@@ -5,15 +5,10 @@ from pydantic import (
     Field,
     HttpUrl,
     PlainSerializer,
-    PositiveInt,
     field_validator,
 )
 from src.models.configs import ConfigBaseSettings
 
-TLPToLower = Annotated[
-    Literal["clear", "green", "amber", "amber+strict", "red"],
-    PlainSerializer(lambda v: "".join(v), return_type=str),
-]
 LogLevelToLower = Annotated[
     Literal["debug", "info", "warn", "error"],
     PlainSerializer(lambda v: "".join(v), return_type=str),
@@ -49,50 +44,56 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
 
     type: Optional[str] = Field(
         alias="CONNECTOR_TYPE",
-        default="EXTERNAL_IMPORT",
-        description="Should always be set to EXTERNAL_IMPORT for this connector.",
+        default="INTERNAL_ENRICHMENT",
+        description="Should always be set to INTERNAL_ENRICHMENT for this connector.",
     )
+
     log_level: Optional[LogLevelToLower] = Field(
         alias="CONNECTOR_LOG_LEVEL",
         default="error",
         description="Determines the verbosity of the logs.",
     )
-    duration_period: Optional[timedelta] = Field(
-        alias="CONNECTOR_DURATION_PERIOD",
-        default="PT24H",
-        description="Duration between two scheduled runs of the connector (ISO 8601 format).",
+    auto: Optional[bool] = Field(
+        alias="CONNECTOR_AUTO",
+        default=True,
+        description="Enables or disables automatic enrichment of observables for OpenCTI.",
     )
-    queue_threshold: Optional[PositiveInt] = Field(
-        alias="CONNECTOR_QUEUE_THRESHOLD",
+    listen_protocol: Optional[str] = Field(
+        alias="CONNECTOR_LISTEN_PROTOCOL",
         default=None,
-        description="Connector queue max size in Mbytes. Default to 500.",
+        description="Protocol used for listening.",
     )
-    run_and_terminate: Optional[bool] = Field(
-        alias="CONNECTOR_RUN_AND_TERMINATE",
+    listen_protocol_api_port: Optional[int] = Field(
+        alias="CONNECTOR_LISTEN_PROTOCOL_API_PORT",
         default=None,
-        description="Connector run-and-terminate flag.",
+        description="Port used for API listening.",
     )
-    send_to_queue: Optional[bool] = Field(
-        alias="CONNECTOR_SEND_TO_QUEUE",
+    listen_protocol_api_path: Optional[str] = Field(
+        alias="CONNECTOR_LISTEN_PROTOCOL_API_PATH",
         default=None,
-        description="Connector send-to-queue flag.",
+        description="API path for callback.",
     )
-    send_to_directory: Optional[bool] = Field(
-        alias="CONNECTOR_SEND_TO_DIRECTORY",
+    listen_protocol_api_uri: Optional[str] = Field(
+        alias="CONNECTOR_LISTEN_PROTOCOL_API_URI",
         default=None,
-        description="Connector send-to-directory flag.",
+        description="Full URI for API listening.",
     )
-    send_to_directory_path: Optional[str] = Field(
-        alias="CONNECTOR_SEND_TO_DIRECTORY_PATH",
+    listen_protocol_api_ssl: Optional[bool] = Field(
+        alias="CONNECTOR_LISTEN_PROTOCOL_API_SSL",
         default=None,
-        description="Connector send-to-directory path.",
+        description="Enable SSL for API listening.",
     )
-    send_to_directory_retention: Optional[PositiveInt] = Field(
-        alias="CONNECTOR_SEND_TO_DIRECTORY_RETENTION",
+    listen_protocol_api_ssl_key: Optional[str] = Field(
+        alias="CONNECTOR_LISTEN_PROTOCOL_API_SSL_KEY",
         default=None,
-        description="Connector send-to-directory retention in days.",
+        description="SSL key file path.",
+    )
+    listen_protocol_api_ssl_cert: Optional[str] = Field(
+        alias="CONNECTOR_LISTEN_PROTOCOL_API_SSL_CERT",
+        default=None,
+        description="SSL certificate file path.",
     )
 
     @field_validator("type")
-    def force_value_for_type_to_be_external_import(cls, value):
-        return "EXTERNAL_IMPORT"
+    def force_value_for_type_to_be_internal_enrichment(cls, value):
+        return "INTERNAL_ENRICHMENT"
