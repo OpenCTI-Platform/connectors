@@ -45,13 +45,13 @@
       "properties": {
         "CONNECTOR_LOG_LEVEL": {
           "description": "Determines the verbosity of the logs.",
-          "type": "string",
           "enum": [
             "debug",
             "info",
             "warn",
             "error"
-          ]
+          ],
+          "type": "string"
         },
         "CONNECTOR_DURATION_PERIOD": {
           "description": "Duration between two scheduled runs of the connector (ISO 8601 format).",
@@ -181,13 +181,13 @@
         },
         "CONNECTOR_LOG_LEVEL": {
           "description": "Determines the verbosity of the logs.",
-          "type": "string",
           "enum": [
             "debug",
             "info",
             "warn",
             "error"
-          ]
+          ],
+          "type": "string"
         },
         "CONNECTOR_DURATION_PERIOD": {
           "description": "Duration between two scheduled runs of the connector (ISO 8601 format).",
@@ -224,11 +224,11 @@
         },
         "SERVICENOW_API_VERSION": {
           "description": "ServiceNow API version used for REST requests.",
-          "type": "string",
           "enum": [
             "v1",
             "v2"
-          ]
+          ],
+          "type": "string"
         },
         "SERVICENOW_API_LEAKY_BUCKET_RATE": {
           "description": "Bucket refill rate (in tokens per second). Controls the rate at which API calls are allowed. For example, a rate of 10 means that 10 calls can be made per second, if the bucket is not empty.",
@@ -254,14 +254,14 @@
         },
         "SERVICENOW_TLP_LEVEL": {
           "description": "Traffic Light Protocol (TLP) level to apply on objects imported into OpenCTI.",
-          "type": "string",
           "enum": [
             "clear",
             "green",
             "amber",
             "amber+strict",
             "red"
-          ]
+          ],
+          "type": "string"
         },
         "SERVICENOW_OBSERVABLES_DEFAULT_SCORE": {
           "description": "Allows you to define a default score for observables and indicators when the 'promote_observables_as_indicators' variable is set to True.",
