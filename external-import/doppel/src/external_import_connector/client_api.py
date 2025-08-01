@@ -4,6 +4,9 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 
 class ConnectorClient:
     def __init__(self, helper, config):
+        """
+        Initialize the client with necessary configurations
+        """
         self.helper = helper
         self.config = config
 
@@ -13,7 +16,11 @@ class ConnectorClient:
         )
 
     @retry(wait=wait_fixed(5), stop=stop_after_attempt(3))  # Default fallback values
-    def _request_data(self, api_url, params=None):
+    def _request_data(self, api_url: str, params=None):
+        """
+        Internal method to handle API requests
+        :return: response
+        """
         try:
             response = self.session.get(api_url, params=params)
             self.helper.connector_logger.info("[API] Requesting data", {"url": api_url})
@@ -46,7 +53,10 @@ class ConnectorClient:
             )
             raise
 
-    def get_alerts(self, last_activity_timestamp, page=0):
+    def get_alerts(self, last_activity_timestamp: str, page=0):
+        """
+        Retrieve alerts from api
+        """
         url = f"{self.config.api_base_url}{self.config.alerts_endpoint}"
         params = {"last_activity_timestamp": last_activity_timestamp, "page": page}
 
