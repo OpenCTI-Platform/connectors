@@ -18,15 +18,14 @@ from connectors_sdk.models.octi.knowledge.entities import Organization, Sector
 from connectors_sdk.models.octi.knowledge.locations import City, Country
 from connectors_sdk.models.octi.knowledge.threats import IntrusionSet
 from connectors_sdk.models.octi.relationships import (
-    BasedOn,
-    DerivedFrom,
-    LocatedAt,
-    RelatedTo,
-    Targets,
-    based_on,
-    located_at,
+    Relationship,
     related_to,
+    based_on,
+    derived_from,
+    indicates,
     targets,
+    located_at,
+    has,
 )
 from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
 from stix2 import Identity as Stix2Identity
@@ -34,26 +33,25 @@ from stix2 import Identity as Stix2Identity
 __all__ = [
     # Models flat list
     "AssociatedFile",
-    "BasedOn",
     "City",
     "Country",
-    "DerivedFrom",
     "ExternalReference",
     "Indicator",
     "IntrusionSet",
     "IPV4Address",
     "KillChainPhase",
-    "LocatedAt",
     "Organization",
     "OrganizationAuthor",
-    "RelatedTo",
+    "Relationship",
     "Sector",
     "Software",
-    "Targets",
     "TLPMarking",
     "Vulnerability",
     # Relationship builders
     "based_on",
+    "derived_from",
+    "has",
+    "indicates",
     "located_at",
     "related_to",
     "targets",
