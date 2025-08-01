@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -9,241 +9,282 @@ class RecordedFutureBaseModel(BaseModel):
 
 
 class CVSS2(RecordedFutureBaseModel):
-    score: float | None = Field(
-        description="The base CVSS score.",
-        default=None,
-    )
-    vectorString: str | None = Field(
+    vectorString: Optional[str] = Field(
         description="The vector string representing the CVSS metrics.",
         default=None,
     )
-    availability: str | None = Field(
+    score: Optional[float] = Field(
+        description="The base CVSS score.",
+        default=None,
+    )
+    availability: Optional[str] = Field(
         description="Impact on availability due to the vulnerability.",
         default=None,
     )
-    confidentiality: str | None = Field(
+    confidentiality: Optional[str] = Field(
         description="Impact on confidentiality due to the vulnerability.",
         default=None,
     )
-    integrity: str | None = Field(
+    integrity: Optional[str] = Field(
         description="Impact on integrity due to the vulnerability.",
         default=None,
     )
-    accessVector: str | None = Field(
+    accessVector: Optional[str] = Field(
         description="The access vector of the CVSS score (e.g., Network, Adjacent)",
         default=None,
     )
-    accessComplexity: str | None = Field(
+    accessComplexity: Optional[str] = Field(
         description="The complexity of the attack required to exploit the vulnerability.",
         default=None,
     )
-    authentication: str | None = Field(
+    authentication: Optional[str] = Field(
         description="Authentication required to exploit the vulnerability.",
         default=None,
     )
-    version: str | None = Field(
+    version: Optional[str] = Field(
         description="CVSS version used.",
         default=None,
     )
-    source: str | None = Field(
+    source: Optional[str] = Field(
         description="Source of the CVSS score (e.g., NVD, CNA, RF)",
         default=None,
     )
-    lastModified: datetime | None = Field(
+    lastModified: Optional[datetime] = Field(
         description="Last modified date of the CVSS score.",
         default=None,
     )
-    published: datetime | None = Field(
+    published: Optional[datetime] = Field(
         description="Publish date of the CVSS score.",
         default=None,
     )
 
 
 class CVSS3(RecordedFutureBaseModel):
-    baseSeverity: str | None = Field(
-        description="The base severity of the CVSS score.",
-        default=None,
-    )
-    baseScore: float | None = Field(
-        description="The base CVSS score.",
-        default=None,
-    )
-    vectorString: str | None = Field(
+    vectorString: Optional[str] = Field(
         description="The vector string representing the CVSS metrics.",
         default=None,
     )
-    attackVector: str | None = Field(
+    baseScore: Optional[float] = Field(
+        description="The base CVSS score.",
+        default=None,
+    )
+    baseSeverity: Optional[str] = Field(
+        description="The base severity of the CVSS score.",
+        default=None,
+    )
+    attackVector: Optional[str] = Field(
         description="The attack vector of the CVSS score (e.g., Network, Adjacent)",
         default=None,
     )
-    attackComplexity: str | None = Field(
+    attackComplexity: Optional[str] = Field(
         description="The complexity of the attack required to exploit the vulnerability.",
         default=None,
     )
-    attackRequirements: str | None = Field(
+    attackRequirements: Optional[str] = Field(
         description="Requirements for the attack to be successful.",
         default=None,
     )
-    privilegesRequired: str | None = Field(
+    privilegesRequired: Optional[str] = Field(
         description="Privileges required to exploit the vulnerability.",
         default=None,
     )
-    userInteraction: str | None = Field(
+    userInteraction: Optional[str] = Field(
         description="User interaction required to exploit the vulnerability.",
         default=None,
     )
-    exploitabilityScore: float | None = Field(
+    exploitabilityScore: Optional[float] = Field(
         description="Score of the exploit for the vulnerability.",
         default=None,
     )
-    impactScore: float | None = Field(
+    impactScore: Optional[float] = Field(
         description="The impact component of the CVSS score.",
         default=None,
     )
-    integrityImpact: str | None = Field(
+    integrityImpact: Optional[str] = Field(
         description="Impact on integrity due to the vulnerability.",
         default=None,
     )
-    confidentialityImpact: str | None = Field(
+    confidentialityImpact: Optional[str] = Field(
         description="Impact on confidentiality due to the vulnerability.",
         default=None,
     )
-    availabilityImpact: str | None = Field(
+    availabilityImpact: Optional[str] = Field(
         description="Impact on availability due to the vulnerability.",
         default=None,
     )
-    scope: str | None = Field(
+    scope: Optional[str] = Field(
         description="Scope of the CVSS score (e.g., Unchanged, Changed)",
         default=None,
     )
-    version: str | None = Field(
+    version: Optional[str] = Field(
         description="CVSS version used.",
         default=None,
     )
-    source: str | None = Field(
+    source: Optional[str] = Field(
         description="Source of the CVSS score (e.g., NVD, CNA, RF)",
         default=None,
     )
 
 
-class CVSS4(CVSS3):
-    impactScore: float | None = Field(
-        description="The impact component of the CVSS score.",
+class CVSS4(BaseModel):
+    vectorString: Optional[str] = Field(
+        description="The vector string representing the CVSS metrics.",
         default=None,
     )
-    exploitabilityScore: float | None = Field(
-        description="The exploitability component of the CVSS score.",
+    baseScore: Optional[float] = Field(
+        description="The base CVSS score.",
         default=None,
     )
-    vulnerableSystemAvailability: str | None = Field(
+    baseSeverity: Optional[str] = Field(
+        description="The base severity of the CVSS score.",
+        default=None,
+    )
+    attackVector: Optional[str] = Field(
+        description="The attack vector of the CVSS score (e.g., Network, Adjacent)",
+        default=None,
+    )
+    attackComplexity: Optional[str] = Field(
+        description="The complexity of the attack required to exploit the vulnerability.",
+        default=None,
+    )
+    attackRequirements: Optional[str] = Field(
+        description="Requirements for the attack to be successful.",
+        default=None,
+    )
+    privilegesRequired: Optional[str] = Field(
+        description="Privileges required to exploit the vulnerability.",
+        default=None,
+    )
+    userInteraction: Optional[str] = Field(
+        description="User interaction required to exploit the vulnerability.",
+        default=None,
+    )
+    vulnerableSystemAvailability: Optional[str] = Field(
         description="Impact on availability due to the vulnerability.",
         default=None,
     )
-    subsequentSystemAvailability: str | None = Field(
+    subsequentSystemAvailability: Optional[str] = Field(
         description="Impact on availability due to the vulnerability.",
         default=None,
     )
-    vulnerableSystemConfidentiality: str | None = Field(
+    vulnerableSystemConfidentiality: Optional[str] = Field(
         description="Impact on confidentiality due to the vulnerability.",
         default=None,
     )
-    subsequentSystemConfidentiality: str | None = Field(
+    subsequentSystemConfidentiality: Optional[str] = Field(
         description="Impact on confidentiality due to the vulnerability.",
         default=None,
     )
-    vulnerableSystemIntegrity: str | None = Field(
+    vulnerableSystemIntegrity: Optional[str] = Field(
         description="Impact on integrity due to the vulnerability.",
         default=None,
     )
-    subsequentSystemIntegrity: str | None = Field(
+    subsequentSystemIntegrity: Optional[str] = Field(
         description="Impact on integrity due to the vulnerability.",
+        default=None,
+    )
+    version: Optional[str] = Field(
+        description="CVSS version used.",
+        default=None,
+    )
+    source: Optional[str] = Field(
+        description="Source of the CVSS score (e.g., NVD, CNA, RF)",
         default=None,
     )
 
 
 class NvdReference(RecordedFutureBaseModel):
-    url: str = Field(description="Hyperlink to the NVD reference.")
-    tag: str | None = Field(
-        description="Resource tag for the NVD reference.",
-        default=None,
+    url: str = Field(
+        description="Hyperlink to the NVD reference.",
+    )
+    tags: Optional[list[str]] = Field(
+        description="Resource tags for the NVD reference.",
+        default=[],
     )
 
 
 class AIInsights(RecordedFutureBaseModel):
-    comment: str | None = Field(
+    comment: Optional[str] = Field(
         description="AI-generated summary of risk rules.",
         default=None,
     )
-    text: str | None = Field(
+    text: Optional[str] = Field(
         description="AI-generated text providing insights on the risk rules.",
         default=None,
     )
-    numberOfReferences: int | None = Field(
+    numberOfReferences: Optional[int] = Field(
         description="Number of references used in the AI insights.",
         default=None,
     )
 
 
 class AnalystNote(RecordedFutureBaseModel):
-    title: str | None = Field(
+    title: Optional[str] = Field(
         description="Title of the analyst note.",
         default=None,
     )
-    content: str | None = Field(
+    content: Optional[str] = Field(
         description="Content of the analyst note.",
         default=None,
     )
-    published: str | None = Field(
+    published: Optional[str] = Field(
         description="Publish date of the note.",
         default=None,
     )
 
 
 class Link(RecordedFutureBaseModel):
-    entityType: str | None = Field(
-        description="Type of the linked entity.",
+    count: Optional[int] = Field(
+        description="Count of the link.",
         default=None,
     )
-    name: str | None = Field(
-        description="Name of the linked entity.",
+    type: Optional[str] = Field(
+        description="Type of the link.",
         default=None,
     )
-    riskScore: int | None = Field(
-        description="Risk score of the linked entity.",
+
+
+class Links(RecordedFutureBaseModel):
+    hits: Optional[list] = Field(
+        description="",
         default=None,
     )
-    categories: list[str] | None = Field(
-        description="Categories associated with the link.",
+    counts: Optional[list] = Field(
+        description="",
+        default=None,
+    )
+    method_aggregates: Optional[list[Link]] = Field(
+        description="",
         default=None,
     )
 
 
 class Risk(RecordedFutureBaseModel):
-    score: int | None = Field(
+    score: Optional[int] = Field(
         description="Overall risk score for the entity.",
         default=None,
     )
-    criticality: int | None = Field(
+    criticality: Optional[int] = Field(
         description="Severity level of the risk.",
         default=None,
     )
-    criticalityLabel: str | None = Field(
+    criticalityLabel: Optional[str] = Field(
         description="Label indicating the criticality of the risk.",
         default=None,
     )
-    rules: int | None = Field(
+    rules: Optional[int] = Field(
         description="Number of triggered risk rules.",
         default=None,
     )
-    riskString: str | None = Field(
+    riskString: Optional[str] = Field(
         description="String representation of the risk score.",
         default=None,
     )
-    riskSummary: str | None = Field(
+    riskSummary: Optional[str] = Field(
         description="Summary of the risk assessment.",
         default=None,
     )
-    evidenceDetails: list[dict[str, Any]] | None = Field(
+    evidenceDetails: Optional[list[dict[str, Any]]] = Field(
         description="Evidence supporting the risk rules.",
         default=None,
     )
@@ -251,56 +292,46 @@ class Risk(RecordedFutureBaseModel):
 
 class VulnerabilityEnrichment(RecordedFutureBaseModel):
     # Common fields
-    aiInsights: AIInsights | None = Field(
+    intelCard: str = Field(
+        description="Permalink to the Intelligence Card.",
+    )
+    links: Links = Field(
+        description="High-confidence evidence-based linkages to other indicators.",
+    )
+    aiInsights: Optional[AIInsights] = Field(
         description="AI-generated summary of risk rules.",
         default=None,
     )
-    analystNotes: list[AnalystNote] | None = Field(
+    analystNotes: Optional[list[AnalystNote]] = Field(
         description="Threat research notes for this entity.",
         default=None,
     )
-    intelCard: str | None = Field(
-        description="Permalink to the Intelligence Card.",
-        default=None,
-    )
-    links: list[Link] | None = Field(
-        description="High-confidence evidence-based linkages to other indicators.",
-        default=None,
-    )
-    risk: Risk | None = Field(
+    risk: Optional[Risk] = Field(
         description="Risk score and evidence details.",
         default=None,
     )
     # Vulnerability-specific fields
-    commonNames: list[str] | None = Field(
+    commonNames: list[str] = Field(
         description="Aliases used to refer to this vulnerability.",
-        default=None,
     )
-    cpe: list[str] | None = Field(
-        description="CPE naming standard of affected products.",
-        default=None,
-    )
-    cvss: CVSS2 | None = Field(
+    cvss: CVSS2 = Field(
         description="CVSS v2 scores as set by NIST.",
-        default=None,
     )
-    cvssv3: CVSS3 | None = Field(
+    cvssv3: CVSS3 = Field(
         description="CVSS v3 scores and associated metrics (NVD, CNA, or RFVA).",
-        default=None,
     )
-    cvssv4: CVSS4 | None = Field(
+    cvssv4: CVSS4 = Field(
         description="CVSS v4 scores and associated metrics (NVD, CNA, or RFVA).",
-        default=None,
     )
-    lifecycleStage: str | None = Field(
+    lifecycleStage: str = Field(
         description="Lifecycle stage of the vulnerability.",
-        default=None,
     )
-    nvdDescription: str | None = Field(
+    cpe: list[str] = Field(
+        description="CPE naming standard of affected products.",
+    )
+    nvdDescription: str = Field(
         description="NVD description of the vulnerability.",
-        default=None,
     )
-    nvdReferences: list[NvdReference] | None = Field(
+    nvdReferences: list[NvdReference] = Field(
         description="NVD advisory references and tools.",
-        default=None,
     )

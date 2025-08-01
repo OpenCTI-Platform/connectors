@@ -115,11 +115,15 @@ class RFClient:
     ) -> VulnerabilityEnrichment:
         enrichment_fields = [
             "commonNames",
+            "cpe",
             "cvss",
             "cvssv3",
             "cvssv4",
             "intelCard",
             "lifecycleStage",
+            "links",
+            "nvdDescription",
+            "nvdReferences",
         ]
         if optional_fields:
             if any(
