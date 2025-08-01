@@ -32,12 +32,9 @@ SCOPE_ENTITIES = [
 ]
 
 VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS = [
-    "cvss_ratings",
-    "cpe22_uri",
-    "linked_malware",
-    "related_links",
-    "analyst_notes",
-    "ai_insights",
+    "analystNotes",
+    "aiInsights",
+    "risk",
 ]
 
 """
@@ -186,7 +183,7 @@ class _RecordedFutureConfig(_ConfigBaseModel):
         cls, vulnerability_enrichment_optional_fields: list[str]
     ) -> list[str]:
         for field in vulnerability_enrichment_optional_fields:
-            if field.lower() not in VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS:
+            if field not in VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS:
                 raise ValueError("Invalid vulnerability enrichment optional field(s)")
         return vulnerability_enrichment_optional_fields
 
