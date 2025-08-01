@@ -4,7 +4,7 @@ from connectors_sdk.models import octi
 from pycti import OpenCTIConnectorHelper
 from rf_client import RFClient, RFClientError
 from .config_loader import ConnectorConfig
-from .rf_to_stix2 import ConversionError, EnrichedIndicator, EnrichedVulnerability
+from .rf_to_stix2 import ConversionError, EnrichedIndicator
 from .use_cases.enrich_vulnerability import VulnerabilityEnricher
 
 from rflib import APP_VERSION
