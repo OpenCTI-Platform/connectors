@@ -6,7 +6,7 @@ from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEnt
 from connectors_sdk.models.octi.enums import AttackMotivation, AttackResourceLevel
 from pycti import IntrusionSet as pycti_IntrusionSet
 from pydantic import AwareDatetime, Field
-from stix2 import IntrusionSet as stix2_IntrusionSet
+from stix2.v21 import IntrusionSet as stix2_IntrusionSet
 
 
 @MODEL_REGISTRY.register

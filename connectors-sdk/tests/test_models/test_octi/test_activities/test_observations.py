@@ -11,8 +11,8 @@ from connectors_sdk.models.octi.activities.observations import (
     Observable,
 )
 from pydantic import ValidationError
-from stix2 import Indicator as stix2_Indicator
-from stix2 import IPv4Address as stix2_IPv4Address
+from stix2.v21 import Indicator as stix2_Indicator
+from stix2.v21 import IPv4Address as stix2_IPv4Address
 
 ### OBSERVABLE BASE TYPE
 

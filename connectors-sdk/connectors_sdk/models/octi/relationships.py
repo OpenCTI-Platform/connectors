@@ -17,7 +17,7 @@ from pydantic import (
     create_model,
     model_validator,
 )
-from stix2 import Relationship as stix2_Relationship
+from stix2.v21 import Relationship as stix2_Relationship
 
 
 class _RelationshipBuilder:

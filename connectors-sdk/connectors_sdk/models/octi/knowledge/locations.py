@@ -6,7 +6,7 @@ from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEnt
 from connectors_sdk.models.octi.enums import LocationType
 from pycti import Location as pycti_Location
 from pydantic import Field
-from stix2 import Location as stix2_Location
+from stix2.v21 import Location as stix2_Location
 
 
 class OCTIStixLocation(stix2_Location):  # type: ignore[misc]  # stix2 does not provide stubs

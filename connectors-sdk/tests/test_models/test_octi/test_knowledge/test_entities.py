@@ -5,7 +5,7 @@ import pytest
 from connectors_sdk.models.octi._common import BaseIdentifiedEntity
 from connectors_sdk.models.octi.knowledge.entities import Organization, Sector
 from pydantic import ValidationError
-from stix2 import Identity as stix2_Identity
+from stix2.v21 import Identity as stix2_Identity
 
 ### ORGANIZATION
 

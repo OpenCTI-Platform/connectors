@@ -6,7 +6,7 @@ from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEnt
 from connectors_sdk.models.octi.enums import IndustrySector, Reliability
 from pycti import Identity as pycti_Identity
 from pydantic import Field
-from stix2 import Identity as stix2_Identity
+from stix2.v21 import Identity as stix2_Identity
 
 
 @MODEL_REGISTRY.register
