@@ -22,6 +22,7 @@ FEATURE_NAMES = [
     "OrganizationAuthor",
     "RelatedTo",
     "Sector",
+    "Software",
     "Targets",
     "TLPMarking",
     "Vulnerability",
