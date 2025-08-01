@@ -5,9 +5,9 @@ import warnings
 from abc import ABC, abstractmethod
 from typing import Any, Literal, Optional, OrderedDict, TypeVar
 
-import pycti  # type: ignore[import-untyped]  # pycti does not provide stubs
-import stix2  # type: ignore[import-untyped] # stix2 does not provide stubs
-import stix2.properties  # type: ignore[import-untyped]
+import pycti
+import stix2
+import stix2.properties
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -325,9 +325,13 @@ class Author(ABC, BaseIdentifiedEntity):
 class TLPMarking(BaseIdentifiedEntity):
     """Represent a TLP marking definition."""
 
-    level: Literal["white", "green", "amber", "amber+strict", "red"] = Field(
-        description="The level of the TLP marking.",
-    )
+    level: Literal[
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red",
+    ] = Field(description="The level of the TLP marking.")
 
     def to_stix2_object(self) -> stix2.v21.MarkingDefinition:
         """Make stix object."""
