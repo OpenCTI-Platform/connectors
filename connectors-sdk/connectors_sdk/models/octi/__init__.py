@@ -1,6 +1,5 @@
 """Offer OpenCTI models."""
 
-import stix2  # type: ignore[import-untyped]  # stix2 does not provide stubs
 from connectors_sdk.models.octi._common import (
     MODEL_REGISTRY,
     AssociatedFile,
@@ -12,32 +11,58 @@ from connectors_sdk.models.octi._common import (
 from connectors_sdk.models.octi.activities.observations import (
     Indicator,
     IPV4Address,
+    Software,
 )
-from connectors_sdk.models.octi.knowledge.entities import Organization
+from connectors_sdk.models.octi.knowledge.arsenal import Vulnerability
+from connectors_sdk.models.octi.knowledge.entities import Organization, Sector
+from connectors_sdk.models.octi.knowledge.locations import City, Country
+from connectors_sdk.models.octi.knowledge.threats import IntrusionSet
 from connectors_sdk.models.octi.relationships import (
-    AnyRelatedToAny,
-    IndicatorBasedOnObservable,
-    IndicatorDerivedFromIndicator,
+    BasedOn,
+    DerivedFrom,
+    Has,
+    LocatedAt,
+    RelatedTo,
+    Targets,
     based_on,
+    has,
+    located_at,
     related_to,
+    targets,
 )
 from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
+from stix2.v21 import Identity as stix2_Identity
 
 __all__ = [
-    "AnyRelatedToAny",
+    # Models flat list
     "AssociatedFile",
-    "BaseEntity",  # for typing purpose.
+    "BasedOn",
+    "City",
+    "Country",
+    "DerivedFrom",
     "ExternalReference",
+    "Has",
     "Indicator",
-    "IndicatorBasedOnObservable",
-    "IndicatorDerivedFromIndicator",
+    "IntrusionSet",
     "IPV4Address",
     "KillChainPhase",
+    "LocatedAt",
     "Organization",
     "OrganizationAuthor",
+    "RelatedTo",
+    "Sector",
+    "Software",
+    "Targets",
     "TLPMarking",
-    "related_to",
+    "Vulnerability",
+    # Relationship builders
     "based_on",
+    "has",
+    "located_at",
+    "related_to",
+    "targets",
+    # Typing purpose
+    "BaseEntity",
 ]
 
 
@@ -55,7 +80,7 @@ class OrganizationAuthor(Author, Organization):
 
     """
 
-    def to_stix2_object(self) -> stix2.v21.Identity:
+    def to_stix2_object(self) -> stix2_Identity:
         """Make stix object."""
         return Organization.to_stix2_object(self)
 

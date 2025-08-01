@@ -6,21 +6,32 @@ import inspect
 import connectors_sdk.models.octi as octi
 
 FEATURE_NAMES = [
-    "AnyRelatedToAny",
     "AssociatedFile",
+    "BasedOn",
     "BaseEntity",
+    "City",
+    "Country",
+    "DerivedFrom",
     "ExternalReference",
+    "Has",
     "Indicator",
-    "IndicatorBasedOnObservable",
-    "IndicatorDerivedFromIndicator",
+    "IntrusionSet",
     "IPV4Address",
     "KillChainPhase",
+    "LocatedAt",
     "Organization",
     "OrganizationAuthor",
+    "RelatedTo",
+    "Sector",
+    "Software",
+    "Targets",
     "TLPMarking",
-    "related_to",
+    "Vulnerability",
     "based_on",
-    # When adding a new OCTI model or feature, add its name here
+    "has",
+    "located_at",
+    "related_to",
+    "targets",
 ]
 
 
