@@ -1,6 +1,7 @@
 import stix2
 from pycti import (
     AttackPattern,
+    Channel,
     Identity,
     IntrusionSet,
     Location,
@@ -146,8 +147,16 @@ stix_object_mapping = {
     "Country": lambda value, object_markings, custom_properties: stix2.Location(
         id=Location.generate_id(value, "Country"),
         name=value,
-        country="FR",  # TODO: Country code is required by STIX2!
+        country="",
         custom_properties={"x_opencti_location_type": "Country"} | custom_properties,
+        allow_custom=True,
+        object_markings=object_markings,
+    ),
+    "Region": lambda value, object_markings, custom_properties: stix2.Location(
+        id=Location.generate_id(value, "Region"),
+        name=value,
+        region="",
+        custom_properties={"x_opencti_location_type": "Region"} | custom_properties,
         allow_custom=True,
         object_markings=object_markings,
     ),
@@ -188,6 +197,7 @@ stix_object_mapping = {
         allow_custom=True,
     ),
     "Channel": lambda value, object_markings, custom_properties: CustomObjectChannel(
+        id=Channel.generate_id(name=value),  # for deduplication
         name=value,
         object_markings=object_markings,
         custom_properties=custom_properties,
