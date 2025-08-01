@@ -11,6 +11,7 @@ from connectors_sdk.models.octi._common import (
 from connectors_sdk.models.octi.activities.observations import (
     Indicator,
     IPV4Address,
+    Software,
 )
 from connectors_sdk.models.octi.knowledge.arsenal import Vulnerability
 from connectors_sdk.models.octi.knowledge.entities import Organization, Sector
@@ -47,6 +48,7 @@ __all__ = [
     "OrganizationAuthor",
     "RelatedTo",
     "Sector",
+    "Software",
     "Targets",
     "TLPMarking",
     "Vulnerability",
