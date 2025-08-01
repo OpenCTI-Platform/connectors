@@ -20,10 +20,12 @@ from connectors_sdk.models.octi.knowledge.threats import IntrusionSet
 from connectors_sdk.models.octi.relationships import (
     BasedOn,
     DerivedFrom,
+    Has,
     LocatedAt,
     RelatedTo,
     Targets,
     based_on,
+    has,
     located_at,
     related_to,
     targets,
@@ -39,6 +41,7 @@ __all__ = [
     "Country",
     "DerivedFrom",
     "ExternalReference",
+    "Has",
     "Indicator",
     "IntrusionSet",
     "IPV4Address",
@@ -54,6 +57,7 @@ __all__ = [
     "Vulnerability",
     # Relationship builders
     "based_on",
+    "has",
     "located_at",
     "related_to",
     "targets",

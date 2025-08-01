@@ -6,6 +6,7 @@ from connectors_sdk.models.octi.activities.observations import Indicator, Observ
 from connectors_sdk.models.octi.relationships import (
     BasedOn,
     DerivedFrom,
+    Has,
     Indicates,
     LocatedAt,
     RelatedTo,
@@ -21,6 +22,7 @@ from stix2.v21 import IPv4Address as stix2_IPv4Address
 IMPLEMENTED_RELATIONSHIPS = [
     BasedOn,
     DerivedFrom,
+    Has,
     LocatedAt,
     Indicates,
     RelatedTo,

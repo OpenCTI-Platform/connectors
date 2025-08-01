@@ -4,7 +4,12 @@ from abc import ABC
 from typing import Any, Literal, Optional, Unpack
 
 from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
-from connectors_sdk.models.octi.activities.observations import Indicator, Observable
+from connectors_sdk.models.octi.knowledge.arsenal import Vulnerability
+from connectors_sdk.models.octi.activities.observations import (
+    Indicator,
+    Observable,
+    Software,
+)
 from connectors_sdk.models.octi.knowledge.entities import Organization, Sector
 from connectors_sdk.models.octi.knowledge.locations import Country
 from connectors_sdk.models.octi.knowledge.threats import IntrusionSet
@@ -274,6 +279,32 @@ class LocatedAt(Relationship):
 
 
 located_at = LocatedAt._builder
+
+
+@MODEL_REGISTRY.register
+class Has(Relationship):
+    """Represent a relationship indicating that a Software has a Vulnerability.
+
+    Examples:
+        >>> from connectors_sdk.models.octi.activites.observations import Software
+        >>> from connectors_sdk.models.octi.knowledge.arsenal import Vulnerability
+        >>> software = Software(name="Test Software")
+        >>> vulnerability = Vulnerability(name="CVE-2025-1234")
+        >>> relationship = Has(source=sector, target=vulnerability)
+
+    """
+
+    _relationship_type: Literal["has"] = "has"
+
+    source: Software = Field(
+        description="Reference to the source entity of the relationship. Here a Software.",
+    )
+    target: Vulnerability = Field(
+        description="Reference to the target entity of the relationship. Here a Vulnerability.",
+    )
+
+
+has = Has._builder
 
 
 MODEL_REGISTRY.rebuild_all()
