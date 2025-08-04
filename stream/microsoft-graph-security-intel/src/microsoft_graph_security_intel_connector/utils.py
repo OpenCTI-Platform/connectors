@@ -158,7 +158,9 @@ def get_expiration_datetime(data: dict, expiration_time: int) -> str:
 
     # if valid_until is not supplied, calculate using configured expiration time
     if valid_until is None:
-        updated_at = OpenCTIConnectorHelper.get_attribute_in_extension("updated_at", data)
+        updated_at = OpenCTIConnectorHelper.get_attribute_in_extension(
+            "updated_at", data
+        )
         datetime_object = datetime.fromisoformat(updated_at)
         age = timedelta(expiration_time)
         expire_datetime = datetime_object + age
