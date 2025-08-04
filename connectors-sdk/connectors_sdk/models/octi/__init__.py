@@ -5,6 +5,7 @@ from connectors_sdk.models.octi._common import (
     AssociatedFile,
     Author,
     BaseEntity,
+    BaseIdentifiedEntity,
     ExternalReference,
     TLPMarking,
 )
@@ -17,6 +18,7 @@ from connectors_sdk.models.octi.knowledge.arsenal import Vulnerability
 from connectors_sdk.models.octi.knowledge.entities import Organization, Sector
 from connectors_sdk.models.octi.knowledge.locations import City, Country
 from connectors_sdk.models.octi.knowledge.threats import IntrusionSet
+from connectors_sdk.models.octi.knowledge.techniques import AttackPattern
 from connectors_sdk.models.octi.relationships import (
     Relationship,
     related_to,
@@ -33,6 +35,7 @@ from stix2 import Identity as Stix2Identity
 __all__ = [
     # Models flat list
     "AssociatedFile",
+    "AttackPattern",
     "City",
     "Country",
     "ExternalReference",
@@ -57,6 +60,7 @@ __all__ = [
     "targets",
     # Typing purpose
     "BaseEntity",
+    "BaseIdentifiedEntity",
 ]
 
 
