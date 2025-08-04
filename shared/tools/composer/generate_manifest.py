@@ -1,68 +1,93 @@
 import json
 import os
-from pathlib import Path
+import traceback
 
 __OPENCTI_CURRENT_VERSION__ = "6.7.0"
 __CONNECTOR_INFOS_FILENAME__ = "connector_infos.json"
 __CONNECTOR_SCHEMA_FILENAME__ = "connector_schema.json"
 __CATALOG_ID__ = "filigran-catalog-id"
+__CONFIG_EXCLUSION_LIST__ = ["OPENCTI_TOKEN", "OPENCTI_URL", "CONNECTOR_TYPE"]
 
-manifest = {
-    "id": __CATALOG_ID__,
-    "name": "OpenCTI Connectors contracts",
-    "description": "",
-    "version": __OPENCTI_CURRENT_VERSION__,
-    "contracts": [],
-}
-
-# Find all connector contracts and all connector infos
-all_connector_schemas = []
-all_connector_infos = []
-
-for root, dirs, files in os.walk("."):
-    for file in files:
-        if file.endswith(__CONNECTOR_SCHEMA_FILENAME__):
-            # Gather all schema
-            all_connector_schemas.append(os.path.join(root, file))
-        elif file.endswith(__CONNECTOR_INFOS_FILENAME__):
-            # Gather all infos
-            all_connector_infos.append(os.path.join(root, file))
+from pathlib import Path
 
 
-if not all_connector_schemas and not all_connector_infos:
-    print("❌ - No contract to add in manifest !")
-else:
-    # Add in manifest.json file all connectors with manager supported
-    for connector_contract in all_connector_schemas:
-        with open(connector_contract, encoding="utf-8") as file:
-            connector_contract_schema = json.load(file)
+class ManifestGenerator:
+    def __init__(self):
+        self.manifest = {
+            "id": __CATALOG_ID__,
+            "name": "OpenCTI Connectors contracts",
+            "description": "",
+            "version": __OPENCTI_CURRENT_VERSION__,
+            "contracts": [],
+        }
 
-            # Add in manifest if and only if manager_supported=true
-            if connector_contract_schema["manager_supported"]:
-                # Remove unnecessary configs as XTM Composer will handle it
-                del connector_contract_schema["default"]["CONNECTOR_TYPE"]
-                del connector_contract_schema["properties"]["CONNECTOR_TYPE"]
-                del connector_contract_schema["properties"]["OPENCTI_URL"]
-                del connector_contract_schema["properties"]["OPENCTI_TOKEN"]
-                connector_contract_schema["required"].remove("OPENCTI_URL")
-                connector_contract_schema["required"].remove("OPENCTI_TOKEN")
+    @staticmethod
+    def connector_contract_paths():
+        """
+        Gather all connector contract paths
+        """
+        for root, dirs, files in os.walk("."):
+            for file in files:
+                if file.endswith(__CONNECTOR_SCHEMA_FILENAME__) or file.endswith(
+                    __CONNECTOR_INFOS_FILENAME__
+                ):
+                    # Gather all schema and infos
+                    connector_path = os.path.join(root, file)
+                    yield connector_path
 
-                manifest["contracts"].append(connector_contract_schema)
+    def complete_manifest(self):
+        all_contract_paths = self.connector_contract_paths()
 
-    for connector_info in all_connector_infos:
-        with open(connector_info, encoding="utf-8") as file:
-            connector_contract_infos = json.load(file)
+        for connector_contract_path in all_contract_paths:
+            with open(connector_contract_path, encoding="utf-8") as file:
+                connector_contract = json.load(file)
+                is_manager_supported = connector_contract["manager_supported"]
 
-            # Add in manifest if and only if manager_supported=false
-            # Need for XTM - HUB connectors ecosystem
-            if not connector_contract_infos["manager_supported"]:
-                manifest["contracts"].append(connector_contract_infos)
+                if (
+                    connector_contract_path.endswith(__CONNECTOR_SCHEMA_FILENAME__)
+                    and is_manager_supported
+                ):
+                    for item in __CONFIG_EXCLUSION_LIST__:
+                        # Remove unnecessary configs as XTM Composer will handle it
+                        default, properties, required = (
+                            connector_contract.get(k)
+                            for k in ("default", "properties", "required")
+                        )
+                        if default.get(item):
+                            del connector_contract["default"][item]
+                        if properties.get(item):
+                            del connector_contract["properties"][item]
+                        if item in required:
+                            connector_contract["required"].remove(item)
+                    self.manifest["contracts"].append(connector_contract)
 
-# Format manifest
-manifest = json.dumps(manifest, indent=2)
+                if (
+                    connector_contract_path.endswith(__CONNECTOR_INFOS_FILENAME__)
+                    and not is_manager_supported
+                ):
+                    # Add in manifest if and only if manager_supported=false
+                    # Need for XTM - HUB connectors ecosystem
+                    self.manifest["contracts"].append(connector_contract)
 
-# Write and add manifest file in root
-connector_root_path = Path(__file__).parents[3]
-manifest_path = os.path.join(connector_root_path, "manifest.json")
-with open(manifest_path, "w", encoding="utf-8") as manifest_file:
-    manifest_file.write(manifest)
+    def generate_manifest(self):
+        """Format, generate and write manifest"""
+        self.complete_manifest()
+        final_manifest = json.dumps(self.manifest, indent=2)
+
+        # Write and add manifest file in root
+        connector_root_path = Path(__file__).parents[3]
+        manifest_path = os.path.join(connector_root_path, "manifest.json")
+        with open(manifest_path, "w", encoding="utf-8") as manifest_file:
+            manifest_file.write(final_manifest)
+
+
+if __name__ == "__main__":
+    """
+    Entry point of the script
+    """
+    try:
+        manifest_generator = ManifestGenerator()
+        manifest_generator.generate_manifest()
+    except Exception:
+        traceback.print_exc()
+        exit(1)
