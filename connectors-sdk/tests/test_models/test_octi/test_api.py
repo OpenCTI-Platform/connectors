@@ -7,7 +7,9 @@ import connectors_sdk.models.octi as octi
 
 FEATURE_NAMES = [
     "AssociatedFile",
+    "AttackPattern",
     "BaseEntity",
+    "BaseIdentifiedEntity",
     "City",
     "Country",
     "ExternalReference",
@@ -35,7 +37,11 @@ FEATURE_NAMES = [
 def test_no_pulic_class_are_abstract():
     """Test that no public class in __all__ are abstract except for BaseEntity for typing purpose."""
     # Given the public API of the octi module
-    public_features = [feat for feat in octi.__all__ if feat != "BaseEntity"]
+    public_features = [
+        feat
+        for feat in octi.__all__
+        if not feat in ["BaseEntity", "BaseIdentifiedEntity"]
+    ]
     # When checking each class in the public API
     for feature_name in public_features:
         cls = getattr(octi, feature_name)
