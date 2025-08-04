@@ -39,16 +39,17 @@ RABBITMQ_DEFAULT_USER=ChangeMe
 RABBITMQ_DEFAULT_PASS=ChangeMe
 SMTP_HOSTNAME=localhost
 ELASTIC_MEMORY_SIZE=2g
-CONNECTOR_LICENCE_KEY_PEM=|
+CONNECTOR_LICENCE_KEY_PEM="
 -----BEGIN CERTIFICATE-----
 ...
 -----END CERTIFICATE-----
+"
 ```
 
 ### Build and Run All needed services with Docker Compose
 
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
 Then go to [http://localhost:8080/dashboard/data/ingestion/connectors](http://localhost:8080/dashboard/data/ingestion/connectors) to verify that the connector is attached to the OpenCTI platform.
