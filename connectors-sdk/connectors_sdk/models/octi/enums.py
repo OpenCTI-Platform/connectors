@@ -127,6 +127,28 @@ class LocationType(StrEnum):
     POSITION = "Position"
 
 
+class Permission(PermissiveEnum):
+    """Permission Open Vocabulary.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L793
+    """
+
+    USER = "user"
+    ADMINISTRATOR = "administrator"
+
+
+class Platform(PermissiveEnum):
+    """Platform Open Vocabulary.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L797
+    """
+
+    WINDOWS = "windows"
+    MACOS = "macos"
+    LINUX = "linux"
+    ANDROID = "android"
+
+
 class Reliability(PermissiveEnum):
     """Reliability Open Vocabulary.
 
