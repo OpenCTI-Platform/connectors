@@ -66,7 +66,9 @@ class CTIButlerConnector:
         self.helper = OpenCTIConnectorHelper(config)
         self.base_url = self._get_param("base_url") + "/"
         self.api_key = self._get_param("api_key")
-        self.knowledgebases = parse_knowledgebases(self.helper, self._get_param("knowledgebases"))
+        self.knowledgebases = parse_knowledgebases(
+            self.helper, self._get_param("knowledgebases")
+        )
         self.interval_days = self._get_param("interval_days", is_number=True)
 
         self.session = requests.Session()
