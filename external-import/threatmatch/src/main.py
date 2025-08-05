@@ -1,11 +1,16 @@
 import sys
 import traceback
 
+from pycti import OpenCTIConnectorHelper
+from threatmatch.config import ConnectorSettings
 from threatmatch.connector import Connector
 
 
 def main() -> None:
-    connector = Connector()
+    config = ConnectorSettings()
+    helper = OpenCTIConnectorHelper(config.model_dump_pycti())
+
+    connector = Connector(helper=helper, config=config)
     connector.run()
 
 
