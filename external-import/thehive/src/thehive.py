@@ -122,7 +122,7 @@ class TheHive:
         for mapping in self.thehive_severity_mapping:
             self.severity_mapping[int(mapping.split(":")[0])] = mapping.split(":")[1]
 
-        self.thehive_api = TheHiveApi(self.thehive_url, self.thehive_api_key)
+        self.thehive_api = TheHiveApi(self.thehive_url, self.thehive_api_key, verify=self.thehive_check_ssl)
 
     def construct_query(self, type, last_date):
         """Construct query for alert or cases based on the last_date."""
@@ -359,7 +359,7 @@ class TheHive:
                 )
                 updated_last_date = self.get_updated_date(item, updated_last_date)
             else:
-                self.helper.log_warn(
+                self.helper.log_warning(
                     f"Ignoring {item.get('title')} due to TLP too high."
                 )
         message = f"Processing complete, last update: {updated_last_date}"
@@ -369,7 +369,7 @@ class TheHive:
     def process_logic(self, type, last_date_key, bundle_func):
         """Process case or alert based on returned query. Update state once complete."""
         self.helper.log_info(
-            f"here the cureent state of the connector : {self.current_state}..."
+            f"here the current state of the connector : {self.current_state}..."
         )
 
         last_date = self.get_last_date(last_date_key, self.thehive_import_from_date)
@@ -589,7 +589,7 @@ class TheHive:
     def run(self):
         """Function to process case, alerts, and pause based on provided interval."""
         while True:
-            self.helper.log_info("Starting TheHive Conncector run loop...")
+            self.helper.log_info("Starting TheHive Connector run loop...")
             try:
                 self.current_state = self.helper.get_state() or {}
                 self.helper.log_info(f"Current State: {self.current_state}")
