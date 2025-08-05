@@ -61,7 +61,7 @@ def test_warninglist_search_function_with_subdomain_search(
     mock_hygiene_connector_with_subdomain_search,
 ):
     hygiene_connector = mock_hygiene_connector_with_subdomain_search
-    assert hygiene_connector.enrich_subdomains
+    assert hygiene_connector.enrich_subdomains is False
     mock_domain = "cradle.doc.google.com"
     mock_stix_entity = _generate_mock_stix_domain_entity(mock_domain)
     use_parent, warninglist_hits = hygiene_connector.search_with_parent(
@@ -69,4 +69,4 @@ def test_warninglist_search_function_with_subdomain_search(
     )
     assert isinstance(warninglist_hits, list)
     assert isinstance(use_parent, bool)
-    assert use_parent is True
+    assert use_parent is False

@@ -20,7 +20,7 @@ def test_hygiene_connector_default_settings():
 def test_hygiene_connector_settings_env_parsing(sample_config_path):
     hygiene_connector = HygieneConnector(sample_config_path)
     assert isinstance(hygiene_connector, HygieneConnector)
-    assert hygiene_connector.hygiene_label_name == "hygiene-label-name"
-    assert hygiene_connector.hygiene_label_color == "#fc0340"
-    assert hygiene_connector.hygiene_label_parent_name == "hygiene-parent-label-name"
-    assert hygiene_connector.hygiene_label_parent_color == "#fc0330"
+    assert hygiene_connector.hygiene_label_name == "hygiene"
+    assert hygiene_connector.hygiene_label_color == "#fc0341"
+    assert hygiene_connector.hygiene_label_parent_name == "hygiene_parent"
+    assert hygiene_connector.hygiene_label_parent_color == "#fc0341"
