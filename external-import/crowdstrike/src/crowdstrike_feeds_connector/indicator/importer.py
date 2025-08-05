@@ -239,9 +239,13 @@ class IndicatorImporter(BaseImporter):
             )
 
             try:
-                bundle_builder = IndicatorBundleBuilder(self.helper, bundle_builder_config)
+                bundle_builder = IndicatorBundleBuilder(
+                    self.helper, bundle_builder_config
+                )
             except Exception as err:
-                self.helper.connector_logger.warning(f"Unable to process indicator value: {indicator['indicator']}, error: {err}")
+                self.helper.connector_logger.warning(
+                    f"Unable to process indicator value: {indicator['indicator']}, error: {err}"
+                )
                 return None
             indicator_bundle_built = bundle_builder.build()
             if indicator_bundle_built:
