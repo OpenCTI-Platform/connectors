@@ -13,7 +13,7 @@ from collections import OrderedDict
 
 from pydantic.json_schema import GenerateJsonSchema
 # Import your configuration model
-from src.__init_config__ import ConfigLoader
+from src import ConfigLoader
 
 __OPENCTI_CURRENT_VERSION__ = "6.7.0"
 __CONNECTOR_INFOS_FILENAME__ = "connector_infos.json"
