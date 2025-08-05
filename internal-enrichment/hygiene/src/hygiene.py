@@ -115,7 +115,7 @@ class HygieneConnector:
     ) -> Optional[str]:
         # Search in warninglist
         warninglist_hits: List[WarningList] = self.warninglists.search(
-            opencti_entity["observable_value"]
+            opencti_entity["observable_value"].lower()
         )
 
         # If not found and the domain is a subdomain, search with the parent.
