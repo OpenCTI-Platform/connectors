@@ -9,7 +9,7 @@ from src.models.configs import ConfigBaseSettings
 
 
 class _ConfigLoaderCVE(ConfigBaseSettings):
-    """Interface for loading ServiceNow dedicated configuration."""
+    """Interface for loading dedicated configuration."""
 
     # Config Loader
     base_url: Optional[str] = Field(
