@@ -11,19 +11,18 @@ from pytest_mock import MockerFixture
 def fixture_config_dict() -> dict[str, Any]:
     return {
         "opencti": {
-            "url": "opencti-url",
-            "token": "opencti-token",
+            "url": "http://test-opencti-url/",
+            "token": "test-opencti-token",
         },
         "connector": {
-            "id": "export-report-pdf-connector-id",
+            "id": "threatmatch-connector-id",
             "type": "EXTERNAL_IMPORT",
             "name": "ThreatMatch",
             "scope": "threatmatch",
             "log_level": "info",
-            "run_and_terminate": True,
         },
         "threatmatch": {
-            "url": "https://threatmatch-url",
+            "url": "https://test-threatmatch-url/",
             "client_id": "threatmatch-client-id",
             "client_secret": "threatmatch-client-secret",
             "interval": 1,

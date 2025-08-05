@@ -14,7 +14,7 @@ def test_connector_config(
 ) -> None:
     connector = Connector()
 
-    assert connector.threatmatch_url == "https://threatmatch-url"
+    assert connector.threatmatch_url == "https://test-threatmatch-url/"
     assert connector.threatmatch_client_id == "threatmatch-client-id"
     assert connector.threatmatch_client_secret == "threatmatch-client-secret"
     assert connector.threatmatch_interval == 1
