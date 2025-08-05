@@ -101,7 +101,7 @@ class ThreatMatch:
             data = r.json()["objects"]
             for object in data:
                 object["description"] = BeautifulSoup(
-                    object["description"], "html.parser"
+                    object.get("description", ""), "html.parser"
                 ).get_text()
             return data
 
