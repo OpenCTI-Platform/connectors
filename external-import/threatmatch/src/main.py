@@ -1,5 +1,5 @@
 import sys
-import time
+import traceback
 
 from threatmatch.connector import Connector
 
@@ -12,7 +12,6 @@ def main() -> None:
 if __name__ == "__main__":
     try:
         main()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        sys.exit(0)
+    except Exception:
+        traceback.print_exc()
+        sys.exit(1)
