@@ -30,8 +30,8 @@ def test_connector_run(mocked_helper: MockerFixture) -> None:
     connector = Connector()
     with pytest.raises(SystemExit):
         connector.run()
-    assert connector.helper.log_info.call_count == 6
-    connector.helper.log_info.assert_has_calls(
+    assert connector.helper.connector_logger.info.call_count == 6
+    connector.helper.connector_logger.info.assert_has_calls(
         [
             call("Fetching ThreatMatch..."),
             call("Connector has never run"),
