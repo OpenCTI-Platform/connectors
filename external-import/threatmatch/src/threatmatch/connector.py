@@ -1,63 +1,19 @@
 import builtins
 import json
-import os
 import sys
 import time
 from datetime import datetime
 
 import requests
-import yaml
 from bs4 import BeautifulSoup
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper
+from threatmatch.config import ConnectorSettings
 
 
 class Connector:
-    def __init__(self):
-        # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/../config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config)
-        # Extra config
-        self.threatmatch_url = get_config_variable(
-            "THREATMATCH_URL", ["threatmatch", "url"], config
-        )
-        self.threatmatch_client_id = get_config_variable(
-            "THREATMATCH_CLIENT_ID", ["threatmatch", "client_id"], config
-        )
-        self.threatmatch_client_secret = get_config_variable(
-            "THREATMATCH_CLIENT_SECRET", ["threatmatch", "client_secret"], config
-        )
-        self.threatmatch_interval = get_config_variable(
-            "THREATMATCH_INTERVAL", ["threatmatch", "interval"], config, True, 5
-        )
-        self.threatmatch_import_from_date = get_config_variable(
-            "THREATMATCH_IMPORT_FROM_DATE", ["threatmatch", "import_from_date"], config
-        )
-        self.threatmatch_import_profiles = get_config_variable(
-            "THREATMATCH_IMPORT_PROFILES",
-            ["threatmatch", "import_profiles"],
-            config,
-            False,
-            True,
-        )
-        self.threatmatch_import_alerts = get_config_variable(
-            "THREATMATCH_IMPORT_ALERTS",
-            ["threatmatch", "import_alerts"],
-            config,
-            False,
-            True,
-        )
-        self.threatmatch_import_iocs = get_config_variable(
-            "THREATMATCH_IMPORT_IOCS",
-            ["threatmatch", "import_iocs"],
-            config,
-            False,
-            True,
-        )
+    def __init__(self, helper: OpenCTIConnectorHelper, config: ConnectorSettings):
+        self.helper = helper
+        self.config = config
         self.identity = self.helper.api.identity.create(
             type="Organization",
             name="Security Alliance",
@@ -65,17 +21,18 @@ class Connector:
         )
 
     def get_interval(self):
-        return int(self.threatmatch_interval) * 60
+        return int(self.config.threatmatch.interval) * 60
 
     def next_run(self, seconds):
         return
 
     def _get_token(self):
         r = requests.post(
-            self.threatmatch_url + "/api/developers-platform/token",
+            self.config.threatmatch.url.encoded_string()
+            + "/api/developers-platform/token",
             json={
-                "client_id": self.threatmatch_client_id,
-                "client_secret": self.threatmatch_client_secret,
+                "client_id": self.config.threatmatch.client_id,
+                "client_secret": self.config.threatmatch.client_secret,
             },
         )
         if r.status_code != 200:
@@ -86,7 +43,11 @@ class Connector:
     def _get_item(self, token, type, item_id):
         headers = {"Authorization": "Bearer " + token}
         r = requests.get(
-            self.threatmatch_url + "/api/stix/" + type + "/" + str(item_id),
+            self.config.threatmatch.url.encoded_string()
+            + "/api/stix/"
+            + type
+            + "/"
+            + str(item_id),
             headers=headers,
         )
         if r.status_code != 200:
@@ -152,7 +113,8 @@ class Connector:
                     self.helper.connector_logger.info("Connector has never run")
                 # If the last_run is more than interval-1 day
                 if last_run is None or (
-                    (timestamp - last_run) > ((int(self.threatmatch_interval) - 1) * 60)
+                    (timestamp - last_run)
+                    > ((int(self.config.threatmatch.interval) - 1) * 60)
                 ):
                     self.helper.connector_logger.info("Connector will run!")
                     now = datetime.utcfromtimestamp(timestamp)
@@ -169,13 +131,14 @@ class Connector:
                             import_from_date = datetime.utcfromtimestamp(
                                 last_run
                             ).strftime("%Y-%m-%d %H:%M")
-                        elif self.threatmatch_import_from_date is not None:
-                            import_from_date = self.threatmatch_import_from_date
+                        elif self.config.threatmatch.import_from_date is not None:
+                            import_from_date = self.config.threatmatch.import_from_date
 
                         headers = {"Authorization": "Bearer " + token}
-                        if self.threatmatch_import_profiles:
+                        if self.config.threatmatch.import_profiles:
                             r = requests.get(
-                                self.threatmatch_url + "/api/profiles/all",
+                                self.config.threatmatch.url.encoded_string()
+                                + "/api/profiles/all",
                                 headers=headers,
                                 json={
                                     "mode": "compact",
@@ -188,9 +151,10 @@ class Connector:
                             self._process_list(
                                 work_id, token, "profiles", data.get("list")
                             )
-                        if self.threatmatch_import_alerts:
+                        if self.config.threatmatch.import_alerts:
                             r = requests.get(
-                                self.threatmatch_url + "/api/alerts/all",
+                                self.config.threatmatch.url.encoded_string()
+                                + "/api/alerts/all",
                                 headers=headers,
                                 json={
                                     "mode": "compact",
@@ -203,9 +167,10 @@ class Connector:
                             self._process_list(
                                 work_id, token, "alerts", data.get("list")
                             )
-                        if self.threatmatch_import_iocs:
+                        if self.config.threatmatch.import_iocs:
                             response = requests.get(
-                                self.threatmatch_url + "/api/taxii/groups",
+                                self.config.threatmatch.url.encoded_string()
+                                + "/api/taxii/groups",
                                 headers=headers,
                             ).json()
                             all_results_id = response[0]["id"]
@@ -217,7 +182,8 @@ class Connector:
                                 "modifiedAfter": date,
                             }
                             r = requests.get(
-                                self.threatmatch_url + "/api/taxii/objects",
+                                self.config.threatmatch.url.encoded_string()
+                                + "/api/taxii/objects",
                                 headers=headers,
                                 params=params,
                             )
@@ -232,7 +198,8 @@ class Connector:
                             while more:
                                 params["modifiedAfter"] = date
                                 r = requests.get(
-                                    self.threatmatch_url + "/api/taxii/objects",
+                                    self.config.threatmatch.url.encoded_string()
+                                    + "/api/taxii/objects",
                                     headers=headers,
                                     params=params,
                                 )
