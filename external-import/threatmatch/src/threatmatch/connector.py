@@ -93,145 +93,138 @@ class Connector:
                 final_bundle_json = json.dumps(final_bundle)
                 self.helper.send_stix2_bundle(final_bundle_json, work_id=work_id)
 
+    def _process_data(self):
+        # Get the current timestamp and check
+        timestamp = int(time.time())
+        current_state = self.helper.get_state()
+        if current_state is not None and "last_run" in current_state:
+            last_run = current_state["last_run"]
+            self.helper.connector_logger.info(
+                "Connector last run: "
+                + datetime.utcfromtimestamp(last_run).strftime("%Y-%m-%d %H:%M:%S")
+            )
+        else:
+            last_run = None
+            self.helper.connector_logger.info("Connector has never run")
+        # If the last_run is more than interval-1 day
+        if last_run is None or (
+            (timestamp - last_run) > ((int(self.config.threatmatch.interval) - 1) * 60)
+        ):
+            self.helper.connector_logger.info("Connector will run!")
+            now = datetime.utcfromtimestamp(timestamp)
+            friendly_name = "ThreatMatch run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, friendly_name
+            )
+            try:
+                token = self._get_token()
+                import_from_date = "2010-01-01 00:00"
+                if last_run is not None:
+                    import_from_date = datetime.utcfromtimestamp(last_run).strftime(
+                        "%Y-%m-%d %H:%M"
+                    )
+                elif self.config.threatmatch.import_from_date is not None:
+                    import_from_date = self.config.threatmatch.import_from_date
+
+                headers = {"Authorization": "Bearer " + token}
+                if self.config.threatmatch.import_profiles:
+                    r = requests.get(
+                        self.config.threatmatch.url.encoded_string()
+                        + "/api/profiles/all",
+                        headers=headers,
+                        json={
+                            "mode": "compact",
+                            "date_since": import_from_date,
+                        },
+                    )
+                    if r.status_code != 200:
+                        self.helper.connector_logger.error(str(r.text))
+                    data = r.json()
+                    self._process_list(work_id, token, "profiles", data.get("list"))
+                if self.config.threatmatch.import_alerts:
+                    r = requests.get(
+                        self.config.threatmatch.url.encoded_string()
+                        + "/api/alerts/all",
+                        headers=headers,
+                        json={
+                            "mode": "compact",
+                            "date_since": import_from_date,
+                        },
+                    )
+                    if r.status_code != 200:
+                        self.helper.connector_logger.error(str(r.text))
+                    data = r.json()
+                    self._process_list(work_id, token, "alerts", data.get("list"))
+                if self.config.threatmatch.import_iocs:
+                    response = requests.get(
+                        self.config.threatmatch.url.encoded_string()
+                        + "/api/taxii/groups",
+                        headers=headers,
+                    ).json()
+                    all_results_id = response[0]["id"]
+                    date = datetime.strptime(import_from_date, "%Y-%m-%d %H:%M")
+                    date = date.isoformat(timespec="milliseconds") + "Z"
+                    params = {
+                        "groupId": all_results_id,
+                        "stixTypeName": "indicator",
+                        "modifiedAfter": date,
+                    }
+                    r = requests.get(
+                        self.config.threatmatch.url.encoded_string()
+                        + "/api/taxii/objects",
+                        headers=headers,
+                        params=params,
+                    )
+                    if r.status_code != 200:
+                        self.helper.connector_logger.error(str(r.text))
+                    more = r.json()["more"]
+                    if not more:
+                        data = r.json()["objects"]
+                    else:
+                        data = []
+                    # This bit is necessary to load all the indicators to upload by checking by date
+                    while more:
+                        params["modifiedAfter"] = date
+                        r = requests.get(
+                            self.config.threatmatch.url.encoded_string()
+                            + "/api/taxii/objects",
+                            headers=headers,
+                            params=params,
+                        )
+                        if r.status_code != 200:
+                            self.helper.connector_logger.error(str(r.text))
+                        data.extend(r.json().get("objects", []))
+                        date = r.json()["objects"][-1]["modified"]
+                        more = r.json().get("more", False)
+                    self.helper.connector_logger.info(data)
+                    self._process_list(work_id, token, "indicators", data)
+            except Exception as e:
+                self.helper.connector_logger.error(str(e))
+            # Store the current timestamp as a last run
+            message = "Connector successfully run, storing last_run as " + str(
+                timestamp
+            )
+            self.helper.connector_logger.info(message)
+            self.helper.set_state({"last_run": timestamp})
+            self.helper.api.work.to_processed(work_id, message)
+            self.helper.connector_logger.info(
+                "Last_run stored, next run in: "
+                + str(round(self.get_interval() / 60, 2))
+                + " minutes"
+            )
+        else:
+            new_interval = self.get_interval() - (timestamp - last_run)
+            self.helper.connector_logger.info(
+                "Connector will not run, next run in: "
+                + str(round(new_interval / 60 / 60 / 24, 2))
+                + " days"
+            )
+
     def run(self):
         self.helper.connector_logger.info("Fetching ThreatMatch...")
         while True:
             try:
-                # Get the current timestamp and check
-                timestamp = int(time.time())
-                current_state = self.helper.get_state()
-                if current_state is not None and "last_run" in current_state:
-                    last_run = current_state["last_run"]
-                    self.helper.connector_logger.info(
-                        "Connector last run: "
-                        + datetime.utcfromtimestamp(last_run).strftime(
-                            "%Y-%m-%d %H:%M:%S"
-                        )
-                    )
-                else:
-                    last_run = None
-                    self.helper.connector_logger.info("Connector has never run")
-                # If the last_run is more than interval-1 day
-                if last_run is None or (
-                    (timestamp - last_run)
-                    > ((int(self.config.threatmatch.interval) - 1) * 60)
-                ):
-                    self.helper.connector_logger.info("Connector will run!")
-                    now = datetime.utcfromtimestamp(timestamp)
-                    friendly_name = "ThreatMatch run @ " + now.strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    )
-                    work_id = self.helper.api.work.initiate_work(
-                        self.helper.connect_id, friendly_name
-                    )
-                    try:
-                        token = self._get_token()
-                        import_from_date = "2010-01-01 00:00"
-                        if last_run is not None:
-                            import_from_date = datetime.utcfromtimestamp(
-                                last_run
-                            ).strftime("%Y-%m-%d %H:%M")
-                        elif self.config.threatmatch.import_from_date is not None:
-                            import_from_date = self.config.threatmatch.import_from_date
-
-                        headers = {"Authorization": "Bearer " + token}
-                        if self.config.threatmatch.import_profiles:
-                            r = requests.get(
-                                self.config.threatmatch.url.encoded_string()
-                                + "/api/profiles/all",
-                                headers=headers,
-                                json={
-                                    "mode": "compact",
-                                    "date_since": import_from_date,
-                                },
-                            )
-                            if r.status_code != 200:
-                                self.helper.connector_logger.error(str(r.text))
-                            data = r.json()
-                            self._process_list(
-                                work_id, token, "profiles", data.get("list")
-                            )
-                        if self.config.threatmatch.import_alerts:
-                            r = requests.get(
-                                self.config.threatmatch.url.encoded_string()
-                                + "/api/alerts/all",
-                                headers=headers,
-                                json={
-                                    "mode": "compact",
-                                    "date_since": import_from_date,
-                                },
-                            )
-                            if r.status_code != 200:
-                                self.helper.connector_logger.error(str(r.text))
-                            data = r.json()
-                            self._process_list(
-                                work_id, token, "alerts", data.get("list")
-                            )
-                        if self.config.threatmatch.import_iocs:
-                            response = requests.get(
-                                self.config.threatmatch.url.encoded_string()
-                                + "/api/taxii/groups",
-                                headers=headers,
-                            ).json()
-                            all_results_id = response[0]["id"]
-                            date = datetime.strptime(import_from_date, "%Y-%m-%d %H:%M")
-                            date = date.isoformat(timespec="milliseconds") + "Z"
-                            params = {
-                                "groupId": all_results_id,
-                                "stixTypeName": "indicator",
-                                "modifiedAfter": date,
-                            }
-                            r = requests.get(
-                                self.config.threatmatch.url.encoded_string()
-                                + "/api/taxii/objects",
-                                headers=headers,
-                                params=params,
-                            )
-                            if r.status_code != 200:
-                                self.helper.connector_logger.error(str(r.text))
-                            more = r.json()["more"]
-                            if not more:
-                                data = r.json()["objects"]
-                            else:
-                                data = []
-                            # This bit is necessary to load all the indicators to upload by checking by date
-                            while more:
-                                params["modifiedAfter"] = date
-                                r = requests.get(
-                                    self.config.threatmatch.url.encoded_string()
-                                    + "/api/taxii/objects",
-                                    headers=headers,
-                                    params=params,
-                                )
-                                if r.status_code != 200:
-                                    self.helper.connector_logger.error(str(r.text))
-                                data.extend(r.json().get("objects", []))
-                                date = r.json()["objects"][-1]["modified"]
-                                more = r.json().get("more", False)
-                            self.helper.connector_logger.info(data)
-                            self._process_list(work_id, token, "indicators", data)
-                    except Exception as e:
-                        self.helper.connector_logger.error(str(e))
-                    # Store the current timestamp as a last run
-                    message = "Connector successfully run, storing last_run as " + str(
-                        timestamp
-                    )
-                    self.helper.connector_logger.info(message)
-                    self.helper.set_state({"last_run": timestamp})
-                    self.helper.api.work.to_processed(work_id, message)
-                    self.helper.connector_logger.info(
-                        "Last_run stored, next run in: "
-                        + str(round(self.get_interval() / 60, 2))
-                        + " minutes"
-                    )
-                else:
-                    new_interval = self.get_interval() - (timestamp - last_run)
-                    self.helper.connector_logger.info(
-                        "Connector will not run, next run in: "
-                        + str(round(new_interval / 60 / 60 / 24, 2))
-                        + " days"
-                    )
-
+                self._process_data()
             except (KeyboardInterrupt, SystemExit):
                 self.helper.connector_logger.info("Connector stop")
                 sys.exit(0)
