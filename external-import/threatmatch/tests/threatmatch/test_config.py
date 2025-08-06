@@ -1,3 +1,4 @@
+import datetime
 import os
 from pathlib import Path
 from typing import Any
@@ -20,12 +21,12 @@ def test_config() -> None:
     assert config["connector"]["name"] == "ThreatMatch"
     assert config["connector"]["scope"] == ["threatmatch"]
     assert config["connector"]["log_level"] == "info"
+    assert config["connector"]["duration_period"] == datetime.timedelta(days=1)
 
-    assert len(config["threatmatch"]) == 8
+    assert len(config["threatmatch"]) == 7
     assert config["threatmatch"]["url"] == HttpUrl("https://test-threatmatch-url")
     assert config["threatmatch"]["client_id"] == "threatmatch-client-id"
     assert config["threatmatch"]["client_secret"] == "threatmatch-client-secret"
-    assert config["threatmatch"]["interval"] == 1
     assert config["threatmatch"]["import_from_date"] == "2025-01-01 00:00"
     assert config["threatmatch"]["import_profiles"] is True
     assert config["threatmatch"]["import_alerts"] is True

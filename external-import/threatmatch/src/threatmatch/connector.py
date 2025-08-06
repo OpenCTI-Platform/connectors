@@ -21,7 +21,7 @@ class Connector:
         )
 
     def get_interval(self):
-        return int(self.config.threatmatch.interval) * 60
+        return int(self.config.connector.duration_period.total_seconds())
 
     def next_run(self, seconds):
         return
@@ -108,7 +108,11 @@ class Connector:
             self.helper.connector_logger.info("Connector has never run")
         # If the last_run is more than interval-1 day
         if last_run is None or (
-            (timestamp - last_run) > ((int(self.config.threatmatch.interval) - 1) * 60)
+            (timestamp - last_run)
+            > (
+                (int(self.config.connector.duration_period.total_seconds() / 60) - 1)
+                * 60
+            )
         ):
             self.helper.connector_logger.info("Connector will run!")
             now = datetime.utcfromtimestamp(timestamp)
@@ -231,8 +235,7 @@ class Connector:
 
     def run(self):
         self.helper.connector_logger.info("Fetching ThreatMatch...")
-        self.helper.schedule_unit(
+        self.helper.schedule_process(
             message_callback=self._process,
-            duration_period=self.config.threatmatch.interval,
-            time_unit=self.helper.TimeUnit.MINUTES,
+            duration_period=self.config.connector.duration_period.total_seconds(),
         )

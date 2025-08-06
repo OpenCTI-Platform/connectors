@@ -17,7 +17,7 @@ def test_connector_run(mocked_helper: MockerFixture) -> None:
         [call("Fetching ThreatMatch...")]
     )
 
-    assert mocked_helper.schedule_unit.call_count == 1
+    assert mocked_helper.schedule_process.call_count == 1
 
 
 @freezegun.freeze_time("2025-04-17T15:24:00Z")
@@ -37,6 +37,6 @@ def test_connector_process(mocked_helper: MockerFixture) -> None:
             call("Connector has never run"),
             call("Connector will run!"),
             call("Connector successfully run, storing last_run as 1744903440"),
-            call("Last_run stored, next run in: 1.0 minutes"),
+            call("Last_run stored, next run in: 1440.0 minutes"),
         ]
     )

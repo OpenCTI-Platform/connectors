@@ -1,8 +1,10 @@
+import datetime
 import os
+import warnings
 from pathlib import Path
 from typing import Annotated, Any
 
-from pydantic import BeforeValidator, Field, HttpUrl, PlainSerializer
+from pydantic import BeforeValidator, Field, HttpUrl, PlainSerializer, model_validator
 from pydantic_core.core_schema import SerializationInfo
 from pydantic_settings import (
     BaseSettings,
@@ -54,6 +56,7 @@ class _ConnectorConfig(_BaseSettings):
     type: str = "EXTERNAL_IMPORT"
     scope: ListFromString = Field(default=["threatmatch"])
     log_level: str = Field(default="error")
+    duration_period: datetime.timedelta = Field(default=datetime.timedelta(days=1))
 
 
 class _Threatmatch(_BaseSettings):
@@ -61,7 +64,6 @@ class _Threatmatch(_BaseSettings):
     client_secret: str
 
     url: HttpUrl = Field(default=HttpUrl("https://eu.threatmatch.com"))
-    interval: int = Field(default=5)
     import_from_date: str = Field(default="2025-01-01 00:00")
     import_profiles: bool = Field(default=True)
     import_alerts: bool = Field(default=True)
@@ -111,3 +113,15 @@ class ConnectorSettings(_BaseSettings):
 
     def model_dump_pycti(self) -> dict[str, Any]:
         return self.model_dump(mode="json", context={"mode": "pycti"})
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_deprecated_interval(cls, data: dict) -> dict:
+        if interval := data.get("threatmatch", {}).pop("interval", None):
+            warnings.warn(
+                "Env var 'THREATMATCH_INTERVAL' is deprecated. Use 'CONNECTOR_DURATION_PERIOD' instead."
+            )
+            data["connector"]["duration_period"] = datetime.timedelta(
+                minutes=int(interval)
+            )
+        return data

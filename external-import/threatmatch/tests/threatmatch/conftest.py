@@ -20,12 +20,12 @@ def fixture_config_dict() -> dict[str, Any]:
             "name": "ThreatMatch",
             "scope": "threatmatch",
             "log_level": "info",
+            "duration_period": "P1D",
         },
         "threatmatch": {
             "url": "https://test-threatmatch-url/",
             "client_id": "threatmatch-client-id",
             "client_secret": "threatmatch-client-secret",
-            "interval": 1,
             "import_from_date": "2025-01-01 00:00",
             "import_profiles": True,
             "import_alerts": True,
