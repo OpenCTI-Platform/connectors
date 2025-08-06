@@ -1,10 +1,12 @@
 import json
 import re
 import sys
+from collections import OrderedDict
 from datetime import datetime
+from typing import Any
 
 import stix2
-from pycti import OpenCTIConnectorHelper
+from pycti import CustomObjectCaseIncident, OpenCTIConnectorHelper
 
 from .client_api import ConnectorClient
 from .config_variables import ConfigConnector
@@ -115,7 +117,8 @@ class MicrosoftSentinelIncidentsConnector:
         for alert in alerts:
             # Create Stix Incident
             stix_incident = self.converter_to_stix.create_incident(alert)
-            stix_objects.append(stix_incident)
+            if stix_incident:
+                stix_objects.append(stix_incident)
 
             for technique in json.loads(
                 alert.get("Techniques", "[]")
@@ -357,6 +360,44 @@ class MicrosoftSentinelIncidentsConnector:
 
         return stix_objects
 
+    def _merge_case_incidents(
+        self, case_incidents_stix_objects: list[list[dict[str, Any]]]
+    ) -> list[object]:
+        stix_objects_per_case_incident_id = OrderedDict()
+        for case_incident_stix_objects in case_incidents_stix_objects:
+            # Last element is always the case incident
+            case_incident = case_incident_stix_objects[-1]
+
+            if (
+                case_incident["id"] in stix_objects_per_case_incident_id
+                and "object_refs" not in case_incident
+            ):
+                # If the case incident already exists and has no object_refs,
+                # we merge the changed properties with the existing ones
+                stix_objects_per_case_incident_id[case_incident["id"]][-1] = (
+                    CustomObjectCaseIncident(
+                        **{
+                            **stix_objects_per_case_incident_id[case_incident["id"]][
+                                -1
+                            ],
+                            **case_incident,
+                        }
+                    )
+                )
+
+            else:
+                # Add or Replace the case incident and all related objects
+                stix_objects_per_case_incident_id[case_incident["id"]] = (
+                    case_incident_stix_objects
+                )
+
+        # Return flattened and ordered list of STIX objects
+        return [
+            stix_object
+            for case_incident_stix_objects in stix_objects_per_case_incident_id.values()
+            for stix_object in case_incident_stix_objects
+        ]
+
     def process_message(self):
         """
         Connector main process to collect intelligence
@@ -388,13 +429,14 @@ class MicrosoftSentinelIncidentsConnector:
             self.client.set_oauth_token()
 
             # Get incidents
-            stix_objects = []
+            case_incidents_stix_objects = []
             incidents = self.client.get_incidents(last_incident_timestamp)
             for incident in incidents:
-                incident_stix_objects = self._extract_intelligence(
-                    last_incident_timestamp, incident
+                # Each element represent a list of the case incident related STIX objects.
+                # The last element of each sub lists is always the case incident itself.
+                case_incidents_stix_objects.append(
+                    self._extract_intelligence(last_incident_timestamp, incident)
                 )
-                stix_objects.extend(incident_stix_objects)
                 last_incident_timestamp = format_date(incident["LastModifiedTime"])
 
             if not incidents:
@@ -409,19 +451,20 @@ class MicrosoftSentinelIncidentsConnector:
                 self.helper.connect_id, self.helper.connect_name
             )
 
-            if stix_objects:
-                # Add author and default TLP marking for consistent bundle
-                stix_objects.append(self.converter_to_stix.author)
-                stix_objects.append(self.tlp_marking)
+            # Add author and default TLP marking for consistent bundle
+            stix_objects = [
+                self.converter_to_stix.author,
+                self.tlp_marking,
+            ] + self._merge_case_incidents(case_incidents_stix_objects)
 
-                stix_bundle = self.helper.stix2_create_bundle(stix_objects)
-                self.helper.send_stix2_bundle(
-                    stix_bundle,
-                    work_id=work_id,
-                    cleanup_inconsistent_bundle=True,
-                )
+            stix_bundle = self.helper.stix2_create_bundle(stix_objects)
+            self.helper.send_stix2_bundle(
+                stix_bundle,
+                work_id=work_id,
+                cleanup_inconsistent_bundle=True,
+            )
 
-                self._set_last_incident_date(last_incident_timestamp)
+            self._set_last_incident_date(last_incident_timestamp)
 
             message = (
                 f"{self.helper.connect_name} connector successfully run, storing last_incident_timestamp as "
