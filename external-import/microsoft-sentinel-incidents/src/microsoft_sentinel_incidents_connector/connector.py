@@ -115,7 +115,8 @@ class MicrosoftSentinelIncidentsConnector:
         for alert in alerts:
             # Create Stix Incident
             stix_incident = self.converter_to_stix.create_incident(alert)
-            stix_objects.append(stix_incident)
+            if stix_incident:
+                stix_objects.append(stix_incident)
 
             for technique in json.loads(
                 alert.get("Techniques", "[]")
@@ -350,10 +351,11 @@ class MicrosoftSentinelIncidentsConnector:
                             )
                             stix_objects.append(stix_relationship_malware)
 
-        stix_case = self.converter_to_stix.create_custom_case_incident(
-            incident, stix_objects
-        )
-        stix_objects.append(stix_case)
+        if stix_objects:
+            stix_case = self.converter_to_stix.create_custom_case_incident(
+                incident, stix_objects
+            )
+            stix_objects.append(stix_case)
 
         return stix_objects
 
