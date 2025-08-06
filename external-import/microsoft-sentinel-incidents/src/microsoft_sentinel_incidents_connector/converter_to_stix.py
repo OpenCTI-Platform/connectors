@@ -85,7 +85,7 @@ class ConverterToStix:
                 return "  \n"
 
         incident_name = alert.get("DisplayName")
-        incident_created_at = format_datetime(alert.get("TimeGenerated"))
+        incident_created_at = format_datetime(alert.get("StartTime"))
         incident_modified_at = format_datetime(alert.get("EndTime"))
         incident_labels = [alert.get("AlertType")] if alert.get("AlertType") else None
         incident_description = (
