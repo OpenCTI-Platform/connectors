@@ -1,19 +1,29 @@
-FROM python:3.12-alpine
-ENV CONNECTOR_TYPE=INTERNAL_IMPORT_FILE
+# syntax=docker/dockerfile:1
+
+ARG PYTHON_VERSION=3.12.5
+FROM python:${PYTHON_VERSION}-alpine AS base
+
+# Prevents Python from writing pyc files.
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Keeps Python from buffering stdout and stderr to avoid situations where
+# the application crashes without emitting any logs due to buffering.
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+RUN apk add --no-cache libmagic && pip install --no-cache-dir pycti==6.7.8
+
+# Install dependencies
+# Avoid an image layer for those files.
+RUN --mount=type=bind,source=src/requirements.txt,target=requirements.txt \
+    python -m pip install --no-cache-dir -r requirements.txt
 
 # Copy the connector
-COPY src /opt/opencti-connector-import-document
-
-# Install Python modules
-# hadolint ignore=DL3003
-RUN apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev libffi-dev openssl-dev rust cargo && \
-    cd /opt/opencti-connector-import-document && \
-    pip3 install --no-cache-dir -r requirements.txt && \
-    apk del git build-base
-
-# Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh && chmod -R 0777 /opt/opencti-connector-import-document
-WORKDIR /opt/opencti-connector-import-document
+COPY --chmod=777 src .
 ENV HOME=/opt/opencti-connector-import-document
-ENTRYPOINT ["/entrypoint.sh"]
+
+# Execute the connector
+CMD [ "python", "main.py" ]
+
+ENV CONNECTOR_TYPE=INTERNAL_IMPORT_FILE
