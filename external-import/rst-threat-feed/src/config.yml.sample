@@ -31,3 +31,7 @@ rst-threat-feed:
   min_score_detection_hash: 45
   only_new: true
   only_attributed: false
+  # retry configuration for connection issues
+  max_retries: 3
+  retry_delay: 10
+  retry_backoff_multiplier: 2.0 # Delays: 10, 20, 40 = 70 seconds total

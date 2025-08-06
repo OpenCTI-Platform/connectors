@@ -87,6 +87,14 @@ class RSTThreatFeed:
                 default=True,
             )
         )
+
+        # Retry configuration for connection issues
+        self._max_retries = int(self.get_config("max_retries", config, 3))
+        self._retry_delay = int(self.get_config("retry_delay", config, 5))
+        self._retry_backoff_multiplier = float(
+            self.get_config("retry_backoff_multiplier", config, 2.0)
+        )
+
         if (
             self._downloader_config["latest"]
             not in self._downloader_config["time_range"]
@@ -172,13 +180,17 @@ class RSTThreatFeed:
             time.sleep(60)
 
     def _process_feed(self, feed_type):
-        downloader = FeedFetch.Downloader(self._downloader_config)
-        result = downloader.get_feed(feed_type)
-        if result["status"] == "ok":
-            stix_bundle = self._create_stix_bundle(result["message"], feed_type)
-            self._batch_send(stix_bundle, feed_type)
-        else:
-            raise Exception(result)
+        try:
+            downloader = FeedFetch.Downloader(self._downloader_config)
+            result = downloader.get_feed(feed_type)
+            if result["status"] == "ok":
+                stix_bundle = self._create_stix_bundle(result["message"], feed_type)
+                self._batch_send(stix_bundle, feed_type)
+            else:
+                self.helper.log_error(f"Failed to download {feed_type} feed: {result}")
+        except Exception as ex:
+            self.helper.log_error(f"Error processing {feed_type} feed: {ex}")
+            # Don't raise the exception, just log and continue with other feeds
 
     def _create_stix_bundle(self, filepath, feed_type):
         self.helper.log_info(f"Parsing IOCs from {filepath}")
@@ -394,29 +406,54 @@ class RSTThreatFeed:
         now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
         friendly_name = f"Run for {feed_type} @ {now.strftime('%Y-%m-%d %H:%M:%S')}"
         self.helper.log_debug(f"Start uploading of the objects: {len(stix_bundle)}")
-        try:
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
-            )
 
-            bundle = stix2.v21.Bundle(objects=stix_bundle, allow_custom=True)
-            self.helper.send_stix2_bundle(
-                bundle=bundle.serialize(),
-                update=self.update_existing_data,
-                work_id=work_id,
-            )
-        except Exception as ex:
-            error_message = f"Communication issue with opencti {ex}"
-            self.helper.log_error(error_message)
-            raise ConnectionError(error_message) from ex
+        max_retries = self._max_retries
+        retry_delay = self._retry_delay  # seconds
 
-        # Finish the work
-        self.helper.log_info(
-            f"Connector ran successfully, saving last_run as {str(timestamp)}"
-        )
-        message = f"Last_run stored, next run in: {str(self.get_interval())} seconds"
-        self.helper.api.work.to_processed(work_id, message)
-        self.helper.log_debug("End of the batch upload")
+        for attempt in range(max_retries):
+            try:
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id, friendly_name
+                )
+
+                bundle = stix2.v21.Bundle(objects=stix_bundle, allow_custom=True)
+                self.helper.send_stix2_bundle(
+                    bundle=bundle.serialize(),
+                    update=self.update_existing_data,
+                    work_id=work_id,
+                )
+
+                # Finish the work
+                self.helper.log_info(
+                    f"Connector ran successfully, saving last_run as {str(timestamp)}"
+                )
+                message = (
+                    f"Last_run stored, next run in: {str(self.get_interval())} seconds"
+                )
+                self.helper.api.work.to_processed(work_id, message)
+                self.helper.log_debug("End of the batch upload")
+                return  # Success, exit retry loop
+
+            except (ConnectionError, OSError, TimeoutError) as ex:
+                error_message = f"Communication issue with opencti (attempt {attempt + 1}/{max_retries}): {ex}"
+                self.helper.log_error(error_message)
+
+                if attempt < max_retries - 1:
+                    self.helper.log_info(f"Retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                    retry_delay *= self._retry_backoff_multiplier  # Exponential backoff
+                else:
+                    self.helper.log_error(
+                        f"Failed to upload {feed_type} feed after {max_retries} attempts. Skipping this feed."
+                    )
+                    # Don't raise the exception, just log and continue
+                    return
+
+            except Exception as ex:
+                error_message = f"Unexpected error during upload for {feed_type}: {ex}"
+                self.helper.log_error(error_message)
+                # For unexpected errors, we still raise to maintain existing behavior
+                raise ConnectionError(error_message) from ex
 
 
 if __name__ == "__main__":
