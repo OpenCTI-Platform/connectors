@@ -89,9 +89,9 @@ class Connector:
                     del stix_object["object_refs"]
                     pass
                 final_objects.append(stix_object)
-                final_bundle = {"type": "bundle", "objects": final_objects}
-                final_bundle_json = json.dumps(final_bundle)
-                self.helper.send_stix2_bundle(final_bundle_json, work_id=work_id)
+            final_bundle = {"type": "bundle", "objects": final_objects}
+            final_bundle_json = json.dumps(final_bundle)
+            self.helper.send_stix2_bundle(final_bundle_json, work_id=work_id)
 
     def _process_data(self):
         # Get the current timestamp and check
