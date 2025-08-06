@@ -124,9 +124,7 @@ class TheHive:
             self.severity_mapping[int(mapping.split(":")[0])] = mapping.split(":")[1]
 
         self.thehive_api = TheHiveApi(
-            self.thehive_url,
-            self.thehive_api_key,
-            verify=self.thehive_check_ssl
+            self.thehive_url, self.thehive_api_key, verify=self.thehive_check_ssl
         )
 
     def construct_query(self, type, last_date):
