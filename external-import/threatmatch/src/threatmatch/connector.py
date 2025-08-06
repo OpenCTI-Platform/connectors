@@ -220,20 +220,19 @@ class Connector:
                 + " days"
             )
 
+    def _process(self):
+        try:
+            self._process_data()
+        except (KeyboardInterrupt, SystemExit):
+            self.helper.connector_logger.info("Connector stop")
+            sys.exit(0)
+        except Exception as e:
+            self.helper.connector_logger.error(str(e))
+
     def run(self):
         self.helper.connector_logger.info("Fetching ThreatMatch...")
-        while True:
-            try:
-                self._process_data()
-            except (KeyboardInterrupt, SystemExit):
-                self.helper.connector_logger.info("Connector stop")
-                sys.exit(0)
-
-            except Exception as e:
-                self.helper.connector_logger.error(str(e))
-
-            if self.helper.connect_run_and_terminate:
-                self.helper.connector_logger.info("Connector stop")
-                sys.exit(0)
-
-            time.sleep(60)
+        self.helper.schedule_unit(
+            message_callback=self._process,
+            duration_period=self.config.threatmatch.interval,
+            time_unit=self.helper.TimeUnit.MINUTES,
+        )
