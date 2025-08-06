@@ -60,6 +60,10 @@ class BaseImporter(ABC):
         fmt_msg = msg.format(*args)
         self.helper.log_error(fmt_msg)
 
+    def _warning(self, msg: str, *args: Any) -> None:
+        fmt_msg = msg.format(*args)
+        self.helper.log_warning(fmt_msg)
+
     def _source_name(self) -> str:
         return self.author["name"]
 
