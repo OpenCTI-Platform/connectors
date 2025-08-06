@@ -58,11 +58,6 @@ class Connector:
             False,
             True,
         )
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-        )
         self.identity = self.helper.api.identity.create(
             type="Organization",
             name="Security Alliance",
@@ -135,11 +130,7 @@ class Connector:
                 final_objects.append(stix_object)
                 final_bundle = {"type": "bundle", "objects": final_objects}
                 final_bundle_json = json.dumps(final_bundle)
-                self.helper.send_stix2_bundle(
-                    final_bundle_json,
-                    work_id=work_id,
-                    update=self.update_existing_data,
-                )
+                self.helper.send_stix2_bundle(final_bundle_json, work_id=work_id)
 
     def run(self):
         self.helper.log_info("Fetching ThreatMatch...")
