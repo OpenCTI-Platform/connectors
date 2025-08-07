@@ -48,4 +48,5 @@ def mock_config(mocker: MockerFixture, config_dict: dict[str, Any]) -> None:
 def fixture_mocked_helper(mocker: MockerFixture) -> MockerFixture:
     helper = mocker.patch("main.OpenCTIConnectorHelper", MagicMock())
     helper.get_state.return_value = {}
+    helper.api.work.initiate_work.return_value = "work-id"
     return helper

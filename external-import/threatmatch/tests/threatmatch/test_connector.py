@@ -1,3 +1,5 @@
+import time
+from datetime import UTC, datetime
 from unittest.mock import call
 
 import freezegun
@@ -40,3 +42,28 @@ def test_connector_process(mocked_helper: MockerFixture) -> None:
             call("Last_run stored, next run in: 1440.0 minutes"),
         ]
     )
+
+
+@freezegun.freeze_time("2025-04-17T15:24:00Z")
+@pytest.mark.usefixtures("mock_config", "mocked_helper")
+def test_connector_process_data_last_run(
+    mocker: MockerFixture, mocked_helper: MockerFixture
+) -> None:
+    now = datetime.fromisoformat("2025-04-17T15:24:00Z")
+    yesterday = datetime.fromisoformat("2025-04-16T15:24:00Z")
+
+    # Only test _process_data method
+    collect_intelligence = mocker.patch.object(Connector, "_collect_intelligence")
+
+    connector = Connector(helper=mocked_helper, config=ConnectorSettings())
+
+    # 1 No last_run in state
+    connector._process_data()
+    collect_intelligence.assert_called_once_with(None, "work-id")
+    mocked_helper.set_state.assert_called_once_with({"last_run": now.timestamp()})
+
+    # 2 last_run in state as timestamp
+    mocked_helper.get_state.return_value = {"last_run": yesterday.timestamp()}
+    connector._process_data()
+    collect_intelligence.assert_called_with(yesterday.timestamp(), "work-id")
+    mocked_helper.set_state.assert_called_with({"last_run": now.timestamp()})
