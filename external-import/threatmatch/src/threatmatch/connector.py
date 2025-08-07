@@ -21,12 +21,6 @@ class Connector:
             description="Security Alliance is a cyber threat intelligence product and services company, formed in 2007.",
         )
 
-    def get_interval(self):
-        return int(self.config.connector.duration_period.total_seconds())
-
-    def next_run(self, seconds):
-        return
-
     def _get_token(self):
         r = requests.post(
             self.config.threatmatch.url.encoded_string()
@@ -223,6 +217,7 @@ class Connector:
 
     def run(self):
         self.helper.connector_logger.info("Connector starting...")
+        self.helper.set_state({})
         self.helper.schedule_process(
             message_callback=self._process,
             duration_period=self.config.connector.duration_period.total_seconds(),
