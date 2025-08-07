@@ -75,6 +75,30 @@ class Connector:
             final_bundle_json = json.dumps(final_bundle)
             self.helper.send_stix2_bundle(final_bundle_json, work_id=work_id)
 
+    def _get_all_content_group_id(self, taxii_groups: list[dict[str, Any]]) -> str:
+        id_by_group = {group["name"]: group["id"] for group in taxii_groups}
+        if all_content_group_id := id_by_group.get("All content"):
+            return all_content_group_id
+        raise ValueError(
+            "No 'All content' group found in TAXII groups, only %s" % id_by_group.keys()
+        )
+
+    def _get_indicators(
+        self,
+        client: ThreatMatchClient,
+        group_id: str,
+        modified_after: str,
+    ) -> dict:
+        data = client.get_taxii_objects(group_id, "indicator", modified_after)
+        indicators = data.get("objects", [])
+        if data.get("more"):
+            return indicators + self._get_indicators(
+                client=client,
+                group_id=group_id,
+                modified_after=indicators[-1]["modified"],
+            )
+        return indicators
+
     def _collect_intelligence(self, last_run: datetime, work_id: str) -> None:
         import_from_date = (
             last_run.strftime("%Y-%m-%d %H:%M")
@@ -87,7 +111,6 @@ class Connector:
             client_id=self.config.threatmatch.client_id,
             client_secret=self.config.threatmatch.client_secret,
         ) as client:
-            headers = {"Authorization": "Bearer " + client.token}
             if self.config.threatmatch.import_profiles:
                 profile_ids = client.get_profile_ids(import_from_date=import_from_date)
                 self._process_list(work_id, client.token, "profiles", profile_ids)
@@ -95,46 +118,17 @@ class Connector:
                 alert_ids = client.get_alert_ids(import_from_date=import_from_date)
                 self._process_list(work_id, client.token, "alerts", alert_ids)
             if self.config.threatmatch.import_iocs:
-                response = requests.get(
-                    self.config.threatmatch.url.encoded_string() + "/api/taxii/groups",
-                    headers=headers,
-                ).json()
-                all_results_id = response[0]["id"]
-                date = datetime.strptime(import_from_date, "%Y-%m-%d %H:%M")
-                date = date.isoformat(timespec="milliseconds") + "Z"
-                params = {
-                    "groupId": all_results_id,
-                    "stixTypeName": "indicator",
-                    "modifiedAfter": date,
-                }
-                r = requests.get(
-                    self.config.threatmatch.url.encoded_string() + "/api/taxii/objects",
-                    headers=headers,
-                    params=params,
+                indicators = self._get_indicators(
+                    client=client,
+                    group_id=self._get_all_content_group_id(client.get_taxii_groups()),
+                    modified_after=(
+                        datetime.strptime(import_from_date, "%Y-%m-%d %H:%M").isoformat(
+                            timespec="milliseconds"
+                        )
+                        + "Z"
+                    ),
                 )
-                if r.status_code != 200:
-                    self.helper.connector_logger.error(str(r.text))
-                more = r.json()["more"]
-                if not more:
-                    data = r.json()["objects"]
-                else:
-                    data = []
-                # This bit is necessary to load all the indicators to upload by checking by date
-                while more:
-                    params["modifiedAfter"] = date
-                    r = requests.get(
-                        self.config.threatmatch.url.encoded_string()
-                        + "/api/taxii/objects",
-                        headers=headers,
-                        params=params,
-                    )
-                    if r.status_code != 200:
-                        self.helper.connector_logger.error(str(r.text))
-                    data.extend(r.json().get("objects", []))
-                    date = r.json()["objects"][-1]["modified"]
-                    more = r.json().get("more", False)
-                self.helper.connector_logger.info(data)
-                self._process_list(work_id, client.token, "indicators", data)
+                self._process_list(work_id, client.token, "indicators", indicators)
 
     @property
     def state(self) -> dict[str, Any]:

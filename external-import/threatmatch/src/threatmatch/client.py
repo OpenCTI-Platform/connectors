@@ -106,6 +106,25 @@ class ThreatMatchClient:
             .get("list", [])
         )
 
+    def get_taxii_groups(self) -> list[dict[str, Any]]:
+        return self._request(
+            method=HTTPMethod.GET,
+            endpoint="/api/taxii/groups",
+        ).json()
+
+    def get_taxii_objects(
+        self, group_id: str, stix_type_name: str, modified_after: str
+    ) -> dict[str, Any]:
+        return self._request(
+            method=HTTPMethod.GET,
+            endpoint="/api/taxii/objects",
+            params={
+                "groupId": group_id,
+                "stixTypeName": stix_type_name,
+                "modifiedAfter": modified_after,
+            },
+        ).json()
+
     def close(self) -> None:
         self.session.close()
 
