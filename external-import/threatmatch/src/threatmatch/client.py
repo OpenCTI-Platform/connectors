@@ -1,4 +1,7 @@
 import time
+from functools import wraps
+from http import HTTPMethod
+from typing import Any, Callable
 
 import requests
 
@@ -36,6 +39,61 @@ class ThreatMatchClient:
     def _ensure_token(self) -> None:
         if not self.token or int(time.time()) > self._token_expires_at:
             self._refresh_token()
+
+    @staticmethod
+    def _with_token_refresh(
+        func: Callable[..., Any],
+    ) -> Callable[..., requests.Response]:
+        """
+        Decorator to handle token refresh on 401 Unauthorized responses.
+        Retries once after refreshing the token.
+        """
+
+        @wraps(func)
+        def wrapper(
+            self: "ThreatMatchClient", *args: Any, **kwargs: Any
+        ) -> requests.Response:
+            self._ensure_token()
+            response = func(self, *args, **kwargs)
+            if response.status_code == 401:
+                self._refresh_token()
+                response = func(self, *args, **kwargs)
+                if response.status_code == 401:  # Check twice to ensure token is valid
+                    raise Exception(
+                        "Unauthorized (401): Check credentials or token validity."
+                    )
+            return response
+
+        return wrapper
+
+    @_with_token_refresh
+    def _request(self, method: str, endpoint: str, **kwargs: Any) -> requests.Response:
+        """
+        Send an HTTP request to the ThreatMatch API with automatic token management.
+
+        Args:
+            method: HTTP verb, e.g., "GET", "POST".
+            endpoint: API endpoint (e.g., "/api/profiles/all").
+            **kwargs: Extra arguments for requests.request.
+
+        Returns:
+            The HTTP response (requests.Response).
+        """
+        url = self.base_url + endpoint
+        headers = kwargs.pop("headers", {})
+        headers["Authorization"] = f"Bearer {self.token}"
+        return self.session.request(method=method, url=url, headers=headers, **kwargs)
+
+    def get_profile_ids(self, import_from_date: str) -> list[int]:
+        return (
+            self._request(
+                method=HTTPMethod.GET,
+                endpoint="/api/profiles/all",
+                json={"mode": "compact", "date_since": import_from_date},
+            )
+            .json()
+            .get("list", [])
+        )
 
     def close(self) -> None:
         self.session.close()
