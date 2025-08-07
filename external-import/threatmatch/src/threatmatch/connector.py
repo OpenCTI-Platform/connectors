@@ -184,10 +184,10 @@ class Connector:
         last_run = self._get_last_run()
 
         self.helper.connector_logger.info("Connector will run!")
-        now = datetime.utcfromtimestamp(timestamp)
-        friendly_name = "ThreatMatch run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
         work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id, friendly_name
+            self.helper.connect_id,
+            "ThreatMatch run @ "
+            + datetime.utcfromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S"),
         )
 
         import_from_date = "2010-01-01 00:00"
