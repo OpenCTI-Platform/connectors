@@ -92,18 +92,8 @@ class Connector:
                 profile_ids = client.get_profile_ids(import_from_date=import_from_date)
                 self._process_list(work_id, client.token, "profiles", profile_ids)
             if self.config.threatmatch.import_alerts:
-                r = requests.get(
-                    self.config.threatmatch.url.encoded_string() + "/api/alerts/all",
-                    headers=headers,
-                    json={
-                        "mode": "compact",
-                        "date_since": import_from_date,
-                    },
-                )
-                if r.status_code != 200:
-                    self.helper.connector_logger.error(str(r.text))
-                data = r.json()
-                self._process_list(work_id, client.token, "alerts", data.get("list"))
+                alert_ids = client.get_alert_ids(import_from_date=import_from_date)
+                self._process_list(work_id, client.token, "alerts", alert_ids)
             if self.config.threatmatch.import_iocs:
                 response = requests.get(
                     self.config.threatmatch.url.encoded_string() + "/api/taxii/groups",

@@ -95,6 +95,17 @@ class ThreatMatchClient:
             .get("list", [])
         )
 
+    def get_alert_ids(self, import_from_date: str) -> list[int]:
+        return (
+            self._request(
+                method=HTTPMethod.GET,
+                endpoint="/api/alerts/all",
+                json={"mode": "compact", "date_since": import_from_date},
+            )
+            .json()
+            .get("list", [])
+        )
+
     def close(self) -> None:
         self.session.close()
 
