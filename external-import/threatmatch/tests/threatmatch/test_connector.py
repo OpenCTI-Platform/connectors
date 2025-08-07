@@ -15,7 +15,7 @@ def test_connector_run(mocked_helper: MockerFixture) -> None:
     connector.run()
     assert connector.helper.connector_logger.info.call_count == 1
     connector.helper.connector_logger.info.assert_has_calls(
-        [call("Fetching ThreatMatch...")]
+        [call("Connector starting...")]
     )
 
     assert mocked_helper.schedule_process.call_count == 1
@@ -36,10 +36,7 @@ def test_connector_process(mocked_helper: MockerFixture) -> None:
     connector.helper.connector_logger.info.assert_has_calls(
         [
             call("Connector last run: never"),
-            call("Connector will run!"),
-            call(
-                "Connector successfully run, storing last_run as 2025-04-17T15:24:00+00:00"
-            ),
+            call("Connector successfully ran"),
         ]
     )
 

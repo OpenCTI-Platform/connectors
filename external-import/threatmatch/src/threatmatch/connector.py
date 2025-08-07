@@ -191,8 +191,6 @@ class Connector:
 
     def _process_data(self):
         last_run = self._get_last_run()
-
-        self.helper.connector_logger.info("Connector will run!")
         work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id,
             "ThreatMatch run @ " + self.start_datetime.isoformat(timespec="seconds"),
@@ -202,21 +200,21 @@ class Connector:
             self._collect_intelligence(last_run, work_id)
         except Exception as e:
             self.helper.connector_logger.error(str(e))
-
-        message = (
-            "Connector successfully run, storing last_run as "
-            + self.start_datetime.isoformat(timespec="seconds")
-        )
-        self.helper.connector_logger.info(message)
         self.helper.set_state(
             {"last_run": self.start_datetime.isoformat(timespec="seconds")}
         )
-        self.helper.api.work.to_processed(work_id, message)
+        self.helper.api.work.to_processed(
+            work_id,
+            "Connector successfully run, storing last_run as "
+            + self.start_datetime.isoformat(timespec="seconds"),
+        )
 
     def _process(self):
         self.start_datetime = datetime.now(tz=UTC)
         try:
+            self.helper.connector_logger.info("Running connector...")
             self._process_data()
+            self.helper.connector_logger.info("Connector successfully ran")
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info("Connector stop")
             sys.exit(0)
@@ -224,7 +222,7 @@ class Connector:
             self.helper.connector_logger.error(str(e))
 
     def run(self):
-        self.helper.connector_logger.info("Fetching ThreatMatch...")
+        self.helper.connector_logger.info("Connector starting...")
         self.helper.schedule_process(
             message_callback=self._process,
             duration_period=self.config.connector.duration_period.total_seconds(),
