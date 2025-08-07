@@ -176,52 +176,36 @@ class Connector:
         else:
             last_run = None
             self.helper.connector_logger.info("Connector has never run")
-        # If the last_run is more than interval-1 day
-        if last_run is None or (
-            (timestamp - last_run)
-            > (
-                (int(self.config.connector.duration_period.total_seconds() / 60) - 1)
-                * 60
-            )
-        ):
-            self.helper.connector_logger.info("Connector will run!")
-            now = datetime.utcfromtimestamp(timestamp)
-            friendly_name = "ThreatMatch run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
-            )
 
-            import_from_date = "2010-01-01 00:00"
-            if last_run is not None:
-                import_from_date = datetime.utcfromtimestamp(last_run).strftime(
-                    "%Y-%m-%d %H:%M"
-                )
-            elif self.config.threatmatch.import_from_date is not None:
-                import_from_date = self.config.threatmatch.import_from_date
+        self.helper.connector_logger.info("Connector will run!")
+        now = datetime.utcfromtimestamp(timestamp)
+        friendly_name = "ThreatMatch run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+        work_id = self.helper.api.work.initiate_work(
+            self.helper.connect_id, friendly_name
+        )
 
-            try:
-                self._collect_intelligence(import_from_date, work_id)
-            except Exception as e:
-                self.helper.connector_logger.error(str(e))
-            # Store the current timestamp as a last run
-            message = "Connector successfully run, storing last_run as " + str(
-                timestamp
+        import_from_date = "2010-01-01 00:00"
+        if last_run is not None:
+            import_from_date = datetime.utcfromtimestamp(last_run).strftime(
+                "%Y-%m-%d %H:%M"
             )
-            self.helper.connector_logger.info(message)
-            self.helper.set_state({"last_run": timestamp})
-            self.helper.api.work.to_processed(work_id, message)
-            self.helper.connector_logger.info(
-                "Last_run stored, next run in: "
-                + str(round(self.get_interval() / 60, 2))
-                + " minutes"
-            )
-        else:
-            new_interval = self.get_interval() - (timestamp - last_run)
-            self.helper.connector_logger.info(
-                "Connector will not run, next run in: "
-                + str(round(new_interval / 60 / 60 / 24, 2))
-                + " days"
-            )
+        elif self.config.threatmatch.import_from_date is not None:
+            import_from_date = self.config.threatmatch.import_from_date
+
+        try:
+            self._collect_intelligence(import_from_date, work_id)
+        except Exception as e:
+            self.helper.connector_logger.error(str(e))
+        # Store the current timestamp as a last run
+        message = "Connector successfully run, storing last_run as " + str(timestamp)
+        self.helper.connector_logger.info(message)
+        self.helper.set_state({"last_run": timestamp})
+        self.helper.api.work.to_processed(work_id, message)
+        self.helper.connector_logger.info(
+            "Last_run stored, next run in: "
+            + str(round(self.get_interval() / 60, 2))
+            + " minutes"
+        )
 
     def _process(self):
         try:
