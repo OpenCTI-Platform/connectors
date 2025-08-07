@@ -2,10 +2,11 @@
 
 set -euo pipefail  # exit on error
 
-CONNECTOR_INFOS_DIRECTORY="__infos__"
-CONNECTOR_INFOS_FILENAME="connector_infos.json"
+CONNECTOR_METADATA_DIRECTORY="__metadata__"
+CONNECTOR_MANIFEST_FILENAME="connector_manifest.json"
 MANAGER_SUPPORTED='"manager_supported": *true'
 VENV_NAME=".temp_venv"
+
 
 activate_venv() {
     # Method to activate isolate venv
@@ -32,51 +33,40 @@ activate_venv() {
     venv_exists=$(find "$1" -name ".temp_venv")
 
     if [ -d "$venv_exists" ]; then
-      echo "✅- Requirements installed for: " "$1"
+      echo "✅ Requirements installed for: " "$1"
     else
-      echo "❌- Requirements not installed for: " "$1"
+      echo "❌ Requirements not installed for: " "$1"
     fi
 }
 
 deactivate_venv() {
     # Method to deactivate venv and remove the folder
-    echo "> Clean Up environment..."
+    echo "> Cleaning up environment..."
     deactivate
     rm -rf "$1"
 }
 
 # Find all parents directory of connector with config loader
 # printf action with the %h format specifier, which prints the directory part (parent directory) of the file path
-connector_directories_path=$(find . -name "$CONNECTOR_INFOS_DIRECTORY" -printf '%h\n')
+connector_directories_path=$(find . -name "$CONNECTOR_METADATA_DIRECTORY" -printf '%h\n')
 
+# ! This script should generate on connector_config_schema.json for one connector ONLY
+# ! Looping over all connectors should be done in the CI job
 # Loop in each connector directory with infos
 for connector_directory_path in $connector_directories_path
 do
   if [ -d "$connector_directory_path" ]; then
-    if grep -q "$MANAGER_SUPPORTED" "$connector_directory_path/$CONNECTOR_INFOS_DIRECTORY/$CONNECTOR_INFOS_FILENAME"; then
+    requirements_file=$(find "$connector_directory_path" -name "requirements.txt")
+    if grep -q "pydantic-settings" "$requirements_file"; then
       (
         activate_venv "$connector_directory_path"
-        generator_path=$(find . -name "generator.py.sample")
-        cp "$generator_path" "$connector_directory_path/generator_tmp.py"
-        python "$connector_directory_path/generator_tmp.py"
-        rm "$connector_directory_path/generator_tmp.py"
+        generator_path=$(find . -name "generate_connector_config_json_schema.py.sample")
+        cp "$generator_path" "$connector_directory_path/generate_connector_config_json_schema_tmp.py"
+        python "$connector_directory_path/generate_connector_config_json_schema_tmp.py"
+        rm "$connector_directory_path/generate_connector_config_json_schema_tmp.py"
         deactivate_venv "$connector_directory_path/$VENV_NAME"
       ) &
     fi
   fi
 done
 wait
-
-generate_manifest=$(find . -name "generate_manifest.py")
-echo -e "\nGenerating manifest file..."
-python "$generate_manifest"
-
-# Ensure manifest is created
-manifest_exists=$(find "$(pwd)" -name "manifest.json")
-
-if [ -f "$manifest_exists" ]; then
-  echo "✅- Manifest well created !"
-else
-  echo "❌- Manifest not created !"
-fi
-
