@@ -120,15 +120,17 @@ class Connector:
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
             )
+
+            import_from_date = "2010-01-01 00:00"
+            if last_run is not None:
+                import_from_date = datetime.utcfromtimestamp(last_run).strftime(
+                    "%Y-%m-%d %H:%M"
+                )
+            elif self.config.threatmatch.import_from_date is not None:
+                import_from_date = self.config.threatmatch.import_from_date
+
             try:
                 token = self._get_token()
-                import_from_date = "2010-01-01 00:00"
-                if last_run is not None:
-                    import_from_date = datetime.utcfromtimestamp(last_run).strftime(
-                        "%Y-%m-%d %H:%M"
-                    )
-                elif self.config.threatmatch.import_from_date is not None:
-                    import_from_date = self.config.threatmatch.import_from_date
 
                 headers = {"Authorization": "Bearer " + token}
                 if self.config.threatmatch.import_profiles:
