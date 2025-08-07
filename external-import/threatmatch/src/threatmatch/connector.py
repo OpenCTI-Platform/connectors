@@ -2,7 +2,7 @@ import builtins
 import json
 import sys
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import requests
@@ -97,7 +97,7 @@ class Connector:
     def _collect_intelligence(self, last_run: int, work_id: str) -> None:
         import_from_date = "2010-01-01 00:00"
         if last_run is not None:
-            import_from_date = datetime.utcfromtimestamp(last_run).strftime(
+            import_from_date = datetime.fromtimestamp(last_run, tz=UTC).strftime(
                 "%Y-%m-%d %H:%M"
             )
         elif self.config.threatmatch.import_from_date is not None:
@@ -180,7 +180,7 @@ class Connector:
         if last_run := self.state.get("last_run"):
             self.helper.connector_logger.info(
                 "Connector last run: "
-                + datetime.utcfromtimestamp(last_run).strftime("%Y-%m-%d %H:%M:%S")
+                + datetime.fromtimestamp(last_run, tz=UTC).strftime("%Y-%m-%d %H:%M:%S")
             )
         else:
             self.helper.connector_logger.info("Connector has never run")
@@ -195,7 +195,7 @@ class Connector:
         work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id,
             "ThreatMatch run @ "
-            + datetime.utcfromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S"),
+            + datetime.fromtimestamp(timestamp, tz=UTC).strftime("%Y-%m-%d %H:%M:%S"),
         )
 
         try:
