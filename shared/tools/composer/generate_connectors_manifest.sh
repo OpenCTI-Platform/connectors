@@ -2,8 +2,8 @@
 
 set -euo pipefail  # exit on error
 
-CONNECTOR_INFOS_DIRECTORY="__infos__"
-CONNECTOR_INFOS_FILENAME="connector_infos.json"
+CONNECTOR_METADATA_DIRECTORY="__metadata__"
+CONNECTOR_MANIFEST_FILENAME="connector_manifest.json"
 MANAGER_SUPPORTED='"manager_supported": *true'
 VENV_NAME=".temp_venv"
 
@@ -47,19 +47,19 @@ deactivate_venv() {
 
 # Find all parents directory of connector with config loader
 # printf action with the %h format specifier, which prints the directory part (parent directory) of the file path
-connector_directories_path=$(find . -name "$CONNECTOR_INFOS_DIRECTORY" -printf '%h\n')
+connector_directories_path=$(find . -name "$CONNECTOR_METADATA_DIRECTORY" -printf '%h\n')
 
 # Loop in each connector directory with infos
 for connector_directory_path in $connector_directories_path
 do
   if [ -d "$connector_directory_path" ]; then
-    if grep -q "$MANAGER_SUPPORTED" "$connector_directory_path/$CONNECTOR_INFOS_DIRECTORY/$CONNECTOR_INFOS_FILENAME"; then
+    if grep -q "$MANAGER_SUPPORTED" "$connector_directory_path/$CONNECTOR_METADATA_DIRECTORY/$CONNECTOR_MANIFEST_FILENAME"; then
       (
         activate_venv "$connector_directory_path"
-        generator_path=$(find . -name "generator.py.sample")
-        cp "$generator_path" "$connector_directory_path/generator_tmp.py"
-        python "$connector_directory_path/generator_tmp.py"
-        rm "$connector_directory_path/generator_tmp.py"
+        generator_path=$(find . -name "generate_connector_config_json_schema.py.sample")
+        cp "$generator_path" "$connector_directory_path/generate_connector_config_json_schema_tmp.py"
+        python "$connector_directory_path/generate_connector_config_json_schema_tmp.py"
+        rm "$connector_directory_path/generate_connector_config_json_schema_tmp.py"
         deactivate_venv "$connector_directory_path/$VENV_NAME"
       ) &
     fi
@@ -67,7 +67,7 @@ do
 done
 wait
 
-generate_manifest=$(find . -name "generate_manifest.py")
+generate_manifest=$(find . -name "generate_connectors_manifest.py")
 echo -e "\nGenerating manifest file..."
 python "$generate_manifest"
 
