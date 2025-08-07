@@ -1,7 +1,7 @@
 import time
 from functools import wraps
 from http import HTTPMethod
-from typing import Callable, Optional
+from typing import Callable, Optional, Any
 
 import requests
 
@@ -102,6 +102,25 @@ class ThreatMatchClient:
             .json()
             .get("list", [])
         )
+
+    def get_taxii_groups(self) -> list[dict[str, Any]]:
+        return self._request(
+            method=HTTPMethod.GET,
+            endpoint="/api/taxii/groups",
+        ).json()
+
+    def get_taxii_objects(
+        self, group_id: str, stix_type_name: str, modified_after: str
+    ):
+        return self._request(
+            method=HTTPMethod.GET,
+            endpoint="/api/taxii/objects",
+            params={
+                "groupId": group_id,
+                "stixTypeName": stix_type_name,
+                "modifiedAfter": modified_after,
+            },
+        ).json()
 
     def close(self):
         self.session.close()
