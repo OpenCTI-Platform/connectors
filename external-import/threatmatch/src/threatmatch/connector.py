@@ -7,6 +7,7 @@ from typing import Any
 import requests
 from bs4 import BeautifulSoup
 from pycti import OpenCTIConnectorHelper
+from threatmatch.client import ThreatMatchClient
 from threatmatch.config import ConnectorSettings
 
 
@@ -20,20 +21,6 @@ class Connector:
             name="Security Alliance",
             description="Security Alliance is a cyber threat intelligence product and services company, formed in 2007.",
         )
-
-    def _get_token(self):
-        r = requests.post(
-            self.config.threatmatch.url.encoded_string()
-            + "/api/developers-platform/token",
-            json={
-                "client_id": self.config.threatmatch.client_id,
-                "client_secret": self.config.threatmatch.client_secret,
-            },
-        )
-        if r.status_code != 200:
-            raise ValueError("ThreatMatch Authentication failed")
-        data = r.json()
-        return data.get("access_token")
 
     def _get_item(self, token, type, item_id):
         headers = {"Authorization": "Bearer " + token}
@@ -95,62 +82,51 @@ class Connector:
             else self.config.threatmatch.import_from_date
         )
 
-        token = self._get_token()
-        headers = {"Authorization": "Bearer " + token}
-        if self.config.threatmatch.import_profiles:
-            r = requests.get(
-                self.config.threatmatch.url.encoded_string() + "/api/profiles/all",
-                headers=headers,
-                json={
-                    "mode": "compact",
-                    "date_since": import_from_date,
-                },
-            )
-            if r.status_code != 200:
-                self.helper.connector_logger.error(str(r.text))
-            data = r.json()
-            self._process_list(work_id, token, "profiles", data.get("list"))
-        if self.config.threatmatch.import_alerts:
-            r = requests.get(
-                self.config.threatmatch.url.encoded_string() + "/api/alerts/all",
-                headers=headers,
-                json={
-                    "mode": "compact",
-                    "date_since": import_from_date,
-                },
-            )
-            if r.status_code != 200:
-                self.helper.connector_logger.error(str(r.text))
-            data = r.json()
-            self._process_list(work_id, token, "alerts", data.get("list"))
-        if self.config.threatmatch.import_iocs:
-            response = requests.get(
-                self.config.threatmatch.url.encoded_string() + "/api/taxii/groups",
-                headers=headers,
-            ).json()
-            all_results_id = response[0]["id"]
-            date = datetime.strptime(import_from_date, "%Y-%m-%d %H:%M")
-            date = date.isoformat(timespec="milliseconds") + "Z"
-            params = {
-                "groupId": all_results_id,
-                "stixTypeName": "indicator",
-                "modifiedAfter": date,
-            }
-            r = requests.get(
-                self.config.threatmatch.url.encoded_string() + "/api/taxii/objects",
-                headers=headers,
-                params=params,
-            )
-            if r.status_code != 200:
-                self.helper.connector_logger.error(str(r.text))
-            more = r.json()["more"]
-            if not more:
-                data = r.json()["objects"]
-            else:
-                data = []
-            # This bit is necessary to load all the indicators to upload by checking by date
-            while more:
-                params["modifiedAfter"] = date
+        with ThreatMatchClient(
+            base_url=self.config.threatmatch.url.encoded_string(),
+            client_id=self.config.threatmatch.client_id,
+            client_secret=self.config.threatmatch.client_secret,
+        ) as client:
+            headers = {"Authorization": "Bearer " + client.token}
+            if self.config.threatmatch.import_profiles:
+                r = requests.get(
+                    self.config.threatmatch.url.encoded_string() + "/api/profiles/all",
+                    headers=headers,
+                    json={
+                        "mode": "compact",
+                        "date_since": import_from_date,
+                    },
+                )
+                if r.status_code != 200:
+                    self.helper.connector_logger.error(str(r.text))
+                data = r.json()
+                self._process_list(work_id, client.token, "profiles", data.get("list"))
+            if self.config.threatmatch.import_alerts:
+                r = requests.get(
+                    self.config.threatmatch.url.encoded_string() + "/api/alerts/all",
+                    headers=headers,
+                    json={
+                        "mode": "compact",
+                        "date_since": import_from_date,
+                    },
+                )
+                if r.status_code != 200:
+                    self.helper.connector_logger.error(str(r.text))
+                data = r.json()
+                self._process_list(work_id, client.token, "alerts", data.get("list"))
+            if self.config.threatmatch.import_iocs:
+                response = requests.get(
+                    self.config.threatmatch.url.encoded_string() + "/api/taxii/groups",
+                    headers=headers,
+                ).json()
+                all_results_id = response[0]["id"]
+                date = datetime.strptime(import_from_date, "%Y-%m-%d %H:%M")
+                date = date.isoformat(timespec="milliseconds") + "Z"
+                params = {
+                    "groupId": all_results_id,
+                    "stixTypeName": "indicator",
+                    "modifiedAfter": date,
+                }
                 r = requests.get(
                     self.config.threatmatch.url.encoded_string() + "/api/taxii/objects",
                     headers=headers,
@@ -158,11 +134,27 @@ class Connector:
                 )
                 if r.status_code != 200:
                     self.helper.connector_logger.error(str(r.text))
-                data.extend(r.json().get("objects", []))
-                date = r.json()["objects"][-1]["modified"]
-                more = r.json().get("more", False)
-            self.helper.connector_logger.info(data)
-            self._process_list(work_id, token, "indicators", data)
+                more = r.json()["more"]
+                if not more:
+                    data = r.json()["objects"]
+                else:
+                    data = []
+                # This bit is necessary to load all the indicators to upload by checking by date
+                while more:
+                    params["modifiedAfter"] = date
+                    r = requests.get(
+                        self.config.threatmatch.url.encoded_string()
+                        + "/api/taxii/objects",
+                        headers=headers,
+                        params=params,
+                    )
+                    if r.status_code != 200:
+                        self.helper.connector_logger.error(str(r.text))
+                    data.extend(r.json().get("objects", []))
+                    date = r.json()["objects"][-1]["modified"]
+                    more = r.json().get("more", False)
+                self.helper.connector_logger.info(data)
+                self._process_list(work_id, client.token, "indicators", data)
 
     @property
     def state(self) -> dict[str, Any]:
