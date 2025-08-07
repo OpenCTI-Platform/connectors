@@ -94,7 +94,15 @@ class Connector:
             final_bundle_json = json.dumps(final_bundle)
             self.helper.send_stix2_bundle(final_bundle_json, work_id=work_id)
 
-    def _collect_intelligence(self, import_from_date, work_id):
+    def _collect_intelligence(self, last_run: int, work_id: str) -> None:
+        import_from_date = "2010-01-01 00:00"
+        if last_run is not None:
+            import_from_date = datetime.utcfromtimestamp(last_run).strftime(
+                "%Y-%m-%d %H:%M"
+            )
+        elif self.config.threatmatch.import_from_date is not None:
+            import_from_date = self.config.threatmatch.import_from_date
+
         token = self._get_token()
         headers = {"Authorization": "Bearer " + token}
         if self.config.threatmatch.import_profiles:
@@ -190,16 +198,8 @@ class Connector:
             + datetime.utcfromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S"),
         )
 
-        import_from_date = "2010-01-01 00:00"
-        if last_run is not None:
-            import_from_date = datetime.utcfromtimestamp(last_run).strftime(
-                "%Y-%m-%d %H:%M"
-            )
-        elif self.config.threatmatch.import_from_date is not None:
-            import_from_date = self.config.threatmatch.import_from_date
-
         try:
-            self._collect_intelligence(import_from_date, work_id)
+            self._collect_intelligence(last_run, work_id)
         except Exception as e:
             self.helper.connector_logger.error(str(e))
         # Store the current timestamp as a last run
