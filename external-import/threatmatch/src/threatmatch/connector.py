@@ -3,6 +3,7 @@ import json
 import sys
 import time
 from datetime import datetime
+from typing import Any
 
 import requests
 from bs4 import BeautifulSoup
@@ -163,19 +164,24 @@ class Connector:
             self.helper.connector_logger.info(data)
             self._process_list(work_id, token, "indicators", data)
 
-    def _process_data(self):
-        # Get the current timestamp and check
-        timestamp = int(time.time())
-        current_state = self.helper.get_state()
-        if current_state is not None and "last_run" in current_state:
-            last_run = current_state["last_run"]
+    @property
+    def state(self) -> dict[str, Any]:
+        return self.helper.get_state() or {}
+
+    def _get_last_run(self) -> int | None:
+        if last_run := self.state.get("last_run"):
             self.helper.connector_logger.info(
                 "Connector last run: "
                 + datetime.utcfromtimestamp(last_run).strftime("%Y-%m-%d %H:%M:%S")
             )
         else:
-            last_run = None
             self.helper.connector_logger.info("Connector has never run")
+        return last_run
+
+    def _process_data(self):
+        # Get the current timestamp and check
+        timestamp = int(time.time())
+        last_run = self._get_last_run()
 
         self.helper.connector_logger.info("Connector will run!")
         now = datetime.utcfromtimestamp(timestamp)
