@@ -1,5 +1,4 @@
-import time
-from datetime import UTC, datetime
+from datetime import datetime
 from unittest.mock import call
 
 import freezegun
@@ -33,13 +32,14 @@ def test_connector_process(mocked_helper: MockerFixture) -> None:
         "HTTPSConnectionPool(host='test-threatmatch-url', port=443): Max retries exceeded with url: /api/developers-platform/token"
         in connector.helper.connector_logger.error.call_args[0][0]
     )
-    assert connector.helper.connector_logger.info.call_count == 4
+    assert connector.helper.connector_logger.info.call_count == 3
     connector.helper.connector_logger.info.assert_has_calls(
         [
-            call("Connector has never run"),
+            call("Connector last run: never"),
             call("Connector will run!"),
-            call("Connector successfully run, storing last_run as 1744903440"),
-            call("Last_run stored, next run in: 1440.0 minutes"),
+            call(
+                "Connector successfully run, storing last_run as 2025-04-17T15:24:00+00:00"
+            ),
         ]
     )
 
@@ -60,10 +60,16 @@ def test_connector_process_data_last_run(
     # 1 No last_run in state
     connector._process_data()
     collect_intelligence.assert_called_once_with(None, "work-id")
-    mocked_helper.set_state.assert_called_once_with({"last_run": now.timestamp()})
+    mocked_helper.set_state.assert_called_once_with({"last_run": now.isoformat()})
 
-    # 2 last_run in state as timestamp
+    # 2 last_run in state as timestamp (retro compatibility)
     mocked_helper.get_state.return_value = {"last_run": yesterday.timestamp()}
     connector._process_data()
-    collect_intelligence.assert_called_with(yesterday.timestamp(), "work-id")
-    mocked_helper.set_state.assert_called_with({"last_run": now.timestamp()})
+    collect_intelligence.assert_called_with(yesterday, "work-id")
+    mocked_helper.set_state.assert_called_with({"last_run": now.isoformat()})
+
+    # 3 last_run in state as ISO format
+    mocked_helper.get_state.return_value = {"last_run": yesterday.isoformat()}
+    connector._process_data()
+    collect_intelligence.assert_called_with(yesterday, "work-id")
+    mocked_helper.set_state.assert_called_with({"last_run": now.isoformat()})

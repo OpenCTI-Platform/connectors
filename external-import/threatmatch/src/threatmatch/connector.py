@@ -1,7 +1,6 @@
 import builtins
 import json
 import sys
-import time
 from datetime import UTC, datetime
 from typing import Any
 
@@ -15,6 +14,7 @@ class Connector:
     def __init__(self, helper: OpenCTIConnectorHelper, config: ConnectorSettings):
         self.helper = helper
         self.config = config
+        self.start_datetime = datetime.now(tz=UTC)  # redefined in _process()
         self.identity = self.helper.api.identity.create(
             type="Organization",
             name="Security Alliance",
@@ -94,12 +94,10 @@ class Connector:
             final_bundle_json = json.dumps(final_bundle)
             self.helper.send_stix2_bundle(final_bundle_json, work_id=work_id)
 
-    def _collect_intelligence(self, last_run: int, work_id: str) -> None:
+    def _collect_intelligence(self, last_run: datetime, work_id: str) -> None:
         import_from_date = "2010-01-01 00:00"
         if last_run is not None:
-            import_from_date = datetime.fromtimestamp(last_run, tz=UTC).strftime(
-                "%Y-%m-%d %H:%M"
-            )
+            import_from_date = last_run.strftime("%Y-%m-%d %H:%M")
         elif self.config.threatmatch.import_from_date is not None:
             import_from_date = self.config.threatmatch.import_from_date
 
@@ -176,44 +174,47 @@ class Connector:
     def state(self) -> dict[str, Any]:
         return self.helper.get_state() or {}
 
-    def _get_last_run(self) -> int | None:
+    def _get_last_run(self) -> datetime | None:
         if last_run := self.state.get("last_run"):
-            self.helper.connector_logger.info(
-                "Connector last run: "
-                + datetime.fromtimestamp(last_run, tz=UTC).strftime("%Y-%m-%d %H:%M:%S")
+            last_run = (
+                datetime.fromtimestamp(last_run, tz=UTC)  # For retro compatibility
+                if isinstance(last_run, float | int)
+                else datetime.fromisoformat(last_run)
             )
-        else:
-            self.helper.connector_logger.info("Connector has never run")
+        self.helper.connector_logger.info(
+            (
+                "Connector last run: "
+                + (last_run.isoformat(timespec="seconds") if last_run else "never")
+            ),
+        )
         return last_run
 
     def _process_data(self):
-        # Get the current timestamp and check
-        timestamp = int(time.time())
         last_run = self._get_last_run()
 
         self.helper.connector_logger.info("Connector will run!")
         work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id,
-            "ThreatMatch run @ "
-            + datetime.fromtimestamp(timestamp, tz=UTC).strftime("%Y-%m-%d %H:%M:%S"),
+            "ThreatMatch run @ " + self.start_datetime.isoformat(timespec="seconds"),
         )
 
         try:
             self._collect_intelligence(last_run, work_id)
         except Exception as e:
             self.helper.connector_logger.error(str(e))
-        # Store the current timestamp as a last run
-        message = "Connector successfully run, storing last_run as " + str(timestamp)
-        self.helper.connector_logger.info(message)
-        self.helper.set_state({"last_run": timestamp})
-        self.helper.api.work.to_processed(work_id, message)
-        self.helper.connector_logger.info(
-            "Last_run stored, next run in: "
-            + str(round(self.get_interval() / 60, 2))
-            + " minutes"
+
+        message = (
+            "Connector successfully run, storing last_run as "
+            + self.start_datetime.isoformat(timespec="seconds")
         )
+        self.helper.connector_logger.info(message)
+        self.helper.set_state(
+            {"last_run": self.start_datetime.isoformat(timespec="seconds")}
+        )
+        self.helper.api.work.to_processed(work_id, message)
 
     def _process(self):
+        self.start_datetime = datetime.now(tz=UTC)
         try:
             self._process_data()
         except (KeyboardInterrupt, SystemExit):
