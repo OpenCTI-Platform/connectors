@@ -7,6 +7,7 @@ from pycti import (
     Location,
     Malware,
     ThreatActorGroup,
+    Tool,
     Vulnerability,
 )
 from pycti.utils.constants import CustomObjectChannel, IdentityTypes
@@ -198,6 +199,13 @@ stix_object_mapping = {
     ),
     "Channel": lambda value, object_markings, custom_properties: CustomObjectChannel(
         id=Channel.generate_id(name=value),  # for deduplication
+        name=value,
+        object_markings=object_markings,
+        custom_properties=custom_properties,
+        allow_custom=True,
+    ),
+    "Tool": lambda value, object_markings, custom_properties: stix2.Tool(
+        id=Tool.generate_id(value),
         name=value,
         object_markings=object_markings,
         custom_properties=custom_properties,
