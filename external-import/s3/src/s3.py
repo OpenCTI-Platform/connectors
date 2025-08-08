@@ -252,9 +252,11 @@ class S3Connector:
 
             # x_acti_uuid
             if "x_acti_uuid" in obj:
-                external_ref = (
-                    {"source_name": "ACTI UUID", "external_id": obj["x_acti_uuid"]},
-                )
+                external_ref = {
+                    "source_name": "ACTI UUID",
+                    "external_id": obj["x_acti_uuid"],
+                }
+
                 if "external_references" in obj:
                     obj["external_references"].append(external_ref)
                 else:
