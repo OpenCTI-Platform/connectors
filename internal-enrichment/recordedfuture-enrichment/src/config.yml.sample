@@ -4,10 +4,8 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'INTERNAL_ENRICHMENT'
   name: 'Recorded Future Enrichment'
-  scope: 'ipv4-addr,ipv6-addr,domain-name,url,stixfile'
-  update_existing_data: false
+  scope: 'ipv4-addr,ipv6-addr,domain-name,url,stixfile,vulnerability'
   log_level: 'info'
 
 recordedfuture-enrichment:
