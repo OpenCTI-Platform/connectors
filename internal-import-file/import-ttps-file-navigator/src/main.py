@@ -1,7 +1,6 @@
 import json
 import os
 import sys
-import time
 import traceback
 from typing import Dict, List
 
@@ -183,6 +182,6 @@ if __name__ == "__main__":
     try:
         connector_import_ttps_file_navigator = ImportTTPsFileNavigator()
         connector_import_ttps_file_navigator.start()
-    except Exception as e:
+    except Exception:
         traceback.print_exc()
         sys.exit(0)
