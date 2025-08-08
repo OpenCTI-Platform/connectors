@@ -4,7 +4,6 @@ import sys
 from datetime import UTC, datetime
 from typing import Any
 
-import requests
 from bs4 import BeautifulSoup
 from pycti import OpenCTIConnectorHelper
 from threatmatch.client import ThreatMatchClient
@@ -22,36 +21,23 @@ class Connector:
             description="Security Alliance is a cyber threat intelligence product and services company, formed in 2007.",
         )
 
-    def _get_item(self, token, type, item_id):
-        headers = {"Authorization": "Bearer " + token}
-        r = requests.get(
-            self.config.threatmatch.url.encoded_string()
-            + "/api/stix/"
-            + type
-            + "/"
-            + str(item_id),
-            headers=headers,
-        )
-        if r.status_code != 200:
-            self.helper.connector_logger.error(str(r.text))
-            return []
-        if r.status_code == 200:
-            data = r.json()["objects"]
-            for object in data:
-                if "description" in object and object["description"]:
-                    object["description"] = BeautifulSoup(
-                        object["description"], "html.parser"
-                    ).get_text()
-            return data
+    def _get_item(self, client, item_type, item_id):
+        bundle = client.get_stix_bundle(item_type, item_id)
+        for stix_object in bundle:
+            if "description" in stix_object and stix_object["description"]:
+                stix_object["description"] = BeautifulSoup(
+                    stix_object["description"], "html.parser"
+                ).get_text()
+        return bundle
 
-    def _process_list(self, work_id, token, type, list):
-        if len(list) > 0:
-            if builtins.type(list[0]) is dict:
-                bundle = list
+    def _process_list(self, work_id, client, item_type, items):
+        if len(items) > 0:
+            if builtins.type(items[0]) is dict:
+                bundle = items
                 self._process_bundle(work_id, bundle)
             else:
-                for item in list:
-                    bundle = self._get_item(token, type, item)
+                for item_id in items:
+                    bundle = self._get_item(client, item_type, item_id)
                     self._process_bundle(work_id, bundle)
 
     def _process_bundle(self, work_id, bundle):
@@ -113,10 +99,10 @@ class Connector:
         ) as client:
             if self.config.threatmatch.import_profiles:
                 profile_ids = client.get_profile_ids(import_from_date=import_from_date)
-                self._process_list(work_id, client.token, "profiles", profile_ids)
+                self._process_list(work_id, client, "profiles", profile_ids)
             if self.config.threatmatch.import_alerts:
                 alert_ids = client.get_alert_ids(import_from_date=import_from_date)
-                self._process_list(work_id, client.token, "alerts", alert_ids)
+                self._process_list(work_id, client, "alerts", alert_ids)
             if self.config.threatmatch.import_iocs:
                 indicators = self._get_indicators(
                     client=client,
@@ -128,7 +114,7 @@ class Connector:
                         + "Z"
                     ),
                 )
-                self._process_list(work_id, client.token, "indicators", indicators)
+                self._process_list(work_id, client, "indicators", indicators)
 
     @property
     def state(self) -> dict[str, Any]:
