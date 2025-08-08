@@ -401,16 +401,6 @@ class RansomwareAPIConnector:
         bundles = []
         last_run_datetime = self.last_run_datetime_with_ingested_data or self.last_run
 
-        # Previous last_run was in seconds
-        if isinstance(last_run_datetime, int):
-            last_run_datetime = datetime.fromtimestamp(
-                last_run_datetime, tz=timezone.utc
-            )
-        elif isinstance(last_run_datetime, str):
-            last_run_datetime = datetime.strptime(
-                last_run_datetime, "%Y-%m-%dT%H:%M:%S%z"
-            )
-
         for item in response_json:
             created = datetime.strptime(
                 item.get("discovered"), "%Y-%m-%d %H:%M:%S.%f"
@@ -495,7 +485,9 @@ class RansomwareAPIConnector:
 
             if current_state and "last_run" in current_state:
                 if isinstance(current_state["last_run"], int):
-                    self.last_run = datetime.fromtimestamp(current_state["last_run"])
+                    self.last_run = datetime.fromtimestamp(
+                        current_state["last_run"]
+                    ).replace(tzinfo=timezone.utc)
                 else:
                     self.last_run = datetime.fromisoformat(current_state["last_run"])
 
