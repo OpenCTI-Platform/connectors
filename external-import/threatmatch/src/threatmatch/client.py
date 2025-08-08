@@ -1,7 +1,7 @@
 import time
 from functools import wraps
 from http import HTTPMethod
-from typing import Callable, Optional, Any
+from typing import Any, Callable, Optional
 
 import requests
 
@@ -121,6 +121,12 @@ class ThreatMatchClient:
                 "modifiedAfter": modified_after,
             },
         ).json()
+
+    def get_stix_bundle(self, item_type, item_id):
+        return self._request(
+            method=HTTPMethod.GET,
+            endpoint=f"/api/stix/{item_type}/{item_id}",
+        ).json()["objects"]
 
     def close(self):
         self.session.close()
