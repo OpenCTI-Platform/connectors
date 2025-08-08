@@ -1,24 +1,30 @@
 """Offer tests for OpenCTI relationships."""
 
 import pytest
-import stix2
 from connectors_sdk.models.octi._common import BaseIdentifiedEntity
 from connectors_sdk.models.octi.activities.observations import Indicator, Observable
 from connectors_sdk.models.octi.relationships import (
-    AnyRelatedToAny,
-    IndicatorBasedOnObservable,
-    IndicatorDerivedFromIndicator,
+    BasedOn,
+    DerivedFrom,
+    Indicates,
+    LocatedAt,
+    RelatedTo,
     Relationship,
+    Targets,
     based_on,
     related_to,
 )
 from pydantic import create_model
+from stix2.v21 import IPv4Address as Stix2IPv4Address
 
 # Add the newly implemented relationship in this list
 IMPLEMENTED_RELATIONSHIPS = [
-    AnyRelatedToAny,
-    IndicatorBasedOnObservable,
-    IndicatorDerivedFromIndicator,
+    BasedOn,
+    DerivedFrom,
+    LocatedAt,
+    Indicates,
+    RelatedTo,
+    Targets,
 ]
 
 ### BASE RELATIONSHIP
@@ -101,20 +107,20 @@ def test_implemented_relationship_is_a_subclass_of_relationship(relationship_cls
 
 
 def test_any_related_to_any_can_use_pipe_syntax(fake_valid_organization_author):
-    """Test that AnyRelatedToAny can use pipe syntax."""
-    # Given the AnyRelatedToAny relationship class and a valid BaseIdentifiedEntity instance
+    """Test that RelatedTo can use pipe syntax."""
+    # Given the RelatedTo relationship class and a valid BaseIdentifiedEntity instance
     author = fake_valid_organization_author
     # When using the pipe syntax to create a relationship
     relationship = author | related_to | author
-    # Then it should return an instance of AnyRelatedToAny with the correct source and target
-    assert isinstance(relationship, AnyRelatedToAny)
+    # Then it should return an instance of RelatedTo with the correct source and target
+    assert isinstance(relationship, RelatedTo)
     assert relationship.source == author
     assert relationship.target == author
 
 
-def test_indicator_based_on_observable_can_use_pipe_syntax():
-    """Test that IndicatorBasedOnObservable can use pipe syntax."""
-    # Given the IndicatorBasedOnObservable relationship class and a Indicator and a valid Observable instance
+def test_based_on_can_use_pipe_syntax():
+    """Test that BasedOn can use pipe syntax."""
+    # Given the BasedOn relationship class and a Indicator and a valid Observable instance
     ind = create_model(
         "DummyIndicator",
         __base__=Indicator,
@@ -129,12 +135,12 @@ def test_indicator_based_on_observable_can_use_pipe_syntax():
 
         def to_stix2_object(self):
             """Dummy method to satisfy the interface."""
-            return stix2.v21.IPv4Address(value="127.0.0.1")
+            return Stix2IPv4Address(value="127.0.0.1")
 
     obs = DummyObservable()
     # When using the pipe syntax to create a relationship
     relationship = ind | based_on | obs
-    # Then it should return an instance of IndicatorBasedOnObservable with the correct source and target
-    assert isinstance(relationship, IndicatorBasedOnObservable)
+    # Then it should return an instance of BasedOn with the correct source and target
+    assert isinstance(relationship, BasedOn)
     assert relationship.source == ind
     assert relationship.target == obs
