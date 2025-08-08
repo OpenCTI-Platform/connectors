@@ -2,6 +2,7 @@ import json
 import os
 import sys
 import time
+import traceback
 from typing import Dict, List
 
 import stix2
@@ -122,6 +123,7 @@ class ImportTTPsFileNavigator:
         :return:
         """
         stix_relationships = []
+        stix_techniques_with_relationships = []
         stix_entity = self.helper.api.stix_domain_object.read(id=entity_id)
         entity_stix_bundle = (
             self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
@@ -129,12 +131,15 @@ class ImportTTPsFileNavigator:
             )
         )
         if len(entity_stix_bundle["objects"]) > 0:
-            entity_stix = [
-                stix_object
-                for stix_object in entity_stix_bundle["objects"]
-                if "x_opencti_id" in stix_object
-                and stix_object["x_opencti_id"] == stix_entity["id"]
-            ][0]
+            entity_stix = next (
+                (
+                    stix_object
+                    for stix_object in entity_stix_bundle["objects"]
+                    if "x_opencti_id" in stix_object
+                       and stix_object["x_opencti_id"] == stix_entity["id"]
+                ),
+                None
+            )
             if (
                 entity_stix.get("type") == "identity"
                 and entity_stix.get("x_opencti_type", None) == "SecurityPlatform"
@@ -150,7 +155,7 @@ class ImportTTPsFileNavigator:
                         allow_custom=True,
                     )
                     stix_relationships.append(rel)
-                stix_techniques = stix_techniques + stix_relationships
+                stix_techniques_with_relationships = stix_techniques + stix_relationships
 
             if (
                 entity_stix.get("type") == "intrusion-set"
@@ -169,16 +174,15 @@ class ImportTTPsFileNavigator:
                         allow_custom=True,
                     )
                     stix_relationships.append(rel)
-                stix_techniques = stix_techniques + stix_relationships
+                stix_techniques_with_relationships = stix_techniques + stix_relationships
 
-        return stix_techniques
+        return stix_techniques_with_relationships
 
 
 if __name__ == "__main__":
     try:
-        connectorImportTTPsFileNavigator = ImportTTPsFileNavigator()
-        connectorImportTTPsFileNavigator.start()
+        connector_import_ttps_file_navigator = ImportTTPsFileNavigator()
+        connector_import_ttps_file_navigator.start()
     except Exception as e:
-        print(e)
-        time.sleep(10)
+        traceback.print_exc()
         sys.exit(0)

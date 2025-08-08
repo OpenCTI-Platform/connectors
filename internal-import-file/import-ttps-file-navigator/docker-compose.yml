@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-import-ttps-file-navigator:
-    image: opencti/connector-import-ttps-file-navigator:6.7.7
+    image: opencti/connector-import-ttps-file-navigator:6.7.9
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -10,5 +10,5 @@ services:
       - CONNECTOR_VALIDATE_BEFORE_IMPORT=true # Validate any bundle before import
       - CONNECTOR_SCOPE=application/json
       - CONNECTOR_AUTO=false # Enable/disable auto-import of file
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
     restart: always
