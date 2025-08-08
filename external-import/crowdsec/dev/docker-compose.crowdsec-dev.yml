@@ -1,0 +1,25 @@
+services:
+  connector-crowdsec-import:
+    build:
+      context: ../cs-opencti-external-import-connector/dev
+      dockerfile: Dockerfile-dev
+    volumes:
+      - ../cs-opencti-external-import-connector/src:/opt/opencti-crowdsec-import
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_ID='ChangeMe' # Add connector ID (any valid UUID v4)
+      - CROWDSEC_MAX_TLP=TLP:AMBER
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - "CONNECTOR_NAME=CrowdSec Import"
+      - CONNECTOR_SCOPE=CrowdSecImport
+      - CROWDSEC_NAME=CrowdSec
+      - "CROWDSEC_DESCRIPTION=CrowdSec CTI enrichment"
+      - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=debug
+      - CROWDSEC_KEY='ChangeMe' # Add API Key
+      - CROWDSEC_VERSION=v2 # v2 is the only supported version for now
+    restart: always
+    depends_on:
+      - opencti
+
