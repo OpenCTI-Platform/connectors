@@ -4,9 +4,9 @@ from typing import Optional
 
 from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
 from connectors_sdk.models.octi.enums import AttackMotivation, AttackResourceLevel
-from pycti import IntrusionSet as pycti_IntrusionSet
+from pycti import IntrusionSet as PyctiIntrusionSet
 from pydantic import AwareDatetime, Field
-from stix2.v21 import IntrusionSet as stix2_IntrusionSet
+from stix2.v21 import IntrusionSet as Stix2IntrusionSet
 
 
 @MODEL_REGISTRY.register
@@ -50,10 +50,10 @@ class IntrusionSet(BaseIdentifiedEntity):
         default=None,
     )
 
-    def to_stix2_object(self) -> stix2_IntrusionSet:
+    def to_stix2_object(self) -> Stix2IntrusionSet:
         """Make stix object."""
-        return stix2_IntrusionSet(
-            id=pycti_IntrusionSet.generate_id(name=self.name),
+        return Stix2IntrusionSet(
+            id=PyctiIntrusionSet.generate_id(name=self.name),
             name=self.name,
             description=self.description,
             aliases=self.aliases,

@@ -11,8 +11,8 @@ from connectors_sdk.models.octi.activities.observations import (
     Observable,
 )
 from pydantic import ValidationError
-from stix2.v21 import Indicator as stix2_Indicator
-from stix2.v21 import IPv4Address as stix2_IPv4Address
+from stix2.v21 import Indicator as Stix2Indicator
+from stix2.v21 import IPv4Address as Stix2IPv4Address
 
 ### OBSERVABLE BASE TYPE
 
@@ -34,7 +34,7 @@ def test_observable_has_required_fields():
 
         def to_stix2_object(self):
             """Dummy method to satisfy the interface."""
-            return stix2_IPv4Address(value="127.0.0.1")
+            return Stix2IPv4Address(value="127.0.0.1")
 
     # When creating an instance of DummyObservable
     observable = DummyObservable()
@@ -135,7 +135,7 @@ def test_indicator_to_stix2_object_returns_valid_stix_object(
     stix2_obj = indicator.to_stix2_object()
 
     # Then: A valid STIX Indicator is returned
-    assert isinstance(stix2_obj, stix2_Indicator)
+    assert isinstance(stix2_obj, Stix2Indicator)
 
 
 ### OBSERVABLES
@@ -180,4 +180,4 @@ def test_ip_v4_address_to_stix2_object_returns_valid_stix_object():
     # When: calling to_stix2_object method
     stix2_obj = ipv4_address.to_stix2_object()
     # Then: A valid STIX2.1 IPV4Address is returned
-    assert isinstance(stix2_obj, stix2_IPv4Address)
+    assert isinstance(stix2_obj, Stix2IPv4Address)

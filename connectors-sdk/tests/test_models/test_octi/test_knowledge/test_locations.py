@@ -5,7 +5,7 @@ import pytest
 from connectors_sdk.models.octi._common import BaseIdentifiedEntity
 from connectors_sdk.models.octi.knowledge.locations import City, Country
 from pydantic import ValidationError
-from stix2.v21 import Location as stix2_Location
+from stix2.v21 import Location as Stix2Location
 
 ### CITY
 
@@ -51,7 +51,7 @@ def test_city_to_stix2_object_returns_valid_stix_object(
     # When: calling to_stix2_object method
     stix2_obj = city.to_stix2_object()
     # Then: A valid STIX2.1 Location is returned
-    assert isinstance(stix2_obj, stix2_Location)
+    assert isinstance(stix2_obj, Stix2Location)
 
 
 ### COUNTRY
@@ -96,4 +96,4 @@ def test_country_to_stix2_object_returns_valid_stix_object(
     # When: calling to_stix2_object method
     stix2_obj = country.to_stix2_object()
     # Then: A valid STIX2.1 Location is returned
-    assert isinstance(stix2_obj, stix2_Location)
+    assert isinstance(stix2_obj, Stix2Location)

@@ -8,7 +8,7 @@ from connectors_sdk.models.octi.activities.observations import Indicator, Observ
 from connectors_sdk.models.octi.knowledge.entities import Organization, Sector
 from connectors_sdk.models.octi.knowledge.locations import Country
 from connectors_sdk.models.octi.knowledge.threats import IntrusionSet
-from pycti import StixCoreRelationship as pycti_StixCoreRelationship
+from pycti import StixCoreRelationship as PyctiStixCoreRelationship
 from pydantic import (
     AwareDatetime,
     ConfigDict,
@@ -17,7 +17,7 @@ from pydantic import (
     create_model,
     model_validator,
 )
-from stix2.v21 import Relationship as stix2_Relationship
+from stix2.v21 import Relationship as Stix2Relationship
 
 
 class _RelationshipBuilder:
@@ -80,10 +80,10 @@ class Relationship(ABC, BaseIdentifiedEntity):
         default=None,
     )
 
-    def to_stix2_object(self) -> stix2_Relationship:
+    def to_stix2_object(self) -> Stix2Relationship:
         """Make stix object."""
-        return stix2_Relationship(
-            id=pycti_StixCoreRelationship.generate_id(
+        return Stix2Relationship(
+            id=PyctiStixCoreRelationship.generate_id(
                 relationship_type=self._relationship_type,
                 source_ref=self.source.id,
                 target_ref=self.target.id,

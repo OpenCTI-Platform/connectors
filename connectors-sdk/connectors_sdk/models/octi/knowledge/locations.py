@@ -4,12 +4,12 @@ from typing import Optional
 
 from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
 from connectors_sdk.models.octi.enums import LocationType
-from pycti import Location as pycti_Location
+from pycti import Location as PyctiLocation
 from pydantic import Field
-from stix2.v21 import Location as stix2_Location
+from stix2.v21 import Location as Stix2Location
 
 
-class OCTIStixLocation(stix2_Location):  # type: ignore[misc]  # stix2 does not provide stubs
+class OCTIStixLocation(Stix2Location):  # type: ignore[misc]  # stix2 does not provide stubs
     """Override stix2 Location to skip some constraints incompatible with OpenCTI Location entities."""
 
     def _check_object_constraints(self) -> None:
@@ -47,7 +47,7 @@ class City(BaseIdentifiedEntity):
         default=None,
     )
 
-    def to_stix2_object(self) -> stix2_Location:
+    def to_stix2_object(self) -> Stix2Location:
         """Make stix object.
 
         Notes:
@@ -57,7 +57,7 @@ class City(BaseIdentifiedEntity):
         location_type = LocationType.CITY.value
 
         return OCTIStixLocation(
-            id=pycti_Location.generate_id(
+            id=PyctiLocation.generate_id(
                 name=self.name,
                 x_opencti_location_type=location_type,
                 latitude=self.latitude,
@@ -85,7 +85,7 @@ class Country(BaseIdentifiedEntity):
         default=None,
     )
 
-    def to_stix2_object(self) -> stix2_Location:
+    def to_stix2_object(self) -> Stix2Location:
         """Make stix object.
 
         Notes:
@@ -95,7 +95,7 @@ class Country(BaseIdentifiedEntity):
         location_type = LocationType.COUNTRY.value
 
         return OCTIStixLocation(
-            id=pycti_Location.generate_id(
+            id=PyctiLocation.generate_id(
                 name=self.name,
                 x_opencti_location_type=location_type,
             ),

@@ -4,9 +4,9 @@ from typing import Optional
 
 from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
 from connectors_sdk.models.octi.enums import IndustrySector, Reliability
-from pycti import Identity as pycti_Identity
+from pycti import Identity as PyctiIdentity
 from pydantic import Field
-from stix2.v21 import Identity as stix2_Identity
+from stix2.v21 import Identity as Stix2Identity
 
 
 @MODEL_REGISTRY.register
@@ -53,7 +53,7 @@ class Organization(BaseIdentifiedEntity):
         description="Aliases of the organization.",
     )
 
-    def to_stix2_object(self) -> stix2_Identity:
+    def to_stix2_object(self) -> Stix2Identity:
         """Make stix object.
 
         Notes:
@@ -62,10 +62,8 @@ class Organization(BaseIdentifiedEntity):
         """
         identity_class = "organization"
 
-        return stix2_Identity(
-            id=pycti_Identity.generate_id(
-                identity_class=identity_class, name=self.name
-            ),
+        return Stix2Identity(
+            id=PyctiIdentity.generate_id(identity_class=identity_class, name=self.name),
             identity_class=identity_class,
             name=self.name,
             description=self.description,
@@ -127,7 +125,7 @@ class Sector(BaseIdentifiedEntity):
         default=None,
     )
 
-    def to_stix2_object(self) -> stix2_Identity:
+    def to_stix2_object(self) -> Stix2Identity:
         """Make stix object.
 
         Notes:
@@ -136,10 +134,8 @@ class Sector(BaseIdentifiedEntity):
         """
         identity_class = "class"
 
-        return stix2_Identity(
-            id=pycti_Identity.generate_id(
-                identity_class=identity_class, name=self.name
-            ),
+        return Stix2Identity(
+            id=PyctiIdentity.generate_id(identity_class=identity_class, name=self.name),
             identity_class=identity_class,
             name=self.name,
             description=self.description,

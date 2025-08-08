@@ -27,7 +27,7 @@ from connectors_sdk.models.octi.relationships import (
     targets,
 )
 from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
-from stix2 import Identity as stix2_Identity
+from stix2 import Identity as Stix2Identity
 
 __all__ = [
     # Models flat list
@@ -72,7 +72,7 @@ class OrganizationAuthor(Author, Organization):
 
     """
 
-    def to_stix2_object(self) -> stix2_Identity:
+    def to_stix2_object(self) -> Stix2Identity:
         """Make stix object."""
         return Organization.to_stix2_object(self)
 
