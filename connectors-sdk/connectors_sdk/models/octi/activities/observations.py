@@ -10,12 +10,12 @@ from connectors_sdk.models.octi._common import (
     BaseIdentifiedEntity,
 )
 from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
-from pycti import Indicator as pycti_Indicator
+from pycti import Indicator as PyctiIndicator
 from pydantic import AwareDatetime, Field, field_validator
-from stix2.v21 import Indicator as stix2_Indicator
-from stix2.v21 import IPv4Address as stix2_IPv4Address
-from stix2.v21 import Software as stix2_Software
-from stix2.v21 import _Observable as stix2__Observable
+from stix2.v21 import Indicator as Stix2Indicator
+from stix2.v21 import IPv4Address as Stix2IPv4Address
+from stix2.v21 import Software as Stix2Software
+from stix2.v21 import _Observable as _Stix2Observable
 
 
 @MODEL_REGISTRY.register
@@ -67,7 +67,7 @@ class Observable(ABC, BaseIdentifiedEntity):
         )
 
     @abstractmethod
-    def to_stix2_object(self) -> stix2__Observable:
+    def to_stix2_object(self) -> _Stix2Observable:
         """Make stix object.
 
         Notes:
@@ -96,17 +96,14 @@ class Indicator(BaseIdentifiedEntity):
     """
 
     name: str = Field(
-        ...,
         description="Name of the indicator.",
         min_length=1,
     )
     pattern: str = Field(
-        ...,
         description="Pattern. See Stix2.1 for instance: https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_me3pzm77qfnf",
         min_length=1,
     )
     pattern_type: str = Field(
-        ...,
         description="Pattern type. The default OpenCTI pattern types are: "
         "'stix', 'eql', 'pcre', 'shodan', 'sigma', 'snort', 'spl', 'suricata', 'tanium-signal', 'yara'."
         "See : See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_9lfdvxnyofxw",
@@ -148,60 +145,59 @@ class Indicator(BaseIdentifiedEntity):
             "X509-Certificate",
         ]
     ] = Field(
-        None,
         description="Observable type. "
         "See: https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/schema/stixCyberObservable.ts#L4",
+        default=None,
     )
     description: Optional[str] = Field(
-        None,
         description="Description of the indicator.",
+        default=None,
     )
     indicator_types: Optional[list[str]] = Field(
-        None,
         description="Indicator types. The default OpenCTI types are: "
         "'anomalous-activity', 'anonymization', 'attribution', 'benign', 'compromised', 'malicious-activity', 'unknown'. "
         "See: https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_cvhfwe3t9vuo",
+        default=None,
     )
     platforms: Optional[list[str]] = Field(
-        None,
         description="Platforms. The default OpenCTI platforms are: 'windows', 'macos', 'linux', 'android'. "
         "See: https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L797",
+        default=None,
     )
     valid_from: Optional[AwareDatetime] = Field(
-        None,
         description="Valid from.",
+        default=None,
     )
     valid_until: Optional[AwareDatetime] = Field(
-        None,
         description="Valid until.",
+        default=None,
     )
     kill_chain_phases: Optional[list[KillChainPhase]] = Field(
-        None,
         description="Kill chain phases.",
+        default=None,
     )
     score: Optional[int] = Field(
-        None,
         description="Score of the indicator.",
         ge=0,
         le=100,
+        default=None,
     )
     associated_files: Optional[list[AssociatedFile]] = Field(
-        None,
         description="Associated files for the indicator.",
+        default=None,
     )
 
     create_observables: Optional[bool] = Field(
-        None,
         description="If True, observables and `based-on` relationships will be created for this "
         "indicator (Delegated to OpenCTI Platform). You can also manually define the Observable objects "
         "and use BasedOnRelationship for more granularity.",
+        default=None,
     )
 
-    def to_stix2_object(self) -> stix2_Indicator:
+    def to_stix2_object(self) -> Stix2Indicator:
         """Make stix object."""
-        _id = pycti_Indicator.generate_id(pattern=self.pattern)
-        return stix2_Indicator(
-            id=_id,
+        return Stix2Indicator(
+            id=PyctiIndicator.generate_id(pattern=self.pattern),
             name=self.name,
             description=self.description,
             indicator_types=self.indicator_types,
@@ -249,7 +245,6 @@ class IPV4Address(Observable):
     """
 
     value: str = Field(
-        ...,
         description="The IP address value. CIDR is allowed.",
         min_length=1,
     )
@@ -266,9 +261,9 @@ class IPV4Address(Observable):
             raise ValueError(f"Invalid IP V4 address {value}") from None
         return value
 
-    def to_stix2_object(self) -> stix2_IPv4Address:
+    def to_stix2_object(self) -> Stix2IPv4Address:
         """Make stix object."""
-        return stix2_IPv4Address(
+        return Stix2IPv4Address(
             value=self.value,
             object_marking_refs=[marking.id for marking in self.markings or []],
             allow_custom=True,
@@ -305,9 +300,9 @@ class Software(Observable):
         default=None,
     )
 
-    def to_stix2_object(self) -> stix2_Software:
+    def to_stix2_object(self) -> Stix2Software:
         """Make Software STIX2.1 object."""
-        return stix2_Software(
+        return Stix2Software(
             name=self.name,
             version=self.version,
             vendor=self.vendor,
