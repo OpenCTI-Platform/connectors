@@ -2,7 +2,7 @@ import time
 
 import requests
 from requests.adapters import HTTPAdapter
-from src.services.client.endpoints import BASE_URL
+from services.client.endpoints import BASE_URL
 from urllib3.util import Retry
 
 
