@@ -88,7 +88,7 @@ class ImportTTPsFileNavigator:
         entity_id = data.get("entity_id", None)
 
         if entity_id:
-            self.helper.log_info("Contextual import.")
+            self.helper.connector_logger("Contextual import.")
             stix_entities = self._update_bundle(technique_entities, entity_id)
             bundle_json = self.helper.stix2_create_bundle(stix_entities)
 
