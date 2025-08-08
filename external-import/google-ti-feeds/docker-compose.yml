@@ -1,6 +1,6 @@
 services:
   connector-google-ti-feeds:
-    image: opencti/connector-google-ti-feeds:6.6.11
+    image: opencti/connector-google-ti-feeds:6.7.9
     environment:
       - OPENCTI_URL='http://localhost:PORT'
       - OPENCTI_TOKEN='ChangeMe'

@@ -32,11 +32,11 @@ mapped_keys = [
     "x_cvss_v2_temporal_score",
     "x_cvss_v3_temporal_score",
     "x_first_seen_active",
+    "x_history",
+    "x_acti_uuid",
 ]
 ignored_keys = [
-    "x_history",
     "x_acti_guid",
-    "x_acti_uuid",
     "x_version",
     "x_product",
     "x_vendor",
@@ -207,6 +207,28 @@ class S3Connector:
                 )
                 new_bundle_objects.append(note)
 
+            # History Note
+            if "x_history" in obj and obj["x_history"]:
+                note_content = "| Timestamp | Comment |\n|---------|---------|\n"
+                for history in obj.get("x_history"):
+                    note_content += f"| {history.get('timestamp', '')} | {history.get('comment', '')} |\n"
+
+                abstract = obj.get("name") + " - History"
+                note = stix2.Note(
+                    id=Note.generate_id(obj["created"], abstract),
+                    created=obj["created"],
+                    abstract=abstract,
+                    content=note_content,
+                    object_refs=[obj["id"]],
+                    object_marking_refs=[self.s3_marking["id"]],
+                    created_by_ref=(
+                        self.identity["standard_id"]
+                        if self.identity is not None
+                        else None
+                    ),
+                )
+                new_bundle_objects.append(note)
+
             # Labels
             if "x_wormable" in obj and obj["x_wormable"]:
                 if "labels" in obj:
@@ -227,6 +249,16 @@ class S3Connector:
             # x_product
             if "x_product" in obj:
                 obj["x_opencti_product"] = obj["x_product"]
+
+            # x_acti_uuid
+            if "x_acti_uuid" in obj:
+                external_ref = (
+                    {"source_name": "ACTI UUID", "external_id": obj["x_acti_uuid"]},
+                )
+                if "external_references" in obj:
+                    obj["external_references"].append(external_ref)
+                else:
+                    obj["external_references"] = [external_ref]
 
             # Relationships "has"
             if (

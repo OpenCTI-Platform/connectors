@@ -115,7 +115,7 @@ class HygieneConnector:
     ) -> Optional[str]:
         # Search in warninglist
         warninglist_hits: List[WarningList] = self.warninglists.search(
-            opencti_entity["observable_value"]
+            opencti_entity["observable_value"].lower()
         )
 
         # If not found and the domain is a subdomain, search with the parent.
@@ -324,8 +324,11 @@ class HygieneConnector:
         self, opencti_entity: dict, stix_entity: dict, label_value: str
     ):
         if opencti_entity["entity_type"] == "Indicator":
-            if label_value not in stix_entity["labels"]:
-                stix_entity["labels"].append(label_value)
+            if label_value not in stix_entity.get("labels", []):
+                if "labels" in opencti_entity:
+                    stix_entity["labels"].append(label_value)
+                else:
+                    stix_entity["labels"] = [label_value]
             else:
                 self.helper.log_debug(
                     f"Label {label_value} already present in {stix_entity}."
