@@ -1,4 +1,4 @@
-from src.services.client.api import CVEClient
-from src.services.client.vulnerability import CVEVulnerability
+from services.client.api import CVEClient
+from services.client.vulnerability import CVEVulnerability
 
 __all__ = ["CVEClient", "CVEVulnerability"]

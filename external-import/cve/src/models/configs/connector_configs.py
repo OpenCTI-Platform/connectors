@@ -8,7 +8,7 @@ from pydantic import (
     PositiveInt,
     field_validator,
 )
-from src.models.configs import ConfigBaseSettings
+from models.configs import ConfigBaseSettings
 
 TLPToLower = Annotated[
     Literal["clear", "green", "amber", "amber+strict", "red"],
