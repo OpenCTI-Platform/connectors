@@ -89,11 +89,11 @@ class Connector:
             self.helper.send_stix2_bundle(final_bundle_json, work_id=work_id)
 
     def _collect_intelligence(self, last_run: datetime, work_id: str) -> None:
-        import_from_date = "2010-01-01 00:00"
-        if last_run is not None:
-            import_from_date = last_run.strftime("%Y-%m-%d %H:%M")
-        elif self.config.threatmatch.import_from_date is not None:
-            import_from_date = self.config.threatmatch.import_from_date
+        import_from_date = (
+            last_run.strftime("%Y-%m-%d %H:%M")
+            if last_run
+            else self.config.threatmatch.import_from_date
+        )
 
         token = self._get_token()
         headers = {"Authorization": "Bearer " + token}
