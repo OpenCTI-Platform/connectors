@@ -10,12 +10,12 @@ from connectors_sdk.models.octi._common import (
     BaseIdentifiedEntity,
 )
 from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
-from pycti import Indicator as pycti_Indicator
+from pycti import Indicator as PyctiIndicator
 from pydantic import AwareDatetime, Field, field_validator
-from stix2.v21 import Indicator as stix2_Indicator
-from stix2.v21 import IPv4Address as stix2_IPv4Address
-from stix2.v21 import Software as stix2_Software
-from stix2.v21 import _Observable as stix2__Observable
+from stix2.v21 import Indicator as Stix2Indicator
+from stix2.v21 import IPv4Address as Stix2IPv4Address
+from stix2.v21 import Software as Stix2Software
+from stix2.v21 import _Observable as _Stix2Observable
 
 
 @MODEL_REGISTRY.register
@@ -67,7 +67,7 @@ class Observable(ABC, BaseIdentifiedEntity):
         )
 
     @abstractmethod
-    def to_stix2_object(self) -> stix2__Observable:
+    def to_stix2_object(self) -> _Stix2Observable:
         """Make stix object.
 
         Notes:
@@ -197,10 +197,10 @@ class Indicator(BaseIdentifiedEntity):
         "and use BasedOnRelationship for more granularity.",
     )
 
-    def to_stix2_object(self) -> stix2_Indicator:
+    def to_stix2_object(self) -> Stix2Indicator:
         """Make stix object."""
-        _id = pycti_Indicator.generate_id(pattern=self.pattern)
-        return stix2_Indicator(
+        _id = PyctiIndicator.generate_id(pattern=self.pattern)
+        return Stix2Indicator(
             id=_id,
             name=self.name,
             description=self.description,
@@ -266,9 +266,9 @@ class IPV4Address(Observable):
             raise ValueError(f"Invalid IP V4 address {value}") from None
         return value
 
-    def to_stix2_object(self) -> stix2_IPv4Address:
+    def to_stix2_object(self) -> Stix2IPv4Address:
         """Make stix object."""
-        return stix2_IPv4Address(
+        return Stix2IPv4Address(
             value=self.value,
             object_marking_refs=[marking.id for marking in self.markings or []],
             allow_custom=True,
@@ -305,9 +305,9 @@ class Software(Observable):
         default=None,
     )
 
-    def to_stix2_object(self) -> stix2_Software:
+    def to_stix2_object(self) -> Stix2Software:
         """Make Software STIX2.1 object."""
-        return stix2_Software(
+        return Stix2Software(
             name=self.name,
             version=self.version,
             vendor=self.vendor,

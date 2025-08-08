@@ -3,7 +3,7 @@
 from typing import Any, Literal, Optional
 
 from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
-from pycti import StixCoreRelationship as pycti_StixCoreRelationship
+from pycti import StixCoreRelationship as PyctiStixCoreRelationship
 from pydantic import AwareDatetime, Field
 from stix2.v21 import Relationship as Stix2Relationship
 
@@ -43,7 +43,7 @@ class Relationship(BaseIdentifiedEntity):
     def to_stix2_object(self) -> Stix2Relationship:
         """Make stix object."""
         return Stix2Relationship(
-            id=pycti_StixCoreRelationship.generate_id(
+            id=PyctiStixCoreRelationship.generate_id(
                 relationship_type=self.type,
                 source_ref=self.source.id,
                 target_ref=self.target.id,

@@ -6,13 +6,13 @@ import pytest
 from connectors_sdk.models.octi._common import BaseIdentifiedEntity
 from connectors_sdk.models.octi.relationships import (
     Relationship,
-    related_to,
     based_on,
     derived_from,
-    indicates,
-    targets,
-    located_at,
     has,
+    indicates,
+    located_at,
+    related_to,
+    targets,
 )
 from pydantic import ValidationError
 

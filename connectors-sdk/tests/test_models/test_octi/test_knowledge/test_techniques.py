@@ -5,7 +5,7 @@ import pytest
 from connectors_sdk.models.octi._common import BaseIdentifiedEntity
 from connectors_sdk.models.octi.knowledge.techniques import AttackPattern
 from pydantic import ValidationError
-from stix2.v21 import AttackPattern as stix2_AttackPattern
+from stix2.v21 import AttackPattern as Stix2AttackPattern
 
 ### ATTACK PATTERN
 
@@ -49,4 +49,4 @@ def test_attack_pattern_to_stix2_object_returns_valid_stix_object(
     # When: calling to_stix2_object method
     stix2_obj = attack_pattern.to_stix2_object()
     # Then: A valid STIX2.1 AttackPattern is returned
-    assert isinstance(stix2_obj, stix2_AttackPattern)
+    assert isinstance(stix2_obj, Stix2AttackPattern)

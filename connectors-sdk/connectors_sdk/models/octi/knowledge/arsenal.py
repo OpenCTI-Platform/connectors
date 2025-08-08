@@ -4,9 +4,9 @@ from typing import Optional
 
 from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
 from connectors_sdk.models.octi.enums import CvssSeverity
-from pycti import Vulnerability as pycti_Vulnerability
+from pycti import Vulnerability as PyctiVulnerability
 from pydantic import Field
-from stix2.v21 import Vulnerability as stix2_Vulnerability
+from stix2.v21 import Vulnerability as Stix2Vulnerability
 
 # TODO: add other enums for CVSS fields?
 
@@ -216,10 +216,10 @@ class Vulnerability(BaseIdentifiedEntity):
         default=None,
     )
 
-    def to_stix2_object(self) -> stix2_Vulnerability:
+    def to_stix2_object(self) -> Stix2Vulnerability:
         """Make Vulnerability STIX2.1 object."""
-        return stix2_Vulnerability(
-            id=pycti_Vulnerability.generate_id(self.name),
+        return Stix2Vulnerability(
+            id=PyctiVulnerability.generate_id(self.name),
             name=self.name,
             description=self.description,
             labels=self.labels,
