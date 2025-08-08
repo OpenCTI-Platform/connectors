@@ -6,7 +6,7 @@ from connectors_sdk.models.octi._common import BaseIdentifiedEntity
 from connectors_sdk.models.octi.enums import CvssSeverity
 from connectors_sdk.models.octi.knowledge.arsenal import Vulnerability
 from pydantic import ValidationError
-from stix2.v21 import Vulnerability as stix2_Vulnerability
+from stix2.v21 import Vulnerability as Stix2Vulnerability
 
 ### VULNERABILITY
 
@@ -90,4 +90,4 @@ def test_vulnerability_to_stix2_object_returns_valid_stix_object(
     # When: calling to_stix2_object method
     stix2_obj = vulnerability.to_stix2_object()
     # Then: A valid STIX2.1 Vulnerability is returned
-    assert isinstance(stix2_obj, stix2_Vulnerability)
+    assert isinstance(stix2_obj, Stix2Vulnerability)

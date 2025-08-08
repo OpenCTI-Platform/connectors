@@ -4,9 +4,9 @@ from typing import Optional
 
 from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
 from connectors_sdk.models.octi.enums import CvssSeverity
-from pycti import Vulnerability as pycti_Vulnerability
+from pycti import Vulnerability as PyctiVulnerability
 from pydantic import Field
-from stix2.v21 import Vulnerability as stix2_Vulnerability
+from stix2.v21 import Vulnerability as Stix2Vulnerability
 
 
 @MODEL_REGISTRY.register
@@ -214,7 +214,7 @@ class Vulnerability(BaseIdentifiedEntity):
         default=None,
     )
 
-    def to_stix2_object(self) -> stix2_Vulnerability:
+    def to_stix2_object(self) -> Stix2Vulnerability:
         """Make Vulnerability STIX2.1 object."""
         return Stix2Vulnerability(
             id=PyctiVulnerability.generate_id(name=self.name),

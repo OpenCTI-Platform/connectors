@@ -12,9 +12,9 @@ from connectors_sdk.models.octi.activities.observations import (
     Software,
 )
 from pydantic import ValidationError
-from stix2.v21 import Indicator as stix2_Indicator
-from stix2.v21 import IPv4Address as stix2_IPv4Address
-from stix2.v21 import Software as stix2_Software
+from stix2.v21 import Indicator as Stix2Indicator
+from stix2.v21 import IPv4Address as Stix2IPv4Address
+from stix2.v21 import Software as Stix2Software
 
 ### OBSERVABLE BASE TYPE
 
@@ -225,4 +225,4 @@ def test_software_address_to_stix2_object_returns_valid_stix_object(
     # When: calling to_stix2_object method
     stix2_obj = ipv4_address.to_stix2_object()
     # Then: A valid STIX2.1 Software is returned
-    assert isinstance(stix2_obj, stix2_Software)
+    assert isinstance(stix2_obj, Stix2Software)

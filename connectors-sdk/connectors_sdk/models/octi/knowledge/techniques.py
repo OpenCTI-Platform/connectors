@@ -2,13 +2,12 @@
 
 from typing import Optional
 
-
 from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
-from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
 from connectors_sdk.models.octi.enums import Permission, Platform
-from pycti import AttackPattern as pycti_AttackPattern
+from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
+from pycti import AttackPattern as PyctiAttackPattern
 from pydantic import Field
-from stix2.v21 import AttackPattern as stix2_AttackPattern
+from stix2.v21 import AttackPattern as Stix2AttackPattern
 
 
 @MODEL_REGISTRY.register
@@ -52,10 +51,10 @@ class AttackPattern(BaseIdentifiedEntity):
         default=None,
     )
 
-    def to_stix2_object(self) -> stix2_AttackPattern:
+    def to_stix2_object(self) -> Stix2AttackPattern:
         """Make AttackPattern STIX2.1 object."""
-        return stix2_AttackPattern(
-            id=pycti_AttackPattern.generate_id(
+        return Stix2AttackPattern(
+            id=PyctiAttackPattern.generate_id(
                 name=self.name,
                 x_mitre_id=self.mitre_id,
             ),
