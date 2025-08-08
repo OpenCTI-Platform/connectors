@@ -130,14 +130,14 @@ class ImportTTPsFileNavigator:
             )
         )
         if len(entity_stix_bundle["objects"]) > 0:
-            entity_stix = next (
+            entity_stix = next(
                 (
                     stix_object
                     for stix_object in entity_stix_bundle["objects"]
                     if "x_opencti_id" in stix_object
-                       and stix_object["x_opencti_id"] == stix_entity["id"]
+                    and stix_object["x_opencti_id"] == stix_entity["id"]
                 ),
-                None
+                None,
             )
             if (
                 entity_stix.get("type") == "identity"
@@ -154,7 +154,9 @@ class ImportTTPsFileNavigator:
                         allow_custom=True,
                     )
                     stix_relationships.append(rel)
-                stix_techniques_with_relationships = stix_techniques + stix_relationships
+                stix_techniques_with_relationships = (
+                    stix_techniques + stix_relationships
+                )
 
             if (
                 entity_stix.get("type") == "intrusion-set"
@@ -173,7 +175,9 @@ class ImportTTPsFileNavigator:
                         allow_custom=True,
                     )
                     stix_relationships.append(rel)
-                stix_techniques_with_relationships = stix_techniques + stix_relationships
+                stix_techniques_with_relationships = (
+                    stix_techniques + stix_relationships
+                )
 
         return stix_techniques_with_relationships
 
