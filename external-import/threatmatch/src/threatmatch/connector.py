@@ -21,17 +21,17 @@ class Connector:
             description="Security Alliance is a cyber threat intelligence product and services company, formed in 2007.",
         )
 
-    def _get_item(self, client, item_type, item_id):
-        bundle = client.get_stix_bundle(item_type, item_id)
+    def _get_stix_objects(self, client, item_type, item_id):
+        stix_objects = client.get_stix_objects(item_type, item_id)
         self.helper.connector_logger.info(
-            f"Found {len(bundle)} STIX objects from {item_type} {item_id}'"
+            f"Found {len(stix_objects)} STIX objects from {item_type} {item_id}'"
         )
-        for stix_object in bundle:
+        for stix_object in stix_objects:
             if "description" in stix_object and stix_object["description"]:
                 stix_object["description"] = BeautifulSoup(
                     stix_object["description"], "html.parser"
                 ).get_text()
-        return bundle
+        return stix_objects
 
     def _process_list(self, work_id, client, item_type, items):
         if len(items) > 0:
@@ -40,13 +40,13 @@ class Connector:
                 self._process_bundle(work_id, bundle)
             else:
                 for item_id in items:
-                    bundle = self._get_item(client, item_type, item_id)
+                    bundle = self._get_stix_objects(client, item_type, item_id)
                     self._process_bundle(work_id, bundle)
 
-    def _process_bundle(self, work_id, bundle):
-        if len(bundle) > 0:
+    def _process_bundle(self, work_id, stix_objects):
+        if len(stix_objects) > 0:
             final_objects = []
-            for stix_object in bundle:
+            for stix_object in stix_objects:
                 if "error" in stix_object:
                     continue
                 if "created_by_ref" not in stix_object:
