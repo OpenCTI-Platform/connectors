@@ -32,11 +32,11 @@ def test_connector_process(mocked_helper: MockerFixture) -> None:
         "HTTPSConnectionPool(host='test-threatmatch-url', port=443): Max retries exceeded with url: /api/developers-platform/token"
         in connector.helper.connector_logger.error.call_args[0][0]
     )
-    assert connector.helper.connector_logger.info.call_count == 3
+    assert connector.helper.connector_logger.info.call_count == 2
     connector.helper.connector_logger.info.assert_has_calls(
         [
+            call("Running connector..."),
             call("Connector last run: never"),
-            call("Connector successfully ran"),
         ]
     )
 

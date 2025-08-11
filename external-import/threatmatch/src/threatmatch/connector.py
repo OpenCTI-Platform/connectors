@@ -1,5 +1,6 @@
 import json
 import sys
+import traceback
 from datetime import UTC, datetime
 from typing import Any
 
@@ -159,10 +160,8 @@ class Connector:
             "ThreatMatch run @ " + self.start_datetime.isoformat(timespec="seconds"),
         )
 
-        try:
-            self._collect_intelligence(last_run, work_id)
-        except Exception as e:
-            self.helper.connector_logger.error(str(e))
+        self._collect_intelligence(last_run, work_id)
+
         self.helper.set_state(
             {"last_run": self.start_datetime.isoformat(timespec="seconds")}
         )
@@ -182,6 +181,7 @@ class Connector:
             self.helper.connector_logger.info("Connector stop")
             sys.exit(0)
         except Exception as e:
+            traceback.print_exc()
             self.helper.connector_logger.error(str(e))
 
     def run(self):
