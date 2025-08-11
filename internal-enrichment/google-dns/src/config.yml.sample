@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'INTERNAL_ENRICHMENT'
   name: 'Google DNS'
   scope: 'Domain-Name,Hostname' # MIME type or SCO
   auto: false # Enable/disable auto-enrichment of observables
