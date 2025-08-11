@@ -3,7 +3,6 @@ import traceback
 from datetime import UTC, datetime
 from typing import Any
 
-from bs4 import BeautifulSoup
 from pycti import OpenCTIConnectorHelper
 from threatmatch.client import ThreatMatchClient
 from threatmatch.config import ConnectorSettings
@@ -28,26 +27,7 @@ class Connector:
         self.helper.connector_logger.info(
             f"Found {len(stix_objects)} STIX objects from {item_type} {item_id}'"
         )
-        for stix_object in stix_objects:
-            if "description" in stix_object and stix_object["description"]:
-                stix_object["description"] = BeautifulSoup(
-                    stix_object["description"], "html.parser"
-                ).get_text()
         return stix_objects
-
-    def _process_stix_objects(self, stix_objects):
-        for stix_object in stix_objects:
-            if "error" in stix_object:
-                continue
-            if "created_by_ref" not in stix_object:
-                stix_object["created_by_ref"] = self.converter.author
-            if "object_refs" in stix_object and stix_object["type"] not in [
-                "report",
-                "note",
-                "opinion",
-                "observed-data",
-            ]:
-                del stix_object["object_refs"]
 
     def _get_all_content_group_id(self, taxii_groups: list[dict[str, Any]]) -> str:
         id_by_group = {group["name"]: group["id"] for group in taxii_groups}
@@ -158,10 +138,13 @@ class Connector:
                 "ThreatMatch run @ "
                 + self.start_datetime.isoformat(timespec="seconds"),
             )
-            self._process_stix_objects(stix_objects)
-
+            processed_stix_object = [
+                processed_stix_object
+                for stix_object in stix_objects
+                for processed_stix_object in self.converter.process(stix_object)
+            ]
             bundle = self.helper.stix2_create_bundle(
-                items=[self.converter.author] + stix_objects
+                items=[self.converter.author] + processed_stix_object
             )
             self.helper.send_stix2_bundle(bundle, work_id=self.work_id)
 

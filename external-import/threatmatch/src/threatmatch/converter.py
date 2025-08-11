@@ -1,6 +1,13 @@
+from typing import Any, Generator
+
 import pycti
 import stix2
+from bs4 import BeautifulSoup
 from pycti import OpenCTIConnectorHelper
+
+
+class ConnectorWarning(Exception):
+    """Custom warning for connector operations."""
 
 
 class Converter:
@@ -32,3 +39,29 @@ class Converter:
             identity_class="organization",
             description=description,
         )
+
+    def process(
+        self, stix_object: dict[str, Any]
+    ) -> Generator[dict[str, Any], None, None]:
+        try:
+            if "error" in stix_object:
+                raise ConnectorWarning()
+            if "created_by_ref" not in stix_object:
+                stix_object["created_by_ref"] = self.author.id
+            if "object_refs" in stix_object and stix_object["type"] not in [
+                "report",
+                "note",
+                "opinion",
+                "observed-data",
+            ]:
+                del stix_object["object_refs"]
+            if "description" in stix_object and stix_object["description"]:
+                stix_object["description"] = BeautifulSoup(
+                    stix_object["description"], "html.parser"
+                ).get_text()
+            yield stix_object
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                "An error occurred while processing an entity, skipping...",
+                {"error": str(e), "stix_object": stix_object},
+            )
