@@ -23,6 +23,9 @@ class Connector:
 
     def _get_item(self, client, item_type, item_id):
         bundle = client.get_stix_bundle(item_type, item_id)
+        self.helper.connector_logger.info(
+            f"Found {len(bundle)} STIX objects from {item_type} {item_id}'"
+        )
         for stix_object in bundle:
             if "description" in stix_object and stix_object["description"]:
                 stix_object["description"] = BeautifulSoup(
@@ -75,6 +78,9 @@ class Connector:
         group_id: str,
         modified_after: str,
     ) -> dict:
+        self.helper.connector_logger.info(
+            f"Fetching indicators modified after {modified_after} from group {group_id}."
+        )
         data = client.get_taxii_objects(group_id, "indicator", modified_after)
         indicators = data.get("objects", [])
         if data.get("more") and indicators:
@@ -100,9 +106,15 @@ class Connector:
         ) as client:
             if self.config.threatmatch.import_profiles:
                 profile_ids = client.get_profile_ids(import_from_date=import_from_date)
+                self.helper.connector_logger.info(
+                    f"Found {len(profile_ids)} profiles to import since {import_from_date}, fetching STIX objects..."
+                )
                 self._process_list(work_id, client, "profiles", profile_ids)
             if self.config.threatmatch.import_alerts:
                 alert_ids = client.get_alert_ids(import_from_date=import_from_date)
+                self.helper.connector_logger.info(
+                    f"Found {len(alert_ids)} alerts to import since {import_from_date}, fetching STIX objects..."
+                )
                 self._process_list(work_id, client, "alerts", alert_ids)
             if self.config.threatmatch.import_iocs:
                 indicators = self._get_indicators(
@@ -114,6 +126,9 @@ class Connector:
                         )
                         + "Z"
                     ),
+                )
+                self.helper.connector_logger.info(
+                    f"Found {len(indicators)} indicators to import since {import_from_date}"
                 )
                 self._process_list(work_id, client, "indicators", indicators)
 
