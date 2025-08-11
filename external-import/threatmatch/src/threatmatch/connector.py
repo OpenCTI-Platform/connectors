@@ -1,4 +1,3 @@
-import json
 import sys
 import traceback
 from datetime import UTC, datetime
@@ -36,8 +35,7 @@ class Connector:
                 ).get_text()
         return stix_objects
 
-    def _process_bundle(self, work_id, stix_objects):
-        final_objects = []
+    def _process_stix_objects(self, stix_objects):
         for stix_object in stix_objects:
             if "error" in stix_object:
                 continue
@@ -50,11 +48,6 @@ class Connector:
                 "observed-data",
             ]:
                 del stix_object["object_refs"]
-                pass
-            final_objects.append(stix_object)
-        final_bundle = {"type": "bundle", "objects": final_objects}
-        final_bundle_json = json.dumps(final_bundle)
-        self.helper.send_stix2_bundle(final_bundle_json, work_id=work_id)
 
     def _get_all_content_group_id(self, taxii_groups: list[dict[str, Any]]) -> str:
         id_by_group = {group["name"]: group["id"] for group in taxii_groups}
@@ -165,7 +158,12 @@ class Connector:
                 "ThreatMatch run @ "
                 + self.start_datetime.isoformat(timespec="seconds"),
             )
-            self._process_bundle(self.work_id, stix_objects)
+            self._process_stix_objects(stix_objects)
+
+            bundle = self.helper.stix2_create_bundle(
+                items=[self.converter.author] + stix_objects
+            )
+            self.helper.send_stix2_bundle(bundle, work_id=self.work_id)
 
         self.helper.set_state(
             {"last_run": self.start_datetime.isoformat(timespec="seconds")}
