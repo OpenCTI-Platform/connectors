@@ -1,3 +1,3 @@
-from src.services.config_loader import IPInfoConfig
+from services.config_loader import ConfigLoader
 
-__all__ = ["IPInfoConfig"]
+__all__ = ["ConfigLoader"]

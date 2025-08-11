@@ -1,11 +1,11 @@
 from typing import Annotated, Literal, Optional
 
+from models.configs import ConfigBaseSettings
 from pydantic import (
     Field,
     PlainSerializer,
     SecretStr,
 )
-from src.models.configs import ConfigBaseSettings
 
 TLPToLower = Annotated[
     Literal["clear", "green", "amber", "amber+strict", "red"],

@@ -1,34 +1,90 @@
-from pydantic import ValidationError
-from src.models import ConfigLoader
+from pathlib import Path
+
+from models.configs import (
+    ConfigBaseSettings,
+    _ConfigLoaderConnector,
+    _ConfigLoaderIPInfo,
+    _ConfigLoaderOCTI,
+)
+from pydantic import Field
+from pydantic_settings import (
+    BaseSettings,
+    DotEnvSettingsSource,
+    EnvSettingsSource,
+    PydanticBaseSettingsSource,
+    YamlConfigSettingsSource,
+)
 
 
-class IPInfoConfig:
-    def __init__(self):
-        """Initialize the connector with necessary configurations"""
-        self.load = self._load_config()
+class ConfigLoaderConnector(_ConfigLoaderConnector):
+    """A concrete implementation of _ConfigLoaderConnector defining default connector configuration values."""
 
-    @staticmethod
-    def _load_config() -> ConfigLoader:
-        """Load the application configuration using Pydantic Settings.
+    id: str = Field(
+        alias="CONNECTOR_ID",
+        default="ipinfo--43cf861c-72a7-4e45-864a-b19e32e6a8bc",
+        description="A unique UUIDv4 identifier for this connector instance.",
+    )
+    name: str = Field(
+        alias="CONNECTOR_NAME",
+        default="IP Info",
+        description="Name of the connector.",
+    )
+    scope: str = Field(
+        alias="CONNECTOR_SCOPE",
+        default="IPv4-Addr,IPv6-Addr",
+        description="The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+    )
 
-        The configuration is loaded from a single source, following a specific order:
-        1. .env file (DotEnvSettingsSource) → If present, it is used as the primary configuration source.
-        2. config.yml file (YamlConfigSettingsSource) → If the .env file is missing, the YAML configuration is used instead.
-        3. System environment variables (EnvSettingsSource) → If neither a '.env' nor a 'config.yml' file is found,
-           the system environment variables are used as the last fallback.
 
-        It validates the configuration using Models Pydantic and ensures that only valid settings are returned.
+class ConfigLoader(ConfigBaseSettings):
+    """Interface for loading global configuration settings."""
 
-        Returns:
-            ConfigLoader: A model containing the validated configuration.
-        """
-        try:
+    opencti: _ConfigLoaderOCTI = Field(
+        default_factory=_ConfigLoaderOCTI,
+        description="OpenCTI configurations.",
+    )
+    connector: ConfigLoaderConnector = Field(
+        default_factory=ConfigLoaderConnector,
+        description="Connector configurations.",
+    )
+    ipinfo: _ConfigLoaderIPInfo = Field(
+        default_factory=_ConfigLoaderIPInfo,
+        description="IPInfo configurations.",
+    )
 
-            load_settings = ConfigLoader()
-            return load_settings
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource]:
+        env_path = Path(__file__).parents[2] / ".env"
+        yaml_path = Path(__file__).parents[2] / "config.yml"
 
-        except ValidationError as err:
-            raise ValueError(err)
-
-        except Exception as err:
-            raise ValueError(err)
+        if env_path.exists():
+            return (
+                DotEnvSettingsSource(
+                    settings_cls,
+                    env_file=env_path,
+                    env_ignore_empty=True,
+                    env_file_encoding="utf-8",
+                ),
+            )
+        elif yaml_path.exists():
+            return (
+                YamlConfigSettingsSource(
+                    settings_cls,
+                    yaml_file=yaml_path,
+                    yaml_file_encoding="utf-8",
+                ),
+            )
+        else:
+            return (
+                EnvSettingsSource(
+                    settings_cls,
+                    env_ignore_empty=True,
+                ),
+            )
