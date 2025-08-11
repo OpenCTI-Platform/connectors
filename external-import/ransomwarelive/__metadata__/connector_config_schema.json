@@ -1,0 +1,182 @@
+{
+  "$defs": {
+    "LogLevelType": {
+      "enum": [
+        "debug",
+        "info",
+        "warning",
+        "error",
+        "critical"
+      ],
+      "title": "LogLevelType",
+      "type": "string"
+    },
+    "_ConnectorConfig": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name of the connector",
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "const": "EXTERNAL_IMPORT",
+          "default": "EXTERNAL_IMPORT",
+          "title": "Type",
+          "type": "string"
+        },
+        "scope": {
+          "description": "The scope of the connector",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Scope",
+          "type": "array"
+        },
+        "duration_period": {
+          "default": "PT10M",
+          "description": "Duration between two scheduled runs of the connector (ISO 8601 format)",
+          "format": "duration",
+          "title": "Duration Period",
+          "type": "string"
+        },
+        "log_level": {
+          "$ref": "#/$defs/LogLevelType",
+          "default": "error",
+          "description": "Determines the verbosity of the logs"
+        },
+        "expose_metrics": {
+          "default": false,
+          "title": "Expose Metrics",
+          "type": "boolean"
+        },
+        "metrics_port": {
+          "default": 9095,
+          "title": "Metrics Port",
+          "type": "integer"
+        },
+        "only_contextual": {
+          "default": false,
+          "title": "Only Contextual",
+          "type": "boolean"
+        },
+        "run_and_terminate": {
+          "default": false,
+          "title": "Run And Terminate",
+          "type": "boolean"
+        },
+        "validate_before_import": {
+          "default": false,
+          "title": "Validate Before Import",
+          "type": "boolean"
+        },
+        "queue_protocol": {
+          "default": "amqp",
+          "title": "Queue Protocol",
+          "type": "string"
+        },
+        "queue_threshold": {
+          "default": 500,
+          "title": "Queue Threshold",
+          "type": "integer"
+        },
+        "send_to_queue": {
+          "default": true,
+          "title": "Send To Queue",
+          "type": "boolean"
+        },
+        "send_to_directory": {
+          "default": false,
+          "title": "Send To Directory",
+          "type": "boolean"
+        },
+        "send_to_directory_path": {
+          "default": null,
+          "title": "Send To Directory Path",
+          "type": "string"
+        },
+        "send_to_directory_retention": {
+          "default": 7,
+          "title": "Send To Directory Retention",
+          "type": "integer"
+        },
+        "pull_history": {
+          "default": false,
+          "description": "Whether to pull historic data",
+          "title": "Pull History",
+          "type": "boolean"
+        },
+        "history_start_year": {
+          "default": 2023,
+          "description": "The year to start from",
+          "title": "History Start Year",
+          "type": "integer"
+        },
+        "create_threat_actor": {
+          "default": false,
+          "description": "Whether to create a Threat Actor object",
+          "title": "Create Threat Actor",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "scope"
+      ],
+      "title": "_ConnectorConfig",
+      "type": "object"
+    },
+    "_OpenCTIConfig": {
+      "properties": {
+        "url": {
+          "format": "uri",
+          "maxLength": 2083,
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        },
+        "token": {
+          "title": "Token",
+          "type": "string"
+        },
+        "json_logging": {
+          "default": true,
+          "title": "Json Logging",
+          "type": "boolean"
+        },
+        "ssl_verify": {
+          "default": false,
+          "title": "Ssl Verify",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "url",
+        "token"
+      ],
+      "title": "_OpenCTIConfig",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "opencti": {
+      "$ref": "#/$defs/_OpenCTIConfig"
+    },
+    "connector": {
+      "$ref": "#/$defs/_ConnectorConfig"
+    }
+  },
+  "required": [
+    "opencti",
+    "connector"
+  ],
+  "title": "ConnectorSettings",
+  "type": "object"
+}
