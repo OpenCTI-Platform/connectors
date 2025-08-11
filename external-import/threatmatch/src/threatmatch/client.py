@@ -66,16 +66,9 @@ class ThreatMatchClient:
             try:
                 return func(self, *args, **kwargs)
             except HTTPError as e:
-                if e.response and e.response.status_code == 401:
+                if e.response.status_code == 401:
                     self._refresh_token()
-                    response = func(self, *args, **kwargs)
-                    if response.status_code == 200:
-                        response.json()
-                    # Check twice to ensure token is invalid
-                    if response.status_code == 401:
-                        raise HTTPError(
-                            "ThreatMatch API token is invalid or expired. Please check your credentials."
-                        )
+                    return func(self, *args, **kwargs)
                 else:
                     self.helper.connector_logger.error(
                         "Error in ThreatMatch API request",
@@ -86,8 +79,7 @@ class ThreatMatchClient:
                             "kwargs": kwargs,
                         },
                     )
-                    response = e.response
-            return response.json()
+                    return e.response.json()
 
         return wrapper
 
@@ -107,6 +99,7 @@ class ThreatMatchClient:
         url = self.base_url + endpoint
         headers = kwargs.pop("headers", {})
         headers["Authorization"] = f"Bearer {self.token}"
+        headers["Accept"] = "application/json"
         response = self.session.request(
             method=method, url=url, headers=headers, **kwargs
         )
@@ -123,14 +116,14 @@ class ThreatMatchClient:
         return self._request(
             method=HTTPMethod.GET,
             endpoint="/api/profiles/all",
-            json={"mode": "compact", "date_since": import_from_date},
+            params={"mode": "compact", "date_since": import_from_date},
         ).get("list", [])
 
     def get_alert_ids(self, import_from_date: str) -> list[int]:
         return self._request(
             method=HTTPMethod.GET,
             endpoint="/api/alerts/all",
-            json={"mode": "compact", "date_since": import_from_date},
+            params={"mode": "compact", "date_since": import_from_date},
         ).get("list", [])
 
     def get_taxii_groups(self) -> list[dict[str, Any]]:
