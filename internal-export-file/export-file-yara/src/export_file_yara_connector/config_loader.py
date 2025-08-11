@@ -25,5 +25,6 @@ class ConfigConnector:
             if os.path.isfile(config_file_path)
             else {}
         )
+        config.setdefault("connector", {}).update({"type": "INTERNAL_EXPORT_FILE"})
 
         return config

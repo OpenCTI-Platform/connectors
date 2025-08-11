@@ -1,5 +1,4 @@
 FROM python:3.12-alpine
-ENV CONNECTOR_TYPE=INTERNAL_EXPORT_FILE
 
 # Copy the connector
 COPY src /opt/opencti-connector-export-file-yara

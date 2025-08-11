@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'INTERNAL_EXPORT_FILE'
   name: 'ExportFileYARA'
   scope: 'text/yara+plain'
   log_level: 'info'
