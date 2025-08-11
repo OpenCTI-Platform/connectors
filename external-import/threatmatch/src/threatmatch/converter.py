@@ -1,4 +1,4 @@
-from typing import Any, Generator
+from typing import Any, Generator, Literal
 
 import pycti
 import stix2
@@ -8,6 +8,10 @@ from pycti import OpenCTIConnectorHelper
 
 class ConnectorWarning(Exception):
     """Custom warning for connector operations."""
+
+
+class InvalidTlpLevelError(Exception):
+    """Custom error for invalid TLP levels."""
 
 
 class Converter:
@@ -25,11 +29,13 @@ class Converter:
         helper: OpenCTIConnectorHelper,
         author_name: str,
         author_description: str,
+        tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"],
     ) -> None:
         self.helper = helper
         self.author = self._create_author(
             name=author_name, description=author_description
         )
+        self.tlp_marking = self._create_tlp_marking(tlp_level=tlp_level)
 
     @staticmethod
     def _create_author(name: str, description: str) -> stix2.Identity:
@@ -40,6 +46,32 @@ class Converter:
             description=description,
         )
 
+    @staticmethod
+    def _create_tlp_marking(
+        tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"],
+    ) -> stix2.MarkingDefinition:
+        match tlp_level:
+            case "white" | "clear":
+                return stix2.TLP_WHITE
+            case "green":
+                return stix2.TLP_GREEN
+            case "amber":
+                return stix2.TLP_AMBER
+            case "amber+strict":
+                return stix2.MarkingDefinition(
+                    id=pycti.MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+                    definition_type="statement",
+                    definition={"statement": "custom"},
+                    custom_properties={
+                        "x_opencti_definition_type": "TLP",
+                        "x_opencti_definition": "TLP:AMBER+STRICT",
+                    },
+                )
+            case "red":
+                return stix2.TLP_RED
+            case _:  # default
+                raise InvalidTlpLevelError(f"Invalid TLP level: {tlp_level}")
+
     def process(
         self, stix_object: dict[str, Any]
     ) -> Generator[dict[str, Any], None, None]:
@@ -48,6 +80,9 @@ class Converter:
                 raise ConnectorWarning()
             if "created_by_ref" not in stix_object:
                 stix_object["created_by_ref"] = self.author.id
+            if "object_marking_refs" not in stix_object:
+                stix_object["object_marking_refs"] = [self.tlp_marking.id]
+
             if "object_refs" in stix_object and stix_object["type"] not in [
                 "report",
                 "note",
@@ -59,6 +94,10 @@ class Converter:
                 stix_object["description"] = BeautifulSoup(
                     stix_object["description"], "html.parser"
                 ).get_text()
+
+            # Labels are not properly assigned in ThreatMatch
+            stix_object.pop("labels", None)
+
             yield stix_object
         except Exception as e:
             self.helper.connector_logger.warning(

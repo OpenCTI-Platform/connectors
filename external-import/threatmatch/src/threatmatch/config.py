@@ -2,7 +2,7 @@ import datetime
 import os
 import warnings
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from pydantic import BeforeValidator, Field, HttpUrl, PlainSerializer, model_validator
 from pydantic_core.core_schema import SerializationInfo
@@ -68,6 +68,9 @@ class _Threatmatch(_BaseSettings):
     import_profiles: bool = Field(default=True)
     import_alerts: bool = Field(default=True)
     import_iocs: bool = Field(default=True)
+    tlp_level: Literal["white", "clear", "green", "amber", "amber+strict", "red"] = (
+        Field(default="amber")
+    )
 
 
 class ConnectorSettings(_BaseSettings):

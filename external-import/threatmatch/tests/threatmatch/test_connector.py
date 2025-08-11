@@ -19,6 +19,7 @@ def test_connector_run(mocked_helper: MockerFixture) -> None:
             helper=mocked_helper,
             author_name="ThreatMatch",
             author_description="ThreatMatch Description",
+            tlp_level="amber",
         ),
     )
     connector.run()
@@ -40,6 +41,7 @@ def test_connector_process(mocked_helper: MockerFixture) -> None:
             helper=mocked_helper,
             author_name="ThreatMatch",
             author_description="ThreatMatch Description",
+            tlp_level="amber",
         ),
     )
     connector._process()
@@ -76,6 +78,7 @@ def test_connector_process_data_last_run(
             helper=mocked_helper,
             author_name="ThreatMatch",
             author_description="ThreatMatch Description",
+            tlp_level="amber",
         ),
     )
 

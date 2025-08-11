@@ -14,6 +14,7 @@ def main() -> None:
         helper=helper,
         author_name="Security Alliance",
         author_description="Security Alliance is a cyber threat intelligence product and services company, formed in 2007.",
+        tlp_level=config.threatmatch.tlp_level,
     )
 
     connector = Connector(helper=helper, config=config, converter=converter)

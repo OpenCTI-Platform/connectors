@@ -30,6 +30,7 @@ def fixture_config_dict() -> dict[str, Any]:
             "import_profiles": True,
             "import_alerts": True,
             "import_iocs": True,
+            "tlp_level": "amber",
         },
     }
 

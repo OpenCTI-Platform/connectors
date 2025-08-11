@@ -23,7 +23,7 @@ def test_config() -> None:
     assert config["connector"]["log_level"] == "info"
     assert config["connector"]["duration_period"] == datetime.timedelta(days=1)
 
-    assert len(config["threatmatch"]) == 7
+    assert len(config["threatmatch"]) == 8
     assert config["threatmatch"]["url"] == HttpUrl("https://test-threatmatch-url")
     assert config["threatmatch"]["client_id"] == "threatmatch-client-id"
     assert config["threatmatch"]["client_secret"] == "threatmatch-client-secret"
@@ -31,6 +31,7 @@ def test_config() -> None:
     assert config["threatmatch"]["import_profiles"] is True
     assert config["threatmatch"]["import_alerts"] is True
     assert config["threatmatch"]["import_iocs"] is True
+    assert config["threatmatch"]["tlp_level"] == "amber"
 
 
 def test_yaml_config(config_dict: dict[str, dict[str, Any]]) -> None:

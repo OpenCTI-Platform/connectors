@@ -17,4 +17,5 @@ services:
       - THREATMATCH_IMPORT_PROFILES=true # Import profiles
       - THREATMATCH_IMPORT_ALERTS=true # Import alerts
       - THREATMATCH_IMPORT_IOCS=true # Import iocs
+      - THREATMATCH_TLP_LEVEL=amber
     restart: always

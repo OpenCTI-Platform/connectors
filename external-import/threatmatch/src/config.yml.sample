@@ -18,4 +18,4 @@ threatmatch:
   import_profiles: true # Import profiles
   import_alerts: true # Import alerts
   import_iocs: true # Import iocs
-
+  tlp_level: 'amber' # TLP level to set on imported entities (allowed values are ['white', 'green', 'amber', 'amber+strict', 'red'])

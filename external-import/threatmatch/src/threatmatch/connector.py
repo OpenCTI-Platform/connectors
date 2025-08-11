@@ -144,7 +144,8 @@ class Connector:
                 for processed_stix_object in self.converter.process(stix_object)
             ]
             bundle = self.helper.stix2_create_bundle(
-                items=[self.converter.author] + processed_stix_object
+                items=[self.converter.author, self.converter.tlp_marking]
+                + processed_stix_object
             )
             self.helper.send_stix2_bundle(bundle, work_id=self.work_id)
 
