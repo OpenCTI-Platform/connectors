@@ -8,19 +8,21 @@ from bs4 import BeautifulSoup
 from pycti import OpenCTIConnectorHelper
 from threatmatch.client import ThreatMatchClient
 from threatmatch.config import ConnectorSettings
+from threatmatch.converter import Converter
 
 
 class Connector:
-    def __init__(self, helper: OpenCTIConnectorHelper, config: ConnectorSettings):
+    def __init__(
+        self,
+        helper: OpenCTIConnectorHelper,
+        config: ConnectorSettings,
+        converter: Converter,
+    ) -> None:
         self.helper = helper
         self.config = config
+        self.converter = converter
         self.start_datetime = datetime.now(tz=UTC)  # redefined in _process()
         self.work_id = None
-        self.identity = self.helper.api.identity.create(
-            type="Organization",
-            name="Security Alliance",
-            description="Security Alliance is a cyber threat intelligence product and services company, formed in 2007.",
-        )
 
     def _get_stix_objects(self, client, item_type, item_id):
         stix_objects = client.get_stix_objects(item_type, item_id)
@@ -40,7 +42,7 @@ class Connector:
             if "error" in stix_object:
                 continue
             if "created_by_ref" not in stix_object:
-                stix_object["created_by_ref"] = self.identity["standard_id"]
+                stix_object["created_by_ref"] = self.converter.author
             if "object_refs" in stix_object and stix_object["type"] not in [
                 "report",
                 "note",
@@ -157,6 +159,7 @@ class Connector:
         last_run = self._get_last_run()
 
         if stix_objects := self._collect_intelligence(last_run):
+
             self.work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id,
                 "ThreatMatch run @ "

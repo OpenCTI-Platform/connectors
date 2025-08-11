@@ -6,12 +6,21 @@ import pytest
 from pytest_mock import MockerFixture
 from threatmatch.config import ConnectorSettings
 from threatmatch.connector import Connector
+from threatmatch.converter import Converter
 
 
 @freezegun.freeze_time("2025-04-17T15:24:00Z")
 @pytest.mark.usefixtures("mock_config", "mocked_helper")
 def test_connector_run(mocked_helper: MockerFixture) -> None:
-    connector = Connector(helper=mocked_helper, config=ConnectorSettings())
+    connector = Connector(
+        helper=mocked_helper,
+        config=ConnectorSettings(),
+        converter=Converter(
+            helper=mocked_helper,
+            author_name="ThreatMatch",
+            author_description="ThreatMatch Description",
+        ),
+    )
     connector.run()
     assert connector.helper.connector_logger.info.call_count == 1
     connector.helper.connector_logger.info.assert_has_calls(
@@ -24,7 +33,15 @@ def test_connector_run(mocked_helper: MockerFixture) -> None:
 @freezegun.freeze_time("2025-04-17T15:24:00Z")
 @pytest.mark.usefixtures("mock_config", "mocked_helper")
 def test_connector_process(mocked_helper: MockerFixture) -> None:
-    connector = Connector(helper=mocked_helper, config=ConnectorSettings())
+    connector = Connector(
+        helper=mocked_helper,
+        config=ConnectorSettings(),
+        converter=Converter(
+            helper=mocked_helper,
+            author_name="ThreatMatch",
+            author_description="ThreatMatch Description",
+        ),
+    )
     connector._process()
 
     assert connector.helper.connector_logger.error.call_count == 1  # Bad url
@@ -52,7 +69,15 @@ def test_connector_process_data_last_run(
     # Only test _process_data method
     collect_intelligence = mocker.patch.object(Connector, "_collect_intelligence")
 
-    connector = Connector(helper=mocked_helper, config=ConnectorSettings())
+    connector = Connector(
+        helper=mocked_helper,
+        config=ConnectorSettings(),
+        converter=Converter(
+            helper=mocked_helper,
+            author_name="ThreatMatch",
+            author_description="ThreatMatch Description",
+        ),
+    )
 
     # 1 No last_run in state
     connector._process_data()
