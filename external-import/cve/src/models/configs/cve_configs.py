@@ -1,11 +1,11 @@
 from typing import Optional
 
+from models.configs import ConfigBaseSettings
 from pydantic import (
     Field,
     PositiveInt,
     SecretStr,
 )
-from src.models.configs import ConfigBaseSettings
 
 
 class _ConfigLoaderCVE(ConfigBaseSettings):
