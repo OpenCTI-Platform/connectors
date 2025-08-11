@@ -1,10 +1,10 @@
 from typing import Optional
 
+from models.configs import ConfigBaseSettings
 from pydantic import (
     Field,
     PositiveInt,
 )
-from src.models.configs import ConfigBaseSettings
 
 MITRE_ENTERPRISE_FILE_URL = "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json"
 MITRE_MOBILE_ATTACK_FILE_URL = "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/mobile-attack/mobile-attack.json"

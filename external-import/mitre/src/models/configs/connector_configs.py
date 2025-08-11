@@ -1,6 +1,7 @@
 from datetime import timedelta
 from typing import Annotated, Literal, Optional
 
+from models.configs import ConfigBaseSettings
 from pydantic import (
     Field,
     HttpUrl,
@@ -8,7 +9,6 @@ from pydantic import (
     PositiveInt,
     field_validator,
 )
-from src.models.configs import ConfigBaseSettings
 
 TLPToLower = Annotated[
     Literal["clear", "green", "amber", "amber+strict", "red"],
