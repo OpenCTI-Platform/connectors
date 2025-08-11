@@ -15,6 +15,7 @@ class Connector:
         self.helper = helper
         self.config = config
         self.start_datetime = datetime.now(tz=UTC)  # redefined in _process()
+        self.work_id = None
         self.identity = self.helper.api.identity.create(
             type="Organization",
             name="Security Alliance",
@@ -34,25 +35,24 @@ class Connector:
         return stix_objects
 
     def _process_bundle(self, work_id, stix_objects):
-        if len(stix_objects) > 0:
-            final_objects = []
-            for stix_object in stix_objects:
-                if "error" in stix_object:
-                    continue
-                if "created_by_ref" not in stix_object:
-                    stix_object["created_by_ref"] = self.identity["standard_id"]
-                if "object_refs" in stix_object and stix_object["type"] not in [
-                    "report",
-                    "note",
-                    "opinion",
-                    "observed-data",
-                ]:
-                    del stix_object["object_refs"]
-                    pass
-                final_objects.append(stix_object)
-            final_bundle = {"type": "bundle", "objects": final_objects}
-            final_bundle_json = json.dumps(final_bundle)
-            self.helper.send_stix2_bundle(final_bundle_json, work_id=work_id)
+        final_objects = []
+        for stix_object in stix_objects:
+            if "error" in stix_object:
+                continue
+            if "created_by_ref" not in stix_object:
+                stix_object["created_by_ref"] = self.identity["standard_id"]
+            if "object_refs" in stix_object and stix_object["type"] not in [
+                "report",
+                "note",
+                "opinion",
+                "observed-data",
+            ]:
+                del stix_object["object_refs"]
+                pass
+            final_objects.append(stix_object)
+        final_bundle = {"type": "bundle", "objects": final_objects}
+        final_bundle_json = json.dumps(final_bundle)
+        self.helper.send_stix2_bundle(final_bundle_json, work_id=work_id)
 
     def _get_all_content_group_id(self, taxii_groups: list[dict[str, Any]]) -> str:
         id_by_group = {group["name"]: group["id"] for group in taxii_groups}
@@ -81,7 +81,7 @@ class Connector:
             )
         return indicators
 
-    def _collect_intelligence(self, last_run: datetime, work_id: str) -> None:
+    def _collect_intelligence(self, last_run: datetime) -> list[dict[str, Any]]:
         import_from_date = (
             last_run.strftime("%Y-%m-%d %H:%M")
             if last_run
@@ -132,7 +132,7 @@ class Connector:
             self.helper.connector_logger.info(
                 f"Found {len(stix_objects)} STIX objects to process since {import_from_date}."
             )
-            self._process_bundle(work_id, stix_objects)
+        return stix_objects
 
     @property
     def state(self) -> dict[str, Any]:
@@ -155,20 +155,17 @@ class Connector:
 
     def _process_data(self):
         last_run = self._get_last_run()
-        work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id,
-            "ThreatMatch run @ " + self.start_datetime.isoformat(timespec="seconds"),
-        )
 
-        self._collect_intelligence(last_run, work_id)
+        if stix_objects := self._collect_intelligence(last_run):
+            self.work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id,
+                "ThreatMatch run @ "
+                + self.start_datetime.isoformat(timespec="seconds"),
+            )
+            self._process_bundle(self.work_id, stix_objects)
 
         self.helper.set_state(
             {"last_run": self.start_datetime.isoformat(timespec="seconds")}
-        )
-        self.helper.api.work.to_processed(
-            work_id,
-            "Connector successfully run, storing last_run as "
-            + self.start_datetime.isoformat(timespec="seconds"),
         )
 
     def _process(self):
@@ -183,6 +180,9 @@ class Connector:
         except Exception as e:
             traceback.print_exc()
             self.helper.connector_logger.error(str(e))
+        finally:
+            if self.work_id:
+                self.helper.api.work.to_processed(self.work_id, "")
 
     def run(self):
         self.helper.connector_logger.info("Connector starting...")
