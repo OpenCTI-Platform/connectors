@@ -94,6 +94,8 @@ class Converter:
                 stix_object["description"] = BeautifulSoup(
                     stix_object["description"], "html.parser"
                 ).get_text()
+            if stix_object.get("relationship_type") == "associated_content":
+                stix_object["relationship_type"] = "related-to"
 
             # Labels are not properly assigned in ThreatMatch
             stix_object.pop("labels", None)
