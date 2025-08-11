@@ -4,6 +4,8 @@ from http import HTTPMethod
 from typing import Any, Callable
 
 import requests
+from pycti import OpenCTIConnectorHelper
+from requests import HTTPError
 
 
 class ThreatMatchClient:
@@ -15,7 +17,14 @@ class ThreatMatchClient:
             profiles = client.get_profiles()
     """
 
-    def __init__(self, base_url: str, client_id: str, client_secret: str):
+    def __init__(
+        self,
+        helper: OpenCTIConnectorHelper,
+        base_url: str,
+        client_id: str,
+        client_secret: str,
+    ):
+        self.helper = helper
         self.base_url = base_url.rstrip("/")  # To avoid double slashes in URLs
         self.client_id = client_id
         self.client_secret = client_secret
@@ -52,22 +61,38 @@ class ThreatMatchClient:
         @wraps(func)
         def wrapper(
             self: "ThreatMatchClient", *args: Any, **kwargs: Any
-        ) -> requests.Response:
+        ) -> dict[str, Any]:
             self._ensure_token()
-            response = func(self, *args, **kwargs)
-            if response.status_code == 401:
-                self._refresh_token()
-                response = func(self, *args, **kwargs)
-                if response.status_code == 401:  # Check twice to ensure token is valid
-                    raise Exception(
-                        "Unauthorized (401): Check credentials or token validity."
+            try:
+                return func(self, *args, **kwargs)
+            except HTTPError as e:
+                if e.response and e.response.status_code == 401:
+                    self._refresh_token()
+                    response = func(self, *args, **kwargs)
+                    if response.status_code == 200:
+                        response.json()
+                    # Check twice to ensure token is invalid
+                    if response.status_code == 401:
+                        raise HTTPError(
+                            "ThreatMatch API token is invalid or expired. Please check your credentials."
+                        )
+                else:
+                    self.helper.connector_logger.error(
+                        "Error in ThreatMatch API request",
+                        {
+                            "error": str(e),
+                            "message": e.response.json(),
+                            "args": args,
+                            "kwargs": kwargs,
+                        },
                     )
-            return response
+                    response = e.response
+            return response.json()
 
         return wrapper
 
     @_with_token_refresh
-    def _request(self, method: str, endpoint: str, **kwargs: Any) -> requests.Response:
+    def _request(self, method: str, endpoint: str, **kwargs: Any) -> dict[str, Any]:
         """
         Send an HTTP request to the ThreatMatch API with automatic token management.
 
@@ -82,35 +107,37 @@ class ThreatMatchClient:
         url = self.base_url + endpoint
         headers = kwargs.pop("headers", {})
         headers["Authorization"] = f"Bearer {self.token}"
-        return self.session.request(method=method, url=url, headers=headers, **kwargs)
+        response = self.session.request(
+            method=method, url=url, headers=headers, **kwargs
+        )
+        response.raise_for_status()
+        data = response.json()
+        if "error" in data:
+            raise HTTPError(
+                "Error in ThreatMatch API",
+                {**kwargs, "error": data},
+            )
+        return data
 
     def get_profile_ids(self, import_from_date: str) -> list[int]:
-        return (
-            self._request(
-                method=HTTPMethod.GET,
-                endpoint="/api/profiles/all",
-                json={"mode": "compact", "date_since": import_from_date},
-            )
-            .json()
-            .get("list", [])
-        )
+        return self._request(
+            method=HTTPMethod.GET,
+            endpoint="/api/profiles/all",
+            json={"mode": "compact", "date_since": import_from_date},
+        ).get("list", [])
 
     def get_alert_ids(self, import_from_date: str) -> list[int]:
-        return (
-            self._request(
-                method=HTTPMethod.GET,
-                endpoint="/api/alerts/all",
-                json={"mode": "compact", "date_since": import_from_date},
-            )
-            .json()
-            .get("list", [])
-        )
+        return self._request(
+            method=HTTPMethod.GET,
+            endpoint="/api/alerts/all",
+            json={"mode": "compact", "date_since": import_from_date},
+        ).get("list", [])
 
     def get_taxii_groups(self) -> list[dict[str, Any]]:
         return self._request(
             method=HTTPMethod.GET,
             endpoint="/api/taxii/groups",
-        ).json()
+        )
 
     def get_taxii_objects(
         self, group_id: str, stix_type_name: str, modified_after: str
@@ -123,13 +150,12 @@ class ThreatMatchClient:
                 "stixTypeName": stix_type_name,
                 "modifiedAfter": modified_after,
             },
-        ).json()
+        )
 
     def get_stix_bundle(self, item_type: str, item_id: str) -> dict[str, Any]:
         return self._request(
-            method=HTTPMethod.GET,
-            endpoint=f"/api/stix/{item_type}/{item_id}",
-        ).json()["objects"]
+            method=HTTPMethod.GET, endpoint=f"/api/stix/{item_type}/{item_id}"
+        ).get("objects", [])
 
     def close(self) -> None:
         self.session.close()

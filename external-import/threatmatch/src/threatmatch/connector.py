@@ -77,7 +77,7 @@ class Connector:
     ) -> dict:
         data = client.get_taxii_objects(group_id, "indicator", modified_after)
         indicators = data.get("objects", [])
-        if data.get("more"):
+        if data.get("more") and indicators:
             return indicators + self._get_indicators(
                 client=client,
                 group_id=group_id,
@@ -93,6 +93,7 @@ class Connector:
         )
 
         with ThreatMatchClient(
+            helper=self.helper,
             base_url=self.config.threatmatch.url.encoded_string(),
             client_id=self.config.threatmatch.client_id,
             client_secret=self.config.threatmatch.client_secret,
