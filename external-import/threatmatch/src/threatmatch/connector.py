@@ -1,4 +1,3 @@
-import builtins
 import json
 import sys
 from datetime import UTC, datetime
@@ -32,16 +31,6 @@ class Connector:
                     stix_object["description"], "html.parser"
                 ).get_text()
         return stix_objects
-
-    def _process_list(self, work_id, client, item_type, items):
-        if len(items) > 0:
-            if builtins.type(items[0]) is dict:
-                bundle = items
-                self._process_bundle(work_id, bundle)
-            else:
-                for item_id in items:
-                    bundle = self._get_stix_objects(client, item_type, item_id)
-                    self._process_bundle(work_id, bundle)
 
     def _process_bundle(self, work_id, stix_objects):
         if len(stix_objects) > 0:
@@ -98,6 +87,8 @@ class Connector:
             else self.config.threatmatch.import_from_date
         )
 
+        stix_objects = []
+
         with ThreatMatchClient(
             helper=self.helper,
             base_url=self.config.threatmatch.url.encoded_string(),
@@ -109,28 +100,38 @@ class Connector:
                 self.helper.connector_logger.info(
                     f"Found {len(profile_ids)} profiles to import since {import_from_date}, fetching STIX objects..."
                 )
-                self._process_list(work_id, client, "profiles", profile_ids)
+                for profile_id in profile_ids:
+                    stix_objects.extend(
+                        self._get_stix_objects(client, "profiles", profile_id)
+                    )
             if self.config.threatmatch.import_alerts:
                 alert_ids = client.get_alert_ids(import_from_date=import_from_date)
                 self.helper.connector_logger.info(
                     f"Found {len(alert_ids)} alerts to import since {import_from_date}, fetching STIX objects..."
                 )
-                self._process_list(work_id, client, "alerts", alert_ids)
+                for alert_id in alert_ids:
+                    stix_objects.extend(
+                        self._get_stix_objects(client, "alerts", alert_id)
+                    )
             if self.config.threatmatch.import_iocs:
-                indicators = self._get_indicators(
-                    client=client,
-                    group_id=self._get_all_content_group_id(client.get_taxii_groups()),
-                    modified_after=(
-                        datetime.strptime(import_from_date, "%Y-%m-%d %H:%M").isoformat(
-                            timespec="milliseconds"
-                        )
-                        + "Z"
-                    ),
+                stix_objects.extend(
+                    self._get_indicators(
+                        client=client,
+                        group_id=self._get_all_content_group_id(
+                            client.get_taxii_groups()
+                        ),
+                        modified_after=(
+                            datetime.strptime(
+                                import_from_date, "%Y-%m-%d %H:%M"
+                            ).isoformat(timespec="milliseconds")
+                            + "Z"
+                        ),
+                    )
                 )
-                self.helper.connector_logger.info(
-                    f"Found {len(indicators)} indicators to import since {import_from_date}"
-                )
-                self._process_list(work_id, client, "indicators", indicators)
+            self.helper.connector_logger.info(
+                f"Found {len(stix_objects)} STIX objects to process since {import_from_date}."
+            )
+            self._process_bundle(work_id, stix_objects)
 
     @property
     def state(self) -> dict[str, Any]:
