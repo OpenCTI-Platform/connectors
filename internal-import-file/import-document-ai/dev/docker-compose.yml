@@ -72,7 +72,7 @@ services:
       - APP__ADMIN__EMAIL=${OPENCTI_ADMIN_EMAIL}
       - APP__ADMIN__PASSWORD=${OPENCTI_ADMIN_PASSWORD}
       - APP__ADMIN__TOKEN=${OPENCTI_ADMIN_TOKEN}
-      - APP__APP_LOGS__LOGS_LEVEL=error
+      - APP__APP_LOGS__LOGS_LEVEL=debug
       - REDIS__HOSTNAME=redis
       - REDIS__PORT=6379
       - ELASTICSEARCH__URL=http://elasticsearch:9200
@@ -140,7 +140,7 @@ services:
       - CONNECTOR_SCOPE=application/pdf,text/plain,text/html,text/markdown
       - CONNECTOR_AUTO=false # Enable/disable auto-import of file
       - CONNECTOR_WEB_SERVICE_URL=http://webservice:80
-      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_LOG_LEVEL=debug
       - CONNECTOR_LICENCE_KEY_PEM=${CONNECTOR_LICENCE_KEY_PEM}
     depends_on:
       - opencti
@@ -160,7 +160,7 @@ services:
       - CONNECTOR_VALIDATE_BEFORE_IMPORT=true # Validate any bundle before import
       - CONNECTOR_SCOPE=application/json,application/xml
       - CONNECTOR_AUTO=false # Enable/disable auto-import of file
-      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_LOG_LEVEL=debug
     restart: unless-stopped
     networks:
       - dev-opencti
