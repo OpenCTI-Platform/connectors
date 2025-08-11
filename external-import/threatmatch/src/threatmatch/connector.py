@@ -217,7 +217,6 @@ class Connector:
 
     def run(self):
         self.helper.connector_logger.info("Connector starting...")
-        self.helper.set_state({})
         self.helper.schedule_process(
             message_callback=self._process,
             duration_period=self.config.connector.duration_period.total_seconds(),
