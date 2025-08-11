@@ -2,20 +2,20 @@ import asyncio
 import sys
 
 from aiohttp import ClientConnectionError, ClientResponseError
-from pycti import OpenCTIConnectorHelper
-from pydantic import ValidationError
-from src.connector.models import (
-    ConfigLoader,
+from connector.models import (
     ObservableResponse,
     SecurityIncidentResponse,
     TaskResponse,
 )
-from src.connector.services import (
+from connector.services import (
+    ConfigLoader,
     ConverterToStix,
     DateTimeFormat,
     ServiceNowClient,
     Utils,
 )
+from pycti import OpenCTIConnectorHelper
+from pydantic import ValidationError
 from tenacity import RetryError
 
 

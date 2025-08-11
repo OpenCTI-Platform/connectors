@@ -1,6 +1,5 @@
-from src.connector.models.common import ConfigBaseSettings
-from src.connector.models.config_loader import ConfigLoader
-from src.connector.models.converter import (
+from connector.models.common import ConfigBaseSettings
+from connector.models.converter import (
     ASN,
     URL,
     AttackPattern,
@@ -28,14 +27,13 @@ from src.connector.models.converter import (
     Vulnerability,
     WindowsRegistyKey,
 )
-from src.connector.models.intelligence import (
+from connector.models.intelligence import (
     ObservableResponse,
     SecurityIncidentResponse,
     TaskResponse,
 )
 
 __all__ = [
-    "ConfigLoader",
     "ConfigBaseSettings",
     "SecurityIncidentResponse",
     "TaskResponse",
