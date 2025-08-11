@@ -36,22 +36,26 @@ class ConfigConnector:
         :return: None
         """
         # OpenCTI configurations
-
+        self.max_tlp = get_config_variable(
+            "MAX_TLP",
+            ["connector", "max_tlp"],
+            self.load,
+        )
         # Connector extra parameters
         self.api_base_url = get_config_variable(
-            "CONNECTOR_TEMPLATE_API_BASE_URL",
-            ["connector_template", "api_base_url"],
+            "SPLUNK_API_BASE_URL",
+            ["splunk", "api_base_url"],
             self.load,
         )
 
         self.api_key = get_config_variable(
-            "CONNECTOR_TEMPLATE_API_KEY",
-            ["connector_template", "api_key"],
+            "SPLUNK_API_KEY",
+            ["splunk", "api_key"],
             self.load,
         )
 
-        self.max_tlp = get_config_variable(
-            "CONNECTOR_TEMPLATE_MAX_TLP",
-            ["connector_template", "max_tlp"],
+        self.verify_ssl = get_config_variable(
+            "SPLUNK_VERIFY_SSL",
+            ["splunk", "verify_ssl"],
             self.load,
         )

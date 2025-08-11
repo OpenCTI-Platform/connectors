@@ -1,5 +1,6 @@
 from typing import List, Dict, Any
-from .splunk_bundle import full_bundle
+
+# from .splunk_bundle import full_bundle
 
 
 class OpenCTIIndicatorFetcher:
@@ -102,7 +103,7 @@ class OpenCTIIndicatorFetcher:
         """
         Returns the full indicator bundle from OpenCTI or predefined bundle.
         """
-        indicators = self._query_opencti_graphql(observable_type, observable_value)
+        indicators = self._query_opencti(observable_type, observable_value)
         if indicators:
             return indicators
         return self.predefined_stix_indicators.get(observable_type, [])

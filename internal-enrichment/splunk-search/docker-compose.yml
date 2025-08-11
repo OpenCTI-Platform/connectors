@@ -1,33 +1,22 @@
-version: '3'
+version: "3"
 services:
-  connector-template:
-    image: opencti/connector-template:6.7.7
+  connector-splunk-search:
+    image: opencti-connector-splunk-search:dev
+    build:
+      context: ./connectors/internal-enrichment/splunk-search
     environment:
-      # Connector's generic execution parameters
-      - OPENCTI_URL=http://localhost
-      - OPENCTI_TOKEN=CHANGEME
-      # Connector's definition parameters REQUIRED
-      - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_NAME=CHANGEME
-      - CONNECTOR_SCOPE=CHANGEME
-      - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_AUTO=true
-
-      # Connector's custom execution parameters
-      - CONNECTOR_TEMPLATE_API_BASE_URL=CHANGEME
-      - CONNECTOR_TEMPLATE_API_KEY=CHANGEME
-      - CONNECTOR_MAX_TLP=TLP:CLEAR # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
-
-      # Add proxy parameters below if needed
-      # - HTTP_PROXY=CHANGEME
-      # - HTTPS_PROXY=CHANGEME
-      # - NO_PROXY=CHANGEME
-    restart: always
-    # networks:
-    #   - docker_default
-
-# networks:
-#   default:
-#     external: true
-#     name: docker_default
-
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_SPLUNK_SEARCH_ID}
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      - CONNECTOR_NAME=SplunkSearch
+      - CONNECTOR_SCOPE=Indicator
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_AUTO=false
+      - CONNECTOR_RUN_AND_TERMINATE=false
+      - SPLUNK_API_BASE_URL=splunk.testing.filigran.io
+      - SPLUNK_API_KEY=${SPLUNK_API_KEY}
+      - SPLUNK_VERIFY_SSL=false
+    depends_on:
+      opencti:
+        condition: service_healthy

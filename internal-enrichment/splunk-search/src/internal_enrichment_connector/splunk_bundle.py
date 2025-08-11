@@ -38,7 +38,7 @@ full_bundle = {
         {
             "id": "indicator--88ef1bc8-71d1-566d-b0e7-0db708dbc3ac",
             "spec_version": "2.1",
-            "revoked": false,
+            "revoked": False,
             "confidence": 100,
             "created": "2025-07-29T17:34:36.589Z",
             "modified": "2025-07-29T17:34:36.658Z",
@@ -50,7 +50,7 @@ full_bundle = {
             "valid_from": "2025-07-29T17:34:36.343Z",
             "valid_until": "2025-10-07T17:02:10.128Z",
             "x_opencti_score": 40,
-            "x_opencti_detection": true,
+            "x_opencti_detection": True,
             "x_opencti_main_observable_type": "Domain-Name",
             "kill_chain_phases": [
                 {
@@ -85,7 +85,7 @@ full_bundle = {
         {
             "id": "indicator--c94e77f2-15e3-5695-aa1b-dc2ddc5c0e12",
             "spec_version": "2.1",
-            "revoked": false,
+            "revoked": False,
             "confidence": 100,
             "created": "2025-07-28T14:22:53.444Z",
             "modified": "2025-07-28T15:26:29.834Z",
@@ -97,8 +97,8 @@ full_bundle = {
             "valid_from": "2025-07-28T14:22:53.216Z",
             "valid_until": "2025-07-30T05:31:45.581Z",
             "x_opencti_score": 23,
-            "x_opencti_detection": false,
-            "x_opencti_main_observable_type": "IPv4-Addr",
+            "x_opencti_detection": False,
+            "x_opencti_main_observable_type": "ipv4-addr",
             "x_mitre_platforms": ["Network Devices"],
             "kill_chain_phases": [
                 {
@@ -128,7 +128,7 @@ full_bundle = {
         {
             "id": "indicator--1f9b0afe-8455-50f2-947b-66143dca7800",
             "spec_version": "2.1",
-            "revoked": false,
+            "revoked": False,
             "confidence": 100,
             "created": "2025-07-28T15:18:30.151Z",
             "modified": "2025-07-28T15:18:30.218Z",
@@ -140,8 +140,8 @@ full_bundle = {
             "valid_from": "2025-07-28T15:18:29.921Z",
             "valid_until": "2025-07-30T06:27:22.286Z",
             "x_opencti_score": 23,
-            "x_opencti_detection": true,
-            "x_opencti_main_observable_type": "IPv4-Addr",
+            "x_opencti_detection": True,
+            "x_opencti_main_observable_type": "ipv4-addr",
             "x_mitre_platforms": ["Network Devices"],
             "kill_chain_phases": [
                 {
@@ -176,7 +176,7 @@ full_bundle = {
         {
             "id": "indicator--5a1a3039-8dcc-55e1-bfbb-811f25e2c0a6",
             "spec_version": "2.1",
-            "revoked": false,
+            "revoked": False,
             "confidence": 100,
             "created": "2025-07-29T17:39:28.353Z",
             "modified": "2025-07-29T17:39:28.443Z",
@@ -188,7 +188,7 @@ full_bundle = {
             "valid_from": "2025-07-29T17:39:28.131Z",
             "valid_until": "2025-10-07T17:07:01.916Z",
             "x_opencti_score": 40,
-            "x_opencti_detection": true,
+            "x_opencti_detection": True,
             "x_opencti_main_observable_type": "Domain-Name",
             "x_mitre_platforms": ["Directory Services"],
             "kill_chain_phases": [
@@ -224,7 +224,7 @@ full_bundle = {
         {
             "id": "indicator--1c641561-d89a-5804-84d9-cdb5f18ea32b",
             "spec_version": "2.1",
-            "revoked": false,
+            "revoked": False,
             "confidence": 100,
             "created": "2025-07-29T17:46:17.384Z",
             "modified": "2025-07-29T17:46:17.454Z",
@@ -236,7 +236,7 @@ full_bundle = {
             "valid_from": "2025-07-29T17:46:17.141Z",
             "valid_until": "2026-04-02T05:57:39.388Z",
             "x_opencti_score": 40,
-            "x_opencti_detection": true,
+            "x_opencti_detection": True,
             "x_opencti_main_observable_type": "StixFile",
             "x_mitre_platforms": ["Windows"],
             "kill_chain_phases": [
@@ -273,6 +273,60 @@ full_bundle = {
             "object_marking_refs": [
                 "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
             ],
+        },
+        {
+            "id": "note--b9b93bc8-16e4-5711-b3bf-1a96377870eb",
+            "spec_version": "2.1",
+            "revoked": False,
+            "confidence": 100,
+            "created": "2025-08-04T19:18:09.000Z",
+            "modified": "2025-08-04T19:22:02.021Z",
+            "content": '{\n  "earliest_time": "-30d@d",\n  "latest_time": "now",\n  "timeout": 60,\n  "wait_seconds": 2\n}',
+            "note_types": ["Search Parameters"],
+            "likelihood": 50,
+            "external_references": [
+                {
+                    "source_name": "Splunk",
+                    "url": "https://docs.splunk.com/Documentation/Splunk/latest/RESTREF/RESTsearch?_gl=1*1usx40f*_gcl_au*MTMxNzQ1MDI1NS4xNzQ2NzE2MTk2*FPAU*MTMxNzQ1MDI1NS4xNzQ2NzE2MTk2*_ga*MTcxNjI0NTk4LjE3Mzg4NjE1MDA.*_ga_5EPM2P39FV*czE3NTQzMzMwNDgkbzEwMSRnMSR0MTc1NDMzNTI0MiRqNjAkbDAkaDE2NTE5NTM0NDM.*_fplc*cUxKN2FoY2gycnVMUkNlJTJCWkRyQ0tqR0klMkJuUnJXNm1mUmpvViUyRkMwaGRCY0Rvck44ZzJKWWZjS1cxY2FLNXZkJTJGeXlWclJ0bnFJcCUyQkxWakc4VklIcUNHYVhkM0lTQ0gwRUVrUFZwMUl1ekNRMlZVdFJsYTR5Y0NyeVFYSFNVdyUzRCUzRA..#search.2Fjobs",
+                    "external_id": "Search/Job Parameters",
+                }
+            ],
+            "x_opencti_id": "ef986557-1498-4a9b-a203-03c31019da1a",
+            "x_opencti_type": "Note",
+            "type": "note",
+            "created_by_ref": "identity--71f97ba4-389b-508f-9a4e-9a0c750c773d",
+            "object_marking_refs": [
+                "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
+            ],
+            "object_refs": ["indicator--56bff783-ffae-550e-9b6a-d68a3f69aeb4"],
+            "abstract": "Last 30 Days",
+        },
+        {
+            "id": "note--c004b7b2-8bd9-5351-98bc-0f786a0ec270",
+            "spec_version": "2.1",
+            "revoked": False,
+            "confidence": 100,
+            "created": "2025-08-04T19:18:09.000Z",
+            "modified": "2025-08-04T19:22:02.021Z",
+            "content": '{\n  "earliest_time": "-90d@d",\n  "latest_time": "now",\n  "timeout": 60,\n  "wait_seconds": 2\n}',
+            "note_types": ["Search Parameters"],
+            "likelihood": 50,
+            "external_references": [
+                {
+                    "source_name": "Splunk",
+                    "url": "https://docs.splunk.com/Documentation/Splunk/latest/RESTREF/RESTsearch?_gl=1*1usx40f*_gcl_au*MTMxNzQ1MDI1NS4xNzQ2NzE2MTk2*FPAU*MTMxNzQ1MDI1NS4xNzQ2NzE2MTk2*_ga*MTcxNjI0NTk4LjE3Mzg4NjE1MDA.*_ga_5EPM2P39FV*czE3NTQzMzMwNDgkbzEwMSRnMSR0MTc1NDMzNTI0MiRqNjAkbDAkaDE2NTE5NTM0NDM.*_fplc*cUxKN2FoY2gycnVMUkNlJTJCWkRyQ0tqR0klMkJuUnJXNm1mUmpvViUyRkMwaGRCY0Rvck44ZzJKWWZjS1cxY2FLNXZkJTJGeXlWclJ0bnFJcCUyQkxWakc4VklIcUNHYVhkM0lTQ0gwRUVrUFZwMUl1ekNRMlZVdFJsYTR5Y0NyeVFYSFNVdyUzRCUzRA..#search.2Fjobs",
+                    "external_id": "Search/Job Parameters",
+                }
+            ],
+            "x_opencti_id": "ef986557-1498-4a9b-a203-03c31019da1a",
+            "x_opencti_type": "Note",
+            "type": "note",
+            "created_by_ref": "identity--71f97ba4-389b-508f-9a4e-9a0c750c773d",
+            "object_marking_refs": [
+                "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
+            ],
+            "object_refs": ["indicator--56bff783-ffae-550e-9b6a-d68a3f69aeb4"],
+            "abstract": "Last 90 Days",
         },
     ],
 }

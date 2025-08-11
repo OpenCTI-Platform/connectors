@@ -1,5 +1,6 @@
 from .utils import get_hash_type, is_ipv4, is_ipv6, is_domain_name, is_hostname
-from .stix_constants import CustomObservableHostname, CustomObservableUserAgent
+
+# from .stix_constants import CustomObservableHostname, CustomObservableUserAgent
 import stix2
 
 
@@ -37,12 +38,6 @@ def parse_observables_and_incident(result: dict, author: dict, tlp: str = None):
                 account_login=result["user_name"],
                 display_name=result["user_name"],
                 **custom_props
-            )
-        )
-    if result.get("http_user_agent"):
-        observables.append(
-            CustomObservableUserAgent(
-                name="User Agent", cpe=result["http_user_agent"], **custom_props
             )
         )
     if result.get("dest"):

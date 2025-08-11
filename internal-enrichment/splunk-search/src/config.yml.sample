@@ -1,16 +1,15 @@
 opencti:
-  url: 'http://localhost:PORT'
+  url: 'http://localhost:8080'
   token: 'ChangeMe'
 
 connector:
-  id: 'ChangeMe'
+  id: '511a18bb-03b6-50e3-888a-08a8e656bf99'
   type: 'INTERNAL_ENRICHMENT'
-  name: 'Internal Enrichment Connector Template'
-  scope: 'ChangeMe'
+  name: 'Splunk Search'
+  scope: 'Indicator'
   log_level: 'info'
-  auto: true # Enable/disable auto-enrichment of observables
+  auto: false # Enable/disable auto-enrichment of observables
 
-connector_template:
+splunk-search:
   api_base_url: 'ChangeMe'
   api_key: 'ChangeMe'
-  max_tlp: "TLP:AMBER" # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED

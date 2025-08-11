@@ -18,7 +18,6 @@ if __name__ == "__main__":
         config = ConfigConnector()
         # playbook_compatible=True only if a bundle is sent !
         helper = OpenCTIConnectorHelper(config=config.load, playbook_compatible=True)
-
         connector = ConnectorTemplate(config=config, helper=helper)
         connector.run()
     except Exception:
