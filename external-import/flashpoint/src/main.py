@@ -1,6 +1,7 @@
 import traceback
 
-from flashpoint_connector import FlashpointConnector
+from flashpoint_connector import ConfigLoader, FlashpointConnector
+from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
     """
@@ -13,6 +14,9 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
+        config = ConfigLoader()
+        helper = OpenCTIConnectorHelper(config.model_dump_pycti())
+
         connector = FlashpointConnector()
         connector.run()
     except Exception:
