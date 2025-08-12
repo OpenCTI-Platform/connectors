@@ -74,46 +74,67 @@ class Converter:
             case _:  # default
                 raise InvalidTlpLevelError(f"Invalid TLP level: {tlp_level}")
 
+    def _handle_author(self, stix_object: dict[str, Any]) -> None:
+        if "created_by_ref" not in stix_object:
+            stix_object["created_by_ref"] = self.author.id
+
+    def _handle_object_marking_refs(self, stix_object: dict[str, Any]) -> None:
+        if "object_marking_refs" not in stix_object:
+            stix_object["object_marking_refs"] = [self.tlp_marking.id]
+
+    def _handle_threat_actor_as_intrusion_set(
+        self, stix_object: dict[str, Any]
+    ) -> None:
+        if self.threat_actor_to_intrusion_set:
+            if stix_object["type"] == "threat-actor":
+                stix_object["type"] = "intrusion-set"
+                stix_object["id"] = stix_object["id"].replace(
+                    "threat-actor", "intrusion-set"
+                )
+            if stix_object["type"] == "relationship":
+                stix_object["source_ref"] = stix_object["source_ref"].replace(
+                    "threat-actor", "intrusion-set"
+                )
+                stix_object["target_ref"] = stix_object["target_ref"].replace(
+                    "threat-actor", "intrusion-set"
+                )
+
+    def _handle_relationship(self, stix_object: dict[str, Any]) -> None:
+        if stix_object.get("relationship_type") == "associated_content":
+            stix_object["relationship_type"] = "related-to"
+
+    def _handle_object_refs(self, stix_object: dict[str, Any]) -> None:
+        if "object_refs" in stix_object and stix_object["type"] not in [
+            "report",
+            "note",
+            "opinion",
+            "observed-data",
+        ]:
+            del stix_object["object_refs"]
+
+    def _handle_description(self, stix_object: dict[str, Any]) -> None:
+        if "description" in stix_object and stix_object["description"]:
+            stix_object["description"] = BeautifulSoup(
+                stix_object["description"], "html.parser"
+            ).get_text()
+
+    def _handle_labels(self, stix_object: dict[str, Any]) -> None:
+        if "labels" in stix_object:
+            stix_object.pop("labels", None)
+
     def process(
         self, stix_object: dict[str, Any]
     ) -> Generator[dict[str, Any], None, None]:
         try:
             if "error" in stix_object:
                 raise ConnectorWarning()
-            if "created_by_ref" not in stix_object:
-                stix_object["created_by_ref"] = self.author.id
-            if "object_marking_refs" not in stix_object:
-                stix_object["object_marking_refs"] = [self.tlp_marking.id]
-
-            if "object_refs" in stix_object and stix_object["type"] not in [
-                "report",
-                "note",
-                "opinion",
-                "observed-data",
-            ]:
-                del stix_object["object_refs"]
-            if "description" in stix_object and stix_object["description"]:
-                stix_object["description"] = BeautifulSoup(
-                    stix_object["description"], "html.parser"
-                ).get_text()
-            if stix_object.get("relationship_type") == "associated_content":
-                stix_object["relationship_type"] = "related-to"
-            if self.threat_actor_to_intrusion_set:
-                if stix_object["type"] == "threat-actor":
-                    stix_object["type"] = "intrusion-set"
-                    stix_object["id"] = stix_object["id"].replace(
-                        "threat-actor", "intrusion-set"
-                    )
-                if stix_object["type"] == "relationship":
-                    stix_object["source_ref"] = stix_object["source_ref"].replace(
-                        "threat-actor", "intrusion-set"
-                    )
-                    stix_object["target_ref"] = stix_object["target_ref"].replace(
-                        "threat-actor", "intrusion-set"
-                    )
-            # Labels are not properly assigned in ThreatMatch
-            stix_object.pop("labels", None)
-
+            self._handle_author(stix_object)
+            self._handle_object_marking_refs(stix_object)
+            self._handle_threat_actor_as_intrusion_set(stix_object)
+            self._handle_relationship(stix_object)
+            self._handle_object_refs(stix_object)
+            self._handle_description(stix_object)
+            self._handle_labels(stix_object)
             yield stix_object
         except Exception as e:
             self.helper.connector_logger.warning(
