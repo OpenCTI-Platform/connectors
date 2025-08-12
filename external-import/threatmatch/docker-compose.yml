@@ -13,7 +13,7 @@ services:
       - THREATMATCH_URL=https://eu.threatmatch.com
       - THREATMATCH_CLIENT_ID=ChangeMe
       - THREATMATCH_CLIENT_SECRET=ChangeMe
-      - "THREATMATCH_IMPORT_FROM_DATE=2010-01-01 00:00"
+      - THREATMATCH_IMPORT_FROM_DATE=P30D
       - THREATMATCH_IMPORT_PROFILES=true # Import profiles
       - THREATMATCH_IMPORT_ALERTS=true # Import alerts
       - THREATMATCH_IMPORT_IOCS=true # Import iocs

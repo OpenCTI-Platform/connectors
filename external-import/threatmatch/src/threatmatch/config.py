@@ -4,7 +4,14 @@ import warnings
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from pydantic import BeforeValidator, Field, HttpUrl, PlainSerializer, model_validator
+from pydantic import (
+    BeforeValidator,
+    Field,
+    HttpUrl,
+    PlainSerializer,
+    TypeAdapter,
+    model_validator,
+)
 from pydantic_core.core_schema import SerializationInfo
 from pydantic_settings import (
     BaseSettings,
@@ -33,10 +40,41 @@ def pycti_list_serializer(v: list[str], info: SerializationInfo) -> str | list[s
     return v
 
 
+def iso_string_validator(value: str) -> datetime:
+    """
+    Convert ISO string / timedelta string to a datetime object.
+
+    Example:
+        > iso_string_validator("2025-01-01 00:00")
+        > datetime.datetime(2025, 1, 1, 0, 0, tzinfo=datetime.timezone.utc)
+        > iso_string_validator("P1D")
+        > datetime.datetime(2024, 10, 30, 0, 0, tzinfo=datetime.timezone.utc)
+    """
+    if isinstance(value, str):
+        try:
+            # Convert presumed ISO string to datetime object
+            return datetime.datetime.fromisoformat(value).astimezone(
+                tz=datetime.timezone.utc
+            )
+        except ValueError:
+            # If not a datetime ISO string, try to parse it as timedelta with pydantic first
+            duration = TypeAdapter(datetime.timedelta).validate_python(value)
+            # Then return a datetime minus the value
+            return datetime.datetime.now(datetime.UTC) - duration
+    return value
+
+
 ListFromString = Annotated[
     list[str],  # Final type
     BeforeValidator(environ_list_validator),
     PlainSerializer(pycti_list_serializer, when_used="json"),
+]
+
+DatetimeFromIsoString = Annotated[
+    datetime.datetime,
+    BeforeValidator(iso_string_validator),
+    # Replace the default serializer as it uses Z -> +00:00 offset
+    PlainSerializer(datetime.datetime.isoformat, when_used="json"),
 ]
 
 
@@ -64,7 +102,7 @@ class _Threatmatch(_BaseSettings):
     client_secret: str
 
     url: HttpUrl = Field(default=HttpUrl("https://eu.threatmatch.com"))
-    import_from_date: str = Field(default="2025-01-01 00:00")
+    import_from_date: DatetimeFromIsoString = Field(default=datetime.timedelta(days=30))
     import_profiles: bool = Field(default=True)
     import_alerts: bool = Field(default=True)
     import_iocs: bool = Field(default=True)

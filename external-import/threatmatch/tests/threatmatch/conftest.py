@@ -1,4 +1,5 @@
 import os
+import time
 from copy import deepcopy
 from typing import Any
 from unittest.mock import MagicMock
@@ -42,6 +43,11 @@ def mock_config(mocker: MockerFixture, config_dict: dict[str, Any]) -> None:
         for sub_key, sub_value in value.items():
             if sub_value is not None:
                 environ[f"{key.upper()}_{sub_key.upper()}"] = str(sub_value)
+
+    # Ensure the timezone is set to UTC for consistent datetime handling
+    os.environ["TZ"] = "UTC"
+    time.tzset()
+
     mocker.patch("os.environ", environ)
 
 

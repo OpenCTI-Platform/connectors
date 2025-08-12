@@ -58,10 +58,8 @@ class Connector:
 
     def _collect_intelligence(self, last_run: datetime) -> list[dict[str, Any]]:
         import_from_date = (
-            last_run.strftime("%Y-%m-%d %H:%M")
-            if last_run
-            else self.config.threatmatch.import_from_date
-        )
+            last_run if last_run else self.config.threatmatch.import_from_date
+        ).strftime("%Y-%m-%d %H:%M")
 
         stix_objects = []
 
