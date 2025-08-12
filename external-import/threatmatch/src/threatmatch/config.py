@@ -109,6 +109,7 @@ class _Threatmatch(_BaseSettings):
     tlp_level: Literal["white", "clear", "green", "amber", "amber+strict", "red"] = (
         Field(default="amber")
     )
+    threat_actor_as_intrusion_set: bool = Field(default=True)
 
 
 class ConnectorSettings(_BaseSettings):

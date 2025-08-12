@@ -20,6 +20,7 @@ def test_connector_run(mocked_helper: MockerFixture) -> None:
             author_name="ThreatMatch",
             author_description="ThreatMatch Description",
             tlp_level="amber",
+            threat_actor_to_intrusion_set=True,
         ),
     )
     connector.run()
@@ -42,6 +43,7 @@ def test_connector_process(mocked_helper: MockerFixture) -> None:
             author_name="ThreatMatch",
             author_description="ThreatMatch Description",
             tlp_level="amber",
+            threat_actor_to_intrusion_set=True,
         ),
     )
     connector._process()
@@ -79,6 +81,7 @@ def test_connector_process_data_last_run(
             author_name="ThreatMatch",
             author_description="ThreatMatch Description",
             tlp_level="amber",
+            threat_actor_to_intrusion_set=True,
         ),
     )
 

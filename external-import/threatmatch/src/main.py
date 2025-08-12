@@ -15,6 +15,7 @@ def main() -> None:
         author_name="Security Alliance",
         author_description="Security Alliance is a cyber threat intelligence product and services company, formed in 2007.",
         tlp_level=config.threatmatch.tlp_level,
+        threat_actor_to_intrusion_set=config.threatmatch.threat_actor_as_intrusion_set,
     )
 
     connector = Connector(helper=helper, config=config, converter=converter)

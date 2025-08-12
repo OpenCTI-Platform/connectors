@@ -30,12 +30,14 @@ class Converter:
         author_name: str,
         author_description: str,
         tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"],
+        threat_actor_to_intrusion_set: bool,
     ) -> None:
         self.helper = helper
         self.author = self._create_author(
             name=author_name, description=author_description
         )
         self.tlp_marking = self._create_tlp_marking(tlp_level=tlp_level)
+        self.threat_actor_to_intrusion_set = threat_actor_to_intrusion_set
 
     @staticmethod
     def _create_author(name: str, description: str) -> stix2.Identity:
@@ -96,7 +98,19 @@ class Converter:
                 ).get_text()
             if stix_object.get("relationship_type") == "associated_content":
                 stix_object["relationship_type"] = "related-to"
-
+            if self.threat_actor_to_intrusion_set:
+                if stix_object["type"] == "threat-actor":
+                    stix_object["type"] = "intrusion-set"
+                    stix_object["id"] = stix_object["id"].replace(
+                        "threat-actor", "intrusion-set"
+                    )
+                if stix_object["type"] == "relationship":
+                    stix_object["source_ref"] = stix_object["source_ref"].replace(
+                        "threat-actor", "intrusion-set"
+                    )
+                    stix_object["target_ref"] = stix_object["target_ref"].replace(
+                        "threat-actor", "intrusion-set"
+                    )
             # Labels are not properly assigned in ThreatMatch
             stix_object.pop("labels", None)
 
