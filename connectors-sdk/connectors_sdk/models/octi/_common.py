@@ -3,9 +3,10 @@
 import codecs
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Literal, Optional, OrderedDict, TypeVar
+from typing import Any, Optional, OrderedDict, TypeVar
 
 import stix2.properties
+from connectors_sdk.models.octi.enums import TLPLevel
 from pycti import MarkingDefinition as PyctiMarkingDefinition
 from pydantic import (
     BaseModel,
@@ -326,14 +327,7 @@ class Author(ABC, BaseIdentifiedEntity):
 class TLPMarking(BaseIdentifiedEntity):
     """Represent a TLP marking definition."""
 
-    level: Literal[
-        "clear",
-        "white",
-        "green",
-        "amber",
-        "amber+strict",
-        "red",
-    ] = Field(description="The level of the TLP marking.")
+    level: TLPLevel = Field(description="The level of the TLP marking.")
 
     def to_stix2_object(self) -> Stix2MarkingDefinition:
         """Make stix object."""
