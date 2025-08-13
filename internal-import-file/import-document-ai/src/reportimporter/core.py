@@ -44,15 +44,20 @@ class ReportImporter:
         # Instantiate the connector helper from config
         base_path = os.path.dirname(os.path.abspath(__file__))
         config_file_path = base_path + "/../config.yml"
-        if os.path.isfile(config_file_path):
-            self.helper.connector_logger.error(
-                f"Using local config file. Use Environment Variables only in production."
-            )
+        try:
             with open(config_file_path) as config_file:
                 config = yaml.load(config_file, Loader=yaml.FullLoader)
-        else:
+            using_local_config = True
+        except FileNotFoundError:
             config = {}
+            using_local_config = False
+
         self.helper = OpenCTIConnectorHelper(config)
+
+        if using_local_config:
+            self.helper.connector_logger.error(
+                "Using local config file. Use Environment Variables only in production."
+            )
 
         # Read connector flags from config (create_indicator, web_service_url, etc.)
         self.create_indicator = get_config_variable(
