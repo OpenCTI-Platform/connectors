@@ -154,6 +154,10 @@ exclude = [
 ]
 plugins = ['pydantic.mypy']
 
+[[tool.mypy.overrides]]
+module = ["pycti.*", "stix2.*"]
+ignore_missing_imports = true  # pycti and stix2 do not provide stubs
+
 [tool.sphinx]
 project = "Connectors SDK"
 author = "Filigran"

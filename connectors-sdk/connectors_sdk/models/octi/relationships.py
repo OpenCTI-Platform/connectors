@@ -3,16 +3,12 @@
 from abc import ABC
 from typing import Any, Literal, Optional, Unpack
 
-import pycti  # type: ignore[import-untyped]  # pycti does not provide stubs
-import stix2  # type: ignore[import-untyped]  # stix2 does not provide stubs
-from connectors_sdk.models.octi._common import (
-    MODEL_REGISTRY,
-    BaseIdentifiedEntity,
-)
-from connectors_sdk.models.octi.activities.observations import (
-    Indicator,
-    Observable,
-)
+from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
+from connectors_sdk.models.octi.activities.observations import Indicator, Observable
+from connectors_sdk.models.octi.knowledge.entities import Organization, Sector
+from connectors_sdk.models.octi.knowledge.locations import Country
+from connectors_sdk.models.octi.knowledge.threats import IntrusionSet
+from pycti import StixCoreRelationship as PyctiStixCoreRelationship
 from pydantic import (
     AwareDatetime,
     ConfigDict,
@@ -21,6 +17,7 @@ from pydantic import (
     create_model,
     model_validator,
 )
+from stix2.v21 import Relationship as Stix2Relationship
 
 
 class _RelationshipBuilder:
@@ -65,30 +62,28 @@ class Relationship(ABC, BaseIdentifiedEntity):
     _builder: Optional[_RelationshipBuilder] = PrivateAttr(None)
 
     source: BaseIdentifiedEntity = Field(
-        ...,
         description="The source entity of the relationship.",
     )
     target: BaseIdentifiedEntity = Field(
-        ...,
         description="The target entity of the relationship.",
     )
     description: Optional[str] = Field(
-        None,
         description="Description of the relationship.",
+        default=None,
     )
     start_time: Optional[AwareDatetime] = Field(
-        None,
         description="Start time of the relationship in ISO 8601 format.",
+        default=None,
     )
     stop_time: Optional[AwareDatetime] = Field(
-        None,
         description="End time of the relationship in ISO 8601 format.",
+        default=None,
     )
 
-    def to_stix2_object(self) -> stix2.v21.Relationship:
+    def to_stix2_object(self) -> Stix2Relationship:
         """Make stix object."""
-        return stix2.Relationship(
-            id=pycti.StixCoreRelationship.generate_id(
+        return Stix2Relationship(
+            id=PyctiStixCoreRelationship.generate_id(
                 relationship_type=self._relationship_type,
                 source_ref=self.source.id,
                 target_ref=self.target.id,
@@ -112,9 +107,6 @@ class Relationship(ABC, BaseIdentifiedEntity):
             external_references=[
                 ref.to_stix2_object() for ref in self.external_references or []
             ],
-            # unused
-            created=None,
-            modified=None,
         )
 
     @model_validator(mode="before")
@@ -132,7 +124,7 @@ class Relationship(ABC, BaseIdentifiedEntity):
 
 
 @MODEL_REGISTRY.register
-class AnyRelatedToAny(Relationship):
+class RelatedTo(Relationship):
     """Represent a relationship indicating that an entity is related to another entity.
 
     This is a generic relationship that can be used for any two entities.
@@ -143,17 +135,17 @@ class AnyRelatedToAny(Relationship):
         >>> from connectors_sdk.models.octi.activities.observations import IPV4Address
         >>> organization = Organization(name="Example Corp")
         >>> ip = IPV4Address(value="127.0.0.1")
-        >>> relationship = AnyRelatedToAny(source=ip, target=organization)
+        >>> relationship = RelatedTo(source=ip, target=organization)
     """
 
     _relationship_type: Literal["related-to"] = "related-to"
 
 
-related_to = AnyRelatedToAny._builder
+related_to = RelatedTo._builder
 
 
 @MODEL_REGISTRY.register
-class IndicatorBasedOnObservable(Relationship):
+class BasedOn(Relationship):
     """Represent a relationship indicating that an indicator is based on an observable.
 
     Notes:
@@ -165,28 +157,26 @@ class IndicatorBasedOnObservable(Relationship):
         >>> from connectors_sdk.models.octi.activities.observations import Indicator, IPV4Address
         >>> indicator = Indicator(name="Test Indicator", pattern="[ipv4-addr:value = '127.0.0.1']", pattern_type="stix")
         >>> observable = IPV4Address(value="127.0.0.1")
-        >>> relationship = IndicatorBasedOnObservable(source=indicator, target=observable)
+        >>> relationship = BasedOn(source=indicator, target=observable)
 
     """
 
     _relationship_type: Literal["based-on"] = "based-on"
 
-    source: "Indicator" = Field(
-        ...,
+    source: Indicator = Field(
         description="Reference to the source entity of the relationship. Here an Indicator.",
     )
-    target: "Observable" = Field(
-        ...,
+    target: Observable = Field(
         description="Reference to the target entity of the relationship. Here an Observable.",
     )
 
 
-based_on = IndicatorBasedOnObservable._builder
+based_on = BasedOn._builder
 
 
 # Demonstrate how to dynamically create a Relationship
-IndicatorDerivedFromIndicator = create_model(
-    "IndicatorDerivedFromIndicator",
+DerivedFrom = create_model(
+    "DerivedFrom",
     __base__=Relationship,
     source=Indicator,
     target=Indicator,
@@ -201,13 +191,93 @@ IndicatorDerivedFromIndicator = create_model(
         >>> from connectors_sdk.models.octi.activities.observations import Indicator
         >>> url = Indicator(name="Url", pattern="[url:value = 'http://example.com/test']", pattern_type="stix")
         >>> domain = Indicator(name="Domain", pattern="[domain-name:value = 'example.com']", pattern_type="stix")
-        >>> relationship = IndicatorDerivedFromIndicator(source=domain, target=url)
+        >>> relationship = DerivedFrom(source=domain, target=url)
     """,
 )
-MODEL_REGISTRY.register(IndicatorDerivedFromIndicator)
+MODEL_REGISTRY.register(DerivedFrom)
+
+
+@MODEL_REGISTRY.register
+class Indicates(Relationship):
+    """Represent a relationship indicating that an indicator can detect evidence of an
+    attack pattern, campaign, infrastructure, intrusion set, malware, threat actor, or tool.
+
+    Examples:
+        >>> from connectors_sdk.models.octi.activities.observations import Indicator
+        >>> from connectors_sdk.models.octi.activities.knowledge import IntrusionSet
+        >>> indicator = Indicator(name="Test Indicator", pattern="[ipv4-addr:value = '127.0.0.1']", pattern_type="stix")
+        >>> intrusion_set = IntrusionSet(name="Test IntrusionSet")
+        >>> relationship = Indicates(source=indicator, target=intrusion_set)
+
+    """
+
+    _relationship_type: Literal["indicates"] = "indicates"
+
+    source: Indicator = Field(
+        description="Reference to the source entity of the relationship. Here an Indicator.",
+    )
+    target: IntrusionSet = Field(
+        description="Reference to the target entity of the relationship. Here an IntrusionSet.",
+    )
+
+
+indicates = Indicates._builder
+
+
+@MODEL_REGISTRY.register
+class Targets(Relationship):
+    """Represent a relationship indicating that an IntrusionSet targets a Country or an Organization.
+
+    Examples:
+        >>> from connectors_sdk.models.octi.knowledge.locations import Country
+        >>> from connectors_sdk.models.octi.knowledge.threats import IntrusionSet
+        >>> intrusion_set = IntrusionSet(name="Test IntrusionSet")
+        >>> country = Country(name="France")
+        >>> relationship = Targets(source=intrusion_set, target=country)
+
+    """
+
+    _relationship_type: Literal["targets"] = "targets"
+
+    source: IntrusionSet = Field(
+        description="Reference to the source entity of the relationship. Here an Intrusion Set.",
+    )
+    target: Country | Organization = Field(
+        description="Reference to the target entity of the relationship. Here a Country or an Organization.",
+    )
+
+
+targets = Targets._builder
+
+
+@MODEL_REGISTRY.register
+class LocatedAt(Relationship):
+    """Represent a relationship indicating that a Sector or an Orgnization is located at a Country.
+
+    Examples:
+        >>> from connectors_sdk.models.octi.knowledge.entities import Sector
+        >>> from connectors_sdk.models.octi.knowledge.locations import Country
+        >>> sector = Sector(name="Test Sector")
+        >>> country = Country(name="France")
+        >>> relationship = LocatedAt(source=sector, target=country)
+
+    """
+
+    _relationship_type: Literal["located-at"] = "located-at"
+
+    source: Organization | Sector = Field(
+        description="Reference to the source entity of the relationship. Here a Sector.",
+    )
+    target: Country = Field(
+        description="Reference to the target entity of the relationship. Here a Country.",
+    )
+
+
+located_at = LocatedAt._builder
 
 
 MODEL_REGISTRY.rebuild_all()
+
 if __name__ == "__main__":  # pragma: no cover # do not run coverage on doctests
     import doctest
 

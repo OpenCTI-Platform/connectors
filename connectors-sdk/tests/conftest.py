@@ -49,7 +49,7 @@ def fake_valid_associated_files() -> list[AssociatedFile]:
 
 
 @pytest.fixture
-def fake_valid_external_referencess() -> list[ExternalReference]:
+def fake_valid_external_references() -> list[ExternalReference]:
     """Fixture to create a fake valid ExternalReference list."""
     return [
         ExternalReference(

@@ -5,9 +5,8 @@ import warnings
 from abc import ABC, abstractmethod
 from typing import Any, Literal, Optional, OrderedDict, TypeVar
 
-import pycti  # type: ignore[import-untyped]  # pycti does not provide stubs
-import stix2  # type: ignore[import-untyped] # stix2 does not provide stubs
-import stix2.properties  # type: ignore[import-untyped]
+import stix2.properties
+from pycti import MarkingDefinition as PyctiMarkingDefinition
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -16,6 +15,13 @@ from pydantic import (
     computed_field,
     model_validator,
 )
+from stix2 import (
+    TLP_AMBER,
+    TLP_GREEN,
+    TLP_RED,
+    TLP_WHITE,
+)
+from stix2 import MarkingDefinition as Stix2MarkingDefinition
 
 T = TypeVar("T", bound=BaseModel)  # Preserve metadata when using register decorator
 
@@ -325,26 +331,38 @@ class Author(ABC, BaseIdentifiedEntity):
 class TLPMarking(BaseIdentifiedEntity):
     """Represent a TLP marking definition."""
 
-    level: Literal["white", "green", "amber", "amber+strict", "red"] = Field(
-        description="The level of the TLP marking.",
-    )
+    level: Literal[
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red",
+    ] = Field(description="The level of the TLP marking.")
 
-    def to_stix2_object(self) -> stix2.v21.MarkingDefinition:
+    def to_stix2_object(self) -> Stix2MarkingDefinition:
         """Make stix object."""
         mapping = {
-            "white": stix2.TLP_WHITE,
-            "green": stix2.TLP_GREEN,
-            "amber": stix2.TLP_AMBER,
-            "amber+strict": stix2.MarkingDefinition(
-                id=pycti.MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+            "clear": Stix2MarkingDefinition(
+                id=PyctiMarkingDefinition.generate_id("TLP", "TLP:CLEAR"),
                 definition_type="statement",
                 definition={"statement": "custom"},
-                custom_properties=dict(  # noqa: C408  # No literal dict for maintainability
-                    x_opencti_definition_type="TLP",
-                    x_opencti_definition="TLP:AMBER+STRICT",
-                ),
+                allow_custom=True,
+                x_opencti_definition_type="TLP",
+                x_opencti_definition="TLP:CLEAR",
             ),
-            "red": stix2.TLP_RED,
+            "white": TLP_WHITE,
+            "green": TLP_GREEN,
+            "amber": TLP_AMBER,
+            "amber+strict": Stix2MarkingDefinition(
+                id=PyctiMarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                allow_custom=True,
+                x_opencti_definition_type="TLP",
+                x_opencti_definition="TLP:AMBER+STRICT",
+            ),
+            "red": TLP_RED,
         }
         return mapping[self.level]
 
