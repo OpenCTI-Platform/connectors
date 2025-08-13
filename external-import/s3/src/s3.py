@@ -1,9 +1,9 @@
+import datetime
 import json
 import os
 import sys
 import time
 import traceback
-from datetime import datetime
 
 import boto3
 import pytz
@@ -34,11 +34,11 @@ mapped_keys = [
     "x_first_seen_active",
     "x_history",
     "x_acti_uuid",
+    "x_product",
 ]
 ignored_keys = [
     "x_acti_guid",
     "x_version",
-    "x_product",
     "x_vendor",
     "x_and_prior_versions",
     "x_credit",
@@ -322,7 +322,10 @@ class S3Connector:
         return new_bundle
 
     def process(self):
-        now = datetime.now(pytz.UTC)
+        now = datetime.datetime.now(pytz.UTC)
+        # We always re-send 2 days of data before deleting to handle multi instances consuming, we are good with this approach
+        # OpenCTI will de-duplicate / upsert if necessary
+        cutoff = now - datetime.timedelta(days=2)
         objects = self.s3_client.list_objects(Bucket=self.s3_bucket_name)
         if objects.get("Contents") is not None and len(objects.get("Contents")) > 0:
             friendly_name = "S3 run @ " + now.astimezone(pytz.UTC).isoformat()
@@ -330,6 +333,7 @@ class S3Connector:
                 self.helper.connect_id, friendly_name
             )
             for o in objects.get("Contents"):
+                last_modified = o.get("LastModified")
                 data = self.s3_client.get_object(
                     Bucket=self.s3_bucket_name, Key=o.get("Key")
                 )
@@ -340,8 +344,16 @@ class S3Connector:
                     self.helper.send_stix2_bundle(bundle=fixed_bundle, work_id=work_id)
                 else:
                     self.helper.log_info("No content to ingest")
-                if self.s3_delete_after_import:
-                    self.helper.log_info("Deleting file " + o.get("Key"))
+                if self.s3_delete_after_import and last_modified < cutoff:
+                    self.helper.log_info(
+                        "Deleting file "
+                        + o.get("Key")
+                        + "(2 days ago="
+                        + str(cutoff)
+                        + ", modified="
+                        + str(last_modified)
+                        + ")"
+                    )
                     self.s3_client.delete_object(
                         Bucket=self.s3_bucket_name, Key=o.get("Key")
                     )
