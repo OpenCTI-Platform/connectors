@@ -9,6 +9,7 @@ from connectors_sdk.models.octi._common import (
     ExternalReference,
     TLPMarking,
 )
+from connectors_sdk.models.octi.activities.analyses import Report
 from connectors_sdk.models.octi.activities.observations import (
     Indicator,
     IPV4Address,
@@ -46,6 +47,7 @@ __all__ = [
     "Organization",
     "OrganizationAuthor",
     "Relationship",
+    "Report",
     "Sector",
     "Software",
     "TLPMarking",
