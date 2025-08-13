@@ -4,7 +4,6 @@
 from datetime import datetime
 
 import pytest
-import stix2
 from connectors_sdk.models.octi._common import BaseIdentifiedEntity
 from connectors_sdk.models.octi.activities.observations import (
     Indicator,
@@ -12,6 +11,8 @@ from connectors_sdk.models.octi.activities.observations import (
     Observable,
 )
 from pydantic import ValidationError
+from stix2.v21 import Indicator as Stix2Indicator
+from stix2.v21 import IPv4Address as Stix2IPv4Address
 
 ### OBSERVABLE BASE TYPE
 
@@ -33,7 +34,7 @@ def test_observable_has_required_fields():
 
         def to_stix2_object(self):
             """Dummy method to satisfy the interface."""
-            return stix2.v21.IPv4Address(value="127.0.0.1")
+            return Stix2IPv4Address(value="127.0.0.1")
 
     # When creating an instance of DummyObservable
     observable = DummyObservable()
@@ -102,7 +103,7 @@ def test_indicator_should_not_accept_incoherent_dates():
 
 def test_indicator_to_stix2_object_returns_valid_stix_object(
     fake_valid_organization_author,
-    fake_valid_external_referencess,
+    fake_valid_external_references,
     fake_valid_tlp_markings,
 ):
     """Test that Indicator.to_stix2_object returns a valid STIX Indicator."""
@@ -125,7 +126,7 @@ def test_indicator_to_stix2_object_returns_valid_stix_object(
         "platforms": ["linux", "windows"],
         "main_observable_type": "Url",
         "author": fake_valid_organization_author,
-        "external_references": fake_valid_external_referencess,
+        "external_references": fake_valid_external_references,
         "markings": fake_valid_tlp_markings,
     }
     indicator = Indicator.model_validate(input_data)
@@ -134,7 +135,7 @@ def test_indicator_to_stix2_object_returns_valid_stix_object(
     stix2_obj = indicator.to_stix2_object()
 
     # Then: A valid STIX Indicator is returned
-    assert isinstance(stix2_obj, stix2.Indicator)
+    assert isinstance(stix2_obj, Stix2Indicator)
 
 
 ### OBSERVABLES
@@ -179,4 +180,4 @@ def test_ip_v4_address_to_stix2_object_returns_valid_stix_object():
     # When: calling to_stix2_object method
     stix2_obj = ipv4_address.to_stix2_object()
     # Then: A valid STIX2.1 IPV4Address is returned
-    assert isinstance(stix2_obj, stix2.v21.IPv4Address)
+    assert isinstance(stix2_obj, Stix2IPv4Address)
