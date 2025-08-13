@@ -1,3 +1,9 @@
+# v2.1.3
+
+  + Upgrade `Titan-Client` to version [1.20.0.13](https://github.com/intel471/titan-client-python/releases/tag/v1.20.0.13)
+  + Make `rawText` in Reports optional
+  + Map reliability in Information Reports (Inforeps)
+
 # v2.1.2
 
   + Upgrade `Titan-Client` to version [1.20.0.12](https://github.com/intel471/titan-client-python/releases/tag/v1.20.0.12)
