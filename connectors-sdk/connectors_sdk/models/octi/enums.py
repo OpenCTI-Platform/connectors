@@ -178,3 +178,16 @@ class ReportType(PermissiveEnum):
     SPOTREP = "spotrep"
     THREAT_REPORT = "threat-report"
 
+
+class TLPLevel(StrEnum):
+    """TLP Level Enum.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/schema/identifier.js#L76
+    """
+
+    CLEAR = "clear"
+    WHITE = "white"
+    GREEN = "green"
+    AMBER = "amber"
+    AMBER_STRICT = "amber+strict"
+    RED = "red"
