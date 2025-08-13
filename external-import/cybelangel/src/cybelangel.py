@@ -345,8 +345,13 @@ class CybelAngel:
     # Parse & Ingest Data
     # ----------------------
     def _process_attack(self, attack, since_date, author_org, work_id):
-        published_at = datetime.strptime(attack.get("published_at"), "%Y-%m-%dT%H:%M:%SZ").replace(
-            tzinfo=timezone.utc)
+        published_at = attack.get("published_at")
+        if published_at:
+            try:
+                published_at = datetime.strptime(published_at, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=timezone.utc)
+            except ValueError:
+                published_at = datetime.strptime(published_at, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+
         if since_date and published_at < since_date:
             self.helper.connector_logger.info(
                 f"Stopping processing as published_at {published_at.strftime('%Y-%m-%dT%H:%M:%SZ')} is before "
@@ -480,12 +485,11 @@ class CybelAngel:
             stix_objects.append(sector)
 
             # Create relationships
-            relationship_campaign_industry = self._create_relationship("targets", campaign.id, industry.id,
+            relationship_campaign_industry = self._create_relationship("targets", campaign.id, sector.id,
                                                                        published_at, marking_id, author_org_id)
             stix_objects.append(relationship_campaign_industry)
 
         # Handle Intrusion Sets modelization
-        intrusion_sets = []
         for actor in threat_actors:
             if not actor:
                 continue
