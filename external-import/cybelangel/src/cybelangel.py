@@ -314,6 +314,7 @@ class CybelAngel:
                     return
                 headers["Authorization"] = f"Bearer {token}"
                 self.helper.connector_logger.info("Re-authentication successful, retrying data fetch.")
+                attempt = 0  # Reset attempt counter on successful response
                 continue
             elif response.status_code != 200:
                 self.helper.connector_logger.error(
