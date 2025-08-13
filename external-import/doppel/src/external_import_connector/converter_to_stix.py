@@ -1,12 +1,11 @@
 import json
 
+from external_import_connector.utils import parse_iso_datetime
 from pycti import Identity as PyCTIIdentity
 from pycti import Indicator as PyCTIIndicator
 from pycti import MarkingDefinition
 from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE, Identity, Indicator
 from stix2 import MarkingDefinition as Stix2MarkingDefinition
-
-from .utils import parse_iso_datetime
 
 
 class ConverterToStix:
@@ -62,7 +61,7 @@ class ConverterToStix:
         Convert list of alerts to stix2 Indicator objects
         :return: stix2 bundle json
         """
-        stix_objects = [self.author]
+        stix_objects = [self.author, self.tlp_marking]
         created_by_ref = self.author.id
 
         for alert in alerts:
@@ -71,18 +70,20 @@ class ConverterToStix:
                 "Processing alert", {"alert_id": alert_id}
             )
 
-            entity = alert.get("entity", "Unknown")
+            entity = alert.get("entity", "unknown")
             pattern = f"[entity:value ='{entity}']"
             indicator_id = PyCTIIndicator.generate_id(pattern=pattern)
 
-            created_at = parse_iso_datetime(
-                alert.get("created_at", ""), "created_at", alert_id, self.helper
+            created_at = (
+                parse_iso_datetime(alert["created_at"])
+                if alert.get("created_at", None)
+                else None
             )
-            modified = parse_iso_datetime(
-                alert.get("last_activity_timestamp", ""),
-                "last_activity_timestamp",
-                alert_id,
-                self.helper,
+
+            modified = (
+                parse_iso_datetime(alert["last_activity_timestamp"])
+                if alert.get("last_activity_timestamp", None)
+                else None
             )
 
             audit_logs = alert.get("audit_logs", [])
@@ -96,7 +97,7 @@ class ConverterToStix:
             entity_content = alert.get("entity_content", {})
             formatted_entity_content = json.dumps(entity_content, indent=2)
             platform = alert.get("platform", "unknown")
-            platform_value = alert.get("product", "Unknown")
+            platform_value = alert.get("product", "unknown")
 
             entity_state = alert.get("entity_state", "unknown")
             queue_state = alert.get("queue_state", "unknown")
@@ -137,9 +138,9 @@ class ConverterToStix:
                 ],
                 custom_properties={
                     "x_opencti_score": score,
-                    "x_opencti_brand": alert.get("brand", "Unknown"),
+                    "x_opencti_brand": alert.get("brand", "unknown"),
                     "x_mitre_platforms": platform_value,
-                    "x_opencti_source": alert.get("source", "Unknown"),
+                    "x_opencti_source": alert.get("source", "unknown"),
                     "x_opencti_notes": alert.get("notes", ""),
                     "x_opencti_audit_logs": audit_log_text,
                 },

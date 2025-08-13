@@ -77,6 +77,7 @@ class ConfigDoppel:
             "DOPPEL_API_BASE_URL",
             ["doppel", "api_base_url"],
             self.load,
+            default="https://api.doppel.com/v1",
         )
 
         self.api_key = get_config_variable(
@@ -84,7 +85,10 @@ class ConfigDoppel:
         )
 
         self.alerts_endpoint = get_config_variable(
-            "DOPPEL_ALERTS_ENDPOINT", ["doppel", "alerts_endpoint"], self.load
+            "DOPPEL_ALERTS_ENDPOINT",
+            ["doppel", "alerts_endpoint"],
+            self.load,
+            default="/alerts",
         )
 
         self.historical_days = self._validate_positive_int(

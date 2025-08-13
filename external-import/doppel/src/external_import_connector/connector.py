@@ -1,6 +1,8 @@
-from .client_api import ConnectorClient
-from .converter_to_stix import ConverterToStix
-from .utils import get_last_run, set_last_run
+import sys
+from datetime import datetime, timedelta, timezone
+
+from external_import_connector.client_api import ConnectorClient
+from external_import_connector.converter_to_stix import ConverterToStix
 
 
 class DoppelConnector:
@@ -13,29 +15,31 @@ class DoppelConnector:
         self.client = ConnectorClient(self.helper, self.config)
         self.converter = ConverterToStix(self.helper, self.config)
 
-    def _collect_alerts(self) -> list:
+    def _get_last_run(self, start_datetime: datetime) -> datetime:
         """
-        Collect alerts from the source and convert into STIX object
-        :return: List of alerts from response.json()
+        Retrieve last_run from current state or the
+        start date depending on historical_days from config
+        :params:
+            start_datetime (datetime): datetime when process started
+        :return: datetime
         """
-        last_timestamp = get_last_run(self.helper, self.config.historical_days)
+        current_state = self.helper.get_state()
 
-        all_alerts = []
-        page = 0
-        while True:
-            response = self.client.get_alerts(last_timestamp, page)
-            if not response:
-                break
+        if current_state and "last_run" in current_state:
+            self.helper.connector_logger.info(
+                "Resuming from last run timestamp",
+                {"last_run": current_state["last_run"]},
+            )
+            last_run = current_state["last_run"]
+        else:
+            default_start = start_datetime - timedelta(days=self.config.historical_days)
+            last_run = default_start.strftime("%Y-%m-%dT%H:%M:%S")
+            self.helper.connector_logger.info(
+                "No previous state found. Using historical polling window",
+                {"start_date": last_run},
+            )
 
-            alerts = response.json().get("alerts", [])
-            if not alerts:
-                break
-
-            all_alerts.extend(alerts)
-            page += 1
-
-        self.helper.connector_logger.info("Fetched alerts", {"count": len(all_alerts)})
-        return all_alerts
+        return last_run
 
     def process_message(self) -> None:
         """
@@ -43,9 +47,14 @@ class DoppelConnector:
         :return: None
         """
         self.helper.connector_logger.info("[DoppelConnector] Running scheduled fetch")
+        work_id = None
+        start_datetime = datetime.now(tz=timezone.utc)
 
         try:
-            alerts = self._collect_alerts()
+            last_run = self._get_last_run(start_datetime)
+
+            # Perfom collect of intelligence
+            alerts = self.client.get_alerts(last_run)
             if alerts:
                 work_id = self.helper.api.work.initiate_work(
                     self.helper.connect_id, "Connector feed"
@@ -58,21 +67,31 @@ class DoppelConnector:
                 )
 
                 self.helper.connector_logger.info(
-                    "STIX bundle sent", {"objects": len(bundle_sent)}
+                    "STIX bundle sent", {"len_bundle_sent": len(bundle_sent)}
                 )
 
-                set_last_run(self.helper)
+            # Set state with last run
+            self.helper.set_state(
+                {"last_run": start_datetime.isoformat(timespec="seconds")}
+            )
 
-                self.helper.api.work.to_processed(
-                    work_id, f"{self.helper.connect_name} connector successfully run"
-                )
-
-                work_id = None
+            self.helper.connector_logger.info(
+                "Updated last run state", {"last_run": last_run}
+            )
+        except (KeyboardInterrupt, SystemExit):
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Connector stopped...",
+                {"connector_name": self.helper.connect_name},
+            )
+            sys.exit(0)
         except Exception as err:
             self.helper.connector_logger.error(
                 "[DoppelConnector] Error in process_message", {"error": err}
             )
-            raise
+        finally:
+            if work_id:
+                message = f"{self.helper.connect_name} connector successfully run"
+                self.helper.api.work.to_processed(work_id, message)
 
     def run(self) -> None:
         """
