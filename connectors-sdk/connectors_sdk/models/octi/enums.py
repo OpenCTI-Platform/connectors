@@ -161,3 +161,20 @@ class Reliability(PermissiveEnum):
     D = "D - Not usually reliable"
     E = "E - Unreliable"
     F = "F - Reliability cannot be judged"
+
+
+class ReportType(PermissiveEnum):
+    """Report Type Open Vocabulary.
+
+    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_9lfdvxnyofxw
+    """
+
+    BREACH_ALERT = "breach_alert"
+    FINTEL = "fintel"
+    INFOREP = "inforep"
+    INTELLIGENCE_SUMMARY = "intelligence_summary"
+    INTERNAL_REPORT = "internal-report"
+    MALWARE = "malware"
+    SPOTREP = "spotrep"
+    THREAT_REPORT = "threat-report"
+

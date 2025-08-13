@@ -20,6 +20,7 @@ FEATURE_NAMES = [
     "Organization",
     "OrganizationAuthor",
     "Relationship",
+    "Report",
     "Sector",
     "Software",
     "TLPMarking",
@@ -34,7 +35,7 @@ FEATURE_NAMES = [
 ]
 
 
-def test_no_pulic_class_are_abstract():
+def test_no_public_class_are_abstract():
     """Test that no public class in __all__ are abstract except for BaseEntity for typing purpose."""
     # Given the public API of the octi module
     public_features = [
