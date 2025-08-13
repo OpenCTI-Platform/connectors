@@ -1,8 +1,8 @@
 import sys
 from datetime import datetime, timedelta, timezone
 
-from external_import_connector.client_api import ConnectorClient
-from external_import_connector.converter_to_stix import ConverterToStix
+from doppel.client_api import ConnectorClient
+from doppel.converter_to_stix import ConverterToStix
 
 
 class DoppelConnector:

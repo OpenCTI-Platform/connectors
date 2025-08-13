@@ -1,6 +1,6 @@
 import json
 
-from external_import_connector.utils import parse_iso_datetime
+from doppel.utils import parse_iso_datetime
 from pycti import Identity as PyCTIIdentity
 from pycti import Indicator as PyCTIIndicator
 from pycti import MarkingDefinition

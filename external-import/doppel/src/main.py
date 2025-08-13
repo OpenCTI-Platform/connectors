@@ -1,7 +1,7 @@
 import traceback
 
-from external_import_connector.config_loader import ConfigDoppel
-from external_import_connector.connector import DoppelConnector
+from doppel.config_loader import ConfigDoppel
+from doppel.connector import DoppelConnector
 from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
