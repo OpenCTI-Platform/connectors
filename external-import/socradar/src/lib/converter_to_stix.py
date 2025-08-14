@@ -131,7 +131,7 @@ class ConverterToStix:
             indicator = stix2.Indicator(
                 id=pycti.Indicator.generate_id(pattern),
                 name=f"{feed_type.upper()}: {value}",
-                description=f"Source: {maintainer}\nValue: {value}",
+                description=f"Source: {maintainer}\n  Value: {value}",
                 pattern=pattern,
                 pattern_type="stix",
                 valid_from=valid_from,
