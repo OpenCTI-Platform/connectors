@@ -44,11 +44,11 @@ class ReportImporter:
         # Instantiate the connector helper from config
         base_path = os.path.dirname(os.path.abspath(__file__))
         config_file_path = base_path + "/../config.yml"
-        try:
+        if os.path.isfile(config_file_path):
             with open(config_file_path) as config_file:
                 config = yaml.load(config_file, Loader=yaml.FullLoader)
             using_local_config = True
-        except FileNotFoundError:
+        else:
             config = {}
             using_local_config = False
 
