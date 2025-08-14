@@ -14,8 +14,9 @@ threatmatch:
   url: 'https://eu.threatmatch.com'
   client_id: 'ChangeMe'
   client_secret: 'ChangeMe'
-  import_from_date: '2010-01-01 00:00'
+  import_from_date: 'P30D'
   import_profiles: true # Import profiles
   import_alerts: true # Import alerts
   import_iocs: true # Import iocs
-
+  tlp_level: 'amber' # TLP level to set on imported entities (allowed values are ['white', 'green', 'amber', 'amber+strict', 'red'])
+  threat_actor_as_intrusion_set: true

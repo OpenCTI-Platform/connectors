@@ -30,6 +30,8 @@ def fixture_config_dict() -> dict[str, Any]:
             "import_profiles": True,
             "import_alerts": True,
             "import_iocs": True,
+            "tlp_level": "amber",
+            "threat_actor_as_intrusion_set": True,
         },
     }
 
@@ -41,6 +43,7 @@ def mock_config(mocker: MockerFixture, config_dict: dict[str, Any]) -> None:
         for sub_key, sub_value in value.items():
             if sub_value is not None:
                 environ[f"{key.upper()}_{sub_key.upper()}"] = str(sub_value)
+
     mocker.patch("os.environ", environ)
 
 
