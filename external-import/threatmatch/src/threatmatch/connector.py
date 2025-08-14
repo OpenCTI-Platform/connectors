@@ -151,7 +151,9 @@ class Connector:
                 items=[self.converter.author, self.converter.tlp_marking]
                 + processed_stix_object
             )
-            self.helper.send_stix2_bundle(bundle, work_id=self.work_id)
+            self.helper.send_stix2_bundle(
+                bundle, work_id=self.work_id, cleanup_inconsistent_bundle=True
+            )
 
         self.helper.set_state(
             {"last_run": self.start_datetime.isoformat(timespec="seconds")}
