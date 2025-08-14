@@ -137,6 +137,7 @@ class ConnectorConfig(ConfigBaseModel):
         "debug",
         "info",
         "warn",
+        "warning",  # warn and warning are aliases
         "error",
     ] = Field(
         description="The minimum level of logs to display.",
