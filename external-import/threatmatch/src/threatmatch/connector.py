@@ -76,7 +76,10 @@ class Connector:
                 )
                 for profile_id in profile_ids:
                     stix_objects.extend(
-                        self._get_stix_objects(client, "profiles", profile_id)
+                        sorted(
+                            self._get_stix_objects(client, "profiles", profile_id),
+                            key=lambda e: e["type"] == "relationship",
+                        )
                     )
             if self.config.threatmatch.import_alerts:
                 alert_ids = client.get_alert_ids(import_from_date=import_from_date)
@@ -85,7 +88,10 @@ class Connector:
                 )
                 for alert_id in alert_ids:
                     stix_objects.extend(
-                        self._get_stix_objects(client, "alerts", alert_id)
+                        sorted(
+                            self._get_stix_objects(client, "alerts", alert_id),
+                            key=lambda e: e["type"] == "relationship",
+                        )
                     )
             if self.config.threatmatch.import_iocs:
                 stix_objects.extend(

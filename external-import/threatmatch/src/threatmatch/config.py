@@ -53,8 +53,11 @@ def iso_string_validator(value: str) -> datetime:
     if isinstance(value, str):
         try:
             # Convert presumed ISO string to datetime object
-            return datetime.datetime.fromisoformat(value).astimezone(
-                tz=datetime.timezone.utc
+            dt = datetime.datetime.fromisoformat(value)
+            return (
+                dt.astimezone(tz=datetime.UTC)
+                if dt.tzinfo
+                else dt.replace(tzinfo=datetime.UTC)
             )
         except ValueError:
             # If not a datetime ISO string, try to parse it as timedelta with pydantic first
