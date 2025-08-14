@@ -12,6 +12,6 @@ connector:
 radar:
   base_feed_url: "https://platform.socradar.com/api/threat/intelligence/feed_list/" # Required
   socradar_key: "SOCRADAR_KEY"
-  feed_lists_ids:
+  feed_lists:
     feed_list_1: 'COLLECTION_ID'
     feed_list_2: 'COLLECTION_ID'
