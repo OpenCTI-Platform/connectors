@@ -17,6 +17,7 @@ FEATURE_NAMES = [
     "IntrusionSet",
     "IPV4Address",
     "KillChainPhase",
+    "Note",
     "Organization",
     "OrganizationAuthor",
     "Relationship",
