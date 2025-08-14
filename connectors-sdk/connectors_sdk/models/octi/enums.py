@@ -127,6 +127,19 @@ class LocationType(StrEnum):
     POSITION = "Position"
 
 
+class NoteType(PermissiveEnum):
+    """Note Type Enum.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L739
+    """
+
+    INTERNAL = "internal"
+    ASSESSMENT = "assessment"
+    ANALYSIS = "analysis"
+    FEEDBACK = "feedback"
+    EXTERNAL = "external"
+
+
 class Permission(PermissiveEnum):
     """Permission Open Vocabulary.
 

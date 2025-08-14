@@ -9,7 +9,7 @@ from connectors_sdk.models.octi._common import (
     ExternalReference,
     TLPMarking,
 )
-from connectors_sdk.models.octi.activities.analyses import Report
+from connectors_sdk.models.octi.activities.analyses import Note, Report
 from connectors_sdk.models.octi.activities.observations import (
     Indicator,
     IPV4Address,
@@ -44,6 +44,7 @@ __all__ = [
     "IntrusionSet",
     "IPV4Address",
     "KillChainPhase",
+    "Note",
     "Organization",
     "OrganizationAuthor",
     "Relationship",

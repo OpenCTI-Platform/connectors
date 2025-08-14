@@ -16,10 +16,51 @@ from connectors_sdk.models.octi._common import (
     AssociatedFile,
     BaseIdentifiedEntity,
 )
-from connectors_sdk.models.octi.enums import Reliability, ReportType
+from connectors_sdk.models.octi.enums import NoteType, Reliability, ReportType
+from pycti import Note as PyctiNote
 from pycti import Report as PyctiReport
 from pydantic import AwareDatetime, Field
-from stix2 import Report as Stix2Report
+from stix2.v21 import Note as Stix2Note
+from stix2.v21 import Report as Stix2Report
+
+
+@MODEL_REGISTRY.register
+class Note(BaseIdentifiedEntity):
+    """Represent a note."""
+
+    content: str = Field(
+        description="The main content of the note.",
+    )
+    abstract: Optional[str] = Field(
+        description="A brief summary of the note content.",
+        default=None,
+    )
+    note_types: Optional[list[NoteType]] = Field(
+        description="Type of the note.",
+        default=None,
+    )
+    objects: Optional[list[BaseIdentifiedEntity]] = Field(
+        description="OCTI objects this note applies to.",
+        default=None,
+    )
+
+    def to_stix2_object(self) -> Stix2Note:
+        """Make stix object."""
+        return stix2.Note(
+            id=PyctiNote.generate_id(
+                content=self.content,
+                created=None,  # required but never set by SDK
+            ),
+            abstract=self.abstract,
+            content=self.content,
+            object_refs=[obj.id for obj in self.objects or []],
+            created_by_ref=self.author.id if self.author else None,
+            external_references=[
+                external_reference.to_stix2_object()
+                for external_reference in self.external_references or []
+            ],
+            object_marking_refs=[marking.id for marking in self.markings or []],
+        )
 
 
 class ReportStix(Stix2Report):  # type: ignore[misc]
