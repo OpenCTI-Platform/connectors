@@ -117,9 +117,14 @@ class ConnectorConfig(ConfigBaseModel):
     Define config specific to this type of connector, e.g. an `external-import`.
     """
 
-    id: str = Field(description="A UUID v4 to identify the connector in OpenCTI.")
-    name: str = Field(description="The name of the connector.")
     type: Literal["EXTERNAL_IMPORT"] = "EXTERNAL_IMPORT"
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+    )
+    name: str = Field(
+        description="The name of the connector.",
+        default="SOCRadar",
+    )
     scope: ListFromString = Field(
         description="The scope of the connector, e.g. 'socradar'.",
         default=["socradar"],
@@ -128,7 +133,6 @@ class ConnectorConfig(ConfigBaseModel):
         description="The period of time to await between two runs of the connector.",
         default=timedelta(minutes=10),
     )
-
     log_level: Literal[
         "debug",
         "info",
@@ -138,6 +142,7 @@ class ConnectorConfig(ConfigBaseModel):
         description="The minimum level of logs to display.",
         default="error",
     )
+
     expose_metrics: bool = Field(
         description="Whether to expose metrics or not.",
         default=False,
