@@ -76,11 +76,6 @@ class RadarConnector:
         Handle a batch of STIX objects (create work, create and send bundle, then close work).
         :param stix_objects: STIX objects batch to handle (length must be lower than BATCH_MAX_SIZE)
         """
-        if len(stix_objects) > BATCH_MAX_SIZE:
-            raise ValueError(
-                f"STIX objects count exceeds max batch size ({BATCH_MAX_SIZE})"
-            )
-
         self._initiate_work()
         self._send_bundle(stix_objects)
         self._finalize_work()
