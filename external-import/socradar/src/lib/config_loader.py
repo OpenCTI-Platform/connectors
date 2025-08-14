@@ -201,7 +201,7 @@ class RadarConfig(ConfigBaseModel):
 
     @field_validator("feed_lists", mode="before")
     @classmethod
-    def convert_collections_uuid(cls, value: Any) -> dict:
+    def convert_collections_uuid(cls, value: Any) -> list[dict]:
         """
         Config/env vars must be as flat as possible.
         This is a util method to format collections, making them easier to use in the rest of the codebase.
