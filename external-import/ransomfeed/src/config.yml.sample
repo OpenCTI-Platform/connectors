@@ -1,0 +1,15 @@
+opencti:
+  url: "http://opencti:8080"
+  token: "CHANGE_ME"
+
+connector:
+  id: "ransomfeed-external-import"
+  type: "EXTERNAL_IMPORT"
+  name: "RansomFeed Connector"
+  scope: "identity,incident,intrusion-set,indicator"
+  confidence_level: 70
+  interval: 3600
+  log_level: "info"
+
+ransomfeed:
+  api_url: "https://api.ransomfeed.it"
