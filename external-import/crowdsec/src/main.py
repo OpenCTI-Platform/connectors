@@ -2,7 +2,6 @@
 """CrowdSec external import connector main file."""
 
 import traceback
-from time import sleep
 
 from crowdsec import CrowdSecImporter
 from crowdsec.config_loader import CrowdSecConfig

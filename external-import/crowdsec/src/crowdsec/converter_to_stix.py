@@ -6,12 +6,7 @@ from typing import Dict, List, Optional, Union
 import pycountry
 import stix2
 from dateutil.parser import parse
-from pycti import (
-    Identity,
-    StixCoreRelationship,
-    StixSightingRelationship,
-    get_config_variable,
-)
+from pycti import Identity, StixCoreRelationship, StixSightingRelationship
 
 from .utils import handle_none_cti_value
 

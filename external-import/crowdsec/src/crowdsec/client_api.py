@@ -5,7 +5,6 @@ from typing import Any, Dict
 from urllib.parse import urljoin
 
 import requests
-from pycti import OpenCTIConnectorHelper
 
 
 class CrowdSecClient:

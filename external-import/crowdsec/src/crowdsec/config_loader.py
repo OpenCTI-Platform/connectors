@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
 
-import stix2
 import yaml
 from pycti import get_config_variable
 
