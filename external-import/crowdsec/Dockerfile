@@ -1,13 +1,15 @@
-FROM python:3.11-alpine
+FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 # Copy the connector
-COPY src /opt/opencti-crowdsec-import
+COPY src /opt/opencti-crowdsec
 
 # Install Python modules
 # hadolint ignore=DL3003
-RUN apk --no-cache add git build-base libmagic libffi-dev && \
-    cd /opt/opencti-crowdsec-import && \
+RUN apk update && apk upgrade && \
+    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
+
+RUN cd /opt/opencti-crowdsec && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 

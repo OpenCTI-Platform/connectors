@@ -10,14 +10,14 @@ connector:
   confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'error' # Log level (debug, info, warn, error)
   update_existing_data: false # Enable/disable update of existing data in database
+  duration_period: 'PT24H' # Interval given for scheduler process in ISO-8601 format
 
 crowdsec:
   key: 'ChangeMe'
-  api_version: v2 # v2 is the only supported version for now
   max_tlp: 'TLP:AMBER' # Max TLP level for observable enrichment
-  tlp: 'TLP_AMBER' # Default TLP level for created observable. Enum: TLP_WHITE, TLP_GREEN, TLP_AMBER, TLP_RED
-  import_interval: 24 # Interval in hours between two imports
-  import_query: 'behaviors.label:"SSH Bruteforce" AND reputation:"malicious"' # Query to filter CrowdSec data for import. Default is behaviors.label:"SSH Bruteforce"
+  tlp_level: 'amber' # # available values are: clear, white, green, amber, amber+strict, red - Default: 'amber'
+  import_query_since: 24 # Fetch only IPs created in the last N hours. Default is 24 hours.
+  import_query: 'behaviors.label:"SSH Bruteforce" AND reputation:"malicious"' # Lucene Query to filter CrowdSec data for import. Default is behaviors.label:"SSH Bruteforce"
   labels_scenario_name: true # Enable/disable scenario's name labels
   labels_scenario_label: false # Enable/disable scenario's label labels
   labels_scenario_color: '#2E2A14' # Color of scenario label (default: dark olive green)
