@@ -5,11 +5,12 @@ import json
 import os
 import unittest
 from datetime import timezone
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import stix2
-from crowdsec.builder import CrowdSecBuilder
-from crowdsec.constants import FAKE_INDICATOR_ID
+import yaml
+from crowdsec.config_loader import CrowdSecConfig
+from crowdsec.converter_to_stix import FAKE_INDICATOR_ID, CrowdSecBuilder
 from dateutil.parser import parse
 
 
@@ -24,6 +25,15 @@ class CrowdSecBuilderTest(unittest.TestCase):
     @classmethod
     def setup_class(cls):
         cls.helper = MagicMock()
+
+        # Mock the config file path to use test config
+        test_config_path = os.path.join(
+            os.path.dirname(__file__), "resources", "config.yml"
+        )
+        with patch.object(CrowdSecConfig, "_load_config") as mock_load_config:
+            with open(test_config_path) as f:
+                mock_load_config.return_value = yaml.load(f, Loader=yaml.FullLoader)
+            cls.config = CrowdSecConfig()
         cls.helper.api.indicator.generate_id.return_value = (
             "indicator--94c598e8-9174-58e0-9731-316e18f26916"
         )
@@ -66,27 +76,27 @@ class CrowdSecBuilderTest(unittest.TestCase):
     def test_init_builder(self):
         builder = CrowdSecBuilder(
             helper=self.helper,
-            config={},
+            config=self.config,
             cti_data=self.cti_data,
             organisation=self.helper.api.stix_domain_object.get_by_stix_id_or_name(
                 name="CrowdSec"
             ),
         )
         self.assertEqual(len(builder.bundle_objects), 0)
-        self.assertEqual(builder.labels_scenario_name, True)
-        self.assertEqual(builder.labels_scenario_label, False)
-        self.assertEqual(builder.labels_scenario_color, "#2E2A14")
-        self.assertEqual(builder.labels_cve, True)
-        self.assertEqual(builder.labels_cve_color, "#800080")
-        self.assertEqual(builder.labels_mitre, True)
-        self.assertEqual(builder.labels_mitre_color, "#000080")
-        self.assertEqual(builder.labels_behavior, False)
-        self.assertEqual(builder.labels_behavior_color, "#808000")
-        self.assertEqual(builder.labels_reputation, True)
-        self.assertEqual(builder.labels_reputation_malicious_color, "#FF0000")
-        self.assertEqual(builder.labels_reputation_suspicious_color, "#FFA500")
-        self.assertEqual(builder.labels_reputation_known_color, "#808080")
-        self.assertEqual(builder.labels_reputation_safe_color, "#00BFFF")
+        self.assertEqual(builder.config.labels_scenario_name, True)
+        self.assertEqual(builder.config.labels_scenario_label, False)
+        self.assertEqual(builder.config.labels_scenario_color, "#2E2A14")
+        self.assertEqual(builder.config.labels_cve, True)
+        self.assertEqual(builder.config.labels_cve_color, "#800080")
+        self.assertEqual(builder.config.labels_mitre, True)
+        self.assertEqual(builder.config.labels_mitre_color, "#000080")
+        self.assertEqual(builder.config.labels_behavior, False)
+        self.assertEqual(builder.config.labels_behavior_color, "#808000")
+        self.assertEqual(builder.config.labels_reputation, True)
+        self.assertEqual(builder.config.labels_reputation_malicious_color, "#FF0000")
+        self.assertEqual(builder.config.labels_reputation_suspicious_color, "#FFA500")
+        self.assertEqual(builder.config.labels_reputation_known_color, "#808080")
+        self.assertEqual(builder.config.labels_reputation_safe_color, "#00BFFF")
         # CTI data
         self.assertEqual(builder.reputation, "malicious")
         self.assertEqual(builder.confidence, "high")

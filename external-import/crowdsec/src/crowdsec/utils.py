@@ -5,7 +5,7 @@ import ipaddress
 import re
 from typing import Any, Dict, Optional
 
-from .constants import LAST_ENRICHMENT_PATTERN
+LAST_ENRICHMENT_PATTERN = "Last CrowdSec enrichment: "
 
 
 def clean_config(value: str) -> str:

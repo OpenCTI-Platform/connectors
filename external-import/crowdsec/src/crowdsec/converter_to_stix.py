@@ -1,32 +1,23 @@
 # -*- coding: utf-8 -*-
-"""CrowdSec builder module."""
+"""CrowdSec builder (converter to stix) module."""
+import re
 from typing import Dict, List, Optional, Union
 
 import pycountry
+import stix2
 from dateutil.parser import parse
 from pycti import (
-    OpenCTIConnectorHelper,
+    Identity,
     StixCoreRelationship,
     StixSightingRelationship,
     get_config_variable,
 )
-from stix2 import (
-    AttackPattern,
-    Bundle,
-    ExternalReference,
-    Identity,
-    Indicator,
-    IPv4Address,
-    IPv6Address,
-    Location,
-    Note,
-    Relationship,
-    Sighting,
-    Vulnerability,
-)
 
-from .constants import CVE_REGEX, FAKE_INDICATOR_ID, MITRE_URL
-from .helper import clean_config, handle_none_cti_value
+from .utils import handle_none_cti_value
+
+MITRE_URL = "https://attack.mitre.org/techniques/"
+FAKE_INDICATOR_ID = "indicator--51b92778-cef0-4a90-b7ec-ebd620d01ac8"
+CVE_REGEX = re.compile(r"CVE-\d{4}-\d{4,7}", re.IGNORECASE)
 
 
 def _get_confidence_level(confidence: str) -> int:
@@ -41,128 +32,19 @@ def _get_confidence_level(confidence: str) -> int:
 
 
 class CrowdSecBuilder:
-    """CrowdSec builder."""
-
-    helper: OpenCTIConnectorHelper
+    """CrowdSec builder. (Converter to STIX)"""
 
     def __init__(
         self,
-        helper: OpenCTIConnectorHelper,
-        config: Dict,
+        helper,
+        config,
         cti_data: Dict,
-        organisation: Identity,
+        organisation: stix2.Identity,
     ) -> None:
         self.helper = helper
+        self.config = config
         self.organisation = organisation
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-            False,
-        )
-
         self.bundle_objects = []
-        self.labels_scenario_name = get_config_variable(
-            "CROWDSEC_LABELS_SCENARIO_NAME",
-            ["crowdsec", "labels_scenario_name"],
-            config,
-            default=True,
-        )
-        self.labels_scenario_label = get_config_variable(
-            "CROWDSEC_LABELS_SCENARIO_LABEL",
-            ["crowdsec", "labels_scenario_label"],
-            config,
-            default=False,
-        )
-        self.labels_scenario_color = clean_config(
-            get_config_variable(
-                "CROWDSEC_LABELS_SCENARIO_COLOR",
-                ["crowdsec", "labels_scenario_color"],
-                config,
-                default="#2E2A14",
-            )
-        )
-        self.labels_cve = get_config_variable(
-            "CROWDSEC_LABELS_CVE",
-            ["crowdsec", "labels_cve"],
-            config,
-            default=True,
-        )
-        self.labels_cve_color = clean_config(
-            get_config_variable(
-                "CROWDSEC_LABELS_CVE_COLOR",
-                ["crowdsec", "labels_cve_color"],
-                config,
-                default="#800080",
-            )
-        )
-        self.labels_behavior = get_config_variable(
-            "CROWDSEC_LABELS_BEHAVIOR",
-            ["crowdsec", "labels_behavior"],
-            config,
-            default=False,
-        )
-        self.labels_behavior_color = clean_config(
-            get_config_variable(
-                "CROWDSEC_LABELS_BEHAVIOR_COLOR",
-                ["crowdsec", "labels_behavior_color"],
-                config,
-                default="#808000",
-            )
-        )
-        self.labels_mitre = get_config_variable(
-            "CROWDSEC_LABELS_MITRE",
-            ["crowdsec", "labels_mitre"],
-            config,
-            default=True,
-        )
-        self.labels_mitre_color = clean_config(
-            get_config_variable(
-                "CROWDSEC_LABELS_MITRE_COLOR",
-                ["crowdsec", "labels_mitre_color"],
-                config,
-                default="#000080",
-            )
-        )
-        self.labels_reputation = get_config_variable(
-            "CROWDSEC_LABELS_REPUTATION",
-            ["crowdsec", "labels_reputation"],
-            config,
-            default=True,
-        )
-        self.labels_reputation_malicious_color = clean_config(
-            get_config_variable(
-                "CROWDSEC_LABELS_REPUTATION_MALICIOUS_COLOR",
-                ["crowdsec", "labels_reputation_malicious_color"],
-                config,
-                default="#FF0000",
-            )
-        )
-        self.labels_reputation_suspicious_color = clean_config(
-            get_config_variable(
-                "CROWDSEC_LABELS_REPUTATION_SUSPICIOUS_COLOR",
-                ["crowdsec", "labels_reputation_suspicious_color"],
-                config,
-                default="#FFA500",
-            )
-        )
-        self.labels_reputation_safe_color = clean_config(
-            get_config_variable(
-                "CROWDSEC_LABELS_REPUTATION_SAFE_COLOR",
-                ["crowdsec", "labels_reputation_safe_color"],
-                config,
-                default="#00BFFF",
-            )
-        )
-        self.labels_reputation_known_color = clean_config(
-            get_config_variable(
-                "CROWDSEC_LABELS_REPUTATION_KNOWN_COLOR",
-                ["crowdsec", "labels_reputation_known_color"],
-                config,
-                default="#808080",
-            )
-        )
-
         # Parse data from CTI response
         self.ip = cti_data.get("ip", "")
         self.behaviors = handle_none_cti_value(cti_data.get("behaviors", []))
@@ -196,10 +78,10 @@ class CrowdSecBuilder:
         markings: List[str],
         external_references: List[Dict],
         update: bool = False,
-    ) -> Union[IPv4Address, IPv6Address]:
+    ) -> Union[stix2.IPv4Address, stix2.IPv6Address]:
         if ip_version not in [4, 6]:
             raise ValueError("Invalid IP version")
-        address_classes = {4: IPv4Address, 6: IPv6Address}
+        address_classes = {4: stix2.IPv4Address, 6: stix2.IPv6Address}
         address_types = {4: "ipv4-addr", 6: "ipv6-addr"}
         address_type = address_types[ip_version]
         address_class = address_classes[ip_version]
@@ -223,10 +105,31 @@ class CrowdSecBuilder:
         return stix_observable
 
     @staticmethod
+    def create_author() -> dict:
+        """
+        Create Author
+        :return: Author in Stix2 object
+        """
+        author = stix2.Identity(
+            id=Identity.generate_id(name="Source Name", identity_class="organization"),
+            name="Source Name",
+            identity_class="organization",
+            description="DESCRIPTION",
+            external_references=[
+                stix2.ExternalReference(
+                    source_name="External Source",
+                    url="CHANGEME",
+                    description="DESCRIPTION",
+                )
+            ],
+        )
+        return author
+
+    @staticmethod
     def create_external_reference(
         source_name: str, url: str, description: str
-    ) -> ExternalReference:
-        return ExternalReference(
+    ) -> stix2.ExternalReference:
+        return stix2.ExternalReference(
             source_name=source_name,
             url=url,
             description=description,
@@ -254,8 +157,8 @@ class CrowdSecBuilder:
         stix_observable: dict,
         pattern: str,
         markings: List[str],
-    ) -> Indicator:
-        indicator = Indicator(
+    ) -> stix2.Indicator:
+        indicator = stix2.Indicator(
             id=self.helper.api.indicator.generate_id(pattern),
             name=f"CrowdSec CTI ({self.reputation} IP: {self.ip})",
             created_by_ref=self.organisation["standard_id"],
@@ -275,7 +178,7 @@ class CrowdSecBuilder:
             },
         )
 
-        relationship = Relationship(
+        relationship = stix2.Relationship(
             id=StixCoreRelationship.generate_id(
                 "based-on",
                 indicator.id,
@@ -299,11 +202,11 @@ class CrowdSecBuilder:
         indicator_id: Optional[str],
         observable_id: str,
         external_references: List[Dict],
-    ) -> AttackPattern:
+    ) -> stix2.AttackPattern:
         description = f"{mitre_technique['label']}: {mitre_technique['description']}"
         name = f"MITRE ATT&CK ({mitre_technique['name']} - {mitre_technique['label']})"
 
-        attack_pattern = AttackPattern(
+        attack_pattern = stix2.AttackPattern(
             id=self.helper.api.attack_pattern.generate_id(
                 name=name, x_mitre_id=mitre_technique["name"]
             ),
@@ -317,7 +220,7 @@ class CrowdSecBuilder:
             external_references=external_references,
         )
         if indicator_id:
-            relationship = Relationship(
+            relationship = stix2.Relationship(
                 id=StixCoreRelationship.generate_id(
                     "indicates",
                     indicator_id,
@@ -332,7 +235,7 @@ class CrowdSecBuilder:
             )
             self.add_to_bundle([relationship])
         else:
-            relationship = Relationship(
+            relationship = stix2.Relationship(
                 id=StixCoreRelationship.generate_id(
                     "related-to",
                     observable_id,
@@ -354,7 +257,7 @@ class CrowdSecBuilder:
         self,
         observable_id: str,
         markings: List[str],
-    ) -> Note:
+    ) -> stix2.Note:
         if self.reputation == "unknown":
             content = "This is was not found in CrowdSec CTI. \n\n"
         else:
@@ -383,7 +286,7 @@ class CrowdSecBuilder:
                     country_info = pycountry.countries.get(alpha_2=country_alpha_2)
                     content += "- " + country_info.name + f" ({val}%)" + "\n\n"
 
-        note = Note(
+        note = stix2.Note(
             type="note",
             id=self.helper.api.note.generate_id(
                 created=self.helper.api.stix2.format_date(), content=content
@@ -407,8 +310,8 @@ class CrowdSecBuilder:
         observable_id: str,
         markings: List[str],
         sighting_ext_refs: List[Dict],
-        indicator: Optional[Indicator],
-    ) -> Sighting:
+        indicator: Optional[stix2.Indicator],
+    ) -> stix2.Sighting:
         first_seen = (
             parse(self.first_seen).strftime("%Y-%m-%dT%H:%M:%SZ")
             if self.first_seen
@@ -419,7 +322,7 @@ class CrowdSecBuilder:
             if self.last_seen
             else None
         )
-        sighting = Sighting(
+        sighting = stix2.Sighting(
             id=StixSightingRelationship.generate_id(
                 self.organisation["standard_id"],
                 observable_id,
@@ -447,16 +350,16 @@ class CrowdSecBuilder:
 
     def add_vulnerability_from_cve(
         self, cve: str, markings: List[str], observable_id: str
-    ) -> Vulnerability:
+    ) -> stix2.Vulnerability:
         cve_name = cve.upper()
-        vulnerability = Vulnerability(
+        vulnerability = stix2.Vulnerability(
             id=self.helper.api.vulnerability.generate_id(cve_name),
             name=cve_name,
             description=cve_name,
             created_by_ref=self.organisation["standard_id"],
             object_marking_refs=markings,
         )
-        relationship = Relationship(
+        relationship = stix2.Relationship(
             id=StixCoreRelationship.generate_id(
                 "related-to",
                 vulnerability.id,
@@ -507,30 +410,30 @@ class CrowdSecBuilder:
     def handle_labels(self) -> List[Dict]:
         # Initialize labels and label colors
         labels = []
-        labels_mitre_color = self.labels_mitre_color
-        scenario_label_color = self.labels_scenario_color
-        labels_cve_color = self.labels_cve_color
-        labels_behavior_color = self.labels_behavior_color
+        labels_mitre_color = self.config.labels_mitre_color
+        scenario_label_color = self.config.labels_scenario_color
+        labels_cve_color = self.config.labels_cve_color
+        labels_behavior_color = self.config.labels_behavior_color
         # Mitre techniques
-        if self.labels_mitre:
+        if self.config.labels_mitre:
             for mitre_technique in self.mitre_techniques:
                 labels.append((mitre_technique["name"], labels_mitre_color))
         # CVEs
-        if self.labels_cve:
+        if self.config.labels_cve:
             for cve in self.cves:
                 labels.append((cve.upper(), labels_cve_color))
         # Behaviors
-        if self.labels_behavior:
+        if self.config.labels_behavior:
             for behavior in self.behaviors:
                 labels.append((behavior["name"], labels_behavior_color))
         # Reputation
-        if self.reputation and self.labels_reputation:
+        if self.reputation and self.config.labels_reputation:
             color_attribute = f"labels_reputation_{self.reputation}_color"
             color = getattr(self, color_attribute, None)
             if self.reputation != "unknown" and color is not None:
                 labels.append((self.reputation, color))
         # Scenario's name
-        if self.labels_scenario_name:
+        if self.config.labels_scenario_name:
             # We handle CVE labels separately to avoid duplicates
             filtered_scenarios = [
                 scenario
@@ -543,7 +446,7 @@ class CrowdSecBuilder:
             if scenario_names:
                 labels.extend(scenario_names)
         # Scenario's label
-        if self.labels_scenario_label:
+        if self.config.labels_scenario_label:
             scenario_labels = [
                 (attack["label"], scenario_label_color)
                 for attack in self.attack_details
@@ -573,7 +476,7 @@ class CrowdSecBuilder:
                 country_id = self.helper.api.location.generate_id(
                     name=country_info.name, x_opencti_location_type="Country"
                 )
-                country = Location(
+                country = stix2.Location(
                     id=country_id,
                     name=country_info.name,
                     country=(
@@ -598,7 +501,7 @@ class CrowdSecBuilder:
 
                 # Create relationship between country and indicator/observable
                 if observable_id:
-                    sighting = Sighting(
+                    sighting = stix2.Sighting(
                         id=StixSightingRelationship.generate_id(
                             country_id,
                             observable_id,
@@ -623,7 +526,7 @@ class CrowdSecBuilder:
 
                 # Create relationship between country and attack pattern
                 for attack_pattern_id in attack_patterns:
-                    country_relationship = Relationship(
+                    country_relationship = stix2.Relationship(
                         id=StixCoreRelationship.generate_id(
                             "targets",
                             attack_pattern_id,
@@ -638,24 +541,3 @@ class CrowdSecBuilder:
                     )
 
                     self.add_to_bundle([country_relationship])
-
-    def send_bundle(self) -> bool:
-        bundle_objects = self.bundle_objects
-        if bundle_objects:
-            self.helper.log_debug(
-                f"[CrowdSec] sending bundle (length:{len(bundle_objects)}): {bundle_objects}"
-            )
-            serialized_bundle = Bundle(
-                objects=bundle_objects, allow_custom=True
-            ).serialize()
-            # serialized_bundle = self.helper.stix2_create_bundle(self.bundle_objects)
-            bundles_sent = self.helper.send_stix2_bundle(
-                bundle=serialized_bundle, update=self.update_existing_data
-            )
-            self.helper.log_debug(
-                f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
-            )
-            self.helper.metric.inc("record_send", len(bundle_objects))
-            return True
-
-        return False
