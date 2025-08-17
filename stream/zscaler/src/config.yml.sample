@@ -1,0 +1,20 @@
+opencti:
+  url: 'https://localhost:8080'
+  token: 'ChangeMe'
+  ssl_verify: false
+
+connector:
+  name: 'ZscalerConnector'
+  id: 'ChangeMe'
+  type: 'STREAM'
+  live_stream_id: 'ChangeMe' # ID of the live stream created in the OpenCTI UI
+  live_stream_listen_delete: true
+  
+  scope: 'Zscaler'
+  log_level: 'info'
+
+zscaler:
+  username: "ChangeMe"
+  password: "ChangeMe"
+  api_key: "ChangeMe"
+  blacklist_name: "ChangeMe"  # Blacklist name

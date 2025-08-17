@@ -69,7 +69,12 @@ class ShodanConnector:
             config,
             default=True,
         )
-
+        self.use_isp_name_for_asn = get_config_variable(
+            "SHODAN_USE_ISP_NAME_FOR_ASN",
+            ["shodan", "use_isp_name_for_asn"],
+            config,
+            default=False,
+        )
         # Shodan Identity
         self.shodan_identity = self.helper.api.identity.create(
             type="Organization",
@@ -211,7 +216,7 @@ class ShodanConnector:
     def _generate_stix_asn(self, data):
         if "asn" in data and data["asn"] is not None and len(data["asn"]) > 0:
             # Generate Asn
-            entity_asn = data["asn"]
+            entity_asn = data["isp"] if self.use_isp_name_for_asn else data["asn"]
             asn_number = int(data["asn"].replace("AS", ""))
             stix_asn = stix2.AutonomousSystem(
                 type="autonomous-system",

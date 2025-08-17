@@ -40,7 +40,7 @@ def c2_domains_to_infrastructure(
         relationship(
             source=intra_entry.id,
             target=ip.id,
-            relationship="consists-of",
+            type="consists-of",
             start_time=entry.created_at,
         )
         for ip in ip_addresses

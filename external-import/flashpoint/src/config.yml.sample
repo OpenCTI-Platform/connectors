@@ -1,26 +1,35 @@
 opencti:
-  url: 'http://localhost:8080'
+  url: 'http://localhost:PORT'
   token: 'ChangeMe'
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'Flashpoint'
   scope: 'flashpoint'
+  log_level: 'error'
   run_and_terminate: false
-  log_level: 'info'
+  duration_period: 'PT1H' # Interval given for scheduler process in ISO-8601 format
+
+  #============================================#
+  # Optional connector's definition parameters #
+  #============================================#
+  #queue_threshold: 500
+  #run_and_terminate: 'False'
+  #send_to_queue: 'True'
+  #send_to_directory: 'False'
+  #send_to_directory_path: 'ChangeMe'
+  #send_to_directory_retention: 7
 
 flashpoint:
   api_key: 'ChangeMe'
-  import_start_date: '2024-01-01'
-  import_apt: false
-  import_malware: false
+  import_start_date: 'P30D'
   import_reports: true
+  indicators_in_reports: false
+  guess_relationships_from_reports: false
   import_indicators: true
-  import_vulnerabilities: true
+  import_alerts: true
+  alert_create_related_entities: false
   import_communities: false
   communities_queries: 'cybersecurity,cyberattack'
-  import_alerts: true
-  indicators_in_reports: false
-  interval: 5 # In minutes
-
+  import_ccm_alerts: true
+  fresh_ccm_alerts_only: true

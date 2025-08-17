@@ -7,6 +7,7 @@ import unittest
 from unittest.mock import MagicMock, PropertyMock
 
 import stix2
+from pycti import Identity
 from virustotal.builder import VirusTotalBuilder
 
 
@@ -20,6 +21,7 @@ class VirusTotalBuilderTest(unittest.TestCase):
 
         # Setup author
         cls.author = stix2.Identity(
+            id=Identity.generate_id("VirusTotal", "Organization"),
             name="VirusTotal",
             identity_class="Organization",
             description="VirusTotal",

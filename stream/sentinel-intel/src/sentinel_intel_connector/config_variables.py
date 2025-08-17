@@ -71,7 +71,7 @@ class ConfigConnector:
             self.load,
         )
         self.action = get_config_variable(
-            "ACTION", ["sentinel_intel", "action"], self.load
+            "SENTINEL_INTEL_ACTION", ["sentinel_intel", "action"], self.load
         )
         self.tlp_level = get_config_variable(
             "SENTINEL_INTEL_TLP_LEVEL", ["sentinel_intel", "tlp_level"], self.load

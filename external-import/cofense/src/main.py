@@ -9,6 +9,7 @@ import stix2
 import yaml
 from cofense_intelligence import CFIntelSync, CofenseIntegration, MalwareThreatReport
 from pycti import (
+    Identity,
     Incident,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
@@ -144,11 +145,11 @@ class CofenseIntel(CofenseIntegration):
 
         helper.log_info("Fetching knowledge...")
         author = stix2.Identity(
+            id=Identity.generate_id("Cofense", "organization"),
             type="identity",
             name="Cofense",
             identity_class="organization",
             description="CofenseIntel",
-            confidence=helper.connect_confidence_level,
         )
 
         now = datetime.utcnow()

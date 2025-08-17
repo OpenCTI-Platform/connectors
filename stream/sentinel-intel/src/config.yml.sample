@@ -14,7 +14,6 @@ connector:
 
 sentinel_intel:
   tenant_id: 'ChangeMe'
-  workspace_id: 'ChangeMe' # Only for Sentinel
   client_id: 'ChangeMe' 
   client_secret: 'ChangeMe' 
   login_url: 'https://login.microsoft.com'

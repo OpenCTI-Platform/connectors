@@ -1,83 +1,71 @@
 """Models"""
 
-from __future__ import annotations
+from pathlib import Path
+from typing import Any
 
-import re
-from typing import Any, Dict, ForwardRef
-
-import stix2
-from pydantic.v1 import BaseModel, BaseSettings, Field, validator
+import yaml
+from pycti import get_config_variable
 
 __all__ = [
-    "RootConfig",
-    "ShodanConfig",
+    "ConfigConnector",
+]
+
+TLP_MARKING_OPTIONS = [
+    "TLP:WHITE",
+    "TLP:GREEN",
+    "TLP:AMBER",
+    "TLP:RED",
+    "TLP:CLEAR",
+    "TLP:AMBER+STRICT",
 ]
 
 
-class RootConfig(BaseModel):
-    """Root config"""
+class ConfigConnector:
+    def __init__(self) -> None:
+        """
+        Initialize the connector with necessary configurations
+        """
 
-    shodan: ShodanConfig = Field(default_factory=lambda: ShodanConfig())
+        # Load configuration file
+        self.load = self._load_config()
+        self._initialize_configurations()
+        self._check_configuration()
 
+    @staticmethod
+    def _load_config() -> dict[str, Any]:
+        config_file_path = Path(__file__).parent.parent.joinpath("config.yml")
+        return (
+            yaml.load(open(config_file_path), Loader=yaml.SafeLoader)
+            if config_file_path.is_file()
+            else {}
+        )
 
-class ShodanConfig(BaseSettings):
-    """Shodan config"""
+    def _check_configuration(self) -> None:
+        """
+        Run configuration additional checks not handled by get_config_variables function.
+        """
+        if self.shodan_max_tlp not in TLP_MARKING_OPTIONS:
+            raise ValueError(
+                "Incorrect value for configuration parameter 'max_tlp'. "
+                f"Permitted values are: {', '.join(TLP_MARKING_OPTIONS)}"
+            )
 
-    max_tlp: stix2.MarkingDefinition = Field(
-        description="Max TLP to allow for lookups",
-        env="SHODAN_MAX_TLP",
-        default="white",
-    )
-    ssl_verify: bool = Field(
-        description="Verify SSL connections to Shodan",
-        env="SHODAN_SSL_VERIFY",
-        default=True,
-    )
+    def _initialize_configurations(self) -> None:
+        """
+        Connector configuration variables
+        :return: None
+        """
+        # OpenCTI configurations
+        self.shodan_max_tlp = get_config_variable(
+            "SHODAN_MAX_TLP",
+            ["shodan", "max_tlp"],
+            self.load,
+            default="TLP:WHITE",
+        )
 
-    @validator("ssl_verify", pre=True)
-    def _bool_validator(cls, value: str) -> bool:
-        """Convert a truthy/falsy value to a bool"""
-
-        if isinstance(value, bool):
-            return value
-
-        lowered = value.lower()
-        if lowered in ["true", "t", "1"]:
-            return True
-        elif lowered in ["false", "f", "0"]:
-            return False
-        else:
-            raise ValueError(f"Invalid bool: {value}")
-
-    @validator("max_tlp", pre=True)
-    def _tlp_validator(cls, value: str) -> stix2.MarkingDefinition:
-        """Convert a marking name to an object"""
-        if isinstance(value, stix2.MarkingDefinition):
-            return value
-
-        if not isinstance(value, str):
-            value = str(value)
-
-        # Chop off any "TLP:" type prefixes
-        value = re.split("[^a-zA-Z]", value)[-1]
-        value = f"TLP_{value}".upper()
-
-        # Fetch TLP_<VALUE> from the stix2 root
-        tlp_value = getattr(stix2, value, None)
-
-        if not isinstance(tlp_value, stix2.MarkingDefinition):
-            raise ValueError(f"Invalid marking: {value}")
-
-        return tlp_value
-
-
-def _update_forward_refs(locals_: Dict[str, Any]) -> None:
-    """Update any models that have forward refs"""
-    for obj in list(locals_.values()):
-        fields = getattr(obj, "__fields__", {}).values()
-        for field in fields:
-            if isinstance(field.type_, ForwardRef):
-                obj.update_forward_refs()
-
-
-_update_forward_refs(locals())
+        self.shodan_ssl_verify = get_config_variable(
+            "SHODAN_SSL_VERIFY",
+            ["shodan", "ssl_verify"],
+            self.load,
+            default=True,
+        )

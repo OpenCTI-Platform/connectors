@@ -3,7 +3,7 @@ import itertools
 import re
 
 import stix2
-from pycti import Note
+from pycti import Note, Report
 
 from . import utils
 from .common import create_stix_relationship
@@ -39,7 +39,7 @@ def process(connector, report):
         report_bundle["objects"] = list(
             filter(lambda item: not item["id"].startswith("x-"), bundle_objects)
         )
-        report = Report(
+        report = MandiantReport(
             bundle=report_bundle,
             details=report_details,
             pdf=report_pdf,
@@ -56,7 +56,7 @@ def process(connector, report):
     return bundle
 
 
-class Report:
+class MandiantReport:
     def __init__(
         self,
         bundle,
@@ -85,7 +85,12 @@ class Report:
         self.update_vulnerability()
         if not self.connector.mandiant_import_software_cpe:
             self.update_software()
-        self.create_relationships()
+
+        if (self.report_type in self.connector.guess_relationships_reports) or (
+            "all" in self.connector.guess_relationships_reports
+        ):
+            self.create_relationships()
+
         if self.create_notes:
             self.create_note()
         return stix2.parse(self.bundle, allow_custom=True)
@@ -170,6 +175,9 @@ class Report:
 
     def update_report(self):
         report = utils.retrieve(self.bundle, "type", "report")
+        report["published"] = report["created"]
+        report["x_opencti_stix_ids"] = [report["id"]]
+        report["id"] = Report.generate_id(report["name"], report["published"])
         report["created_by_ref"] = self.identity["standard_id"]
         report["report_types"] = [self.report_type]
         report["object_refs"] = list(
@@ -283,16 +291,14 @@ class Report:
         if text == "":
             return
 
-        note = utils.generate_note(
-            {
-                "id": Note.generate_id(report["created"], text),
-                "abstract": "Analysis",
-                "content": text,
-                "created_by_ref": self.identity["standard_id"],
-                "object_refs": [report.get("id")],
-                "object_marking_refs": report["object_marking_refs"],
-                "note_types": ["analysis", "external"],
-            }
+        note = stix2.Note(
+            id=Note.generate_id(report["created"], text),
+            abstract="Analysis",
+            content=text,
+            created_by_ref=self.identity["standard_id"],
+            object_refs=[report.get("id")],
+            object_marking_refs=report["object_marking_refs"],
+            custom_properties={"note_types": ["analysis", "external"]},
         )
 
         self.bundle["objects"].append(note)
@@ -400,7 +406,7 @@ class Report:
         ]
 
         # Get objects from tags
-        source_geographies = list(self._get_objects_from_tags("source_geographies"))
+        # source_geographies = list(self._get_objects_from_tags("source_geographies"))
         target_geographies = list(self._get_objects_from_tags("target_geographies"))
         affected_industries = list(self._get_objects_from_tags("affected_industries"))
         affected_systems = list(self._get_objects_from_tags("affected_systems"))
@@ -415,11 +421,12 @@ class Report:
 
         if len(intrusion_sets) > 0:
             definitions += [
-                {
-                    "type": "originates-from",
-                    "sources": intrusion_sets,
-                    "destinations": source_geographies,
-                },
+                # https://github.com/OpenCTI-Platform/connectors/compare/issue/3129
+                # {
+                #    "type": "originates-from",
+                #    "sources": intrusion_sets,
+                #    "destinations": source_geographies,
+                # },
                 {
                     "type": "targets",
                     "sources": intrusion_sets,
@@ -459,11 +466,12 @@ class Report:
 
         if len(malwares) > 0:
             definitions += [
-                {
-                    "type": "originates-from",
-                    "sources": malwares,
-                    "destinations": source_geographies,
-                },
+                # https://github.com/OpenCTI-Platform/connectors/compare/issue/3129
+                # {
+                #    "type": "originates-from",
+                #    "sources": malwares,
+                #    "destinations": source_geographies,
+                # },
                 {
                     "type": "targets",
                     "sources": malwares,

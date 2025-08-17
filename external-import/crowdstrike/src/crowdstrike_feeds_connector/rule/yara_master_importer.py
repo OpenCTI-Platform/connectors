@@ -51,6 +51,7 @@ class YaraMasterImporter(BaseImporter):
         tlp_marking: MarkingDefinition,
         report_status: int,
         report_type: str,
+        no_file_trigger_import: bool,
     ) -> None:
         """Initialize CrowdStrike YARA master importer."""
         super().__init__(helper, author, tlp_marking)
@@ -58,8 +59,9 @@ class YaraMasterImporter(BaseImporter):
         self.rules_api_cs = RulesAPI(helper)
         self.report_status = report_status
         self.report_type = report_type
+        self.no_file_trigger_import = no_file_trigger_import
 
-        self.report_fetcher = ReportFetcher(helper)
+        self.report_fetcher = ReportFetcher(helper, self.no_file_trigger_import)
 
     def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Run importer."""

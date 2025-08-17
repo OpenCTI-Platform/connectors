@@ -1,0 +1,40 @@
+{
+  "md5_sample": {
+    "hashes": {
+      "MD5": "946d53360ef6e553b90d826a018bc546"
+    },
+    "type": "StixFile"
+  },
+  "sha1_sample": {
+    "hashes": {
+      "SHA-1": "ef1faa3a55cca05d84187c8cd15ceed9066c0f19"
+    },
+    "type": "StixFile"
+  },
+  "sha256_sample": {
+    "hashes": {
+      "SHA-256": "e67538748476070016be140e73625dcb4f9b953f5c1806ac8e08a49b45e7d1cd"
+    },
+    "type": "StixFile"
+  },
+  "domain_sample": {
+    "type": "Domain-Name",
+    "value": "thesecure.biz"
+  },
+  "ipv4_sample": {
+    "type": "IPv4-Addr",
+    "value": "23.95.75.114"
+  },
+  "url_sample": {
+    "type": "Url",
+    "value": "https://rechnung-senden.net/download/"
+  },
+  "ipv6_sample": {
+    "type": "IPv6-Addr",
+    "value": "2604:a880:400:d1::3c0:f001"
+  },
+  "hostname_sample": {
+    "type": "Hostname",
+    "value": "ebay.ebayshoo.com"
+  }
+}

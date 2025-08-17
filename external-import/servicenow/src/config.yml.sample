@@ -1,0 +1,39 @@
+opencti: # OpenCTI Parameters
+  url: 'http://localhost:PORT' # REQUIRED
+  token: 'ChangeMe' # REQUIRED
+
+connector:
+  # Connector definition parameters - REQUIRED
+  id: 'ChangeMe'
+
+  # Connector definition parameters - OPTIONAL
+  #name: 'ChangeMe' # Default: 'ServiceNow'
+  #scope: 'ChangeMe' # Default: 'ServiceNow'
+  #log_level: 'ChangeMe' # Default: 'error'
+  #duration_period: 'ChangeMe' # Default: 'PT24H' (ISO8601 format in String, start with P...)
+  #queue_threshold: ChangeMe # Default: 500 MBytes, Float accepted
+  #run_and_terminate: ChangeMe # Default: False, True run connector once
+  #send_to_queue: ChangeMe # Default: True
+  #send_to_directory: ChangeMe # Default: False
+  #send_to_directory_path: 'ChangeMe' # if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path
+  #send_to_directory_retention: ChangeMe # Default: 7, in days
+
+servicenow:
+  # ServiceNow definition parameters - REQUIRED
+  instance_name: 'ChangeMe'
+  api_key: 'ChangeMe'
+
+  # ServiceNow definition parameters - OPTIONAL
+  #import_start_date: 'ChangeMe' # Format 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS+HH:MM' or ISO 8601 duration - Default: "P30D"
+  #api_version: 'ChangeMe' # Default: "v2"
+  #api_leaky_bucket_rate: ChangeMe # Default: 10
+  #api_leaky_bucket_capacity: ChangeMe # Default: 10
+  #api_retry: ChangeMe # Default: 5
+  #api_backoff: 'ChangeMe' # Default: 'PT30S'
+  #state_to_exclude: 'ChangeMe' # Example: "eradicate,analysis,closed,cancelled,draft,contain,review,recover"
+  #severity_to_exclude: 'ChangeMe' # Example: "high,medium,low"
+  #priority_to_exclude: 'ChangeMe' # Example: "critical,high,moderate,low,planning"
+  #comment_to_exclude: 'ChangeMe' # Example: "private,public,auto"
+  #tlp_level: 'ChangeMe' # Default: 'red' (available: clear, green, amber, amber+strict, red)
+  #observables_default_score: ChangeMe # Default: 50
+  #promote_observables_as_indicators: ChangeMe # Default: True

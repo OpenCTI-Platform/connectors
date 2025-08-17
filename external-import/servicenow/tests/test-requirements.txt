@@ -1,0 +1,4 @@
+# Main dependencies needs to be installed
+-r ../src/requirements.txt
+pytest<9,>=8.1.1
+pytest-asyncio<1,>=0.16

@@ -198,11 +198,11 @@ class MispFeed:
         # Initialize MISP
         if self.source_type == "s3":
             bucket_name = get_config_variable(
-                "MISP_BUCKET_NAME", ["misp", "bucket_name"], config, False
+                "MISP_BUCKET_NAME", ["misp_feed", "bucket_name"], config, False
             )
 
             self.bucket_prefix = get_config_variable(
-                "MISP_BUCKET_PREFIX", ["misp", "bucket_prefix"], config, False
+                "MISP_BUCKET_PREFIX", ["misp_feed", "bucket_prefix"], config, False
             )
 
             self.s3 = boto3.resource("s3").Bucket(bucket_name)
@@ -362,7 +362,6 @@ class MispFeed:
                             stix2.IntrusionSet(
                                 id=IntrusionSet.generate_id(name),
                                 name=name,
-                                confidence=self.helper.connect_confidence_level,
                                 labels=["intrusion-set"],
                                 description=galaxy_entity["description"],
                                 created_by_ref=author["id"],
@@ -535,7 +534,6 @@ class MispFeed:
                                 stix2.IntrusionSet(
                                     id=IntrusionSet.generate_id(threat["name"]),
                                     name=threat["name"],
-                                    confidence=self.helper.connect_confidence_level,
                                     created_by_ref=author["id"],
                                     object_marking_refs=markings,
                                     allow_custom=True,
@@ -548,7 +546,6 @@ class MispFeed:
                                     id=Malware.generate_id(threat["name"]),
                                     name=threat["name"],
                                     is_family=True,
-                                    confidence=self.helper.connect_confidence_level,
                                     created_by_ref=author["id"],
                                     object_marking_refs=markings,
                                     allow_custom=True,
@@ -560,7 +557,6 @@ class MispFeed:
                                 stix2.Tool(
                                     id=Tool.generate_id(threat["name"]),
                                     name=threat["name"],
-                                    confidence=self.helper.connect_confidence_level,
                                     created_by_ref=author["id"],
                                     object_marking_refs=markings,
                                     allow_custom=True,
@@ -572,7 +568,6 @@ class MispFeed:
                                 stix2.AttackPattern(
                                     id=AttackPattern.generate_id(threat["name"]),
                                     name=threat["name"],
-                                    confidence=self.helper.connect_confidence_level,
                                     created_by_ref=author["id"],
                                     object_marking_refs=markings,
                                     allow_custom=True,
@@ -616,7 +611,6 @@ class MispFeed:
                             stix2.IntrusionSet(
                                 id=IntrusionSet.generate_id(name),
                                 name=name,
-                                confidence=self.helper.connect_confidence_level,
                                 created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 allow_custom=True,
@@ -647,7 +641,6 @@ class MispFeed:
                             stix2.Tool(
                                 id=Tool.generate_id(name),
                                 name=name,
-                                confidence=self.helper.connect_confidence_level,
                                 created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 allow_custom=True,
@@ -683,7 +676,6 @@ class MispFeed:
                                 id=Malware.generate_id(name),
                                 name=name,
                                 is_family=True,
-                                confidence=self.helper.connect_confidence_level,
                                 created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 allow_custom=True,
@@ -715,7 +707,6 @@ class MispFeed:
                             stix2.AttackPattern(
                                 id=AttackPattern.generate_id(name),
                                 name=name,
-                                confidence=self.helper.connect_confidence_level,
                                 created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 allow_custom=True,
@@ -732,7 +723,6 @@ class MispFeed:
                             stix2.Identity(
                                 id=Identity.generate_id(name, "class"),
                                 name=name,
-                                confidence=self.helper.connect_confidence_level,
                                 identity_class="class",
                                 created_by_ref=author["id"],
                                 object_marking_refs=markings,
@@ -1090,7 +1080,6 @@ class MispFeed:
                         id=Indicator.generate_id(pattern),
                         name=name,
                         description=attribute["comment"],
-                        confidence=self.helper.connect_confidence_level,
                         pattern_type=pattern_type,
                         pattern=pattern,
                         valid_from=datetime.utcfromtimestamp(
@@ -1369,26 +1358,35 @@ class MispFeed:
                         allow_custom=True,
                     )
                 )
-            ### Create relationship between MISP attribute (indicator or observable) and MISP object (observable)
-            if object_observable is not None and (
-                indicator is not None or observable is not None
-            ):
-                relationships.append(
-                    stix2.Relationship(
-                        id=StixCoreRelationship.generate_id(
-                            "related-to",
-                            object_observable.id,
-                            observable.id if observable is not None else indicator.id,
-                        ),
-                        relationship_type="related-to",
-                        created_by_ref=author["id"],
-                        source_ref=object_observable.id,
-                        target_ref=(
-                            observable.id if (observable is not None) else indicator.id
-                        ),
-                        allow_custom=True,
-                    )
+
+            # Create relationship between MISP attribute (indicator or observable) and MISP object (observable)
+            if object_observable is not None:
+
+                indicator_id = indicator.get("id") if indicator else None
+                observable_id = observable.get("id") if observable else None
+                source_id = object_observable.get("id")
+                target_id = (
+                    observable_id
+                    if observable_id is not None and observable_id != source_id
+                    else indicator_id
                 )
+
+                if target_id is not None:
+                    relationships.append(
+                        stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to",
+                                source_id,
+                                target_id,
+                            ),
+                            relationship_type="related-to",
+                            created_by_ref=author["id"],
+                            source_ref=source_id,
+                            target_ref=target_id,
+                            allow_custom=True,
+                        )
+                    )
+
             # Event threats
             threat_names = {}
             for threat in (
@@ -1409,7 +1407,6 @@ class MispFeed:
                             target_ref=threat.id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
-                            confidence=self.helper.connect_confidence_level,
                             allow_custom=True,
                         )
                     )
@@ -1425,7 +1422,6 @@ class MispFeed:
                             target_ref=threat.id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
-                            confidence=self.helper.connect_confidence_level,
                             allow_custom=True,
                         )
                     )
@@ -1452,7 +1448,6 @@ class MispFeed:
                             target_ref=threat_id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
-                            confidence=self.helper.connect_confidence_level,
                             allow_custom=True,
                         )
                     )
@@ -1468,7 +1463,6 @@ class MispFeed:
                             target_ref=threat_id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
-                            confidence=self.helper.connect_confidence_level,
                             allow_custom=True,
                         )
                     )
@@ -1495,7 +1489,6 @@ class MispFeed:
                         target_ref=attack_pattern.id,
                         description=attribute["comment"],
                         object_marking_refs=attribute_markings,
-                        confidence=self.helper.connect_confidence_level,
                         allow_custom=True,
                     )
                     relationships.append(relationship_uses)
@@ -1509,7 +1502,6 @@ class MispFeed:
                     #         source_ref=indicator.id,
                     #         target_ref=relationship_uses.id,
                     #         description=attribute["comment"],
-                    #         confidence=self.helper.connect_confidence_level,
                     #         object_marking_refs=attribute_markings,
                     #     )
                     #     relationships.append(relationship_indicates)
@@ -1523,7 +1515,6 @@ class MispFeed:
                     #         source_ref=observable.id,
                     #         target_ref=relationship_uses.id,
                     #         description=attribute["comment"],
-                    #         confidence=self.helper.connect_confidence_level,
                     #         object_marking_refs=attribute_markings,
                     #     )
                     #     relationships.append(relationship_indicates)
@@ -1546,7 +1537,6 @@ class MispFeed:
                             "uses", threat_id, attack_pattern.id
                         ),
                         relationship_type="uses",
-                        confidence=self.helper.connect_confidence_level,
                         created_by_ref=author["id"],
                         source_ref=threat_id,
                         target_ref=attack_pattern.id,
@@ -1565,7 +1555,6 @@ class MispFeed:
                     #        source_ref=indicator.id,
                     #        target_ref=relationship_uses.id,
                     #        description=attribute["comment"],
-                    #        confidence=self.helper.connect_confidence_level,
                     #        object_marking_refs=attribute_markings,
                     #    )
                     #    relationships.append(relationship_indicates)
@@ -1579,7 +1568,6 @@ class MispFeed:
                     #        source_ref=observable.id,
                     #        target_ref=relationship_uses.id,
                     #        description=attribute["comment"],
-                    #        confidence=self.helper.connect_confidence_level,
                     #        object_marking_refs=attribute_markings,
                     #    )
                     #    relationships.append(relationship_indicates)
@@ -1596,7 +1584,6 @@ class MispFeed:
                             target_ref=sector.id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
-                            confidence=self.helper.connect_confidence_level,
                             allow_custom=True,
                         )
                     )
@@ -1612,7 +1599,6 @@ class MispFeed:
                             target_ref=sector.id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
-                            confidence=self.helper.connect_confidence_level,
                             allow_custom=True,
                         )
                     )
@@ -1630,7 +1616,6 @@ class MispFeed:
                             target_ref=country.id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
-                            confidence=self.helper.connect_confidence_level,
                             allow_custom=True,
                         )
                     )
@@ -1646,7 +1631,6 @@ class MispFeed:
                             target_ref=country.id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
-                            confidence=self.helper.connect_confidence_level,
                             allow_custom=True,
                         )
                     )
@@ -2063,7 +2047,6 @@ class MispFeed:
                 labels=event_tags,
                 object_refs=object_refs,
                 external_references=event_external_references,
-                confidence=self.helper.connect_confidence_level,
                 custom_properties={
                     "x_opencti_files": added_files,
                 },
@@ -2078,7 +2061,6 @@ class MispFeed:
                         ),
                         self._process_note(note["content"], bundle_objects),
                     ),
-                    confidence=self.helper.connect_confidence_level,
                     created=datetime.utcfromtimestamp(int(note["timestamp"])).strftime(
                         "%Y-%m-%dT%H:%M:%SZ"
                     ),

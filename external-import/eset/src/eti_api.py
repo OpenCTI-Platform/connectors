@@ -1,4 +1,4 @@
-""" Client implementation of ETI API.
+"""Client implementation of ETI API.
 
 .. note::
     Implemented with 3rd party package :mod:`urllib3`, because built-in :mod:`urllib` does not support multipart.

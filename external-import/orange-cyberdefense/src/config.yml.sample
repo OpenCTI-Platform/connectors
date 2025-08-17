@@ -4,32 +4,25 @@ opencti:
 
 
 connector:
-  id: 'ChangeMe'
+  id: 'connector-orange-cyberdefense'
   type: 'EXTERNAL_IMPORT'
   name: 'Orange Cyberdefense Cyber Threat Intelligence'
-  scope: 'ocd'
+  scope: 'identity,attack-pattern,intrusion-set,malware,tool,report,location,vulnerability,indicator,campaign,relationship'
   confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
   update_existing_data: true
   log_level: 'info'
 
 ocd:
-  portal_api_login: 'ChangeMe'
-  portal_api_key: 'ChangeMe'
-  datalake_login: 'ChangeMe'
-  datalake_password: 'ChangeMe'
+  datalake_token: 'ChangeMe'
   datalake_zip_file_path: '/opt/opencti-connector-orange-cyberdefense'
   import_worldwatch: true
   import_worldwatch_start_date: '2022-01-01'
   import_worldwatch_api_key: 'ChangeMe'
-  import_cybercrime: false
-  import_cybercrime_start_date: '2022-01-01'
   import_threat_library: true
   import_datalake: true
-  import_datalake_atom_types: 'apk,as,cc,crypto,cve,domain,email,file,fqdn,iban,ip,ip_range,paste,phone_number,regkey,ssl,url'
-  import_datalake_threat_types: 'ddos,fraud,hack,leak,malware,phishing,scam,scan,spam'
-  import_datalake_minimum_risk_score: 90
+  datalake_queries: '[{"query_hash":"b56b43144690145c115e8f5fee9dade3","label":"high_confidence_network_iocs"},{"query_hash":"346f3acbcb29f476d56b6689c36ea6d4","label":"ocd_peerpressure_c2_tracker"}]'
   create_observables: true  # Create observables from indicators
   curate_labels: true # Curated labels
   threat_actor_as_intrusion_set: true
-  interval: 15 # Required, in minutes
+  interval: 30 # Required, in minutes. Minimum recommended 30
   reset_state: false # force the use of the start_dates from the config instead of getting the state saved in opencti

@@ -1,0 +1,193 @@
+lookml:
+- dashboard: ioc_opencti_intelligence
+  description: ""
+  elements:
+  - body_text: '[{"type":"p","align":"left","id":"z7fjc","children":[{"text":""}]},{"type":"p","align":"left","id":"oxjq0","children":[{"text":"OpenCTI
+      (Open Cyber Threat Intelligence) is an open-source platform designed to manage
+      and share cyber threat intelligence. It provides a structured way to collect,
+      store, analyze, and disseminate data about cyber threats. \n\nThis dashboard
+      shows all ingested OpenCTI IOCs into the Google SecOps SIEM''s Entity Graph"}]}]'
+    col: 8
+    height: 3
+    name: ""
+    rich_content_json: '{"format":"slate"}'
+    row: 0
+    subtitle_text: ""
+    title_text: ""
+    type: text
+    width: 16
+  - body_text: '![OpenCTI](https://github.com/OpenCTI-Platform/opencti/blob/master/.github/img/logo_opencti.png?raw=true)'
+    col: 0
+    height: 4
+    name: ' (2)'
+    row: 0
+    subtitle_text: ""
+    title_text: ""
+    type: text
+    width: 8
+  - col: 0
+    column_limit: 50
+    defaults_version: 1
+    explore: entity_graph_connector
+    fields:
+    - entity_graph.count
+    - entity_graph.metadata__entity_type_enum_name
+    filters:
+      entity_graph.metadata__vendor_name: FILIGRAN
+      entity_graph.time_filter: 24 weeks
+    font_size: 12
+    height: 7
+    hidden_pivots: {}
+    label_density: 25
+    legend_position: center
+    limit: 500
+    limit_displayed_rows: false
+    model: scn
+    name: IOCs by Entity Type
+    ordering: none
+    pivots:
+    - entity_graph.metadata__entity_type_enum_name
+    plot_size_by_field: false
+    point_style: none
+    row: 10
+    show_null_labels: false
+    show_silhouette: false
+    show_totals_labels: false
+    show_value_labels: false
+    show_view_names: false
+    show_x_axis_label: true
+    show_x_axis_ticks: true
+    show_y_axis_labels: true
+    show_y_axis_ticks: true
+    sorts:
+    - entity_graph.metadata__entity_type_enum_name desc
+    stacking: ""
+    title: IOCs by Entity Type
+    totals_color: '#808080'
+    trellis: ""
+    type: looker_donut_multiples
+    width: 9
+    x_axis_gridlines: false
+    x_axis_reversed: false
+    x_axis_scale: auto
+    y_axis_combined: true
+    y_axis_gridlines: true
+    y_axis_reversed: false
+    y_axis_scale_mode: linear
+    y_axis_tick_density: default
+    y_axis_tick_density_custom: 5
+  - col: 9
+    color_application: undefined
+    column_limit: 50
+    defaults_version: 1
+    explore: entity_graph_connector
+    fields:
+    - entity_graph__metadata__threat.risk_score
+    - entity_graph.count
+    filters:
+      entity_graph.metadata__vendor_name: FILIGRAN
+      entity_graph.time_filter: 24 weeks
+    font_size: 12
+    height: 7
+    hidden_pivots: {}
+    label_density: 25
+    label_type: labPer
+    legend_position: center
+    limit: 500
+    limit_displayed_rows: false
+    model: scn
+    name: IOCs by Risk Score
+    ordering: none
+    pivots:
+    - entity_graph__metadata__threat.risk_score
+    plot_size_by_field: false
+    point_style: none
+    row: 10
+    show_null_labels: false
+    show_silhouette: false
+    show_totals_labels: false
+    show_value_labels: false
+    show_view_names: false
+    show_x_axis_label: true
+    show_x_axis_ticks: true
+    show_y_axis_labels: true
+    show_y_axis_ticks: true
+    sorts:
+    - entity_graph__metadata__threat.risk_score
+    stacking: ""
+    title: IOCs by Risk Score
+    totals_color: '#808080'
+    trellis: ""
+    type: looker_column
+    value_labels: legend
+    width: 9
+    x_axis_gridlines: false
+    x_axis_reversed: false
+    x_axis_scale: auto
+    y_axis_combined: true
+    y_axis_gridlines: true
+    y_axis_reversed: false
+    y_axis_scale_mode: linear
+    y_axis_tick_density: default
+    y_axis_tick_density_custom: 5
+  - col: 0
+    color_application: undefined
+    column_limit: 50
+    defaults_version: 1
+    explore: entity_graph_connector
+    fields:
+    - entity_graph.count
+    - entity_graph.metadata__collected_timestamp_date
+    fill_fields:
+    - entity_graph.metadata__collected_timestamp_date
+    filters:
+      entity_graph.metadata__vendor_name: FILIGRAN
+      entity_graph.time_filter: 24 weeks
+    font_size: 12
+    height: 6
+    hidden_pivots: {}
+    label_density: 25
+    label_type: labPer
+    legend_position: center
+    limit: 500
+    limit_displayed_rows: false
+    model: scn
+    name: IOCs ingested over time
+    ordering: none
+    plot_size_by_field: false
+    point_style: none
+    row: 4
+    show_null_labels: false
+    show_silhouette: false
+    show_totals_labels: false
+    show_value_labels: false
+    show_view_names: false
+    show_x_axis_label: true
+    show_x_axis_ticks: true
+    show_y_axis_labels: true
+    show_y_axis_ticks: true
+    sorts:
+    - entity_graph.metadata__collected_timestamp_date desc
+    stacking: ""
+    title: IOCs ingested over time
+    totals_color: '#808080'
+    trellis: ""
+    type: looker_column
+    value_labels: legend
+    width: 24
+    x_axis_gridlines: false
+    x_axis_reversed: false
+    x_axis_scale: auto
+    y_axis_combined: true
+    y_axis_gridlines: true
+    y_axis_reversed: false
+    y_axis_scale_mode: linear
+    y_axis_tick_density: default
+    y_axis_tick_density_custom: 5
+  layout: newspaper
+  title: '[IOC] OpenCTI Intelligence'
+metadata:
+  exported_at: "2024-12-14T02:03:58-08:00"
+  file_fingerprint: "1026295915379339851810777221096552055963"
+  looker_version: 24.18.128
+  version: "1"

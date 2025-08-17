@@ -9,6 +9,7 @@ from io import BytesIO
 from typing import Dict
 
 import jbxapi
+import pycti
 import stix2
 import yaml
 from pycti import OpenCTIConnectorHelper, StixCoreRelationship, get_config_variable
@@ -809,9 +810,11 @@ class JoeSandboxConnector:
         if malware_configs:
             configs = malware_configs.get("config")
             for config_dict in configs:
+                note_content = f"```\n{json.dumps(config_dict, indent=2)}\n```"
                 note = stix2.Note(
+                    id=pycti.Note.generate_id(None, note_content),
                     abstract=f"Malware Configuration ({config_dict['@threatname']})",
-                    content=f"```\n{json.dumps(config_dict, indent=2)}\n```",
+                    content=note_content,
                     created_by_ref=self.identity,
                     object_marking_refs=[self._default_tlp],
                     object_refs=[observable["standard_id"]],

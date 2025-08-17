@@ -1,4 +1,4 @@
-"""Generic TAXII2 connector. """
+"""Generic TAXII2 connector."""
 
 import json
 import os

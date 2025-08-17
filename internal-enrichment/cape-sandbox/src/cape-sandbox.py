@@ -10,6 +10,7 @@ from typing import Dict
 from urllib.parse import urlparse
 
 import magic
+import pycti
 import pyzipper
 import requests
 import stix2
@@ -362,9 +363,11 @@ class CapeSandboxConnector:
             for config_dict in configs_list:
                 for detection_name in config_dict:
                     # Create a Note containing the config
+                    note_content = f"```\n{json.dumps(config_dict, indent=2)}\n```"
                     note = stix2.Note(
+                        id=pycti.Note.generate_id(None, note_content),
                         abstract=f"{detection_name} Config",
-                        content=f"```\n{json.dumps(config_dict, indent=2)}\n```",
+                        content=note_content,
                         created_by_ref=self.identity,
                         object_refs=[final_observable["standard_id"]],
                     )

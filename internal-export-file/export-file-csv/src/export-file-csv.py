@@ -26,6 +26,9 @@ class ExportFileCsv:
             False,
             ";",
         )
+        self.errors: list[Exception] = (
+            []
+        )  # error holder to be reset before each new process
 
     def export_dict_list_to_csv(self, data):
         output = io.StringIO()
@@ -40,53 +43,71 @@ class ExportFileCsv:
             ]
         csv_data = [headers]
         for d in data:
-            row = []
-            for h in headers:
-                if h.startswith("hashes_") and "hashes" in d:
-                    hashes = {}
-                    for hash in d["hashes"]:
-                        hashes[hash["algorithm"]] = hash["hash"]
-                    if h.split("_")[1] in hashes:
-                        row.append(hashes[h.split("_")[1]])
+            try:
+                row = []
+                for h in headers:
+                    if h.startswith("hashes_") and "hashes" in d:
+                        hashes = {}
+                        for hash in d["hashes"]:
+                            hashes[hash["algorithm"]] = hash["hash"]
+                        if h.split("_")[1] in hashes:
+                            row.append(hashes[h.split("_")[1]])
+                        else:
+                            row.append("")
+                    elif h not in d:
+                        row.append("")
+                    elif isinstance(d[h], str):
+                        row.append(d[h])
+                    elif isinstance(d[h], int):
+                        row.append(str(d[h]))
+                    elif isinstance(d[h], float):
+                        row.append(str(d[h]))
+                    elif isinstance(d[h], list):
+                        if len(d[h]) > 0 and isinstance(d[h][0], str):
+                            row.append(",".join(d[h]))
+                        elif len(d[h]) > 0 and isinstance(d[h][0], dict):
+                            rrow = []
+                            for r in d[h]:
+                                if "name" in r:
+                                    if r["name"] is not None:
+                                        rrow.append(r["name"])
+                                    else:
+                                        rrow.append("")
+                                elif "definition" in r:
+                                    if r["definition"] is not None:
+                                        rrow.append(r["definition"])
+                                    else:
+                                        rrow.append("")
+                                elif "value" in r:
+                                    if r["value"] is not None:
+                                        rrow.append(r["value"])
+                                    else:
+                                        rrow.append("")
+                                elif "observable_value" in r:
+                                    if r["observable_value"] is not None:
+                                        rrow.append(r["observable_value"])
+                                    else:
+                                        rrow.append("")
+                            row.append(",".join(rrow))
+                        else:
+                            row.append("")
+                    elif isinstance(d[h], dict):
+                        if "name" in d[h]:
+                            row.append(d[h]["name"])
+                        elif "value" in d[h]:
+                            row.append(d[h]["value"])
+                        elif "observable_value" in d[h]:
+                            row.append(d[h]["observable_value"])
+                        else:
+                            row.append("")
                     else:
                         row.append("")
-                elif h not in d:
-                    row.append("")
-                elif isinstance(d[h], str):
-                    row.append(d[h])
-                elif isinstance(d[h], int):
-                    row.append(str(d[h]))
-                elif isinstance(d[h], float):
-                    row.append(str(d[h]))
-                elif isinstance(d[h], list):
-                    if len(d[h]) > 0 and isinstance(d[h][0], str):
-                        row.append(",".join(d[h]))
-                    elif len(d[h]) > 0 and isinstance(d[h][0], dict):
-                        rrow = []
-                        for r in d[h]:
-                            if "name" in r:
-                                rrow.append(r["name"])
-                            elif "definition" in r:
-                                rrow.append(r["definition"])
-                            elif "value" in r:
-                                rrow.append(r["value"])
-                            elif "observable_value" in r:
-                                rrow.append(r["observable_value"])
-                        row.append(",".join(rrow))
-                    else:
-                        row.append("")
-                elif isinstance(d[h], dict):
-                    if "name" in d[h]:
-                        row.append(d[h]["name"])
-                    elif "value" in d[h]:
-                        row.append(d[h]["value"])
-                    elif "observable_value" in d[h]:
-                        row.append(d[h]["observable_value"])
-                    else:
-                        row.append("")
-                else:
-                    row.append("")
-            csv_data.append(row)
+                csv_data.append(row)
+            except Exception as err:
+                self.helper.connector_logger.warning(
+                    "Error with csv input data, one line cannot be exported." + str(err)
+                )
+                self.errors.append(err)
         writer = csv.writer(
             output,
             delimiter=self.export_file_csv_delimiter,
@@ -151,6 +172,7 @@ class ExportFileCsv:
         entity_type = data["entity_type"]
         main_filter = data.get("main_filter")
         access_filter = data.get("access_filter")
+        self.errors = []  # reset before launching main process
 
         # Single export always containing object_refs
         # Full but no relationships
@@ -287,6 +309,12 @@ class ExportFileCsv:
             list_filters = json.dumps(list_params)
             self._export_list(data, entities_list, list_filters)
 
+        if len(self.errors) > 0:
+            msg = f"Some values were not processed in CSV (for {len(self.errors)} lines). See connector logs for details."
+            self.helper.api.work.report_expectation(
+                work_id=self.helper.work_id, error={"error": msg, "source": "CONNECTOR"}
+            )
+            return msg
         return "Export done"
 
     # Start the main loop

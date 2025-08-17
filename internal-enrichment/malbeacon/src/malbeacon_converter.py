@@ -1,5 +1,4 @@
 import ipaddress
-from datetime import datetime
 
 import stix2
 import validators
@@ -207,7 +206,6 @@ class MalbeaconConverter:
             name=value,
             description=description,
             pattern_type="stix",
-            valid_from=datetime.now(),
             pattern=self.create_indicator_pattern(value),
             created_by_ref=self.author["id"],
             external_references=self.external_reference,

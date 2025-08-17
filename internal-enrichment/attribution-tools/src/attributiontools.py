@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Dict
 from urllib.parse import urljoin
 
+import pycti
 import yaml
 
 # Import attribution_tools parser:
@@ -18,7 +19,12 @@ from attribution_tools.attribution_model import AttributionToolsModel
 from attribution_tools.train_attribution_model import TrainingAttributionToolsModel
 from cron_converter import Cron
 from dataexport import DataExport
-from pycti import OpenCTIApiClient, OpenCTIConnectorHelper, get_config_variable
+from pycti import (
+    OpenCTIApiClient,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
+    get_config_variable,
+)
 from stix2 import Bundle, Note, Relationship
 
 TRAINING_DATA_PATH = os.path.dirname(os.path.abspath(__file__)) + "/data/training_data"
@@ -151,6 +157,9 @@ class AttributionTools:
                     break
                 # Create a relationship between the incident and predicted intrusion set
                 relationship = Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "attributed-to", incident_standard_id, predicted_standard_ids[i]
+                    ),
                     created_by_ref=self.identity_id,
                     relationship_type="attributed-to",
                     description=(
@@ -191,6 +200,7 @@ class AttributionTools:
             )
             note_contents += f"\n|{rank}|{name}|{probability}|{standard_id}|{link}|"
         note = Note(
+            id=pycti.Note.generate_id(None, note_contents),
             type="note",
             abstract=f"Attribution-tools connector enrichment {timestamp_str}",
             content=note_contents,

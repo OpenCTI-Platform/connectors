@@ -77,6 +77,8 @@ Below are the parameters you'll need to set for Shodan Connector:
 | max_tlp               | `max_tlp`               | `SHODAN_MAX_TLP`               | `TLP:AMBER` | No        | The maximal TLP of the observable being enriched.                                               |
 | default_score         | `default_score`         | `SHODAN_DEFAULT_SCORE`         | `50`        | No        | Default_score allows you to add a default score for an indicator and its observable             |
 | import_search_results | `import_search_results` | `SHODAN_IMPORT_SEARCH_RESULTS` | `True`      | No        | Returns the results of the search against the enriched indicator (Search the SHODAN database). |
+| create_note | `create_note` | `SHODAN_CREATE_NOTE` | `True` | Adds Shodan results to a note, otherwise it is saved in the description. |
+| use_isp_name_for_asn | `use_isp_name_for_asn` | `SHODAN_USE_ISP_NAME_FOR_ASN` | `False` | Use the ISP name for ASN name rather than AS+Number. |
 
 ## Deployment
 

@@ -1,5 +1,3 @@
-from datetime import datetime
-
 import stix2
 from pycti import (
     Identity,
@@ -127,7 +125,6 @@ class MalpediaConverter:
         :return: stix2.Indicator
         """
 
-        now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
         return stix2.Indicator(
             id=Indicator.generate_id(prepared_data.name),
             name=prepared_data.name,
@@ -136,7 +133,6 @@ class MalpediaConverter:
             pattern_type=prepared_data.pattern_type,
             object_marking_refs=prepared_data.object_marking_refs,
             created_by_ref=self.malpedia_identity["id"],
-            valid_from=now,
             custom_properties={
                 "x_opencti_main_observable_type": "StixFile",
             },

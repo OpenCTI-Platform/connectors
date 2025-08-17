@@ -13,5 +13,7 @@ RUN apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-de
 
 # Expose and entrypoint
 COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh && chmod -R 0777 /opt/opencti-connector-import-file-stix
+WORKDIR /opt/opencti-connector-import-file-stix
+ENV HOME=/opt/opencti-connector-import-file-stix
 ENTRYPOINT ["/entrypoint.sh"]

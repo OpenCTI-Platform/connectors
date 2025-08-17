@@ -1,9 +1,8 @@
 import os
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
-import stix2
 from pycti import OpenCTIConnectorHelper
 
 
@@ -113,6 +112,12 @@ class ExternalImportConnector:
 
                 # If the last_run is more than interval-1 day
                 if last_run is None or ((timestamp - last_run) >= self._get_interval()):
+                    last_run_datetime = (
+                        datetime.fromtimestamp(last_run).replace(tzinfo=timezone.utc)
+                        if last_run
+                        else None
+                    )
+
                     self.helper.log_info(f"{self.helper.connect_name} will run!")
                     now = datetime.utcfromtimestamp(timestamp)
                     friendly_name = f"{self.helper.connect_name} run @ " + now.strftime(
@@ -124,19 +129,21 @@ class ExternalImportConnector:
 
                     try:
                         # Performing the collection of intelligence
-                        bundle_objects = self._collect_intelligence()
-                        bundle = stix2.Bundle(
-                            objects=bundle_objects, allow_custom=True
-                        ).serialize()
+                        bundle_objects = self._collect_intelligence(
+                            since=last_run_datetime
+                        )
+                        if bundle_objects:
+                            bundle = self.helper.stix2_create_bundle(bundle_objects)
 
-                        self.helper.log_info(
-                            f"Sending {len(bundle_objects)} STIX objects to OpenCTI..."
-                        )
-                        self.helper.send_stix2_bundle(
-                            bundle,
-                            update=self.update_existing_data,
-                            work_id=work_id,
-                        )
+                            self.helper.log_info(
+                                f"Sending {len(bundle_objects)} STIX objects to OpenCTI..."
+                            )
+                            self.helper.send_stix2_bundle(
+                                bundle,
+                                work_id=work_id,
+                                cleanup_inconsistent_bundle=True,
+                            )
+
                     except Exception as e:
                         self.helper.log_error(str(e))
 

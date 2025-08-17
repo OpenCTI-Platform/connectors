@@ -23,11 +23,13 @@ By doing this, you are actively helping us to improve the quality of the entire 
 -->
 
 - [ ] I consider the submitted work as finished
+- [ ] I have signed my commits using GPG key.
 - [ ] I tested the code for its functionality using different use cases
 - [ ] I added/update the relevant documentation (either on github or on notion)
 - [ ] Where necessary I refactored code to improve the overall quality
 
 <!-- For completed items, change [ ] to [x]. -->
+<!-- To sign commits with a GPG key, you can refer to https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits. -->
 
 ### Further comments
 

@@ -2,6 +2,7 @@ import base64
 import datetime
 import json
 import os
+import re
 import sys
 import time
 
@@ -20,6 +21,15 @@ from pycti import (
 )
 
 TMP_DIR = "TMP"
+
+OBSERVABLE_TYPES_MAP = {
+    "url:value": "Url",
+    "domain-name:value": "Domain-Name",
+    "ipv4-addr:value": "IPv4-Addr",
+    "file:hashes.MD5": "MD5",
+    "file:hashes.'SHA-1'": "SHA-1",
+    "file:hashes.'SHA-256'": "SHA-256",
+}
 
 
 class Eset:
@@ -164,6 +174,7 @@ class Eset:
         client.set_auth(username=self.eset_username, password=self.eset_password)
         no_more_result = False
         end_epoch = start_epoch + 3600
+        atomic_ind_pattern = re.compile(r"\[(\S+) = '[^']+'\]")
         while no_more_result is False:
             self.helper.log_info(
                 "Iterating with collection="
@@ -249,10 +260,22 @@ class Eset:
                             else:
                                 id_remaps[object["id"]] = new_id
                             object["id"] = new_id
+
+                            # Attempt to fill in x_opencti_main_observable_type
+                            atomic_match = atomic_ind_pattern.fullmatch(
+                                object["pattern"]
+                            )
+                            if atomic_match:
+                                pattern_field_name = atomic_match.group(1)
+                                if pattern_field_name in OBSERVABLE_TYPES_MAP:
+                                    object["x_opencti_main_observable_type"] = (
+                                        OBSERVABLE_TYPES_MAP[pattern_field_name]
+                                    )
                             if self.eset_create_observables:
                                 object["x_opencti_create_observables"] = (
                                     self.eset_create_observables
                                 )
+                        object["where_sighted_refs"] = []
                         objects.append(object)
                     parsed_content["objects"] = objects
                     self.helper.send_stix2_bundle(

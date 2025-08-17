@@ -21,7 +21,7 @@ from pycti import (
     OpenCTIConnectorHelper,
     Report,
     StixCoreRelationship,
-    ThreatActor,
+    ThreatActorGroup,
     get_config_variable,
 )
 
@@ -109,7 +109,7 @@ class CRITsConnector:
             dynamic_params["created_by_ref"] = custom_properties["created_by_ref"]
 
         return stix2.ThreatActor(
-            id=ThreatActor.generate_id(name=crits_obj["name"]),
+            id=ThreatActorGroup.generate_id(name=crits_obj["name"]),
             name=crits_obj["name"],
             labels=crits_obj.get("bucket_list", []),
             object_marking_refs=[self.default_marking],

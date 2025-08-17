@@ -1,0 +1,21 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'STREAM'
+  name: 'Microsoft Defender Intel Synchronizer'
+  scope: 'sentinel' # MIME type or SCO
+  log_level: 'info'
+
+microsoft_defender_intel_synchronizer:
+  tenant_id: 'ChangeMe'
+  client_id: 'ChangeMe' 
+  client_secret: 'ChangeMe' 
+  login_url: 'https://login.microsoft.com'
+  base_url: 'https://api.securitycenter.microsoft.com'
+  resource_path: '/api/indicators'
+  expire_time: 30
+  taxii_collections: 'ID1,ID2,ID3,etc.'
+  interval: 300

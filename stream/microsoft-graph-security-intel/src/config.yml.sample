@@ -1,0 +1,14 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'STREAM'
+  name: 'Microsoft Graph Security Intel'
+  live_stream_id: 'ChangeMe'
+
+microsoft_graph_security_intel:
+  tenant_id: 'ChangeMe'
+  client_id: 'ChangeMe' 
+  client_secret: 'ChangeMe'

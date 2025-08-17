@@ -1,6 +1,8 @@
 import traceback
 
+from pycti import OpenCTIConnectorHelper
 from stream_connector import ConnectorTemplate
+from stream_connector.config_loader import ConfigConnector
 
 if __name__ == "__main__":
     """
@@ -13,7 +15,10 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        connector = ConnectorTemplate()
+        config = ConfigConnector()
+        helper = OpenCTIConnectorHelper(config=config.load)
+
+        connector = ConnectorTemplate(config=config, helper=helper)
         connector.run()
     except Exception:
         traceback.print_exc()

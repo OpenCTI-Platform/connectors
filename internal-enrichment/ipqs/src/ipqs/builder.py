@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """IPQS builder module."""
 
-from datetime import datetime
-
+import pycti
 from pycti import OpenCTIConnectorHelper, StixCoreRelationship
 from stix2 import (
     AutonomousSystem,
@@ -121,20 +120,19 @@ class IPQSBuilder:
         pattern : str
             Stix pattern for the indicator.
         """
-        now_time = datetime.utcnow()
 
         # Create an Indicator if positive hits >= ip_indicator_create_positives specified in config
 
         self.helper.log_debug(f"[IPQS] creating indicator with pattern {pattern}")
 
         indicator = Indicator(
+            id=pycti.Indicator.generate_id(pattern),
             created_by_ref=self.author,
             name=indicator_value,
             description=description,
             confidence=self.helper.connect_confidence_level,
             pattern=pattern,
             pattern_type="stix",
-            valid_from=self.helper.api.stix2.format_date(now_time),
             # valid_until=self.helper.api.stix2.format_date(valid_until),
             custom_properties={
                 "x_opencti_score": self.score,

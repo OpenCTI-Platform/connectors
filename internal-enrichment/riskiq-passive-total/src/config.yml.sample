@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'RiskIQ PassiveTotal'
+  scope: 'IPv4-Addr,Domain-Name'
+  log_level: 'info'
+  auto: 'false' # Enable/disable auto-enrichment of observables
+
+riskiq:
+  username: 'ChangeMe'
+  api_key: 'ChangeMe'
+  max_tlp: 'TLP:AMBER' # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
+  import_last_seen_time_window : 'ChangeMe' # Default P30D

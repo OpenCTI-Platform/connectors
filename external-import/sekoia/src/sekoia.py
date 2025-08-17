@@ -3,7 +3,7 @@ import json
 import os
 import sys
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import cached_property
 from posixpath import join as urljoin
 from typing import Any, Dict, Iterable, List, Set
@@ -19,12 +19,12 @@ from requests import RequestException
 #   But from a manual deployement, we have to use a Daemon for launching the service
 #   So i added a global var : gbl_scriptDir (not mandatory but for visibility purpose only)
 gbl_scriptDir: str = os.path.dirname(os.path.realpath(__file__))
+
+
 # so i propose the change on the relative path with the concat of the script dir path (go to line 374)
 
 
 class Sekoia(object):
-    limit = 200
-
     def __init__(self):
         # Instantiate the connector helper from config
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
@@ -46,25 +46,45 @@ class Sekoia(object):
 
         self.base_url = self.get_config("base_url", config, "https://api.sekoia.io")
         self.start_date: str = self.get_config("start_date", config, None)
+        self.limit = get_config_variable(
+            "SEKOIA_LIMIT",
+            ["sekoia", "limit"],
+            config,
+            isNumber=True,
+            default=200,
+        )
         self.collection = self.get_config(
             "collection", config, "d6092c37-d8d7-45c3-8aff-c4dc26030608"
         )
         self.create_observables = self.get_config("create_observables", config, True)
+        self.import_source_list = get_config_variable(
+            "SEKOIA_IMPORT_SOURCE_LIST",
+            ["sekoia", "import_source_list"],
+            config,
+            default=False,
+        )
+        self.import_ioc_relationships = get_config_variable(
+            "SEKOIA_IMPORT_IOC_RELATIONSHIPS",
+            ["sekoia", "import_ioc_relationships"],
+            config,
+            default=True,
+        )
+        self.all_labels = []
 
-        self.helper.log_info("Setting up api key")
+        self.helper.connector_logger.info("Setting up api key")
         self.api_key = self.get_config("api_key", config)
         if not self.api_key:
-            self.helper.log_error("API key is Missing")
+            self.helper.connector_logger.error("API key is Missing")
             raise ValueError("API key is Missing")
 
         self._load_data_sets()
-        self.helper.log_info("All datasets has been loaded")
+        self.helper.connector_logger.info("All datasets has been loaded")
 
         self.helper.api.identity.create(
             stix_id="identity--357447d7-9229-4ce1-b7fa-f1b83587048e",
             type="Organization",
             name="SEKOIA",
-            description="SEKOIA.IO is a European cybersecurity SAAS company, whose mission is to develop the best protection capabilities against cyber attacks.",
+            description="SEKOIA.IO is a European cybersecurity SaaS company, whose mission is to develop the best protection capabilities against cyber attacks.",
         )
         self.helper.api.marking_definition.create(
             stix_id="marking-definition--bf973641-9d22-45d7-a307-ccdc68e120b9",
@@ -77,24 +97,22 @@ class Sekoia(object):
         return self.helper.connect_scope
 
     def process_message(self):
-        self.helper.log_info("Starting SEKOIA.IO connector")
+        self.helper.connector_logger.info("Starting SEKOIA.IO connector")
         state = self.helper.get_state() or {}
         cursor = state.get("last_cursor", self.generate_first_cursor())
-        self.helper.log_info(f"Starting with {cursor}")
+        self.helper.connector_logger.info(f"Starting with {cursor}")
 
-        friendly_name = "SEKOIA run @ " + datetime.utcnow().strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
+        friendly_name = "SEKOIA run @ " + datetime.now(timezone.utc).isoformat()
         try:
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
             )
             cursor = self._run(cursor, work_id)
             message = f"Connector successfully run, cursor updated to {cursor}"
-            self.helper.log_info(message)
+            self.helper.connector_logger.info(message)
             self.helper.api.work.to_processed(work_id, message)
         except (KeyboardInterrupt, SystemExit):
-            self.helper.log_info("Connector stop")
+            self.helper.connector_logger.info("Connector stop")
             self.helper.api.work.to_processed(work_id, "Connector is stopping")
             sys.exit(0)
         except Exception as ex:
@@ -102,7 +120,7 @@ class Sekoia(object):
             # since `_run` updates it after every successful request
             state = self.helper.get_state() or {}
             cursor = state.get("last_cursor", cursor)
-            self.helper.log_error(str(ex))
+            self.helper.connector_logger.error(str(ex))
             message = f"Connector encountered an error, cursor updated to {cursor}"
             self.helper.api.work.to_processed(work_id, message)
 
@@ -143,15 +161,15 @@ class Sekoia(object):
         Generate the first cursor to interrogate the API
         so we don't start at the beginning.
         """
-        start = f"{(datetime.utcnow() - timedelta(hours=1)).isoformat()}Z"
+        start = f"{(datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()}Z"
         if self.start_date:
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"Using date provided to the connector: {self.start_date}"
             )
             try:
                 start = f"{parse(self.start_date).isoformat()}Z"
             except ParserError:
-                self.helper.log_error(
+                self.helper.connector_logger.error(
                     f"Impossible to parse the date provided: {self.start_date}. Starting from one hour ago"
                 )
 
@@ -166,7 +184,8 @@ class Sekoia(object):
             yield items[i : i + chunk_size]
 
     def _run(self, cursor, work_id):
-        current_time = f"{datetime.utcnow().isoformat()}Z"
+
+        current_time = f"{datetime.now(timezone.utc).isoformat()}"
         current_cursor = base64.b64encode(current_time.encode("utf-8")).decode("utf-8")
 
         params = {"limit": self.limit, "cursor": cursor}
@@ -189,18 +208,30 @@ class Sekoia(object):
         self._clean_external_references_fields(items)
         items = self._clean_ic_fields(items)
         self._add_files_to_items(items)
-        [all_related_objects, all_relationships] = (
-            self._retrieve_related_objects_and_relationships(items)
-        )
-        items += all_related_objects + all_relationships
+
+        # Getting source refs and add as labels in entity
+        self._add_sources_to_items(items)
+
+        if self.import_ioc_relationships:
+            # Retrieve all related object to IOC and relationship
+            [all_related_objects, all_relationships] = (
+                self._retrieve_related_objects_and_relationships(items)
+            )
+
+            if self.import_source_list:
+                all_related_objects = self._add_sources_to_items(all_related_objects)
+
+            items += all_related_objects + all_relationships
+
         bundle = self.helper.stix2_create_bundle(items)
         try:
             self.helper.send_stix2_bundle(bundle, work_id=work_id)
         except RecursionError:
-            self.helper.log_error(
-                "A recursion error occured, circular dependencies detected in the Sekoia bundle, sending the whole bundle but please fix it"
+            self.helper.connector_logger.error(
+                "A recursion error occured, circular dependencies detected in the Sekoia bundle, sending the whole "
+                "bundle but please fix it "
             )
-            self.helper.send_stix2_bundle(bundle, work_id=work_id, bypass_split=True)
+            self.helper.send_stix2_bundle(bundle, work_id=work_id)
 
         self.helper.set_state({"last_cursor": cursor})
         if len(items) < self.limit:
@@ -244,14 +275,7 @@ class Sekoia(object):
 
     @staticmethod
     def _field_to_ignore(field: str) -> bool:
-        to_ignore = [
-            "x_ic_impacted_locations",
-            "x_ic_impacted_sectors",
-        ]
-        return (
-            (field.startswith("x_ic") or field.startswith("x_inthreat"))
-            and (field.endswith("ref") or field.endswith("refs"))
-        ) or field in to_ignore
+        return field.startswith("x_ic")
 
     def _retrieve_related_objects_and_relationships(self, indicators: List[Dict]):
         all_related_objects = []
@@ -314,7 +338,7 @@ class Sekoia(object):
         To avoid having an infinite recursion a safe guard has been implemented.
         """
         if current_depth == 5:
-            # Safe guard to avoid infinite recursion if an object was not found for example
+            # Safeguard to avoid infinite recursion if an object was not found for example
             return items
 
         items = self._update_mapped_refs(items)
@@ -444,7 +468,7 @@ class Sekoia(object):
             param_string = (
                 "&".join(f"{k}={v}" for k, v in params.items()) if params else ""
             )
-            self.helper.log_debug(
+            self.helper.connector_logger.debug(
                 f"Sending request to: {url} with params {param_string}"
             )
             res = requests.get(url, params=params, headers=headers)
@@ -455,9 +479,9 @@ class Sekoia(object):
         except RequestException as ex:
             if ex.response:
                 error = f"Request failed with status: {ex.response.status_code}"
-                self.helper.log_error(error)
+                self.helper.connector_logger.error(error)
             else:
-                self.helper.log_error(str(ex))
+                self.helper.connector_logger.error(str(ex))
             return None
 
     def _load_data_sets(self):
@@ -465,24 +489,24 @@ class Sekoia(object):
         ## MODIFICATION BY CYRILYXE
         #   Use of the global variable : gbl_scriptDir
         #   For using absolute path and not relative ones
-        global gbl_scriptDir
+        global gbl_scriptDir  # noqa: F824
 
-        self.helper.log_info("Loading locations mapping")
+        self.helper.connector_logger.info("Loading locations mapping")
         with open(gbl_scriptDir + "/data/geography_mapping.json") as fp:
             self._geography_mapping: Dict = json.load(fp)
 
-        self.helper.log_info("Loading sectors mapping")
+        self.helper.connector_logger.info("Loading sectors mapping")
         with open(gbl_scriptDir + "/data/sectors_mapping.json") as fp:
             self._sectors_mapping: Dict = json.load(fp)
 
         # Adds OpenCTI sectors/locations to cache
-        self.helper.log_info("Loading OpenCTI sectors")
+        self.helper.connector_logger.info("Loading OpenCTI sectors")
         with open(gbl_scriptDir + "/data/sectors.json") as fp:
             objects = json.load(fp)["objects"]
             for sector in objects:
                 self._clean_and_add_to_cache(sector)
 
-        self.helper.log_info("Loading OpenCTI locations")
+        self.helper.connector_logger.info("Loading OpenCTI locations")
         with open(gbl_scriptDir + "/data/geography.json") as fp:
             for geography in json.load(fp)["objects"]:
                 self._clean_and_add_to_cache(geography)
@@ -511,6 +535,50 @@ class Sekoia(object):
                             "no_trigger_import": True,
                         }
                     )
+
+    def _create_custom_label(self, name_label: str, color_label: str):
+        """
+        This method allows you to create a custom label, using the OpenCTI API.
+
+        :param name_label: A parameter giving the name of the label.
+        :param color_label: A parameter giving the color of the label.
+        """
+
+        new_custom_label = self.helper.api.label.read_or_create_unchecked(
+            value=name_label, color=color_label
+        )
+        if new_custom_label is None:
+            self.helper.connector_logger.error(
+                "[ERROR] The label could not be created. If your connector does not have the permission to create "
+                "labels, "
+                "please create it manually before launching",
+                {"name_label": name_label},
+            )
+        else:
+            self.all_labels.append(new_custom_label["value"])
+
+    def _add_sources_to_items(self, items: List[Dict]):
+        object_list = []
+        for item in items:
+
+            labels = []
+            for source in self._retrieve_by_ids(
+                item.get("x_inthreat_sources_refs", []), self.get_object_url
+            ):
+                label_name = f'source:{source["name"]}'.lower()
+                if label_name not in self.all_labels:
+                    self._create_custom_label(label_name, "#f8c167")
+
+                labels.append(label_name)
+
+            if labels:
+                if item.get("x_opencti_labels", []):
+                    item["x_opencti_labels"].extend(labels)
+                else:
+                    item["x_opencti_labels"] = labels
+            object_list.append(item)
+
+        return object_list
 
 
 if __name__ == "__main__":

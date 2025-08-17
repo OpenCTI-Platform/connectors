@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 
 import pycti  # type: ignore
 import stix2
-from config import Config
+from config import ConfigConnector
 
 
 class ConversionError(Exception):
@@ -45,10 +45,21 @@ class _CommonUtils:
     def _extract_domain(url, suffix=""):
         # type: (str, str) -> str
         """Extract domain name from url"""
-        parsed_url = urlparse(url)
-        if parsed_url.path and parsed_url.path != "/":
-            return parsed_url.netloc + suffix
-        return parsed_url.netloc
+        try:
+            parsed_url = urlparse(url)
+            domain = parsed_url.netloc
+            path = parsed_url.path
+        except ValueError:
+            # The thing is that if urlparse has an obfuscated URL
+            # then we catch this error and take the domain ourselves.
+            # Example of an obfuscated URL - http://example.web[.]app/
+            rest = url.split("://", 1)[-1]
+            domain = rest.split("/", 1)[0]
+            path = "/" + rest.split("/", 1)[1] if "/" in rest else ""
+
+        if path and path != "/":
+            return domain + suffix
+        return domain
 
     @staticmethod
     def is_ipv4(ipv4):
@@ -86,19 +97,19 @@ class _CommonUtils:
     def _generate_tlp_obj(color):
         # type: (str) -> Any
         """Generate TLP object"""
-        return Config.STIX_TLP_MAP.get(color.lower())
+        return ConfigConnector.STIX_TLP_MAP.get(color.lower())
 
     @staticmethod
     def _generate_main_observable_type(obj_type):
         # type: (str) -> str
         """Generate TLP object"""
-        return Config.STIX_MAIN_OBSERVABLE_TYPE_MAP.get(obj_type)
+        return ConfigConnector.STIX_MAIN_OBSERVABLE_TYPE_MAP.get(obj_type)
 
     @staticmethod
     def _generate_malware_type(obj_type):
         # type: (str) -> Optional[str, None]
         """Generate Malware type object"""
-        if obj_type.lower() in Config.STIX_MALWARE_TYPE_MAP:
+        if obj_type.lower() in ConfigConnector.STIX_MALWARE_TYPE_MAP:
             return obj_type.lower()
         else:
             return None
@@ -107,19 +118,19 @@ class _CommonUtils:
     def _generate_country_by_cc(country_code):
         # type: (str) -> str
         """Generate Country by Country Code"""
-        return Config.COUNTRIES.get(country_code)
+        return ConfigConnector.COUNTRIES.get(country_code)
 
     @staticmethod
     def _generate_stix_country_type(country_type):
         # type: (str) -> str
         """Generate STIX2 Country type by Country type"""
-        return Config.COUNTRIES.get(country_type)
+        return ConfigConnector.COUNTRIES.get(country_type)
 
     @staticmethod
     def _generate_stix_report_type(report_type):
         # type: (str) -> str
         """Generate STIX2 Report type by Report type"""
-        return Config.STIX_REPORT_TYPE_MAP.get(report_type)
+        return ConfigConnector.STIX_REPORT_TYPE_MAP.get(report_type)
 
 
 class BaseEntity(_CommonUtils):
@@ -132,7 +143,7 @@ class BaseEntity(_CommonUtils):
         self.is_ioc = False
         self.description = ""
 
-        self.valid_from: datetime = datetime.now()
+        self.valid_from = None
         self.valid_until: datetime = datetime.now()
 
         # defined in self._setup
@@ -151,10 +162,14 @@ class BaseEntity(_CommonUtils):
     def _generate_author():
         """Generate Author"""
         return stix2.Identity(
-            id=pycti.Identity.generate_id(Config.AUTHOR, "organization"),
-            name=Config.AUTHOR,
+            id=pycti.Identity.generate_id(ConfigConnector.AUTHOR, "organization"),
+            name=ConfigConnector.AUTHOR,
             identity_class="organization",
         )
+
+    @staticmethod
+    def stix_escape(value: str) -> str:
+        return value.replace("\\", "\\\\").replace("'", "\\'")
 
     def _generate_indicator(self):
         return
@@ -174,17 +189,17 @@ class BaseEntity(_CommonUtils):
         if text:
             self.description = self._remove_html_tags(self._sanitize(text))
 
-    def set_valid_from(self, date):
-        # type: (datetime) -> None
+    def set_valid_from(self, valid_from):
+        # type: (Optional[datetime]) -> None
         """Set object valid_from"""
-        if date:
-            self.valid_from = date
+        if valid_from:
+            self.valid_from = valid_from
 
-    def set_valid_until(self, date):
-        # type: (datetime) -> None
+    def set_valid_until(self, valid_until):
+        # type: (Optional[datetime]) -> None
         """Set object valid_until"""
-        if date:
-            self.valid_until = date
+        if valid_until:
+            self.valid_until = valid_until
 
     def _generate_relationship(self, source_id, target_id, relation_type="based-on"):
         return stix2.Relationship(
@@ -479,7 +494,8 @@ class URL(_BaseIndicator):
         super().__init__(name, c_type, tlp_color, labels, risk_score)
 
     def _create_pattern(self, pattern_name):
-        return f"[url:value = '{pattern_name}']"
+        pattern = f"[url:value = '{self.stix_escape(pattern_name)}']"
+        return pattern
 
     def _generate_observable(self):
         self.stix_main_object = stix2.URL(
@@ -577,7 +593,7 @@ class ThreatActor(_BaseSDO):
 
     def _generate_sdo(self):
         self.stix_main_object = stix2.ThreatActor(
-            id=pycti.ThreatActor.generate_id(self.name),
+            id=pycti.ThreatActorGroup.generate_id(self.name),
             name=self.name,
             description=self.description,
             aliases=self.aliases,

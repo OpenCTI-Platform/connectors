@@ -1,5 +1,7 @@
 # OpenCTI Intel 471 Connector
 
+This is the legacy version of the connector. Please use [OpenCTI Intel 471 Connector v2](../intel471_v2).
+
 ## Description
 
 Intel 471 delivers structured technical and non-technical data and intelligence on cyber threats.

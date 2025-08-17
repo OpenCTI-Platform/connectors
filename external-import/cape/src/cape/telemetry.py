@@ -12,8 +12,11 @@ from cape.cape import (
     cuckooReportTTP,
     cuckooTarget,
 )
+from pycti import Indicator as pyctiIndicator
+from pycti import Malware as pyctiMalware
 from pycti import Note as pyctiNote
 from pycti import Report as pyctiReport
+from pycti import StixCoreRelationship
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from stix2.v21 import (
     TLP_AMBER,
@@ -129,7 +132,10 @@ class openCTIInterface:
             if self.CreateIndicator:
                 STIXPattern = self.getStixPattern(host.ip, "ipv4")
                 IPind = Indicator(
-                    name=host.ip, pattern=STIXPattern, pattern_type="stix"
+                    id=pyctiIndicator.generate_id(STIXPattern),
+                    name=host.ip,
+                    pattern=STIXPattern,
+                    pattern_type="stix",
                 )
                 IPObs.append(IPind)
         return IPObs
@@ -145,6 +151,7 @@ class openCTIInterface:
                 value=host.domain
             )  # , resolves_to_refs=IP.id) ref https://github.com/OpenCTI-Platform/client-python/issues/155
             Rel = Relationship(
+                id=StixCoreRelationship.generate_id("resolves-to", DNS.id, IP.id),
                 source_ref=DNS.id,
                 target_ref=IP.id,
                 relationship_type="resolves-to",
@@ -154,11 +161,17 @@ class openCTIInterface:
             if self.CreateIndicator:
                 STIXPattern = self.getStixPattern(host.domain, "FQDN")
                 DNSind = Indicator(
-                    name=host.domain, pattern=STIXPattern, pattern_type="stix"
+                    id=pyctiIndicator.generate_id(STIXPattern),
+                    name=host.domain,
+                    pattern=STIXPattern,
+                    pattern_type="stix",
                 )
                 STIXPattern = self.getStixPattern(host.ip, "ipv4")
                 IPind = Indicator(
-                    name=host.ip, pattern=STIXPattern, pattern_type="stix"
+                    id=pyctiIndicator.generate_id(STIXPattern),
+                    name=host.ip,
+                    pattern=STIXPattern,
+                    pattern_type="stix",
                 )
                 DNSObs.append(DNSind)
                 DNSObs.append(IPind)
@@ -306,6 +319,7 @@ class openCTIInterface:
             mime_type=file.type,
         )
         ind = Indicator(
+            id=pyctiIndicator.generate_id(STIXPattern),
             name=file.name,
             pattern=STIXPattern,
             pattern_type="stix",
@@ -313,6 +327,11 @@ class openCTIInterface:
         )
 
         rel = Relationship(
+            id=StixCoreRelationship.generate_id(
+                "based-on",
+                ind.id,
+                Filex.id,
+            ),
             source_ref=ind.id,
             relationship_type="based-on",
             target_ref=Filex.id,
@@ -339,7 +358,10 @@ class openCTIInterface:
             if self.CreateIndicator:
                 STIXPattern = self.getStixPattern(file.sha256.upper(), "sha256")
                 fileind = Indicator(
-                    name=file.name, pattern=STIXPattern, pattern_type="stix"
+                    id=pyctiIndicator.generate_id(STIXPattern),
+                    name=file.name,
+                    pattern=STIXPattern,
+                    pattern_type="stix",
                 )
                 iocs.append(fileind)
 
@@ -370,7 +392,8 @@ class openCTIInterface:
             reportLabels.append("Malicious")
 
         if report.detections:
-            reportLabels.append(report.detections)
+            for detection in report.detections:
+                reportLabels.append(detection["family"])
 
         labelIDs = []
         for labelx in reportLabels:
@@ -440,7 +463,11 @@ class openCTIInterface:
             return None
 
         if not MalwareX:
-            MalwareX = Malware(name=Detection, is_family=False)
+            MalwareX = Malware(
+                id=pyctiMalware.generate_id(name=Detection),
+                name=Detection,
+                is_family=False,
+            )
 
         return MalwareX
 
@@ -545,7 +572,10 @@ class openCTIInterface:
             AttackPatterns = []
 
         if self.report.detections:
-            Malware = self.Get_Malware(self.report.detections)
+            detection = ""
+            if len(self.report.detections) > 0:
+                detection = self.report.detections[0]["family"]
+            Malware = self.Get_Malware(detection)
         else:
             Malware = None
 
@@ -577,6 +607,9 @@ class openCTIInterface:
                 if IDx:
                     payload_relations.append(
                         Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to", payload[0].id, IDx
+                            ),
                             relationship_type="related-to",
                             source_ref=payload[0].id,
                             target_ref=IDx,
@@ -586,6 +619,9 @@ class openCTIInterface:
             for ATP in AttackPatterns:
                 payload_relations.append(
                     Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "related-to", payload[0].id, ATP["standard_id"]
+                        ),
                         relationship_type="related-to",
                         source_ref=payload[0].id,
                         target_ref=ATP["standard_id"],
@@ -599,6 +635,9 @@ class openCTIInterface:
                     ID = Malware["id"]
 
                 Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to", payload[0].id, ID
+                    ),
                     relationship_type="related-to",
                     source_ref=payload[0].id,
                     target_ref=ID,

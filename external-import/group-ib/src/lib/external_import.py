@@ -1,26 +1,31 @@
-import os
 import sys
 import time
 from datetime import datetime
+from traceback import format_exc
+from typing import Any
 
-import stix2
-from config import Config
+from config import ConfigConnector
 from cyberintegrations import TIAdapter
 from cyberintegrations.decorators import cache_data
-from cyberintegrations.utils import FileHandler, ProxyConfigurator
+from cyberintegrations.utils import ProxyConfigurator
 from pycti import OpenCTIConnectorHelper
+from utils import ExternalImportHelper
 
 
 @cache_data(
-    cache_dir=Config.MITRE_CACHE_FOLDER, cache_file=Config.MITRE_CACHE_FILENAME, ttl=1
+    cache_dir=ConfigConnector.MITRE_CACHE_FOLDER,
+    cache_file=ConfigConnector.MITRE_CACHE_FILENAME,
+    ttl=1,
 )
-def get_mitre_mapper(adapter, endpoint, params, decode=True, **kwargs):
+def get_mitre_mapper(adapter, endpoint, params, helper, decode=True, **kwargs):
     # type: (TIAdapter, str, dict, bool, dict) -> dict
+    helper.connector_logger.info(f"Starting get_mitre_mapper with endpoint: {endpoint}")
     mitre_mapper = {}
 
     response = adapter.send_request(
         endpoint=endpoint, params=params, decode=decode, **kwargs
     )
+    helper.connector_logger.debug(f"Received response from endpoint: {endpoint}")
 
     for pattern_dictionary in response.get("AttackPattern").values():
         name = pattern_dictionary.get("name", "")
@@ -28,7 +33,13 @@ def get_mitre_mapper(adapter, endpoint, params, decode=True, **kwargs):
             name = name[1:-1:]
             name = name.split("->")[-1]
         mitre_mapper[pattern_dictionary.get("mitreId")] = name
+        helper.connector_logger.debug(
+            f"Mapped MITRE ID {pattern_dictionary.get('mitreId')} to name: {name}"
+        )
 
+    helper.connector_logger.info(
+        f"Completed get_mitre_mapper, mapped {len(mitre_mapper)} attack patterns"
+    )
     return mitre_mapper
 
 
@@ -41,168 +52,260 @@ class ExternalImportConnector:
 
     Attributes:
         helper (OpenCTIConnectorHelper): The helper to use.
-        interval (str): The interval to use. It SHOULD be a string in the format '7d', '12h', '10m', '30s'
-                        where the final letter SHOULD be one of 'd', 'h', 'm', 's' standing for day, hour, minute, second respectively.
+        interval (str): The interval to use.
+            Specifies the time interval in ISO 8601 format (Duration):
+                Format: P[n]Y[n]M[n]DT[n]H[n]M[n]S
+                - P: indicates the beginning of the period (Period).
+                - T: separates date and time, used before time components.
+                - n: a number representing a quantity (e.g. 3 for 3 minutes).
+
+                Examples:
+                - PT3M: an interval of 3 minutes.
+                - PT5S: an interval of 5 seconds.
+                - P1DT2H: an interval of 1 day and 2 hours.
         update_existing_data (str): Whether to update existing data or not in OpenCTI.
     """
 
     def __init__(self):
+        self.cfg = ConfigConnector()
         self.helper = OpenCTIConnectorHelper({})
+        self.helper.connector_logger.info("Initializing ExternalImportConnector")
+        self.pc = ProxyConfigurator()
+        self.helper.connector_logger.debug(
+            "Initialized ConfigConnector, OpenCTIConnectorHelper, and ProxyConfigurator"
+        )
+
+        current_state = self.helper.get_state()
+        self.helper.connector_logger.debug(f"Current state retrieved: {current_state}")
 
         # Specific connector attributes for external import connectors
-        try:
-            self.interval = os.environ.get("CONNECTOR_RUN_EVERY", None).lower()
-            self.helper.log_info(
-                f"Verifying integrity of the CONNECTOR_RUN_EVERY value: '{self.interval}'"
+        self.interval = ExternalImportHelper.validation_interval(
+            cfg=self.cfg, helper=self.helper
+        )
+        self.helper.connector_logger.debug(f"Interval set to: {self.interval}")
+        self.update_existing_data = (
+            ExternalImportHelper.validation_update_existing_data(
+                cfg=self.cfg, helper=self.helper
             )
-            unit = self.interval[-1]
-            if unit not in ["d", "h", "m", "s"]:
-                raise TypeError
-            int(self.interval[:-1])
-        except TypeError as ex:
-            msg = (
-                f"Error ({ex}) when grabbing CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. "
-                "It SHOULD be a string in the format '7d', '12h', '10m', '30s' where the final letter "
-                "SHOULD be one of 'd', 'h', 'm', 's' standing for day, hour, minute, second respectively. "
-            )
-            self.helper.log_error(msg)
-            raise ValueError(msg) from ex
-
-        update_existing_data = os.environ.get("CONNECTOR_UPDATE_EXISTING_DATA", "false")
-        if isinstance(update_existing_data, str) and update_existing_data.lower() in [
-            "true",
-            "false",
-        ]:
-            self.update_existing_data = update_existing_data.lower() == "true"
-        elif isinstance(update_existing_data, bool) and update_existing_data in [
-            True,
-            False,
-        ]:
-            self.update_existing_data = update_existing_data
-        else:
-            msg = (
-                f"Error when grabbing CONNECTOR_UPDATE_EXISTING_DATA environment variable: '{update_existing_data}'. "
-                "It SHOULD be either `true` or `false`. `false` is assumed. "
-            )
-            self.helper.log_warning(msg)
-            self.update_existing_data = "false"
-
-        self.cfg = Config
-        self.fh = FileHandler()
-        self.pc = ProxyConfigurator()
-
-        self.endpoints_config = self.fh.read_yaml_config(config=Config.CONFIG_YML)
-        self.mapping_config = self.fh.read_json_config(config=Config.CONFIG_JSON)
-
+        )
+        self.helper.connector_logger.debug(
+            f"Update existing data set to: {self.update_existing_data}"
+        )
         self.ttl = None
-
-        self.ti_api_url = os.environ.get("TI_API_URL")
-        self._ti_api_username = os.environ.get("TI_API_USERNAME")
-        self._ti_api_token = os.environ.get("TI_API_TOKEN")
-
-        self.proxy_ip = os.environ.get("PROXY_IP")
-        self.proxy_port = os.environ.get("PROXY_PORT")
-        self.proxy_protocol = os.environ.get("PROXY_PROTOCOL")
-        self._proxy_username = os.environ.get("PROXY_USERNAME")
-        self._proxy_password = os.environ.get("PROXY_PASSWORD")
+        self.helper.connector_logger.debug("TTL initialized as None")
 
         # Global collections filters
         self.IGNORE_NON_MALWARE_DDOS = False
         self.IGNORE_NON_INDICATOR_THREATS = False
         self.INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR = False
+        self.helper.connector_logger.debug("Initialized global collection filters")
 
-        # gather TI API creds
-        self.creds = {"api_key": self._ti_api_token, "username": self._ti_api_username}
         # Proxy initialization
         self.proxies = self.pc.get_proxies(
-            proxy_ip=self.proxy_ip,
-            proxy_port=self.proxy_port,
-            proxy_protocol=self.proxy_protocol,
-            proxy_username=self._proxy_username,
-            proxy_password=self._proxy_password,
+            proxy_ip=self.cfg.ti_api_proxy_ip,
+            proxy_port=self.cfg.ti_api_proxy_port,
+            proxy_protocol=self.cfg.ti_api_proxy_protocol,
+            proxy_username=self.cfg.ti_api_proxy_username,
+            proxy_password=self.cfg.ti_api_proxy_password,
         )
+        self.helper.connector_logger.debug(f"Proxies initialized: {self.proxies}")
+
+        # Collections initialization
+        self.enabled_collections = []
+        for (
+            collection_name,
+            slached_collection_name,
+        ) in ConfigConnector.COLLECTION_MAP.items():
+            enable = self.cfg.get_collection_settings(collection_name, "enable")
+            if enable == True:
+                self.enabled_collections.append(slached_collection_name)
+            self.helper.connector_logger.debug(
+                f"Checked collection {collection_name}, enable: {enable}"
+            )
+        self.helper.connector_logger.info(
+            f"Enabled Collections: {self.enabled_collections}"
+        )
+
         # TI API initialization
         self.ti_adapter = TIAdapter(
-            ti_creds_dict=self.creds,
+            ti_creds_dict={
+                "api_key": self.cfg.ti_api_token,
+                "username": self.cfg.ti_api_username,
+            },
             proxies=self.proxies,
-            config_obj=Config,
-            api_url=self.ti_api_url,
+            config_obj=self.cfg,
+            api_url=self.cfg.ti_api_url,
+            enabled_collections=self.enabled_collections,
+            collection_mapping_config=self.cfg.collection_mapping_config,
+            collections_last_sequence_updates=current_state,
         )
+        self.helper.connector_logger.info("Initialized TI Adapter")
+
         # create list of collections feeds generators
-        self.generators_list = None
         self.MITRE_MAPPER = None
+        self.helper.connector_logger.debug("MITRE_MAPPER initialized as None")
+        self.helper.connector_logger.info(
+            "Completed initialization of ExternalImportConnector"
+        )
 
     def _collect_intelligence(
-        self, collection, ttl, portion, mitre_mapper, flag=False
+        self,
+        collection,
+        ttl,
+        portion,
+        mitre_mapper,
+        flag_instrusion_set_instead_of_threat_actor=False,
     ) -> list:
         """Collect intelligence from the source"""
+        self.helper.connector_logger.info(
+            f"Starting intelligence collection for collection: {collection}, TTL: {ttl}"
+        )
         raise NotImplementedError
 
-    def _get_interval(self) -> int:
-        """Returns the interval to use for the connector
-
-        This SHOULD always return the interval in seconds. If the connector expects
-        the parameter to be received as hours uncomment as necessary.
-        """
-        unit = self.interval[-1:]
-        value = self.interval[:-1]
-
-        try:
-            if unit == "d":
-                # In days:
-                return int(value) * 60 * 60 * 24
-            if unit == "h":
-                # In hours:
-                return int(value) * 60 * 60
-            if unit == "m":
-                # In minutes:
-                return int(value) * 60
-            if unit == "s":
-                # In seconds:
-                return int(value)
-        except Exception as ex:
-            self.helper.log_error(
-                f"Error when converting CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. {str(ex)}"
+    def check_generator(self, generator, collection):
+        self.helper.connector_logger.debug(
+            f"Checking generator for collection: {collection}"
+        )
+        if not generator:
+            self.helper.connector_logger.warning(
+                "No generator for collection: {}".format(collection)
             )
-            raise ValueError(
-                f"Error when converting CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. {str(ex)}"
-            ) from ex
+            return False
+        self.helper.connector_logger.debug(
+            f"Generator valid for collection: {collection}"
+        )
+        return True
+
+    def check_enable(self, enable, collection):
+        self.helper.connector_logger.debug(
+            f"Checking enable status for collection: {collection}, enable: {enable}"
+        )
+        if not enable:
+            self.helper.connector_logger.warning(
+                "User disable collection: {}. Aborting!".format(collection)
+            )
+            return False
+        self.helper.connector_logger.debug(f"Collection {collection} is enabled")
+        return True
+
+    def extra_pre_processing(self, collection, portion) -> None | Any:
+        self.helper.connector_logger.info(
+            f"Starting extra pre-processing for collection: {collection}"
+        )
+        parsed_portion = None
+        if collection == "attacks/ddos" and self.IGNORE_NON_MALWARE_DDOS:
+            self.helper.connector_logger.debug("Applying filter for non-malware DDoS")
+            parsed_portion = portion.parse_portion(
+                filter_map=[("malware", [])],
+                check_existence=True,
+            )
+        elif (
+            collection in ["apt/threat", "hi/threat"]
+            and self.IGNORE_NON_INDICATOR_THREATS
+        ):
+            self.helper.connector_logger.debug(
+                "Applying filter for non-indicator threats"
+            )
+            parsed_portion = portion.parse_portion(
+                filter_map=[("indicators", [])],
+                check_existence=True,
+            )
+        else:
+            self.helper.connector_logger.debug(
+                "No specific filters applied, parsing portion"
+            )
+            parsed_portion = portion.parse_portion()
+        self.helper.connector_logger.info(
+            f"Completed extra pre-processing for collection: {collection}, parsed portion size: {len(parsed_portion) if parsed_portion else 0}"
+        )
+        return parsed_portion
+
+    def get_formatted_utcfromtimestamp(self, date) -> str:
+        self.helper.connector_logger.debug(f"Formatting timestamp: {date}")
+        formatted_date = datetime.utcfromtimestamp(date).strftime("%Y-%m-%d %H:%M:%S")
+        self.helper.connector_logger.debug(f"Formatted timestamp to: {formatted_date}")
+        return formatted_date
+
+    def set_or_update_state(
+        self, timestamp: int | None = None, prepared_data: dict | None = None
+    ):
+        self.helper.connector_logger.info("Starting set_or_update_state")
+        current_state = self.helper.get_state()
+        self.helper.connector_logger.debug(f"Current state: {current_state}")
+        if current_state is not None:
+            if timestamp:
+                current_state["last_run"] = timestamp
+                self.helper.connector_logger.debug(
+                    f"Updated state with last_run: {timestamp}"
+                )
+            elif prepared_data:
+                current_state.update(prepared_data)
+                self.helper.connector_logger.debug(
+                    f"Updated state with prepared_data: {prepared_data}"
+                )
+        else:
+            if timestamp:
+                current_state = {"last_run": timestamp}
+                self.helper.connector_logger.debug(
+                    f"Created new state with last_run: {timestamp}"
+                )
+            elif prepared_data:
+                current_state = prepared_data
+                self.helper.connector_logger.debug(
+                    f"Created new state with prepared_data: {prepared_data}"
+                )
+
+        self.helper.set_state(current_state)
+        self.helper.connector_logger.info("Completed set_or_update_state")
+
+    def get_last_run(self, current_state: dict | None):
+        self.helper.connector_logger.debug("Retrieving last run timestamp")
+        if current_state is not None and "last_run" in current_state:
+            last_run = current_state["last_run"]
+            self.helper.connector_logger.info(
+                f"{self.helper.connect_name} connector last run: "
+                f"{self.get_formatted_utcfromtimestamp(date=last_run)}"
+            )
+        else:
+            last_run = None
+            self.helper.connector_logger.info(
+                f"{self.helper.connect_name} connector has never run"
+            )
+        self.helper.connector_logger.debug(f"Last run timestamp: {last_run}")
+        return last_run
 
     def run(self) -> None:
         # Main procedure
-        self.helper.log_info(f"Starting {self.helper.connect_name} connector...")
+        self.helper.connector_logger.info(
+            f"Starting {self.helper.connect_name} connector..."
+        )
         while True:
             try:
                 # Get the current timestamp and check
                 timestamp = int(time.time())
+                self.helper.connector_logger.debug(f"Current timestamp: {timestamp}")
                 current_state = self.helper.get_state()
-                if current_state is not None and "last_run" in current_state:
-                    last_run = current_state["last_run"]
-                    self.helper.log_info(
-                        f"{self.helper.connect_name} connector last run: "
-                        f'{datetime.utcfromtimestamp(last_run).strftime("%Y-%m-%d %H:%M:%S")}'
-                    )
-                else:
-                    last_run = None
-                    self.helper.log_info(
-                        f"{self.helper.connect_name} connector has never run"
-                    )
+                self.helper.connector_logger.debug(f"Current state: {current_state}")
+                last_run = self.get_last_run(current_state=current_state)
 
-                # If the last_run is more than interval-1 day
-                if last_run is None or ((timestamp - last_run) >= self._get_interval()):
+                # If the last_run is None or the required interval has passed since last_run
+                interval_seconds = ExternalImportHelper.get_interval(
+                    interval=self.interval, helper=self.helper
+                )
+                self.helper.connector_logger.debug(
+                    f"Interval in seconds: {interval_seconds}"
+                )
+                if last_run is None or (timestamp - last_run >= interval_seconds):
                     self.helper.metric.inc("run_count")
                     self.helper.metric.state("running")
-                    self.helper.log_info(f"{self.helper.connect_name} will run!")
-                    now = datetime.utcfromtimestamp(timestamp)
-                    friendly_name = f'{self.helper.connect_name} run @ {now.strftime("%Y-%m-%d %H:%M:%S")}'
-                    work_id = self.helper.api.work.initiate_work(
-                        self.helper.connect_id, friendly_name
+                    self.helper.connector_logger.info(
+                        f"{self.helper.connect_name} will run!"
                     )
-
                     try:
                         # create list of collections feeds generators
-                        self.generators_list = self.ti_adapter.create_generators(
-                            sleep_amount=1
+                        data = self.ti_adapter.create_generators(sleep_amount=1)
+                        self.helper.connector_logger.debug(
+                            f"Generators data {data} {type(data)}"
                         )
 
                         # MITRE
@@ -210,148 +313,203 @@ class ExternalImportConnector:
                             adapter=self.ti_adapter,
                             endpoint="common/matrix/vocab/techniques",
                             params={},
+                            helper=self.helper,
                         )
+                        self.helper.connector_logger.info("MITRE mapper initialized")
 
                         ###
-                        for collection, generator in self.generators_list:
+                        for data_item in data:
+                            prepared_data = data_item[1]
+                            self.helper.connector_logger.debug(
+                                f"Generator prepared data {prepared_data}"
+                            )
+                            collection = data_item[0][0]
+                            friendly_name = f"{self.helper.connect_name} - {collection} run @ {self.get_formatted_utcfromtimestamp(date=timestamp)}"
+                            work_id = self.helper.api.work.initiate_work(
+                                self.helper.connect_id, friendly_name
+                            )
+                            self.helper.connector_logger.info(
+                                f"Initiated work ID: {work_id} for collection: {collection}"
+                            )
+                            generator = data_item[0][1]
+                            self.helper.connector_logger.debug(
+                                f"Generator data collection:{collection} , generator: {generator}"
+                            )
+                            collection_name_for_config_map = collection.replace(
+                                "/", "_"
+                            )
                             time.sleep(3)
 
-                            if not generator:
-                                self.helper.log_warning(
-                                    "No generator for collection: {}".format(collection)
-                                )
+                            if not self.check_generator(
+                                generator=generator, collection=collection
+                            ):
                                 continue
 
-                            endpoints_config = self.fh.read_yaml_config(
-                                config=Config.CONFIG_YML
+                            enable = self.cfg.get_collection_settings(
+                                collection_name_for_config_map, "enable"
                             )
-                            if not endpoints_config["collections"][collection][
-                                "enable"
-                            ]:
-                                self.helper.log_warning(
-                                    "User disable collection: {}. Aborting!".format(
-                                        collection
-                                    )
-                                )
+                            self.helper.connector_logger.debug(
+                                f"Collection {collection_name_for_config_map} enable status: {enable}"
+                            )
+
+                            if not self.check_enable(
+                                enable=enable, collection=collection
+                            ):
                                 continue
 
                             # TTL
-                            self.ttl = (
-                                self.endpoints_config.get("collections", {})
-                                .get(collection, {})
-                                .get("ttl", None)
+                            ttl = self.cfg.get_collection_settings(
+                                collection_name_for_config_map, "ttl"
+                            )
+                            self.ttl = int(ttl)
+                            self.helper.connector_logger.debug(
+                                f"TTL set to: {self.ttl}"
                             )
 
                             # Global collections filters
+
                             self.INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR = (
-                                self.endpoints_config.get("extra_settings", {}).get(
-                                    "intrusion_set_instead_of_threat_actor", False
+                                self.cfg.get_extra_settings_by_name(
+                                    "intrusion_set_instead_of_threat_actor"
                                 )
                             )
-                            self.IGNORE_NON_MALWARE_DDOS = self.endpoints_config.get(
-                                "extra_settings", {}
-                            ).get("ignore_non_malware_ddos", True)
-                            self.IGNORE_NON_INDICATOR_THREATS = (
-                                self.endpoints_config.get("extra_settings", {}).get(
-                                    "ignore_non_indicator_threats", False
+                            self.helper.connector_logger.debug(
+                                f"INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR: {self.INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR}"
+                            )
+
+                            self.IGNORE_NON_MALWARE_DDOS = (
+                                self.cfg.get_extra_settings_by_name(
+                                    "ignore_non_malware_ddos"
                                 )
+                            )
+                            self.helper.connector_logger.debug(
+                                f"IGNORE_NON_MALWARE_DDOS: {self.IGNORE_NON_MALWARE_DDOS}"
+                            )
+
+                            self.IGNORE_NON_INDICATOR_THREATS = (
+                                self.cfg.get_extra_settings_by_name(
+                                    "ignore_non_indicator_threats"
+                                )
+                            )
+                            self.helper.connector_logger.debug(
+                                f"IGNORE_NON_INDICATOR_THREATS: {self.IGNORE_NON_INDICATOR_THREATS}"
                             )
 
                             for portion in generator:
-
+                                self.helper.connector_logger.info(
+                                    f"Processing portion for collection: {collection}"
+                                )
                                 # Extra pre-processing for collections
-                                if (
-                                    collection == "attacks/ddos"
-                                    and self.IGNORE_NON_MALWARE_DDOS
-                                ):
-                                    parsed_portion = portion.parse_portion(
-                                        filter_map=[("malware", [])],
-                                        check_existence=True,
-                                    )
-                                elif (
-                                    collection in ["apt/threat", "hi/threat"]
-                                    and self.IGNORE_NON_INDICATOR_THREATS
-                                ):
-                                    parsed_portion = portion.parse_portion(
-                                        filter_map=[("indicators", [])],
-                                        check_existence=True,
-                                    )
-                                else:
-                                    parsed_portion = portion.parse_portion()
-
+                                parsed_portion = self.extra_pre_processing(
+                                    collection=collection, portion=portion
+                                )
                                 size = len(parsed_portion)
                                 count = 0
+                                self.helper.connector_logger.debug(
+                                    f"Parsed portion size: {size}"
+                                )
                                 for event in parsed_portion:
                                     count += 1
-                                    self.helper.log_debug(f"Parsing {count}/{size}")
-
+                                    self.helper.connector_logger.info(
+                                        f"Parsing {count}/{size}. Collection: {collection}"
+                                    )
+                                    self.helper.connector_logger.info(
+                                        f"Processing event for collection: {collection}. All data from the received event: {event}"
+                                    )
                                     bundle_objects = self._collect_intelligence(
                                         collection,
                                         self.ttl,
                                         event,
                                         self.MITRE_MAPPER,
-                                        flag=self.INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR,
+                                        flag_instrusion_set_instead_of_threat_actor=self.INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR,
                                     )
-                                    bundle = stix2.Bundle(
-                                        objects=bundle_objects, allow_custom=True
-                                    ).serialize()
-
-                                    self.helper.log_info(
-                                        f"Sending {len(bundle_objects)} STIX objects to OpenCTI..."
+                                    self.helper.connector_logger.debug(
+                                        f"Collected {len(bundle_objects)} intelligence objects for event {count}"
                                     )
-                                    self.helper.send_stix2_bundle(
-                                        bundle,
-                                        update=self.update_existing_data,
-                                        work_id=work_id,
-                                    )
+                                    if len(bundle_objects) > 0:
+                                        bundle = (
+                                            OpenCTIConnectorHelper.stix2_create_bundle(
+                                                bundle_objects
+                                            )
+                                        )
+                                        self.helper.connector_logger.info(
+                                            f"Sending {len(bundle_objects)} STIX objects to OpenCTI..."
+                                        )
+                                        self.helper.send_stix2_bundle(
+                                            bundle,
+                                            update=self.update_existing_data,
+                                            work_id=work_id,
+                                        )
+                                        self.helper.connector_logger.debug(
+                                            f"Sent STIX bundle for work ID: {work_id}"
+                                        )
 
                                 # Update seqUpdate param
-                                prepared_data = {"seqUpdate": portion.sequpdate}
-                                self.fh.save_collection_info(
-                                    config=Config.CONFIG_YML,
-                                    collection=collection,
-                                    **prepared_data,
+                                prepared_data[collection].update(
+                                    {"sequpdate": portion.sequpdate}
                                 )
+                                self.helper.connector_logger.debug(
+                                    f"Updated seqUpdate for collection {collection}: {portion.sequpdate}"
+                                )
+                                self.set_or_update_state(prepared_data=prepared_data)
 
-                    except Exception as e:
-                        self.helper.log_error(str(e))
+                            # Finish work
+                            message = f"{self.helper.connect_name} - {collection} successfully run, storing last_run as {timestamp}"
+                            self.helper.api.work.to_processed(work_id, message)
+                            self.helper.connector_logger.info(
+                                f"Work completed for collection: {collection}, work ID: {work_id}"
+                            )
+                    except Exception:
+                        self.helper.connector_logger.error(format_exc())
+                        self.helper.connector_logger.error(
+                            "Error occurred during collection processing"
+                        )
 
                     # Store the current timestamp as a last run
-                    message = f"{self.helper.connect_name} connector successfully run, storing last_run as {timestamp}"
-                    self.helper.log_info(message)
-
-                    self.helper.log_debug(
+                    self.helper.connector_logger.info(
                         f"Grabbing current state and update it with last_run: {timestamp}"
                     )
-                    current_state = self.helper.get_state()
-                    if current_state:
-                        current_state["last_run"] = timestamp
-                    else:
-                        current_state = {"last_run": timestamp}
-                    self.helper.set_state(current_state)
-
-                    self.helper.api.work.to_processed(work_id, message)
-                    self.helper.log_info(
-                        f"Last_run stored, next run in: {round(self._get_interval() / 60 / 60, 2)} hours"
+                    self.set_or_update_state(timestamp=timestamp)
+                    next_run_it = ExternalImportHelper.get_next_run_it(
+                        interval=self.interval,
+                        helper=self.helper,
+                        timestamp=timestamp,
+                        last_run=last_run,
+                    )
+                    self.helper.connector_logger.info(
+                        f"Last_run stored, next run in: {next_run_it}"
                     )
                 else:
                     self.helper.metric.state("idle")
-                    new_interval = self._get_interval() - (timestamp - last_run)
-                    self.helper.log_info(
+                    next_run_it = ExternalImportHelper.get_next_run_it(
+                        interval=self.interval,
+                        helper=self.helper,
+                        timestamp=timestamp,
+                        last_run=last_run,
+                    )
+                    self.helper.connector_logger.info(
                         f"{self.helper.connect_name} connector will not run, "
-                        f"next run in: {round(new_interval / 60 / 60, 2)} hours"
+                        f"next run in:  {next_run_it} "
                     )
 
             except (KeyboardInterrupt, SystemExit):
-                self.helper.log_info(f"{self.helper.connect_name} connector stopped")
+                self.helper.connector_logger.info(
+                    f"{self.helper.connect_name} connector stopped"
+                )
                 sys.exit(0)
-            except Exception as e:
+            except Exception:
                 self.helper.metric.inc("error_count")
                 self.helper.metric.state("stopped")
-                self.helper.log_error(str(e))
+                self.helper.connector_logger.error(format_exc())
+                self.helper.connector_logger.error(
+                    "Unexpected error occurred in main loop"
+                )
 
             if self.helper.connect_run_and_terminate:
-                self.helper.log_info(f"{self.helper.connect_name} connector ended")
+                self.helper.connector_logger.info(
+                    f"{self.helper.connect_name} connector ended"
+                )
                 sys.exit(0)
 
+            self.helper.connector_logger.debug("Sleeping for 60 seconds")
             time.sleep(60)

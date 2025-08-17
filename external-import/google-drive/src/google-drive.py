@@ -150,7 +150,6 @@ class GoogleDrive:
             modified=modified,
             report_types=[self.google_drive_report_type],
             labels=self.google_drive_report_labels,
-            confidence=self.helper.connect_confidence_level,
             created_by_ref=self.identity["standard_id"],
             object_marking_refs=[self.default_marking],
             object_refs=[self.identity["standard_id"]],

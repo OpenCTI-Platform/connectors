@@ -9,6 +9,7 @@ import plyara.utils
 import stix2
 from pycti import (
     STIX_EXT_OCTI_SCO,
+    Indicator,
     Location,
     Note,
     OpenCTIConnectorHelper,
@@ -31,6 +32,8 @@ class VirusTotalBuilder:
         stix_entity: dict,
         opencti_entity: dict,
         data: dict,
+        include_attributes_in_note: Optional[bool] = False,
+        url_related_object_data: dict = {},
     ) -> None:
         """Initialize Virustotal builder."""
         self.helper = helper
@@ -41,6 +44,8 @@ class VirusTotalBuilder:
         self.stix_entity = stix_entity
         self.attributes = data["attributes"]
         self.score = self._compute_score(self.attributes["last_analysis_stats"])
+        self.include_attributes_in_note = include_attributes_in_note
+        self.url_related_object_data = url_related_object_data
 
         # Update score of observable.
         OpenCTIStix2.put_attribute_in_extension(
@@ -202,6 +207,7 @@ class VirusTotalBuilder:
             valid_until = now_time + datetime.timedelta(minutes)
 
             indicator = stix2.Indicator(
+                id=Indicator.generate_id(pattern),
                 created_by_ref=self.author,
                 name=self.opencti_entity["observable_value"],
                 description=(
@@ -211,7 +217,6 @@ class VirusTotalBuilder:
                 confidence=self.helper.connect_confidence_level,
                 pattern=pattern,
                 pattern_type="stix",
-                valid_from=self.helper.api.stix2.format_date(now_time),
                 valid_until=self.helper.api.stix2.format_date(valid_until),
                 external_references=(
                     [self.external_reference]
@@ -365,6 +370,11 @@ class VirusTotalBuilder:
                     + (result["result"] if result["result"] is not None else "N/A")
                     + " | \n"
                 )
+            content += (
+                self.create_notes_attributes_content()
+                if self.include_attributes_in_note
+                else ""
+            )
             self.create_note(
                 "VirusTotal Results",
                 content,
@@ -377,6 +387,11 @@ class VirusTotalBuilder:
                 content += (
                     "| " + key + " | " + self.attributes["categories"][key] + " | \n"
                 )
+            content += (
+                self.create_notes_attributes_content()
+                if self.include_attributes_in_note
+                else ""
+            )
             self.create_note("VirusTotal Categories", content)
 
     def create_yara(
@@ -413,6 +428,7 @@ class VirusTotalBuilder:
             return
 
         indicator = stix2.Indicator(
+            id=Indicator.generate_id(plyara.utils.rebuild_yara_rule(rule[0])),
             created_by_ref=self.author,
             name=yara.get("rule_name", "No rulename provided"),
             description=f"""```\n{json.dumps(
@@ -556,3 +572,47 @@ class VirusTotalBuilder:
             f'[VirusTotal] updating size with {self.attributes["size"]}'
         )
         self.stix_entity["size"] = self.attributes["size"]
+
+    def create_notes_attributes_content(self):
+        attributes_content = ""
+        attributes_scope = {
+            "StixFile": {
+                "File Type": self.attributes.get("type_description"),
+                "Type Tags": ", ".join(self.attributes.get("type_tags", [])),
+                "Last Submission": self.attributes.get("last_submission_date"),
+                "Popular Threat Label": self.attributes.get(
+                    "popular_threat_classification", {}
+                ).get("suggested_threat_label"),
+                "Signature Verification": self.attributes.get("signature_info", {}).get(
+                    "verified"
+                ),
+                "Names": ", ".join(self.attributes.get("names", [])),
+            },
+            "IPv4-Addr": {
+                "Country": self.attributes.get("country"),
+                "Autonomous System Label": self.attributes.get("as_owner"),
+            },
+            "Domain-Name": {
+                "Creation Date": self.attributes.get("creation_date"),
+                "Last Analysis Date": self.attributes.get("last_analysis_date"),
+            },
+            "Url": {
+                "Final URL": self.attributes.get("last_final_url"),
+                "Last Analysis Date": self.attributes.get("last_analysis_date"),
+                "Serving IP Address": self.url_related_object_data.get("id"),
+            },
+        }
+        attributes_scope = attributes_scope.get(self.opencti_entity.get("entity_type"))
+        if self.include_attributes_in_note and attributes_scope:
+            for attribute, value in attributes_scope.items():
+                attributes_content += (
+                    "| " + attribute + " | " + str(value or "N/A") + " | \n"
+                )
+            if attributes_content:
+                content = "## Attributes Info\n\n"
+                content += "Any falsy value will be replaced by ‘N/A’\n"
+                content += "| Attributes |      |\n"
+                content += "|--------|----------|\n"
+                content += attributes_content
+                return content
+        return ""

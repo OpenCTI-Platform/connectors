@@ -17,7 +17,7 @@ class Cert(BaseModel):
     issued: datetime
 
 
-class Phishing(BaseModel):
+class FoxPhishing(BaseModel):
     scanned: datetime
     domain: str
     url: str

@@ -9,12 +9,16 @@
 ################################################################################
 """
 
+import base64
 import ipaddress
 import json
+from collections import OrderedDict
 from datetime import datetime
 
 import pycti  # type: ignore
 import stix2
+from stix2 import Report
+from stix2.properties import ListProperty, ReferenceProperty
 
 TLP_MAP = {
     "white": stix2.TLP_WHITE,
@@ -33,12 +37,13 @@ class ConversionError(Exception):
 class RFStixEntity:
     """Parent class"""
 
-    def __init__(self, name, _type, author=None, tlp="white"):
+    def __init__(self, name, _type, author=None, tlp="red", first_seen=None):
         self.name = name
         self.type = _type
         self.author = author or self._create_author()
         self.tlp = TLP_MAP.get(tlp, None)
         self.stix_obj = None
+        self.first_seen = first_seen
 
     def to_stix_objects(self):
         """Returns a list of STIX objects"""
@@ -70,7 +75,7 @@ class RFStixEntity:
 class Indicator(RFStixEntity):
     """Base class for Indicators of Compromise (IP, Hash, URL, Domain)"""
 
-    def __init__(self, name, _type, author, tlp):
+    def __init__(self, name, _type, author, tlp, first_seen=None):
         super().__init__(name, _type, author, tlp)
         self.stix_indicator = None
         self.stix_observable = None
@@ -80,6 +85,8 @@ class Indicator(RFStixEntity):
         self.objects = []
         self.tlp = TLP_MAP.get(tlp, None)
         self.description = None
+        self.first_seen = first_seen
+        self.labels = []
 
     def to_stix_objects(self):
         """Returns a list of STIX objects"""
@@ -103,8 +110,9 @@ class Indicator(RFStixEntity):
             id=pycti.Indicator.generate_id(self._create_pattern()),
             name=self.name,
             description=self.description,
+            labels=self.labels,
             pattern_type="stix",
-            valid_from=datetime.now(),
+            valid_from=self.first_seen,
             pattern=self._create_pattern(),
             created_by_ref=self.author.id,
             object_marking_refs=self.tlp,
@@ -117,6 +125,9 @@ class Indicator(RFStixEntity):
 
     def add_description(self, description):
         self.description = description
+
+    def add_labels(self, labels):
+        self.labels = labels
 
     def _add_main_observable_type_to_indicators(self):
         """Handle x_opencti_main_observable_type for filtering"""
@@ -216,8 +227,8 @@ class Indicator(RFStixEntity):
 
 
 class IPAddress(Indicator):
-    def __init__(self, name, _type, author=None, tlp=None):
-        super().__init__(name, _type, author, tlp)
+    def __init__(self, name, _type, author=None, tlp=None, first_seen=None):
+        super().__init__(name, _type, author, tlp, first_seen)
 
     """Converts IP address to IP indicator and observable"""
 
@@ -252,11 +263,13 @@ class IPAddress(Indicator):
             return stix2.IPv6Address(
                 value=self.name,
                 object_marking_refs=self.tlp,
+                custom_properties={"x_opencti_created_by_ref": self.author.id},
             )
         elif self.is_ipv4() is True:
             return stix2.IPv4Address(
                 value=self.name,
                 object_marking_refs=self.tlp,
+                custom_properties={"x_opencti_created_by_ref": self.author.id},
             )
         else:
             raise ValueError(
@@ -271,21 +284,25 @@ class IPAddress(Indicator):
 class Domain(Indicator):
     """Converts Domain to Domain indicator and observable"""
 
-    def __init__(self, name, _type, author=None, tlp=None):
-        super().__init__(name, _type, author, tlp)
+    def __init__(self, name, _type, author=None, tlp=None, first_seen=None):
+        super().__init__(name, _type, author, tlp, first_seen)
 
     def _create_pattern(self):
         return f"[domain-name:value = '{self.name}']"
 
     def _create_obs(self):
-        return stix2.DomainName(value=self.name, object_marking_refs=self.tlp)
+        return stix2.DomainName(
+            value=self.name,
+            object_marking_refs=self.tlp,
+            custom_properties={"x_opencti_created_by_ref": self.author.id},
+        )
 
 
 class URL(Indicator):
     """Converts URL to URL indicator and observable"""
 
-    def __init__(self, name, _type, author=None, tlp=None):
-        super().__init__(name, _type, author, tlp)
+    def __init__(self, name, _type, author=None, tlp=None, first_seen=None):
+        super().__init__(name, _type, author, tlp, first_seen)
 
     def _create_pattern(self):
         ioc = self.name.replace("\\", "\\\\")
@@ -293,14 +310,18 @@ class URL(Indicator):
         return f"[url:value = '{ioc}']"
 
     def _create_obs(self):
-        return stix2.URL(value=self.name, object_marking_refs=self.tlp)
+        return stix2.URL(
+            value=self.name,
+            object_marking_refs=self.tlp,
+            custom_properties={"x_opencti_created_by_ref": self.author.id},
+        )
 
 
 class FileHash(Indicator):
     """Converts Hash to File indicator and observable"""
 
-    def __init__(self, name, _type, author=None, tlp=None):
-        super().__init__(name, _type, author, tlp)
+    def __init__(self, name, _type, author=None, tlp=None, first_seen=None):
+        super().__init__(name, _type, author, tlp, first_seen)
         self.algorithm = self._determine_algorithm()
 
     def _determine_algorithm(self):
@@ -322,7 +343,9 @@ class FileHash(Indicator):
 
     def _create_obs(self):
         return stix2.File(
-            hashes={self.algorithm: self.name}, object_marking_refs=self.tlp
+            hashes={self.algorithm: self.name},
+            object_marking_refs=self.tlp,
+            custom_properties={"x_opencti_created_by_ref": self.author.id},
         )
 
 
@@ -352,6 +375,7 @@ class Identity(RFStixEntity):
         "Organization": "organization",
         "Person": "individual",
         "Industry": "class",
+        "Sector": "class",
     }
 
     def create_stix_objects(self):
@@ -380,17 +404,20 @@ class ThreatActor(RFStixEntity):
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        ta_args = {
-            "id": pycti.ThreatActor.generate_id(self.name),
-            "name": self.name,
-            "created_by_ref": self.author.id,
-            "object_marking_refs": self.tlp,
-        }
-
-        if self.type == "Person":
-            ta_args["resource_level"] = "individual"
-
-        self.stix_obj = stix2.ThreatActor(**ta_args)
+        self.stix_obj = stix2.ThreatActor(
+            id=pycti.ThreatActor.generate_id(
+                name=self.name,
+                opencti_type=(
+                    "Threat-Actor-Individual"
+                    if self.type == "Person"
+                    else "Threat-Actor-Group"
+                ),
+            ),
+            name=self.name,
+            resource_level="individual" if self.type == "Person" else None,
+            created_by_ref=self.author.id,
+            object_marking_refs=self.tlp,
+        )
 
     def create_id_class(self):
         """Creates a STIX2 identity class"""
@@ -729,8 +756,8 @@ class Vulnerability(RFStixEntity):
 class DetectionRule(RFStixEntity):
     """Represents a Yara, Sigma or SNORT rule"""
 
-    def __init__(self, name, _type, content, author, tlp=None):
-        super().__init__(name, _type, author, tlp)
+    def __init__(self, name, _type, content, author, tlp=None, first_seen=None):
+        super().__init__(name, _type, author, tlp, first_seen)
         # TODO: possibly need to accomodate multi-rule. Right now just shoving everything in one
 
         self.name = name.split(".")[0]
@@ -750,7 +777,7 @@ class DetectionRule(RFStixEntity):
             name=self.name,
             pattern_type=self.type,
             pattern=self.content,
-            valid_from=datetime.now(),
+            valid_from=self.first_seen,
             created_by_ref=self.author.id,
             object_marking_refs=self.tlp,
         )
@@ -771,16 +798,11 @@ class Software(RFStixEntity):
         self.software_object = stix2.Software(
             name=self.name,
             object_marking_refs=self.tlp,
+            custom_properties={"x_opencti_created_by_ref": self.author.id},
         )
 
 
 class Location(RFStixEntity):
-    rf_type_to_stix = {
-        "Country": "Country",
-        "City": "City",
-        "ProvinceOrState": "Administrative-Area",
-    }
-
     rf_type_to_stix = {
         "Country": "Country",
         "City": "City",
@@ -803,8 +825,9 @@ class Location(RFStixEntity):
             id=pycti.Location.generate_id(self.name, self.type),
             name=self.name,
             country=self.name,
-            custom_properties={"x_opencti_location_type": self.type},
+            created_by_ref=self.author.id,
             object_marking_refs=self.tlp,
+            custom_properties={"x_opencti_location_type": self.type},
         )
 
 
@@ -823,6 +846,7 @@ class Campaign(RFStixEntity):
         self.campaign_object = stix2.Campaign(
             id=pycti.Campaign.generate_id(self.name),
             name=self.name,
+            created_by_ref=self.author.id,
             object_marking_refs=self.tlp,
         )
 
@@ -895,6 +919,16 @@ RELATIONSHIPS_MAPPER = [
 ]
 
 
+class RFReport(Report):
+    """Subclass of Report with 'object_refs' property set to required=False."""
+
+    _properties = OrderedDict(Report._properties)  # Copy the parent class properties
+    _properties["object_refs"] = ListProperty(
+        ReferenceProperty(valid_types=["SCO", "SDO", "SRO"], spec_version="2.1"),
+        required=False,
+    )
+
+
 class StixNote:
     """Represents Analyst Note"""
 
@@ -931,7 +965,6 @@ class StixNote:
         opencti_helper,
         tas,
         rfapi,
-        tlp="white",
         person_to_ta=False,
         ta_to_intrusion_set=False,
         risk_as_score=False,
@@ -951,10 +984,12 @@ class StixNote:
         self.ta_to_intrusion_set = ta_to_intrusion_set
         self.risk_as_score = risk_as_score
         self.risk_threshold = risk_threshold
-        self.tlp = TLP_MAP.get(tlp.lower(), None)
+        self.tlp = stix2.TLP_RED
         self.rfapi = rfapi
+        self.attachments = None
 
-    def _create_author(self):
+    @staticmethod
+    def _create_author():
         """Creates Recorded Future Author"""
         return stix2.Identity(
             id=pycti.Identity.generate_id("Recorded Future", "organization"),
@@ -962,7 +997,8 @@ class StixNote:
             identity_class="organization",
         )
 
-    def _generate_external_references(self, urls):
+    @staticmethod
+    def _generate_external_references(urls):
         """Generate External references from validation urls"""
         refs = []
         for url in urls:
@@ -983,6 +1019,7 @@ class StixNote:
         )
         self.report_types = self._create_report_types(attr.get("topic", []))
         self.labels = [topic["name"] for topic in attr.get("topic", [])]
+        self.attachments = attr["attachments"]
         for entity in attr.get("note_entities", []):
             type_ = entity["type"]
             name = entity["name"]
@@ -1003,7 +1040,7 @@ class StixNote:
                 continue
             elif type_ not in ENTITY_TYPE_MAPPER:
                 msg = f"[ANALYST NOTES] Cannot convert entity {name} to STIX2 because it is of type {type_}"
-                self.helper.log_warning(msg)
+                self.helper.connector_logger.warning(msg)
                 continue
             else:
                 rf_object = ENTITY_TYPE_MAPPER[type_](name, type_, self.author, tlp)
@@ -1020,7 +1057,7 @@ class StixNote:
                             INDICATOR_TYPE_URL_MAPPER[type_], name
                         )
                         if risk_score < self.risk_threshold:
-                            self.helper.log_info(
+                            self.helper.connector_logger.info(
                                 f"[ANALYST NOTES] Ignoring entity {name} as its risk score is lower than the defined risk threshold"
                             )
                             continue
@@ -1035,14 +1072,16 @@ class StixNote:
                         )
                 stix_objs = rf_object.to_stix_objects()
             self.objects.extend(stix_objs)
-        if "attachment_content" in attr:
-            rule = DetectionRule(
-                attr["attachment"],
-                attr["attachment_type"],
-                attr["attachment_content"],
-                self.author,
-            )
-            self.objects.extend(rule.to_stix_objects())
+
+        for attachment in self.attachments:
+            if attachment["type"] != "pdf":
+                rule = DetectionRule(
+                    attachment["name"],
+                    attachment["type"],
+                    attachment["content"],
+                    self.author,
+                )
+                self.objects.extend(rule.to_stix_objects())
 
     def _create_rel(self, from_id, to_id, relation):
         """Creates Relationship object"""
@@ -1085,13 +1124,192 @@ class StixNote:
                             )
         self.objects.extend(relationships)
 
+    def create_adversary_targets_relations(self, adversary, event_attr):
+        """
+        Create relation between adversary and targets
+        Adversary (Intrusion Set / Malware) -> Targets -> "targets" data in event (Sector, Country, Company)
+        """
+        targets = []
+        event_objects = []
+
+        # Get company, country and sector value from event
+        target_country_name = []
+        target_company_name = []
+        target_sector_name = []
+        for target in event_attr["target"]:
+            if target["type"] == "Country":
+                target_country_name.append(target["name"])
+            elif target["type"] in ["Company", "Organization"]:
+                target_company_name.append(target["name"])
+            elif target["type"] in ["Sector", "Industry"]:
+                target_sector_name.append(target["name"])
+
+        # Create country stix2 objects
+        country = None
+        if target_country_name:
+            for country_name in target_country_name:
+                country = Location(
+                    name=country_name,
+                    _type="Country",
+                    author=self.author,
+                    tlp="white",
+                ).to_stix_objects()[0]
+                targets.append(country)
+                event_objects.append(country)
+
+        # Get or create company stix2 objects
+        company = None
+        if target_company_name:
+            for company_name in target_company_name:
+                # Check if company is already in self.objects
+                company_obj = [
+                    obj for obj in self.objects if obj.get("name") == company_name
+                ]
+                if company_obj:
+                    company = company_obj[0]
+                else:
+                    # If company not in self.objects, create it
+                    company_obj = Identity(
+                        name=company_name,
+                        _type="Organization",
+                    )
+                    company_obj.create_stix_objects()
+                    company = company_obj.stix_obj
+                    event_objects.append(company)
+
+                targets.append(company)
+
+                # Create company-country relationship
+                if country:
+                    event_objects.append(
+                        self._create_rel(
+                            from_id=company.id,
+                            to_id=country.id,
+                            relation="located-at",
+                        )
+                    )
+
+        # Get or create sector stix2 objects
+        sector = None
+        if target_sector_name:
+            for sector_name in target_sector_name:
+                sector_obj = [
+                    obj for obj in self.objects if obj.get("name") == sector_name
+                ]
+                if sector_obj:
+                    sector = sector_obj[0]
+                else:
+                    sector_obj = Identity(
+                        name=sector_name,
+                        _type="Sector",
+                    )
+                    sector_obj.create_stix_objects()
+                    sector = sector_obj.stix_obj
+                    event_objects.append(sector)
+                targets.append(sector)
+
+        # Create adversary-targets relationships
+        for target in targets:
+            if target:
+                event_objects.append(
+                    self._create_rel(
+                        from_id=adversary.id,
+                        to_id=target.id,
+                        relation="targets",
+                    )
+                )
+
+        return event_objects
+
+    def create_adversary_capabilities_relations(self, adversary, event_attr):
+        """
+        Create relation between adversary and capabilities
+        Adversary (Intrusion Set) -> Uses -> "capabilities" data in event (Attack Pattern / Malware)
+        """
+        event_objects = []
+        for event_capability in event_attr["capabilities"]:
+
+            # Get or create capability (AttackPattern or Malware)
+            capability_name = event_capability["name"]
+            capability_obj = [
+                obj for obj in self.objects if obj.get("name") == capability_name
+            ]
+            if len(capability_obj) > 0:
+                capability = capability_obj[0]
+            else:
+                capability_type = event_capability["type"]
+                if capability_type == "Malware":
+                    capability_obj = Malware(
+                        name=capability_name,
+                        _type=capability_type,
+                    )
+                else:
+                    capability_obj = TTP(
+                        name=capability_name,
+                        _type=capability_type,
+                    )
+                capability_obj.create_stix_objects()
+                capability = capability_obj.stix_obj
+                event_attr.append(capability)
+
+            # Create relation adversary-capability
+            event_objects.append(
+                self._create_rel(
+                    from_id=adversary.id,
+                    to_id=capability.id,
+                    relation="uses",
+                )
+            )
+
+        return event_objects
+
+    def create_event_relations(self, events):
+        """
+        Create correct relationships for analyst note
+        Only for 'CyberAttack' events for now
+        """
+        event_objects = []
+        for event in events:
+            if event.get("type") == "CyberAttack" and event.get("attributes"):
+                event_attr = event["attributes"]
+
+                if event_attr.get("adversary"):
+
+                    # Retrieve adversary in self.objects depending on adversary name in event
+                    # self.objects contains all IntrusionSet, Malware, Identity, AttackPattern et ThreatActor linked to note
+                    event_adversary = event_attr["adversary"][0]["name"]
+                    adversary_list = [
+                        obj
+                        for obj in self.objects
+                        if obj.get("name") == event_adversary
+                    ]
+                    if len(adversary_list) > 0:
+                        adversary = adversary_list[0]
+
+                        if event_attr.get("target"):
+                            event_objects += self.create_adversary_targets_relations(
+                                adversary=adversary, event_attr=event_attr
+                            )
+
+                        if event_attr.get("capabilities"):
+                            event_objects += (
+                                self.create_adversary_capabilities_relations(
+                                    adversary=adversary, event_attr=event_attr
+                                )
+                            )
+
+        if event_objects:
+            self.objects.extend(event_objects)
+        else:
+            self.create_relations()
+
     def _create_report_types(self, topics):
         """Converts Insikt Topics to STIX2 Report types"""
         ret = set()
         for topic in topics:
             name = topic["name"]
             if name not in self.report_type_mapper:
-                self.helper.log_warning(
+                self.helper.connector_logger.warning(
                     "[ANALYST NOTES] Could not map a report type for type {}".format(
                         name
                     )
@@ -1102,7 +1320,26 @@ class StixNote:
 
     def to_stix_objects(self):
         """Returns a list of STIX objects"""
-        report = stix2.Report(
+        report_object_refs = [obj.id for obj in self.objects]
+
+        # Report in STIX lib must have at least one object_refs even if there is no object_refs
+        # Use a subclass of Report to make the object_refs optional
+
+        files = []
+        for attachment in self.attachments:
+            if attachment.get("type") == "pdf":
+                files.append(
+                    {
+                        "name": attachment.get("name"),
+                        "data": base64.b64encode(attachment.get("content")).decode(
+                            "utf-8"
+                        ),
+                        "mime_type": "application/pdf",
+                        "no_trigger_import": False,
+                    }
+                )
+
+        report = RFReport(
             id=pycti.Report.generate_id(self.name, self.published),
             name=self.name,
             description=self.text,
@@ -1110,9 +1347,10 @@ class StixNote:
             created_by_ref=self.author.id,
             labels=self.labels,
             report_types=self.report_types,
-            object_refs=[obj.id for obj in self.objects],
+            object_refs=report_object_refs,
             external_references=self.external_references,
             object_marking_refs=self.tlp,
+            custom_properties={"x_opencti_files": files},
         )
         return self.objects + [report, self.author, self.tlp]
 

@@ -343,6 +343,7 @@ class cuckooReportNetwork:
         self.json = report_json["network"]
 
         # Get Basic info
+        self.id = self.json["id"]
         self.dead_hosts = self.json["dead_hosts"]
         self.dns_servers = self.json["dns_servers"]
         self.domains = self.json["domains"]

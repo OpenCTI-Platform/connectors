@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Helper functions to convert ISO 8601 strings into datetime objects.
-"""
+"""Helper functions to convert ISO 8601 strings into datetime objects."""
 
 import datetime
 import re

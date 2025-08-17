@@ -4,6 +4,8 @@ from typing import Dict
 
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
+CONTAINER_TYPE_LIST = ["report", "grouping", "case-incident", "case-rfi", "case-rft"]
+
 
 def load_re_flags(rule):
     """Load the regular expression flags from a rule definition."""
@@ -41,33 +43,81 @@ class TaggerConnector:
                     flags = load_re_flags(rule)
 
                     for attribute in rule["attributes"]:
-                        attr = enrichment_entity.get(attribute)
+                        if attribute.lower() in ["objects-type", "objects-name"]:
+                            attr = enrichment_entity.get("objects")
+                        else:
+                            attr = enrichment_entity.get(attribute)
                         if attr is None:
                             continue
 
+                        # Handles the case where the attribute is the list of labels
                         if attribute.lower() == "objectlabel":
-                            for el in attr:
+                            for obj in attr:
                                 if not re.search(
-                                    rule["search"], el["value"], flags=flags
+                                    rule["search"], obj["value"], flags=flags
                                 ):
                                     continue
 
-                                self.helper.api.stix_domain_object.add_label(
-                                    id=enrichment_entity["standard_id"],
-                                    label_name=rule["label"],
+                                self.add_label(
+                                    enrichment_entity["standard_id"], rule["label"]
                                 )
                                 break
 
                             continue
 
+                        # Checks that the entity is a container
+                        if (
+                            enrichment_entity["entity_type"].lower()
+                            in CONTAINER_TYPE_LIST
+                        ):
+
+                            # Handles the case where the attribute is the list of objects
+                            if attribute.lower() == "objects-type":
+                                for obj in attr:
+                                    if not re.search(
+                                        rule["search"], obj["entity_type"], flags=flags
+                                    ):
+                                        continue
+
+                                    self.add_label(
+                                        enrichment_entity["standard_id"], rule["label"]
+                                    )
+                                    break
+
+                                continue
+
+                            elif attribute.lower() == "objects-name":
+                                for obj in attr:
+
+                                    name = obj.get(
+                                        "name", obj.get("observable_value", None)
+                                    )
+                                    if name is None:
+                                        continue
+
+                                    if not re.search(rule["search"], name, flags=flags):
+                                        continue
+
+                                    self.add_label(
+                                        enrichment_entity["standard_id"], rule["label"]
+                                    )
+                                    break
+
+                                continue
+
                         if not re.search(rule["search"], attr, flags=flags):
                             continue
 
-                        self.helper.api.stix_domain_object.add_label(
-                            id=enrichment_entity["standard_id"],
-                            label_name=rule["label"],
-                        )
+                        self.add_label(enrichment_entity["standard_id"], rule["label"])
                         break
+
+    def add_label(self, entity, label):
+        """Send the API call to apply the label on the entity."""
+
+        self.helper.api.stix_domain_object.add_label(
+            id=entity,
+            label_name=label,
+        )
 
 
 if __name__ == "__main__":
