@@ -16,6 +16,7 @@ FEATURE_NAMES = [
     "Indicator",
     "IntrusionSet",
     "IPV4Address",
+    "IPV6Address",
     "KillChainPhase",
     "Note",
     "Organization",

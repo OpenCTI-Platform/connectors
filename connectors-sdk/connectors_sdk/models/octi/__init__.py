@@ -13,6 +13,7 @@ from connectors_sdk.models.octi.activities.analyses import Note, Report
 from connectors_sdk.models.octi.activities.observations import (
     Indicator,
     IPV4Address,
+    IPV6Address,
     Software,
 )
 from connectors_sdk.models.octi.knowledge.arsenal import Vulnerability
@@ -43,6 +44,7 @@ __all__ = [
     "Indicator",
     "IntrusionSet",
     "IPV4Address",
+    "IPV6Address",
     "KillChainPhase",
     "Note",
     "Organization",
