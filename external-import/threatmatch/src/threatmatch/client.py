@@ -145,7 +145,7 @@ class ThreatMatchClient:
             },
         )
 
-    def get_stix_bundle(self, item_type: str, item_id: str) -> dict[str, Any]:
+    def get_stix_objects(self, item_type: str, item_id: str) -> dict[str, Any]:
         return self._request(
             method=HTTPMethod.GET, endpoint=f"/api/stix/{item_type}/{item_id}"
         ).get("objects", [])
