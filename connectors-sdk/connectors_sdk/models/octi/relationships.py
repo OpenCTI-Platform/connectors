@@ -1,66 +1,26 @@
 """Define Relationships handled by OpenCTI platform."""
 
-from abc import ABC
-from typing import Any, Literal, Optional, Unpack
+from typing import Literal, Optional
 
 from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
-from connectors_sdk.models.octi.activities.observations import Indicator, Observable
-from connectors_sdk.models.octi.knowledge.entities import Organization, Sector
-from connectors_sdk.models.octi.knowledge.locations import Country
-from connectors_sdk.models.octi.knowledge.threats import IntrusionSet
 from pycti import StixCoreRelationship as PyctiStixCoreRelationship
-from pydantic import (
-    AwareDatetime,
-    ConfigDict,
-    Field,
-    PrivateAttr,
-    create_model,
-    model_validator,
-)
+from pydantic import AwareDatetime, Field
 from stix2.v21 import Relationship as Stix2Relationship
 
 
-class _RelationshipBuilder:
-    """Builder class to enable pipe syntax for relationship creation.
-
-    Notes:
-     - We implement pipe syntax rather than greater or bitwise operators becuase of the simplier order of operations.
-
-    """
-
-    def __init__(self, relationship_class: type["Relationship"]):
-        """Initialize the RelationshipBuilder with a relationship class."""
-        self.relationship_class = relationship_class
-
-    def __ror__(self, source: "BaseIdentifiedEntity") -> "_PendingRelationship":
-        """Handle source | relationship_builder."""
-        return _PendingRelationship(
-            source=source, relationship_class=self.relationship_class
-        )
-
-
-class _PendingRelationship:
-    """Intermediate object that has source and relationship type but no target."""
-
-    def __init__(
-        self, source: "BaseIdentifiedEntity", relationship_class: type["Relationship"]
-    ):
-        """Initialize the PendingRelationship with a source entity and relationship class."""
-        self.source = source
-        self.relationship_class = relationship_class
-
-    def __or__(self, target: "BaseIdentifiedEntity") -> "Relationship":
-        """Handle pending_relationship | target."""
-        return self.relationship_class(source=self.source, target=target)
-
-
 @MODEL_REGISTRY.register
-class Relationship(ABC, BaseIdentifiedEntity):
+class Relationship(BaseIdentifiedEntity):
     """Base class for OpenCTI relationships."""
 
-    _relationship_type: str = PrivateAttr("")
-    _builder: Optional[_RelationshipBuilder] = PrivateAttr(None)
-
+    type: Literal[
+        "related-to",
+        "based-on",
+        "derived-from",
+        "indicates",
+        "targets",
+        "located-at",
+        "has",
+    ] = Field(description="Type of the relationship.")
     source: BaseIdentifiedEntity = Field(
         description="The source entity of the relationship.",
     )
@@ -84,19 +44,13 @@ class Relationship(ABC, BaseIdentifiedEntity):
         """Make stix object."""
         return Stix2Relationship(
             id=PyctiStixCoreRelationship.generate_id(
-                relationship_type=self._relationship_type,
+                relationship_type=self.type,
                 source_ref=self.source.id,
                 target_ref=self.target.id,
                 start_time=self.start_time,
                 stop_time=self.stop_time,
             ),
-            relationship_type=self._relationship_type,
-            **self._common_stix2_args(),
-        )
-
-    def _common_stix2_args(self) -> dict[str, Any]:
-        """Factorize custom params."""
-        return dict(  # noqa: C408 # No literal dict for maintainability
+            relationship_type=self.type,
             source_ref=self.source.id,
             target_ref=self.target.id,
             description=self.description,
@@ -109,171 +63,73 @@ class Relationship(ABC, BaseIdentifiedEntity):
             ],
         )
 
-    @model_validator(mode="before")
-    @classmethod
-    def _prevent_direct_instantiation(cls, data: Any) -> Any:
-        """Prevent direct instantiation of the Relationship class as there is no @abstract_method."""
-        if cls is Relationship:
-            raise TypeError("Cannot instantiate abstract class Relationship directly")
-        return data
 
-    def __init_subclass__(cls, **kwargs: Unpack[ConfigDict]) -> None:
-        """Ceate a builder for each subclass."""
-        super().__init_subclass__(**kwargs)
-        cls._builder = _RelationshipBuilder(cls)
-
-
-@MODEL_REGISTRY.register
-class RelatedTo(Relationship):
-    """Represent a relationship indicating that an entity is related to another entity.
-
-    This is a generic relationship that can be used for any two entities.
-    It is not specific to any type of entity.
-
-    Examples:
-        >>> from connectors_sdk.models.octi.knowledge.entities import Organization
-        >>> from connectors_sdk.models.octi.activities.observations import IPV4Address
-        >>> organization = Organization(name="Example Corp")
-        >>> ip = IPV4Address(value="127.0.0.1")
-        >>> relationship = RelatedTo(source=ip, target=organization)
-    """
-
-    _relationship_type: Literal["related-to"] = "related-to"
-
-
-related_to = RelatedTo._builder
-
-
-@MODEL_REGISTRY.register
-class BasedOn(Relationship):
-    """Represent a relationship indicating that an indicator is based on an observable.
+class _RelationshipBuilder:
+    """Builder class to enable pipe syntax for relationship creation.
 
     Notes:
-        This relationship creation can be delegated to the OpenCTI platform for simple cases.
-        To do so you can create the indicator and set its `create_observables` attribute to True
-        or create the Observable and set its create_indcator atribute to True.
-
-    Examples:
-        >>> from connectors_sdk.models.octi.activities.observations import Indicator, IPV4Address
-        >>> indicator = Indicator(name="Test Indicator", pattern="[ipv4-addr:value = '127.0.0.1']", pattern_type="stix")
-        >>> observable = IPV4Address(value="127.0.0.1")
-        >>> relationship = BasedOn(source=indicator, target=observable)
+     - We implement pipe syntax rather than greater or bitwise operators because of the simplier order of operations.
 
     """
 
-    _relationship_type: Literal["based-on"] = "based-on"
+    def __init__(
+        self,
+        relationship_type: str,
+    ):
+        """Initialize the RelationshipBuilder with a relationship class."""
+        self.relationship_type = relationship_type
 
-    source: Indicator = Field(
-        description="Reference to the source entity of the relationship. Here an Indicator.",
-    )
-    target: Observable = Field(
-        description="Reference to the target entity of the relationship. Here an Observable.",
-    )
-
-
-based_on = BasedOn._builder
-
-
-# Demonstrate how to dynamically create a Relationship
-DerivedFrom = create_model(
-    "DerivedFrom",
-    __base__=Relationship,
-    source=Indicator,
-    target=Indicator,
-    _relationship_type=(Literal["derived_from"], "derived-from"),
-    # extra
-    __doc__="""Represent a relationship indicating that an indicator is derived from another indicator.
-
-    Notes:
-        - Derived-from is not as permissive in OpenCTI platform as it is in STIX: not all SCO/SDO can be linked together.
-
-    Examples:
-        >>> from connectors_sdk.models.octi.activities.observations import Indicator
-        >>> url = Indicator(name="Url", pattern="[url:value = 'http://example.com/test']", pattern_type="stix")
-        >>> domain = Indicator(name="Domain", pattern="[domain-name:value = 'example.com']", pattern_type="stix")
-        >>> relationship = DerivedFrom(source=domain, target=url)
-    """,
-)
-MODEL_REGISTRY.register(DerivedFrom)
+    def __ror__(self, source: "BaseIdentifiedEntity") -> "_PendingRelationship":
+        """Handle source | relationship_builder."""
+        return _PendingRelationship(
+            source=source,
+            relationship_type=self.relationship_type,
+        )
 
 
-@MODEL_REGISTRY.register
-class Indicates(Relationship):
-    """Represent a relationship indicating that an indicator can detect evidence of an
-    attack pattern, campaign, infrastructure, intrusion set, malware, threat actor, or tool.
+class _PendingRelationship:
+    """Intermediate object that has source and relationship type but no target."""
 
-    Examples:
-        >>> from connectors_sdk.models.octi.activities.observations import Indicator
-        >>> from connectors_sdk.models.octi.activities.knowledge import IntrusionSet
-        >>> indicator = Indicator(name="Test Indicator", pattern="[ipv4-addr:value = '127.0.0.1']", pattern_type="stix")
-        >>> intrusion_set = IntrusionSet(name="Test IntrusionSet")
-        >>> relationship = Indicates(source=indicator, target=intrusion_set)
+    def __init__(
+        self,
+        source: "BaseIdentifiedEntity",
+        relationship_type: str,
+    ):
+        """Initialize the PendingRelationship with a source entity and relationship class."""
+        self.source = source
+        self.relationship_type = relationship_type
 
-    """
-
-    _relationship_type: Literal["indicates"] = "indicates"
-
-    source: Indicator = Field(
-        description="Reference to the source entity of the relationship. Here an Indicator.",
-    )
-    target: IntrusionSet = Field(
-        description="Reference to the target entity of the relationship. Here an IntrusionSet.",
-    )
+    def __or__(self, target: "BaseIdentifiedEntity") -> "Relationship":
+        """Handle pending_relationship | target."""
+        return Relationship(
+            type=self.relationship_type,
+            source=self.source,
+            target=target,
+        )
 
 
-indicates = Indicates._builder
+def relationship_builder(
+    relationship_type: Literal[
+        "related-to",
+        "based-on",
+        "derived-from",
+        "indicates",
+        "targets",
+        "located-at",
+        "has",
+    ],
+) -> _RelationshipBuilder:
+    """Create a relationship builder for the specified type."""
+    return _RelationshipBuilder(relationship_type)
 
 
-@MODEL_REGISTRY.register
-class Targets(Relationship):
-    """Represent a relationship indicating that an IntrusionSet targets a Country or an Organization.
-
-    Examples:
-        >>> from connectors_sdk.models.octi.knowledge.locations import Country
-        >>> from connectors_sdk.models.octi.knowledge.threats import IntrusionSet
-        >>> intrusion_set = IntrusionSet(name="Test IntrusionSet")
-        >>> country = Country(name="France")
-        >>> relationship = Targets(source=intrusion_set, target=country)
-
-    """
-
-    _relationship_type: Literal["targets"] = "targets"
-
-    source: IntrusionSet = Field(
-        description="Reference to the source entity of the relationship. Here an Intrusion Set.",
-    )
-    target: Country | Organization = Field(
-        description="Reference to the target entity of the relationship. Here a Country or an Organization.",
-    )
-
-
-targets = Targets._builder
-
-
-@MODEL_REGISTRY.register
-class LocatedAt(Relationship):
-    """Represent a relationship indicating that a Sector or an Orgnization is located at a Country.
-
-    Examples:
-        >>> from connectors_sdk.models.octi.knowledge.entities import Sector
-        >>> from connectors_sdk.models.octi.knowledge.locations import Country
-        >>> sector = Sector(name="Test Sector")
-        >>> country = Country(name="France")
-        >>> relationship = LocatedAt(source=sector, target=country)
-
-    """
-
-    _relationship_type: Literal["located-at"] = "located-at"
-
-    source: Organization | Sector = Field(
-        description="Reference to the source entity of the relationship. Here a Sector.",
-    )
-    target: Country = Field(
-        description="Reference to the target entity of the relationship. Here a Country.",
-    )
-
-
-located_at = LocatedAt._builder
+related_to = relationship_builder("related-to")
+based_on = relationship_builder("based-on")
+derived_from = relationship_builder("derived-from")
+indicates = relationship_builder("indicates")
+targets = relationship_builder("targets")
+located_at = relationship_builder("located-at")
+has = relationship_builder("has")
 
 
 MODEL_REGISTRY.rebuild_all()

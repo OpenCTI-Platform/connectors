@@ -3,9 +3,10 @@
 import codecs
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Literal, Optional, OrderedDict, TypeVar
+from typing import Any, Optional, OrderedDict, TypeVar
 
 import stix2.properties
+from connectors_sdk.models.octi.enums import TLPLevel
 from pycti import MarkingDefinition as PyctiMarkingDefinition
 from pydantic import (
     BaseModel,
@@ -15,13 +16,8 @@ from pydantic import (
     computed_field,
     model_validator,
 )
-from stix2 import (
-    TLP_AMBER,
-    TLP_GREEN,
-    TLP_RED,
-    TLP_WHITE,
-)
-from stix2 import MarkingDefinition as Stix2MarkingDefinition
+from stix2.v21 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
+from stix2.v21 import MarkingDefinition as Stix2MarkingDefinition
 
 T = TypeVar("T", bound=BaseModel)  # Preserve metadata when using register decorator
 
@@ -260,24 +256,24 @@ class AssociatedFile(BaseEntity):
         description="The name of the file.",
     )
     description: Optional[str] = Field(
-        None,
         description="Description of the file.",
+        default=None,
     )
     content: Optional[bytes] = Field(
-        None,
         description="The file content.",
+        default=None,
     )
     mime_type: Optional[str] = Field(
-        None,
         description="File mime type.",
+        default=None,
     )
     markings: Optional[list["TLPMarking"]] = Field(
-        None,
         description="References for object marking.",
+        default=None,
     )
     version: Optional[str] = Field(
-        None,
         description="Version of the file.",
+        default=None,
     )
 
     def to_stix2_object(self) -> AssociatedFileStix:
@@ -331,14 +327,7 @@ class Author(ABC, BaseIdentifiedEntity):
 class TLPMarking(BaseIdentifiedEntity):
     """Represent a TLP marking definition."""
 
-    level: Literal[
-        "clear",
-        "white",
-        "green",
-        "amber",
-        "amber+strict",
-        "red",
-    ] = Field(description="The level of the TLP marking.")
+    level: TLPLevel = Field(description="The level of the TLP marking.")
 
     def to_stix2_object(self) -> Stix2MarkingDefinition:
         """Make stix object."""
@@ -375,16 +364,16 @@ class ExternalReference(BaseEntity):
         description="The name of the source of the external reference.",
     )
     description: Optional[str] = Field(
-        None,
         description="Description of the external reference.",
+        default=None,
     )
     url: Optional[str] = Field(
-        None,
         description="URL of the external reference.",
+        default=None,
     )
     external_id: Optional[str] = Field(
-        None,
         description="An identifier for the external reference content.",
+        default=None,
     )
 
     def to_stix2_object(self) -> stix2.v21.ExternalReference:
@@ -394,8 +383,6 @@ class ExternalReference(BaseEntity):
             description=self.description,
             url=self.url,
             external_id=self.external_id,
-            # unused
-            hashes=None,
         )
 
 
