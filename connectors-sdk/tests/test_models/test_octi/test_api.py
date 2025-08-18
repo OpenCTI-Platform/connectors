@@ -12,6 +12,7 @@ FEATURE_NAMES = [
     "BaseIdentifiedEntity",
     "City",
     "Country",
+    "DomainName",
     "ExternalReference",
     "Indicator",
     "IntrusionSet",

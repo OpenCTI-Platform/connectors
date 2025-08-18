@@ -11,6 +11,7 @@ from connectors_sdk.models.octi._common import (
 )
 from connectors_sdk.models.octi.activities.analyses import Note, Report
 from connectors_sdk.models.octi.activities.observations import (
+    DomainName,
     Indicator,
     IPV4Address,
     IPV6Address,
@@ -40,6 +41,7 @@ __all__ = [
     "AttackPattern",
     "City",
     "Country",
+    "DomainName",
     "ExternalReference",
     "Indicator",
     "IntrusionSet",

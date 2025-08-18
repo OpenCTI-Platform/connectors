@@ -12,6 +12,7 @@ from connectors_sdk.models.octi._common import (
 from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
 from pycti import Indicator as PyctiIndicator
 from pydantic import AwareDatetime, Field, field_validator
+from stix2.v21 import DomainName as Stix2DomainName
 from stix2.v21 import Indicator as Stix2Indicator
 from stix2.v21 import IPv4Address as Stix2IPv4Address
 from stix2.v21 import IPv6Address as Stix2IPv6Address
@@ -224,6 +225,31 @@ class Indicator(BaseIdentifiedEntity):
             x_opencti_files=[
                 file.to_stix2_object() for file in self.associated_files or []
             ],
+        )
+
+
+@MODEL_REGISTRY.register
+class DomainName(Observable):
+    """Define a domain name observable on OpenCTI.
+
+    Notes:
+        - The `resolves_to_refs` (from STIX2.1 spec) field is not implemented on OpenCTI.
+          It must be replaced by explicit `resolves-to` relationships.
+
+    """
+
+    value: str = Field(
+        description="Specifies the value of the domain name.",
+        min_length=1,
+    )
+
+    def to_stix2_object(self) -> Stix2DomainName:
+        """Make stix object."""
+        return Stix2DomainName(
+            value=self.value,
+            object_marking_refs=[marking.id for marking in self.markings or []],
+            allow_custom=True,
+            **self._custom_properties_to_stix(),
         )
 
 
