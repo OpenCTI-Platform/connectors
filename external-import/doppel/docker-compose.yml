@@ -11,7 +11,7 @@ services:
       - CONNECTOR_ID=changeMe
       - CONNECTOR_NAME=Doppel Threat Intelligence
       - CONNECTOR_SCOPE=doppel
-      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_DURATION_PERIOD=PT1H
 
       # Doppel-specific config
