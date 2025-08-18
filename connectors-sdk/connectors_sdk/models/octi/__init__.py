@@ -5,56 +5,65 @@ from connectors_sdk.models.octi._common import (
     AssociatedFile,
     Author,
     BaseEntity,
+    BaseIdentifiedEntity,
     ExternalReference,
     TLPMarking,
 )
+from connectors_sdk.models.octi.activities.analyses import Note, Report
 from connectors_sdk.models.octi.activities.observations import (
     Indicator,
     IPV4Address,
+    Software,
 )
+from connectors_sdk.models.octi.knowledge.arsenal import Vulnerability
 from connectors_sdk.models.octi.knowledge.entities import Organization, Sector
 from connectors_sdk.models.octi.knowledge.locations import City, Country
+from connectors_sdk.models.octi.knowledge.techniques import AttackPattern
 from connectors_sdk.models.octi.knowledge.threats import IntrusionSet
 from connectors_sdk.models.octi.relationships import (
-    BasedOn,
-    DerivedFrom,
-    LocatedAt,
-    RelatedTo,
-    Targets,
+    Relationship,
     based_on,
+    derived_from,
+    has,
+    indicates,
     located_at,
     related_to,
     targets,
 )
 from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
-from stix2 import Identity as Stix2Identity
+from stix2.v21 import Identity as Stix2Identity
 
 __all__ = [
     # Models flat list
     "AssociatedFile",
-    "BasedOn",
+    "AttackPattern",
     "City",
     "Country",
-    "DerivedFrom",
     "ExternalReference",
     "Indicator",
     "IntrusionSet",
     "IPV4Address",
     "KillChainPhase",
-    "LocatedAt",
+    "Note",
     "Organization",
     "OrganizationAuthor",
-    "RelatedTo",
+    "Relationship",
+    "Report",
     "Sector",
-    "Targets",
+    "Software",
     "TLPMarking",
+    "Vulnerability",
     # Relationship builders
     "based_on",
+    "derived_from",
+    "has",
+    "indicates",
     "located_at",
     "related_to",
     "targets",
     # Typing purpose
     "BaseEntity",
+    "BaseIdentifiedEntity",
 ]
 
 

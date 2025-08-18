@@ -53,6 +53,19 @@ class AttackResourceLevel(PermissiveEnum):
     GOVERNMENT = "government"
 
 
+class CvssSeverity(StrEnum):
+    """CVSS Severity Enum.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/domain/vulnerability.js#L13
+    """
+
+    CRITICAL = "CRITICAL"
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+    UNKNOWN = "Unknown"
+
+
 class IndustrySector(PermissiveEnum):
     """Industry Sector Open Vocabulary.
 
@@ -114,6 +127,41 @@ class LocationType(StrEnum):
     POSITION = "Position"
 
 
+class NoteType(PermissiveEnum):
+    """Note Type Enum.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L739
+    """
+
+    INTERNAL = "internal"
+    ASSESSMENT = "assessment"
+    ANALYSIS = "analysis"
+    FEEDBACK = "feedback"
+    EXTERNAL = "external"
+
+
+class Permission(PermissiveEnum):
+    """Permission Open Vocabulary.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L793
+    """
+
+    USER = "user"
+    ADMINISTRATOR = "administrator"
+
+
+class Platform(PermissiveEnum):
+    """Platform Open Vocabulary.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L797
+    """
+
+    WINDOWS = "windows"
+    MACOS = "macos"
+    LINUX = "linux"
+    ANDROID = "android"
+
+
 class Reliability(PermissiveEnum):
     """Reliability Open Vocabulary.
 
@@ -126,3 +174,33 @@ class Reliability(PermissiveEnum):
     D = "D - Not usually reliable"
     E = "E - Unreliable"
     F = "F - Reliability cannot be judged"
+
+
+class ReportType(PermissiveEnum):
+    """Report Type Open Vocabulary.
+
+    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_9lfdvxnyofxw
+    """
+
+    BREACH_ALERT = "breach_alert"
+    FINTEL = "fintel"
+    INFOREP = "inforep"
+    INTELLIGENCE_SUMMARY = "intelligence_summary"
+    INTERNAL_REPORT = "internal-report"
+    MALWARE = "malware"
+    SPOTREP = "spotrep"
+    THREAT_REPORT = "threat-report"
+
+
+class TLPLevel(StrEnum):
+    """TLP Level Enum.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/schema/identifier.js#L76
+    """
+
+    CLEAR = "clear"
+    WHITE = "white"
+    GREEN = "green"
+    AMBER = "amber"
+    AMBER_STRICT = "amber+strict"
+    RED = "red"
