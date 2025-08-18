@@ -66,6 +66,22 @@ class CvssSeverity(StrEnum):
     UNKNOWN = "Unknown"
 
 
+class HashAlgorithm(PermissiveEnum):
+    """Hash Algorithm Open Vocabulary.
+
+    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_tumklw3o2gyz
+    """
+
+    MD5 = "MD5"
+    SHA1 = "SHA-1"
+    SHA256 = "SHA-256"
+    SHA512 = "SHA-512"
+    SHA3256 = "SHA3-256"
+    SHA3512 = "SHA3-512"
+    SSDEEP = "SSDEEP"
+    TLSH = "TLSH"
+
+
 class IndustrySector(PermissiveEnum):
     """Industry Sector Open Vocabulary.
 

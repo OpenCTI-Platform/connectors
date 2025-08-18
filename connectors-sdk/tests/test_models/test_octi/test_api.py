@@ -14,6 +14,7 @@ FEATURE_NAMES = [
     "Country",
     "DomainName",
     "ExternalReference",
+    "File",
     "Indicator",
     "IntrusionSet",
     "IPV4Address",
