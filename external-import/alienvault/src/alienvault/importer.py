@@ -118,6 +118,13 @@ class PulseImporter:
         self._info("{0} pulse(s) since {1}...", pulse_count, latest_pulse_datetime)
 
         if self.filter_indicators:
+            """
+            If filtering is enabled, go over each "pulse".
+            Remove any indicators older than latest_pulse_datetime which is stored in connector state.
+            Keep track of how many were removed and how many are left.
+            Log details after each pulse and give a summary at the end.
+            Use case: Ensuring only recent indicators are processed
+            """
             total_remaining = 0
             total_filtered = 0
             for i, pulse in enumerate(pulses, start=1):
