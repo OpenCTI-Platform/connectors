@@ -3,6 +3,10 @@
 The Doppel connector integrates OpenCTI with the Doppel Threat Intelligence platform by ingesting alerts as STIX 2.1
 Indicators.
 
+| Status            | Date       | Comment |
+| ----------------- |------------| ------- |
+| Filigran Verified | 2025-08-18 |    -    |
+
 ## Table of Contents
 
 - [OpenCTI Doppel Connector](#opencti-doppel-connector)
