@@ -122,7 +122,9 @@ Below are the optional parameters around the collection 'Vulnerabilities' you ca
 | Google Threat Intel Get Related Softwares           | `gti.vulnerability_get_related_softwares` | `GTI_VULNERABILITY_GET_RELATED_SOFTWARES` | `False`                          | `No`      | If set to `True`, the connector will import related software data from vulnerability data.                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 
 > 📅 The `import_start_date` can be formatted as a time zone aware datetime or as a duration (e.g., `1970-01-01T00:00:00+03:00` for January, 1st 1970 at 3AM in Timezone +3H or `P3D` for 3 days ago relative to NOW UTC).
-> Importing all collections in the same connector is not recommended, as it can lead to performance issues. It is advisable to create separate connectors for each collection type (e.g., one for reports, another for threat actors, etc.).
+> If you want to retrieve a large amount of historical data, we recommend deploying a dedicated connector (by changing its name but keeping the same docker image), and running another connector for daily fetching.
+  This is because processing old data can be resource-intensive and may impact real-time operations.
+> If you're only using the connector for real-time / day-to-day fetching, a single instance is sufficient.
 
 ## Development
 
