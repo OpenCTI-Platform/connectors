@@ -27,6 +27,7 @@ FEATURE_NAMES = [
     "Sector",
     "Software",
     "TLPMarking",
+    "URL",
     "Vulnerability",
     "related_to",
     "based_on",

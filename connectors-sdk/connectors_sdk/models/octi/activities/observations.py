@@ -12,6 +12,7 @@ from connectors_sdk.models.octi._common import (
 from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
 from pycti import Indicator as PyctiIndicator
 from pydantic import AwareDatetime, Field, field_validator
+from stix2.v21 import URL as Stix2URL  # noqa: N811 # URL is not a constant but a class
 from stix2.v21 import DomainName as Stix2DomainName
 from stix2.v21 import Indicator as Stix2Indicator
 from stix2.v21 import IPv4Address as Stix2IPv4Address
@@ -381,6 +382,25 @@ class Software(Observable):
             swid=self.swid,
             cpe=self.cpe,
             languages=self.languages,
+            object_marking_refs=[marking.id for marking in self.markings or []],
+            allow_custom=True,
+            **self._custom_properties_to_stix(),
+        )
+
+
+@MODEL_REGISTRY.register
+class URL(Observable):
+    """Represent a URL observable."""
+
+    value: str = Field(
+        description="The URL value.",
+        min_length=1,
+    )
+
+    def to_stix2_object(self) -> Stix2URL:
+        """Make stix object."""
+        return Stix2URL(
+            value=self.value,
             object_marking_refs=[marking.id for marking in self.markings or []],
             allow_custom=True,
             **self._custom_properties_to_stix(),

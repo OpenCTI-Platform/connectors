@@ -11,6 +11,7 @@ from connectors_sdk.models.octi._common import (
 )
 from connectors_sdk.models.octi.activities.analyses import Note, Report
 from connectors_sdk.models.octi.activities.observations import (
+    URL,
     DomainName,
     Indicator,
     IPV4Address,
@@ -56,6 +57,7 @@ __all__ = [
     "Sector",
     "Software",
     "TLPMarking",
+    "URL",
     "Vulnerability",
     # Relationship builders
     "based_on",
