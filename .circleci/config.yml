@@ -74,6 +74,7 @@ jobs:
     docker:
       - image: cimg/python:3.11
     working_directory: ~/repo
+    parallelism: 4
     steps:
       - checkout
       - run: | 
@@ -87,7 +88,19 @@ jobs:
           command: pip install -r ci-requirements.txt --user
       - run:
           name: Run tests
-          command: bash run_test.sh
+          command: |
+            set -euo pipefail
+            circleci tests glob "**/test-requirements.txt" \
+              | circleci tests run \
+                  --split-by=timings \
+                  --command="xargs bash run_test.sh"
+        # Save JUnit so CircleCI can show pass/fail per connector and build timings history
+      - store_test_results:
+          path: test_outputs
+
+      # Save logs/reports as downloadable artifacts
+      - store_artifacts:
+          path: test_outputs
   build:
     parameters:
       ci_executor:
