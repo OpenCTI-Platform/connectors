@@ -10,7 +10,7 @@
   ],
   "max_confidence_level": 50,
   "manager_supported": true,
-  "container_version": "6.7.0",
+  "container_version": "6.7.10",
   "container_image": "opencti/connector-servicenow",
   "container_type": "EXTERNAL_IMPORT",
   "verified": true,

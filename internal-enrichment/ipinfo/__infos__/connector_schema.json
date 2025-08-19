@@ -12,7 +12,7 @@
   "max_confidence_level": 75,
   "manager_supported": true,
   "container_image": "opencti/connector-ipinfo",
-  "container_version": "6.7.0",
+  "container_version": "6.7.10",
   "container_type": "INTERNAL_ENRICHMENT",
   "verified": true,
   "last_verified_date": "15-06-2025",
