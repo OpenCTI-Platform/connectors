@@ -1,47 +1,50 @@
 #!/bin/bash
-set -euo pipefail
 
-for TEST_REQUIREMENTS_FILE in "$@"
+set -e  # exit on error
+
+venv_name=".temp_venv"
+
+# virtual environment will not be cleaned up if script is interrupted
+if [ -d "$venv_name" ]; then
+  echo 'Removing virtual environment'
+  rm -rf "$venv_name"
+fi
+
+if (( $# )); then
+  test_requirements_files="$@"
+  echo 'Using provided test-requirements.txt files:' "$test_requirements_files"
+else
+  test_requirements_files=$(find . -name "test-requirements.txt")
+  echo 'Found test-requirements.txt files:' "$test_requirements_files"
+fi
+
+for requirements_file in $test_requirements_files
 do
-# Assume the test-requirements.txt sits inside the connector root or its tests dir.
-# Use dirname to be path-agnostic.
-REQ_DIR="$(dirname "$TEST_REQUIREMENTS_FILE")"
+  project="$(dirname "$requirements_file")"
+  echo 'Running tests pipeline for project' $project
 
-# If your tests live under "$REQ_DIR/tests", keep it; otherwise, just run at $REQ_DIR.
-# (Adjust this to your repo layout as needed.)
-CONNECTOR_DIR="$REQ_DIR"
+  # Per-connector outputs
+  OUT_DIR="test_outputs/$(echo "$CONNECTOR_DIR" | tr '/ ' '__')"
+  mkdir -p "$OUT_DIR"
 
-# Per-connector outputs
-OUT_DIR="test_outputs/$(echo "$CONNECTOR_DIR" | tr '/ ' '__')"
-mkdir -p "$OUT_DIR"
+  echo 'Creating isolated virtual environment'
+  python -m venv "$venv_name"
+  if [ -f "$venv_name/bin/activate" ]; then
+    source "$venv_name/bin/activate"  # Linux/MacOS
+  elif [ -f "$venv_name/Scripts/activate" ]; then
+    source "$venv_name/Scripts/activate"  # Windows
+  fi
 
-VENV_PATH=".temp_venv"  # could also be "$OUT_DIR/.venv" if you later decide to cache it
+  echo 'Installing requirements'
+  python -m pip install -q -r "$requirements_file"
 
-echo "Running tests for: $CONNECTOR_DIR"
-echo "Using requirements: $TEST_REQUIREMENTS_FILE"
-echo "Output dir: $OUT_DIR"
 
-python -m venv "$VENV_PATH"
-# shellcheck disable=SC1091
-source "$VENV_PATH/bin/activate"
+  echo 'Running tests'
+  python -m pytest "$project" --junitxml="$OUT_DIR/junit.xml" -q -rA  # exit non zero if no test run
 
-python -m pip install --upgrade pip wheel
-python -m pip install -r "$TEST_REQUIREMENTS_FILE"
-
-# JUnit + coverage (optional) + verbose failure info
-# Remove coverage bits if you don't need them.
-pytest \
-  "$CONNECTOR_DIR" \
-  --junitxml="$OUT_DIR/junit.xml" \
-  -q -rA
-
-# Save a plain log too (handy for debugging)
-# pytest "$CONNECTOR_DIR" -q -rA | tee "$OUT_DIR/pytest.log"
-
-deactivate || true
-rm -rf "$VENV_PATH"
-
-echo "Tests completed for: $CONNECTOR_DIR"
-echo "Outputs saved to: $OUT_DIR"
-echo "----------------------------------------"
+  echo 'Removing virtual environment'
+  deactivate
+  rm -rf "$venv_name"
 done
+
+
