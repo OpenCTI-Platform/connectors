@@ -82,6 +82,35 @@ class HashAlgorithm(PermissiveEnum):
     TLSH = "TLSH"
 
 
+class ImplementationLanguage(PermissiveEnum):
+    """Implementation Language Open Vocabulary.
+
+    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_1s3o9ou3pbq
+    """
+
+    APPLESCRIPT = "applescript"
+    BASH = "bash"
+    C = "c"
+    C_PLUS_PLUS = "c++"
+    C_SHARP = "c#"
+    GO = "go"
+    JAVA = "java"
+    JAVASCRIPT = "javascript"
+    LUA = "lua"
+    OBJECTIVE_C = "objective-c"
+    PERL = "perl"
+    PHP = "php"
+    POWERSHELL = "powershell"
+    PYTHON = "python"
+    RUBY = "ruby"
+    SCALA = "scala"
+    SWIFT = "swift"
+    TYPESCRIPT = "typescript"
+    VISUAL_BASIC = "visual-basic"
+    X86_32 = "x86-32"
+    X86_64 = "x86-64"
+
+
 class IndustrySector(PermissiveEnum):
     """Industry Sector Open Vocabulary.
 
@@ -143,6 +172,81 @@ class LocationType(StrEnum):
     POSITION = "Position"
 
 
+class MalwareCapability(PermissiveEnum):
+    """Malware Capability Open Vocabulary.
+
+    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_2b6es5hl7gmc
+    """
+
+    ACCESSES_REMOTE_MACHINES = "accesses-remote-machines"
+    ANTI_DEBUGGING = "anti-debugging"
+    ANTI_DISASSEMBLY = "anti-disassembly"
+    ANTI_EMULATION = "anti-emulation"
+    ANTI_MEMORY_FORENSICS = "anti-memory-forensics"
+    ANTI_SANDBOX = "anti-sandbox"
+    ANTI_VM = "anti-vm"
+    CAPTURES_INPUT_PERIPHERALS = "captures-input-peripherals"
+    CAPTURES_OUTPUT_PERIPHERALS = "captures-output-peripherals"
+    CAPTURES_SYSTEM_STATE_DATA = "captures-system-state-data"
+    CLEANS_TRACES_OF_INFECTION = "cleans-traces-of-infection"
+    COMMITS_FRAUD = "commits-fraud"
+    COMMUNICATES_WITH_C2 = "communicates-with-c2"
+    COMPROMISES_DATA_AVAILABILITY = "compromises-data-availability"
+    COMPROMISES_DATA_INTEGRITY = "compromises-data-integrity"
+    COMPROMISES_SYSTEM_AVAILABILITY = "compromises-system-availability"
+    CONTROLS_LOCAL_MACHINE = "controls-local-machine"
+    DEGRADES_SECURITY_SOFTWARE = "degrades-security-software"
+    DEGRADES_SYSTEM_UPDATES = "degrades-system-updates"
+    DETERMINES_C2_SERVER = "determines-c2-server"
+    EMAILS_SPAM = "emails-spam"
+    ESCALATES_PRIVILEGES = "escalates-privileges"
+    EVADES_AV = "evades-av"
+    EXFILTRATES_DATA = "exfiltrates-data"
+    FINGERPRINTS_HOST = "fingerprints-host"
+    HIDES_ARTIFACTS = "hides-artifacts"
+    HIDES_EXECUTING_CODE = "hides-executing-code"
+    INFECTS_FILES = "infects-files"
+    INFECTS_REMOTE_MACHINES = "infects-remote-machines"
+    INSTALLS_OTHER_COMPONENTS = "installs-other-components"
+    PERSISTS_AFTER_SYSTEM_REBOOT = "persists-after-system-reboot"
+    PREVENTS_ARTIFACT_ACCESS = "prevents-artifact-access"
+    PREVENTS_ARTIFACT_DELETION = "prevents-artifact-deletion"
+    PROBES_NETWORK_ENVIRONMENT = "probes-network-environment"
+    SELF_MODIFIES = "self-modifies"
+    STEALS_AUTHENTICATION_CREDENTIALS = "steals-authentication-credentials"
+    VIOLATES_SYSTEM_OPERATIONAL_INTEGRITY = "violates-system-operational-integrity"
+
+
+class MalwareType(PermissiveEnum):
+    """Malware Type Open Vocabulary.
+
+    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_oxlc4df65spl
+    """
+
+    ADWARE = "adware"
+    BACKDOOR = "backdoor"
+    BOT = "bot"
+    BOOTKIT = "bootkit"
+    DDOS = "ddos"
+    DOWNLOADER = "downloader"
+    DROPPER = "dropper"
+    EXPLOIT_KIT = "exploit-kit"
+    KEYLOGGER = "keylogger"
+    RANSOMWARE = "ransomware"
+    REMOTE_ACCESS_TROJAN = "remote-access-trojan"
+    RESOURCE_EXPLOITATION = "resource-exploitation"
+    ROGUE_SECURITY_SOFTWARE = "rogue-security-software"
+    ROOTKIT = "rootkit"
+    SCREEN_CAPTURE = "screen-capture"
+    SPYWARE = "spyware"
+    TROJAN = "trojan"
+    UNKNOWN = "unknown"
+    VIRUS = "virus"
+    WEBSHELL = "webshell"
+    WIPER = "wiper"
+    WORM = "worm"
+
+
 class NoteType(PermissiveEnum):
     """Note Type Enum.
 
@@ -176,6 +280,22 @@ class Platform(PermissiveEnum):
     MACOS = "macos"
     LINUX = "linux"
     ANDROID = "android"
+
+
+class ProcessorArchitecture(PermissiveEnum):
+    """Processor Architecture Open Vocabulary.
+
+    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_iup9ob79qwei
+    """
+
+    ALPHA = "alpha"
+    ARM = "arm"
+    IA_64 = "ia-64"
+    MIPS = "mips"
+    POWERPC = "powerpc"
+    SPARC = "sparc"
+    X86 = "x86"
+    X86_64 = "x86-64"
 
 
 class Reliability(PermissiveEnum):

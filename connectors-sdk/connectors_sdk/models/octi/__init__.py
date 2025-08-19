@@ -19,7 +19,7 @@ from connectors_sdk.models.octi.activities.observations import (
     IPV6Address,
     Software,
 )
-from connectors_sdk.models.octi.knowledge.arsenal import Vulnerability
+from connectors_sdk.models.octi.knowledge.arsenal import Malware, Vulnerability
 from connectors_sdk.models.octi.knowledge.entities import Organization, Sector
 from connectors_sdk.models.octi.knowledge.locations import City, Country
 from connectors_sdk.models.octi.knowledge.techniques import AttackPattern
@@ -51,6 +51,7 @@ __all__ = [
     "IPV4Address",
     "IPV6Address",
     "KillChainPhase",
+    "Malware",
     "Note",
     "Organization",
     "OrganizationAuthor",

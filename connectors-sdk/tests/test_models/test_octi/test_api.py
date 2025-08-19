@@ -20,6 +20,7 @@ FEATURE_NAMES = [
     "IPV4Address",
     "IPV6Address",
     "KillChainPhase",
+    "Malware",
     "Note",
     "Organization",
     "OrganizationAuthor",
