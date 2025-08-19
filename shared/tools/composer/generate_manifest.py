@@ -2,7 +2,7 @@ import json
 import os
 import traceback
 
-__OPENCTI_CURRENT_VERSION__ = "6.7.0"
+__OPENCTI_CURRENT_VERSION__ = "6.7.9"
 __CONNECTOR_INFOS_FILENAME__ = "connector_infos.json"
 __CONNECTOR_SCHEMA_FILENAME__ = "connector_schema.json"
 __CATALOG_ID__ = "filigran-catalog-id"
