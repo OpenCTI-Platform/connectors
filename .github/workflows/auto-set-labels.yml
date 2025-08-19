@@ -8,4 +8,4 @@ jobs:
       - name: Setting labels
         uses: FiligranHQ/auto-label@1.0.0
         with:
-          labels_by_organization: "{\"FiligranHQ\":[\"filigran team\"]}"
+          labels_by_organization: "{\"OpenCTI-Platform\":[\"filigran team\"]}"
