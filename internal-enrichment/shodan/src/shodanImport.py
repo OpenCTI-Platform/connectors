@@ -433,8 +433,6 @@ class ShodanConnector:
             except shodan.APIError as e:
                 # Handling specific errors for Shodan API
                 raise ValueError(f"Shodan API Error : {str(e)}")
-            except Exception as e:
-                return self.helper.log_error(f"Unexpected Error occurred: {str(e)}")
         elif (
             stix_entity["type"] == "indicator"
             and stix_entity["pattern_type"] == "shodan"
@@ -519,7 +517,11 @@ class ShodanConnector:
                             response, stix_objects, stix_entity_ip, score, True
                         )
                         number_processed = number_processed + 1
-
+                else:
+                    # If import_search_results is False, we only generate the stix bundle from the pattern
+                    bundle_objects = self._generate_stix_bundle(
+                        {"data": []}, stix_objects, stix_entity, score, True
+                    )
                 # send stix2 bundle
                 uniq_bundles_objects = list(
                     {obj["id"]: obj for obj in bundle_objects}.values()
@@ -536,8 +538,6 @@ class ShodanConnector:
             except shodan.APIError as e:
                 # Handling specific errors for Shodan API
                 raise ValueError(f"Shodan API Error : {str(e)}")
-            except Exception as e:
-                return self.helper.log_error(f"Unexpected Error occurred: {str(e)}")
         else:
             if stix_entity["type"] == "indicator":
                 raise ValueError(
@@ -546,9 +546,22 @@ class ShodanConnector:
             else:
                 raise ValueError("Unsupported type: " + stix_entity["type"])
 
+    def process_message(self, data: Dict) -> str:
+        try:
+            self._process_message(data)
+        except Exception as e:
+            self.helper.connector_logger.error(
+                "[CONNECTOR] An unexpected Error occurred", {"error_message": str(e)}
+            )
+            # If an error occurs, we send the original stix objects back
+            self.helper.send_stix2_bundle(
+                self.helper.stix2_create_bundle(data["stix_objects"])
+            )
+            raise e
+
     # Start the main loop
     def start(self):
-        self.helper.listen(message_callback=self._process_message)
+        self.helper.listen(message_callback=self.process_message)
 
 
 if __name__ == "__main__":
