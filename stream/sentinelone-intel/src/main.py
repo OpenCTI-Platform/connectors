@@ -1,8 +1,8 @@
 import traceback
 
 from pycti import OpenCTIConnectorHelper
-from stream_connector import SentinelOneIntelConnector
-from stream_connector.config_loader import ConfigConnector
+from sentinelone_connector import SentinelOneIntelConnector
+from sentinelone_connector.config_loader import ConfigConnector
 
 if __name__ == "__main__":
     """

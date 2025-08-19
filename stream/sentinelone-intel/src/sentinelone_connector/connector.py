@@ -8,6 +8,7 @@ from .config_loader import ConfigConnector
 #TODO: REMOVE
 from datetime import datetime
 import logging
+import time
 
 
 class SentinelOneIntelConnector:
@@ -22,7 +23,7 @@ class SentinelOneIntelConnector:
         self.client = SentinelOneClient(config, helper)
 
         #TODO: REMOVE
-        self._setup_development_environment()
+        self._setup_development_environment(helper)
 
 
     def check_stream_id(self) -> None:
@@ -49,8 +50,8 @@ class SentinelOneIntelConnector:
         except Exception:
             raise ValueError("Cannot process the message")
 
-
         if data["type"] == "indicator" and data["pattern_type"] == "stix":
+            print("indicator")
             if msg.event == "create":
                 self.helper.connector_logger.info("Creating IOC")
                 self.client.create_indicator(data)

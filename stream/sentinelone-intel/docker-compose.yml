@@ -8,7 +8,7 @@ services:
       - OPENCTI_TOKEN=CHANGEME
       # Connector's definition parameters REQUIRED
       - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_NAME=CHANGEME
+      - CONNECTOR_NAME=SentinelOne Intel Stream Connecto
       - CONNECTOR_SCOPE=CHANGEME
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_LIVE_STREAM_ID=live # ID of the live stream created in the OpenCTI UI

@@ -3,9 +3,8 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  id: 'ChangeMe'
-  type: 'INTERNAL_IMPORT_FILE'
-  name: 'Internal Import File Connector Template'
+  id: 'e47da89e-ae1e-4340-9fff-2ec35a883889'
+  name: 'SentinelOne Intel Stream Connector'
   scope: 'ChangeMe'
   log_level: 'info'
   live_stream_id: 'live' # ID of the live stream created in the OpenCTI UI
@@ -15,6 +14,6 @@ connector:
 sentinelone-intel:
   api_url: 'ChangeMe'
   api_key: 'ChangeMe'
-  account_id: 'ChangeMe'
-  site_id: 'ChangeMe'
-  group_id: 'ChangeMe'
+  account_id: 'ChangeMeOrRemove'
+  site_id: 'ChangeMeOrRemove'
+  group_id: 'ChangeMeOrRemove'

@@ -52,8 +52,8 @@ class ConfigConnector:
             self.load,
             default=None,  
             required=True
-        ).strip("APIToken ")
-
+        )
+        #TODO: strip APIToken doesnt work here so implement other
 
         #SentinelOne API Filtering Parameters:
 
@@ -82,9 +82,9 @@ class ConfigConnector:
         )
 
         #At least one of the three IDs are required to interface with the API (see README for more info)
-        if (self.s1_account_id is None and self.s1_group_id is None and self.s1_site_id is None):
+        if (self.account_id is None and self.group_id is None and self.site_id is None):
             raise ValueError("Need to put one of acc group site, see README for more info")
         
         #API requests cannot use both an account and site ID (see README for more info)
-        if (self.s1_account_id is not None and self.s1_site_id is not None):
+        if (self.account_id is not None and self.site_id is not None):
             raise ValueError("Cannot use both account id and site id at same time, see README for more info")
