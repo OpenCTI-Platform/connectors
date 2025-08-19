@@ -30,13 +30,6 @@ from pycti import (
 )
 
 
-def smart_truncate(content, length=100, suffix="..."):
-    if len(content) <= length:
-        return content
-    else:
-        return " ".join(content[: length + 1].split(" ")[0:-1]) + suffix
-
-
 class Silobreaker:
     def __init__(self):
         # Instantiate the connector helper from config
@@ -588,12 +581,8 @@ class Silobreaker:
                             )
                             objects.append(relationship_stix)
                 if len(objects) > 0:
-                    description = smart_truncate(
-                        self._convert_to_markdown(
-                            item["Extras"]["DocumentTeasers"]["HtmlSnippet"]
-                        ),
-                        200,
-                        "...",
+                    description = self._convert_to_markdown(
+                        item["Extras"]["DocumentTeasers"]["HtmlSnippet"]
                     )
                     content = item["Extras"]["DocumentTeasers"]["HtmlSnippet"]
                     if (
@@ -605,12 +594,8 @@ class Silobreaker:
                             .encode("utf-8")
                             .decode("utf-8")
                         )
-                        description = smart_truncate(
-                            self._convert_to_markdown(
-                                item["Extras"]["DocumentFullText"]["HtmlFullText"]
-                            ),
-                            200,
-                            "...",
+                        description = self._convert_to_markdown(
+                            item["Extras"]["DocumentFullText"]["HtmlFullText"]
                         )
                     file = None
                     if (
