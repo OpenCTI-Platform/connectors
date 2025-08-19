@@ -1,3 +1,3 @@
-from .connector import IndicatorConnector
+from .connector import ConnectorTemplate
 
-__all__ = ["IndicatorConnector"]
+__all__ = ["ConnectorTemplate"]

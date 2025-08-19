@@ -4,18 +4,14 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'STREAM'
-  name: 'SentinelOne Intel'
+  type: 'INTERNAL_IMPORT_FILE'
+  name: 'Internal Import File Connector Template'
   scope: 'ChangeMe'
   log_level: 'info'
   live_stream_id: 'live' # ID of the live stream created in the OpenCTI UI
   live_stream_listen_delete: true
   live_stream_no_dependencies: true
 
-sentinelone_intel:
-  url: 'change Me Ending In/'
+connector_template:
+  api_base_url: 'ChangeMe'
   api_key: 'ChangeMe'
-  account_id: 'ChangeMe'
-  max_api_attempts: 5
-  log_s1_response: true
-  
