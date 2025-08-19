@@ -35,17 +35,56 @@ class ConfigConnector:
         Connector configuration variables
         :return: None
         """
-        # OpenCTI configurations
 
-        # Connector extra parameters
-        self.api_base_url = get_config_variable(
-            "CONNECTOR_TEMPLATE_API_BASE_URL",
-            ["connector_template", "api_base_url"],
+        #SentinelOne API Basic Parameters: Mandatory.
+
+        self.api_url = get_config_variable(
+            "SENTINELONE-INTEL_API_URL",
+            ["sentinelone-intel", "api_url"],
             self.load,
-        )
+            default=None,  
+            required=True  
+        ).strip("/")
 
         self.api_key = get_config_variable(
-            "CONNECTOR_TEMPLATE_API_KEY",
-            ["connector_template", "api_key"],
+            "SENTINELONE-INTEL_API_KEY",
+            ["sentinelone-intel", "api_key"],
             self.load,
+            default=None,  
+            required=True
+        ).strip("APIToken ")
+
+
+        #SentinelOne API Filtering Parameters:
+
+        self.account_id = get_config_variable(
+            "SENTINELONE-INTEL_ACCOUNT_ID",
+            ["sentinelone-intel", "account_id"],
+            self.load,
+            default=None,
+            isNumber=True
         )
+
+        self.site_id = get_config_variable(
+            "SENTINELONE-INTEL_SITE_ID",
+            ["sentinelone-intel", "site_id"],
+            self.load,
+            default=None,
+            isNumber=True
+        )
+
+        self.group_id = get_config_variable(
+            "SENTINELONE-INTEL_GROUP_ID", 
+            ["sentinelone-intel", "group_id"],
+            self.load,
+            default=None,
+            isNumber=True
+        )
+
+        #At least one of the three IDs are required to interface with the API (see README for more info)
+        if (self.s1_account_id is None and self.s1_group_id is None and self.s1_site_id is None):
+            raise ValueError("Need to put one of acc group site, see README for more info")
+        
+        #API requests cannot use both an account and site ID (see README for more info)
+        if (self.s1_account_id is not None and self.s1_site_id is not None):
+            raise ValueError("Cannot use both account id and site id at same time, see README for more info")

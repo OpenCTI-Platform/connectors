@@ -12,6 +12,9 @@ connector:
   live_stream_listen_delete: true
   live_stream_no_dependencies: true
 
-connector_template:
-  api_base_url: 'ChangeMe'
+sentinelone-intel:
+  api_url: 'ChangeMe'
   api_key: 'ChangeMe'
+  account_id: 'ChangeMe'
+  site_id: 'ChangeMe'
+  group_id: 'ChangeMe'
