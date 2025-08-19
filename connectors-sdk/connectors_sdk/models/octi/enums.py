@@ -260,6 +260,19 @@ class NoteType(PermissiveEnum):
     EXTERNAL = "external"
 
 
+class OrganizationType(PermissiveEnum):
+    """Organization Type Open Vocabulary.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L770
+    """
+
+    VENDOR = "vendor"
+    PARTNER = "partner"
+    CONSTITUENT = "constituent"
+    CSIRT = "csirt"
+    OTHER = "other"
+
+
 class Permission(PermissiveEnum):
     """Permission Open Vocabulary.
 

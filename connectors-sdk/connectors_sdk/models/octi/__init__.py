@@ -20,7 +20,11 @@ from connectors_sdk.models.octi.activities.observations import (
     Software,
 )
 from connectors_sdk.models.octi.knowledge.arsenal import Malware, Vulnerability
-from connectors_sdk.models.octi.knowledge.entities import Organization, Sector
+from connectors_sdk.models.octi.knowledge.entities import (
+    Individual,
+    Organization,
+    Sector,
+)
 from connectors_sdk.models.octi.knowledge.locations import City, Country
 from connectors_sdk.models.octi.knowledge.techniques import AttackPattern
 from connectors_sdk.models.octi.knowledge.threats import IntrusionSet
@@ -47,6 +51,7 @@ __all__ = [
     "ExternalReference",
     "File",
     "Indicator",
+    "Individual",
     "IntrusionSet",
     "IPV4Address",
     "IPV6Address",
