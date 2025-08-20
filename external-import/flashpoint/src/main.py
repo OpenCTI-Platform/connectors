@@ -17,7 +17,7 @@ if __name__ == "__main__":
         config = ConfigLoader()
         helper = OpenCTIConnectorHelper(config.model_dump_pycti())
 
-        connector = FlashpointConnector()
+        connector = FlashpointConnector(config=config, helper=helper)
         connector.run()
     except Exception:
         traceback.print_exc()
