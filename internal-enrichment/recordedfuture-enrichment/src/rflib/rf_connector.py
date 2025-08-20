@@ -123,7 +123,7 @@ class RFEnrichmentConnector:
 
         Notes:
             - In case of success, return a success message a string
-            - In case of error, return an error message **in a list**, e.g. ["An error occured"] (backward compatibility)
+            - In case of error, raise the error (pycti will handle it)
         """
 
         try:
@@ -180,16 +180,13 @@ class RFEnrichmentConnector:
                 VulnerabilityEnrichmentError,
             ) as err:
                 self.helper.connector_logger.error(err)
-                return [repr(err)]  # error message MUST be returned as a list
+                raise err  # pycti will send it to OCTI
 
         except Exception as err:
             self.helper.connector_logger.error(
                 "An unexpected error occured", {"error": err}
             )
-            return [
-                f"An unexpected error occured: {repr(err)}. "
-                "See connector's log for more details."
-            ]  # error message MUST be returned as a list
+            raise err  # pycti will send it to OCTI
 
     def start(self):
         """Start the main loop"""
