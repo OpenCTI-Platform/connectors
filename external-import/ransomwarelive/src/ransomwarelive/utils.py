@@ -35,7 +35,7 @@ def threat_description_generator(group_name: str, group_data) -> str:
     return description
 
 
-def fetch_country_domain(domain: str):
+def fetch_country_domain(helper, domain: str):
     """
     Fetches the whois information of a domain
 
@@ -46,6 +46,13 @@ def fetch_country_domain(domain: str):
     """
     try:
         w = whois.whois(domain)
+
+        # Log warning to explain "Error trying to connect to socket: closing socket"
+        # Check README for further explanations
+        if not w.get("domain_name", None):
+            helper.connector_logger.warning(
+                "WHOIS call impossible for this domain", {"domain": domain}
+            )
 
         description = f"Domain:{domain}  \n"
         if w.get("country") is not None:
