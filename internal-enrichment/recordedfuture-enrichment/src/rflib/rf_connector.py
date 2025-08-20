@@ -125,6 +125,9 @@ class RFEnrichmentConnector:
             - In case of success, return a success message a string
             - In case of error, raise the error (pycti will handle it)
         """
+        enrichment_completed = False  # Enrichment state flag
+
+        original_stix_objects: list[dict] = data["stix_objects"]
 
         try:
             enrichment_entity: dict = data["enrichment_entity"]
@@ -160,7 +163,7 @@ class RFEnrichmentConnector:
 
                 self.helper.connector_logger.info("Sending bundle...")
 
-                bundle_objects = [
+                bundle_objects = original_stix_objects + [
                     octi_object.to_stix2_object() for octi_object in octi_objects
                 ]
                 bundle = self.helper.stix2_create_bundle(bundle_objects)
@@ -168,6 +171,8 @@ class RFEnrichmentConnector:
                     bundle=bundle,
                     cleanup_inconsistent_bundle=False,  # TODO: change to True
                 )
+
+                enrichment_completed = True
 
                 message = f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
                 self.helper.connector_logger.info(message)
@@ -187,6 +192,12 @@ class RFEnrichmentConnector:
                 "An unexpected error occured", {"error": err}
             )
             raise err  # pycti will send it to OCTI
+        finally:
+            # Ensure objects in original bundle are always sent back,
+            # even if they have not been enriched (for compatibility with playbooks)
+            if not enrichment_completed:
+                bundle = self.helper.stix2_create_bundle(original_stix_objects)
+                self.helper.send_stix2_bundle(bundle)
 
     def start(self):
         """Start the main loop"""
