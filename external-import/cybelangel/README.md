@@ -1,8 +1,11 @@
 # CybelAngel Connector for OpenCTI
 
+The scope of this connector is : **CybelAngel Threat Intelligence Claimed Attacks**
+
 This connector allows you to automatically import threat intelligence from the CybelAngel platform into OpenCTI. It retrieves claimed attacks and transforms them into STIX 2.1 objects, including intrusion sets, campaigns, victim organizations, and relationships.
 
 ## Requirements
+
 - Python 3.10+
 - OpenCTI Platform >= 6.7.0
 
