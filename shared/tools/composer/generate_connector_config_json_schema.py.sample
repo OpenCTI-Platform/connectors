@@ -23,7 +23,7 @@ __CONNECTOR_METADATA_DIRECTORY__ = "__metadata__"
 __CONNECTOR_CONFIG_JSON_SCHEMA_FILENAME__ = "connector_config_schema.json"
 
 
-def getConnectorConfigSchemaGenerator(connector_name: str) -> GenerateJsonSchema:
+def get_connector_config_schema_generator(connector_name: str) -> GenerateJsonSchema:
     class ConnectorConfigSchemaGenerator(GenerateJsonSchema):
         @override
         def generate(self, schema, mode="validation"):
@@ -168,7 +168,7 @@ class ConnectorContractGenerator:
         Always subclass GenerateJsonSchema and pass the class to Pydantic, not an instance
         :return: The generated connector schema as a dictionary.
         """
-        schema_generator = getConnectorConfigSchemaGenerator(self.connector_name)
+        schema_generator = get_connector_config_schema_generator(self.connector_name)
 
         return self.connector_config_loader.model_json_schema(
             by_alias=False,
