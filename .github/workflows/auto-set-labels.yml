@@ -1,5 +1,12 @@
 name: Assign labels on PR from an organization
-on: pull_request
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -8,4 +15,4 @@ jobs:
       - name: Setting labels
         uses: FiligranHQ/auto-label@1.0.0
         with:
-          labels_by_organization: "{\"OpenCTI-Platform\":[\"filigran team\"]}"
+          labels_by_organization: "{\"FiligranHQ\":[\"filigran team\"]}"
