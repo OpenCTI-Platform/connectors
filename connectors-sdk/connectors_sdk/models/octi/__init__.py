@@ -27,7 +27,7 @@ from connectors_sdk.models.octi.knowledge.entities import (
 )
 from connectors_sdk.models.octi.knowledge.locations import City, Country
 from connectors_sdk.models.octi.knowledge.techniques import AttackPattern
-from connectors_sdk.models.octi.knowledge.threats import IntrusionSet
+from connectors_sdk.models.octi.knowledge.threats import IntrusionSet, ThreatActorGroup
 from connectors_sdk.models.octi.relationships import (
     Relationship,
     based_on,
@@ -64,6 +64,7 @@ __all__ = [
     "Report",
     "Sector",
     "Software",
+    "ThreatActorGroup",
     "TLPMarking",
     "URL",
     "Vulnerability",

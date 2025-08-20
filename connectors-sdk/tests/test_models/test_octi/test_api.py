@@ -29,6 +29,7 @@ FEATURE_NAMES = [
     "Report",
     "Sector",
     "Software",
+    "ThreatActorGroup",
     "TLPMarking",
     "URL",
     "Vulnerability",

@@ -341,6 +341,36 @@ class ReportType(PermissiveEnum):
     THREAT_REPORT = "threat-report"
 
 
+class ThreatActorRole(PermissiveEnum):
+    """Threat Actor Role Open Vocabulary.
+
+    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_u6befh8d18r
+    """
+
+    AGENT = "agent"
+    DIRECTOR = "director"
+    INDEPENDENT = "independent"
+    INFRASTRUCTURE_ARCHITECT = "infrastructure-architect"
+    INFRASTRUCTURE_OPERATOR = "infrastructure-operator"
+    MALWARE_AUTHOR = "malware-author"
+    SPONSOR = "sponsor"
+
+
+class ThreatActorSophistication(PermissiveEnum):
+    """Threat Actor Sophistication Open Vocabulary.
+
+    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_8jm676xbnggg
+    """
+
+    NONE = "none"
+    MINIMAL = "minimal"
+    INTERMEDIATE = "intermediate"
+    ADVANCED = "advanced"
+    EXPERT = "expert"
+    INNOVATOR = "innovator"
+    STRATEGIC = "strategic"
+
+
 class TLPLevel(StrEnum):
     """TLP Level Enum.
 
