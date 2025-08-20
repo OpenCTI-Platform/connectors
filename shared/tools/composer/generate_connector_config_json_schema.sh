@@ -3,7 +3,6 @@
 set -euo pipefail  # exit on error
 
 CONNECTOR_METADATA_DIRECTORY="__metadata__"
-CONNECTOR_MANIFEST_FILENAME="connector_manifest.json"
 VENV_NAME=".temp_venv"
 
 find_requirements_txt() {
