@@ -29,7 +29,9 @@ class CybelAngel:
 
         # Instantiate the connector helper from config
         try:
-            config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
+            config_file_path = (
+                os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
+            )
             config_file_path = config_file_path.replace("\\", "/")
             config = (
                 yaml.load(open(config_file_path), Loader=yaml.FullLoader)
@@ -40,30 +42,70 @@ class CybelAngel:
             self.helper = OpenCTIConnectorHelper(config)
 
             # Extra config
-            self.opencti_url = get_config_variable("OPENCTI_URL", ["opencti", "url"], config,
-                                                   default="http://opencti:8080")
-            self.opencti_token = get_config_variable("OPENCTI_TOKEN", ["opencti", "token"], config)
-            self.connector_id = get_config_variable("CONNECTOR_ID", ["connector", "id"], config)
-            self.connector_type = get_config_variable("CONNECTOR_TYPE", ["connector", "type"], config,
-                                                      default="EXTERNAL_IMPORT")
-            self.connector_name = get_config_variable("CONNECTOR_NAME", ["connector", "name"], config,
-                                                      default="CybelAngel")
-            self.connector_scope = get_config_variable("CONNECTOR_SCOPE", ["connector", "scope"], config, default="all")
-            self.connector_log_level = get_config_variable("CONNECTOR_LOG_LEVEL", ["connector", "log_level"], config,
-                                                           default="error")
-            self.cybelangel_client_id = get_config_variable("CYBELANGEL_CLIENT_ID", ["cybelangel", "client_id"], config)
-            self.cybelangel_client_secret = get_config_variable("CYBELANGEL_CLIENT_SECRET",
-                                                                ["cybelangel", "client_secret"], config)
-            self.cybelangel_api_url = get_config_variable("CYBELANGEL_API_URL", ["cybelangel", "api_url"], config,
-                                                          default="https://api.cybelangel.com")
-            self.cybelangel_auth_url = get_config_variable("CYBELANGEL_AUTH_URL", ["cybelangel", "auth_url"], config,
-                                                           default="https://auth.cybelangel.com/oauth/token")
-            self.cybelangel_interval = get_config_variable("CYBELANGEL_INTERVAL", ["cybelangel", "interval"], config,
-                                                           isNumber=True, default=1)
-            self.cybelangel_marking = get_config_variable("CYBELANGEL_MARKING", ["cybelangel", "marking"],
-                                                          config, default="TLP:AMBER+STRICT")
-            self.cybelangel_fetch_period = get_config_variable("CYBELANGEL_FETCH_PERIOD",
-                                                               ["cybelangel", "fetch_period"], config, default="7")
+            self.opencti_url = get_config_variable(
+                "OPENCTI_URL", ["opencti", "url"], config, default="http://opencti:8080"
+            )
+            self.opencti_token = get_config_variable(
+                "OPENCTI_TOKEN", ["opencti", "token"], config
+            )
+            self.connector_id = get_config_variable(
+                "CONNECTOR_ID", ["connector", "id"], config
+            )
+            self.connector_type = get_config_variable(
+                "CONNECTOR_TYPE",
+                ["connector", "type"],
+                config,
+                default="EXTERNAL_IMPORT",
+            )
+            self.connector_name = get_config_variable(
+                "CONNECTOR_NAME", ["connector", "name"], config, default="CybelAngel"
+            )
+            self.connector_scope = get_config_variable(
+                "CONNECTOR_SCOPE", ["connector", "scope"], config, default="all"
+            )
+            self.connector_log_level = get_config_variable(
+                "CONNECTOR_LOG_LEVEL",
+                ["connector", "log_level"],
+                config,
+                default="error",
+            )
+            self.cybelangel_client_id = get_config_variable(
+                "CYBELANGEL_CLIENT_ID", ["cybelangel", "client_id"], config
+            )
+            self.cybelangel_client_secret = get_config_variable(
+                "CYBELANGEL_CLIENT_SECRET", ["cybelangel", "client_secret"], config
+            )
+            self.cybelangel_api_url = get_config_variable(
+                "CYBELANGEL_API_URL",
+                ["cybelangel", "api_url"],
+                config,
+                default="https://api.cybelangel.com",
+            )
+            self.cybelangel_auth_url = get_config_variable(
+                "CYBELANGEL_AUTH_URL",
+                ["cybelangel", "auth_url"],
+                config,
+                default="https://auth.cybelangel.com/oauth/token",
+            )
+            self.cybelangel_interval = get_config_variable(
+                "CYBELANGEL_INTERVAL",
+                ["cybelangel", "interval"],
+                config,
+                isNumber=True,
+                default=1,
+            )
+            self.cybelangel_marking = get_config_variable(
+                "CYBELANGEL_MARKING",
+                ["cybelangel", "marking"],
+                config,
+                default="TLP:AMBER+STRICT",
+            )
+            self.cybelangel_fetch_period = get_config_variable(
+                "CYBELANGEL_FETCH_PERIOD",
+                ["cybelangel", "fetch_period"],
+                config,
+                default="7",
+            )
         except Exception as e:
             self.helper.connector_logger.error(
                 f"Error loading configuration: {e}. Please check your config.yml file."
@@ -158,16 +200,18 @@ class CybelAngel:
             "client_id": self.cybelangel_client_id,
             "client_secret": self.cybelangel_client_secret,
             "audience": "https://platform.cybelangel.com/",
-            "grant_type": "client_credentials"
+            "grant_type": "client_credentials",
         }
 
         headers = {
             "Content-Type": "application/json",
             "User-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
-                          "Chrome/138.0.0.0 Safari/537.36 "
+            "Chrome/138.0.0.0 Safari/537.36 ",
         }
         for attempt in range(1, max_retries + 1):
-            self.helper.connector_logger.info(f"Attempt {attempt} to authenticate with CybelAngel API")
+            self.helper.connector_logger.info(
+                f"Attempt {attempt} to authenticate with CybelAngel API"
+            )
             try:
                 response = requests.post(
                     self.cybelangel_auth_url, json=auth_data, headers=headers
@@ -205,13 +249,17 @@ class CybelAngel:
                 spec_version="2.1",
                 name="CybelAngel",
                 description="Cybelangel is a cybersecurity company that specializes in detecting and mitigating cyber "
-                            "threats.",
+                "threats.",
                 confidence=50,
                 identity_class="organization",
                 type="identity",
-                object_marking_refs=[self.cybelangel_marking.id] if self.cybelangel_marking else None,
+                object_marking_refs=(
+                    [self.cybelangel_marking.id] if self.cybelangel_marking else None
+                ),
             )
-            self.helper.connector_logger.debug("CybelAngel identity object created successfully.")
+            self.helper.connector_logger.debug(
+                "CybelAngel identity object created successfully."
+            )
 
             return identity
         except Exception as e:
@@ -223,11 +271,15 @@ class CybelAngel:
     # ----------------------
     # STIX Builder
     # ----------------------
-    def _create_identity(self, name, identity_class, marking=None, created_by=None, contact_info=None):
+    def _create_identity(
+        self, name, identity_class, marking=None, created_by=None, contact_info=None
+    ):
         if not name:
             return None
         if len(name) < 2:
-            self.helper.connector_logger.warning(f"Identity name '{name}' is too short, adding whitespace.")
+            self.helper.connector_logger.warning(
+                f"Identity name '{name}' is too short, adding whitespace."
+            )
             name += " "
         return stix2.Identity(
             id=Identity.generate_id(name, identity_class),
@@ -235,10 +287,18 @@ class CybelAngel:
             identity_class=identity_class,
             contact_information=contact_info,
             object_marking_refs=marking,
-            created_by_ref=created_by
+            created_by_ref=created_by,
         )
 
-    def _create_relationship(self, rel_type, source_id, target_id, published_at, marking=None, created_by=None):
+    def _create_relationship(
+        self,
+        rel_type,
+        source_id,
+        target_id,
+        published_at,
+        marking=None,
+        created_by=None,
+    ):
         return stix2.Relationship(
             id=StixCoreRelationship.generate_id(rel_type, source_id, target_id),
             source_ref=source_id,
@@ -246,7 +306,7 @@ class CybelAngel:
             created=published_at,
             relationship_type=rel_type,
             object_marking_refs=marking,
-            created_by_ref=created_by
+            created_by_ref=created_by,
         )
 
     # ----------------------
@@ -254,7 +314,9 @@ class CybelAngel:
     # ----------------------
     def opencti_bundle(self, work_id, last_run=None):
         token = self.authenticate()
-        self.helper.connector_logger.debug("Token received, proceeding with data fetching.")
+        self.helper.connector_logger.debug(
+            "Token received, proceeding with data fetching."
+        )
         cybelangel_org_identity = self.create_cybelangel_org()
 
         if not token or not cybelangel_org_identity:
@@ -262,9 +324,14 @@ class CybelAngel:
             return
 
         since_date, end_date, parameters = self._build_fetch_parameters(last_run)
-        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        }
 
-        self._fetch_and_process_pages(headers, parameters, cybelangel_org_identity, work_id, since_date)
+        self._fetch_and_process_pages(
+            headers, parameters, cybelangel_org_identity, work_id, since_date
+        )
 
     def _build_fetch_parameters(self, last_run):
         if last_run:
@@ -273,7 +340,9 @@ class CybelAngel:
             except ValueError:
                 fetch_period = getattr(self, "cybelangel_fetch_period", "7")
                 since_date = datetime.now(timezone.utc) - timedelta(days=fetch_period)
-                since_date = since_date.replace(hour=0, minute=0, second=0, microsecond=0)
+                since_date = since_date.replace(
+                    hour=0, minute=0, second=0, microsecond=0
+                )
                 self.helper.connector_logger.warning(
                     f"Invalid last_run format. Using last {fetch_period} days."
                 )
@@ -293,7 +362,9 @@ class CybelAngel:
         )
         return since_date, end_date, parameters
 
-    def _fetch_and_process_pages(self, headers, parameters, author_org, work_id, since_date):
+    def _fetch_and_process_pages(
+        self, headers, parameters, author_org, work_id, since_date
+    ):
         page_offset = 0
         page_limit = 50
         has_more = True
@@ -301,40 +372,54 @@ class CybelAngel:
 
         while has_more:
             url = f"{self.cybelangel_api_url}/api/v1/claimed-attacks?page_offset={page_offset}&page_limit={page_limit}&{parameters}"
-            self.helper.connector_logger.debug(f"Fetching data from CybelAngel API: {url}")
+            self.helper.connector_logger.debug(
+                f"Fetching data from CybelAngel API: {url}"
+            )
             response = requests.get(url, headers=headers)
 
             # The CybelAngel token expires after 1 hour. This block reauthenticates in case the token is no longer valid
             if response.status_code == 401 and attempt < 3:
                 attempt += 1
-                self.helper.connector_logger.info(f"Token expired, re-authenticating. Attempt {attempt}...")
+                self.helper.connector_logger.info(
+                    f"Token expired, re-authenticating. Attempt {attempt}..."
+                )
                 token = self.authenticate()
                 if not token:
-                    self.helper.connector_logger.error("Re-authentication failed, exiting.")
+                    self.helper.connector_logger.error(
+                        "Re-authentication failed, exiting."
+                    )
                     return
                 headers["Authorization"] = f"Bearer {token}"
-                self.helper.connector_logger.info("Re-authentication successful, retrying data fetch.")
+                self.helper.connector_logger.info(
+                    "Re-authentication successful, retrying data fetch."
+                )
                 attempt = 0  # Reset attempt counter on successful response
                 continue
             elif response.status_code != 200:
                 self.helper.connector_logger.error(
                     f"Failed to fetch data from CybelAngel: {response.status_code}. Response: {response.text}. "
-                    f"Retrying...")
+                    f"Retrying..."
+                )
                 time.sleep(5)
                 attempt += 1
                 if attempt >= 3:
-                    self.helper.connector_logger.error("Failed to fetch data after 3 attempts, exiting.")
+                    self.helper.connector_logger.error(
+                        "Failed to fetch data after 3 attempts, exiting."
+                    )
                     return
                 continue
 
             attacks = response.json().get("claimed_attacks", [])
             if not attacks:
                 has_more = False
-                self.helper.connector_logger.info("No more attacks found, stopping processing.")
+                self.helper.connector_logger.info(
+                    "No more attacks found, stopping processing."
+                )
                 break
 
             self.helper.connector_logger.info(
-                f"Processing {len(attacks)} attacks - offset {page_offset} with limit {page_limit}")
+                f"Processing {len(attacks)} attacks - offset {page_offset} with limit {page_limit}"
+            )
 
             for attack in attacks:
                 self._process_attack(attack, since_date, author_org, work_id)
@@ -348,18 +433,23 @@ class CybelAngel:
         published_at = attack.get("published_at")
         if published_at:
             try:
-                published_at = datetime.strptime(published_at, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=timezone.utc)
+                published_at = datetime.strptime(
+                    published_at, "%Y-%m-%dT%H:%M:%S.%fZ"
+                ).replace(tzinfo=timezone.utc)
             except ValueError:
-                published_at = datetime.strptime(published_at, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+                published_at = datetime.strptime(
+                    published_at, "%Y-%m-%dT%H:%M:%SZ"
+                ).replace(tzinfo=timezone.utc)
 
         if since_date and published_at < since_date:
             self.helper.connector_logger.info(
                 f"Stopping processing as published_at {published_at.strftime('%Y-%m-%dT%H:%M:%SZ')} is before "
-                f"last_run value {since_date.strftime('%Y-%m-%dT%H:%M:%SZ')}")
+                f"last_run value {since_date.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+            )
             return
 
         stix_objects = [author_org, self.cybelangel_marking]
-        author_org_id = author_org['id'] if author_org else None
+        author_org_id = author_org["id"] if author_org else None
         marking_id = [self.cybelangel_marking.id] if self.cybelangel_marking else None
 
         campaign_objective = attack.get("category", "Unknown")
@@ -375,19 +465,25 @@ class CybelAngel:
         victim_sites = attack.get("victim_sites", [])
 
         # Handle Campaign modelization
-        final_actor = threat_actors[0] if threat_actors and threat_actors[0] else "Unknown actor"
+        final_actor = (
+            threat_actors[0] if threat_actors and threat_actors[0] else "Unknown actor"
+        )
 
         if victim_organizations:
             if len(victim_organizations) > 1:
                 campaign_name = f"{final_actor} targets multiple organizations"
-                campaign_description = f"{campaign_objective.capitalize()} campaign by {final_actor} targeting multiple " \
-                                       f"organizations: {', '.join(victim_organizations)} "
+                campaign_description = (
+                    f"{campaign_objective.capitalize()} campaign by {final_actor} targeting multiple "
+                    f"organizations: {', '.join(victim_organizations)} "
+                )
             else:
                 campaign_name = f"{final_actor} targets {victim_organizations[0]}"
                 campaign_description = f"{campaign_objective.capitalize()} campaign by {final_actor} targeting {victim_organizations[0]} "
         else:
-            campaign_name = f"{campaign_objective.capitalize()} campaign by {final_actor}" + (
-                f" ({published_at})" if published_at else "")
+            campaign_name = (
+                f"{campaign_objective.capitalize()} campaign by {final_actor}"
+                + (f" ({published_at})" if published_at else "")
+            )
             campaign_description = f"{campaign_objective.capitalize()} campaign by {final_actor} with no specific target"
 
         campaign = stix2.Campaign(
@@ -420,8 +516,14 @@ class CybelAngel:
             stix_objects.append(location)
 
             # Create relationships
-            relationship_campaign_location = self._create_relationship("targets", campaign.id, location.id,
-                                                                       published_at, marking_id, author_org_id)
+            relationship_campaign_location = self._create_relationship(
+                "targets",
+                campaign.id,
+                location.id,
+                published_at,
+                marking_id,
+                author_org_id,
+            )
             stix_objects.append(relationship_campaign_location)
 
         # Handle Organization modelization
@@ -437,10 +539,13 @@ class CybelAngel:
                     for org, site in zip(victim_organizations, victim_sites):
                         if len(org) < 2:
                             self.helper.connector_logger.info(
-                                f"Victim organization name {org} is too short, adding whitespace.")
+                                f"Victim organization name {org} is too short, adding whitespace."
+                            )
                             org = org + " "
 
-                        identity = self._create_identity(org, "Organization", marking_id, author_org_id, site)
+                        identity = self._create_identity(
+                            org, "Organization", marking_id, author_org_id, site
+                        )
                         identities.append(identity)
                         stix_objects.append(identity)
 
@@ -448,10 +553,13 @@ class CybelAngel:
                     for org in victim_organizations:
                         if len(org) < 2:
                             self.helper.connector_logger.info(
-                                f"Victim organization name {org} is too short, adding whitespace.")
+                                f"Victim organization name {org} is too short, adding whitespace."
+                            )
                             org = org + " "
 
-                        identity = self._create_identity(org, "Organization", marking_id, author_org_id)
+                        identity = self._create_identity(
+                            org, "Organization", marking_id, author_org_id
+                        )
                         identities.append(identity)
                         stix_objects.append(identity)
 
@@ -459,22 +567,37 @@ class CybelAngel:
                 for site in victim_sites:
                     if len(site) < 2:
                         self.helper.connector_logger.info(
-                            f"Victim site name {site} is too short, adding whitespace.")
+                            f"Victim site name {site} is too short, adding whitespace."
+                        )
                         site = site + " "
 
-                    identity = self._create_identity(site, "Organization", marking_id, author_org_id)
+                    identity = self._create_identity(
+                        site, "Organization", marking_id, author_org_id
+                    )
                     identities.append(identity)
                     stix_objects.append(identity)
 
             # Create relationships
             for identity in identities:
-                relationship_campaign_identity = self._create_relationship("targets", campaign.id, identity.id,
-                                                                           published_at, marking_id, author_org_id)
+                relationship_campaign_identity = self._create_relationship(
+                    "targets",
+                    campaign.id,
+                    identity.id,
+                    published_at,
+                    marking_id,
+                    author_org_id,
+                )
                 stix_objects.append(relationship_campaign_identity)
 
                 for location in locations:
-                    relationship_identity_location = self._create_relationship("located-at", identity.id, location.id,
-                                                                               published_at, marking_id, author_org_id)
+                    relationship_identity_location = self._create_relationship(
+                        "located-at",
+                        identity.id,
+                        location.id,
+                        published_at,
+                        marking_id,
+                        author_org_id,
+                    )
                     stix_objects.append(relationship_identity_location)
 
         # Handle Sector modelization
@@ -485,8 +608,14 @@ class CybelAngel:
             stix_objects.append(sector)
 
             # Create relationships
-            relationship_campaign_industry = self._create_relationship("targets", campaign.id, sector.id,
-                                                                       published_at, marking_id, author_org_id)
+            relationship_campaign_industry = self._create_relationship(
+                "targets",
+                campaign.id,
+                sector.id,
+                published_at,
+                marking_id,
+                author_org_id,
+            )
             stix_objects.append(relationship_campaign_industry)
 
         # Handle Intrusion Sets modelization
@@ -495,7 +624,8 @@ class CybelAngel:
                 continue
             if len(actor) < 2:
                 self.helper.connector_logger.info(
-                    f"Intrusion set name {actor} is too short, adding whitespace.")
+                    f"Intrusion set name {actor} is too short, adding whitespace."
+                )
                 actor = actor + " "
 
             intrusion_set = stix2.IntrusionSet(
@@ -510,32 +640,59 @@ class CybelAngel:
             stix_objects.append(intrusion_set)
 
             # Create relationships
-            relationship_campaign_intrusion = self._create_relationship("attributed-to", campaign.id, intrusion_set.id,
-                                                                        published_at, marking_id, author_org_id)
+            relationship_campaign_intrusion = self._create_relationship(
+                "attributed-to",
+                campaign.id,
+                intrusion_set.id,
+                published_at,
+                marking_id,
+                author_org_id,
+            )
             stix_objects.append(relationship_campaign_intrusion)
 
             for identity in identities:
-                relationship_intrusion_identity = self._create_relationship("targets", intrusion_set.id, identity.id,
-                                                                            published_at, marking_id, author_org_id)
+                relationship_intrusion_identity = self._create_relationship(
+                    "targets",
+                    intrusion_set.id,
+                    identity.id,
+                    published_at,
+                    marking_id,
+                    author_org_id,
+                )
                 stix_objects.append(relationship_intrusion_identity)
 
             for location in locations:
-                relationship_intrusion_location = self._create_relationship("targets", intrusion_set.id, location.id,
-                                                                            published_at, marking_id, author_org_id)
+                relationship_intrusion_location = self._create_relationship(
+                    "targets",
+                    intrusion_set.id,
+                    location.id,
+                    published_at,
+                    marking_id,
+                    author_org_id,
+                )
                 stix_objects.append(relationship_intrusion_location)
 
             for industry in industries:
-                relationship_intrusion_industry = self._create_relationship("targets", intrusion_set.id, industry.id,
-                                                                            published_at, marking_id, author_org_id)
+                relationship_intrusion_industry = self._create_relationship(
+                    "targets",
+                    intrusion_set.id,
+                    industry.id,
+                    published_at,
+                    marking_id,
+                    author_org_id,
+                )
                 stix_objects.append(relationship_intrusion_industry)
 
         # Send bundle to OpenCTI
         if stix_objects:
             try:
-                bundle = stix2.Bundle(objects=stix_objects, allow_custom=True).serialize()
+                bundle = stix2.Bundle(
+                    objects=stix_objects, allow_custom=True
+                ).serialize()
                 self.helper.send_stix2_bundle(bundle, update=True, work_id=work_id)
                 self.helper.connector_logger.info(
-                    f"Successfully processed {len(stix_objects)} STIX objects from CybelAngel.")
+                    f"Successfully processed {len(stix_objects)} STIX objects from CybelAngel."
+                )
             except Exception as e:
                 self.helper.connector_logger.error(f"Error creating STIX bundle: {e}")
 
@@ -558,7 +715,9 @@ class CybelAngel:
             current_state = self.helper.get_state()
             last_run = current_state.get("last_run") if current_state else None
             self.helper.connector_logger.info(
-                "Get Elements since " + last_run if last_run else "No previous run found"
+                "Get Elements since " + last_run
+                if last_run
+                else "No previous run found"
             )
 
             self.opencti_bundle(work_id, last_run)
@@ -573,7 +732,7 @@ class CybelAngel:
             error_message = f"Unexpected error during synchronization: {str(e)}"
             self.helper.api.work.report_expectation(
                 work_id=work_id,
-                error={"error": error_message, "source": "CybelAngel Connector"}
+                error={"error": error_message, "source": "CybelAngel Connector"},
             )
 
             self.helper.connector_logger.error(str(e))
