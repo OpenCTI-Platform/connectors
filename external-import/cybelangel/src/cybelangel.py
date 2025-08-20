@@ -1,20 +1,20 @@
-from datetime import datetime, timedelta, timezone
 import os
 import sys
 import time
+from datetime import datetime, timedelta, timezone
 
 import requests
 import stix2
 import yaml
 from pycti import (
-    IntrusionSet,
-    Identity,
-    Location,
     Campaign,
-    StixCoreRelationship,
+    Identity,
+    IntrusionSet,
+    Location,
     MarkingDefinition,
     OpenCTIConnectorHelper,
-    get_config_variable
+    StixCoreRelationship,
+    get_config_variable,
 )
 
 
