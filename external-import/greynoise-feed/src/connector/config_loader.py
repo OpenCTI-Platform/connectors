@@ -2,7 +2,7 @@ import os
 import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Optional
 
 import __main__
 from pydantic import (
@@ -24,7 +24,6 @@ from pydantic_settings import (
     YamlConfigSettingsSource,
 )
 
-# TODO: type optional fields as Optional[type]
 
 # Get the path of the __main__ module file (the entry point of the connector)
 _MAIN_PATH = os.path.dirname(os.path.abspath(__main__.__file__))
@@ -154,27 +153,32 @@ class ConnectorConfig(ConfigBaseModel):
     Define config specific to this type of connector, e.g. an `external-import`.
     """
 
-    id: str = Field(description="A UUID v4 to identify the connector in OpenCTI.")
-    name: str = Field(description="The name of the connector.")
     type: Literal["EXTERNAL_IMPORT"] = "EXTERNAL_IMPORT"
-    scope: ListFromString = Field(
-        description="The scope of the connector, e.g. 'greynoise'.",
-        default=["greynoise"],
+    id: str = Field(description="A UUID v4 to identify the connector in OpenCTI.")
+    name: str = Field(
+        description="The name of the connector.",
+        default="GreyNoise Feed",
     )
-    duration_period: timedelta = Field(
+    scope: Optional[ListFromString] = Field(
+        description="The scope of the connector, e.g. 'greynoise'.",
+        default=["greynoisefeed"],
+    )
+    duration_period: Optional[timedelta] = Field(
         description="The period of time to await between two runs of the connector.",
         default=timedelta(hours=24),
     )
-
-    log_level: Literal[
-        "debug",
-        "info",
-        "warn",
-        "error",
+    log_level: Optional[
+        Literal[
+            "debug",
+            "info",
+            "warn",
+            "error",
+        ]
     ] = Field(
         description="The minimum level of logs to display.",
         default="error",
     )
+
     expose_metrics: bool = Field(
         description="Whether to expose metrics or not.",
         default=False,
@@ -223,47 +227,49 @@ class ConnectorConfig(ConfigBaseModel):
 
 class GreynoiseConfig(ConfigBaseModel):
     api_key: str = Field(description="The API key to connect to Greynoise.")
-    feed_type: Literal[
-        "benign",
-        "malicious",
-        "suspicious",
-        "benign+malicious",
-        "malicious+suspicious",
-        "benign+suspicious+malicious",
-        "all",
+    feed_type: Optional[
+        Literal[
+            "benign",
+            "malicious",
+            "suspicious",
+            "benign+malicious",
+            "malicious+suspicious",
+            "benign+suspicious+malicious",
+            "all",
+        ]
     ] = Field(
         description="Type of feed to import.",
         default="malicious",
     )
-    limit: int = Field(
+    limit: Optional[int] = Field(
         description="Max number of indicators to ingest.",
         default=10_000,
     )
-    import_metadata: bool = Field(
+    import_metadata: Optional[bool] = Field(
         description="Import metadata (cities, sightings, etc.). ⚠️ Can generate a lot of data.",
         default=False,
     )
-    import_destination_sightings: bool = Field(
+    import_destination_sightings: Optional[bool] = Field(
         description="Import indicator's countries (from metadata) as a Sighting.",
         default=False,
     )
-    indicator_score_malicious: int = Field(
+    indicator_score_malicious: Optional[int] = Field(
         description="Default indicator score for malicious indicators.",
+        ge=0,
+        le=100,
         default=75,
-        ge=0,
-        le=100,
     )
-    indicator_score_suspicious: int = Field(
+    indicator_score_suspicious: Optional[int] = Field(
         description="Default indicator score for suspicious indicators.",
+        ge=0,
+        le=100,
         default=50,
-        ge=0,
-        le=100,
     )
-    indicator_score_benign: int = Field(
+    indicator_score_benign: Optional[int] = Field(
         description="Default indicator score for benign indicators.",
-        default=20,
         ge=0,
         le=100,
+        default=20,
     )
 
 
