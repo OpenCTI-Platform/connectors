@@ -150,7 +150,8 @@ class ConnectorContractGenerator:
 
         self._create_metadata_directory()
 
-    def _create_metadata_directory(self):
+    @staticmethod
+    def _create_metadata_directory():
         """
         Ensure __metadata__ directory exists to write the config JSON schema in it.
         """
