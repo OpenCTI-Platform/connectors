@@ -57,8 +57,8 @@ def get_connector_config_schema_generator(connector_name: str) -> GenerateJsonSc
             """
             Flatten config loader schema so all config vars are described at root level.
 
-            :param schema_defs: Dictionary of configuration definitions.
-            :return: Dictionary with 'properties' and 'required' keys.
+            :param root_schema: Original schema.
+            :return: Flatten schema.
             """
             flat_json_schema = {
                 "$schema": root_schema["$schema"],
