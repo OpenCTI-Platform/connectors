@@ -1,10 +1,5 @@
 name: Assign labels on PR from an organization
 on: pull_request
-
-permissions:
-  contents: read
-  pull-requests: write
-
 jobs:
   build:
     runs-on: ubuntu-latest
