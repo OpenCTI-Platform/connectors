@@ -24,7 +24,6 @@ from pydantic_settings import (
     YamlConfigSettingsSource,
 )
 
-
 # Get the path of the __main__ module file (the entry point of the connector)
 _MAIN_PATH = os.path.dirname(os.path.abspath(__main__.__file__))
 
