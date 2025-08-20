@@ -13,12 +13,13 @@ from .misp_converter_to_stix import MISPConverterToStix
 
 class FlashpointConnector:
 
-    def __init__(self):
+    def __init__(self, config: ConfigLoader, helper: OpenCTIConnectorHelper):
         """
         Initialize the Connector with necessary configurations
         """
-        self.config = ConfigLoader()
-        self.helper = OpenCTIConnectorHelper(self.config.model_dump_pycti())
+        self.config = config
+        self.helper = helper
+
         self.client = FlashpointClient(
             api_base_url="https://api.flashpoint.io",
             api_key=self.config.flashpoint.api_key,
