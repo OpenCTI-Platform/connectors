@@ -6,6 +6,8 @@ from typing import NotRequired, Optional, TypedDict, cast
 from pycti import OpenCTIConnectorHelper
 from stix2 import TAXIICollectionSource
 
+from external_import_connector.health import HealthCheck
+
 from .client_api import ConnectorClient
 from .config_variables import ConfigConnector
 
@@ -259,6 +261,9 @@ class ConnectorIBMXTI:
         Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
         :return: None
         """
+        health_check = HealthCheck(self.__helper)
+        health_check.register_thread()
+
         self.__helper.schedule_iso(
             message_callback=self.process_message,
             duration_period=self.__config.duration_period,  # type: ignore
