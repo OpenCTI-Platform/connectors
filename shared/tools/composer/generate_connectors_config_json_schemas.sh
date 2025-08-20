@@ -74,10 +74,10 @@ do
     if [ -f "$requirements_file" ] && grep -q "pydantic-settings" "$requirements_file"; then
       (
         activate_venv "$connector_directory_path"
-        generator_path=$(find . -name "generate_connector_config_json_schema.py.sample")
-        cp "$generator_path" "$connector_directory_path/generate_connector_config_json_schema_tmp.py"
-        python "$connector_directory_path/generate_connector_config_json_schema_tmp.py"
-        rm "$connector_directory_path/generate_connector_config_json_schema_tmp.py"
+        generator_path=$(find . -name "generate_connectors_config_json_schemas.py.sample")
+        cp "$generator_path" "$connector_directory_path/generate_connectors_config_json_schemas_tmp.py"
+        python "$connector_directory_path/generate_connectors_config_json_schemas_tmp.py"
+        rm "$connector_directory_path/generate_connectors_config_json_schemas_tmp.py"
         deactivate_venv "$connector_directory_path/$VENV_NAME"
       ) &
     fi
