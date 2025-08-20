@@ -81,9 +81,8 @@ def get_connector_config_schema_generator(connector_name: str) -> GenerateJsonSc
                 for config_var_name, config_var_schema in config_schema.items():
                     property_name = f"{config_loader_namespace_name.upper()}_{config_var_name.upper()}"
 
-                    config_var_schema.pop(
-                        "title", None
-                    )  # ? why removing title ? useful for generating the env vars table in README
+                    config_var_schema.pop("title", None)
+
                     flat_json_schema["properties"][property_name] = config_var_schema
 
                     if config_var_name in required_config_vars:
