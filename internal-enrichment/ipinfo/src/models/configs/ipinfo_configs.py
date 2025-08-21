@@ -8,7 +8,7 @@ from pydantic import (
 from src.models.configs import ConfigBaseSettings
 
 TLPToLower = Annotated[
-    Literal["clear", "green", "amber", "amber+strict", "red"],
+    Literal["TLP:CLEAR", "TLP:GREEN", "TLP:AMBER", "TLP:AMBER+STRICT", "TLP:RED"],
     PlainSerializer(lambda v: "".join(v), return_type=str),
 ]
 
@@ -23,7 +23,7 @@ class _ConfigLoaderIPInfo(ConfigBaseSettings):
     )
     max_tlp: Optional[TLPToLower] = Field(
         alias="IPINFO_MAX_TLP",
-        default="amber",
+        default="TLP:AMBER",
         description="Traffic Light Protocol (TLP) level to apply on objects imported into OpenCTI.",
     )
     use_asn_name: Optional[bool] = Field(
