@@ -53,8 +53,8 @@ from connector.src.custom.mappers.gti_reports.gti_report_to_stix_location import
 from connector.src.custom.mappers.gti_threat_actors.gti_threat_actor_to_stix_composite import (
     GTIThreatActorToSTIXComposite,
 )
-from connector.src.custom.mappers.gti_vulnerabilities.gti_vulnerability_to_stix_vulnerability import (
-    GTIVulnerabilityToSTIXVulnerability,
+from connector.src.custom.mappers.gti_vulnerabilities.gti_vulnerability_to_stix_composite import (
+    GTIVulnerabilityToSTIXComposite,
 )
 from connector.src.custom.models.gti.gti_attack_technique_id_model import (
     GTIAttackTechniqueIDData,
@@ -160,14 +160,14 @@ GTI_REPORT_ATTACK_TECHNIQUE_CONVERTER_CONFIG = GenericConverterConfig(
 
 GTI_REPORT_VULNERABILITY_CONVERTER_CONFIG = GenericConverterConfig(
     entity_type="vulnerabilities",
-    mapper_class=GTIVulnerabilityToSTIXVulnerability,
+    mapper_class=GTIVulnerabilityToSTIXComposite,
     output_stix_type="vulnerability",
     exception_class=GTIVulnerabilityConversionError,
     display_name="vulnerabilities",
     input_model=GTIVulnerabilityData,
     display_name_singular="vulnerability",
     validate_input=True,
-    postprocessing_function=link_to_report(),
+    postprocessing_function=link_to_report(["vulnerability"]),
 )
 
 GTI_REPORT_DOMAIN_CONVERTER_CONFIG = GenericConverterConfig(
