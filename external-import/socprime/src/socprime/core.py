@@ -165,7 +165,7 @@ class SocprimeConnector:
         res = []
         indicator_id = pycti.Indicator.generate_id(pattern=indicator.pattern)
         for tool_name in self._get_tools_from_rule(rule):
-            tool = self.mitre_attack.get_tool_by_name(tool_name)
+            tool = self.mitre_attack.get_tool_by_name(tool_name, self.author.id)
             if tool:
                 res.append(tool)
                 rel = Relationship(
@@ -175,6 +175,7 @@ class SocprimeConnector:
                     relationship_type="indicates",
                     source_ref=indicator_id,
                     target_ref=tool.id,
+                    created_by_ref=self.author.id,
                 )
                 res.append(rel)
         return res
@@ -196,7 +197,9 @@ class SocprimeConnector:
         res = []
         indicator_id = pycti.Indicator.generate_id(pattern=indicator.pattern)
         for technique_id in self._get_techniques_from_rule(rule):
-            technique = self.mitre_attack.get_technique_by_id(technique_id)
+            technique = self.mitre_attack.get_technique_by_id(
+                technique_id, self.author.id
+            )
             if technique:
                 res.append(technique)
                 rel = Relationship(
@@ -206,6 +209,7 @@ class SocprimeConnector:
                     relationship_type="indicates",
                     source_ref=indicator_id,
                     target_ref=technique.id,
+                    created_by_ref=self.author.id,
                 )
                 res.append(rel)
         return res
@@ -224,7 +228,9 @@ class SocprimeConnector:
         res = []
         indicator_id = pycti.Indicator.generate_id(pattern=indicator.pattern)
         for actor_name in self._get_actors_from_rule(rule):
-            intusion_set = self.mitre_attack.get_intrusion_set_by_name(actor_name)
+            intusion_set = self.mitre_attack.get_intrusion_set_by_name(
+                actor_name, self.author.id
+            )
             if intusion_set:
                 res.append(intusion_set)
                 rel = Relationship(
@@ -234,6 +240,7 @@ class SocprimeConnector:
                     relationship_type="indicates",
                     source_ref=indicator_id,
                     target_ref=intusion_set.id,
+                    created_by_ref=self.author.id,
                 )
                 res.append(rel)
         return res
@@ -503,6 +510,7 @@ class SocprimeConnector:
                     relationship_type="indicates",
                     source_ref=indicator_id,
                     target_ref=vuln.id,
+                    created_by_ref=self.author.id,
                 )
                 res.append(rel)
         return res
@@ -515,8 +523,7 @@ class SocprimeConnector:
                 res.extend(rule["tags"]["cve_id"])
         return res
 
-    @staticmethod
-    def _get_vuln_by_cve_id(cve_id: str) -> Vulnerability:
+    def _get_vuln_by_cve_id(self, cve_id: str) -> Vulnerability:
         return Vulnerability(
             type="vulnerability",
             id=pycti.Vulnerability.generate_id(name=cve_id),
@@ -527,4 +534,5 @@ class SocprimeConnector:
                     "external_id": cve_id,
                 }
             ],
+            created_by_ref=self.author.id,
         )
