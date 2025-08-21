@@ -35,12 +35,12 @@ mapped_keys = [
     "x_history",
     "x_acti_uuid",
     "x_product",
+    "x_and_prior_versions"
 ]
 ignored_keys = [
     "x_acti_guid",
     "x_version",
     "x_vendor",
-    "x_and_prior_versions",
     "x_credit",
 ]
 
@@ -245,6 +245,11 @@ class S3Connector:
                     obj["labels"].append("notable-vuln")
                 else:
                     obj["labels"] = ["notable-vuln"]
+            if "x_and_prior_versions" in obj and obj["x_and_prior_versions"]:
+                if "labels" in obj:
+                    obj["labels"].append("and-prior-versions")
+                else:
+                    obj["labels"] = ["and-prior-versions"]
 
             # x_product
             if "x_product" in obj:
@@ -285,14 +290,6 @@ class S3Connector:
                 original_source_ref = obj["source_ref"]
                 obj["source_ref"] = obj["target_ref"]
                 obj["target_ref"] = original_source_ref
-
-            # Ignored technology / technology-to
-            # TODO: TBD
-            if obj["type"] == "relationship" and (
-                obj["relationship_type"] == "technology"
-                or obj["relationship_type"] == "technology-to"
-            ):
-                continue
 
             # Cleanup orphan relationships
             if (
