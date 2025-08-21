@@ -3,6 +3,7 @@ from typing import List, Optional, Union
 
 import pycti
 import requests
+import stix2
 from stix2 import AttackPattern, Filter, IntrusionSet, Malware, MemoryStore, Tool
 
 
@@ -31,7 +32,10 @@ class MitreAttack:
         self._tools = self.get_software()
 
     def get_technique_by_id(
-        self, technique_mitre_id: str, author_id: str
+        self,
+        technique_mitre_id: str,
+        author_id: str,
+        tlp_marking: stix2.MarkingDefinition,
     ) -> Optional[AttackPattern]:
         filt = [
             Filter("type", "=", "attack-pattern"),
@@ -49,10 +53,11 @@ class MitreAttack:
                 description=props["description"],
                 external_references=props["external_references"],
                 created_by_ref=author_id,
+                object_marking_refs=[tlp_marking.id],
             )
 
     def get_tool_by_name(
-        self, name: str, author_id: str
+        self, name: str, author_id: str, tlp_marking: stix2.MarkingDefinition
     ) -> Optional[Union[Tool, Malware]]:
         for item in self._tools:
             if item.name.lower() == name.lower():
@@ -64,6 +69,7 @@ class MitreAttack:
                     "external_references": props["external_references"],
                     "aliases": props["x_mitre_aliases"],
                     "created_by_ref": author_id,
+                    "object_marking_refs": [tlp_marking.id],
                 }
                 if props["type"] == "malware":
                     return Malware(
@@ -80,7 +86,7 @@ class MitreAttack:
                     )
 
     def get_intrusion_set_by_name(
-        self, name: str, author_id: str
+        self, name: str, author_id: str, tlp_marking: stix2.MarkingDefinition
     ) -> Optional[IntrusionSet]:
         filt = [
             Filter("type", "=", "intrusion-set"),
@@ -97,4 +103,5 @@ class MitreAttack:
                 external_references=props["external_references"],
                 aliases=props["aliases"],
                 created_by_ref=author_id,
+                object_marking_refs=[tlp_marking],
             )
