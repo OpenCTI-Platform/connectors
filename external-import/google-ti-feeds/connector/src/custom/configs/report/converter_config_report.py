@@ -10,6 +10,7 @@ from connector.src.custom.configs.converter_config_common import (
 )
 from connector.src.custom.exceptions import (
     GTIActorConversionError,
+    GTICampaignConversionError,
     GTIDomainConversionError,
     GTIFileConversionError,
     GTIIPConversionError,
@@ -21,6 +22,9 @@ from connector.src.custom.exceptions import (
 )
 from connector.src.custom.mappers.gti_attack_techniques.gti_attack_technique_ids_to_stix_attack_patterns import (
     GTIAttackTechniqueIDsToSTIXAttackPatterns,
+)
+from connector.src.custom.mappers.gti_campaigns.gti_campaign_to_stix_composite import (
+    GTICampaignToSTIXComposite,
 )
 from connector.src.custom.mappers.gti_iocs.gti_domain_to_stix_domain import (
     GTIDomainToSTIXDomain,
@@ -54,6 +58,9 @@ from connector.src.custom.mappers.gti_vulnerabilities.gti_vulnerability_to_stix_
 )
 from connector.src.custom.models.gti.gti_attack_technique_id_model import (
     GTIAttackTechniqueIDData,
+)
+from connector.src.custom.models.gti.gti_campaign_model import (
+    GTICampaignData,
 )
 from connector.src.custom.models.gti.gti_domain_model import (
     GTIDomainData,
@@ -211,6 +218,18 @@ GTI_REPORT_IP_CONVERTER_CONFIG = GenericConverterConfig(
     postprocessing_function=link_to_report(),
 )
 
+GTI_REPORT_CAMPAIGN_CONVERTER_CONFIG = GenericConverterConfig(
+    entity_type="campaigns",
+    mapper_class=GTICampaignToSTIXComposite,
+    output_stix_type="campaign",
+    exception_class=GTICampaignConversionError,
+    display_name="Campaigns",
+    input_model=GTICampaignData,
+    display_name_singular="Campaign",
+    validate_input=True,
+    postprocessing_function=link_to_report(["campaign"]),
+)
+
 REPORT_CONVERTER_CONFIGS = {
     "reports": GTI_REPORT_CONVERTER_CONFIG,
     "report_locations": GTI_REPORT_LOCATION_CONVERTER_CONFIG,
@@ -223,4 +242,5 @@ REPORT_CONVERTER_CONFIGS = {
     "report_files": GTI_REPORT_FILE_CONVERTER_CONFIG,
     "report_urls": GTI_REPORT_URL_CONVERTER_CONFIG,
     "report_ip_addresses": GTI_REPORT_IP_CONVERTER_CONFIG,
+    "report_campaigns": GTI_REPORT_CAMPAIGN_CONVERTER_CONFIG,
 }
