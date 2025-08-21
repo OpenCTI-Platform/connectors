@@ -1,6 +1,6 @@
 """Composite mapper that handles campaign to locations, identity, and campaign conversion in one step."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, List
 
 from connector.src.custom.mappers.gti_campaigns.gti_campaign_to_stix_campaign import (
@@ -105,8 +105,10 @@ class GTICampaignToSTIXComposite(BaseMapper):
 
         attributes = self.campaign.attributes
 
-        created = datetime.fromtimestamp(attributes.creation_date)
-        modified = datetime.fromtimestamp(attributes.last_modification_date)
+        created = datetime.fromtimestamp(attributes.creation_date, tz=timezone.utc)
+        modified = datetime.fromtimestamp(
+            attributes.last_modification_date, tz=timezone.utc
+        )
 
         # Create relationships between campaign and targeted locations
         targeted_locations = self._get_targeted_locations(locations)
