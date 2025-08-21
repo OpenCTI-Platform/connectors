@@ -138,7 +138,7 @@ class IpInfoConnector:
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
 
-        if not OpenCTIConnectorHelper.check_max_tlp(tlp, "tlp:" + self.max_tlp):
+        if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
             raise ValueError(
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )

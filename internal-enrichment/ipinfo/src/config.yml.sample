@@ -11,5 +11,5 @@ opencti:
 
 ipinfo:
   token: 'ChangeMe'
-  # max_tlp: 'amber' # optional - default: 'amber' (available: clear, green, amber, amber+strict, red)
+  # max_tlp: 'TLP:AMBER' # optional - default: 'TLP:AMBER' (available: "TLP:CLEAR", "TLP:GREEN", "TLP:AMBER", "TLP:AMBER+STRICT", "TLP:RED")
   # use_asn_name: true # default: true // Set false if you want ASN name to be just the number e.g. AS8075
