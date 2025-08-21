@@ -30,7 +30,9 @@ class MitreAttack:
         self._src = self._get_data_from_branch("enterprise-attack")
         self._tools = self.get_software()
 
-    def get_technique_by_id(self, technique_mitre_id: str) -> Optional[AttackPattern]:
+    def get_technique_by_id(
+        self, technique_mitre_id: str, author_id: str
+    ) -> Optional[AttackPattern]:
         filt = [
             Filter("type", "=", "attack-pattern"),
             Filter("external_references.external_id", "=", technique_mitre_id),
@@ -46,9 +48,12 @@ class MitreAttack:
                 name=props["name"],
                 description=props["description"],
                 external_references=props["external_references"],
+                created_by_ref=author_id,
             )
 
-    def get_tool_by_name(self, name: str) -> Optional[Union[Tool, Malware]]:
+    def get_tool_by_name(
+        self, name: str, author_id: str
+    ) -> Optional[Union[Tool, Malware]]:
         for item in self._tools:
             if item.name.lower() == name.lower():
                 props = item._inner
@@ -58,6 +63,7 @@ class MitreAttack:
                     "labels": props["labels"],
                     "external_references": props["external_references"],
                     "aliases": props["x_mitre_aliases"],
+                    "created_by_ref": author_id,
                 }
                 if props["type"] == "malware":
                     return Malware(
@@ -73,7 +79,9 @@ class MitreAttack:
                         **common_props,
                     )
 
-    def get_intrusion_set_by_name(self, name: str) -> Optional[IntrusionSet]:
+    def get_intrusion_set_by_name(
+        self, name: str, author_id: str
+    ) -> Optional[IntrusionSet]:
         filt = [
             Filter("type", "=", "intrusion-set"),
             Filter("name", "=", name),
@@ -88,4 +96,5 @@ class MitreAttack:
                 description=props["description"],
                 external_references=props["external_references"],
                 aliases=props["aliases"],
+                created_by_ref=author_id,
             )
