@@ -1,7 +1,6 @@
 import sys
-import time
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Union
 
 import pycti
@@ -44,6 +43,8 @@ class SocprimeConnector:
         self.helper = OpenCTIConnectorHelper(self.config.model_dump_pycti())
         self.tdm_api_client = ApiClient(api_key=self.config.socprime.api_key)
         self.mitre_attack = MitreAttack()
+        self.start_datetime = datetime.now(tz=UTC)  # redefined in _process()
+        self.work_id = None
 
     def _load_state(self) -> Dict[str, Any]:
         current_state = self.helper.get_state()
@@ -349,7 +350,7 @@ class SocprimeConnector:
             )
             return []
 
-    def _create_author_identity(self, work_id: str) -> str:
+    def _create_author_identity(self) -> str:
         """Creates SOC Prime author and returns its id."""
         name = "SOC Prime"
         author_identity = Identity(
@@ -366,12 +367,12 @@ class SocprimeConnector:
         )
 
         serialized_bundle = self.helper.stix2_create_bundle(items=[author_identity])
-        self.helper.send_stix2_bundle(serialized_bundle, work_id=work_id)
+        self.helper.send_stix2_bundle(serialized_bundle, work_id=self.work_id)
         return author_identity.get("id")
 
-    def send_rules_from_tdm(self, work_id: str) -> None:
+    def send_rules_from_tdm(self) -> None:
         self.mitre_attack.initialize()
-        author_id = self._create_author_identity(work_id)
+        author_id = self._create_author_identity()
 
         bundle_objects = []
         rules = self._get_rules_from_content_lists_and_jobs()
@@ -398,9 +399,15 @@ class SocprimeConnector:
 
         self.helper.connector_logger.info(f"Sending {rules_count} rules")
 
-        self._send_stix_objects(objects_list=bundle_objects, work_id=work_id)
+        if bundle_objects:
+            self.work_id = self.helper.api.work.initiate_work(
+                connector_id=self.helper.connector_id,
+                friendly_name="SOC Prime run @ "
+                + self.start_datetime.isoformat(timespec="seconds"),
+            )
+            self._send_stix_objects(objects_list=bundle_objects)
 
-    def _send_stix_objects(self, objects_list: list, work_id: str) -> None:
+    def _send_stix_objects(self, objects_list: list) -> None:
         objects = [
             x
             for x in objects_list
@@ -408,33 +415,28 @@ class SocprimeConnector:
         ]
         if objects:
             bundle = self.helper.stix2_create_bundle(items=objects)
-            self.helper.send_stix2_bundle(bundle, work_id=work_id)
+            self.helper.send_stix2_bundle(bundle, work_id=self.work_id)
 
         objects = [
             x for x in objects_list if isinstance(x, self._stix_object_types_to_udate)
         ]
         if objects:
             bundle = self.helper.stix2_create_bundle(items=objects)
-            self.helper.send_stix2_bundle(bundle, work_id=work_id)
+            self.helper.send_stix2_bundle(bundle, work_id=self.work_id)
 
     def process(self):
         """
         Connector main process to collect, transform and send intelligence.
         """
-        now = datetime.now(tz=timezone.utc)
+        self.start_datetime = datetime.now(tz=timezone.utc)
 
-        friendly_name = "SOC Prime run @ " + now.isoformat(timespec="seconds")
-        work_id = self.helper.api.work.initiate_work(
-            connector_id=self.helper.connector_id,
-            friendly_name=friendly_name,
-        )
         error_flag = False  # Work in_error flag
         message = ""  # Work message placeholder
 
         try:
             current_state = self._load_state()
             self.helper.connector_logger.debug(
-                f"Loaded state", {"current_state": current_state}
+                "Loaded state", {"current_state": current_state}
             )
 
             last_run = self._get_state_value(current_state, self._STATE_LAST_RUN)
@@ -452,13 +454,15 @@ class SocprimeConnector:
                     "[CONNECTOR] Connector last run", {"last_run": last_run}
                 )
 
-            self.send_rules_from_tdm(work_id)
+            self.send_rules_from_tdm()
 
             new_state = current_state.copy()
-            new_state[self._STATE_LAST_RUN] = now.isoformat()
+            new_state[self._STATE_LAST_RUN] = self.start_datetime.isoformat(
+                timespec="seconds"
+            )
 
             self.helper.connector_logger.info(
-                f"Storing new state", {"new_state": new_state}
+                "Storing new state", {"new_state": new_state}
             )
             self.helper.set_state(new_state)
 
@@ -479,7 +483,10 @@ class SocprimeConnector:
             )
 
         finally:
-            self.helper.api.work.to_processed(work_id, message, in_error=error_flag)
+            if self.work_id:
+                self.helper.api.work.to_processed(
+                    self.work_id, message, in_error=error_flag
+                )
 
     def run(self):
         """
