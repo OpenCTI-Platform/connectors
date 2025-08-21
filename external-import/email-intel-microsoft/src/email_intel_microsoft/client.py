@@ -42,27 +42,30 @@ class ConnectorClient(BaseClient):
         attachments_mime_types: list[str],
     ) -> None:
         super().__init__()
+        self._tenant_id = tenant_id
+        self._client_id = client_id
+        self._client_secret = client_secret
         self._email = email
         self._mailbox = mailbox
         self._attachments_mime_types = attachments_mime_types
 
-        # Azure credential (aio flavour → must be closed)
-        self._credentials = ClientSecretCredential(
-            tenant_id=tenant_id,
-            client_id=client_id,
-            client_secret=client_secret,
-        )
-
-        # Root Graph client
-        self._client = GraphServiceClient(credentials=self._credentials)
+        self._credentials: ClientSecretCredential | None = None
+        self._client: GraphServiceClient | None = None
+        self._folder_id: str | None = None
 
     async def __aenter__(self) -> "ConnectorClient":
         """Opens Azure credential with async context manager."""
+        self._credentials = ClientSecretCredential(
+            tenant_id=self._tenant_id,
+            client_id=self._client_id,
+            client_secret=self._client_secret,
+        )
+        self._client = GraphServiceClient(credentials=self._credentials)
         self._folder_id = await self.get_folder_id_by_name(self._mailbox)
         return self
 
-    async def __aexit__(self, *_exc: Any) -> None:
-        """Closes the underlying Azure credential when the ConnectorClient is used as an async context manager."""
+    async def __aexit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
+        """Closes the Graph client."""
         await self._credentials.close()
 
     async def get_folder_id_by_name(self, mailbox: str) -> str:

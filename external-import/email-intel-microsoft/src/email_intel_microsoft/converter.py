@@ -1,7 +1,7 @@
 from typing import Generator, Literal
 
 import stix2
-from base_connector import BaseConverter, ConnectorWarning
+from base_connector import BaseConverter
 from base_connector.models import OpenCTIFile
 from msgraph.generated.models.message import (
     Message,
@@ -69,6 +69,14 @@ class ConnectorConverter(BaseConverter):
                 ),
             )
         except Exception as e:
-            raise ConnectorWarning(
-                "An error occurred while creating the Report, skipping..."
-            ) from e
+            self.helper.connector_logger.warning(
+                "An error occurred while creating the Report, skipping...",
+                meta={
+                    "error": str(e),
+                    "email": {
+                        "subject": entity.subject,
+                        "from": entity.from_.email_address.address,
+                        "received_date_time": entity.received_date_time,
+                    },
+                },
+            )

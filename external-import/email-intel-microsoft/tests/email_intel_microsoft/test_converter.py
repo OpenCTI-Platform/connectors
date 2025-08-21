@@ -4,7 +4,6 @@ from unittest.mock import Mock
 
 import pycti
 import pytest
-from base_connector import ConnectorWarning
 from email_intel_microsoft.converter import ConnectorConverter
 from stix2 import TLPMarking
 from stix2.utils import STIXdatetime
@@ -97,11 +96,28 @@ def test_converter_to_stix_no_subject(converter: ConnectorConverter) -> None:
 
 
 def test_converter_to_stix_with_error(converter: ConnectorConverter) -> None:
-    with pytest.raises(ConnectorWarning) as exc_info:
-        report = list(converter.to_stix_objects(entity=Mock(attachments=None)))
-        assert len(report) == 0
-    assert exc_info.value.args == (
+    entity = Mock(
+        subject="Test Report",
+        received_date_time=datetime.datetime(2025, 4, 16),
+        attachments=[],
+    )
+    entity._from = Mock(email_address=Mock())
+    entity.from_.email_address.address = "Email address"
+    converter._create_report = Mock(side_effect=ValueError("Test error"))
+
+    report = list(converter.to_stix_objects(entity=entity))
+
+    assert len(report) == 0
+    converter.helper.connector_logger.warning.assert_called_once_with(
         "An error occurred while creating the Report, skipping...",
+        meta={
+            "email": {
+                "subject": "Test Report",
+                "received_date_time": datetime.datetime(2025, 4, 16),
+                "from": "Email address",
+            },
+            "error": "Test error",
+        },
     )
 
 
