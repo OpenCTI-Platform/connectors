@@ -4,6 +4,9 @@ This module defines the main CONVERTER_CONFIGS dictionary that combines all conv
 from the specialized modules.
 """
 
+from connector.src.custom.configs.campaign.converter_config_campaign import (
+    CAMPAIGN_CONVERTER_CONFIGS,
+)
 from connector.src.custom.configs.malware.converter_config_malware import (
     MALWARE_CONVERTER_CONFIGS,
 )
@@ -22,4 +25,5 @@ CONVERTER_CONFIGS = {
     **THREAT_ACTOR_CONVERTER_CONFIGS,
     **MALWARE_CONVERTER_CONFIGS,
     **VULNERABILITY_CONVERTER_CONFIGS,
+    **CAMPAIGN_CONVERTER_CONFIGS,
 }

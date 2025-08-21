@@ -79,6 +79,7 @@ class OrchestratorReport(BaseOrchestrator):
             "threat_actors",
             "attack_techniques",
             "vulnerabilities",
+            "campaigns",
             "domains",
             "files",
             "urls",

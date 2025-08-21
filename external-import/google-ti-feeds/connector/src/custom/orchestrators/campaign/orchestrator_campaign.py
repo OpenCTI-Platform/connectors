@@ -1,15 +1,15 @@
-"""Malware family-specific orchestrator for fetching and processing malware family data."""
+"""Campaign-specific orchestrator for fetching and processing campaign data."""
 
 import logging
 import re
 from typing import Any, Dict, Optional
 
 from connector.src.custom.configs import (
-    MALWARE_FAMILY_BATCH_PROCESSOR_CONFIG,
+    CAMPAIGN_BATCH_PROCESSOR_CONFIG,
     GTIConfig,
 )
-from connector.src.custom.convert_to_stix.malware.convert_to_stix_malware import (
-    ConvertToSTIXMalware,
+from connector.src.custom.convert_to_stix.campaign.convert_to_stix_campaign import (
+    ConvertToSTIXCampaign,
 )
 from connector.src.custom.models.gti.gti_attack_technique_id_model import (
     GTIAttackTechniqueIDData,
@@ -18,11 +18,11 @@ from connector.src.custom.orchestrators.base_orchestrator import BaseOrchestrato
 from connector.src.octi.work_manager import WorkManager
 from connector.src.utils.batch_processors import GenericBatchProcessor
 
-LOG_PREFIX = "[OrchestratorMalware]"
+LOG_PREFIX = "[OrchestratorCampaign]"
 
 
-class OrchestratorMalware(BaseOrchestrator):
-    """Malware family-specific orchestrator for fetching and processing malware family data."""
+class OrchestratorCampaign(BaseOrchestrator):
+    """Campaign-specific orchestrator for fetching and processing campaign data."""
 
     def __init__(
         self,
@@ -31,7 +31,7 @@ class OrchestratorMalware(BaseOrchestrator):
         config: GTIConfig,
         tlp_level: str,
     ):
-        """Initialize the Malware Family Orchestrator.
+        """Initialize the Campaign Orchestrator.
 
         Args:
             work_manager: Work manager for handling OpenCTI work operations
@@ -45,13 +45,20 @@ class OrchestratorMalware(BaseOrchestrator):
         self.logger.info(
             "API URL", {"prefix": LOG_PREFIX, "api_url": self.config.api_url}
         )
+        self.logger.info(
+            "Campaign import start date",
+            {
+                "prefix": LOG_PREFIX,
+                "start_date": self.config.campaign_import_start_date,
+            },
+        )
 
-        self.converter = ConvertToSTIXMalware(config, logger, tlp_level)
+        self.converter = ConvertToSTIXCampaign(config, logger, tlp_level)
         self.batch_processor = self._create_batch_processor()
         self.nb_current: int = 0
 
     def _create_batch_processor(self) -> GenericBatchProcessor:
-        """Create and configure the malware family batch processor.
+        """Create and configure the campaign batch processor.
 
         Returns:
             Configured GenericBatchProcessor instance
@@ -59,22 +66,22 @@ class OrchestratorMalware(BaseOrchestrator):
         """
         return GenericBatchProcessor(
             work_manager=self.work_manager,
-            config=MALWARE_FAMILY_BATCH_PROCESSOR_CONFIG,
+            config=CAMPAIGN_BATCH_PROCESSOR_CONFIG,
             logger=self.logger,
         )
 
     async def run(self, initial_state: Optional[Dict[str, Any]]) -> None:
-        """Run the malware family orchestrator.
+        """Run the campaign orchestrator.
 
         Args:
             initial_state: Initial state for the orchestrator
 
         """
         subentity_types = [
-            "threat_actors",
+            "malware_families",
             "attack_techniques",
             "vulnerabilities",
-            "campaigns",
+            "threat_actors",
             # "reports",
             # "domains",
             # "files",
@@ -82,19 +89,15 @@ class OrchestratorMalware(BaseOrchestrator):
             # "ip_addresses",
         ]
         try:
-            async for gti_malware_families in self.client_api.fetch_malware_families(
-                initial_state
-            ):
-                total_malware_families = len(gti_malware_families)
-                for malware_family_idx, malware_family in enumerate(
-                    gti_malware_families
-                ):
-                    malware_family_entities = (
-                        self.converter.convert_malware_family_to_stix(malware_family)
+            async for gti_campaigns in self.client_api.fetch_campaigns(initial_state):
+                total_campaigns = len(gti_campaigns)
+                for campaign_idx, campaign in enumerate(gti_campaigns):
+                    campaign_entities = self.converter.convert_campaign_to_stix(
+                        campaign
                     )
                     subentities_ids = await self.client_api.fetch_subentities_ids(
                         entity_name="entity_id",
-                        entity_id=malware_family.id,
+                        entity_id=campaign.id,
                         subentity_types=subentity_types,
                     )
 
@@ -106,8 +109,8 @@ class OrchestratorMalware(BaseOrchestrator):
                             "Found relationships",
                             {
                                 "prefix": LOG_PREFIX,
-                                "current": malware_family_idx + 1,
-                                "total": total_malware_families,
+                                "current": campaign_idx + 1,
+                                "total": total_campaigns,
                                 "relationships": rel_summary,
                             },
                         )
@@ -146,12 +149,12 @@ class OrchestratorMalware(BaseOrchestrator):
                     subentity_stix = (
                         self.converter.convert_subentities_to_stix_with_linking(
                             subentities=subentities_detailed,
-                            main_entity="malware_family",
-                            main_entities=malware_family_entities,
+                            main_entity="campaign",
+                            main_entities=campaign_entities,
                         )
                     )
 
-                    all_entities = malware_family_entities + (subentity_stix or [])
+                    all_entities = campaign_entities + (subentity_stix or [])
 
                     entity_types: Dict[str, int] = {}
                     for entity in all_entities:
@@ -167,8 +170,8 @@ class OrchestratorMalware(BaseOrchestrator):
                         "Converted to STIX entities",
                         {
                             "prefix": LOG_PREFIX,
-                            "current": malware_family_idx + 1,
-                            "total": total_malware_families,
+                            "current": campaign_idx + 1,
+                            "total": total_campaigns,
                             "entities_count": len(all_entities),
                             "entities_summary": entities_summary,
                         },
@@ -183,35 +186,35 @@ class OrchestratorMalware(BaseOrchestrator):
             self._flush_batch_processor()
 
     def _update_index_inplace(self) -> None:
-        """Update the work message to reflect current malware family progress."""
+        """Update the work message to reflect current campaign progress."""
 
         def replacer(match: Any) -> str:
-            actual_total = self.client_api.real_total_malware_families or 0
+            actual_total = self.client_api.real_total_campaigns or 0
 
             if actual_total == 0:
-                return "(~ 0/0 malware families)"
+                return "(~ 0/0 campaigns)"
 
             self.nb_current += 1
-            return f"(~ {self.nb_current}/{actual_total} malware families)"
+            return f"(~ {self.nb_current}/{actual_total} campaigns)"
 
-        pattern = r"\(~ (\d+)/(\d+) malware families\)"
+        pattern = r"\(~ (\d+)/(\d+) campaigns\)"
         template = self.batch_processor.config.work_name_template
         self.batch_processor.config.work_name_template = re.sub(
             pattern, replacer, template
         )
 
     def _flush_batch_processor(self) -> None:
-        """Flush any remaining items in the malware family batch processor."""
+        """Flush any remaining items in the campaign batch processor."""
         try:
             work_id = self.batch_processor.flush()
             if work_id:
                 self.logger.info(
-                    "Malware family batch processor: Flushed remaining items",
+                    "Campaign batch processor: Flushed remaining items",
                     {"prefix": LOG_PREFIX},
                 )
             self.batch_processor.update_final_state()
         except Exception as e:
             self.logger.error(
-                "Failed to flush malware family batch processor",
+                "Failed to flush campaign batch processor",
                 {"prefix": LOG_PREFIX, "error": str(e)},
             )

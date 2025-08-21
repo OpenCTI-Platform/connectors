@@ -4,6 +4,9 @@ import logging
 from typing import Any, AsyncGenerator, Dict, List, Optional
 from uuid import uuid4
 
+from connector.src.custom.client_api.campaign.client_api_campaign import (
+    ClientAPICampaign,
+)
 from connector.src.custom.client_api.client_api_shared import ClientAPIShared
 from connector.src.custom.client_api.malware.client_api_malware import ClientAPIMalware
 from connector.src.custom.client_api.report.client_api_report import ClientAPIReport
@@ -52,6 +55,10 @@ class ClientAPI:
             self.vulnerability_client = ClientAPIVulnerability(
                 config, logger, self._shared_api_client, self._shared_fetcher_factory
             )
+        if self.config.import_campaigns:
+            self.campaign_client = ClientAPICampaign(
+                config, logger, self._shared_api_client, self._shared_fetcher_factory
+            )
         self.shared_client = ClientAPIShared(
             config, logger, self._shared_api_client, self._shared_fetcher_factory
         )
@@ -75,6 +82,11 @@ class ClientAPI:
     def real_total_vulnerabilities(self) -> int:
         """Get the real total number of vulnerabilities from the vulnerability client."""
         return self.vulnerability_client.real_total_vulnerabilities
+
+    @property
+    def real_total_campaigns(self) -> int:
+        """Get the real total number of campaigns from the campaign client."""
+        return self.campaign_client.real_total_campaigns
 
     async def fetch_reports(
         self, initial_state: Optional[Dict[str, Any]]
@@ -145,6 +157,22 @@ class ClientAPI:
             initial_state
         ):
             yield vulnerability_data
+
+    async def fetch_campaigns(
+        self, initial_state: Optional[Dict[str, Any]] = None
+    ) -> AsyncGenerator[Dict[Any, Any], None]:
+        """Fetch campaigns from the API.
+
+        Args:
+            initial_state (Optional[Dict[str, Any]]): The initial state of the fetcher.
+
+        Yields:
+            Dict[str, Any]: The fetched campaigns.
+
+        """
+        self.logger.info("Starting campaign fetching", {"prefix": LOG_PREFIX})
+        async for campaign_data in self.campaign_client.fetch_campaigns(initial_state):
+            yield campaign_data
 
     async def fetch_subentities_ids(
         self, entity_name: str, entity_id: str, subentity_types: list[str]
