@@ -53,8 +53,8 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
             target_ref=target_entity.id,
             organization_id=src_entity.created_by_ref,
             marking_ids=src_entity.object_marking_refs,
-            created=datetime.now(),
-            modified=datetime.now(),
+            created=datetime.now(tz=timezone.utc),
+            modified=datetime.now(tz=timezone.utc),
             description=f"{type(src_entity).__name__} {relation_type} {type(target_entity).__name__}",
         )
 
@@ -178,7 +178,9 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
         ):
             try:
                 first_seen_str = attributes.first_seen_details[0].value
-                first_seen = datetime.strptime(first_seen_str, "%Y-%m-%dT%H:%M:%SZ")
+                first_seen = datetime.strptime(
+                    first_seen_str, "%Y-%m-%dT%H:%M:%SZ"
+                ).replace(tzinfo=timezone.utc)
             except (ValueError, TypeError):
                 first_seen = None
 
@@ -192,7 +194,9 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
         ):
             try:
                 last_seen_str = attributes.last_seen_details[0].value
-                last_seen = datetime.strptime(last_seen_str, "%Y-%m-%dT%H:%M:%SZ")
+                last_seen = datetime.strptime(
+                    last_seen_str, "%Y-%m-%dT%H:%M:%SZ"
+                ).replace(tzinfo=timezone.utc)
             except (ValueError, TypeError):
                 last_seen = None
 
