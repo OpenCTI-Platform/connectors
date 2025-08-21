@@ -79,6 +79,9 @@ class SocPrimeConfig(BaseModel):
     job_ids: ListFromString = Field(default=[])
     siem_type: ListFromString = Field(default=[])
     indicator_siem_type: str = Field(default="sigma")
+    tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"] = (
+        Field(default="red")
+    )
 
     @model_validator(mode="after")
     def check_dependencies(self):
