@@ -24,6 +24,10 @@ from stix2 import (
 )
 
 
+class InvalidTlpLevelError(Exception):
+    """Error raised when the TLP level is invalid."""
+
+
 class ParsedRule(NamedTuple):
     name: str
     description: str | None
@@ -47,6 +51,32 @@ class SocprimeConnector:
         self.start_datetime = datetime.now(tz=UTC)  # redefined in _process()
         self.work_id = None
         self.author = self._create_author_identity()
+        self.tlp_marking = self._create_tlp_marking()
+
+    def _create_tlp_marking(self) -> stix2.MarkingDefinition:
+        match self.config.socprime.tlp_level:
+            case "white" | "clear":
+                return stix2.TLP_WHITE
+            case "green":
+                return stix2.TLP_GREEN
+            case "amber":
+                return stix2.TLP_AMBER
+            case "amber+strict":
+                return stix2.MarkingDefinition(
+                    id=pycti.MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+                    definition_type="statement",
+                    definition={"statement": "custom"},
+                    custom_properties={
+                        "x_opencti_definition_type": "TLP",
+                        "x_opencti_definition": "TLP:AMBER+STRICT",
+                    },
+                )
+            case "red":
+                return stix2.TLP_RED
+            case _:  # default
+                raise InvalidTlpLevelError(
+                    f"Invalid TLP level: {self.config.socprime.tlp_level}"
+                )
 
     def _load_state(self) -> Dict[str, Any]:
         current_state = self.helper.get_state()
@@ -84,6 +114,7 @@ class SocprimeConnector:
                 rule, siem_types=siem_types
             ),
             created_by_ref=self.author.id,
+            object_marking_refs=[self.tlp_marking],
             valid_from=parsed_rule.release_date,
             valid_until=None,
         )
@@ -165,7 +196,9 @@ class SocprimeConnector:
         res = []
         indicator_id = pycti.Indicator.generate_id(pattern=indicator.pattern)
         for tool_name in self._get_tools_from_rule(rule):
-            tool = self.mitre_attack.get_tool_by_name(tool_name, self.author.id)
+            tool = self.mitre_attack.get_tool_by_name(
+                tool_name, self.author.id, self.tlp_marking
+            )
             if tool:
                 res.append(tool)
                 rel = Relationship(
@@ -176,6 +209,7 @@ class SocprimeConnector:
                     source_ref=indicator_id,
                     target_ref=tool.id,
                     created_by_ref=self.author.id,
+                    object_marking_refs=[self.tlp_marking],
                 )
                 res.append(rel)
         return res
@@ -198,7 +232,7 @@ class SocprimeConnector:
         indicator_id = pycti.Indicator.generate_id(pattern=indicator.pattern)
         for technique_id in self._get_techniques_from_rule(rule):
             technique = self.mitre_attack.get_technique_by_id(
-                technique_id, self.author.id
+                technique_id, self.author.id, self.tlp_marking
             )
             if technique:
                 res.append(technique)
@@ -210,6 +244,7 @@ class SocprimeConnector:
                     source_ref=indicator_id,
                     target_ref=technique.id,
                     created_by_ref=self.author.id,
+                    object_marking_refs=[self.tlp_marking],
                 )
                 res.append(rel)
         return res
@@ -229,7 +264,7 @@ class SocprimeConnector:
         indicator_id = pycti.Indicator.generate_id(pattern=indicator.pattern)
         for actor_name in self._get_actors_from_rule(rule):
             intusion_set = self.mitre_attack.get_intrusion_set_by_name(
-                actor_name, self.author.id
+                actor_name, self.author.id, self.tlp_marking
             )
             if intusion_set:
                 res.append(intusion_set)
@@ -241,6 +276,7 @@ class SocprimeConnector:
                     source_ref=indicator_id,
                     target_ref=intusion_set.id,
                     created_by_ref=self.author.id,
+                    object_marking_refs=[self.tlp_marking],
                 )
                 res.append(rel)
         return res
@@ -511,6 +547,7 @@ class SocprimeConnector:
                     source_ref=indicator_id,
                     target_ref=vuln.id,
                     created_by_ref=self.author.id,
+                    object_marking_refs=[self.tlp_marking],
                 )
                 res.append(rel)
         return res
@@ -535,4 +572,5 @@ class SocprimeConnector:
                 }
             ],
             created_by_ref=self.author.id,
+            object_marking_refs=[self.tlp_marking],
         )
