@@ -2,7 +2,7 @@
 
 from connectors_sdk.models import octi
 from pycti import OpenCTIConnectorHelper
-from rf_client import RFClient, RFClientError
+from rf_client import RFClient, RFClientError, RFClientNotFoundError
 from rflib import APP_VERSION
 
 from .config_loader import ConnectorConfig
@@ -81,7 +81,10 @@ class RFEnrichmentConnector:
 
         self.helper.connector_logger.info(
             "Enriching observable...",
-            {"observable_id": observable_id, "observable_value": observable_value},
+            {
+                "observable_id": observable_id,
+                "observable_value": observable_value,
+            },
         )
 
         data = self.rf_client.get_observable_enrichment(
@@ -96,8 +99,8 @@ class RFEnrichmentConnector:
     def enrich_vulnerability(
         self, octi_entity: dict
     ) -> list[octi.BaseIdentifiedEntity]:
-        vulnerability_id = octi_entity.get("standard_id")
-        vulnerability_name = octi_entity.get("name")
+        vulnerability_id = octi_entity["standard_id"]
+        vulnerability_name = octi_entity["name"]
 
         self.helper.connector_logger.info(
             "Enriching vulnerability...",
@@ -128,17 +131,17 @@ class RFEnrichmentConnector:
         enrichment_completed = False  # Enrichment state flag
 
         original_stix_objects: list[dict] = data["stix_objects"]
+        enrichment_entity: dict = data["enrichment_entity"]
+
+        entity_type: str = enrichment_entity["entity_type"]
+        entity_stix_id: str = enrichment_entity["standard_id"]
 
         try:
-            enrichment_entity: dict = data["enrichment_entity"]
-            entity_type: str = enrichment_entity["entity_type"]
-
             if entity_type.lower() not in self.config.connector.scope:
                 message = (
                     f"Recorded Future enrichment does not support type {entity_type}"
                 )
                 self.helper.connector_logger.error(message)
-                # TODO: change error type?
                 raise ValueError(message)  # pycti will send it to OCTI
 
             tlp = "TLP:CLEAR"
@@ -151,47 +154,87 @@ class RFEnrichmentConnector:
             ):
                 message = f"Do not send any data, TLP of the entity is ({tlp}), "
                 f"which is greater than MAX TLP: ({self.config.recorded_future.info_max_tlp})"
-                self.helper.connector_logger.warning(message)
-                return message
-
-            try:
-                octi_objects = []
-                if entity_type == "Vulnerability":
-                    octi_objects = self.enrich_vulnerability(enrichment_entity)
-                else:
-                    octi_objects = self.enrich_observable(enrichment_entity)
-
-                self.helper.connector_logger.info("Sending bundle...")
-
-                bundle_objects = original_stix_objects + [
-                    octi_object.to_stix2_object() for octi_object in octi_objects
-                ]
-                bundle = self.helper.stix2_create_bundle(bundle_objects)
-                bundles_sent = self.helper.send_stix2_bundle(
-                    bundle=bundle,
-                    cleanup_inconsistent_bundle=False,  # TODO: change to True
+                self.helper.connector_logger.warning(
+                    message,
+                    {
+                        "entity_type": entity_type,
+                        "entity_stix_id": entity_stix_id,
+                    },
                 )
-
-                enrichment_completed = True
-
-                message = f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
-                self.helper.connector_logger.info(message)
-
                 return message
 
-            except (
-                RFClientError,
-                ObservableEnrichmentError,
-                VulnerabilityEnrichmentError,
-            ) as err:
-                self.helper.connector_logger.error(err)
-                raise err  # pycti will send it to OCTI
+            octi_objects = []
+            if entity_type == "Vulnerability":
+                octi_objects = self.enrich_vulnerability(enrichment_entity)
+            else:
+                octi_objects = self.enrich_observable(enrichment_entity)
+
+            self.helper.connector_logger.info(
+                "Sending bundle...",
+                {
+                    "entity_type": entity_type,
+                    "entity_stix_id": entity_stix_id,
+                },
+            )
+
+            bundle_objects = original_stix_objects + [
+                octi_object.to_stix2_object() for octi_object in octi_objects
+            ]
+            bundle = self.helper.stix2_create_bundle(bundle_objects)
+            bundles_sent = self.helper.send_stix2_bundle(
+                bundle=bundle,
+                cleanup_inconsistent_bundle=True,
+            )
+
+            enrichment_completed = True
+
+            message = f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
+            self.helper.connector_logger.info(
+                message,
+                {
+                    "entity_type": entity_type,
+                    "entity_stix_id": entity_stix_id,
+                },
+            )
+
+            return message
+
+        except RFClientNotFoundError as err:
+            self.helper.connector_logger.warning(
+                str(err),
+                {
+                    "entity_type": entity_type,
+                    "entity_stix_id": entity_stix_id,
+                    "error": err,
+                },
+            )
+            return str(err)  # do not display error on OCTI
+        except (
+            RFClientError,
+            ObservableEnrichmentError,
+            VulnerabilityEnrichmentError,
+        ) as err:
+            self.helper.connector_logger.error(
+                str(err),
+                {
+                    "entity_type": entity_type,
+                    "entity_stix_id": entity_stix_id,
+                    "error": err,
+                },
+            )
+            raise err  # pycti will send it to OCTI
 
         except Exception as err:
             self.helper.connector_logger.error(
-                "An unexpected error occured", {"error": err}
+                "An unexpected error occured",
+                {
+                    "entity_type": entity_type,
+                    "entity_stix_id": entity_stix_id,
+                    "error": err,
+                },
             )
             raise err  # pycti will send it to OCTI
+
         finally:
             # Ensure objects in original bundle are always sent back,
             # even if they have not been enriched (for compatibility with playbooks)
