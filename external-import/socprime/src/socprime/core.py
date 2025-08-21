@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timezone
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Union
 
 import pycti
+import stix2
 import yaml
 from dateutil.parser import parse as parse_date_str
 from pycti import StixCoreRelationship
@@ -45,6 +46,7 @@ class SocprimeConnector:
         self.mitre_attack = MitreAttack()
         self.start_datetime = datetime.now(tz=UTC)  # redefined in _process()
         self.work_id = None
+        self.author = self._create_author_identity()
 
     def _load_state(self) -> Dict[str, Any]:
         current_state = self.helper.get_state()
@@ -64,7 +66,6 @@ class SocprimeConnector:
         self,
         rule: dict,
         siem_types: Optional[List[str]] = None,
-        author_id: Optional[str] = None,
     ) -> List:
         stix_objects = []
         parsed_rule = self._parse_rule(rule)
@@ -82,7 +83,7 @@ class SocprimeConnector:
             external_references=self._get_external_refs_from_rule(
                 rule, siem_types=siem_types
             ),
-            created_by_ref=author_id,
+            created_by_ref=self.author.id,
             valid_from=parsed_rule.release_date,
             valid_until=None,
         )
@@ -350,13 +351,14 @@ class SocprimeConnector:
             )
             return []
 
-    def _create_author_identity(self) -> str:
+    def _create_author_identity(self) -> stix2.Identity:
         """Creates SOC Prime author and returns its id."""
-        name = "SOC Prime"
-        author_identity = Identity(
-            id=pycti.Identity.generate_id(name=name, identity_class="organization"),
+        return Identity(
+            id=pycti.Identity.generate_id(
+                name="SOC Prime", identity_class="organization"
+            ),
             type="identity",
-            name=name,
+            name="SOC Prime",
             identity_class="organization",
             description="SOC Prime operates the world’s largest and most advanced Platform for collaborative cyber defense. "
             + "The SOC Prime Platform integration with OpenCTI provides the latest detections within Sigma rules.",
@@ -366,13 +368,8 @@ class SocprimeConnector:
             ],
         )
 
-        serialized_bundle = self.helper.stix2_create_bundle(items=[author_identity])
-        self.helper.send_stix2_bundle(serialized_bundle, work_id=self.work_id)
-        return author_identity.get("id")
-
     def send_rules_from_tdm(self) -> None:
         self.mitre_attack.initialize()
-        author_id = self._create_author_identity()
 
         bundle_objects = []
         rules = self._get_rules_from_content_lists_and_jobs()
@@ -386,7 +383,6 @@ class SocprimeConnector:
                 rule_stix_objects = self.get_stix_objects_from_rule(
                     rule=rule,
                     siem_types=available_siem_types.get(rule["case"]["id"]),
-                    author_id=author_id,
                 )
                 bundle_objects.extend(rule_stix_objects)
                 rules_count += 1
@@ -405,23 +401,9 @@ class SocprimeConnector:
                 friendly_name="SOC Prime run @ "
                 + self.start_datetime.isoformat(timespec="seconds"),
             )
-            self._send_stix_objects(objects_list=bundle_objects)
-
-    def _send_stix_objects(self, objects_list: list) -> None:
-        objects = [
-            x
-            for x in objects_list
-            if not isinstance(x, self._stix_object_types_to_udate)
-        ]
-        if objects:
-            bundle = self.helper.stix2_create_bundle(items=objects)
-            self.helper.send_stix2_bundle(bundle, work_id=self.work_id)
-
-        objects = [
-            x for x in objects_list if isinstance(x, self._stix_object_types_to_udate)
-        ]
-        if objects:
-            bundle = self.helper.stix2_create_bundle(items=objects)
+            bundle = self.helper.stix2_create_bundle(
+                items=[self.author] + bundle_objects
+            )
             self.helper.send_stix2_bundle(bundle, work_id=self.work_id)
 
     def process(self):
