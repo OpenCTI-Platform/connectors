@@ -12,3 +12,4 @@ connector:
 socprime:
   api_key: 'ChangeMe'
   content_list_name: 'ChangeMe'
+  tlp_level: 'red'

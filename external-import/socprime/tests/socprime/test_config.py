@@ -35,9 +35,10 @@ def test_config_settings() -> None:
     assert config["connector"]["scope"] == ["socprime"]
     assert config["connector"]["log_level"] == "error"
 
-    assert len(config["socprime"]) == 5
+    assert len(config["socprime"]) == 6
     assert config["socprime"]["api_key"] == "api-key"
     assert config["socprime"]["content_list_name"] == ["name1", "name2"]
     assert config["socprime"]["job_ids"] == ["job1", "job2"]
     assert config["socprime"]["siem_type"] == ["devo", "snowflake"]
     assert config["socprime"]["indicator_siem_type"] == "ChangeMe"
+    assert config["socprime"]["tlp_level"] == "red"
