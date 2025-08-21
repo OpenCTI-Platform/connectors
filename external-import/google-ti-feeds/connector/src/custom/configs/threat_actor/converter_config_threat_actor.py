@@ -63,6 +63,9 @@ from connector.src.custom.mappers.gti_threat_actors.gti_threat_actor_to_stix_ide
 from connector.src.custom.mappers.gti_threat_actors.gti_threat_actor_to_stix_location import (
     GTIThreatActorToSTIXLocation,
 )
+from connector.src.custom.mappers.gti_vulnerabilities.gti_vulnerability_to_stix_composite import (
+    GTIVulnerabilityToSTIXComposite,
+)
 from connector.src.custom.mappers.gti_vulnerabilities.gti_vulnerability_to_stix_vulnerability import (
     GTIVulnerabilityToSTIXVulnerability,
 )
@@ -174,7 +177,7 @@ GTI_THREAT_ACTOR_ATTACK_TECHNIQUE_CONVERTER_CONFIG = GenericConverterConfig(
 
 GTI_THREAT_ACTOR_VULNERABILITY_CONVERTER_CONFIG = GenericConverterConfig(
     entity_type="vulnerabilities",
-    mapper_class=GTIVulnerabilityToSTIXVulnerability,
+    mapper_class=GTIVulnerabilityToSTIXComposite,
     output_stix_type="vulnerability",
     exception_class=GTIVulnerabilityConversionError,
     display_name="vulnerabilities",
