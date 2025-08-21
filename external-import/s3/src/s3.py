@@ -35,7 +35,7 @@ mapped_keys = [
     "x_history",
     "x_acti_uuid",
     "x_product",
-    "x_and_prior_versions"
+    "x_and_prior_versions",
 ]
 ignored_keys = [
     "x_acti_guid",
