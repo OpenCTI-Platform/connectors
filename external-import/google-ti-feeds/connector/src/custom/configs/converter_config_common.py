@@ -351,6 +351,13 @@ def exploits_relationship(
     return create_relationship("exploits", source_context, mapper_class, reverse)
 
 
+def attributed_to_relationship(
+    mapper_class: Any, source_context: str, reverse: bool = False
+) -> Any:
+    """Create 'attributed-to' relationships from source context."""
+    return create_relationship("attributed-to", source_context, mapper_class, reverse)
+
+
 def context_to_report_relationship(
     source_context: str, relationship_creator: Any
 ) -> Any:
