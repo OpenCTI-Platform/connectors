@@ -379,11 +379,6 @@ class MicrosoftSentinelIncidentsConnector:
                     "[CONNECTOR] Connector has never run..."
                 )
 
-            # Initiate a new work
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, self.helper.connect_name
-            )
-
             self.helper.connector_logger.info(
                 "[CONNECTOR] Running connector...",
                 {"connector_name": self.helper.connect_name},
@@ -401,6 +396,18 @@ class MicrosoftSentinelIncidentsConnector:
                 )
                 stix_objects.extend(incident_stix_objects)
                 last_incident_timestamp = format_date(incident["LastModifiedTime"])
+
+            if not incidents:
+                self.helper.connector_logger.info(
+                    f"{self.helper.connect_name} connector successfully run, no new data to send."
+                )
+                self._set_last_incident_date(last_incident_timestamp)
+                return
+
+            # Initiate a new work
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, self.helper.connect_name
+            )
 
             if stix_objects:
                 # Add author and default TLP marking for consistent bundle
