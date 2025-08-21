@@ -29,7 +29,7 @@ class ConnectorConfig(BaseConfig):
         min_length=1,
     )
     scope: str = Field(
-        default="report,location,identity,attack_pattern,domain,file,ipv4,ipv6,malware,sector,intrusion_set,url,vulnerability",
+        default="report,location,identity,attack_pattern,domain,file,ipv4,ipv6,malware,sector,intrusion_set,url,vulnerability,campaign",
         description="Comma-separated list of OpenCTI entity types that this connector can import",
     )
     log_level: Literal["debug", "info", "warn", "warning", "error"] = Field(
