@@ -5,6 +5,7 @@ from typing import Any, Dict
 from unittest.mock import patch
 from uuid import uuid4
 
+import isodate
 import pytest
 from connector.src.custom.configs.gti_config import GTIConfig
 from connector.src.custom.exceptions.gti_configuration_error import (
@@ -309,9 +310,13 @@ def _then_connector_created_successfully(capfd, mock_env, connector, data) -> No
             # noinspection PyProtectedMember
             gti_config = connector._config.get_config_class(GTIConfig)
             val = getattr(gti_config, config_key)
-            if type(val) is list:
-                val = ",".join(val)
-            assert str(val) == value  # noqa: S101
+            if config_key.endswith("import_start_date"):
+                assert val == isodate.parse_duration(value)  # noqa: S101
+
+            else:
+                if type(val) is list:
+                    val = ",".join(val)
+                assert str(val) == value  # noqa: S101
 
     log_records = capfd.readouterr()
     # noinspection PyProtectedMember

@@ -5,6 +5,7 @@ from typing import Any, Dict
 from unittest.mock import patch
 from uuid import uuid4
 
+import isodate
 import pytest
 from connector.src.octi.connector import Connector
 from connector.src.octi.exceptions.configuration_error import ConfigurationError
@@ -284,9 +285,11 @@ def _then_connector_created_successfully(capfd, mock_env, connector, data) -> No
             ) == value
         elif key.startswith("CONNECTOR_"):
             config_key = key[len("CONNECTOR_") :].lower()
-            assert (  # noqa: S101
-                str(getattr(connector._config.connector_config, config_key)) == value
-            )
+            attr = getattr(connector._config.connector_config, config_key)
+            if config_key == "duration_period":
+                assert attr == isodate.parse_duration(value)  # noqa: S101
+            else:
+                assert str(attr) == value  # noqa: S101
 
     log_records = capfd.readouterr()
     if connector._config.connector_config.log_level in ["info", "debug"]:

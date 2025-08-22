@@ -2,6 +2,7 @@
 
 import json
 import logging
+from datetime import timedelta
 from pathlib import Path
 from typing import Any, Dict
 
@@ -57,7 +58,7 @@ class DummyConfig:
     def __init__(
         self,
         api_key: str,
-        report_import_start_date: str,
+        report_import_start_date: timedelta,
         api_url: str,
         import_reports: bool,
         report_types: list[str],
@@ -67,9 +68,9 @@ class DummyConfig:
         """Initialize the DummyConfig object."""
         self.api_key = api_key
         self.report_import_start_date = report_import_start_date
-        self.threat_actor_import_start_date = "P1D"
-        self.malware_family_import_start_date = "P1D"
-        self.vulnerability_import_start_date = "P1D"
+        self.threat_actor_import_start_date = timedelta(days=1)
+        self.malware_family_import_start_date = timedelta(days=1)
+        self.vulnerability_import_start_date = timedelta(days=1)
         self.api_url = api_url
         self.import_reports = import_reports
         self.import_threat_actors = True
@@ -171,7 +172,7 @@ def gti_config() -> DummyConfig:
     """Fixture for GTI configuration."""
     return DummyConfig(
         api_key="fake-key",
-        report_import_start_date="P1D",
+        report_import_start_date=timedelta(days=1),
         api_url="https://fake-gti.api",
         import_reports=True,
         report_types=["All"],

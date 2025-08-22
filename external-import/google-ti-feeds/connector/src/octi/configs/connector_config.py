@@ -1,5 +1,6 @@
 """Connector-specific configuration definitions for OpenCTI external imports."""
 
+from datetime import timedelta
 from typing import ClassVar, Literal, Optional
 
 from connector.src.octi.interfaces.base_config import BaseConfig
@@ -35,10 +36,9 @@ class ConnectorConfig(BaseConfig):
         default="error",
         description="Logging level for the connector",
     )
-    duration_period: str = Field(
-        default="PT2H",
+    duration_period: timedelta = Field(
+        default=timedelta(hours=2),
         description="ISO 8601 duration between connector runs (e.g., PT2H for 2 hours)",
-        pattern=r"^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$",
     )
     queue_threshold: int = Field(
         default=500,
