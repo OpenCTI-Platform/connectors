@@ -1,4 +1,4 @@
-pycti==6.7.12
+pycti==6.7.13
 pydantic>=2.10, <3
 pydantic-settings~=2.9.1
 python-whois>=0.9.5
