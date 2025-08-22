@@ -9,7 +9,7 @@ from connector.src.custom.exceptions.gti_configuration_error import (
     GTIConfigurationError,
 )
 from connector.src.octi.interfaces.base_config import BaseConfig
-from pydantic import Field
+from pydantic import Field, HttpUrl
 from pydantic_settings import SettingsConfigDict
 
 ALLOWED_REPORT_TYPES = [
@@ -94,8 +94,7 @@ class GTIBaseConfig(BaseConfig):
         description="API key for authenticating with the Google Threat Intelligence service",
         min_length=1,
     )
-    api_url: str = Field(
-        default="https://www.virustotal.com/api/v3",
+    api_url: HttpUrl = Field(
+        default=HttpUrl("https://www.virustotal.com/api/v3"),
         description="Base URL for the Google Threat Intelligence API",
-        pattern=r"^https?://.*",
     )

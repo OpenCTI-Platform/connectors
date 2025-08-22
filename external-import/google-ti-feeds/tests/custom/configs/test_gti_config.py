@@ -15,6 +15,7 @@ from connector.src.octi.connector import Connector
 from connector.src.octi.exceptions.configuration_error import ConfigurationError
 from connector.src.octi.global_config import GlobalConfig
 from pycti import OpenCTIConnectorHelper  # type: ignore
+from pydantic import HttpUrl
 from tests.conftest import mock_env_vars
 
 # =====================
@@ -25,7 +26,7 @@ from tests.conftest import mock_env_vars
 @pytest.fixture(
     params=[
         {
-            "opencti_url": "http://fake:8080",
+            "opencti_url": "http://fake:8080/",
             "opencti_token": f"{uuid4()}",
             "connector_id": f"{uuid4()}",
             "gti_api_key": f"{uuid4()}",
@@ -46,14 +47,14 @@ def min_required_config(request) -> dict[str, str]:  # type: ignore
     params=[
         {
             "gti_report_import_start_date": "P3D",
-            "gti_api_url": "https://api.gti.com",
+            "gti_api_url": "https://api.gti.com/",
             "gti_import_reports": "False",
             "gti_report_types": "Actor Profile",
             "gti_report_origins": "google threat intelligence",
         },
         {
             "gti_report_import_start_date": "P20D",
-            "gti_api_url": "https://api2.gti.com",
+            "gti_api_url": "https://api2.gti.com/",
             "gti_import_reports": "True",
             "gti_report_types": "Patch Report,TTP Deep Dive",
             "gti_report_origins": "google threat intelligence,partner",
@@ -302,9 +303,11 @@ def _then_connector_created_successfully(capfd, mock_env, connector, data) -> No
         if key.startswith("OPENCTI_"):
             config_key = key[len("OPENCTI_") :].lower()
             # noinspection PyProtectedMember
-            assert (  # noqa: S101
-                getattr(connector._config.octi_config, config_key)
-            ) == value
+            attr = getattr(connector._config.octi_config, config_key)
+            if isinstance(attr, HttpUrl):
+                assert attr.unicode_string() == value  # noqa: S101
+            else:
+                assert attr == value  # noqa: S101
         elif key.startswith("GTI_"):
             config_key = key[len("GTI_") :].lower()
             # noinspection PyProtectedMember
@@ -314,9 +317,12 @@ def _then_connector_created_successfully(capfd, mock_env, connector, data) -> No
                 assert val == isodate.parse_duration(value)  # noqa: S101
 
             else:
-                if type(val) is list:
-                    val = ",".join(val)
-                assert str(val) == value  # noqa: S101
+                if isinstance(attr, HttpUrl):
+                    assert attr.unicode_string() == value  # noqa: S101
+                else:
+                    if type(val) is list:
+                        val = ",".join(val)
+                    assert str(val) == value  # noqa: S101
 
     log_records = capfd.readouterr()
     # noinspection PyProtectedMember

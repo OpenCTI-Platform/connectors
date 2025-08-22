@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 import pytest
+from pydantic import HttpUrl
 
 # =====================
 # Test Fakes
@@ -59,7 +60,7 @@ class DummyConfig:
         self,
         api_key: str,
         report_import_start_date: timedelta,
-        api_url: str,
+        api_url: HttpUrl,
         import_reports: bool,
         report_types: list[str],
         report_origins: list[str],
@@ -173,7 +174,7 @@ def gti_config() -> DummyConfig:
     return DummyConfig(
         api_key="fake-key",
         report_import_start_date=timedelta(days=1),
-        api_url="https://fake-gti.api",
+        api_url=HttpUrl("https://fake-gti.api"),
         import_reports=True,
         report_types=["All"],
         report_origins=["All"],

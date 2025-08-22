@@ -128,7 +128,7 @@ class ClientAPIReport(BaseClientAPI):
             initial_state=initial_state,
         )
         report_fetcher = self.fetcher_factory.create_fetcher_by_name(
-            "main_reports", base_url=self.config.api_url
+            "main_reports", base_url=self.config.api_url.unicode_string()
         )
 
         for filter_config in filter_configs:

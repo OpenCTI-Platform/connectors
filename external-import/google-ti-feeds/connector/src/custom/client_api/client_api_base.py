@@ -193,7 +193,7 @@ class BaseClientAPI:
         if hasattr(self.config, "api_url") and self.config.api_url:
             self.logger.info(
                 "Using base API URL",
-                {"prefix": LOG_PREFIX, "api_url": self.config.api_url},
+                {"prefix": LOG_PREFIX, "api_url": self.config.api_url.unicode_string()},
             )
         else:
             self.logger.error(
@@ -244,7 +244,7 @@ class BaseClientAPI:
         if hasattr(self.config, "api_url") and self.config.api_url:
             self.logger.info(
                 "Created API client",
-                {"prefix": LOG_PREFIX, "api_url": self.config.api_url},
+                {"prefix": LOG_PREFIX, "api_url": self.config.api_url.unicode_string()},
             )
         else:
             self.logger.warning(

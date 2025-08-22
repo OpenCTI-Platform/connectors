@@ -126,7 +126,7 @@ class ClientAPIThreatActor(BaseClientAPI):
             initial_state=initial_state,
         )
         threat_actor_fetcher = self.fetcher_factory.create_fetcher_by_name(
-            "main_threat_actors", base_url=self.config.api_url
+            "main_threat_actors", base_url=self.config.api_url.unicode_string()
         )
 
         for filter_config in filter_configs:

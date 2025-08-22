@@ -50,7 +50,8 @@ class Orchestrator:
         self.tlp_level = tlp_level.lower()
 
         self.logger.info(
-            "API URL", {"prefix": LOG_PREFIX, "api_url": self.config.api_url}
+            "API URL",
+            {"prefix": LOG_PREFIX, "api_url": self.config.api_url.unicode_string()},
         )
         self.logger.info("Initializing orchestrator", {"prefix": LOG_PREFIX})
 
