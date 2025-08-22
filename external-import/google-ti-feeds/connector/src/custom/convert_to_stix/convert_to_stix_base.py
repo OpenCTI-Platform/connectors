@@ -3,6 +3,9 @@
 import logging
 from typing import Any, Dict, List, Literal, Optional, cast
 
+from connector.src.custom.configs import (
+    GTIConfig,
+)
 from connector.src.custom.configs.converter_config import (
     CONVERTER_CONFIGS,
 )
@@ -18,7 +21,7 @@ LOG_PREFIX = "[BaseConverter]"
 class BaseConvertToSTIX:
     """Base converter class with common functionality."""
 
-    def __init__(self, config: Any, logger: logging.Logger, tlp_level: str):
+    def __init__(self, config: GTIConfig, logger: logging.Logger, tlp_level: str):
         """Initialize Base Convert to STIX."""
         self.config = config
         self.logger = logger
