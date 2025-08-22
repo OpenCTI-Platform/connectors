@@ -9,11 +9,11 @@
   "last_verified_date": "YYYY-MM-DD",
   "playbook_supported": false,
   "max_confidence_level": 50,
-  "support_version": "rolling",
+  "support_version": ">=6.5.1",
   "subscription_link": "CHANGEME or null",
   "source_code": "CHANGEME",
   "manager_supported": false,
-  "container_version": "OCTI_VERSION",
+  "container_version": "rolling",
   "container_image": "opencti/connector-CONNECTOR_NAME",
   "container_type": "CHANGEME"
 }

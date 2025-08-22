@@ -21,7 +21,7 @@
       "subscription_link": "https://levelblue.com/open-threat-exchange",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/alienvault",
       "manager_supported": false,
-      "container_version": "6.7.0",
+      "container_version": "rolling",
       "container_image": "opencti/connector-alienvault",
       "container_type": "EXTERNAL_IMPORT"
     },
@@ -43,7 +43,7 @@
       "subscription_link": "",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/cisa-known-exploited-vulnerabilities",
       "manager_supported": false,
-      "container_version": "6.7.0",
+      "container_version": "rolling",
       "container_image": "opencti/connector-cisa-known-exploited-vulnerabilities",
       "container_type": "EXTERNAL_IMPORT"
     },
@@ -64,7 +64,7 @@
       "subscription_link": "",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/crowdstrike",
       "manager_supported": false,
-      "container_version": "6.7.0",
+      "container_version": "rolling",
       "container_image": "opencti/connector-crowdstrike",
       "container_type": "EXTERNAL_IMPORT"
     },
@@ -86,7 +86,7 @@
       "subscription_link": "https://nvd.nist.gov/contact",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/cve",
       "manager_supported": true,
-      "container_version": "6.7.0",
+      "container_version": "rolling",
       "container_image": "opencti/connector-cve",
       "container_type": "EXTERNAL_IMPORT",
       "config_schema": {
@@ -239,7 +239,7 @@
       "subscription_link": "",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/dragos",
       "manager_supported": false,
-      "container_version": "6.7.0",
+      "container_version": "rolling",
       "container_image": "opencti/connector-dragos",
       "container_type": "EXTERNAL_IMPORT"
     },
@@ -261,7 +261,7 @@
       "subscription_link": "",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/email-intel-imap",
       "manager_supported": false,
-      "container_version": "6.7.0",
+      "container_version": "rolling",
       "container_image": "opencti/connector-email-intel-imap",
       "container_type": "EXTERNAL_IMPORT",
       "config_schema": {
@@ -450,7 +450,7 @@
       "subscription_link": "",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/oob/connector_manager/external-import/email-intel-microsoft",
       "manager_supported": false,
-      "container_version": "6.7.0",
+      "container_version": "rolling",
       "container_image": "opencti/connector-email-intel-microsoft",
       "container_type": "EXTERNAL_IMPORT",
       "config_schema": {
@@ -634,7 +634,7 @@
       "subscription_link": "",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/flashpoint",
       "manager_supported": false,
-      "container_version": "6.7.0",
+      "container_version": "rolling",
       "container_image": "opencti/connector-flashpoint",
       "container_type": "EXTERNAL_IMPORT",
       "config_schema": {
@@ -851,7 +851,7 @@
       "subscription_link": "",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/google-ti-feeds",
       "manager_supported": false,
-      "container_version": "6.7.0",
+      "container_version": "rolling",
       "container_image": "opencti/connector-google-ti-feeds",
       "container_type": "EXTERNAL_IMPORT"
     },
@@ -872,7 +872,7 @@
       "subscription_link": "CHANGEME or null",
       "source_code": "CHANGEME",
       "manager_supported": true,
-      "container_version": "6.7.9",
+      "container_version": "rolling",
       "container_image": "opencti/connector-greynoise-feed",
       "container_type": "EXTERNAL_IMPORT",
       "config_schema": {
@@ -1078,7 +1078,7 @@
       "subscription_link": "https://www.mitre.org/who-we-are/work-with-us",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/mitre",
       "manager_supported": true,
-      "container_version": "6.7.0",
+      "container_version": "rolling",
       "container_image": "opencti/connector-mitre",
       "container_type": "EXTERNAL_IMPORT",
       "config_schema": {
@@ -1223,7 +1223,7 @@
       "subscription_link": "",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/phishunt",
       "manager_supported": false,
-      "container_version": "6.7.0",
+      "container_version": "rolling",
       "container_image": "opencti/connector-phishunt",
       "container_type": "EXTERNAL_IMPORT"
     },
@@ -1244,7 +1244,7 @@
       "subscription_link": "https://www.ransomware.live",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/oob/connector_manager/external-import/ransomwarelive",
       "manager_supported": false,
-      "container_version": "6.7.0",
+      "container_version": "rolling",
       "container_image": "opencti/connector-ransomwarelive",
       "container_type": "EXTERNAL_IMPORT",
       "config_schema": {
@@ -1393,7 +1393,7 @@
       "subscription_link": "https://www.recordedfuture.com/get-started",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/recorded-future",
       "manager_supported": false,
-      "container_version": "6.7.0",
+      "container_version": "rolling",
       "container_image": "opencti/connector-recorded-future",
       "container_type": "EXTERNAL_IMPORT"
     },
@@ -1414,7 +1414,7 @@
       "subscription_link": "https://www.sekoia.io/en/product/cti/",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/sekoia",
       "manager_supported": false,
-      "container_version": "6.7.0",
+      "container_version": "rolling",
       "container_image": "opencti/connector-sekoia",
       "container_type": "EXTERNAL_IMPORT"
     },
@@ -1435,7 +1435,7 @@
       "subscription_link": "https://www.servicenow.com/contact-us.html",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/servicenow",
       "manager_supported": true,
-      "container_version": "6.7.0",
+      "container_version": "rolling",
       "container_image": "opencti/connector-servicenow",
       "container_type": "EXTERNAL_IMPORT",
       "config_schema": {
@@ -1671,7 +1671,7 @@
       "subscription_link": "",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/tenable-vuln-management",
       "manager_supported": false,
-      "container_version": "6.7.0",
+      "container_version": "rolling",
       "container_image": "opencti/connector-tenable-vuln-management",
       "container_type": "EXTERNAL_IMPORT"
     },
@@ -1692,7 +1692,7 @@
       "subscription_link": "",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/oob/connector_manager/external-import/threatfox",
       "manager_supported": false,
-      "container_version": "6.7.0",
+      "container_version": "rolling",
       "container_image": "opencti/connector-threatfox",
       "container_type": "EXTERNAL_IMPORT"
     },
@@ -1713,7 +1713,7 @@
       "subscription_link": "",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/oob/connector_manager/external-import/urlhaus",
       "manager_supported": false,
-      "container_version": "6.7.0",
+      "container_version": "rolling",
       "container_image": "opencti/connector-urlhaus",
       "container_type": "EXTERNAL_IMPORT"
     },
@@ -1735,7 +1735,7 @@
       "subscription_link": "https://www.vulncheck.com/",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/oob/connector_manager/external-import/vulncheck",
       "manager_supported": false,
-      "container_version": "6.7.0",
+      "container_version": "rolling",
       "container_image": "opencti/connector-vulncheck",
       "container_type": "EXTERNAL_IMPORT"
     },
@@ -1757,7 +1757,7 @@
       "subscription_link": "https://www.first.org/epss/",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/oob/connector_manager/internal-enrichment/first-epss",
       "manager_supported": false,
-      "container_version": "6.7.0",
+      "container_version": "rolling",
       "container_image": "opencti/connector-first-epss",
       "container_type": "INTERNAL_ENRICHMENT"
     },
@@ -1778,7 +1778,7 @@
       "subscription_link": "https://urlscan.io",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/oob/connector_manager/internal-enrichment/google-dns",
       "manager_supported": false,
-      "container_version": "6.7.0",
+      "container_version": "rolling",
       "container_image": "opencti/connector-google-dns",
       "container_type": "INTERNAL_ENRICHMENT"
     },
@@ -1800,7 +1800,7 @@
       "subscription_link": "https://ipinfo.io/support",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/ipinfo",
       "manager_supported": true,
-      "container_version": "6.7.0",
+      "container_version": "rolling",
       "container_image": "opencti/connector-ipinfo",
       "container_type": "INTERNAL_ENRICHMENT",
       "config_schema": {
@@ -1939,7 +1939,7 @@
       "subscription_link": "https://urlscan.io",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/oob/connector_manager/internal-enrichment/urlscan-enrichment",
       "manager_supported": false,
-      "container_version": "6.7.0",
+      "container_version": "rolling",
       "container_image": "opencti/connector-urlscan-enrichment",
       "container_type": "INTERNAL_ENRICHMENT"
     },
@@ -1960,7 +1960,7 @@
       "subscription_link": "",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/oob/connector_manager/stream/google-secops-siem",
       "manager_supported": false,
-      "container_version": "6.7.0",
+      "container_version": "rolling",
       "container_image": "opencti/connector-google-secops-siem",
       "container_type": "STREAM"
     }
