@@ -32,7 +32,7 @@ class ConnectorConfig(BaseConfig):
         default="report,location,identity,attack_pattern,domain,file,ipv4,ipv6,malware,sector,intrusion_set,url,vulnerability",
         description="Comma-separated list of OpenCTI entity types that this connector can import",
     )
-    log_level: Literal["debug", "info", "warn", "error"] = Field(
+    log_level: Literal["debug", "info", "warn", "warning", "error"] = Field(
         default="error",
         description="Logging level for the connector",
     )
