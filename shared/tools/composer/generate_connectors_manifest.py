@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Generator
 
 # ? why prefix/suffix __ ?
-__OPENCTI_CURRENT_VERSION__ = "latest"
+__OPENCTI_CURRENT_VERSION__ = "rolling"
 __CONNECTOR_METADATA_DIRECTORY__ = "__metadata__"
 __CONNECTOR_MANIFEST_FILENAME__ = "connector_manifest.json"
 __CONNECTOR_CONFIG_JSON_SCHEMA_FILENAME__ = "connector_config_schema.json"
