@@ -293,12 +293,13 @@ def manage_context(operation: str, context_key: Optional[str] = None) -> Any:
 
     def postprocess(stix_output: Any) -> Any:
         try:
-            if operation == "set" and context_key:
-                _handle_set_operation(stix_output, context_key)
-            elif operation == "clear" and context_key:
-                _handle_clear_operation(context_key)
-            elif operation == "clear_all":
-                _handle_clear_all_operation()
+            match operation:
+                case "set" if context_key:
+                    _handle_set_operation(stix_output, context_key)
+                case "clear" if context_key:
+                    _handle_clear_operation(context_key)
+                case "clear_all":
+                    _handle_clear_all_operation()
 
         except Exception as e:
             _logger.warning(
