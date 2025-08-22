@@ -26,5 +26,4 @@ services:
       - CONNECTOR_HISTORY_START_YEAR=2023 # Data only goes back till 2020
       - CONNECTOR_RUN_EVERY=10m # DEPRECATED, use CONNECTOR_DURATION_PERIOD instead
       - CONNECTOR_CREATE_THREAT_ACTOR=false
-
     restart: always
