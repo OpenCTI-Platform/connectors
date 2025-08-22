@@ -149,7 +149,7 @@ class BaseConvertToSTIX:
                 )
 
             except Exception as e:
-                self.logger.error(
+                self.logger.warning(
                     "Failed to convert entity to STIX",
                     {"prefix": LOG_PREFIX, "entity_type": entity_type, "error": str(e)},
                 )

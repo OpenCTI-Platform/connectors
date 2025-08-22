@@ -39,7 +39,7 @@ class ConvertToSTIXReport(BaseConvertToSTIX):
             return stix_entities
 
         except Exception as e:
-            self.logger.error(
+            self.logger.warning(
                 "Failed to convert report to STIX",
                 {"prefix": LOG_PREFIX, "error": str(e)},
             )
