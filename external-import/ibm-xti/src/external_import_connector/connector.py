@@ -6,10 +6,9 @@ from typing import NotRequired, Optional, TypedDict, cast
 from pycti import OpenCTIConnectorHelper
 from stix2 import TAXIICollectionSource
 
-from external_import_connector.health import HealthCheck
-
 from .client_api import ConnectorClient
 from .config_variables import ConfigConnector
+from .health import HealthCheck
 
 
 class FeedState(TypedDict):

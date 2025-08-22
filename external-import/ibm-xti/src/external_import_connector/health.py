@@ -1,8 +1,9 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from threading import Thread
+
+import uvicorn
 from fastapi import FastAPI
 from pycti import OpenCTIConnectorHelper
-import uvicorn
 
 
 class HealthCheck:
