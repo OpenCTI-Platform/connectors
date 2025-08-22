@@ -1,4 +1,4 @@
-# RansomwareLive Connector
+# OpenCTI Ransomware.live Connector
 
 <!--
 General description of the connector
