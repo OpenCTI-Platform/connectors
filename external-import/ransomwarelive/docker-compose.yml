@@ -1,15 +1,14 @@
 version: "3"
 services:
-  connector-ransomware:
-    image: opencti/connector-ransomwarelive:6.7.13
-    container_name: ransomware-connector
+  connector-ransomware-live:
+    image: opencti/connector-ransomware-live:6.7.13
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGEME #generate user token
       # Connector's definition parameters REQUIRED
       - CONNECTOR_ID=CHANGEME #Valid UUIDv4 tokem
-      - CONNECTOR_NAME=Ransomware Connector
+      - CONNECTOR_NAME=Ransomware.live
       - CONNECTOR_SCOPE=identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report
       - CONNECTOR_LOG_LEVEL=info # Log level: debug, info, warn, error
       - CONNECTOR_DURATION_PERIOD=CHANGEME # ISO8601 format in String, start with 'P...' for Period
