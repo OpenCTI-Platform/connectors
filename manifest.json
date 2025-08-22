@@ -2,7 +2,7 @@
   "id": "filigran-catalog-id",
   "name": "OpenCTI Connectors contracts",
   "description": "",
-  "version": "latest",
+  "version": "rolling",
   "contracts": [
     {
       "title": "AlienVault OTX",
