@@ -10,8 +10,12 @@ import pytz
 import stix2
 import yaml
 from pycti import (
+    CourseOfAction,
+    Identity,
+    Infrastructure,
     Note,
     OpenCTIConnectorHelper,
+    StixCoreRelationship,
     get_config_variable,
 )
 
@@ -35,12 +39,12 @@ mapped_keys = [
     "x_history",
     "x_acti_uuid",
     "x_product",
+    "x_and_prior_versions",
 ]
 ignored_keys = [
     "x_acti_guid",
     "x_version",
     "x_vendor",
-    "x_and_prior_versions",
     "x_credit",
 ]
 
@@ -121,6 +125,53 @@ class S3Connector:
 
     def get_interval(self):
         return int(self.s3_interval) * 60
+
+    def rewrite_stix_ids(self, objects):
+        for obj in objects:
+            # Rewrite relationships IDs
+            if obj["type"] == "relationship":
+                obj["id"] = StixCoreRelationship.generate_id(
+                    obj["relationship_type"],
+                    obj["source_ref"],
+                    obj["target_ref"],
+                    obj.get("start_time"),
+                    obj.get("stop_time"),
+                )
+
+            # Rewrite infrastructures IDs
+            if obj["type"] == "infrastructure":
+                new_id = Infrastructure.generate_id(obj["name"])
+                for obj2 in objects:
+                    if obj2["type"] == "relationship":
+                        if obj2["source_ref"] == obj["id"]:
+                            obj2["source_ref"] = new_id
+                        if obj2["target_ref"] == obj["id"]:
+                            obj2["target_ref"] = new_id
+                obj["id"] = new_id
+
+            # Rewrite identity IDs
+            if obj["type"] == "identity":
+                new_id = Identity.generate_id(obj["name"], obj["identity_class"])
+                for obj2 in objects:
+                    if obj2["type"] == "relationship":
+                        if obj2["source_ref"] == obj["id"]:
+                            obj2["source_ref"] = new_id
+                        if obj2["target_ref"] == obj["id"]:
+                            obj2["target_ref"] = new_id
+                obj["id"] = new_id
+
+            # Rewrite CoA IDs
+            if obj["type"] == "course-of-action":
+                new_id = CourseOfAction.generate_id(obj["name", obj.get("x_mitre_id")])
+                for obj2 in objects:
+                    if obj2["type"] == "relationship":
+                        if obj2["source_ref"] == obj["id"]:
+                            obj2["source_ref"] = new_id
+                        if obj2["target_ref"] == obj["id"]:
+                            obj2["target_ref"] = new_id
+                obj["id"] = new_id
+
+        return objects
 
     def fix_bundle(self, bundle):
         included_entities = []
@@ -245,6 +296,11 @@ class S3Connector:
                     obj["labels"].append("notable-vuln")
                 else:
                     obj["labels"] = ["notable-vuln"]
+            if "x_and_prior_versions" in obj and obj["x_and_prior_versions"]:
+                if "labels" in obj:
+                    obj["labels"].append("and-prior-versions")
+                else:
+                    obj["labels"] = ["and-prior-versions"]
 
             # x_product
             if "x_product" in obj:
@@ -286,14 +342,6 @@ class S3Connector:
                 obj["source_ref"] = obj["target_ref"]
                 obj["target_ref"] = original_source_ref
 
-            # Ignored technology / technology-to
-            # TODO: TBD
-            if obj["type"] == "relationship" and (
-                obj["relationship_type"] == "technology"
-                or obj["relationship_type"] == "technology-to"
-            ):
-                continue
-
             # Cleanup orphan relationships
             if (
                 obj["type"] == "relationship"
@@ -317,8 +365,9 @@ class S3Connector:
                 continue
             new_bundle_objects.append(obj)
 
-        if new_bundle_objects:
-            new_bundle = self.helper.stix2_create_bundle(new_bundle_objects)
+        if len(new_bundle_objects) > 0:
+            rewritten_bundle_objects = self.rewrite_stix_ids(new_bundle_objects)
+            new_bundle = self.helper.stix2_create_bundle(rewritten_bundle_objects)
         return new_bundle
 
     def process(self):
