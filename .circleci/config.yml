@@ -72,7 +72,7 @@ jobs:
           template: basic_fail_1
   build_manifest:
     docker:
-      - image: cimg/python:3.11
+      - image: cimg/python:3.12
     working_directory: ~/repo
     steps:
       - checkout
