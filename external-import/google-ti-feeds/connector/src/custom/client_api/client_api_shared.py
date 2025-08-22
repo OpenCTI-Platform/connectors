@@ -39,7 +39,7 @@ class ClientAPIShared(BaseClientAPI):
         subentities_ids = {}
 
         relationships_fetcher = self.fetcher_factory.create_fetcher_by_name(
-            "relationships", base_url=self.config.api_url
+            "relationships", base_url=self.config.api_url.unicode_string()
         )
         try:
             for subentity_type in subentity_types:
@@ -153,7 +153,7 @@ class ClientAPIShared(BaseClientAPI):
 
             try:
                 fetcher = self.fetcher_factory.create_fetcher_by_name(
-                    entity_type, base_url=self.config.api_url
+                    entity_type, base_url=self.config.api_url.unicode_string()
                 )
                 entities = await fetcher.fetch_multiple(ids)
                 subentities[entity_type] = entities
