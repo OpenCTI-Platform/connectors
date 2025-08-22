@@ -5,7 +5,6 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, AsyncGenerator, Dict, List, Optional
 from uuid import uuid4
 
-import isodate  # type: ignore
 from connector.src.custom.configs.fetcher_config import FETCHER_CONFIGS
 from connector.src.utils.api_engine.aio_http_client import AioHttpClient
 from connector.src.utils.api_engine.api_client import ApiClient
@@ -71,7 +70,7 @@ class BaseClientAPI:
             return start_date
 
         try:
-            duration = isodate.parse_duration(start_date_config)
+            duration = start_date_config
             if isinstance(duration, timedelta):
                 past_date = datetime.now(timezone.utc) - duration
                 start_date = past_date.strftime("%Y-%m-%dT%H:%M:%S")
