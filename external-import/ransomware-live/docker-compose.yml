@@ -28,7 +28,3 @@ services:
       - CONNECTOR_CREATE_THREAT_ACTOR=false
 
     restart: always
-networks:
-  default:
-    name: open_cti_docker_default
-    external: true
