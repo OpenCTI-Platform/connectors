@@ -1,6 +1,6 @@
 services:
   connector-tenable-security-center:
-    image: opencti/connector-tenable-security-center:6.7.13
+    image: opencti/connector-tenable-security-center:6.7.14
     env_file:
       - .env
     restart: unless-stopped
