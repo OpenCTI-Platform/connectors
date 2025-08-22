@@ -872,7 +872,7 @@
       "subscription_link": "CHANGEME or null",
       "source_code": "CHANGEME",
       "manager_supported": true,
-      "container_version": "rolling",
+      "container_version": "6.7.9",
       "container_image": "opencti/connector-greynoise-feed",
       "container_type": "EXTERNAL_IMPORT",
       "config_schema": {
