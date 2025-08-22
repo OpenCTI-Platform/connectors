@@ -21,10 +21,10 @@ fi
 for requirements_file in $test_requirements_files
 do
   project="$(dirname "$requirements_file")"
-  echo 'Running tests pipeline for project' $project
+  echo 'Running tests pipeline for project' "$project"
 
   # Per-connector outputs
-  OUT_DIR="test_outputs/$(echo "$CONNECTOR_DIR" | tr '/ ' '__')"
+  OUT_DIR="test_outputs/$(echo "$project" | tr '/ ' '__')"
   mkdir -p "$OUT_DIR"
 
   echo 'Creating isolated virtual environment'
