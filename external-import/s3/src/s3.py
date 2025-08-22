@@ -127,9 +127,33 @@ class S3Connector:
         return int(self.s3_interval) * 60
 
     def rewrite_stix_ids(self, objects):
+        # First pass: Build ID mapping for objects that need new IDs
+        id_mapping = {}
+
         for obj in objects:
-            # Rewrite relationships IDs
-            if obj["type"] == "relationship":
+            obj_type = obj.get("type")
+
+            if obj_type == "infrastructure":
+                old_id = obj["id"]
+                new_id = Infrastructure.generate_id(obj["name"])
+                id_mapping[old_id] = new_id
+
+            elif obj_type == "identity":
+                old_id = obj["id"]
+                new_id = Identity.generate_id(obj["name"], obj["identity_class"])
+                id_mapping[old_id] = new_id
+
+            elif obj_type == "course-of-action":
+                old_id = obj["id"]
+                new_id = CourseOfAction.generate_id(obj["name"], obj.get("x_mitre_id"))
+                id_mapping[old_id] = new_id
+
+        # Second pass: Update all objects with new IDs and references
+        for obj in objects:
+            obj_type = obj.get("type")
+
+            if obj_type == "relationship":
+                # Update relationship ID
                 obj["id"] = StixCoreRelationship.generate_id(
                     obj["relationship_type"],
                     obj["source_ref"],
@@ -138,38 +162,20 @@ class S3Connector:
                     obj.get("stop_time"),
                 )
 
-            # Rewrite infrastructures IDs
-            if obj["type"] == "infrastructure":
-                new_id = Infrastructure.generate_id(obj["name"])
-                for obj2 in objects:
-                    if obj2["type"] == "relationship":
-                        if obj2["source_ref"] == obj["id"]:
-                            obj2["source_ref"] = new_id
-                        if obj2["target_ref"] == obj["id"]:
-                            obj2["target_ref"] = new_id
-                obj["id"] = new_id
+                # Update references using the mapping
+                source_ref = obj.get("source_ref")
+                target_ref = obj.get("target_ref")
 
-            # Rewrite identity IDs
-            if obj["type"] == "identity":
-                new_id = Identity.generate_id(obj["name"], obj["identity_class"])
-                for obj2 in objects:
-                    if obj2["type"] == "relationship":
-                        if obj2["source_ref"] == obj["id"]:
-                            obj2["source_ref"] = new_id
-                        if obj2["target_ref"] == obj["id"]:
-                            obj2["target_ref"] = new_id
-                obj["id"] = new_id
+                if source_ref in id_mapping:
+                    obj["source_ref"] = id_mapping[source_ref]
+                if target_ref in id_mapping:
+                    obj["target_ref"] = id_mapping[target_ref]
 
-            # Rewrite CoA IDs
-            if obj["type"] == "course-of-action":
-                new_id = CourseOfAction.generate_id(obj["name", obj.get("x_mitre_id")])
-                for obj2 in objects:
-                    if obj2["type"] == "relationship":
-                        if obj2["source_ref"] == obj["id"]:
-                            obj2["source_ref"] = new_id
-                        if obj2["target_ref"] == obj["id"]:
-                            obj2["target_ref"] = new_id
-                obj["id"] = new_id
+            elif obj_type in ("infrastructure", "identity", "course-of-action"):
+                # Update the object's ID from the mapping
+                old_id = obj["id"]
+                if old_id in id_mapping:
+                    obj["id"] = id_mapping[old_id]
 
         return objects
 
@@ -382,11 +388,14 @@ class S3Connector:
                 self.helper.connect_id, friendly_name
             )
             for o in objects.get("Contents"):
-                last_modified = o.get("LastModified")
-                data = self.s3_client.get_object(
-                    Bucket=self.s3_bucket_name, Key=o.get("Key")
-                )
-                content = data["Body"].read()
+                try:
+                    last_modified = o.get("LastModified")
+                    data = self.s3_client.get_object(
+                        Bucket=self.s3_bucket_name, Key=o.get("Key")
+                    )
+                    content = data["Body"].read()
+                except:
+                    continue
                 self.helper.log_info("Sending file " + o.get("Key"))
                 fixed_bundle = self.fix_bundle(content)
                 if fixed_bundle:
@@ -403,9 +412,12 @@ class S3Connector:
                         + str(last_modified)
                         + ")"
                     )
-                    self.s3_client.delete_object(
-                        Bucket=self.s3_bucket_name, Key=o.get("Key")
-                    )
+                    try:
+                        self.s3_client.delete_object(
+                            Bucket=self.s3_bucket_name, Key=o.get("Key")
+                        )
+                    except:
+                        continue
             message = (
                 "Connector successfully run ("
                 + str(len(objects.get("Contents")))
