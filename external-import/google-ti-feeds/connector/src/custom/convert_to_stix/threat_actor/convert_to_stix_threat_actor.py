@@ -3,6 +3,9 @@
 import logging
 from typing import Any, List
 
+from connector.src.custom.configs import (
+    GTIConfig,
+)
 from connector.src.custom.convert_to_stix.convert_to_stix_base import BaseConvertToSTIX
 
 LOG_PREFIX = "[ConvertToSTIXThreatActor]"
@@ -11,7 +14,7 @@ LOG_PREFIX = "[ConvertToSTIXThreatActor]"
 class ConvertToSTIXThreatActor(BaseConvertToSTIX):
     """Threat actor-specific converter for fetching and processing threat actor data."""
 
-    def __init__(self, config: Any, logger: logging.Logger, tlp_level: str):
+    def __init__(self, config: GTIConfig, logger: logging.Logger, tlp_level: str):
         """Initialize Threat Actor Converter."""
         super().__init__(config, logger, tlp_level)
 

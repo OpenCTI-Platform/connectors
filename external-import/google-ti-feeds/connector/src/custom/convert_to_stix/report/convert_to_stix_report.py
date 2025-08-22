@@ -3,6 +3,9 @@
 import logging
 from typing import Any, List
 
+from connector.src.custom.configs import (
+    GTIConfig,
+)
 from connector.src.custom.convert_to_stix.convert_to_stix_base import BaseConvertToSTIX
 
 LOG_PREFIX = "[ConvertToSTIXReport]"
@@ -11,7 +14,7 @@ LOG_PREFIX = "[ConvertToSTIXReport]"
 class ConvertToSTIXReport(BaseConvertToSTIX):
     """Report-specific converter for fetching and processing report data."""
 
-    def __init__(self, config: Any, logger: logging.Logger, tlp_level: str):
+    def __init__(self, config: GTIConfig, logger: logging.Logger, tlp_level: str):
         """Initialize Report Converter."""
         super().__init__(config, logger, tlp_level)
 
