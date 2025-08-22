@@ -1,8 +1,18 @@
-"""Connector to enrich IOCs and Vulnerabilities with Recorded Future data"""
+"""
+############################## TERMS OF USE ####################################
+# The following code is provided for demonstration purposes only, and should   #
+# not be used without independent verification. Recorded Future makes no       #
+# representations or warranties, express, implied, statutory, or otherwise,    #
+# regarding this code, and provides it strictly "as-is".                       #
+# Recorded Future shall not be liable for, and you assume all risk of          #
+# using the foregoing.                                                         #
+################################################################################
+"""
 
 import traceback
 
-from rflib.rf_connector import RFEnrichmentConnector
+from pycti import OpenCTIConnectorHelper
+from rflib import ConnectorConfig, RFEnrichmentConnector
 
 if __name__ == "__main__":
     """
@@ -15,7 +25,13 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        connector = RFEnrichmentConnector()
+        config = ConnectorConfig()
+        helper = OpenCTIConnectorHelper(
+            config=config.model_dump_pycti(),
+            playbook_compatible=True,
+        )
+
+        connector = RFEnrichmentConnector(config, helper)
         connector.start()
     except Exception:
         traceback.print_exc()
