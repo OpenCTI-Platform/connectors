@@ -1,7 +1,7 @@
 import datetime
 from types import SimpleNamespace
 from typing import Any, Callable
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock, Mock, patch
 
 import freezegun
 import pytest
@@ -34,6 +34,18 @@ def fixture_connector(mocked_helper: Mock, test_config: ConnectorSettings) -> Co
     )
 
 
+@pytest.fixture(name="patch_client_context")
+def patch_client_context():
+    async def fake_context(self, *args, **kwargs):
+        return self
+
+    with patch(
+        "email_intel_microsoft.client.ConnectorClient.__aenter__", fake_context
+    ), patch("email_intel_microsoft.client.ConnectorClient.__aexit__", fake_context):
+        yield
+
+
+@pytest.mark.usefixtures("patch_client_context")
 @pytest.mark.asyncio
 def test_connector_process_data(
     connector: Connector,
@@ -43,8 +55,14 @@ def test_connector_process_data(
     email1 = message("message1", [])
     email2 = message("message2", [])
 
-    connector.client._messages = messages_builder(
+    connector.client._client = MagicMock()
+
+    messages = messages_builder(
         [SimpleNamespace(value=[email1, email2], odata_next_link=None)]
+    )
+
+    connector.client._client.users.by_user_id.return_value.mail_folders.by_mail_folder_id.return_value.messages = (
+        messages
     )
 
     stix_objects = connector.process_data()

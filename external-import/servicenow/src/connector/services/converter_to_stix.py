@@ -1,19 +1,36 @@
 from datetime import datetime
 from typing import Literal
 
-from connector.models import (
+from src.connector.models import (
+    ASN,
+    URL,
     AttackPattern,
     Author,
     CustomCaseIncident,
     CustomTask,
+    Directory,
+    DomainName,
+    EmailAddress,
+    EmailMessage,
     ExternalReference,
+    File,
+    Hostname,
     IntrusionSet,
+    IPv4Address,
+    IPv6Address,
     Malware,
+    Mutex,
+    ObservableResponse,
+    OrganizationName,
+    PhoneNumber,
     Relationship,
     SecurityIncidentResponse,
     TaskResponse,
     TLPMarking,
     Tool,
+    UserAccount,
+    Vulnerability,
+    WindowsRegistyKey,
 )
 
 
@@ -181,14 +198,14 @@ class ConverterToStix:
     def make_custom_task(
         self,
         data: TaskResponse,
-        case_incident: CustomCaseIncident,
+        all_objects: list,
         all_labels: list[str],
     ) -> CustomTask:
         """Make a CustomTask object and its representation in STIX 2.1 format.
         The CustomTask is represented by the SIT in ServiceNow.
         Args:
             data (TaskResponse): Validated task data from ServiceNow.
-            case_incident (CustomCaseIncident): Security Incident to which this task is linked.
+            all_objects (list): Security Incident to which this task is linked.
             all_labels (list[str]): List of labels to associate with the task.
         Returns:
             CustomTask: An object containing a task and its representation in STIX 2.1 format.
@@ -201,7 +218,7 @@ class ConverterToStix:
             updated=data.sys_updated_on,
             due_date=data.due_date,
             labels=all_labels,
-            objects=case_incident,
+            objects=all_objects,
             markings=[self._tlp_marking],
             author=self._author,
         )
@@ -209,15 +226,17 @@ class ConverterToStix:
     def make_custom_case_incident(
         self,
         data: SecurityIncidentResponse,
-        case_incident_object_refs: list,
+        case_incident_related_objects: list,
         external_references: list[ExternalReference],
+        labels: list[str] = None,
     ) -> CustomCaseIncident:
         """Make a CustomCaseIncident object and its representation in STIX 2.1 format.
         The CustomCaseIncident is represented by the SIR in ServiceNow.
         Args:
             data (SecurityIncidentResponse): Validated security incident data from ServiceNow.
-            case_incident_object_refs (list): List of security incident-related objects.
+            case_incident_related_objects (list): List of security incident-related objects.
             external_references (list[ExternalReference]): An external link to the security incident data. (SIR)
+            labels (list[str] | None): List of labels for security incident.
         Returns:
             CustomCaseIncident: An object containing a security incident and its representation in STIX 2.1 format.
         """
@@ -229,11 +248,11 @@ class ConverterToStix:
             severity=data.severity,
             priority=data.priority,
             types=data.category,
-            labels=data.subcategory,
+            labels=labels,
             external_references=external_references,
             markings=[self._tlp_marking],
             author=self._author,
-            objects=case_incident_object_refs,
+            objects=case_incident_related_objects,
         )
 
     def make_relationship(
@@ -241,7 +260,8 @@ class ConverterToStix:
         source_object,
         relationship_type: str,
         target_object,
-        start_time: datetime = None,
+        original_creation_date: datetime = None,
+        modification_date: datetime = None,
     ) -> Relationship:
         """Creates a relationship object and its representation in STIX 2.1 format.
 
@@ -249,7 +269,10 @@ class ConverterToStix:
             source_object: The source object.
             relationship_type (str): The type of the relationship.
             target_object: The target object to relate to the source.
-            start_time (datetime, optional): The time the relationship started being relevant or observed.
+            original_creation_date (datetime | None): This optional datetime represents the original creation date,
+                the date on which the relationship began to be relevant or observed.
+            modification_date (datetime | None): This optional datetime represents the modification date,
+                the date on which the relationship was updated.
         Returns:
             Relationship: A Relationship object and its representation in STIX 2.1 format.
         """
@@ -257,7 +280,290 @@ class ConverterToStix:
             relationship_type=relationship_type,
             source=source_object,
             target=target_object,
-            start_time=start_time,
+            original_creation_date=original_creation_date,
+            modification_date=modification_date,
+            markings=[self._tlp_marking],
+            author=self._author,
+        )
+
+    def make_domain_name(
+        self,
+        observable: ObservableResponse,
+        all_labels: list,
+        external_reference: ExternalReference,
+    ) -> DomainName:
+        return DomainName(
+            value=observable.value,
+            type=observable.type,
+            labels=all_labels,
+            description=observable.notes,
+            external_reference=external_reference,
+            markings=[self._tlp_marking],
+            author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
+        )
+
+    def make_ipv4(
+        self,
+        observable: ObservableResponse,
+        all_labels: list,
+        external_reference: ExternalReference,
+    ) -> IPv4Address:
+        return IPv4Address(
+            value=observable.value,
+            type=observable.type,
+            labels=all_labels,
+            description=observable.notes,
+            external_reference=external_reference,
+            markings=[self._tlp_marking],
+            author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
+        )
+
+    def make_ipv6(
+        self,
+        observable: ObservableResponse,
+        all_labels: list,
+        external_reference: ExternalReference,
+    ) -> IPv6Address:
+        return IPv6Address(
+            value=observable.value,
+            type=observable.type,
+            labels=all_labels,
+            description=observable.notes,
+            external_reference=external_reference,
+            markings=[self._tlp_marking],
+            author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
+        )
+
+    def make_url(
+        self,
+        observable: ObservableResponse,
+        all_labels: list,
+        external_reference: ExternalReference,
+    ) -> URL:
+        return URL(
+            value=observable.value,
+            type=observable.type,
+            labels=all_labels,
+            description=observable.notes,
+            external_reference=external_reference,
+            markings=[self._tlp_marking],
+            author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
+        )
+
+    def make_email_address(
+        self,
+        observable: ObservableResponse,
+        all_labels: list,
+        external_reference: ExternalReference,
+    ) -> EmailAddress:
+        return EmailAddress(
+            value=observable.value,
+            type=observable.type,
+            labels=all_labels,
+            description=observable.notes,
+            external_reference=external_reference,
+            markings=[self._tlp_marking],
+            author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
+        )
+
+    def make_email_message(
+        self,
+        observable: ObservableResponse,
+        all_labels: list,
+        external_reference: ExternalReference,
+    ) -> EmailMessage:
+        return EmailMessage(
+            value=observable.value,
+            type=observable.type,
+            labels=all_labels,
+            description=observable.notes,
+            external_reference=external_reference,
+            markings=[self._tlp_marking],
+            author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
+        )
+
+    def make_file(
+        self,
+        observable: ObservableResponse,
+        all_labels: list,
+        external_reference: ExternalReference,
+    ) -> File:
+        return File(
+            name=observable.value,
+            type=observable.type,
+            labels=all_labels,
+            description=observable.notes,
+            external_reference=external_reference,
+            markings=[self._tlp_marking],
+            author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
+        )
+
+    def make_directory(
+        self,
+        observable: ObservableResponse,
+        all_labels: list,
+        external_reference: ExternalReference,
+    ) -> Directory:
+        return Directory(
+            path=observable.value,
+            type=observable.type,
+            labels=all_labels,
+            description=observable.notes,
+            external_reference=external_reference,
+            markings=[self._tlp_marking],
+            author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
+        )
+
+    def make_hostname(
+        self,
+        observable: ObservableResponse,
+        all_labels: list,
+        external_reference: ExternalReference,
+    ) -> Hostname:
+        return Hostname(
+            value=observable.value,
+            type=observable.type,
+            labels=all_labels,
+            description=observable.notes,
+            external_reference=external_reference,
+            markings=[self._tlp_marking],
+            author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
+        )
+
+    def make_mutex(
+        self,
+        observable: ObservableResponse,
+        all_labels: list,
+        external_reference: ExternalReference,
+    ) -> Mutex:
+        return Mutex(
+            name=observable.value,
+            type=observable.type,
+            labels=all_labels,
+            description=observable.notes,
+            external_reference=external_reference,
+            markings=[self._tlp_marking],
+            author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
+        )
+
+    def make_asn(
+        self,
+        observable: ObservableResponse,
+        all_labels: list,
+        external_reference: ExternalReference,
+    ) -> ASN:
+        return ASN(
+            value=observable.value,
+            type=observable.type,
+            labels=all_labels,
+            description=observable.notes,
+            external_reference=external_reference,
+            markings=[self._tlp_marking],
+            author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
+        )
+
+    def make_phone_number(
+        self,
+        observable: ObservableResponse,
+        all_labels: list,
+        external_reference: ExternalReference,
+    ) -> PhoneNumber:
+        return PhoneNumber(
+            value=observable.value,
+            type=observable.type,
+            labels=all_labels,
+            description=observable.notes,
+            external_reference=external_reference,
+            markings=[self._tlp_marking],
+            author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
+        )
+
+    def make_windows_registry_key(
+        self,
+        observable: ObservableResponse,
+        all_labels: list,
+        external_reference: ExternalReference,
+    ) -> WindowsRegistyKey:
+        return WindowsRegistyKey(
+            key=observable.value,
+            type=observable.type,
+            labels=all_labels,
+            description=observable.notes,
+            external_reference=external_reference,
+            markings=[self._tlp_marking],
+            author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
+        )
+
+    def make_user_account(
+        self,
+        observable: ObservableResponse,
+        all_labels: list,
+        external_reference: ExternalReference,
+    ) -> UserAccount:
+        return UserAccount(
+            user=observable.value,
+            type=observable.type,
+            labels=all_labels,
+            description=observable.notes,
+            external_reference=external_reference,
+            markings=[self._tlp_marking],
+            author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
+        )
+
+    def make_organization_name(
+        self,
+        observable: ObservableResponse,
+        all_labels: list,
+        external_reference: ExternalReference,
+    ) -> OrganizationName:
+        return OrganizationName(
+            name=observable.value,
+            labels=all_labels,
+            description=observable.notes,
+            external_reference=external_reference,
+            markings=[self._tlp_marking],
+            author=self._author,
+        )
+
+    def make_vulnerability(
+        self,
+        observable: ObservableResponse,
+        all_labels: list,
+        external_reference: ExternalReference,
+    ) -> Vulnerability:
+        return Vulnerability(
+            name=observable.value,
+            labels=all_labels,
+            description=observable.notes,
+            external_reference=external_reference,
             markings=[self._tlp_marking],
             author=self._author,
         )

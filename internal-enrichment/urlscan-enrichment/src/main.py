@@ -128,7 +128,7 @@ class UrlscanConnector:
             {"entity_type": stix_entity["type"], "entity_value": stix_entity["value"]},
         )
 
-        if is_submission is True:
+        if is_submission:
             prepared_file_png = (
                 self.utils.prepare_file_png(data)
                 if self.config.import_screenshot

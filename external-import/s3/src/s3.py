@@ -1,17 +1,21 @@
+import datetime
 import json
 import os
 import sys
 import time
 import traceback
-from datetime import datetime
 
 import boto3
 import pytz
 import stix2
 import yaml
 from pycti import (
+    CourseOfAction,
+    Identity,
+    Infrastructure,
     Note,
     OpenCTIConnectorHelper,
+    StixCoreRelationship,
     get_config_variable,
 )
 
@@ -26,21 +30,21 @@ mapped_keys = [
     "x_zero_day",
     "x_notable_vuln",
     "x_name",
-]
-ignored_keys = [
-    "x_cvss_v2_vector",
+    "x_cwe",
     "x_cvss_v2",
+    "x_cvss_v2_vector",
     "x_cvss_v2_temporal_score",
     "x_cvss_v3_temporal_score",
-    "x_history",
     "x_first_seen_active",
-    "x_acti_guid",
+    "x_history",
     "x_acti_uuid",
-    "x_version",
     "x_product",
-    "x_vendor",
     "x_and_prior_versions",
-    "x_cwe",
+]
+ignored_keys = [
+    "x_acti_guid",
+    "x_version",
+    "x_vendor",
     "x_credit",
 ]
 
@@ -94,6 +98,12 @@ class S3Connector:
                     m=s3_marking
                 )
             )
+        self.s3_delete_after_import = get_config_variable(
+            "S3_DELETE_AFTER_IMPORT",
+            ["s3", "delete_after_import"],
+            config,
+            default=True,
+        )
         self.s3_interval = get_config_variable(
             "S3_INTERVAL", ["s3", "interval"], config, isNumber=True, default=5
         )
@@ -116,109 +126,64 @@ class S3Connector:
     def get_interval(self):
         return int(self.s3_interval) * 60
 
-    def cvss_score_to_severity(self, score):
-        if score == 0.0:
-            return "None"
-        elif 0.1 <= score <= 3.9:
-            return "Low"
-        elif 4.0 <= score <= 6.9:
-            return "Medium"
-        elif 7.0 <= score <= 8.9:
-            return "High"
-        elif 9.0 <= score <= 10.0:
-            return "Critical"
+    def rewrite_stix_ids(self, objects):
+        # First pass: Build ID mapping for objects that need new IDs
+        id_mapping = {}
 
-    def parse_cvss3_vector(self, cvss_vector):
-        # Remove the initial "CVSS:3.1/" part
-        metrics_string = cvss_vector.split("/")[1:]
-        parsed_metrics = {}
-        for metric in metrics_string:
-            key, value = metric.split(":")
-            # Interpret each key according to CVSS3 standards
-            if key == "AV":
-                parsed_metrics["Attack Vector"] = {
-                    "N": "Network",
-                    "A": "Adjacent",
-                    "L": "Local",
-                    "P": "Physical",
-                }.get(value, "Unknown")
+        for obj in objects:
+            obj_type = obj.get("type")
 
-            elif key == "AC":
-                parsed_metrics["Attack Complexity"] = {"L": "Low", "H": "High"}.get(
-                    value, "Unknown"
+            if obj_type == "infrastructure":
+                old_id = obj["id"]
+                new_id = Infrastructure.generate_id(obj["name"])
+                id_mapping[old_id] = new_id
+
+            elif obj_type == "identity":
+                old_id = obj["id"]
+                new_id = Identity.generate_id(obj["name"], obj["identity_class"])
+                id_mapping[old_id] = new_id
+
+            elif obj_type == "course-of-action":
+                old_id = obj["id"]
+                new_id = CourseOfAction.generate_id(obj["name"], obj.get("x_mitre_id"))
+                id_mapping[old_id] = new_id
+
+        # Second pass: Update all objects with new IDs and references
+        for obj in objects:
+            obj_type = obj.get("type")
+
+            if obj_type == "relationship":
+                # Update relationship ID
+                obj["id"] = StixCoreRelationship.generate_id(
+                    obj["relationship_type"],
+                    obj["source_ref"],
+                    obj["target_ref"],
+                    obj.get("start_time"),
+                    obj.get("stop_time"),
                 )
 
-            elif key == "PR":
-                parsed_metrics["Privileges Required"] = {
-                    "N": "None",
-                    "L": "Low",
-                    "H": "High",
-                }.get(value, "Unknown")
+                # Update references using the mapping
+                source_ref = obj.get("source_ref")
+                target_ref = obj.get("target_ref")
 
-            elif key == "UI":
-                parsed_metrics["User Interaction"] = {"N": "None", "R": "Required"}.get(
-                    value, "Unknown"
-                )
+                if source_ref in id_mapping:
+                    obj["source_ref"] = id_mapping[source_ref]
+                if target_ref in id_mapping:
+                    obj["target_ref"] = id_mapping[target_ref]
 
-            elif key == "S":
-                parsed_metrics["Scope"] = {"U": "Unchanged", "C": "Changed"}.get(
-                    value, "Unknown"
-                )
+            elif obj_type in ("infrastructure", "identity", "course-of-action"):
+                # Update the object's ID from the mapping
+                old_id = obj["id"]
+                if old_id in id_mapping:
+                    obj["id"] = id_mapping[old_id]
 
-            elif key == "C":
-                parsed_metrics["Confidentiality Impact"] = {
-                    "H": "High",
-                    "L": "Low",
-                    "N": "None",
-                }.get(value, "Unknown")
-
-            elif key == "I":
-                parsed_metrics["Integrity Impact"] = {
-                    "H": "High",
-                    "L": "Low",
-                    "N": "None",
-                }.get(value, "Unknown")
-
-            elif key == "A":
-                parsed_metrics["Availability Impact"] = {
-                    "H": "High",
-                    "L": "Low",
-                    "N": "None",
-                }.get(value, "Unknown")
-
-            elif key == "E":
-                parsed_metrics["Exploitability"] = {
-                    "X": "Not Defined",
-                    "H": "High",
-                    "F": "Functional",
-                    "P": "Proof-of-Concept",
-                    "U": "Unproven",
-                }.get(value, "Unknown")
-
-            elif key == "RL":
-                parsed_metrics["Remediation Level"] = {
-                    "X": "Not Defined",
-                    "U": "Unavailable",
-                    "W": "Workaround",
-                    "T": "Temporary Fix",
-                    "O": "Official Fix",
-                }.get(value, "Unknown")
-
-            elif key == "RC":
-                parsed_metrics["Report Confidence"] = {
-                    "X": "Not Defined",
-                    "C": "Confirmed",
-                    "R": "Reasonable",
-                    "U": "Unknown",
-                }.get(value, "Unknown")
-
-        return parsed_metrics
+        return objects
 
     def fix_bundle(self, bundle):
         included_entities = []
-        ignored_entities = []
         data = json.loads(bundle)
         new_bundle_objects = []
+        new_bundle = []
         for obj in data["objects"]:
             included_entities.append(obj["id"])
         for obj in data["objects"]:
@@ -228,11 +193,14 @@ class S3Connector:
                     and key not in mapped_keys
                     and key not in ignored_keys
                 ):
-                    self.helper.log_info("Found non-mapped custom key: " + key)
+                    self.helper.log_error("Found non-mapped custom key: " + key)
+
+            # Ensure author and marking
             if self.identity is not None and "created_by_ref" not in obj:
                 obj["created_by_ref"] = self.identity["standard_id"]
             if "object_marking_refs" not in obj:
                 obj["object_marking_refs"] = [self.s3_marking["id"]]
+
             if "x_severity" in obj:
                 if obj["x_severity"] == "high":
                     obj["x_opencti_score"] = 90
@@ -240,25 +208,46 @@ class S3Connector:
                     obj["x_opencti_score"] = 60
                 elif obj["x_severity"] == "low":
                     obj["x_opencti_score"] = 30
+
+            # Aliases
             if "x_alias" in obj:
-                obj["x_opencti_aliases"] = obj["x_alias"]
+                obj["x_opencti_aliases"] = (
+                    obj["x_alias"]
+                    if isinstance(obj["x_alias"], list)
+                    else [obj["x_alias"]]
+                )
+
+            # CVSS 2
+            if "x_cvss_v2" in obj:
+                obj["x_opencti_cvss_v2_base_score"] = obj["x_cvss_v2"]
+            if "x_cvss_v2_temporal_score" in obj:
+                obj["x_opencti_cvss_v2_temporal_score"] = obj[
+                    "x_cvss_v2_temporal_score"
+                ]
+            if "x_cvss_v2_vector" in obj:
+                obj["x_opencti_cvss_v2_vector_string"] = obj["x_cvss_v2_vector"]
+
+            # CVSS3
             if "x_cvss_v3" in obj:
                 obj["x_opencti_cvss_base_score"] = obj["x_cvss_v3"]
-                obj["x_opencti_cvss_base_severity"] = self.cvss_score_to_severity(
-                    obj["x_cvss_v3"]
-                )
+            if "x_cvss_v3_temporal_score" in obj:
+                obj["x_opencti_cvss_temporal_score"] = obj["x_cvss_v3_temporal_score"]
             if "x_cvss_v3_vector" in obj:
-                parsed_metrics = self.parse_cvss3_vector(obj["x_cvss_v3_vector"])
-                obj["x_opencti_cvss_attack_vector"] = parsed_metrics["Attack Vector"]
-                obj["x_opencti_cvss_integrity_impact"] = parsed_metrics[
-                    "Integrity Impact"
-                ]
-                obj["x_opencti_cvss_availability_impact"] = parsed_metrics[
-                    "Availability Impact"
-                ]
-                obj["x_opencti_cvss_confidentiality_impact"] = parsed_metrics[
-                    "Confidentiality Impact"
-                ]
+                obj["x_opencti_cvss_vector_string"] = obj["x_cvss_v3_vector"]
+
+            # CWE
+            if "x_cwe" in obj:
+                obj["x_opencti_cwe"] = [obj["x_cwe"]]
+
+            # First seen active
+            if "x_first_seen_active" in obj:
+                obj["x_opencti_first_seen_active"] = obj["x_first_seen_active"]
+
+            # Ad-hoc desc
+            if "x_description" in obj:
+                obj["x_opencti_description"] = obj["x_description"]
+
+            # Note
             if "x_title" in obj and "x_analysis" in obj:
                 note = stix2.Note(
                     id=Note.generate_id(obj["created"], obj["x_analysis"]),
@@ -274,35 +263,71 @@ class S3Connector:
                     ),
                 )
                 new_bundle_objects.append(note)
-            if "x_wormable" in obj:
+
+            # History Note
+            if "x_history" in obj and obj["x_history"]:
+                note_content = "| Timestamp | Comment |\n|---------|---------|\n"
+                for history in obj.get("x_history"):
+                    note_content += f"| {history.get('timestamp', '')} | {history.get('comment', '')} |\n"
+
+                abstract = obj.get("name") + " - History"
+                note = stix2.Note(
+                    id=Note.generate_id(obj["created"], abstract),
+                    created=obj["created"],
+                    abstract=abstract,
+                    content=note_content,
+                    object_refs=[obj["id"]],
+                    object_marking_refs=[self.s3_marking["id"]],
+                    created_by_ref=(
+                        self.identity["standard_id"]
+                        if self.identity is not None
+                        else None
+                    ),
+                )
+                new_bundle_objects.append(note)
+
+            # Labels
+            if "x_wormable" in obj and obj["x_wormable"]:
                 if "labels" in obj:
                     obj["labels"].append("wormable")
                 else:
                     obj["labels"] = ["wormable"]
-            if "x_zero_day" in obj:
+            if "x_zero_day" in obj and obj["x_zero_day"]:
                 if "labels" in obj:
                     obj["labels"].append("zero-day")
                 else:
                     obj["labels"] = ["zero-day"]
-            if "x_notable_vuln" in obj:
+            if "x_notable_vuln" in obj and obj["x_notable_vuln"]:
                 if "labels" in obj:
                     obj["labels"].append("notable-vuln")
                 else:
                     obj["labels"] = ["notable-vuln"]
-            if obj["type"] == "software":
-                obj["name"] = obj["x_product"] + " " + obj["version"]
+            if "x_and_prior_versions" in obj and obj["x_and_prior_versions"]:
+                if "labels" in obj:
+                    obj["labels"].append("and-prior-versions")
+                else:
+                    obj["labels"] = ["and-prior-versions"]
 
-            if "relationship_type" in obj and (
-                obj["relationship_type"] == "technology"
-                or obj["relationship_type"] == "technology-to"
-                or obj["relationship_type"] == "remediated-by"
-            ):
-                continue
-            if obj["type"] == "infrastructure" and obj["name"].startswith("cpe:"):
-                ignored_entities.append(obj["id"])
-                continue
+            # x_product
+            if "x_product" in obj:
+                obj["x_opencti_product"] = obj["x_product"]
+
+            # x_acti_uuid
+            if "x_acti_uuid" in obj:
+                external_ref = {
+                    "source_name": "ACTI UUID",
+                    "external_id": obj["x_acti_uuid"],
+                }
+
+                if "external_references" in obj:
+                    obj["external_references"].append(external_ref)
+                else:
+                    obj["external_references"] = [external_ref]
+
+            # Relationships "has"
             if (
                 obj["type"] == "relationship"
+                and obj["relationship_type"] == "related-to"
                 and obj["source_ref"].startswith("vulnerability")
                 and obj["target_ref"].startswith("software")
             ):
@@ -310,11 +335,20 @@ class S3Connector:
                 original_source_ref = obj["source_ref"]
                 obj["source_ref"] = obj["target_ref"]
                 obj["target_ref"] = original_source_ref
-            if obj["type"] == "relationship" and (
-                obj["source_ref"] in ignored_entities
-                or obj["target_ref"] in ignored_entities
+
+            # Relationship "remediates"
+            if (
+                obj["type"] == "relationship"
+                and obj["relationship_type"] == "remediated-by"
+                and obj["source_ref"].startswith("vulnerability")
+                and obj["target_ref"].startswith("software")
             ):
-                continue
+                obj["relationship_type"] = "remediates"
+                original_source_ref = obj["source_ref"]
+                obj["source_ref"] = obj["target_ref"]
+                obj["target_ref"] = original_source_ref
+
+            # Cleanup orphan relationships
             if (
                 obj["type"] == "relationship"
                 and obj["source_ref"] not in included_entities
@@ -336,11 +370,17 @@ class S3Connector:
                 )
                 continue
             new_bundle_objects.append(obj)
-        new_bundle = self.helper.stix2_create_bundle(new_bundle_objects)
+
+        if len(new_bundle_objects) > 0:
+            rewritten_bundle_objects = self.rewrite_stix_ids(new_bundle_objects)
+            new_bundle = self.helper.stix2_create_bundle(rewritten_bundle_objects)
         return new_bundle
 
     def process(self):
-        now = datetime.now(pytz.UTC)
+        now = datetime.datetime.now(pytz.UTC)
+        # We always re-send 2 days of data before deleting to handle multi instances consuming, we are good with this approach
+        # OpenCTI will de-duplicate / upsert if necessary
+        cutoff = now - datetime.timedelta(days=2)
         objects = self.s3_client.list_objects(Bucket=self.s3_bucket_name)
         if objects.get("Contents") is not None and len(objects.get("Contents")) > 0:
             friendly_name = "S3 run @ " + now.astimezone(pytz.UTC).isoformat()
@@ -348,18 +388,36 @@ class S3Connector:
                 self.helper.connect_id, friendly_name
             )
             for o in objects.get("Contents"):
-                data = self.s3_client.get_object(
-                    Bucket=self.s3_bucket_name, Key=o.get("Key")
-                )
-                content = data["Body"].read()
+                try:
+                    last_modified = o.get("LastModified")
+                    data = self.s3_client.get_object(
+                        Bucket=self.s3_bucket_name, Key=o.get("Key")
+                    )
+                    content = data["Body"].read()
+                except:
+                    continue
                 self.helper.log_info("Sending file " + o.get("Key"))
                 fixed_bundle = self.fix_bundle(content)
-                self.helper.send_stix2_bundle(bundle=fixed_bundle, work_id=work_id)
-                self.helper.log_info("Deleting file " + o.get("Key"))
-                self.s3_client.delete_object(
-                    Bucket=self.s3_bucket_name, Key=o.get("Key")
-                )
-
+                if fixed_bundle:
+                    self.helper.send_stix2_bundle(bundle=fixed_bundle, work_id=work_id)
+                else:
+                    self.helper.log_info("No content to ingest")
+                if self.s3_delete_after_import and last_modified < cutoff:
+                    self.helper.log_info(
+                        "Deleting file "
+                        + o.get("Key")
+                        + "(2 days ago="
+                        + str(cutoff)
+                        + ", modified="
+                        + str(last_modified)
+                        + ")"
+                    )
+                    try:
+                        self.s3_client.delete_object(
+                            Bucket=self.s3_bucket_name, Key=o.get("Key")
+                        )
+                    except:
+                        continue
             message = (
                 "Connector successfully run ("
                 + str(len(objects.get("Contents")))

@@ -4,7 +4,8 @@ from typing import Any, Literal, Optional
 
 import pycti
 import stix2
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
+from pydantic import BaseModel, ConfigDict, Field, PositiveInt, PrivateAttr
+from src.connector.models.intelligence import asn_regex
 
 
 class Converter(BaseModel):
@@ -82,14 +83,16 @@ class Author(Converter):
             name=self.name,
             identity_class=self.identity_class,
             description=self.description,
-            custom_properties={"x_opencti_organization_type": self.organization_type},
-            external_references=[
-                stix2.ExternalReference(
-                    source_name="ServiceNow",
-                    url="https://www.servicenow.com/",
-                    description="Official site of ServiceNow.",
-                )
-            ],
+            custom_properties={
+                "x_opencti_organization_type": self.organization_type,
+                "x_opencti_external_references": [
+                    stix2.ExternalReference(
+                        source_name="ServiceNow",
+                        url="https://www.servicenow.com/",
+                        description="Official site of ServiceNow.",
+                    )
+                ],
+            },
         )
 
 
@@ -227,13 +230,15 @@ class IntrusionSet(Converter):
             id=pycti.IntrusionSet.generate_id(name=self.name),
             created_by_ref=self.author.id,
             name=self.name,
+            aliases=self.aliases,
             description=self.description,
             object_marking_refs=[marking.id for marking in self.markings or []],
-            external_references=[
-                external_references.to_stix2_object()
-                for external_references in self.external_references or []
-            ],
-            aliases=self.aliases,
+            custom_properties={
+                "x_opencti_external_references": [
+                    external_references.to_stix2_object()
+                    for external_references in self.external_references or []
+                ],
+            },
         )
 
 
@@ -271,14 +276,16 @@ class Malware(Converter):
             id=pycti.Malware.generate_id(name=self.name),
             created_by_ref=self.author.id,
             name=self.name,
+            aliases=self.aliases,
             description=self.description,
             is_family=self.is_family,
             object_marking_refs=[marking.id for marking in self.markings or []],
-            external_references=[
-                external_references.to_stix2_object()
-                for external_references in self.external_references or []
-            ],
-            aliases=self.aliases,
+            custom_properties={
+                "x_opencti_external_references": [
+                    external_references.to_stix2_object()
+                    for external_references in self.external_references or []
+                ],
+            },
         )
 
 
@@ -312,13 +319,15 @@ class Tool(Converter):
             id=pycti.Tool.generate_id(name=self.name),
             created_by_ref=self.author.id,
             name=self.name,
+            aliases=self.aliases,
             description=self.description,
             object_marking_refs=[marking.id for marking in self.markings or []],
-            external_references=[
-                external_references.to_stix2_object()
-                for external_references in self.external_references or []
-            ],
-            aliases=self.aliases,
+            custom_properties={
+                "x_opencti_external_references": [
+                    external_references.to_stix2_object()
+                    for external_references in self.external_references or []
+                ],
+            },
         )
 
 
@@ -359,7 +368,7 @@ class CustomCaseIncident(Converter):
         default=None,
         description="A list of objects associated with the case incident.",
     )
-    labels: Optional[str] = Field(
+    labels: Optional[list[str]] = Field(
         default=None,
         description="A Labels of the case incident.",
     )
@@ -386,15 +395,15 @@ class CustomCaseIncident(Converter):
             response_types=[self.types],
             object_marking_refs=[marking.id for marking in self.markings or []],
             object_refs=[obj.id for obj in self.objects or []],
-            external_references=[
-                external_references.to_stix2_object()
-                for external_references in self.external_references or []
-            ],
             created=self.created,
             modified=self.updated,
             custom_properties={
-                "x_opencti_labels": [self.labels] if self.labels else [],
+                "x_opencti_labels": self.labels or [],
                 "x_opencti_created_by_ref": self.author.id,
+                "x_opencti_external_references": [
+                    external_references.to_stix2_object()
+                    for external_references in self.external_references or []
+                ],
             },
         )
 
@@ -419,7 +428,7 @@ class CustomTask(Converter):
         default=None,
         description="The due date of the task, representing the deadline for completion.",
     )
-    objects: Optional[Converter] = Field(
+    objects: Optional[list[Converter]] = Field(
         default=None,
         description="A list of objects associated with the task.",
     )
@@ -443,9 +452,9 @@ class CustomTask(Converter):
             created=self.created,
             modified=self.updated,
             due_date=self.due_date,
-            object_refs=[self.objects.id],
+            object_refs=[obj.id for obj in self.objects or []],
             object_marking_refs=[marking.id for marking in self.markings or []],
-            labels=self.labels,
+            labels=self.labels or [],
             custom_properties={"x_opencti_created_by_ref": self.author.id},
         )
 
@@ -456,9 +465,15 @@ class Relationship(Converter):
     author: Author = Field(
         description="Reference to the author that reported this relationship."
     )
-    start_time: Optional[datetime] = Field(
+    original_creation_date: Optional[datetime] = Field(
         default=None,
-        description="This optional timestamp represents the earliest time at which the Relationship between the objects exists.",
+        description="This optional datetime represents the original creation date, the date on which the relationship "
+        "began to be relevant or observed.",
+    )
+    modification_date: Optional[datetime] = Field(
+        default=None,
+        description="This optional datetime represents the modification date, the date on which the relationship "
+        "was updated.",
     )
     relationship_type: str = Field(description="Reference to the type of relationship.")
     source: Converter = Field(
@@ -475,10 +490,780 @@ class Relationship(Converter):
             id=pycti.StixCoreRelationship.generate_id(
                 self.relationship_type, self.source.id, self.target.id
             ),
-            start_time=self.start_time,
+            created=self.original_creation_date,
+            modified=self.modification_date,
             relationship_type=self.relationship_type,
             source_ref=self.source.id,
             target_ref=self.target.id,
-            object_marking_refs=[marking.id for marking in self.markings],
+            object_marking_refs=[marking.id for marking in self.markings or []],
             created_by_ref=self.author.id,
+        )
+
+
+class DomainName(Converter):
+    value: str = Field(
+        description="The value of the observable corresponds to a domain name.",
+    )
+    type: str = Field(description="The type of observable for OpenCTI.")
+    labels: Optional[list[str]] = Field(
+        default=None,
+        description="A list of Labels of the observables.",
+    )
+    description: Optional[str] = Field(
+        description="A note of the observable.",
+    )
+    external_reference: Optional[ExternalReference] = Field(
+        default=None,
+        description="An external link to the observable's data.",
+    )
+    markings: list[TLPMarking] = Field(description="References for object marking.")
+    author: Author = Field(
+        description="Reference to the author that reported this observable."
+    )
+    score: Optional[PositiveInt] = Field(
+        default=None, description="References for object marking."
+    )
+    promote_observable_as_indicator: bool = Field(
+        description="Boolean to promote observables into indicators.",
+    )
+
+    def to_stix2_object(self) -> stix2.DomainName:
+        """Converted to Stix 2.1 object."""
+        return stix2.DomainName(
+            value=self.value,
+            object_marking_refs=[marking.id for marking in self.markings or []],
+            custom_properties={
+                "x_opencti_created_by_ref": self.author.id,
+                "x_opencti_labels": self.labels,
+                "x_opencti_description": self.description,
+                "x_opencti_external_references": (
+                    [self.external_reference.to_stix2_object()]
+                    if self.external_reference
+                    else []
+                ),
+                "x_opencti_main_observable_type": self.type,
+                "x_opencti_score": self.score,
+                "x_opencti_create_indicator": self.promote_observable_as_indicator,
+            },
+        )
+
+
+class IPv4Address(Converter):
+    value: str = Field(
+        description="The value of the observable corresponds to a Ipv4 Address or Network.",
+    )
+    type: str = Field(description="The type of observable for OpenCTI.")
+    labels: Optional[list[str]] = Field(
+        default=None,
+        description="A list of Labels of the observables.",
+    )
+    description: Optional[str] = Field(
+        description="A note of the observable.",
+    )
+    external_reference: Optional[ExternalReference] = Field(
+        default=None,
+        description="An external link to the observable's data.",
+    )
+    markings: list[TLPMarking] = Field(description="References for object marking.")
+    author: Author = Field(
+        description="Reference to the author that reported this observable."
+    )
+    score: Optional[PositiveInt] = Field(
+        default=None, description="References for object marking."
+    )
+    promote_observable_as_indicator: bool = Field(
+        description="Boolean to promote observables into indicators.",
+    )
+
+    def to_stix2_object(self) -> stix2.IPv4Address:
+        """Converted to Stix 2.1 object."""
+        return stix2.IPv4Address(
+            value=self.value,
+            object_marking_refs=[marking.id for marking in self.markings or []],
+            custom_properties={
+                "x_opencti_created_by_ref": self.author.id,
+                "x_opencti_labels": self.labels,
+                "x_opencti_description": self.description,
+                "x_opencti_external_references": (
+                    [self.external_reference.to_stix2_object()]
+                    if self.external_reference
+                    else []
+                ),
+                "x_opencti_main_observable_type": self.type,
+                "x_opencti_score": self.score,
+                "x_opencti_create_indicator": self.promote_observable_as_indicator,
+            },
+        )
+
+
+class IPv6Address(Converter):
+    value: str = Field(
+        description="The value of the observable corresponds to a Ipv6 Address or Network.",
+    )
+    type: str = Field(description="The type of observable for OpenCTI.")
+    labels: Optional[list[str]] = Field(
+        default=None,
+        description="A list of Labels of the observables.",
+    )
+    description: Optional[str] = Field(
+        description="A note of the observable.",
+    )
+    external_reference: Optional[ExternalReference] = Field(
+        default=None,
+        description="An external link to the observable's data.",
+    )
+    markings: list[TLPMarking] = Field(description="References for object marking.")
+    author: Author = Field(
+        description="Reference to the author that reported this observable."
+    )
+    score: Optional[PositiveInt] = Field(
+        default=None, description="References for object marking."
+    )
+    promote_observable_as_indicator: bool = Field(
+        description="Boolean to promote observables into indicators.",
+    )
+
+    def to_stix2_object(self) -> stix2.IPv6Address:
+        """Converted to Stix 2.1 object."""
+        return stix2.IPv6Address(
+            value=self.value,
+            object_marking_refs=[marking.id for marking in self.markings or []],
+            custom_properties={
+                "x_opencti_created_by_ref": self.author.id,
+                "x_opencti_labels": self.labels,
+                "x_opencti_description": self.description,
+                "x_opencti_external_references": (
+                    [self.external_reference.to_stix2_object()]
+                    if self.external_reference
+                    else []
+                ),
+                "x_opencti_main_observable_type": self.type,
+                "x_opencti_score": self.score,
+                "x_opencti_create_indicator": self.promote_observable_as_indicator,
+            },
+        )
+
+
+class URL(Converter):
+    value: str = Field(
+        description="The value of the observable corresponds to a url.",
+    )
+    type: str = Field(description="The type of observable for OpenCTI.")
+    labels: Optional[list[str]] = Field(
+        default=None,
+        description="A list of Labels of the observables.",
+    )
+    description: Optional[str] = Field(
+        description="A note of the observable.",
+    )
+    external_reference: Optional[ExternalReference] = Field(
+        default=None,
+        description="An external link to the observable's data.",
+    )
+    markings: list[TLPMarking] = Field(description="References for object marking.")
+    author: Author = Field(
+        description="Reference to the author that reported this observable."
+    )
+    score: Optional[PositiveInt] = Field(
+        default=None, description="References for object marking."
+    )
+    promote_observable_as_indicator: bool = Field(
+        description="Boolean to promote observables into indicators.",
+    )
+
+    def to_stix2_object(self) -> stix2.URL:
+        """Converted to Stix 2.1 object."""
+        return stix2.URL(
+            value=self.value,
+            object_marking_refs=[marking.id for marking in self.markings or []],
+            custom_properties={
+                "x_opencti_created_by_ref": self.author.id,
+                "x_opencti_labels": self.labels,
+                "x_opencti_description": self.description,
+                "x_opencti_external_references": (
+                    [self.external_reference.to_stix2_object()]
+                    if self.external_reference
+                    else []
+                ),
+                "x_opencti_main_observable_type": self.type,
+                "x_opencti_score": self.score,
+                "x_opencti_create_indicator": self.promote_observable_as_indicator,
+            },
+        )
+
+
+class EmailAddress(Converter):
+    value: str = Field(
+        description="The value of the observable corresponds to a Email Address.",
+    )
+    type: str = Field(description="The type of observable for OpenCTI.")
+    labels: Optional[list[str]] = Field(
+        default=None,
+        description="A list of Labels of the observables.",
+    )
+    description: Optional[str] = Field(
+        description="A note of the observable.",
+    )
+    external_reference: Optional[ExternalReference] = Field(
+        default=None,
+        description="An external link to the observable's data.",
+    )
+    markings: list[TLPMarking] = Field(description="References for object marking.")
+    author: Author = Field(
+        description="Reference to the author that reported this observable."
+    )
+    score: Optional[PositiveInt] = Field(
+        default=None, description="References for object marking."
+    )
+    promote_observable_as_indicator: bool = Field(
+        description="Boolean to promote observables into indicators.",
+    )
+
+    def to_stix2_object(self) -> stix2.EmailAddress:
+        """Converted to Stix 2.1 object."""
+        return stix2.EmailAddress(
+            value=self.value,
+            object_marking_refs=[marking.id for marking in self.markings or []],
+            custom_properties={
+                "x_opencti_created_by_ref": self.author.id,
+                "x_opencti_labels": self.labels,
+                "x_opencti_description": self.description,
+                "x_opencti_external_references": (
+                    [self.external_reference.to_stix2_object()]
+                    if self.external_reference
+                    else []
+                ),
+                "x_opencti_main_observable_type": self.type,
+                "x_opencti_score": self.score,
+                "x_opencti_create_indicator": self.promote_observable_as_indicator,
+            },
+        )
+
+
+class EmailMessage(Converter):
+    value: str = Field(
+        description="The value of the observable corresponds to a Email Message ID or Body or Subject.",
+    )
+    type: str = Field(description="The type of observable for OpenCTI.")
+    labels: Optional[list[str]] = Field(
+        default=None,
+        description="A list of Labels of the observables.",
+    )
+    description: Optional[str] = Field(
+        description="A note of the observable.",
+    )
+    external_reference: Optional[ExternalReference] = Field(
+        default=None,
+        description="An external link to the observable's data.",
+    )
+    markings: list[TLPMarking] = Field(description="References for object marking.")
+    author: Author = Field(
+        description="Reference to the author that reported this observable."
+    )
+    score: Optional[PositiveInt] = Field(
+        default=None, description="References for object marking."
+    )
+    promote_observable_as_indicator: bool = Field(
+        description="Boolean to promote observables into indicators.",
+    )
+
+    def to_stix2_object(self) -> stix2.EmailMessage:
+        """Converted to Stix 2.1 object."""
+        # field_name available: "Body", "Message_id", "Subject"
+        observable_type, field_name = self.type.split("--", maxsplit=1)
+        new_field = {field_name.lower(): self.value}
+        if field_name == "Message_id":
+            new_field["subject"] = self.value
+
+        return stix2.EmailMessage(
+            **new_field,
+            is_multipart=False,
+            object_marking_refs=[marking.id for marking in self.markings or []],
+            custom_properties={
+                "x_opencti_created_by_ref": self.author.id,
+                "x_opencti_labels": self.labels,
+                "x_opencti_description": self.description,
+                "x_opencti_external_references": (
+                    [self.external_reference.to_stix2_object()]
+                    if self.external_reference
+                    else []
+                ),
+                "x_opencti_main_observable_type": observable_type,
+                "x_opencti_score": self.score,
+                "x_opencti_create_indicator": self.promote_observable_as_indicator,
+            }
+        )
+
+
+class File(Converter):
+    name: str = Field(
+        description="The name of the observable corresponds to a File.",
+    )
+    type: str = Field(description="The type of observable for OpenCTI.")
+    labels: Optional[list[str]] = Field(
+        default=None,
+        description="A list of Labels of the observables.",
+    )
+    description: Optional[str] = Field(
+        description="A note of the observable.",
+    )
+    external_reference: Optional[ExternalReference] = Field(
+        default=None,
+        description="An external link to the observable's data.",
+    )
+    markings: list[TLPMarking] = Field(description="References for object marking.")
+    author: Author = Field(
+        description="Reference to the author that reported this observable."
+    )
+    score: Optional[PositiveInt] = Field(
+        default=None, description="References for object marking."
+    )
+    promote_observable_as_indicator: bool = Field(
+        description="Boolean to promote observables into indicators.",
+    )
+
+    def to_stix2_object(self) -> stix2.File:
+        """Converted to Stix 2.1 object."""
+        hashes = None
+        if self.type in ["MD5", "SHA-1", "SHA-256", "SHA-512"]:
+            hashes = {self.type: self.name}
+        return stix2.File(
+            name=self.name,
+            hashes=hashes,
+            object_marking_refs=[marking.id for marking in self.markings or []],
+            custom_properties={
+                "x_opencti_created_by_ref": self.author.id,
+                "x_opencti_labels": self.labels,
+                "x_opencti_description": self.description,
+                "x_opencti_external_references": (
+                    [self.external_reference.to_stix2_object()]
+                    if self.external_reference
+                    else []
+                ),
+                "x_opencti_main_observable_type": self.type,
+                "x_opencti_score": self.score,
+                "x_opencti_create_indicator": self.promote_observable_as_indicator,
+            },
+        )
+
+
+class Directory(Converter):
+    path: str = Field(
+        description="The path of the observable corresponds to a Directory.",
+    )
+    type: str = Field(description="The type of observable for OpenCTI.")
+    labels: Optional[list[str]] = Field(
+        default=None,
+        description="A list of Labels of the observables.",
+    )
+    description: Optional[str] = Field(
+        description="A note of the observable.",
+    )
+    external_reference: Optional[ExternalReference] = Field(
+        default=None,
+        description="An external link to the observable's data.",
+    )
+    markings: list[TLPMarking] = Field(description="References for object marking.")
+    author: Author = Field(
+        description="Reference to the author that reported this observable."
+    )
+    score: Optional[PositiveInt] = Field(
+        default=None, description="References for object marking."
+    )
+    promote_observable_as_indicator: bool = Field(
+        description="Boolean to promote observables into indicators.",
+    )
+
+    def to_stix2_object(self) -> stix2.Directory:
+        """Converted to Stix 2.1 object."""
+        return stix2.Directory(
+            path=self.path,
+            object_marking_refs=[marking.id for marking in self.markings or []],
+            custom_properties={
+                "x_opencti_created_by_ref": self.author.id,
+                "x_opencti_labels": self.labels,
+                "x_opencti_description": self.description,
+                "x_opencti_external_references": (
+                    [self.external_reference.to_stix2_object()]
+                    if self.external_reference
+                    else []
+                ),
+                "x_opencti_main_observable_type": self.type,
+                "x_opencti_score": self.score,
+                "x_opencti_create_indicator": self.promote_observable_as_indicator,
+            },
+        )
+
+
+class Hostname(Converter):
+    value: str = Field(
+        description="The value of the observable corresponds to a Hostname.",
+    )
+    type: str = Field(description="The type of observable for OpenCTI.")
+    labels: Optional[list[str]] = Field(
+        default=None,
+        description="A list of Labels of the observables.",
+    )
+    description: Optional[str] = Field(
+        description="A note of the observable.",
+    )
+    external_reference: Optional[ExternalReference] = Field(
+        default=None,
+        description="An external link to the observable's data.",
+    )
+    markings: list[TLPMarking] = Field(description="References for object marking.")
+    author: Author = Field(
+        description="Reference to the author that reported this observable."
+    )
+    score: Optional[PositiveInt] = Field(
+        default=None, description="References for object marking."
+    )
+    promote_observable_as_indicator: bool = Field(
+        description="Boolean to promote observables into indicators.",
+    )
+
+    def to_stix2_object(self) -> pycti.CustomObservableHostname:
+        """Converted to Stix 2.1 object."""
+        return pycti.CustomObservableHostname(
+            value=self.value,
+            object_marking_refs=[marking.id for marking in self.markings or []],
+            custom_properties={
+                "x_opencti_created_by_ref": self.author.id,
+                "x_opencti_labels": self.labels,
+                "x_opencti_description": self.description,
+                "x_opencti_external_references": (
+                    [self.external_reference.to_stix2_object()]
+                    if self.external_reference
+                    else []
+                ),
+                "x_opencti_main_observable_type": self.type,
+                "x_opencti_score": self.score,
+                "x_opencti_create_indicator": self.promote_observable_as_indicator,
+            },
+        )
+
+
+class Mutex(Converter):
+    name: str = Field(
+        description="The name of the observable corresponds to a Mutex.",
+    )
+    type: str = Field(description="The type of observable for OpenCTI.")
+    labels: Optional[list[str]] = Field(
+        default=None,
+        description="A list of Labels of the observables.",
+    )
+    description: Optional[str] = Field(
+        description="A note of the observable.",
+    )
+    external_reference: Optional[ExternalReference] = Field(
+        default=None,
+        description="An external link to the observable's data.",
+    )
+    markings: list[TLPMarking] = Field(description="References for object marking.")
+    author: Author = Field(
+        description="Reference to the author that reported this observable."
+    )
+    score: Optional[PositiveInt] = Field(
+        default=None, description="References for object marking."
+    )
+    promote_observable_as_indicator: bool = Field(
+        description="Boolean to promote observables into indicators.",
+    )
+
+    def to_stix2_object(self) -> stix2.Mutex:
+        """Converted to Stix 2.1 object."""
+        return stix2.Mutex(
+            name=self.name,
+            object_marking_refs=[marking.id for marking in self.markings or []],
+            custom_properties={
+                "x_opencti_created_by_ref": self.author.id,
+                "x_opencti_labels": self.labels,
+                "x_opencti_description": self.description,
+                "x_opencti_external_references": (
+                    [self.external_reference.to_stix2_object()]
+                    if self.external_reference
+                    else []
+                ),
+                "x_opencti_main_observable_type": self.type,
+                "x_opencti_score": self.score,
+                "x_opencti_create_indicator": self.promote_observable_as_indicator,
+            },
+        )
+
+
+class ASN(Converter):
+    value: str = Field(
+        description="The value of the observable corresponds to a ASN.",
+    )
+    type: str = Field(description="The type of observable for OpenCTI.")
+    labels: Optional[list[str]] = Field(
+        default=None,
+        description="A list of Labels of the observables.",
+    )
+    description: Optional[str] = Field(
+        description="A note of the observable.",
+    )
+    external_reference: Optional[ExternalReference] = Field(
+        default=None,
+        description="An external link to the observable's data.",
+    )
+    markings: list[TLPMarking] = Field(description="References for object marking.")
+    author: Author = Field(
+        description="Reference to the author that reported this observable."
+    )
+    score: Optional[PositiveInt] = Field(
+        default=None, description="References for object marking."
+    )
+    promote_observable_as_indicator: bool = Field(
+        description="Boolean to promote observables into indicators.",
+    )
+
+    def to_stix2_object(self) -> stix2.AutonomousSystem:
+        """Converted to Stix 2.1 object."""
+        as_number = asn_regex.match(self.value).group(1)
+        return stix2.AutonomousSystem(
+            name=self.value,
+            number=int(as_number),
+            object_marking_refs=[marking.id for marking in self.markings or []],
+            custom_properties={
+                "x_opencti_created_by_ref": self.author.id,
+                "x_opencti_labels": self.labels,
+                "x_opencti_description": self.description,
+                "x_opencti_external_references": (
+                    [self.external_reference.to_stix2_object()]
+                    if self.external_reference
+                    else []
+                ),
+                "x_opencti_main_observable_type": self.type,
+                "x_opencti_score": self.score,
+                "x_opencti_create_indicator": self.promote_observable_as_indicator,
+            },
+        )
+
+
+class PhoneNumber(Converter):
+    value: str = Field(
+        description="The value of the observable corresponds to a Phone number.",
+    )
+    type: str = Field(description="The type of observable for OpenCTI.")
+    labels: Optional[list[str]] = Field(
+        default=None,
+        description="A list of Labels of the observables.",
+    )
+    description: Optional[str] = Field(
+        description="A note of the observable.",
+    )
+    external_reference: Optional[ExternalReference] = Field(
+        default=None,
+        description="An external link to the observable's data.",
+    )
+    markings: list[TLPMarking] = Field(description="References for object marking.")
+    author: Author = Field(
+        description="Reference to the author that reported this observable."
+    )
+    score: Optional[PositiveInt] = Field(
+        default=None, description="References for object marking."
+    )
+    promote_observable_as_indicator: bool = Field(
+        description="Boolean to promote observables into indicators.",
+    )
+
+    def to_stix2_object(self) -> pycti.CustomObservablePhoneNumber:
+        """Converted to Stix 2.1 object."""
+        return pycti.CustomObservablePhoneNumber(
+            value=self.value,
+            object_marking_refs=[marking.id for marking in self.markings or []],
+            custom_properties={
+                "x_opencti_created_by_ref": self.author.id,
+                "x_opencti_labels": self.labels,
+                "x_opencti_description": self.description,
+                "x_opencti_external_references": (
+                    [self.external_reference.to_stix2_object()]
+                    if self.external_reference
+                    else []
+                ),
+                "x_opencti_main_observable_type": self.type,
+                "x_opencti_score": self.score,
+                "x_opencti_create_indicator": self.promote_observable_as_indicator,
+            },
+        )
+
+
+class WindowsRegistyKey(Converter):
+    key: str = Field(
+        description="The key of the observable corresponds to a Windows Registry Key.",
+    )
+    type: str = Field(description="The type of observable for OpenCTI.")
+    labels: Optional[list[str]] = Field(
+        default=None,
+        description="A list of Labels of the observables.",
+    )
+    description: Optional[str] = Field(
+        description="A note of the observable.",
+    )
+    external_reference: Optional[ExternalReference] = Field(
+        default=None,
+        description="An external link to the observable's data.",
+    )
+    markings: list[TLPMarking] = Field(description="References for object marking.")
+    author: Author = Field(
+        description="Reference to the author that reported this observable."
+    )
+    score: Optional[PositiveInt] = Field(
+        default=None, description="References for object marking."
+    )
+    promote_observable_as_indicator: bool = Field(
+        description="Boolean to promote observables into indicators.",
+    )
+
+    def to_stix2_object(self) -> stix2.WindowsRegistryKey:
+        """Converted to Stix 2.1 object."""
+        return stix2.WindowsRegistryKey(
+            key=self.key,
+            object_marking_refs=[marking.id for marking in self.markings or []],
+            custom_properties={
+                "x_opencti_created_by_ref": self.author.id,
+                "x_opencti_labels": self.labels,
+                "x_opencti_description": self.description,
+                "x_opencti_external_references": (
+                    [self.external_reference.to_stix2_object()]
+                    if self.external_reference
+                    else []
+                ),
+                "x_opencti_main_observable_type": self.type,
+                "x_opencti_score": self.score,
+                "x_opencti_create_indicator": self.promote_observable_as_indicator,
+            },
+        )
+
+
+class UserAccount(Converter):
+    user: str = Field(
+        description="The user id of the observable corresponds to a UserAccount.",
+    )
+    type: str = Field(description="The type of observable for OpenCTI.")
+    labels: Optional[list[str]] = Field(
+        default=None,
+        description="A list of Labels of the observables.",
+    )
+    description: Optional[str] = Field(
+        default=None,
+        description="A note of the observable.",
+    )
+    external_reference: Optional[ExternalReference] = Field(
+        default=None,
+        description="An external link to the observable's data.",
+    )
+    markings: list[TLPMarking] = Field(description="References for object marking.")
+    author: Author = Field(
+        description="Reference to the author that reported this observable."
+    )
+    score: Optional[PositiveInt] = Field(
+        default=None, description="References for object marking."
+    )
+    promote_observable_as_indicator: bool = Field(
+        description="Boolean to promote observables into indicators.",
+    )
+
+    def to_stix2_object(self) -> stix2.UserAccount:
+        """Converted to Stix 2.1 object."""
+        return stix2.UserAccount(
+            user_id=self.user,
+            object_marking_refs=[marking.id for marking in self.markings or []],
+            custom_properties={
+                "x_opencti_created_by_ref": self.author.id,
+                "x_opencti_labels": self.labels,
+                "x_opencti_description": self.description,
+                "x_opencti_external_references": (
+                    [self.external_reference.to_stix2_object()]
+                    if self.external_reference
+                    else []
+                ),
+                "x_opencti_main_observable_type": self.type,
+                "x_opencti_score": self.score,
+                "x_opencti_create_indicator": self.promote_observable_as_indicator,
+            },
+        )
+
+
+class OrganizationName(Converter):
+    """Represent an organization."""
+
+    name: str = Field(
+        description="Reference to the name of the organization.",
+    )
+    labels: Optional[list[str]] = Field(
+        default=None,
+        description="A list of Labels of the organisation.",
+    )
+    description: Optional[str] = Field(
+        description="A note of the organisation.",
+    )
+    external_reference: Optional[ExternalReference] = Field(
+        default=None,
+        description="An external link to the organisation data.",
+    )
+    markings: list[TLPMarking] = Field(description="References for object marking.")
+    author: Author = Field(
+        description="Reference to the author that reported this organisation."
+    )
+
+    def to_stix2_object(self) -> stix2.Identity:
+        """Converted to Stix 2.1 object."""
+        return stix2.Identity(
+            id=pycti.Identity.generate_id(identity_class="unknown", name=self.name),
+            name=self.name,
+            object_marking_refs=[marking.id for marking in self.markings or []],
+            custom_properties={
+                "x_opencti_created_by_ref": self.author.id,
+                "x_opencti_labels": self.labels,
+                "x_opencti_description": self.description,
+                "x_opencti_external_references": (
+                    [self.external_reference.to_stix2_object()]
+                    if self.external_reference
+                    else []
+                ),
+            },
+        )
+
+
+class Vulnerability(Converter):
+    """Represent a Vulnerability. ("CVE Name" observable in ServiceNow)"""
+
+    name: str = Field(
+        description="Reference to the name of the Vulnerability.",
+    )
+    labels: Optional[list[str]] = Field(
+        default=None,
+        description="A list of Labels of the Vulnerability.",
+    )
+    description: Optional[str] = Field(
+        default=None,
+        description="A note of the Vulnerability.",
+    )
+    external_reference: Optional[ExternalReference] = Field(
+        default=None,
+        description="An external link to the Vulnerability data.",
+    )
+    markings: list[TLPMarking] = Field(description="References for object marking.")
+    author: Author = Field(
+        description="Reference to the author that reported this Vulnerability."
+    )
+
+    def to_stix2_object(self) -> stix2.Vulnerability:
+        """Converted to Stix 2.1 object."""
+        return stix2.Vulnerability(
+            id=pycti.Vulnerability.generate_id(name=self.name),
+            name=self.name,
+            object_marking_refs=[marking.id for marking in self.markings or []],
+            custom_properties={
+                "x_opencti_created_by_ref": self.author.id,
+                "x_opencti_labels": self.labels or [],
+                "x_opencti_description": self.description,
+                "x_opencti_external_references": (
+                    [self.external_reference.to_stix2_object()]
+                    if self.external_reference
+                    else []
+                ),
+            },
         )

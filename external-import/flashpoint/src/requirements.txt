@@ -1,5 +1,6 @@
-pycti==6.6.13
+pycti==6.7.14
 validators==0.35.0
 dateparser==1.2.1
-pydantic~=2.11.4
-pydantic-settings~=2.9.1
+requests==2.32.4
+pydantic==2.11.7
+pydantic-settings==2.9.1

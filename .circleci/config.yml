@@ -43,7 +43,7 @@ jobs:
           template: basic_fail_1
   base_linter:
     docker:
-      - image: alpine/flake8:7.2.0
+      - image: alpine/flake8:7.3.0
     working_directory: ~/repo
     steps:
       - checkout
@@ -74,15 +74,33 @@ jobs:
     docker:
       - image: cimg/python:3.11
     working_directory: ~/repo
+    parallelism: 4
     steps:
       - checkout
-      - run: sudo apt-get update -qq && sudo apt install curl gettext-base
+      - run: | 
+          sudo apt-get update -qq 
+          sudo apt install -y \
+            curl \
+            gettext-base \
+            libcairo2-dev libpango1.0-dev  # for internal-export-file/export-report-pdf tests (weasyprint)
       - run:
           name: install dependencies
           command: pip install -r ci-requirements.txt --user
       - run:
           name: Run tests
-          command: bash run_test.sh
+          command: |
+            set -euo pipefail
+            circleci tests glob "**/test-requirements.txt" \
+              | circleci tests run \
+                  --split-by=timings \
+                  --command="xargs bash run_test.sh"
+        # Save JUnit so CircleCI can show pass/fail per connector and build timings history
+      - store_test_results:
+          path: test_outputs
+
+      # Save logs/reports as downloadable artifacts
+      - store_artifacts:
+          path: test_outputs
   build:
     parameters:
       ci_executor:

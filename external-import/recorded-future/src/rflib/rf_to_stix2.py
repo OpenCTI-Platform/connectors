@@ -263,11 +263,13 @@ class IPAddress(Indicator):
             return stix2.IPv6Address(
                 value=self.name,
                 object_marking_refs=self.tlp,
+                custom_properties={"x_opencti_created_by_ref": self.author.id},
             )
         elif self.is_ipv4() is True:
             return stix2.IPv4Address(
                 value=self.name,
                 object_marking_refs=self.tlp,
+                custom_properties={"x_opencti_created_by_ref": self.author.id},
             )
         else:
             raise ValueError(
@@ -289,7 +291,11 @@ class Domain(Indicator):
         return f"[domain-name:value = '{self.name}']"
 
     def _create_obs(self):
-        return stix2.DomainName(value=self.name, object_marking_refs=self.tlp)
+        return stix2.DomainName(
+            value=self.name,
+            object_marking_refs=self.tlp,
+            custom_properties={"x_opencti_created_by_ref": self.author.id},
+        )
 
 
 class URL(Indicator):
@@ -304,7 +310,11 @@ class URL(Indicator):
         return f"[url:value = '{ioc}']"
 
     def _create_obs(self):
-        return stix2.URL(value=self.name, object_marking_refs=self.tlp)
+        return stix2.URL(
+            value=self.name,
+            object_marking_refs=self.tlp,
+            custom_properties={"x_opencti_created_by_ref": self.author.id},
+        )
 
 
 class FileHash(Indicator):
@@ -333,7 +343,9 @@ class FileHash(Indicator):
 
     def _create_obs(self):
         return stix2.File(
-            hashes={self.algorithm: self.name}, object_marking_refs=self.tlp
+            hashes={self.algorithm: self.name},
+            object_marking_refs=self.tlp,
+            custom_properties={"x_opencti_created_by_ref": self.author.id},
         )
 
 
@@ -363,6 +375,7 @@ class Identity(RFStixEntity):
         "Organization": "organization",
         "Person": "individual",
         "Industry": "class",
+        "Sector": "class",
     }
 
     def create_stix_objects(self):
@@ -785,16 +798,11 @@ class Software(RFStixEntity):
         self.software_object = stix2.Software(
             name=self.name,
             object_marking_refs=self.tlp,
+            custom_properties={"x_opencti_created_by_ref": self.author.id},
         )
 
 
 class Location(RFStixEntity):
-    rf_type_to_stix = {
-        "Country": "Country",
-        "City": "City",
-        "ProvinceOrState": "Administrative-Area",
-    }
-
     rf_type_to_stix = {
         "Country": "Country",
         "City": "City",
@@ -817,8 +825,9 @@ class Location(RFStixEntity):
             id=pycti.Location.generate_id(self.name, self.type),
             name=self.name,
             country=self.name,
-            custom_properties={"x_opencti_location_type": self.type},
+            created_by_ref=self.author.id,
             object_marking_refs=self.tlp,
+            custom_properties={"x_opencti_location_type": self.type},
         )
 
 
@@ -837,6 +846,7 @@ class Campaign(RFStixEntity):
         self.campaign_object = stix2.Campaign(
             id=pycti.Campaign.generate_id(self.name),
             name=self.name,
+            created_by_ref=self.author.id,
             object_marking_refs=self.tlp,
         )
 
@@ -1113,6 +1123,185 @@ class StixNote:
                                 )
                             )
         self.objects.extend(relationships)
+
+    def create_adversary_targets_relations(self, adversary, event_attr):
+        """
+        Create relation between adversary and targets
+        Adversary (Intrusion Set / Malware) -> Targets -> "targets" data in event (Sector, Country, Company)
+        """
+        targets = []
+        event_objects = []
+
+        # Get company, country and sector value from event
+        target_country_name = []
+        target_company_name = []
+        target_sector_name = []
+        for target in event_attr["target"]:
+            if target["type"] == "Country":
+                target_country_name.append(target["name"])
+            elif target["type"] in ["Company", "Organization"]:
+                target_company_name.append(target["name"])
+            elif target["type"] in ["Sector", "Industry"]:
+                target_sector_name.append(target["name"])
+
+        # Create country stix2 objects
+        country = None
+        if target_country_name:
+            for country_name in target_country_name:
+                country = Location(
+                    name=country_name,
+                    _type="Country",
+                    author=self.author,
+                    tlp="white",
+                ).to_stix_objects()[0]
+                targets.append(country)
+                event_objects.append(country)
+
+        # Get or create company stix2 objects
+        company = None
+        if target_company_name:
+            for company_name in target_company_name:
+                # Check if company is already in self.objects
+                company_obj = [
+                    obj for obj in self.objects if obj.get("name") == company_name
+                ]
+                if company_obj:
+                    company = company_obj[0]
+                else:
+                    # If company not in self.objects, create it
+                    company_obj = Identity(
+                        name=company_name,
+                        _type="Organization",
+                    )
+                    company_obj.create_stix_objects()
+                    company = company_obj.stix_obj
+                    event_objects.append(company)
+
+                targets.append(company)
+
+                # Create company-country relationship
+                if country:
+                    event_objects.append(
+                        self._create_rel(
+                            from_id=company.id,
+                            to_id=country.id,
+                            relation="located-at",
+                        )
+                    )
+
+        # Get or create sector stix2 objects
+        sector = None
+        if target_sector_name:
+            for sector_name in target_sector_name:
+                sector_obj = [
+                    obj for obj in self.objects if obj.get("name") == sector_name
+                ]
+                if sector_obj:
+                    sector = sector_obj[0]
+                else:
+                    sector_obj = Identity(
+                        name=sector_name,
+                        _type="Sector",
+                    )
+                    sector_obj.create_stix_objects()
+                    sector = sector_obj.stix_obj
+                    event_objects.append(sector)
+                targets.append(sector)
+
+        # Create adversary-targets relationships
+        for target in targets:
+            if target:
+                event_objects.append(
+                    self._create_rel(
+                        from_id=adversary.id,
+                        to_id=target.id,
+                        relation="targets",
+                    )
+                )
+
+        return event_objects
+
+    def create_adversary_capabilities_relations(self, adversary, event_attr):
+        """
+        Create relation between adversary and capabilities
+        Adversary (Intrusion Set) -> Uses -> "capabilities" data in event (Attack Pattern / Malware)
+        """
+        event_objects = []
+        for event_capability in event_attr["capabilities"]:
+
+            # Get or create capability (AttackPattern or Malware)
+            capability_name = event_capability["name"]
+            capability_obj = [
+                obj for obj in self.objects if obj.get("name") == capability_name
+            ]
+            if len(capability_obj) > 0:
+                capability = capability_obj[0]
+            else:
+                capability_type = event_capability["type"]
+                if capability_type == "Malware":
+                    capability_obj = Malware(
+                        name=capability_name,
+                        _type=capability_type,
+                    )
+                else:
+                    capability_obj = TTP(
+                        name=capability_name,
+                        _type=capability_type,
+                    )
+                capability_obj.create_stix_objects()
+                capability = capability_obj.stix_obj
+                event_attr.append(capability)
+
+            # Create relation adversary-capability
+            event_objects.append(
+                self._create_rel(
+                    from_id=adversary.id,
+                    to_id=capability.id,
+                    relation="uses",
+                )
+            )
+
+        return event_objects
+
+    def create_event_relations(self, events):
+        """
+        Create correct relationships for analyst note
+        Only for 'CyberAttack' events for now
+        """
+        event_objects = []
+        for event in events:
+            if event.get("type") == "CyberAttack" and event.get("attributes"):
+                event_attr = event["attributes"]
+
+                if event_attr.get("adversary"):
+
+                    # Retrieve adversary in self.objects depending on adversary name in event
+                    # self.objects contains all IntrusionSet, Malware, Identity, AttackPattern et ThreatActor linked to note
+                    event_adversary = event_attr["adversary"][0]["name"]
+                    adversary_list = [
+                        obj
+                        for obj in self.objects
+                        if obj.get("name") == event_adversary
+                    ]
+                    if len(adversary_list) > 0:
+                        adversary = adversary_list[0]
+
+                        if event_attr.get("target"):
+                            event_objects += self.create_adversary_targets_relations(
+                                adversary=adversary, event_attr=event_attr
+                            )
+
+                        if event_attr.get("capabilities"):
+                            event_objects += (
+                                self.create_adversary_capabilities_relations(
+                                    adversary=adversary, event_attr=event_attr
+                                )
+                            )
+
+        if event_objects:
+            self.objects.extend(event_objects)
+        else:
+            self.create_relations()
 
     def _create_report_types(self, topics):
         """Converts Insikt Topics to STIX2 Report types"""

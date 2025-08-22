@@ -1,4 +1,5 @@
 import datetime
+import json
 import os
 from pathlib import Path
 
@@ -80,6 +81,13 @@ class ConfigConnector:
             self.load,
             default=datetime.timedelta(days=30),
         )
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        mapping_path = os.path.join(current_dir, "resources", "taxonomy.json")
+        if os.path.exists(mapping_path):
+            with open(mapping_path, "r", encoding="utf-8") as f:
+                self.mapping = json.load(f)
+        else:
+            self.mapping = {}
         if type(self.relative_import_start_date) == str:
             self.relative_import_start_date = isodate.parse_duration(
                 self.relative_import_start_date
