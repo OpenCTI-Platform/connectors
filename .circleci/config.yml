@@ -79,12 +79,7 @@ jobs:
       - run:
           name: Build Connectors Schemas for XTM composer
           command: |
-            if git log -1 --pretty=%B | grep -q '\[ci build-manifest\]'; then
-              echo "Skipping steps due to [ci build-manifest] flag."
-              exit 0
-            else
               bash ./shared/tools/composer/generate_connectors_config_json_schemas.sh
-            fi
       - run:
           name: Build Manifest for XTM composer
           command: |
