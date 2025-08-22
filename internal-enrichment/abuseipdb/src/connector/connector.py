@@ -1,11 +1,8 @@
-import os
-import traceback
 from collections import defaultdict
 from typing import Dict
 
 import requests
 import stix2
-import yaml
 from dateutil.parser import parse
 from pycti import (
     STIX_EXT_OCTI_SCO,
@@ -13,26 +10,16 @@ from pycti import (
     OpenCTIConnectorHelper,
     OpenCTIStix2,
     StixSightingRelationship,
-    get_config_variable,
 )
+
+from .config_loader import ConfigLoader
 
 
 class AbuseIPDBConnector:
-    def __init__(self):
-        # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config, playbook_compatible=True)
-        self.api_key = get_config_variable(
-            "ABUSEIPDB_API_KEY", ["abuseipdb", "api_key"], config
-        )
-        self.max_tlp = get_config_variable(
-            "ABUSEIPDB_MAX_TLP", ["abuseipdb", "max_tlp"], config
-        )
+    def __init__(self, config: ConfigLoader, helper: OpenCTIConnectorHelper):
+        self.config = config
+        self.helper = helper
+
         self.whitelist_label = self.helper.api.label.read_or_create_unchecked(
             value="whitelist", color="#4caf50"
         )
@@ -78,7 +65,7 @@ class AbuseIPDBConnector:
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
 
-        if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
+        if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.config.abuseipdb.max_tlp):
             raise ValueError(
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
@@ -191,12 +178,3 @@ class AbuseIPDBConnector:
     # Start the main loop
     def start(self):
         self.helper.listen(message_callback=self._process_message)
-
-
-if __name__ == "__main__":
-    try:
-        abuseIPDBInstance = AbuseIPDBConnector()
-        abuseIPDBInstance.start()
-    except Exception:
-        traceback.print_exc()
-        exit(1)

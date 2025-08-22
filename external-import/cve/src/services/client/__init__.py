@@ -1,2 +1,4 @@
-from .api import CVEClient  # noqa: F401
-from .vulnerability import CVEVulnerability  # noqa: F401
+from src.services.client.api import CVEClient
+from src.services.client.vulnerability import CVEVulnerability
+
+__all__ = ["CVEClient", "CVEVulnerability"]

@@ -27,7 +27,7 @@ def fixture_connector(mocked_helper: Mock, test_config: ConnectorSettings) -> Co
             host=test_config.email_intel_imap.host,
             port=test_config.email_intel_imap.port,
             username=test_config.email_intel_imap.username,
-            password=test_config.email_intel_imap.password,
+            password=test_config.email_intel_imap.password.get_secret_value(),
             mailbox=test_config.email_intel_imap.mailbox,
         ),
     )

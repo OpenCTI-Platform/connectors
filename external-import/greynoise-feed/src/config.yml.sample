@@ -1,14 +1,13 @@
 opencti:
-  url: 'http://localhost:8080'
+  url: 'http://localhost:PORT'
   token: 'ChangeMe'
 
 connector:
-  id: '49a42ae6-57c8-4a3c-9dde-da891f6e6271' # Valid UUIDv4
-  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
   name: 'GreyNoise Feed'
   scope: 'greynoisefeed'
-  log_level: 'info'
+  log_level: 'error'
 
-greynoisefeed:
+greynoise_feed:
   api_key: 'ChangeMe'
   feed_type: 'malicious' # set to benign, malicious, suspicious, benign+malicious, malicious+suspicious, benign+suspicious+malicious, or all
