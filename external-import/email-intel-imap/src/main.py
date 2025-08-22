@@ -27,7 +27,7 @@ def client_factory(config: ConfigLoader) -> BaseConnectorClient:
             host=config.email_intel_imap.host,
             port=config.email_intel_imap.port,
             username=config.email_intel_imap.username,
-            token_json=config.email_intel_imap.google_token_json,
+            token_json=config.email_intel_imap.google_token_json.get_secret_value(),
             mailbox=config.email_intel_imap.mailbox,
         )
 
@@ -38,7 +38,7 @@ def client_factory(config: ConfigLoader) -> BaseConnectorClient:
         host=config.email_intel_imap.host,
         port=config.email_intel_imap.port,
         username=config.email_intel_imap.username,
-        password=config.email_intel_imap.password,
+        password=config.email_intel_imap.password.get_secret_value(),
         mailbox=config.email_intel_imap.mailbox,
     )
 
