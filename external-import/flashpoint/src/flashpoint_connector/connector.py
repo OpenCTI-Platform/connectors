@@ -22,7 +22,7 @@ class FlashpointConnector:
 
         self.client = FlashpointClient(
             api_base_url="https://api.flashpoint.io",
-            api_key=self.config.flashpoint.api_key,
+            api_key=self.config.flashpoint.api_key.get_secret_value(),
         )
         self.converter_to_stix = ConverterToStix(self.helper)
         self.misp_converter_to_stix = MISPConverterToStix(self.helper, self.config)
