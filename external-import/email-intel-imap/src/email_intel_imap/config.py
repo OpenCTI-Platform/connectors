@@ -1,10 +1,10 @@
 import datetime
 import os
-from typing import Literal, Optional
+from typing import Literal
 
 from base_connector.config import BaseConnectorSettings, ConnectorConfig, ListFromString
 from base_connector.enums import LogLevelType
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, SecretStr, model_validator
 from pydantic_settings import SettingsConfigDict
 
 _FILE_PATH = os.path.dirname(os.path.abspath(__file__))
@@ -28,8 +28,8 @@ class _EmailIntelConfig(BaseModel):
     host: str
     port: int = Field(default=993)
     username: str
-    password: Optional[str] = Field(default=None)
-    google_token_json: Optional[str] = Field(
+    password: SecretStr = Field(default=None)
+    google_token_json: SecretStr = Field(
         default=None, description="Content of the token.json file from Google API"
     )
     mailbox: str = Field(default="INBOX")
