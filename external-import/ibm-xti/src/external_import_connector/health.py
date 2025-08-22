@@ -24,7 +24,7 @@ class HealthCheck:
             if last_run_dt < datetime.now() - timedelta(minutes=10):
                 raise TimeoutError("Connector has not run in the last 2 intervals")
 
-        return {'success': True}
+        return {"success": True}
 
     def __listen(self):
         self.__app.get("/health")(self.__ping)
