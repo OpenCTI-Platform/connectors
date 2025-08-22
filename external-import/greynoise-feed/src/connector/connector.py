@@ -550,7 +550,7 @@ class GreyNoiseFeedConnector:
             try:
                 ips_list = []
                 session = GreyNoise(
-                    api_key=self.config.greynoise_feed.api_key,
+                    api_key=self.config.greynoise_feed.api_key.get_secret_value(),
                     integration_name="opencti-feed-v2.4",
                 )
 

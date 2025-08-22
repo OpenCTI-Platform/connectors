@@ -13,6 +13,7 @@ from pydantic import (
     Field,
     HttpUrl,
     PlainSerializer,
+    SecretStr,
     TypeAdapter,
     model_validator,
 )
@@ -225,7 +226,7 @@ class ConnectorConfig(ConfigBaseModel):
 
 
 class GreynoiseConfig(ConfigBaseModel):
-    api_key: str = Field(description="The API key to connect to Greynoise.")
+    api_key: SecretStr = Field(description="The API key to connect to Greynoise.")
     feed_type: Optional[
         Literal[
             "benign",
