@@ -94,6 +94,7 @@ def all_defaulted_config(request) -> dict[str, str]:  # type: ignore
         {"log_level": "debug"},
         {"log_level": "error"},
         {"log_level": "warn"},
+        {"log_level": "warning"},
     ]
 )
 def valid_log_level_config(request) -> dict[str, str]:  # type: ignore
