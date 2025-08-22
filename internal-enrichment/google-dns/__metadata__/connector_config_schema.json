@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/google-dns_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "OPENCTI_JSON_LOGGING": {
+      "default": true,
+      "description": "Whether to format logs as JSON or not.",
+      "type": "boolean"
+    },
+    "OPENCTI_SSL_VERIFY": {
+      "default": false,
+      "description": "Whether to check SSL certificate or not.",
+      "type": "boolean"
+    },
+    "CONNECTOR_ID": {
+      "description": "A UUID v4 to identify the connector in OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "googledns"
+      ],
+      "description": "The scope of the connector, e.g. 'googledns'.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "P1D",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_EXPOSE_METRICS": {
+      "default": false,
+      "description": "Whether to expose metrics or not.",
+      "type": "boolean"
+    },
+    "CONNECTOR_METRICS_PORT": {
+      "default": 9095,
+      "description": "The port to expose metrics.",
+      "type": "integer"
+    },
+    "CONNECTOR_ONLY_CONTEXTUAL": {
+      "default": false,
+      "description": "Whether to expose metrics or not.",
+      "type": "boolean"
+    },
+    "CONNECTOR_RUN_AND_TERMINATE": {
+      "default": false,
+      "description": "Connector run-and-terminate flag.",
+      "type": "boolean"
+    },
+    "CONNECTOR_VALIDATE_BEFORE_IMPORT": {
+      "default": false,
+      "description": "Whether to validate data before import or not.",
+      "type": "boolean"
+    },
+    "CONNECTOR_QUEUE_PROTOCOL": {
+      "default": "amqp",
+      "description": "The queue protocol to use.",
+      "type": "string"
+    },
+    "CONNECTOR_QUEUE_THRESHOLD": {
+      "default": 500,
+      "description": "Connector queue max size in Mbytes. Default to pycti value.",
+      "type": "integer"
+    },
+    "CONNECTOR_SEND_TO_QUEUE": {
+      "default": true,
+      "description": "Connector send-to-queue flag. Default to True.",
+      "type": "boolean"
+    },
+    "CONNECTOR_SEND_TO_DIRECTORY": {
+      "default": false,
+      "description": "Connector send-to-directory flag.",
+      "type": "boolean"
+    },
+    "CONNECTOR_SEND_TO_DIRECTORY_PATH": {
+      "default": null,
+      "description": "Connector send-to-directory path.",
+      "type": "string"
+    },
+    "CONNECTOR_SEND_TO_DIRECTORY_RETENTION": {
+      "default": 7,
+      "description": "Connector send-to-directory retention.",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_ID",
+    "CONNECTOR_NAME"
+  ],
+  "additionalProperties": true
+}

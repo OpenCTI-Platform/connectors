@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/ransomwarelive_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "type": "string"
+    },
+    "OPENCTI_JSON_LOGGING": {
+      "default": true,
+      "type": "boolean"
+    },
+    "OPENCTI_SSL_VERIFY": {
+      "default": false,
+      "type": "boolean"
+    },
+    "CONNECTOR_ID": {
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "description": "Name of the connector",
+      "minLength": 1,
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "description": "The scope of the connector",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT10M",
+      "description": "Duration between two scheduled runs of the connector (ISO 8601 format)",
+      "format": "duration",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "enum": [
+        "debug",
+        "info",
+        "warning",
+        "error",
+        "critical"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_EXPOSE_METRICS": {
+      "default": false,
+      "type": "boolean"
+    },
+    "CONNECTOR_METRICS_PORT": {
+      "default": 9095,
+      "type": "integer"
+    },
+    "CONNECTOR_ONLY_CONTEXTUAL": {
+      "default": false,
+      "type": "boolean"
+    },
+    "CONNECTOR_RUN_AND_TERMINATE": {
+      "default": false,
+      "type": "boolean"
+    },
+    "CONNECTOR_VALIDATE_BEFORE_IMPORT": {
+      "default": false,
+      "type": "boolean"
+    },
+    "CONNECTOR_QUEUE_PROTOCOL": {
+      "default": "amqp",
+      "type": "string"
+    },
+    "CONNECTOR_QUEUE_THRESHOLD": {
+      "default": 500,
+      "type": "integer"
+    },
+    "CONNECTOR_SEND_TO_QUEUE": {
+      "default": true,
+      "type": "boolean"
+    },
+    "CONNECTOR_SEND_TO_DIRECTORY": {
+      "default": false,
+      "type": "boolean"
+    },
+    "CONNECTOR_SEND_TO_DIRECTORY_PATH": {
+      "default": null,
+      "type": "string"
+    },
+    "CONNECTOR_SEND_TO_DIRECTORY_RETENTION": {
+      "default": 7,
+      "type": "integer"
+    },
+    "CONNECTOR_PULL_HISTORY": {
+      "default": false,
+      "description": "Whether to pull historic data",
+      "type": "boolean"
+    },
+    "CONNECTOR_HISTORY_START_YEAR": {
+      "default": 2023,
+      "description": "The year to start from",
+      "type": "integer"
+    },
+    "CONNECTOR_CREATE_THREAT_ACTOR": {
+      "default": false,
+      "description": "Whether to create a Threat Actor object",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_ID",
+    "CONNECTOR_NAME",
+    "CONNECTOR_SCOPE"
+  ],
+  "additionalProperties": false
+}

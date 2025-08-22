@@ -1,0 +1,21 @@
+{
+  "title": "ServiceNow",
+  "slug": "servicenow",
+  "description": "ServiceNow provides Security Incident Response and Security Incident Tasks module handled by this connector which collects SIR and SIT and related entities.",
+  "short_description": "Ingestion of SIR and SIT as Case Incident and Tasks.",
+  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "use_cases": [
+    "Incident Response & Ticketing"
+  ],
+  "verified": true,
+  "last_verified_date": "15-06-2025",
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">= 6.5.1",
+  "subscription_link": "https://www.servicenow.com/contact-us.html",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/servicenow",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-servicenow",
+  "container_type": "EXTERNAL_IMPORT"
+}

@@ -6,13 +6,13 @@ from email_intel_imap.client import (
     ConnectorClient,
     GoogleOAuthClient,
 )
-from email_intel_imap.config import ConnectorSettings
+from email_intel_imap.config import ConnectorSettings as ConfigLoader
 from email_intel_imap.connector import Connector
 from email_intel_imap.converter import ConnectorConverter
 from pycti import OpenCTIConnectorHelper
 
 
-def client_factory(config: ConnectorSettings) -> BaseConnectorClient:
+def client_factory(config: ConfigLoader) -> BaseConnectorClient:
     """
     Factory function to create a connector client based on the provided configuration.
 
@@ -27,7 +27,7 @@ def client_factory(config: ConnectorSettings) -> BaseConnectorClient:
             host=config.email_intel_imap.host,
             port=config.email_intel_imap.port,
             username=config.email_intel_imap.username,
-            token_json=config.email_intel_imap.google_token_json,
+            token_json=config.email_intel_imap.google_token_json.get_secret_value(),
             mailbox=config.email_intel_imap.mailbox,
         )
 
@@ -38,7 +38,7 @@ def client_factory(config: ConnectorSettings) -> BaseConnectorClient:
         host=config.email_intel_imap.host,
         port=config.email_intel_imap.port,
         username=config.email_intel_imap.username,
-        password=config.email_intel_imap.password,
+        password=config.email_intel_imap.password.get_secret_value(),
         mailbox=config.email_intel_imap.mailbox,
     )
 
@@ -53,7 +53,7 @@ def main() -> None:
     - exit(1): effective way to terminate a Python program when an error is encountered.
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
-    config = ConnectorSettings()
+    config = ConfigLoader()
     helper = OpenCTIConnectorHelper(config=config.model_dump_pycti())
     converter = ConnectorConverter(
         helper=helper,
