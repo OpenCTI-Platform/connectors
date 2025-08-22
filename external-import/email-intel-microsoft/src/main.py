@@ -29,7 +29,7 @@ def main() -> None:
     client = ConnectorClient(
         tenant_id=config.email_intel_microsoft.tenant_id,
         client_id=config.email_intel_microsoft.client_id,
-        client_secret=config.email_intel_microsoft.client_secret,
+        client_secret=config.email_intel_microsoft.client_secret.get_secret_value(),
         email=config.email_intel_microsoft.email,
         mailbox=config.email_intel_microsoft.mailbox,
         attachments_mime_types=config.email_intel_microsoft.attachments_mime_types,
