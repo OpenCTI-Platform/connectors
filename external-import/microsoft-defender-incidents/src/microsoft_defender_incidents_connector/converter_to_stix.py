@@ -160,15 +160,19 @@ class ConverterToStix:
             )
             return None
 
-        user_account = stix2.UserAccount(
-            account_login=user_account_dict.get("accountName"),
-            display_name=user_account_dict.get("displayName"),
-            object_marking_refs=[self.tlp_marking],
-            custom_properties={
-                "created_by_ref": self.author["id"],
-            },
-        )
-        return user_account
+        user_account_account_name = user_account_dict.get("accountName")
+        user_account_display_name = user_account_dict.get("displayName")
+        if user_account_account_name or user_account_display_name:
+            # stix2 lib does not check fields constraints (at least one field must be provided)
+            user_account = stix2.UserAccount(
+                account_login=user_account_account_name,
+                display_name=user_account_display_name,
+                object_marking_refs=[self.tlp_marking],
+                custom_properties={
+                    "created_by_ref": self.author["id"],
+                },
+            )
+            return user_account
 
     @handle_stix2_error
     def create_evidence_ipv4(self, evidence: dict) -> stix2.IPv4Address | None:

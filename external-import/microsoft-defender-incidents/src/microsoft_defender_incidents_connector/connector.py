@@ -347,11 +347,6 @@ class MicrosoftDefenderIncidentsConnector:
                     "[CONNECTOR] Connector has never run..."
                 )
 
-            # Initiate a new work
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, self.helper.connect_name
-            )
-
             self.helper.connector_logger.info(
                 "[CONNECTOR] Running connector...",
                 {"connector_name": self.helper.connect_name},
@@ -370,19 +365,31 @@ class MicrosoftDefenderIncidentsConnector:
                 stix_objects.extend(incident_stix_objects)
                 last_incident_timestamp = format_date(incident["lastUpdateDateTime"])
 
-            if stix_objects:
-                # Add author and default TLP marking for consistent bundle
-                stix_objects.append(self.converter_to_stix.author)
-                stix_objects.append(self.tlp_marking)
-
-                stix_bundle = self.helper.stix2_create_bundle(stix_objects)
-                self.helper.send_stix2_bundle(
-                    stix_bundle,
-                    work_id=work_id,
-                    cleanup_inconsistent_bundle=True,
+            if not stix_objects:
+                self.helper.connector_logger.info(
+                    f"{self.helper.connect_name} connector successfully run, no new data to send."
                 )
+                return
 
-                self._set_last_incident_date(last_incident_timestamp)
+            # Initiate a new work
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, self.helper.connect_name
+            )
+
+            # Add author and default TLP marking for consistent bundle
+            stix_objects = [
+                self.converter_to_stix.author,
+                self.tlp_marking,
+            ] + stix_objects
+
+            stix_bundle = self.helper.stix2_create_bundle(stix_objects)
+            self.helper.send_stix2_bundle(
+                stix_bundle,
+                work_id=work_id,
+                cleanup_inconsistent_bundle=True,
+            )
+
+            self._set_last_incident_date(last_incident_timestamp)
 
             message = (
                 f"{self.helper.connect_name} connector successfully run, storing last_incident_timestamp as "
