@@ -62,30 +62,28 @@ deactivate_venv() {
 # printf action with the %h format specifier, which prints the directory part (parent directory) of the file path
 connector_directories_path=$(find . -type d -name "$CONNECTOR_METADATA_DIRECTORY" -printf '%h\n')
 
-# ! This script should generate connector_config_schema.json for one connector ONLY
-# ! Looping over all connectors should be done in a dedicated CI job
-# Loop in each connector directory with infos
+# Loop in each connector directory with infos and regenerate JSON schema if changed
 for connector_directory_path in $connector_directories_path
 do
   if [ -d "$connector_directory_path" ]; then
     # Only generate schema for directory that changed
-#    directory_has_changed=$(git diff "$connector_directory_path")
-#    if [ -z "$directory_has_changed" ] ; then
-#      echo "Nothing has changed."
-#    else
-    echo "> Looking for a config loader in " "$connector_directory_path"
-    requirements_file=$(find_requirements_txt "$connector_directory_path")
-    echo "Found requirements.txt: " "$requirements_file"
-    if [ -f "$requirements_file" ] && grep -q "pydantic-settings" "$requirements_file"; then
-      (
-        activate_venv "$connector_directory_path"
-        generator_path=$(find . -name "generate_connectors_config_json_schemas.py.sample")
-        cp "$generator_path" "$connector_directory_path/generate_connectors_config_json_schemas_tmp.py"
-        python "$connector_directory_path/generate_connectors_config_json_schemas_tmp.py"
-        rm "$connector_directory_path/generate_connectors_config_json_schemas_tmp.py"
-        deactivate_venv "$connector_directory_path/$VENV_NAME"
-      ) &
-#      fi
+    directory_has_changed=$(git diff HEAD~1 HEAD -- "$connector_directory_path")
+    if [ -z "$directory_has_changed" ] ; then
+      echo "Nothing has changed."
+    else
+      echo "> Looking for a config loader in " "$connector_directory_path"
+      requirements_file=$(find_requirements_txt "$connector_directory_path")
+      echo "Found requirements.txt: " "$requirements_file"
+      if [ -f "$requirements_file" ] && grep -q "pydantic-settings" "$requirements_file"; then
+        (
+          activate_venv "$connector_directory_path"
+          generator_path=$(find . -name "generate_connectors_config_json_schemas.py.sample")
+          cp "$generator_path" "$connector_directory_path/generate_connectors_config_json_schemas_tmp.py"
+          python "$connector_directory_path/generate_connectors_config_json_schemas_tmp.py"
+          rm "$connector_directory_path/generate_connectors_config_json_schemas_tmp.py"
+          deactivate_venv "$connector_directory_path/$VENV_NAME"
+        ) &
+      fi
     fi
   fi
 done
