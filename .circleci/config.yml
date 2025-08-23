@@ -77,7 +77,7 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Build Connectors Schemas for XTM composer
+          name: Build Connectors Schemas for XTM composer and Update Config Documentation
           command: |
               bash ./shared/tools/composer/generate_connectors_config_json_schemas.sh
       - run:
