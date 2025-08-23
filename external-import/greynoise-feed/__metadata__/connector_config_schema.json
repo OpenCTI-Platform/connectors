@@ -122,7 +122,9 @@
     },
     "GREYNOISE_FEED_API_KEY": {
       "description": "The API key to connect to Greynoise.",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "GREYNOISE_FEED_FEED_TYPE": {
       "default": "malicious",

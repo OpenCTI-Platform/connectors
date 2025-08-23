@@ -128,7 +128,9 @@
       "type": "string"
     },
     "EMAIL_INTEL_MICROSOFT_CLIENT_SECRET": {
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "EMAIL_INTEL_MICROSOFT_EMAIL": {
       "format": "email",

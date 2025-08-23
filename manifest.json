@@ -587,7 +587,9 @@
             "type": "string"
           },
           "EMAIL_INTEL_MICROSOFT_CLIENT_SECRET": {
-            "type": "string"
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
           },
           "EMAIL_INTEL_MICROSOFT_EMAIL": {
             "format": "email",
@@ -764,7 +766,9 @@
           },
           "FLASHPOINT_API_KEY": {
             "description": "The API key to connect to Flashpoint.",
-            "type": "string"
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
           },
           "FLASHPOINT_IMPORT_START_DATE": {
             "description": "The date from which to start importing data.",
@@ -1003,7 +1007,9 @@
           },
           "GREYNOISE_FEED_API_KEY": {
             "description": "The API key to connect to Greynoise.",
-            "type": "string"
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
           },
           "GREYNOISE_FEED_FEED_TYPE": {
             "default": "malicious",
