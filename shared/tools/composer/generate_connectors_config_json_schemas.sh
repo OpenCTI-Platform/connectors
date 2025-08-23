@@ -69,8 +69,9 @@ do
     # Only generate schema for directory that changed
     directory_has_changed=$(git diff HEAD~1 HEAD -- "$connector_directory_path")
     if [ -z "$directory_has_changed" ] ; then
-      echo "Nothing has changed."
+      echo "Nothing has changed in: " "$connector_directory_path"
     else
+      echo "Changes in: " "$connector_directory_path"
       echo "> Looking for a config loader in " "$connector_directory_path"
       requirements_file=$(find_requirements_txt "$connector_directory_path")
       echo "Found requirements.txt: " "$requirements_file"
