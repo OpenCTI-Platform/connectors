@@ -1,4 +1,4 @@
-FROM python:3.12-alpine as silentpush-enrichment
+FROM python:3.13-alpine as silentpush-enrichment
 
 LABEL authors="jorgeley@silentpush.com"
 
