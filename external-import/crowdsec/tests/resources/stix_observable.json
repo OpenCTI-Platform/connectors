@@ -1,0 +1,31 @@
+{
+   "id":"ipv4-addr--06d36f46-e6d1-557f-a527-f1cc701617cc",
+   "spec_version":"2.1",
+   "value":"TEST.IP.186.190",
+   "external_references":[
+      {
+         "source_name":"CrowdSec CTI",
+         "description":"CrowdSec CTI url for this IP",
+         "url":"https://app.crowdsec.net/cti/TEST.IP.186.190"
+      }
+   ],
+   "x_opencti_id":"06985ff3-55cd-4a64-89ad-5fe297256584",
+   "x_opencti_type":"IPv4-Addr",
+   "type":"ipv4-addr",
+   "x_opencti_labels":[
+      "crowdsecurity/http-admin-interface-probing",
+      "crowdsecurity/http-backdoors-attempts",
+      "crowdsecurity/http-bad-user-agent",
+      "crowdsecurity/http-crawl-non_statics",
+      "crowdsecurity/http-dos-swithcing-ua",
+      "crowdsecurity/http-open-proxy",
+      "crowdsecurity/http-path-traversal-probing",
+      "crowdsecurity/http-probing",
+      "crowdsecurity/http-sensitive-files",
+      "crowdsecurity/http-sqli-probbing-detection",
+      "cve-2021-41773",
+      "cve-2022-26134",
+      "firewallservices/pf-scan-multi_ports",
+      "malicious"
+   ]
+}
