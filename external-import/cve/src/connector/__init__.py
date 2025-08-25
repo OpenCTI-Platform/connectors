@@ -1,2 +1,4 @@
 # Import modules to init
-from .cveConnector import CVEConnector  # noqa: F401
+from src.connector.cveConnector import CVEConnector
+
+__all__ = ["CVEConnector"]

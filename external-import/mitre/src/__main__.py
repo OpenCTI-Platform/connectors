@@ -1,5 +1,4 @@
 import json
-import os
 import ssl
 import sys
 import time
@@ -7,8 +6,8 @@ import urllib
 from datetime import datetime
 from typing import Optional
 
-import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper
+from src.services.config_loader import MitreConfig
 
 MITRE_ENTERPRISE_FILE_URL = "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json"
 MITRE_MOBILE_ATTACK_FILE_URL = "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/mobile-attack/mobile-attack.json"
@@ -59,51 +58,25 @@ class Mitre:
     """Mitre connector."""
 
     def __init__(self):
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path, encoding="utf8"), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
+        # Load configuration file and connection helper
+        # Instantiate the connector helper from config
+        self.config = MitreConfig()
+        self.config_instance = self.config.load
+
+        # Convert the config into a dictionary, automatically excluding any parameters set to `None`.
+        self.config_dict = self.config_instance.model_dump(exclude_none=True)
+        self.helper = OpenCTIConnectorHelper(config=self.config_dict)
+
+        self.mitre_remove_statement_marking = (
+            self.config_instance.mitre.remove_statement_marking
         )
-        self.helper = OpenCTIConnectorHelper(config)
-        self.mitre_remove_statement_marking = get_config_variable(
-            "MITRE_REMOVE_STATEMENT_MARKING",
-            ["mitre", "remove_statement_marking"],
-            config,
-            default=False,
-        )
-        self.mitre_interval = get_config_variable(
-            "MITRE_INTERVAL",
-            ["mitre", "interval"],
-            config,
-            isNumber=True,
-            default=7,
-        )
+
+        self.mitre_interval = self.config_instance.mitre.interval
         urls = [
-            get_config_variable(
-                "MITRE_ENTERPRISE_FILE_URL",
-                ["mitre", "enterprise_file_url"],
-                config,
-                default=MITRE_ENTERPRISE_FILE_URL,
-            ),
-            get_config_variable(
-                "MITRE_MOBILE_ATTACK_FILE_URL",
-                ["mitre", "mobile_attack_file_url"],
-                config,
-                default=MITRE_MOBILE_ATTACK_FILE_URL,
-            ),
-            get_config_variable(
-                "MITRE_ICS_ATTACK_FILE_URL",
-                ["mitre", "ics_attack_file_url"],
-                config,
-                default=MITRE_ICS_ATTACK_FILE_URL,
-            ),
-            get_config_variable(
-                "MITRE_CAPEC_FILE_URL",
-                ["mitre", "capec_file_url"],
-                config,
-                default=MITRE_CAPEC_FILE_URL,
-            ),
+            self.config_instance.mitre.enterprise_file_url,
+            self.config_instance.mitre.mobile_attack_file_url,
+            self.config_instance.mitre.ics_attack_file_url,
+            self.config_instance.mitre.capec_file_url,
         ]
         self.mitre_urls = list(filter(lambda url: url is not False, urls))
         self.interval = days_to_seconds(self.mitre_interval)

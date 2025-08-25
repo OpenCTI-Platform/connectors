@@ -4,7 +4,7 @@ from typing import Literal
 
 from base_connector.config import BaseConnectorSettings, ConnectorConfig, ListFromString
 from base_connector.enums import LogLevelType
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, SecretStr
 from pydantic_settings import SettingsConfigDict
 
 _FILE_PATH = os.path.dirname(os.path.abspath(__file__))
@@ -27,7 +27,7 @@ class _EmailIntelMicrosoftConfig(BaseModel):
 
     tenant_id: str
     client_id: str
-    client_secret: str
+    client_secret: SecretStr
     email: EmailStr
     mailbox: str = Field(default="INBOX")
     attachments_mime_types: ListFromString = Field(

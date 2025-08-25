@@ -69,34 +69,7 @@ To import data from the NVD and use the connector, you need to request an API Ke
 
 ### Configuration variables
 
-Below are the parameters you'll need to set for OpenCTI:
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-Below are the parameters you'll need to set for running the connector properly:
-
-| Parameter            | config.yml           | Docker environment variable      | Default                              | Mandatory | Description                                                                                                                                 |
-|----------------------|----------------------|----------------------------------|--------------------------------------|-----------|---------------------------------------------------------------------------------------------------------------------------------------------|
-| Connector ID         | id                   | `CONNECTOR_ID`                   | /                                    | Yes       | A unique `UUIDv4` identifier for this connector instance.                                                                                   |
-| Connector Name       | name                 | `CONNECTOR_NAME`                 | Common Vulnerabilities and Exposures | Yes       | Name of the connector.                                                                                                                      |
-| Connector Scope      | scope                | `CONNECTOR_SCOPE`                | identity,vulnerability               | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object.                                                    |
-| Run and Terminate    | run_and_terminate    | `CONNECTOR_RUN_AND_TERMINATE`    | False                                | No        | Launch the connector once if set to True. Takes 2 available values: `True` or `False`                                                       |
-| Log Level            | log_level            | `CONNECTOR_LOG_LEVEL`            | info                                 | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.                                                      |
-
-Below are the parameters you'll need to set for CVE connector:
-
-| Parameter              | config.yml         | Docker environment variable | Default                                      | Mandatory | Description                                                                                                                                                         |
-|------------------------|--------------------|-----------------------------|----------------------------------------------|-----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| CVE Base URL           | base_url           | `CVE_BASE_URL`              | https://services.nvd.nist.gov/rest/json/cves | Yes       | URL for the CVE API.                                                                                                                                                |
-| CVE API Key            | api_key            | `CVE_API_KEY`               | /                                            | Yes       | API Key for the CVE API.                                                                                                                                            |
-| CVE Interval           | interval           | `CVE_INTERVAL`              | 2                                            | Yes       | Interval in hours to check and import new CVEs. Must be strictly greater than 1, advice from NIST minimum 2 hours                                                   |
-| CVE Max Date Range     | max_date_range     | `CVE_MAX_DATE_RANGE`        | 120                                          | Yes       | Determines how many days to collect CVE. Maximum of 120 days.                                                                                                       |
-| CVE Maintain Data      | maintain_data      | `CVE_MAINTAIN_DATA`         | True                                         | Yes       | If set to `True`, import CVEs from the last run of the connector to the current time. Takes 2 values: `True` or `False`.                                            |
-| CVE Pull History       | pull_history       | `CVE_PULL_HISTORY`          | False                                        | No        | If set to `True`, import all CVEs from start year define in history start year configuration and history start year is required. Takes 2 values: `True` or `False`. |
-| CVE History Start Year | history_start_year | `CVE_HISTORY_START_YEAR`    | 2019                                         | No        | Year in number. Required when pull_history is set to `True`.  Minimum 2019 as CVSS V3.1 was released in June 2019, thus most CVE published before 2019 do not include the cvssMetricV31 object.                                                                                      |
+Find all the configuration variables available here: [Connector Configurations](./__metadata__)
 
 For more details about the CVE API, see the documentation at the link below:
 

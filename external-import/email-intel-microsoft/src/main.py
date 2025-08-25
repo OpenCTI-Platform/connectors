@@ -2,7 +2,7 @@ import sys
 import traceback
 
 from email_intel_microsoft.client import ConnectorClient
-from email_intel_microsoft.config import ConnectorSettings
+from email_intel_microsoft.config import ConnectorSettings as ConfigLoader
 from email_intel_microsoft.connector import Connector
 from email_intel_microsoft.converter import ConnectorConverter
 from pycti import OpenCTIConnectorHelper
@@ -18,7 +18,7 @@ def main() -> None:
     - exit(1): effective way to terminate a Python program when an error is encountered.
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
-    config = ConnectorSettings()
+    config = ConfigLoader()
     helper = OpenCTIConnectorHelper(config=config.model_dump_pycti())
     converter = ConnectorConverter(
         helper=helper,
@@ -29,7 +29,7 @@ def main() -> None:
     client = ConnectorClient(
         tenant_id=config.email_intel_microsoft.tenant_id,
         client_id=config.email_intel_microsoft.client_id,
-        client_secret=config.email_intel_microsoft.client_secret,
+        client_secret=config.email_intel_microsoft.client_secret.get_secret_value(),
         email=config.email_intel_microsoft.email,
         mailbox=config.email_intel_microsoft.mailbox,
         attachments_mime_types=config.email_intel_microsoft.attachments_mime_types,

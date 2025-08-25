@@ -2,3 +2,4 @@ urllib3==2.5.0
 pycti==6.7.14
 certifi==2025.8.3
 greynoise==2.3.0
+pydantic-settings==2.10.1

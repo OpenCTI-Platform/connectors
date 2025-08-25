@@ -47,6 +47,10 @@ relies on email as a delivery method and is compatible with standard IMAP server
 
 Configuration parameters can be either defined in a `config.yml`, `.env` or in environment variables.
 
+### Configuration variables
+
+Find all the configuration variables available here: [Connector Configurations](./__metadata__)
+
 ### OpenCTI Configuration
 
 | Parameter     | config.yml | Environment Variable | Required | Description                                          |
