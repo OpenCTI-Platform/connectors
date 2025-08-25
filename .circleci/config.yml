@@ -193,6 +193,16 @@ workflows:
           filters:
             tags:
               only: /.*/
+      - build_manifest:
+          requires:
+            - ensure_formatting
+            - base_linter
+            - linter
+            - test
+          filters:
+            branches:
+              only:
+                - master
       - build:
           name: "build_release"
           ci_executor:
@@ -263,8 +273,3 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - build_manifest:
-          filters:
-            branches:
-              only:
-                - oob/connector_manager
