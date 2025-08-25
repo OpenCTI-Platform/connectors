@@ -3,10 +3,96 @@
 from typing import Optional
 
 from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
-from connectors_sdk.models.octi.enums import CvssSeverity
+from connectors_sdk.models.octi.enums import (
+    CvssSeverity,
+    ImplementationLanguage,
+    MalwareCapability,
+    MalwareType,
+    ProcessorArchitecture,
+)
+from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
+from pycti import Malware as PyctiMalware
 from pycti import Vulnerability as PyctiVulnerability
-from pydantic import Field
+from pydantic import AwareDatetime, Field
+from stix2.v21 import Malware as Stix2Malware
 from stix2.v21 import Vulnerability as Stix2Vulnerability
+
+
+@MODEL_REGISTRY.register
+class Malware(BaseIdentifiedEntity):
+    """Represent a malware entity."""
+
+    name: str = Field(
+        description="Name of the malware.",
+        min_length=1,
+    )
+    is_family: bool = Field(
+        description="Is the malware a family?",
+    )
+    description: Optional[str] = Field(
+        description="Description of the malware.",
+        default=None,
+    )
+    aliases: Optional[list[str]] = Field(
+        description="Alternative names used to identify this malware or malware family.",
+        default=None,
+    )
+    types: Optional[list[MalwareType]] = Field(
+        description="Types of the malware.",
+        default=None,
+    )
+    first_seen: Optional[AwareDatetime] = Field(
+        description="The time that this Malware was first seen.",
+        default=None,
+    )
+    last_seen: Optional[AwareDatetime] = Field(
+        description="The time that this Malware was last seen.",
+        default=None,
+    )
+    architecture_execution_envs: Optional[list[ProcessorArchitecture]] = Field(
+        description="Architecture execution environment of the malware.",
+        default=None,
+    )
+    implementation_languages: Optional[list[ImplementationLanguage]] = Field(
+        description="Implementation languages of the malware.",
+        default=None,
+    )
+    kill_chain_phases: Optional[list[KillChainPhase]] = Field(
+        description="Kill chain phases of the malware.",
+        default=None,
+    )
+    capabilities: Optional[list[MalwareCapability]] = Field(
+        description="Any of the capabilities identified for the malware instance or family.",
+        default=None,
+    )
+
+    def to_stix2_object(self) -> Stix2Malware:
+        """Make stix object."""
+        return Stix2Malware(
+            id=PyctiMalware.generate_id(name=self.name),
+            name=self.name,
+            is_family=self.is_family,
+            description=self.description,
+            aliases=self.aliases,
+            malware_types=self.types,
+            first_seen=self.first_seen,
+            last_seen=self.last_seen,
+            architecture_execution_envs=self.architecture_execution_envs,
+            implementation_languages=self.implementation_languages,
+            kill_chain_phases=[
+                kill_chain_phase.to_stix2_object()
+                for kill_chain_phase in self.kill_chain_phases or []
+            ],
+            capabilities=self.capabilities,
+            external_references=[
+                external_reference.to_stix2_object()
+                for external_reference in self.external_references or []
+            ],
+            created_by_ref=self.author.id if self.author else None,
+            object_marking_refs=[marking.id for marking in self.markings or []],
+            operating_system_refs=None,  # not implemented on OpenCTI
+            sample_refs=None,  # not implemented on OpenCTI
+        )
 
 
 @MODEL_REGISTRY.register
