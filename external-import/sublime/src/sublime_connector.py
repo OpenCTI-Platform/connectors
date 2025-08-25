@@ -178,7 +178,6 @@ class SublimeConnector:
             False,
         )
 
-        # Case priority and severity configuration
         self.set_priority = get_config_variable(
             "SUBLIME_SET_PRIORITY",
             ["sublime", "set_priority"],
@@ -194,7 +193,6 @@ class SublimeConnector:
             True,
         )
 
-        # Batch processing configuration
         self.batch_size = int(
             get_config_variable(
                 "SUBLIME_BATCH_SIZE",
@@ -223,10 +221,9 @@ class SublimeConnector:
             self.poll_interval = 300  # 5 minutes default
 
         # Value for if to update an existing bundle.
-        # Currently set to False as placeholder for potental future logic
+        # Currently set to False as placeholder for potental future feature
         self.update_existing_data = False
 
-        # Create session for API requests
         self.session = requests.Session()
         self.session.headers.update(
             {
@@ -292,7 +289,7 @@ class SublimeConnector:
         current_state = self.helper.get_state() or {}
 
         # Check for force historical ingest flag
-        # A bit of logic here as OpenCTI will store these flags. This can prevent future historical
+        # A bit of logic here as OpenCTI will store these flags. This can prevent future historical ingest
         # So we clear the flag if it's enabled in config
         if self.force_historical:
             self.helper.log_info(
@@ -322,14 +319,14 @@ class SublimeConnector:
             )
         except (isodate.ISO8601Error, ValueError) as e:
             self.helper.log_warning(
-                '[!] Invalid first run duration format "{}": {}. Using default 14 days'.format(
+                '[!] Invalid first run duration format "{}": {}. Using default 8 hours.'.format(
                     self.first_run_duration, e
                 )
             )
-            # Fallback to 14 days
-            default_time = datetime.now(timezone.utc) - timedelta(days=14)
+            # Fallback to 1 day
+            default_time = datetime.now(timezone.utc) - timedelta(hours=8)
 
-        # Format for Sublime API: 2025-06-07T05:00:00.000Z
+        # Format for Sublime API: 2025-12-31T05:00:00.000Z
         return default_time.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
     def _sanitize_email(self, email):
@@ -411,9 +408,6 @@ class SublimeConnector:
 
         Returns:
             list: List of group canonical IDs that are flagged
-
-        Raises:
-            Exception: API request failures or authentication errors
         """
         params = {
             "created_at__gte": start_time,
@@ -497,7 +491,7 @@ class SublimeConnector:
 
         Uses a two-step process with batch processing:
         1. Fetch list of flagged group IDs within time range
-        2. Process groups in batches to prevent memory exhaustion
+        2. Process groups in batches for quicker access and easier troubleshooting
         3. Yield batches of message groups for incremental processing
 
         Args:
@@ -505,16 +499,11 @@ class SublimeConnector:
 
         Yields:
             list: Batches of message group dictionaries with 'malicious' verdict
-
-        Raises:
-            Exception: Network errors or JSON parsing failures
         """
-        # Calculate time boundaries for this fetch
         if since_timestamp:
             start_time = since_timestamp
         else:
             # Default to 5 mins ago for frequent polling
-            # TODO This hasn't been fully tested
             start_time = (datetime.now(timezone.utc) - timedelta(minutes=5)).strftime(
                 "%Y-%m-%dT%H:%M:%S.000Z"
             )
@@ -611,20 +600,20 @@ class SublimeConnector:
             self.helper.log_warning("[!] Message group missing subjects")
             return False
 
-        # Check for data_model (where the detailed email data is)
-        if "data_model" not in message_group:
-            self.helper.log_warning("[!] Message group missing data_model")
+        # Check for MDM (where the detailed email data is)
+        if "MDM" not in message_group:
+            self.helper.log_warning("[!] Message group missing MDM")
             return False
 
-        data_model = message_group["data_model"]
+        MDM = message_group["MDM"]
 
-        # Check for sender in data_model
+        # Check for sender in MDM
         if (
-            "sender" not in data_model
-            or "email" not in data_model.get("sender", {})
-            or "email" not in data_model.get("sender", {}).get("email", {})
+            "sender" not in MDM
+            or "email" not in MDM.get("sender", {})
+            or "email" not in MDM.get("sender", {}).get("email", {})
         ):
-            self.helper.log_warning("[!] Message group data_model missing sender email")
+            self.helper.log_warning("[!] Message group MDM missing sender email")
             return False
 
         return True
@@ -637,7 +626,7 @@ class SublimeConnector:
         - One detailed EmailMessage from MDM (primary email)
         - Basic EmailMessage objects from preview data
         - Incident object representing the group
-        - Cyber observables (URLs, domains, IPs, email addresses)
+        - Observables (URLs, domains, IPs, email addresses)
         - Indicators generated from observables
         - Relationships linking all objects to the incident
 
@@ -711,13 +700,13 @@ class SublimeConnector:
         Returns:
             tuple: (EmailMessage object, list of observable objects, list of additional EmailMessage objects)
         """
-        data_model = message_group.get("data_model", {})
-        if not data_model:
+        MDM = message_group.get("MDM", {})
+        if not MDM:
             return None, [], []
 
         observables = []
 
-        sender_email = self._lookup_MDM_value(data_model, "sender.email.email")
+        sender_email = self._lookup_MDM_value(MDM, "sender.email.email")
         sender = None
         if sender_email:
             sender_email = self._sanitize_email(sender_email)
@@ -725,25 +714,25 @@ class SublimeConnector:
                 id=self._make_deterministic_id("email-addr", sender_email),
                 value=sender_email,
             )
-        recipients = self._extract_recipients(data_model)
+        recipients = self._extract_recipients(MDM)
         if sender:
             observables.append(sender)
         observables.extend(recipients)
 
-        observables.extend(self._extract_urls(data_model))
-        observables.extend(self._extract_domains(data_model))
-        observables.extend(self._extract_ips(data_model))
+        observables.extend(self._extract_urls(MDM))
+        observables.extend(self._extract_domains(MDM))
+        observables.extend(self._extract_ips(MDM))
 
         # Build email message (STIX2: is_multipart requires body)
-        body_text = self._lookup_MDM_value(data_model, "body.plain.raw")
+        body_text = self._lookup_MDM_value(MDM, "body.plain.raw")
 
         # raw text makes things easier, but option is here for HTML
-        # html_content = self._lookup_MDM_value(data_model, 'body.html.raw')
+        # html_content = self._lookup_MDM_value(MDM, 'body.html.raw')
 
         # Edge case. Sometimes the raw body doesn't exist. In that case, use HTML
         # e.g. html.raw = <span style="display: none"></p></html>
         if not body_text:
-            html_text = self._lookup_MDM_value(data_model, "body.html.raw")
+            html_text = self._lookup_MDM_value(MDM, "body.html.raw")
             body_text = html_text
 
         # Get actual subject from message group
@@ -877,12 +866,12 @@ class SublimeConnector:
             subject = subjects[0] if subjects else "Unknown Subject"
             description += "\n**Subject:** {}\n".format(subject)
 
-            # Collect unique recipients from both data_model and previews
+            # Collect unique recipients from both MDM and previews
             recipients = set()
-            data_model = message_group.get("data_model", {})
+            MDM = message_group.get("MDM", {})
 
-            if data_model:
-                to_list = self._lookup_MDM_value(data_model, "recipients.to") or []
+            if MDM:
+                to_list = self._lookup_MDM_value(MDM, "recipients.to") or []
                 for recipient in to_list:
                     email = self._lookup_MDM_value(recipient, "email.email")
                     if email:
@@ -972,10 +961,10 @@ class SublimeConnector:
         """
         try:
             sender_email = "Unknown Sender"
-            data_model = message_group.get("data_model", {})
-            if data_model and self._lookup_MDM_value(data_model, "sender.email.email"):
+            MDM = message_group.get("MDM", {})
+            if MDM and self._lookup_MDM_value(MDM, "sender.email.email"):
                 sender_email = self._sanitize_email(
-                    self._lookup_MDM_value(data_model, "sender.email.email")
+                    self._lookup_MDM_value(MDM, "sender.email.email")
                 )
             elif message_group.get("previews"):
                 for preview in message_group.get("previews", []):
@@ -989,13 +978,13 @@ class SublimeConnector:
 
             preview_count = len(message_group.get("previews", []))
             has_primary = bool(
-                data_model and self._lookup_MDM_value(data_model, "sender.email.email")
+                MDM and self._lookup_MDM_value(MDM, "sender.email.email")
             )
             email_count = max(preview_count, 1) if has_primary else preview_count
 
             recipients = set()
-            if data_model:
-                to_list = self._lookup_MDM_value(data_model, "recipients.to") or []
+            if MDM:
+                to_list = self._lookup_MDM_value(MDM, "recipients.to") or []
                 for recipient in to_list:
                     email = self._lookup_MDM_value(recipient, "email.email")
                     if email:
@@ -1068,12 +1057,10 @@ class SublimeConnector:
         group_id = message_group.get("id", "unknown")
 
         try:
-            data_model = message_group.get("data_model", {})
+            MDM = message_group.get("MDM", {})
             sender_email = (
-                self._sanitize_email(
-                    self._lookup_MDM_value(data_model, "sender.email.email")
-                )
-                if self._lookup_MDM_value(data_model, "sender.email.email")
+                self._sanitize_email(self._lookup_MDM_value(MDM, "sender.email.email"))
+                if self._lookup_MDM_value(MDM, "sender.email.email")
                 else self._sanitize_email(
                     next(
                         (
@@ -1088,13 +1075,13 @@ class SublimeConnector:
 
             preview_count = len(message_group.get("previews", []))
             has_primary = bool(
-                data_model and self._lookup_MDM_value(data_model, "sender.email.email")
+                MDM and self._lookup_MDM_value(MDM, "sender.email.email")
             )
             email_count = max(preview_count, 1) if has_primary else preview_count
 
             recipients = set()
-            if data_model:
-                to_list = self._lookup_MDM_value(data_model, "recipients.to") or []
+            if MDM:
+                to_list = self._lookup_MDM_value(MDM, "recipients.to") or []
                 for recipient in to_list:
                     email = self._lookup_MDM_value(recipient, "email.email")
                     if email:
@@ -1234,13 +1221,13 @@ class SublimeConnector:
 
     def _create_indicator_for_observable(self, observable):
         """
-        Create a single STIX indicator from a cyber observable using pycti utilities.
+        Create a single STIX indicator from an observable using pycti utilities.
 
         Uses OpenCTIStix2Utils to generate proper STIX patterns and creates
         Indicator objects with malicious-activity labels.
 
         Args:
-            observable (stix2.SDO): STIX cyber observable object
+            observable (stix2.SDO): STIX observable object
 
         Returns:
             stix2.Indicator: STIX Indicator object, or None if type not supported
@@ -1283,7 +1270,7 @@ class SublimeConnector:
             incident (stix2.Incident): Main incident object
             primary_email (stix2.EmailMessage): Primary detailed email
             all_emails (list): List of all email objects (preview + additional)
-            observables (list): List of cyber observable objects (excludes EmailMessage objects)
+            observables (list): List of observable objects (excludes EmailMessage objects)
             indicators (list): List of indicator objects (unused in current implementation)
 
         Returns:
@@ -1315,9 +1302,7 @@ class SublimeConnector:
 
     def _create_relationship(self, source, target, relationship_type="related-to"):
         """
-        Create a single relationship between two STIX objects.
-
-        Uses deterministic ID generation for consistent relationships.
+        Create a single relationship between two STIX objects. Uses deterministic ID generation for consistent relationships.
 
         Args:
             source (stix2.SDO): Source STIX object
@@ -1341,20 +1326,20 @@ class SublimeConnector:
             object_marking_refs=[stix2.TLP_AMBER],
         )
 
-    def _lookup_MDM_value(self, data, path):
+    def _lookup_MDM_value(self, MDM, value):
         """
-        Lookup values in MDM based on their rule structure
-        This makes it easier to correlate values to MQL rules
+        Lookup values in MDM based on their rule structure.
+        This may seem overcomplicated compared to parsing JSON but it easier correlates to MQL rule structure.
 
         Args:
-            data (dict): Dictionary to search
-            path (str): Dot-separated path (e.g., 'sender.email.email')
+            MDM (dict): Message data to search
+            value (str): Dot-separated path (e.g., 'sender.email.email')
 
         Returns:
             Any: Value at the path, or None if path doesn't exist
         """
-        keys = path.split(".")
-        value = data
+        keys = value.split(".")
+        value = MDM
         for key in keys:
             if isinstance(value, dict):
                 value = value.get(key)
@@ -1362,18 +1347,18 @@ class SublimeConnector:
                 return None
         return value
 
-    def _extract_recipients(self, data_model):
+    def _extract_recipients(self, MDM):
         """
         Extract recipient email addresses from message data model.
 
         Args:
-            data_model (dict): Message data model from Sublime API
+            MDM (dict): Message data model from Sublime API
 
         Returns:
             list: List of stix2.EmailAddress objects for recipients
         """
         recipients = []
-        to_list = self._lookup_MDM_value(data_model, "recipients.to") or []
+        to_list = self._lookup_MDM_value(MDM, "recipients.to") or []
         for recipient in to_list:
             email = self._lookup_MDM_value(recipient, "email.email")
             if email:
@@ -1385,18 +1370,18 @@ class SublimeConnector:
                 )
         return recipients
 
-    def _extract_urls(self, data_model):
+    def _extract_urls(self, MDM):
         """
         Extract URLs from email body links.
 
         Args:
-            data_model (dict): Message data model from Sublime API
+            MDM (dict): Message data model from Sublime API
 
         Returns:
             list: List of stix2.URL objects
         """
         urls = []
-        links = self._lookup_MDM_value(data_model, "body.links") or []
+        links = self._lookup_MDM_value(MDM, "body.links") or []
         for link in links:
             url = self._lookup_MDM_value(link, "href_url.url")
             if url:
@@ -1408,12 +1393,12 @@ class SublimeConnector:
                 )
         return urls
 
-    def _extract_domains(self, data_model):
+    def _extract_domains(self, MDM):
         """
         Extract domains from email headers. Deduplicates based on lowercase domain names.
 
         Args:
-            data_model (dict): Message data model from Sublime API
+            MDM (dict): Message data model from Sublime API
 
         Returns:
             list: List of stix2.DomainName objects
@@ -1421,7 +1406,7 @@ class SublimeConnector:
         domains = []
         seen = set()
 
-        header_domains = self._lookup_MDM_value(data_model, "headers.domains") or []
+        header_domains = self._lookup_MDM_value(MDM, "headers.domains") or []
         for domain_info in header_domains:
             domain = domain_info.get("domain")
             if domain and domain.lower() not in seen:
@@ -1435,19 +1420,19 @@ class SublimeConnector:
 
         return domains
 
-    def _extract_ips(self, data_model):
+    def _extract_ips(self, MDM):
         """
         Extract IP addresses from email headers.
-        Automatically detects IPv4 vs IPv6 addresses based on presence of colons.
+        Differentiates IPv4 vs IPv6 based on presence of colons.
 
         Args:
-            data_model (dict): Message data model from Sublime API
+            MDM (dict): Message data model from Sublime API
 
         Returns:
             list: List of stix2.IPv4Address or stix2.IPv6Address objects
         """
         ips = []
-        header_ips = self._lookup_MDM_value(data_model, "headers.ips") or []
+        header_ips = self._lookup_MDM_value(MDM, "headers.ips") or []
         for ip_info in header_ips:
             ip = ip_info.get("ip")
             if ip:
@@ -1493,14 +1478,13 @@ class SublimeConnector:
                     )
                     continue
 
-                # Check if this message group already exists in OpenCTI
+                # Check if this message group already exists in OpenCTI using temp cache
                 if group_id in self._existing_group_ids:
                     self.helper.log_debug(
                         "[DEBUG] Skipping existing group: {}".format(group_id)
                     )
                     continue
 
-                # Check if event incident already exists for this group_id
                 existing_incident = None
                 try:
                     all_incidents = self.helper.api.incident.list()
@@ -1610,7 +1594,9 @@ class SublimeConnector:
 
     def _get_existing_group_ids(self):
         """
-        Get all existing Sublime group IDs from OpenCTI incidents and cases.
+        Get existing Sublime group IDs from OpenCTI incidents and cases.
+        Retrieve most recent 1000 (configurable) to build temp cache in memory.
+        Use this to get external references from each to ensure there's no duplicate incidents or cases.
 
         Returns:
             set: Set of existing group IDs
@@ -1664,7 +1650,6 @@ class SublimeConnector:
         since_timestamp = self._get_last_timestamp()
         self.helper.log_debug("Fetching messages since {}".format(since_timestamp))
 
-        # Initialize work tracking
         work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id, "Sublime Import"
         )

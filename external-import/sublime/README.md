@@ -1,23 +1,14 @@
 # Sublime Security OpenCTI Connector
 
-An OpenCTI external import connector that retrieves malicious email message groups from Sublime Security's API and converts them into STIX 2.1 objects for threat intelligence ingestion.
+An OpenCTI external import connector that retrieves malicious email message groups from Sublime Security's API and ingests them as OpenCTI Incidents and Cases.
 
 ## Architecture
 
-The connector polls Sublime Security's message groups API endpoint to retrieve email threat data. Each message group is transformed into a STIX bundle containing:
+The connector polls Sublime Security's message groups API endpoint to retrieve flagged email data. Each message group is transformed into a STIX bundle containing:
 
-- One Incident object representing the email threat group
-- One Case object for investigation workflow
-- Multiple EmailMessage objects (detailed primary message and basic preview messages)
-- Cyber observables extracted from email content (URLs, domains, IPs, email addresses, file hashes)
-- Indicators generated from observables
-- Relationships linking all objects to the incident
-
-```
-Sublime API → Message Groups → STIX Bundle → OpenCTI Platform
-                    ↓
-    [Incident + Case + EmailMessages + Observables + Indicators + Relationships]
-```
+- One Incident object representing each email group
+- One Case object linked to the Incident for analysis
+- Observables extracted from email content (URLs, domains, IPs, email addresses, attachment file hashes)
 
 ## Installation
 
@@ -36,28 +27,41 @@ Required environment variables in `docker-compose.yml`:
       - CONNECTOR_NAME=Sublime Security
       - CONNECTOR_SCOPE=sublime
       - CONNECTOR_LOG_LEVEL=info
-      - CONNECTOR_DURATION_PERIOD=PT10M
+      - CONNECTOR_DURATION_PERIOD=PT3M  # ISO 8601 duration (PT10M = 10 minutes)
 
       - SUBLIME_URL=https://platform.sublime.security
       - SUBLIME_TOKEN=ChangeMe
-      - SUBLIME_INCIDENT_TYPE=phishing
-      - SUBLIME_INCIDENT_PREFIX=Sublime Incident -
-      - SUBLIME_CASE_PREFIX=Case -
-      - SUBLIME_AUTO_CREATE_CASES=true
-      # Multiple verdicts can be declared like: malicious,suspicious
-      - SUBLIME_VERDICTS=malicious
-      - SUBLIME_CONFIDENCE_LEVEL=80
+      - SUBLIME_INCIDENT_TYPE=phishing  # STIX incident type
+      - SUBLIME_INCIDENT_PREFIX=Sublime Alert - 
+      - SUBLIME_CASE_PREFIX=Case - 
+      - SUBLIME_AUTO_CREATE_CASES=false  # Automatically create cases for incidents
+      - SUBLIME_VERDICTS=malicious  # Multiple verdicts can comma-separated like: malicious,suspicious
+      - SUBLIME_SET_PRIORITY=true  # Enable priority mapping from attack score verdict
+      - SUBLIME_SET_SEVERITY=true  # Enable severity mapping from attack score verdict
+      - SUBLIME_CONFIDENCE_LEVEL=80 # 0-100 confidence score
+      - SUBLIME_FIRST_RUN_DURATION=PT8H  # Duration for initial data fetch in ISO 8601 format (P14D = 14 days, PT1H = 1 hour)
+      - SUBLIME_FORCE_HISTORICAL=false  # Force historical fetch by overriding existing state
+      - SUBLIME_BATCH_SIZE=100   # Number of message groups to process per batch (default: 100)
+
+
 ```
 
 ### Deployment
 
+For local builds, add the build option to your docker-compose.yml with the specific file to the connector. For example:
+
+```    build: 
+        context: ~/threat-intel/OpenCTI/sublime_connector_opencti
+```
+
+To start the container:
 ```bash
-docker-compose up --build -d
+docker compose up --build -d
 ```
 
 Monitor connector logs:
 ```bash
-docker-compose logs -f connector-sublime
+docker compose logs -f connector-sublime
 ```
 
 ## Configuration Reference
@@ -78,32 +82,19 @@ docker-compose logs -f connector-sublime
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `CONNECTOR_LOG_LEVEL` | `info` | Logging verbosity level |
-| `CONNECTOR_DURATION_PERIOD` | `PT5M` | Polling interval (ISO 8601 duration format) |
+| `CONNECTOR_DURATION_PERIOD` | `PT3M` | Polling interval (ISO 8601 duration format) |
 | `SUBLIME_INCIDENT_TYPE` | `phishing` | Label to apply to incident type |
-| `SUBLIME_INCIDENT_PREFIX` | `Sublime Alert: ` | Prefix for incident object names |
-| `SUBLIME_CASE_PREFIX` | `Case: ` | Prefix for case object names |
-| `SUBLIME_AUTO_CREATE_CASES` | `true` | Automatically create investigation cases |
+| `SUBLIME_INCIDENT_PREFIX` | `Sublime Incident - ` | Prefix for incident object names |
+| `SUBLIME_CASE_PREFIX` | `Case - ` | Prefix for case object names |
+| `SUBLIME_AUTO_CREATE_CASES` | `false` | Automatically create investigation cases |
 | `SUBLIME_VERDICTS` | `malicious` | Comma-separated attack score verdicts to process |
 | `SUBLIME_CONFIDENCE_LEVEL` | `80` | Confidence score for STIX objects (0-100) |
-| `SUBLIME_HISTORICAL_INGEST` | `false` | Toggle a historical ingest of older email groups (not yet implemented) |
-| `SUBLIME_HISTORICAL_INGEST_DAYS` | `14` | Number of previous days of Sublime data to ingest (not yet implemented) |
+| `SUBLIME_FIRST_RUN_DURATION` | `PT8H` | ISO 8601 duration for initial data fetch on first run |
+| `SUBLIME_FORCE_HISTORICAL` | `false` | Force historical fetch ignoring existing state for correcting improper states |
+| `SUBLIME_SET_PRIORITY` | `false` | Enable priority mapping from attack score |
+| `SUBLIME_SET_SEVERITY` | `false` | Enable severity mapping from attack score |
+| `SUBLIME_BATCH_SIZE` | `100` | Number of messages per processing batch |
 
-
-### Configuration Examples
-
-High-confidence filtering:
-```yaml
-- SUBLIME_VERDICTS=malicious
-- SUBLIME_CONFIDENCE_LEVEL=95
-```
-
-Multi-verdict monitoring:
-```yaml
-- SUBLIME_VERDICTS=malicious,suspicious
-- SUBLIME_CONFIDENCE_LEVEL=60
-- SUBLIME_AUTO_CREATE_CASES=false
-```
 
 ## API Token Configuration
 
