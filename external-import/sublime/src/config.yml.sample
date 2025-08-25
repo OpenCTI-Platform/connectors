@@ -21,21 +21,20 @@ sublime:
   token: "ChangeMe"
   url: "https://platform.sublime.security"
 
-  # Optional - Attack Score Verdicts
   verdicts: "malicious"  # Comma-separated: malicious,suspicious
 
-  # Optional - STIX Configuration
-  confidence_level: 80  # 0-100 confidence score
   incident_type: "phishing"  # STIX incident type
 
-  # Optional - Naming Configuration
   incident_prefix: "Sublime Alert - "
   case_prefix: "Case - "
 
-  # Optional - Case Management
   auto_create_cases: false  # Automatically create cases for incidents
 
-  # Optional - Historical Ingest (one-time mode)
-  historical_ingest_days: 14  # Set to any number 1-90 for one-time historical ingest
-  historical_ingest: false  # Enable one-time historical ingest mode
+  set_priority: true  # Enable priority mapping from attack score verdict
+  set_severity: true  # Enable severity mapping from attack score verdict
+  confidence_level: 80  # 0-100 confidence score
+
+  first_run_duration: "PT8H"  # Duration for initial data fetch in ISO 8601 format (P14D = 14 days, PT1H = 1 hour)
+  force_historical: false  # Force historical fetch by overriding existing state
+  batch_size: 100  # Number of message groups to process per batch (default: 100)
 

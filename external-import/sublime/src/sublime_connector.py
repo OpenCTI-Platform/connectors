@@ -5,9 +5,7 @@ Simplified implementation following OpenCTI connector patterns
 
 import json
 import os
-import sys
 import time
-import traceback
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -20,36 +18,17 @@ from pycti import OpenCTIConnectorHelper, get_config_variable
 
 class SublimeConnector:
     """
-    Sublime Security external import connector for OpenCTI
+    Sublime external import connector for OpenCTI
     """
 
     def __init__(self):
         """
-        Initialize the Sublime Security OpenCTI connector.
+        Initialize the Sublime OpenCTI connector.
 
         Configuration Sources (in priority order):
         1. Environment variables
         2. config.yml file (if exists)
         3. Default values
-
-        Environment Variables:
-            Required:
-                OPENCTI_URL, OPENCTI_TOKEN,
-                CONNECTOR_ID, CONNECTOR_NAME, CONNECTOR_SCOPE,
-                SUBLIME_TOKEN, SUBLIME_URL
-
-            Optional:
-                SUBLIME_INCIDENT_PREFIX (default: 'Sublime Alert: ')
-                SUBLIME_CASE_PREFIX (default: 'Case: ')
-                SUBLIME_AUTO_CREATE_CASES (default: True)
-                SUBLIME_VERDICTS (default: 'malicious')
-                SUBLIME_CONFIDENCE_LEVEL (default: 80)
-                SUBLIME_INCIDENT_TYPE (default: 'phishing')
-                SUBLIME_HISTORICAL_INGEST (default: False)
-                SUBLIME_HISTORICAL_INGEST_DAYS (default: 14)
-
-        Raises:
-            ValueError: If required environment variables are missing
         """
         # Load configuration from config.yml if it exists
         config_file_path = os.path.join(
@@ -61,10 +40,12 @@ class SublimeConnector:
             try:
                 with open(config_file_path, "r", encoding="utf-8") as config_file:
                     config_dict = yaml.safe_load(config_file)
-                print("[*] Loaded configuration from {}".format(config_file_path))
+                self.helper.log_info(
+                    "[*] Loaded configuration from {}".format(config_file_path)
+                )
             except Exception as e:
-                print(
-                    "[WARNING] Failed to load config.yml: {}. Default values may be used.".format(
+                self.helper.log_warning(
+                    "[*] Failed to load config.yml: {}. Default values may be used.".format(
                         e
                     )
                 )
@@ -103,7 +84,7 @@ class SublimeConnector:
                     ["connector", "duration_period"],
                     config_dict,
                     False,
-                    "PT10M",
+                    "PT3M",
                 ),
             },
         }
@@ -158,7 +139,6 @@ class SublimeConnector:
             False,
         )
 
-        # Processing and STIX configuration
         verdicts_config = get_config_variable(
             "SUBLIME_VERDICTS", ["sublime", "verdicts"], config_dict, False, "malicious"
         )
@@ -183,19 +163,46 @@ class SublimeConnector:
             "phishing",
         )
 
-        self.historical_ingest = get_config_variable(
-            "SUBLIME_HISTORICAL_INGEST",
-            ["sublime", "historical_ingest"],
+        self.first_run_duration = get_config_variable(
+            "SUBLIME_FIRST_RUN_DURATION",
+            ["sublime", "first_run_duration"],
+            config_dict,
+            False,
+            "PT8H",
+        )
+        self.force_historical = get_config_variable(
+            "SUBLIME_FORCE_HISTORICAL",
+            ["sublime", "force_historical"],
             config_dict,
             False,
             False,
         )
-        self.historical_ingest_days = get_config_variable(
-            "SUBLIME_HISTORICAL_INGEST_DAYS",
-            ["sublime", "historical_ingest_days"],
+
+        # Case priority and severity configuration
+        self.set_priority = get_config_variable(
+            "SUBLIME_SET_PRIORITY",
+            ["sublime", "set_priority"],
             config_dict,
+            False,
             True,
-            14,
+        )
+        self.set_severity = get_config_variable(
+            "SUBLIME_SET_SEVERITY",
+            ["sublime", "set_severity"],
+            config_dict,
+            False,
+            True,
+        )
+
+        # Batch processing configuration
+        self.batch_size = int(
+            get_config_variable(
+                "SUBLIME_BATCH_SIZE",
+                ["sublime", "batch_size"],
+                config_dict,
+                True,
+                100,
+            )
         )
 
         if not self.api_token:
@@ -215,7 +222,8 @@ class SublimeConnector:
             )
             self.poll_interval = 300  # 5 minutes default
 
-        # Set default options
+        # Value for if to update an existing bundle.
+        # Currently set to False as placeholder for potental future logic
         self.update_existing_data = False
 
         # Create session for API requests
@@ -231,7 +239,7 @@ class SublimeConnector:
         # Create Sublime Identity for STIX objects
         self.sublime_identity = stix2.Identity(
             id=self._make_deterministic_id("identity", "sublime-security-organization"),
-            name="Sublime Security",
+            name="Sublime",
             identity_class="organization",
             description="Email Security Platform",
             custom_properties={"x_opencti_type": "Organization"},
@@ -240,50 +248,158 @@ class SublimeConnector:
 
         self.helper.log_info("[*] Sublime connector initialized")
         self.helper.log_info(
-            "[*] Configuration: verdicts={}, confidence={}, incident_type={}, duration_period:{}, historical_ingest: {}".format(
+            "[*] Configuration: verdicts={}, confidence={}, incident_type={}, duration_period={}, first_run_duration={}, force_historical={}, incident_prefix='{}', case_prefix='{}', auto_create_cases={}, set_priority={}, set_severity={}, batch_size={}, platform_url={}".format(
                 self.verdicts,
                 self.confidence_level,
                 self.incident_type,
                 duration_period,
-                self.historical_ingest,
+                self.first_run_duration,
+                self.force_historical,
+                self.incident_name_prefix,
+                self.case_name_prefix,
+                self.auto_create_cases,
+                self.set_priority,
+                self.set_severity,
+                self.batch_size,
+                self.api_base_url,
             )
         )
 
     def _make_deterministic_id(self, stix_type, unique_value):
-        """Generate deterministic STIX ID to prevent duplicates"""
+        """Generate deterministic UUIDs for STIX values"""
+        safe_stix_type = str(stix_type or "unknown")
+        safe_unique_value = str(unique_value or "unknown")
+
         namespace = uuid.uuid5(uuid.NAMESPACE_DNS, "sublime-security-opencti")
         deterministic_uuid = uuid.uuid5(
-            namespace, "{}:{}".format(stix_type, unique_value)
+            namespace, "{}:{}".format(safe_stix_type, safe_unique_value)
         )
-        return "{}--{}".format(stix_type, deterministic_uuid)
+        return "{}--{}".format(safe_stix_type, deterministic_uuid)
 
     def _get_last_timestamp(self):
         """
         Get the last processed timestamp from OpenCTI connector state.
 
+        On first run (no existing state), fetches data from first_run_duration ago.
+        Subsequent runs are delta-based from the last processed timestamp.
+
+        If force_historical is enabled, ignores existing state once and then disables itself.
+
         Returns:
             str: ISO 8601 timestamp string of last processed message,
-                 or 5 minutes ago if no previous state exists
+                 or calculated based on first_run_duration if no previous state exists or force_historical is enabled
         """
-        current_state = self.helper.get_state()
-        if current_state and "last_timestamp" in current_state:
+        current_state = self.helper.get_state() or {}
+
+        # Check for force historical ingest flag
+        # A bit of logic here as OpenCTI will store these flags. This can prevent future historical
+        # So we clear the flag if it's enabled in config
+        if self.force_historical:
+            self.helper.log_info(
+                "[*] Force historical mode enabled - clearing previous state"
+            )
+            current_state.pop("force_historical_used", None)
+            current_state.pop("last_timestamp", None)
+            current_state["force_historical_used"] = True
+            self.helper.set_state(current_state)
+        elif current_state and "last_timestamp" in current_state:
             return current_state["last_timestamp"]
 
-        # Default to 5 minutes ago with Sublime API timestamp format
-        default_time = datetime.now(timezone.utc) - timedelta(minutes=5)
+        # First run or forced historical: use configured duration for initial data fetch
+        try:
+            duration_obj = isodate.parse_duration(self.first_run_duration)
+            default_time = datetime.now(timezone.utc) - duration_obj
+
+            if self.force_historical:
+                mode = "Forced historical"
+            else:
+                mode = "First run"
+
+            self.helper.log_info(
+                "[*] {}: fetching {} of historical data".format(
+                    mode, self.first_run_duration
+                )
+            )
+        except (isodate.ISO8601Error, ValueError) as e:
+            self.helper.log_warning(
+                '[!] Invalid first run duration format "{}": {}. Using default 14 days'.format(
+                    self.first_run_duration, e
+                )
+            )
+            # Fallback to 14 days
+            default_time = datetime.now(timezone.utc) - timedelta(days=14)
+
         # Format for Sublime API: 2025-06-07T05:00:00.000Z
         return default_time.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
-    def _set_last_timestamp(self, timestamp):
+    def _sanitize_email(self, email):
         """
-        Update the last processed timestamp in OpenCTI connector state.
+        Sanitize email address by removing Unicode BOM and other problematic characters.
 
         Args:
-            timestamp (str): ISO 8601 timestamp string to save as last processed
+            email (str): Raw email address
+
+        Returns:
+            str: Sanitized email address
         """
-        current_state = self.helper.get_state() or {}
-        current_state["last_timestamp"] = timestamp
-        self.helper.set_state(current_state)
+        if not email:
+            return email
+
+        # Remove Unicode BOM (Byte Order Mark) characters
+        sanitized = (
+            email.replace("\ufeff", "")
+            .replace("\ufffe", "")
+            .replace("\u00ef\u00bb\u00bf", "")
+        )
+
+        # Strip leading/trailing whitespace
+        sanitized = sanitized.strip()
+
+        return sanitized
+
+    def _map_attack_score_to_level(self, attack_score_verdict, mapping_type):
+        """
+        Map Sublime attack score verdict to OpenCTI priority or severity level.
+
+        Attack score verdicts: benign, unknown, graymail, suspicious, malicious, spam
+
+        Args:
+            attack_score_verdict (str): Sublime attack score verdict
+            mapping_type (str): Either 'priority' or 'severity'
+
+        Returns:
+            str: Mapped level (low, medium, high, critical) or None if not configured
+        """
+        if mapping_type == "priority" and not self.set_priority:
+            return None
+        if mapping_type == "severity" and not self.set_severity:
+            return None
+
+        # Verdict to level mapping - OpenCTI expects different values for priority vs severity
+        if mapping_type == "priority":
+            # Priority uses P1/P2/P3/P4 format (P1 = highest priority)
+            verdict_mapping = {
+                "malicious": "P1",  # Highest priority
+                "suspicious": "P2",  # High priority
+                "spam": "P3",  # Medium priority
+                "graymail": "P3",  # Medium priority
+                "unknown": "P4",  # Low priority
+                "benign": "P4",  # Low priority
+            }
+        else:
+            # Severity mapping - confirmed to work with: critical, high, medium, low
+            verdict_mapping = {
+                "malicious": "high",
+                "suspicious": "medium",
+                "spam": "low",
+                "graymail": "low",
+                "unknown": "low",
+                "benign": "low",
+            }
+
+        verdict = (attack_score_verdict or "unknown").lower()
+        default_value = "P4" if mapping_type == "priority" else "low"
+        return verdict_mapping.get(verdict, default_value)
 
     def _fetch_group_ids(self, start_time, end_time):
         """
@@ -299,7 +415,6 @@ class SublimeConnector:
         Raises:
             Exception: API request failures or authentication errors
         """
-        # Build query parameters for flagged message groups
         params = {
             "created_at__gte": start_time,
             "created_at__lt": end_time,
@@ -314,15 +429,14 @@ class SublimeConnector:
 
         full_url = "{}/messages/groups".format(api_url)
 
-        # Debug logging for API requests
         self.helper.log_info(
             "[*] Fetch Time range: {} to {}".format(start_time, end_time)
         )
-        self.helper.log_debug("[DEBUG] API Request parameters: {}".format(params))
-
+        self.helper.log_debug(
+            "API request: {} with {} parameters".format(full_url, len(params))
+        )
         response = self.session.get(full_url, params=params, timeout=30)
 
-        # Debug response details
         if not response.ok:
             self.helper.log_error(
                 "[!] API request failed - Status: {}, Response: {}".format(
@@ -337,7 +451,7 @@ class SublimeConnector:
         group_ids = data.get("all_group_canonical_ids")
 
         # Handle case where API returns None or doesn't include the field
-        if group_ids is None:
+        if not group_ids:
             self.helper.log_warning(
                 "[!] API response missing all_group_canonical_ids field"
             )
@@ -363,7 +477,7 @@ class SublimeConnector:
 
         full_url = "{}/messages/groups/{}".format(api_url, group_id)
 
-        self.helper.log_debug("Fetching group: {}".format(full_url))
+        self.helper.log_debug("Fetching group: {}".format(group_id))
 
         response = self.session.get(full_url, timeout=30)
 
@@ -381,15 +495,16 @@ class SublimeConnector:
         """
         Fetch malicious message groups from Sublime API since provided time.
 
-        Uses a two-step process:
+        Uses a two-step process with batch processing:
         1. Fetch list of flagged group IDs within time range
-        2. Fetch individual groups and filter by 'malicious' attack score verdict
+        2. Process groups in batches to prevent memory exhaustion
+        3. Yield batches of message groups for incremental processing
 
         Args:
             since_timestamp (str): ISO 8601 timestamp to fetch messages since
 
-        Returns:
-            list: List of message group dictionaries with 'malicious' verdict
+        Yields:
+            list: Batches of message group dictionaries with 'malicious' verdict
 
         Raises:
             Exception: Network errors or JSON parsing failures
@@ -408,45 +523,63 @@ class SublimeConnector:
         end_time = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
         try:
-            # Step 1: Get list of flagged group IDs
             group_ids = self._fetch_group_ids(start_time, end_time)
             if not group_ids:
-                self.helper.log_debug(
-                    "[DEBUG] No flagged message groups found in time range"
-                )
-                return []
-
-            # Step 2: Fetch individual message groups and filter by malicious verdict
-            all_messages = []
-            for group_id in group_ids:
-                message_group = self._fetch_single_group(group_id)
-                if message_group:
-                    # Filter by attack score verdict (skip null/None verdicts)
-                    attack_score_raw = message_group.get("attack_score_verdict")
-                    if attack_score_raw is None:
-                        self.helper.log_debug(
-                            "[DEBUG] Skipping group {} with null verdict (no score assigned)".format(
-                                group_id
-                            )
-                        )
-                        continue
-
-                    attack_score = attack_score_raw.lower()
-                    if attack_score in self.verdicts:
-                        all_messages.append(message_group)
-                    else:
-                        self.helper.log_debug(
-                            "[DEBUG] Skipping group {} with verdict: {} (not in {})".format(
-                                group_id, attack_score, self.verdicts
-                            )
-                        )
+                self.helper.log_debug("No flagged message groups found in time range")
+                return
 
             self.helper.log_info(
-                "[*] Fetched {} message groups (verdicts: {}) from {} total flagged groups".format(
-                    len(all_messages), self.verdicts, len(group_ids)
+                "[*] Found {} flagged group IDs. Processing in batches of {}".format(
+                    len(group_ids), self.batch_size
                 )
             )
-            return all_messages
+
+            total_fetched = 0
+            for i in range(0, len(group_ids), self.batch_size):
+                batch_ids = group_ids[i : i + self.batch_size]
+                batch_messages = []
+
+                self.helper.log_info(
+                    "[*] Processing batch {}/{}: groups {} to {} ({} total)".format(
+                        (i // self.batch_size) + 1,
+                        (len(group_ids) + self.batch_size - 1) // self.batch_size,
+                        i + 1,
+                        min(i + self.batch_size, len(group_ids)),
+                        len(batch_ids),
+                    )
+                )
+
+                for group_id in batch_ids:
+                    message_group = self._fetch_single_group(group_id)
+                    if message_group:
+                        attack_score_raw = message_group.get("attack_score_verdict")
+                        if not attack_score_raw:
+                            continue
+
+                        attack_score = attack_score_raw.lower()
+                        if attack_score in self.verdicts:
+                            batch_messages.append(message_group)
+                        else:
+                            self.helper.log_debug(
+                                "Skipping group {} with verdict '{}' (not in {})".format(
+                                    group_id, attack_score, self.verdicts
+                                )
+                            )
+
+                if batch_messages:
+                    total_fetched += len(batch_messages)
+                    self.helper.log_info(
+                        "[*] Batch yielding {} messages (verdicts: {})".format(
+                            len(batch_messages), self.verdicts
+                        )
+                    )
+                    yield batch_messages
+
+            self.helper.log_info(
+                "[*] Completed fetching {} total message groups from {} flagged groups".format(
+                    total_fetched, len(group_ids)
+                )
+            )
 
         except requests.exceptions.RequestException as e:
             raise Exception("Network error: {}".format(e))
@@ -520,17 +653,14 @@ class SublimeConnector:
         group_id = message_group.get("id", "unknown")
         previews = message_group.get("previews", [])
 
-        self.helper.log_debug(
-            "[DEBUG] Creating STIX bundle for group {} with {} emails".format(
-                group_id, len(previews)
-            )
-        )
-
         # Create detailed email from MDM
-        primary_email, observables = self._create_primary_email(message_group)
+        primary_email, observables, additional_emails = self._create_primary_email(
+            message_group
+        )
         if primary_email:
             objects.append(primary_email)
         objects.extend(observables)
+        objects.extend(additional_emails)  # Add any additional EmailMessage objects
 
         # Create basic emails from previews of other emails in group
         preview_emails = self._create_preview_emails(previews, group_id)
@@ -541,151 +671,110 @@ class SublimeConnector:
         objects.append(incident)
 
         # Create indicators from observables
-        indicators = self._create_indicators(observables)
+        indicators = []
+
+        for observable in observables:
+            try:
+                indicator = self._create_indicator_for_observable(observable)
+                if indicator:
+                    indicators.append(indicator)
+            except Exception as e:
+                # Log the problematic observable value for debugging
+                obs_value = getattr(observable, "value", "Unknown")
+                self.helper.log_warning(
+                    "[!] Failed to create indicator for {}: {}".format(
+                        observable._type, e
+                    )
+                )
+                self.helper.log_warning(
+                    "[!] Problematic {} value: {}".format(observable._type, obs_value)
+                )
+
         objects.extend(indicators)
 
-        # Link everything to incident
+        # Link everything to incident (include additional_emails from MDM)
+        all_emails = preview_emails + additional_emails
         relationships = self._create_relationships(
-            incident, primary_email, preview_emails, observables, indicators
+            incident, primary_email, all_emails, observables, indicators
         )
         objects.extend(relationships)
 
-        # Optional: Create detailed email-to-observable relationships
-        # Comment out this section if not needed for simpler relationship model
-        email_relationships = self._create_email_observable_relationships(
-            primary_email, observables, message_group
-        )
-        objects.extend(email_relationships)
-
-        self.helper.log_debug(
-            "[DEBUG] Created {} total STIX objects".format(len(objects))
-        )
         return objects, incident
 
     def _create_primary_email(self, message_group):
         """
         Create detailed EmailMessage from group's primary Message Data Model (MDM).
 
-        Extracts rich threat intelligence including:
-        - Email addresses (sender, recipients)
-        - URLs from email body
-        - Domains from headers
-        - IP addresses from headers
-        - Email content and metadata
-
         Args:
             message_group (dict): Message group data from Sublime API
 
         Returns:
-            tuple: (EmailMessage object, list of observable objects)
+            tuple: (EmailMessage object, list of observable objects, list of additional EmailMessage objects)
         """
         data_model = message_group.get("data_model", {})
         if not data_model:
-            return None, []
+            return None, [], []
 
         observables = []
 
-        # Extract email addresses
-        sender = self._extract_sender(data_model)
+        sender_email = self._lookup_MDM_value(data_model, "sender.email.email")
+        sender = None
+        if sender_email:
+            sender_email = self._sanitize_email(sender_email)
+            sender = stix2.EmailAddress(
+                id=self._make_deterministic_id("email-addr", sender_email),
+                value=sender_email,
+            )
         recipients = self._extract_recipients(data_model)
         if sender:
             observables.append(sender)
         observables.extend(recipients)
 
-        # Extract threat indicators
         observables.extend(self._extract_urls(data_model))
         observables.extend(self._extract_domains(data_model))
         observables.extend(self._extract_ips(data_model))
 
         # Build email message (STIX2: is_multipart requires body)
-        body_text = self._get_nested(data_model, "body.plain.raw")
+        body_text = self._lookup_MDM_value(data_model, "body.plain.raw")
 
-        # To make an analyst's life easier, only use raw text and not HTML
-        # But leave option.
-        # html_content = self._get_nested(data_model, 'body.html.raw')
+        # raw text makes things easier, but option is here for HTML
+        # html_content = self._lookup_MDM_value(data_model, 'body.html.raw')
 
         # Edge case. Sometimes the raw body doesn't exist. In that case, use HTML
         # e.g. html.raw = <span style="display: none"></p></html>
         if not body_text:
-            html_text = self._get_nested(data_model, "body.html.raw")
+            html_text = self._lookup_MDM_value(data_model, "body.html.raw")
             body_text = html_text
 
-        # Debug logging to understand the data structure
-        # self.helper.log_info('[*] Body text: {} (type: {})'.format(
-        #    'Present' if body_text else 'None', type(body_text).__name__))
-        # self.helper.log_info('[*] HTML content: {} (type: {})'.format(
-        #    'Present' if html_content else 'None', type(html_content).__name__))
+        # Get actual subject from message group
+        subjects = message_group.get("subjects", [])
+        subject = subjects[0] if subjects else "Email processed by Sublime"
 
+        if not subject or subject.strip() == "":
+            subject = "Email processed by Sublime"
+
+        group_id = message_group.get("id", "unknown")
         email_data = {
-            "subject": self._get_nested(data_model, "subject.subject"),
-            "from_ref": sender.id if sender else None,
-            "to_refs": [r.id for r in recipients] if recipients else None,
-            "date": self._get_nested(data_model, "headers.date"),
-            "message_id": self._get_nested(data_model, "headers.message_id"),
+            "id": self._make_deterministic_id(
+                "email-message", "{}:primary".format(group_id)
+            ),
+            "subject": subject,
+            "is_multipart": False,
+            "body": body_text or "Email content processed by Sublime",
         }
 
-        if body_text and isinstance(body_text, str) and body_text.strip():
-            # Use plain text body
-            email_data["body"] = body_text
-            """
-        elif html_content:
-            # Extract HTML content as string
-            if isinstance(html_content, dict):
-                html_text = html_content.get('raw') or str(html_content)
-            elif isinstance(html_content, str):
-                html_text = html_content
-            else:
-                html_text = str(html_content)
+        if sender:
+            email_data["from_ref"] = sender.id
 
-            if html_text and html_text.strip():
-                email_data['body'] = html_text
-            else:
-                email_data['body'] = 'No content available'
-            """
-        else:
-            # Fallback body
-            email_data["body"] = "No content available"
+        if recipients:
+            email_data["to_refs"] = [recipient.id for recipient in recipients]
 
-        # Always set is_multipart to False to avoid complex STIX constraints
-        email_data["is_multipart"] = False
-
-        # Remove None values
-        email_data = {k: v for k, v in email_data.items() if v is not None}
-
-        # Final debug check
-        self.helper.log_debug(
-            "[DEBUG] Final email_data keys. : {}".format(list(email_data.keys()))
-        )
-        self.helper.log_debug("[DEBUG] Final email_data: {}".format(email_data))
-
-        # Validate before leaving
-        has_body = "body" in email_data
-        has_is_multipart = "is_multipart" in email_data
-        # self.helper.log_info('[*] Has body: {}, Has is_multipart: {}'.format(has_body, has_is_multipart))
-
-        if has_is_multipart and not has_body:
-            self.helper.log_error(
-                "[!] Relationship error: is_multipart set but no body!"
-            )
-            self.helper.log_error("[!] Removing is_multipart to prevent error")
-            email_data.pop("is_multipart", None)
-
-        # Create EmailMessage with deterministic ID (is_multipart and body are now always provided)
-        group_id = message_group.get("id", "unknown")
-        email_data["id"] = self._make_deterministic_id(
-            "email-message", "{}:primary".format(group_id)
-        )
         email = stix2.EmailMessage(**email_data)
-        return email, observables
+        return email, observables, []  # No additional emails in single email case
 
     def _create_preview_emails(self, previews, group_id):
         """
-        Create basic EmailMessage objects from preview data.
-
-        Creates simplified EmailMessage objects with:
-        - Subject and basic metadata
-        - Email addresses (sender, recipients)
-        - File objects from attachment hashes
+        Creates simplified EmailMessage objects
 
         Args:
             previews (list): List of preview email dictionaries
@@ -697,35 +786,24 @@ class SublimeConnector:
         all_objects = []
 
         for i, preview in enumerate(previews):
-            # Skip if preview is None or empty
             if not preview:
-                self.helper.log_debug("[*] Skipping None or empty preview")
                 continue
 
-            # Debug logging for preview structure
-            self.helper.log_debug(
-                "[*] Processing preview: {}".format(
-                    preview.keys()
-                    if isinstance(preview, dict)
-                    else type(preview).__name__
-                )
-            )
-
-            # Create email addresses
             sender = None
             recipients = []
 
             if preview.get("sender_email_address"):
-                sender_email = preview["sender_email_address"]
+                sender_email = self._sanitize_email(preview["sender_email_address"])
                 sender = stix2.EmailAddress(
                     id=self._make_deterministic_id("email-addr", sender_email),
                     value=sender_email,
                 )
                 all_objects.append(sender)
 
-            recipients_list = preview.get("recipients") or []
-            for recipient_addr in recipients_list:
+            # Create recipient email addresses
+            for recipient_addr in preview.get("recipients") or []:
                 if recipient_addr:
+                    recipient_addr = self._sanitize_email(recipient_addr)
                     recipient = stix2.EmailAddress(
                         id=self._make_deterministic_id("email-addr", recipient_addr),
                         value=recipient_addr,
@@ -743,36 +821,98 @@ class SublimeConnector:
                     )
                     all_objects.append(file_obj)
 
-            # Create EmailMessage with required fields
+            # Simplified EmailMessage - minimal fields only
             email_data = {
-                "subject": preview.get("subject", "Unknown Subject"),
-                "from_ref": sender.id if sender else None,
-                "to_refs": [r.id for r in recipients] if recipients else None,
-                "date": preview.get("created_at"),
-                "body": preview.get("body_text"),  # Required field
-                "is_multipart": False,  # Required field
-            }
-
-            # Remove None values and create if we have data
-            email_data = {k: v for k, v in email_data.items() if v is not None}
-            if email_data:
-                email_data["id"] = self._make_deterministic_id(
+                "id": self._make_deterministic_id(
                     "email-message", "{}:preview:{}".format(group_id, i)
-                )
-                email = stix2.EmailMessage(**email_data)
-                all_objects.append(email)
+                ),
+                "subject": str(preview.get("subject") or "Unknown Subject"),
+                "is_multipart": False,
+                "body": "Email preview processed by Sublime",
+            }
+            email = stix2.EmailMessage(**email_data)
+            all_objects.append(email)
 
         return all_objects
 
+    def _create_description(self, message_group):
+        """
+        Create detailed description with alert labels, subject, and recipient details.
+        Args:
+            base_description (str): Basic description to start with
+            message_group (dict): Original message group data from Sublime API
+
+        Returns:
+            str: Rich description with alert labels, subject, and recipients
+        """
+        try:
+            subjects = message_group.get("subjects", [])
+            subject = subjects[0] if subjects else "Unknown Subject"
+            flagged_rules = message_group.get("flagged_rules", [])
+            attack_score = message_group.get("attack_score_verdict") or "unknown"
+            email_count = len(message_group.get("previews", []))
+            email_plural = "email" if email_count == 1 else "emails"
+            description = "{} email group with {} {} detected by Sublime.".format(
+                attack_score.capitalize(), email_count, email_plural
+            )
+
+            attack_score = message_group.get("attack_score_verdict") or "unknown"
+            flagged_rules = message_group.get("flagged_rules", [])
+
+            description += "\n\n**Sublime Alert Labels:**\n"
+            description += "- email-threat\n"
+            description += "- sublime-attack-score-{}\n".format(attack_score)
+
+            if flagged_rules:
+                rule_names = [
+                    rule.get("rule_meta", {}).get("name", "Unknown")
+                    for rule in flagged_rules
+                ]
+                for rule_name in rule_names:
+                    description += "- rule-{}\n".format(
+                        rule_name.lower().replace(" ", "-")
+                    )
+
+            subjects = message_group.get("subjects", [])
+            subject = subjects[0] if subjects else "Unknown Subject"
+            description += "\n**Subject:** {}\n".format(subject)
+
+            # Collect unique recipients from both data_model and previews
+            recipients = set()
+            data_model = message_group.get("data_model", {})
+
+            if data_model:
+                to_list = self._lookup_MDM_value(data_model, "recipients.to") or []
+                for recipient in to_list:
+                    email = self._lookup_MDM_value(recipient, "email.email")
+                    if email:
+                        recipients.add(email)
+
+            for preview in message_group.get("previews", []):
+                if not preview:
+                    continue
+                recipient_list = preview.get("recipients", []) or []
+                for recipient in recipient_list:
+                    if recipient:
+                        recipients.add(recipient)
+
+            if recipients:
+                description += "\n**Recipients ({}):**\n".format(len(recipients))
+                sorted_recipients = sorted(list(recipients))
+                for recipient in sorted_recipients:
+                    description += "- {}\n".format(recipient)
+            else:
+                description += "\n**Recipients:** None identified\n"
+
+            return description
+
+        except Exception as e:
+            self.helper.log_warning("[!] Failed to create description: {}".format(e))
+            return "Malicious email group detected by Sublime Security. Description unavailable."
+
     def _create_group_incident(self, message_group):
         """
-        Create incident representing the entire message group.
-
-        Creates a STIX Incident with:
-        - Descriptive name and details
-        - Attack score and rule information
-        - External reference to Sublime platform
-        - Appropriate labels and metadata
+        Creates a STIX Incident bundle to ingest as Event Incident
 
         Args:
             message_group (dict): Message group data from Sublime API
@@ -781,48 +921,29 @@ class SublimeConnector:
             stix2.Incident: STIX Incident object
         """
         group_id = message_group.get("id", "unknown")
-        subjects = message_group.get("subjects", [])
-        subject = subjects[0] if subjects else "Unknown Subject"
-        email_count = len(message_group.get("previews", []))
-        flagged_rules = message_group.get("flagged_rules", [])
-        attack_score = message_group.get("attack_score_verdict") or "unknown"
+        attack_score_verdict = message_group.get("attack_score_verdict", "unknown")
 
-        # Build description
-        description = (
-            "Email threat group with {} emails detected by Sublime Security.\n".format(
-                email_count
-            )
-        )
-        description += 'Subject: "{}".\n Attack score: {}.'.format(
-            subject, attack_score
-        )
+        # Generate incident name with same structure as case name
+        incident_name = self._generate_incident_name(message_group)
 
-        labels = ["email-threat", "sublime-attack-score-{}".format(attack_score)]
+        incident_description = self._create_description(message_group)
 
-        if flagged_rules:
-            description += " Triggered rules:"
-            rule_names = [
-                rule.get("rule_meta", {}).get("name", "Unknown")
-                for rule in flagged_rules
-            ]
-            for rule_name in rule_names:
-                description += " {}.".format(rule_name)
-                labels.append("rule-{}".format(rule_name.lower().replace(" ", "-")))
-
-        # Create incident with deterministic ID
+        # Create Event Incident with deterministic ID
         incident = stix2.Incident(
             id=self._make_deterministic_id("incident", group_id),
-            name="{} {}".format(self.incident_name_prefix, subject),
-            description=description,
-            labels=labels,
+            name=incident_name,
+            description=incident_description,
             created_by_ref=self.sublime_identity.id,
             object_marking_refs=[stix2.TLP_AMBER],
+            confidence=self.confidence_level,
             external_references=[
                 {
-                    "source_name": "Sublime Security",
-                    "description": "View this message group in Sublime Security platform",
-                    "url": "{}/messages/{}".format(self.api_base_url, group_id),
-                    "external_id": group_id,
+                    "source_name": "Sublime",
+                    "description": "View this message group in Sublime platform",
+                    "url": "{}/messages/{}".format(
+                        self.api_base_url, str(group_id or "unknown")
+                    ),
+                    "external_id": str(group_id or "unknown"),
                 }
             ],
             custom_properties={
@@ -833,72 +954,273 @@ class SublimeConnector:
             allow_custom=True,
             incident_type=self.incident_type.capitalize(),
             source="Sublime Security",
-            confidence=self.confidence_level,
+            severity=self._map_attack_score_to_level(attack_score_verdict, "severity"),
         )
 
         return incident
 
+    def _generate_incident_name(self, message_group):
+        """
+        Generate incident name with same structure as case name.
+        This all allows for aggregate values within the name.
+
+        Args:
+            message_group (dict): Original message group data from Sublime API
+
+        Returns:
+            str: Incident name with sender, count, and recipient details
+        """
+        try:
+            sender_email = "Unknown Sender"
+            data_model = message_group.get("data_model", {})
+            if data_model and self._lookup_MDM_value(data_model, "sender.email.email"):
+                sender_email = self._sanitize_email(
+                    self._lookup_MDM_value(data_model, "sender.email.email")
+                )
+            elif message_group.get("previews"):
+                for preview in message_group.get("previews", []):
+                    if not preview:
+                        continue
+                    if preview.get("sender_email_address"):
+                        sender_email = self._sanitize_email(
+                            preview.get("sender_email_address")
+                        )
+                        break
+
+            preview_count = len(message_group.get("previews", []))
+            has_primary = bool(
+                data_model and self._lookup_MDM_value(data_model, "sender.email.email")
+            )
+            email_count = max(preview_count, 1) if has_primary else preview_count
+
+            recipients = set()
+            if data_model:
+                to_list = self._lookup_MDM_value(data_model, "recipients.to") or []
+                for recipient in to_list:
+                    email = self._lookup_MDM_value(recipient, "email.email")
+                    if email:
+                        recipients.add(email)
+
+            for preview in message_group.get("previews", []):
+                if not preview:
+                    continue
+                recipient_list = preview.get("recipients", []) or []
+                for recipient in recipient_list:
+                    if recipient:
+                        recipients.add(recipient)
+
+            recipient_count = len(recipients)
+
+            # Get message group subject
+            subjects = message_group.get("subjects", [])
+            subject = subjects[0] if subjects else "Unknown Subject"
+            if len(subject) > 10:
+                subject_abbreviated = "[{}...{}]".format(subject[:7], subject[-3:])
+            elif not subject:
+                subject_abbreviated = ""
+            else:
+                subject_abbreviated = "[{}]".format(subject)
+
+            email_plural = "Email" if email_count == 1 else "Emails"
+            recipient_plural = "Recipient" if recipient_count == 1 else "Recipients"
+
+            if email_count == 0:
+                incident_name = "{} {} Sent {} to {} {}. {}".format(
+                    self.incident_name_prefix,
+                    sender_email,
+                    email_plural,
+                    recipient_count,
+                    recipient_plural,
+                    subject_abbreviated,
+                )
+            else:
+                count_display = (
+                    "{}".format(email_count) if preview_count > 0 else str(email_count)
+                )
+                incident_name = "{} {} Sent {} {} to {} {}. {}".format(
+                    self.incident_name_prefix,
+                    sender_email,
+                    count_display,
+                    email_plural,
+                    recipient_count,
+                    recipient_plural,
+                    subject_abbreviated,
+                )
+
+            return incident_name
+
+        except Exception as e:
+            self.helper.log_warning(
+                "[!] Failed to generate incident name: {}. Using fallback.".format(e)
+            )
+            # Fallback to simple incident naming
+            return "{} {}".format(self.incident_name_prefix, subject)
+
     def _create_opencti_case(self, incident, stix_objects, message_group):
         """
         Create a Case using OpenCTI API for the incident.
-
-        Creates a case that references the incident and all related objects,
-        following OpenCTI case management patterns.
 
         Args:
             incident (stix2.Incident): The main incident object
             stix_objects (list): All STIX objects created for this message group
             message_group (dict): Original message group data from Sublime API
         """
+        group_id = message_group.get("id", "unknown")
+
         try:
-            # Extract case information from incident
-            # Extract subject from incident name and apply case prefix
-            subject = incident.name.replace(self.incident_name_prefix, "")
-            case_name = "{} {}".format(self.case_name_prefix, subject)
-            case_description = "Investigation case for {}\n\n{}".format(
-                incident.name, incident.description
+            data_model = message_group.get("data_model", {})
+            sender_email = (
+                self._sanitize_email(
+                    self._lookup_MDM_value(data_model, "sender.email.email")
+                )
+                if self._lookup_MDM_value(data_model, "sender.email.email")
+                else self._sanitize_email(
+                    next(
+                        (
+                            p.get("sender_email_address")
+                            for p in message_group.get("previews", [])
+                            if p and p.get("sender_email_address")
+                        ),
+                        "Unknown Sender",
+                    )
+                )
             )
 
-            # Build list of object IDs for the case - include all objects from this message group
-            object_ids = [incident.id]
+            preview_count = len(message_group.get("previews", []))
+            has_primary = bool(
+                data_model and self._lookup_MDM_value(data_model, "sender.email.email")
+            )
+            email_count = max(preview_count, 1) if has_primary else preview_count
 
-            # Add all STIX objects from this specific message group (excluding identity)
-            for obj in stix_objects:
-                if (
-                    hasattr(obj, "id")
-                    and obj.id != self.sublime_identity.id
-                    and obj.id != incident.id
-                ):
-                    object_ids.append(obj.id)
+            recipients = set()
+            if data_model:
+                to_list = self._lookup_MDM_value(data_model, "recipients.to") or []
+                for recipient in to_list:
+                    email = self._lookup_MDM_value(recipient, "email.email")
+                    if email:
+                        recipients.add(email)
+
+            for preview in message_group.get("previews", []):
+                if not preview:
+                    continue
+                recipient_list = preview.get("recipients", []) or []
+                for recipient in recipient_list:
+                    if recipient:
+                        recipients.add(recipient)
+
+            recipient_count = len(recipients)
+
+            # Create case name with plural handling
+            email_plural = "Email" if email_count == 1 else "Emails"
+            recipient_plural = "Recipient" if recipient_count == 1 else "Recipients"
+
+            # Abbreviate subject for case name. Adjust if you'd like
+            subjects = message_group.get("subjects", [])
+            subject = subjects[0] if subjects else ""
+            subject_abbreviated = (
+                "[{}...{}]".format(subject[:11], subject[-3:])
+                if len(subject) > 15
+                else "[{}]".format(subject) if subject else ""
+            )
+
+            # Build case name
+            case_name = "{} {} Sent {} {} to {} {}. {}".format(
+                self.case_name_prefix,
+                sender_email,
+                email_count,
+                email_plural,
+                recipient_count,
+                recipient_plural,
+                subject_abbreviated,
+            )
+            object_ids = [incident.id] + [
+                obj.id
+                for obj in stix_objects
+                if hasattr(obj, "id")
+                and obj.id not in [self.sublime_identity.id, incident.id]
+            ]
 
             # Convert STIX external references to dictionary format for OpenCTI API
-            external_refs = []
-            for ref in incident.external_references:
-                external_refs.append(
-                    {
-                        "source_name": ref.source_name,
-                        "description": ref.description,
-                        "url": ref.url,
-                        "external_id": ref.external_id,
-                    }
-                )
+            external_refs = [
+                {
+                    "source_name": ref.source_name,
+                    "description": ref.description,
+                    "url": ref.url,
+                    "external_id": ref.external_id,
+                }
+                for ref in incident.external_references
+            ]
 
-            # Create case data following the sample pattern
+            # Create case data without external references. They're added separately
+            group_id = message_group.get("id", "unknown")
+            case_description = self._create_description(message_group)
+
             case_data = {
+                # Removed as OpenCTI ignores and creates its own id regardless
+                # "id": deterministic_case_id,
                 "name": case_name,
                 "description": case_description,
                 "objects": object_ids,
                 "created_by": self.sublime_identity.id,
                 "object_marking_refs": [stix2.TLP_AMBER.id],
-                "external_references": external_refs,
             }
 
-            # Create the case using OpenCTI helper's API
+            # Add priority and severity if configured
+            attack_score_verdict = message_group.get("attack_score_verdict")
+
+            priority = self._map_attack_score_to_level(attack_score_verdict, "priority")
+            severity = self._map_attack_score_to_level(attack_score_verdict, "severity")
+
+            if priority:
+                case_data["priority"] = priority
+
+            if severity:
+                case_data["severity"] = severity
+
+            self.helper.log_info("[*] Creating new case for group: {}".format(group_id))
             case = self.helper.api.case_incident.create(**case_data)
+
+            # Add external references after case creation (for all cases to ensure proper linking)
+            if case and isinstance(case, dict) and case.get("id") and external_refs:
+                try:
+                    # Get existing external references to avoid duplicates
+                    existing_ext_refs = case.get("externalReferences", [])
+                    existing_ext_ids = {
+                        ref.get("external_id") for ref in existing_ext_refs
+                    }
+
+                    for ext_ref in external_refs:
+                        # Skip if external reference already exists on this case
+                        if ext_ref["external_id"] in existing_ext_ids:
+                            self.helper.log_info("*" * 100)
+                            continue
+
+                        ext_ref_result = self.helper.api.external_reference.create(
+                            source_name=ext_ref["source_name"],
+                            description=ext_ref["description"],
+                            url=ext_ref["url"],
+                            external_id=ext_ref["external_id"],
+                        )
+
+                        if (
+                            ext_ref_result
+                            and isinstance(ext_ref_result, dict)
+                            and ext_ref_result.get("id")
+                        ):
+                            self.helper.api.stix_domain_object.add_external_reference(
+                                id=case["id"],
+                                external_reference_id=ext_ref_result["id"],
+                            )
+                except Exception as ext_ref_error:
+                    self.helper.log_error(
+                        "[!] Failed to add external references to case {}: {}".format(
+                            case.get("id", "unknown"), ext_ref_error
+                        )
+                    )
 
             if case:
                 self.helper.log_info(
-                    "[*] Successfully created case with ID: {}".format(
+                    "[*] Successfully processed case with ID: {}".format(
                         case.get("id", "unknown")
                     )
                 )
@@ -910,51 +1232,11 @@ class SublimeConnector:
                 "[!] Failed to create case for incident {}: {}".format(incident.id, e)
             )
 
-    def _create_indicators(self, observables):
-        """
-        Create STIX indicators from cyber observables.
-
-        Generates Indicator objects with appropriate STIX patterns for:
-        - Email addresses
-        - URLs
-        - Domain names
-        - IP addresses
-        - File hashes
-
-        Args:
-            observables (list): List of STIX cyber observable objects
-
-        Returns:
-            list: List of STIX Indicator objects
-        """
-        indicators = []
-
-        for observable in observables:
-            try:
-                indicator = self._create_indicator_for_observable(observable)
-                if indicator:
-                    indicators.append(indicator)
-            except Exception as e:
-                # Log the problematic observable value for debugging
-                obs_value = getattr(observable, "value", "Unknown")
-                self.helper.log_warning(
-                    "[!] Failed to create indicator for {}: {}".format(
-                        observable._type, e
-                    )
-                )
-                self.helper.log_debug(
-                    "[DEBUG] Problematic {} value: {}".format(
-                        observable._type, obs_value
-                    )
-                )
-
-        return indicators
-
     def _create_indicator_for_observable(self, observable):
         """
-        Create a single STIX indicator from a cyber observable.
+        Create a single STIX indicator from a cyber observable using pycti utilities.
 
-        Maps observable types to appropriate STIX patterns and creates
+        Uses OpenCTIStix2Utils to generate proper STIX patterns and creates
         Indicator objects with malicious-activity labels.
 
         Args:
@@ -963,33 +1245,17 @@ class SublimeConnector:
         Returns:
             stix2.Indicator: STIX Indicator object, or None if type not supported
         """
-        patterns = {
-            "email-addr": lambda obs: f"[email-addr:value = '{self._escape_stix_value(obs.value)}']",
-            "url": lambda obs: f"[url:value = '{self._escape_stix_value(obs.value)}']",
-            "domain-name": lambda obs: f"[domain-name:value = '{self._escape_stix_value(obs.value)}']",
-            "ipv4-addr": lambda obs: f"[ipv4-addr:value = '{self._escape_stix_value(obs.value)}']",
-            "ipv6-addr": lambda obs: f"[ipv6-addr:value = '{self._escape_stix_value(obs.value)}']",
-            "file": lambda obs: (
-                f"[file:hashes.SHA-256 = '{self._escape_stix_value(list(obs.hashes.values())[0])}']"
-                if obs.hashes
-                else None
-            ),
-        }
+        from pycti.utils.opencti_stix2_utils import OpenCTIStix2Utils
 
-        pattern_func = patterns.get(observable._type)
-        if not pattern_func:
-            return None
-
-        pattern = pattern_func(observable)
+        # Use pycti utility to create STIX pattern
+        pattern = OpenCTIStix2Utils.create_stix_pattern(
+            observable._type, observable.value
+        )
         if not pattern:
             return None
 
-        # Debug log the generated pattern for troubleshooting
-        self.helper.log_debug(
-            "[DEBUG] Generated STIX pattern for {}: {}".format(
-                observable._type, pattern
-            )
-        )
+        # Log pattern generation for troubleshooting if needed
+        # self.helper.log_debug("Generated STIX pattern for {}: {}".format(observable._type, pattern))
 
         # Create indicator with proper metadata
         indicator = stix2.Indicator(
@@ -1001,53 +1267,23 @@ class SublimeConnector:
             object_marking_refs=[stix2.TLP_AMBER],
             custom_properties={
                 "x_opencti_type": "Indicator",
-                "x_sublime_security_source": "email-threat",
             },
             allow_custom=True,
         )
 
         return indicator
 
-    def _escape_stix_value(self, value):
-        """
-        Escape special characters in STIX pattern values to prevent syntax errors.
-
-        STIX patterns use single quotes to delimit string values and backslashes
-        for escaping. Both must be properly escaped to avoid parser errors.
-
-        Args:
-            value (str): The value to escape
-
-        Returns:
-            str: Escaped value safe for use in STIX patterns
-        """
-        if not isinstance(value, str):
-            value = str(value)
-
-        # Escape backslashes first (must be done before escaping single quotes)
-        value = value.replace("\\", "\\\\")
-
-        # Then escape single quotes
-        value = value.replace("'", "\\'")
-
-        return value
-
     def _create_relationships(
-        self, incident, primary_email, preview_emails, observables, indicators
+        self, incident, primary_email, all_emails, observables, indicators
     ):
         """
         Create relationships between incident and all related objects.
 
-        Links the incident to:
-        - Primary email message
-        - All cyber observables
-        - Preview email messages
-
         Args:
             incident (stix2.Incident): Main incident object
             primary_email (stix2.EmailMessage): Primary detailed email
-            preview_emails (list): List of preview email objects
-            observables (list): List of cyber observable objects
+            all_emails (list): List of all email objects (preview + additional)
+            observables (list): List of cyber observable objects (excludes EmailMessage objects)
             indicators (list): List of indicator objects (unused in current implementation)
 
         Returns:
@@ -1055,115 +1291,25 @@ class SublimeConnector:
         """
         relationships = []
 
-        # Link primary email to incident
-        if primary_email:
+        if primary_email and hasattr(primary_email, "id"):
             relationships.append(self._create_relationship(incident, primary_email))
 
-        # Link observables to incident
         for observable in observables:
-            relationships.append(self._create_relationship(incident, observable))
+            if observable and hasattr(observable, "id"):
+                relationships.append(self._create_relationship(incident, observable))
 
-        # Link preview emails to incident
-        for obj in preview_emails:
-            if hasattr(obj, "_type") and obj._type == "email-message":
+        for obj in all_emails:
+            if (
+                obj
+                and hasattr(obj, "_type")
+                and obj._type == "email-message"
+                and hasattr(obj, "id")
+            ):
                 relationships.append(self._create_relationship(incident, obj))
 
-        return relationships
-
-    def _create_email_observable_relationships(
-        self, primary_email, observables, message_group
-    ):
-        """
-        Create detailed relationships between EmailMessage and observables.
-
-        Creates specific relationships showing which email contained which indicators:
-        - EmailMessage -> URL (contains)
-        - EmailMessage -> File (contains)
-        - EmailMessage -> IPv4Address (originates-from)
-        - EmailMessage -> DomainName (originates-from)
-        - EmailAddress -> DomainName (belongs-to)
-
-        This section can be easily commented out if simpler relationships are preferred.
-
-        Args:
-            primary_email (stix2.EmailMessage): Primary detailed email
-            observables (list): List of cyber observable objects
-            message_group (dict): Original message group data from Sublime API
-
-        Returns:
-            list: List of STIX Relationship objects
-        """
-        relationships = []
-
-        if not primary_email:
-            return relationships
-
-        # Group observables by type for targeted relationship creation
-        urls = [
-            obs for obs in observables if hasattr(obs, "_type") and obs._type == "url"
-        ]
-        domains = [
-            obs
-            for obs in observables
-            if hasattr(obs, "_type") and obs._type == "domain-name"
-        ]
-        ips = [
-            obs
-            for obs in observables
-            if hasattr(obs, "_type") and obs._type in ["ipv4-addr", "ipv6-addr"]
-        ]
-        email_addresses = [
-            obs
-            for obs in observables
-            if hasattr(obs, "_type") and obs._type == "email-addr"
-        ]
-        files = [
-            obs for obs in observables if hasattr(obs, "_type") and obs._type == "file"
-        ]
-
-        # EmailMessage -> URL (contains) - URLs found in email body
-        for url in urls:
-            relationships.append(
-                self._create_relationship(primary_email, url, "contains")
-            )
-
-        # EmailMessage -> File (contains) - File attachments
-        for file_obj in files:
-            relationships.append(
-                self._create_relationship(primary_email, file_obj, "contains")
-            )
-
-        # EmailMessage -> IP (originates-from) - IPs from email headers showing message path
-        for ip in ips:
-            relationships.append(
-                self._create_relationship(primary_email, ip, "originates-from")
-            )
-
-        # EmailMessage -> Domain (originates-from) - Domains from email headers showing message path
-        for domain in domains:
-            relationships.append(
-                self._create_relationship(primary_email, domain, "originates-from")
-            )
-
-        # EmailAddress -> DomainName (belongs-to) - Link email addresses to their domains
-        for email_addr in email_addresses:
-            email_value = getattr(email_addr, "value", "")
-            if "@" in email_value:
-                domain_part = email_value.split("@")[1].lower()
-                # Find matching domain observable
-                for domain in domains:
-                    if hasattr(domain, "value") and domain.value.lower() == domain_part:
-                        relationships.append(
-                            self._create_relationship(email_addr, domain, "belongs-to")
-                        )
-                        break
-
-        if relationships:
-            self.helper.log_debug(
-                "[DEBUG] Created {} email-to-observable relationships".format(
-                    len(relationships)
-                )
-            )
+        for indicator in indicators:
+            if indicator and hasattr(indicator, "id"):
+                relationships.append(self._create_relationship(incident, indicator))
 
         return relationships
 
@@ -1195,10 +1341,10 @@ class SublimeConnector:
             object_marking_refs=[stix2.TLP_AMBER],
         )
 
-    # Helper methods for data extraction
-    def _get_nested(self, data, path):
+    def _lookup_MDM_value(self, data, path):
         """
-        Get nested dictionary value using dot notation.
+        Lookup values in MDM based on their rule structure
+        This makes it easier to correlate values to MQL rules
 
         Args:
             data (dict): Dictionary to search
@@ -1216,23 +1362,6 @@ class SublimeConnector:
                 return None
         return value
 
-    def _extract_sender(self, data_model):
-        """
-        Extract sender email address from message data model.
-
-        Args:
-            data_model (dict): Message data model from Sublime API
-
-        Returns:
-            stix2.EmailAddress: Sender email address object, or None if not found
-        """
-        email = self._get_nested(data_model, "sender.email.email")
-        if email:
-            return stix2.EmailAddress(
-                id=self._make_deterministic_id("email-addr", email), value=email
-            )
-        return None
-
     def _extract_recipients(self, data_model):
         """
         Extract recipient email addresses from message data model.
@@ -1244,10 +1373,11 @@ class SublimeConnector:
             list: List of stix2.EmailAddress objects for recipients
         """
         recipients = []
-        to_list = self._get_nested(data_model, "recipients.to") or []
+        to_list = self._lookup_MDM_value(data_model, "recipients.to") or []
         for recipient in to_list:
-            email = self._get_nested(recipient, "email.email")
+            email = self._lookup_MDM_value(recipient, "email.email")
             if email:
+                email = self._sanitize_email(email)
                 recipients.append(
                     stix2.EmailAddress(
                         id=self._make_deterministic_id("email-addr", email), value=email
@@ -1259,9 +1389,6 @@ class SublimeConnector:
         """
         Extract URLs from email body links.
 
-        Processes links from the email body and constructs full URLs
-        with appropriate schemes if missing.
-
         Args:
             data_model (dict): Message data model from Sublime API
 
@@ -1269,12 +1396,12 @@ class SublimeConnector:
             list: List of stix2.URL objects
         """
         urls = []
-        links = self._get_nested(data_model, "body.links") or []
+        links = self._lookup_MDM_value(data_model, "body.links") or []
         for link in links:
-            url = self._get_nested(link, "href_url.url")
+            url = self._lookup_MDM_value(link, "href_url.url")
             if url:
                 if "://" not in url:
-                    scheme = self._get_nested(link, "href_url.scheme") or "http"
+                    scheme = self._lookup_MDM_value(link, "href_url.scheme") or "http"
                     url = "{}://{}".format(scheme, url)
                 urls.append(
                     stix2.URL(id=self._make_deterministic_id("url", url), value=url)
@@ -1283,8 +1410,7 @@ class SublimeConnector:
 
     def _extract_domains(self, data_model):
         """
-        Extract domains from email headers.
-        Deduplicates based on lowercase domain names.
+        Extract domains from email headers. Deduplicates based on lowercase domain names.
 
         Args:
             data_model (dict): Message data model from Sublime API
@@ -1295,7 +1421,7 @@ class SublimeConnector:
         domains = []
         seen = set()
 
-        header_domains = self._get_nested(data_model, "headers.domains") or []
+        header_domains = self._lookup_MDM_value(data_model, "headers.domains") or []
         for domain_info in header_domains:
             domain = domain_info.get("domain")
             if domain and domain.lower() not in seen:
@@ -1312,7 +1438,6 @@ class SublimeConnector:
     def _extract_ips(self, data_model):
         """
         Extract IP addresses from email headers.
-
         Automatically detects IPv4 vs IPv6 addresses based on presence of colons.
 
         Args:
@@ -1322,7 +1447,7 @@ class SublimeConnector:
             list: List of stix2.IPv4Address or stix2.IPv6Address objects
         """
         ips = []
-        header_ips = self._get_nested(data_model, "headers.ips") or []
+        header_ips = self._lookup_MDM_value(data_model, "headers.ips") or []
         for ip_info in header_ips:
             ip = ip_info.get("ip")
             if ip:
@@ -1333,88 +1458,278 @@ class SublimeConnector:
                 )
         return ips
 
-    def _process_messages(self, messages):
+    def _process_message_batch(self, messages, work_id):
         """
-        Process messages and send to OpenCTI.
+        Process a single batch of messages and send to OpenCTI.
 
-        For each message:
-        1. Validates message structure
-        2. Creates STIX objects
-        3. Bundles objects
-        4. Sends to OpenCTI
-        5. Updates state with latest timestamp
+        For each message in the batch:
+        * Validates message structure
+        * Creates STIX objects
+        * Creates STIX bundle
+        * Sends bundle to OpenCTI
 
         Args:
             messages (list): List of message group dictionaries from Sublime API
+            work_id (str): OpenCTI work ID for tracking progress
+
+        Returns:
+            tuple: (processed_count, latest_timestamp)
         """
-        if not messages:
-            return
+        processed_count = 0
+        latest_timestamp = None
 
-        # Initialize work
-        work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id, "Sublime Security Import"
-        )
+        if not hasattr(self, "_existing_group_ids"):
+            self._existing_group_ids = self._get_existing_group_ids()
 
-        try:
-            processed_count = 0
-            latest_timestamp = None
+        for message in messages:
+            try:
+                group_id = message.get("id", "unknown")
 
-            for message in messages:
+                if not self._validate_message(message):
+                    self.helper.log_warning(
+                        "[!] Skipping group {} - failed basic validation".format(
+                            group_id
+                        )
+                    )
+                    continue
+
+                # Check if this message group already exists in OpenCTI
+                if group_id in self._existing_group_ids:
+                    self.helper.log_debug(
+                        "[DEBUG] Skipping existing group: {}".format(group_id)
+                    )
+                    continue
+
+                # Check if event incident already exists for this group_id
+                existing_incident = None
                 try:
-                    if not self._validate_message(message):
-                        continue
+                    all_incidents = self.helper.api.incident.list()
+                    self.helper.log_debug(
+                        "[DEBUG] Checking {} total incidents for external reference match".format(
+                            len(all_incidents) if all_incidents else 0
+                        )
+                    )
 
-                    # Create STIX objects
-                    stix_objects, incident = self._create_stix_objects(message)
+                    if all_incidents:
+                        for incident_obj in all_incidents:
+                            incident_ext_refs = incident_obj.get(
+                                "externalReferences", []
+                            )
+                            for ext_ref in incident_ext_refs:
+                                if ext_ref.get("external_id") == group_id:
+                                    existing_incident = incident_obj
+                                    self.helper.log_info(
+                                        "[*] Found existing event incident by external_id: {} for group: {}".format(
+                                            incident_obj.get("id"), group_id
+                                        )
+                                    )
+                                    break
+                            if existing_incident:
+                                break
 
-                    # Create bundle with custom properties allowed
-                    bundle = stix2.Bundle(objects=stix_objects, allow_custom=True)
+                        if existing_incident:
+                            self.helper.log_debug(
+                                "[DEBUG] Skipping group {} - event incident already exists: {}".format(
+                                    group_id, existing_incident.get("id")
+                                )
+                            )
+                            continue
+                        else:
+                            self.helper.log_debug(
+                                "[DEBUG] No existing event incident found for group: {} (checked {} incidents)".format(
+                                    group_id, len(all_incidents) if all_incidents else 0
+                                )
+                            )
 
-                    # For serious debugging, uncomment out this section. It is a lot of content
-                    # self.helper.log_debug('[*] === COMPLETE STIX BUNDLE ===')
-                    # self.helper.log_debug(bundle.serialize(pretty=True))
-                    # self.helper.log_debug('[*] === END STIX BUNDLE ===')
+                except Exception as incident_check_error:
+                    self.helper.log_warning(
+                        "[!] Event incident existence check failed: {}".format(
+                            incident_check_error
+                        )
+                    )
 
-                    # Send to OpenCTI
-                    self.helper.log_debug("[*] Sending STIX Bundle to OpenCTI ...")
+                # Create STIX objects
+                stix_objects, incident = self._create_stix_objects(message)
+
+                # Ensure stix_objects is a flat list of individual STIX objects
+                flattened_objects = []
+                for obj in stix_objects:
+                    if isinstance(obj, list):
+                        # Flatten nested lists (can happen with observables from _create_primary_email)
+                        flattened_objects.extend(obj)
+                    else:
+                        flattened_objects.append(obj)
+                stix_objects = flattened_objects
+
+                bundle = stix2.Bundle(objects=stix_objects, allow_custom=True)
+
+                # Send to OpenCTI
+                self.helper.log_debug(
+                    "[DEBUG] About to send STIX Bundle for incident: {}".format(
+                        incident.id
+                    )
+                )
+                try:
                     self.helper.send_stix2_bundle(
                         bundle.serialize(),
                         work_id=work_id,
                         update=self.update_existing_data,
                     )
+                    self.helper.log_debug(
+                        "[DEBUG] Bundle sent successfully for incident: {}".format(
+                            incident.id
+                        )
+                    )
+                except Exception as bundle_error:
+                    self.helper.log_warning(
+                        "[!] Failed to send STIX bundle for incident {}: {}".format(
+                            incident.id, bundle_error
+                        )
+                    )
 
-                    # Create case for the incident using OpenCTI API (if enabled)
-                    if self.auto_create_cases:
-                        self._create_opencti_case(incident, stix_objects, message)
+                # Create OpenCTI case if enabled
+                if self.auto_create_cases:
+                    self._create_opencti_case(incident, stix_objects, message)
 
-                    processed_count += 1
+                processed_count += 1
 
-                    # Track latest timestamp
-                    msg_timestamp = message.get("_meta", {}).get("created_at")
-                    if msg_timestamp and (
-                        not latest_timestamp or msg_timestamp > latest_timestamp
+                # Track latest timestamp
+                msg_timestamp = message.get("_meta", {}).get("created_at")
+                if msg_timestamp and (
+                    not latest_timestamp or msg_timestamp > latest_timestamp
+                ):
+                    latest_timestamp = msg_timestamp
+
+            except Exception as e:
+                canonical_id = message.get("_meta", {}).get("canonical_id", "unknown")
+                self.helper.log_error(
+                    "[!] Failed to process message {}: {}".format(canonical_id, e)
+                )
+
+        return processed_count, latest_timestamp
+
+    def _get_existing_group_ids(self):
+        """
+        Get all existing Sublime group IDs from OpenCTI incidents and cases.
+
+        Returns:
+            set: Set of existing group IDs
+        """
+        existing_group_ids = set()
+
+        try:
+            # Get group IDs from incidents and cases using shared method
+            incidents = self.helper.api.incident.list(first=1000)
+            cases = self.helper.api.case_incident.list(first=1000)
+
+            # Extract group IDs from incidents
+            for obj in incidents:
+                ext_refs = obj.get("externalReferences", [])
+                for ext_ref in ext_refs:
+                    if ext_ref.get("source_name") == "Sublime" and ext_ref.get(
+                        "external_id"
                     ):
-                        latest_timestamp = msg_timestamp
+                        existing_group_ids.add(ext_ref["external_id"])
 
-                except Exception as e:
-                    canonical_id = message.get("_meta", {}).get(
-                        "canonical_id", "unknown"
-                    )
-                    self.helper.log_error(
-                        "[!] Failed to process message {}: {}".format(canonical_id, e)
-                    )
+            # Extract group IDs from cases
+            for obj in cases:
+                ext_refs = obj.get("externalReferences", [])
+                for ext_ref in ext_refs:
+                    if ext_ref.get("source_name") == "Sublime" and ext_ref.get(
+                        "external_id"
+                    ):
+                        existing_group_ids.add(ext_ref["external_id"])
 
-            # Update state with latest timestamp
-            if latest_timestamp:
-                self._set_last_timestamp(latest_timestamp)
-
-            # Mark work as completed
-            message = "Processed {} messages".format(processed_count)
-            self.helper.log_info(message)
-            self.helper.api.work.to_processed(work_id, message)
+            self.helper.log_info(
+                "[*] Found {} existing Sublime group IDs in OpenCTI".format(
+                    len(existing_group_ids)
+                )
+            )
+            return existing_group_ids
 
         except Exception as e:
-            self.helper.log_error("[!] Batch processing failed: {}".format(e))
+            self.helper.log_warning(
+                "[!] Error fetching existing group IDs: {}".format(e)
+            )
+            return set()
+
+    def _process_messages(self):
+        """
+        Process messages using batch processing with incremental state updates.
+
+        Returns:
+            int: Total number of messages processed
+        """
+        # Get last processed timestamp
+        since_timestamp = self._get_last_timestamp()
+        self.helper.log_debug("Fetching messages since {}".format(since_timestamp))
+
+        # Initialize work tracking
+        work_id = self.helper.api.work.initiate_work(
+            self.helper.connect_id, "Sublime Import"
+        )
+
+        try:
+            total_processed = 0
+            global_latest_timestamp = None
+
+            for batch_messages in self._fetch_messages(since_timestamp):
+                if not batch_messages:
+                    continue
+
+                self.helper.log_info(
+                    "[*] Processing batch of {} messages".format(len(batch_messages))
+                )
+
+                batch_processed, batch_latest_timestamp = self._process_message_batch(
+                    batch_messages, work_id
+                )
+
+                total_processed += batch_processed
+
+                if batch_latest_timestamp and (
+                    not global_latest_timestamp
+                    or batch_latest_timestamp > global_latest_timestamp
+                ):
+                    global_latest_timestamp = batch_latest_timestamp
+
+                if global_latest_timestamp:
+                    current_state = self.helper.get_state() or {}
+                    current_state["last_timestamp"] = global_latest_timestamp
+                    self.helper.set_state(current_state)
+                    self.helper.log_info(
+                        "[*] Batch complete: {} processed this batch, {} total processed, state updated to {}".format(
+                            batch_processed, total_processed, global_latest_timestamp
+                        )
+                    )
+
+            if not global_latest_timestamp:
+                current_time = datetime.now(timezone.utc).strftime(
+                    "%Y-%m-%dT%H:%M:%S.000Z"
+                )
+                current_state = self.helper.get_state() or {}
+                current_state["last_timestamp"] = current_time
+                self.helper.set_state(current_state)
+                self.helper.log_info(
+                    "[*] No messages processed. Updated state to current time: {}".format(
+                        current_time
+                    )
+                )
+
+            completion_message = "Processed {} messages in batches".format(
+                total_processed
+            )
+            self.helper.log_info("[*] {}".format(completion_message))
+            self.helper.api.work.to_processed(work_id, completion_message)
+
+            return total_processed
+
+        except Exception as e:
+            error_message = "Batch processing failed after {} messages: {}".format(
+                total_processed, e
+            )
+            self.helper.log_error("[!] {}".format(error_message))
+            self.helper.api.work.to_received(work_id, error_message)
             raise
 
     def run(self):
@@ -1427,7 +1742,7 @@ class SublimeConnector:
                 timestamp = int(time.time())
                 current_state = self.helper.get_state()
 
-                if current_state is not None and "last_run" in current_state:
+                if current_state and "last_run" in current_state:
                     last_run = current_state["last_run"]
                     time_diff = timestamp - last_run
 
@@ -1439,15 +1754,8 @@ class SublimeConnector:
                         time.sleep(next_run)
                         continue
 
-                # Get last processed timestamp
-                since_timestamp = self._get_last_timestamp()
-                self.helper.log_debug(
-                    "[DEBUG] Fetching messages since {}".format(since_timestamp)
-                )
-
-                # Fetch and process messages
-                messages = self._fetch_messages(since_timestamp)
-                self._process_messages(messages)
+                # Process messages using batch processing
+                self._process_messages()
 
                 # Update last run timestamp
                 current_state = self.helper.get_state() or {}
@@ -1470,10 +1778,5 @@ class SublimeConnector:
 
 
 if __name__ == "__main__":
-    try:
-        connector = SublimeConnector()
-        connector.run()
-    except Exception as e:
-        print("Error: {}".format(e))
-        traceback.print_exc()
-        sys.exit(1)
+    connector = SublimeConnector()
+    connector.run()
