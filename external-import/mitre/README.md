@@ -16,18 +16,10 @@ This connector collects data from the MITRE datasets in order to pre-populate yo
 * x-mitre-data-source
 * x-mitre-data-component
 
-## Configuration
 
-The connector can be configured with the following variables:
+## Configuration variables
 
-| Env var | Default | Description |
-| - | - | - |
-| `MITRE_INTERVAL` | 7 | Number of the days between each MITRE datasets collection. |
-| `MITRE_REMOVE_STATEMENT_MARKING` | true | Remove the statement MITRE marking definition. |
-| `MITRE_ENTERPRISE_FILE_URL` | https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json | Resource URL |
-| `MITRE_MOBILE_ATTACK_FILE_URL` | https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/mobile-attack/mobile-attack.json | Resource URL |
-| `MITRE_ICS_ATTACK_FILE_URL` | https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/ics-attack/ics-attack.json | Resource URL |
-| `MITRE_CAPEC_FILE_URL` | https://raw.githubusercontent.com/mitre/cti/master/capec/2.1/stix-capec.json | Resource URL |
+Find all the configuration variables available here: [Connector Configurations](./__metadata__)
 
 **Note:** in case you do not want to collect a specific data source, just pass `False` on the correspondent config option, e.g., `MITRE_CAPEC_FILE_URL=False`.
 

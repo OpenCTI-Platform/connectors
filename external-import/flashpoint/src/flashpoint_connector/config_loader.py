@@ -12,6 +12,7 @@ from pydantic import (
     Field,
     HttpUrl,
     PlainSerializer,
+    SecretStr,
     TypeAdapter,
     model_validator,
 )
@@ -215,7 +216,7 @@ class ConnectorConfig(ConfigBaseModel):
 
 
 class FlashpointConfig(ConfigBaseModel):
-    api_key: str = Field(description="The API key to connect to Flashpoint.")
+    api_key: SecretStr = Field(description="The API key to connect to Flashpoint.")
     import_start_date: DatetimeFromIsoString = Field(
         description="The date from which to start importing data.",
         default_factory=lambda: iso_string_validator("P30D"),  # 30 days ago

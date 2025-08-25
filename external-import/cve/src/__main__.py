@@ -2,7 +2,7 @@
 
 import traceback
 
-from connector import CVEConnector
+from src.connector import CVEConnector
 
 if __name__ == "__main__":
     """

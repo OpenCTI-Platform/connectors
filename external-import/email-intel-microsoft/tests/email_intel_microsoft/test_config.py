@@ -2,7 +2,7 @@ import datetime
 
 import pytest
 from email_intel_microsoft.config import ConnectorSettings
-from pydantic import HttpUrl
+from pydantic import HttpUrl, SecretStr
 
 
 @pytest.mark.usefixtures("mock_email_intel_microsoft_config")
@@ -10,7 +10,11 @@ def test_config() -> None:
     config = ConnectorSettings().model_dump()
 
     assert config["opencti"]["url"] == HttpUrl("http://test-opencti-url/")
-    assert config["opencti"]["token"] == "test-opencti-token"
+    token = config["opencti"]["token"]
+    if isinstance(token, SecretStr):
+        assert token.get_secret_value() == "test-opencti-token"
+    else:
+        assert token == "test-opencti-token"
 
     assert config["connector"]["id"] == "test-connector-id"
     assert config["connector"]["name"] == "External Import Connector Template"
@@ -24,7 +28,10 @@ def test_config() -> None:
     ] == datetime.timedelta(days=30)
     assert config["email_intel_microsoft"]["tenant_id"] == "tenant-id"
     assert config["email_intel_microsoft"]["client_id"] == "client-id"
-    assert config["email_intel_microsoft"]["client_secret"] == "client-secret"
+    assert (
+        config["email_intel_microsoft"]["client_secret"].get_secret_value()
+        == "client-secret"
+    )
     assert config["email_intel_microsoft"]["email"] == "foo@bar.com"
     assert config["email_intel_microsoft"]["mailbox"] == "INBOX"
     assert config["email_intel_microsoft"]["attachments_mime_types"] == (
