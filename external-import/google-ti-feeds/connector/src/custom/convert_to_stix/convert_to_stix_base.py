@@ -3,6 +3,9 @@
 import logging
 from typing import Any, Dict, List, Literal, Optional, cast
 
+from connector.src.custom.configs import (
+    GTIConfig,
+)
 from connector.src.custom.configs.converter_config import (
     CONVERTER_CONFIGS,
 )
@@ -18,7 +21,7 @@ LOG_PREFIX = "[BaseConverter]"
 class BaseConvertToSTIX:
     """Base converter class with common functionality."""
 
-    def __init__(self, config: Any, logger: logging.Logger, tlp_level: str):
+    def __init__(self, config: GTIConfig, logger: logging.Logger, tlp_level: str):
         """Initialize Base Convert to STIX."""
         self.config = config
         self.logger = logger
@@ -47,7 +50,8 @@ class BaseConvertToSTIX:
         for entity_type, config in CONVERTER_CONFIGS.items():
             factory.register_config(entity_type, config)
             self.logger.debug(
-                f"{LOG_PREFIX} Registered converter config for {entity_type}"
+                "Registered converter config",
+                {"prefix": LOG_PREFIX, "entity_type": entity_type},
             )
 
         return factory
@@ -68,7 +72,7 @@ class BaseConvertToSTIX:
             aliases=["GTI"],
         )
 
-        self.logger.debug(f"{LOG_PREFIX} Created organization identity")
+        self.logger.debug("Created organization identity", {"prefix": LOG_PREFIX})
         return organization
 
     def _create_tlp_marking(self) -> TLPMarking:
@@ -90,7 +94,12 @@ class BaseConvertToSTIX:
         ):
             normalized_level = "amber"
             self.logger.warning(
-                f"{LOG_PREFIX} Invalid TLP level '{tlp_level}', defaulting to 'amber'"
+                "Invalid TLP level, defaulting to 'amber'",
+                {
+                    "prefix": LOG_PREFIX,
+                    "tlp_level": tlp_level,
+                    "default_level": "amber",
+                },
             )
 
         tlp_literal = cast(
@@ -101,7 +110,7 @@ class BaseConvertToSTIX:
         tlp_marking = TLPMarking(level=tlp_literal)
 
         self.logger.debug(
-            f"{LOG_PREFIX} Created TLP marking with level: {normalized_level}"
+            "Created TLP marking", {"prefix": LOG_PREFIX, "level": normalized_level}
         )
         return tlp_marking
 
@@ -134,12 +143,18 @@ class BaseConvertToSTIX:
                 stix_entities = converter.convert_multiple(entities)
                 all_stix_entities.extend(stix_entities)
                 self.logger.debug(
-                    f"{LOG_PREFIX} Converted {len(stix_entities)} {entity_type} to STIX"
+                    "Converted entities to STIX",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "entity_count": len(stix_entities),
+                        "entity_type": entity_type,
+                    },
                 )
 
             except Exception as e:
-                self.logger.error(
-                    f"{LOG_PREFIX} Failed to convert {entity_type} to STIX: {str(e)}"
+                self.logger.warning(
+                    "Failed to convert entity to STIX",
+                    {"prefix": LOG_PREFIX, "entity_type": entity_type, "error": str(e)},
                 )
 
         return all_stix_entities
@@ -164,7 +179,8 @@ class BaseConvertToSTIX:
         all_stix_entities = self.convert_subentities_to_stix(subentities, main_entity)
 
         self.logger.debug(
-            f"{LOG_PREFIX} Converted sub-entities with {main_entity} linking"
+            "Converted sub-entities with linking",
+            {"prefix": LOG_PREFIX, "main_entity": main_entity},
         )
 
         return all_stix_entities

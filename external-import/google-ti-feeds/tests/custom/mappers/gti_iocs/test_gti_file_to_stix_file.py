@@ -85,6 +85,9 @@ def minimal_file_data() -> GTIFileData:
     return GTIFileDataFactory.build(
         id="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         attributes=FileModelFactory.build(
+            sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709",
+            md5="d41d8cd98f00b204e9800998ecf8427e",
             creation_date=None,
             last_modification_date=None,
             gti_assessment=None,
@@ -98,6 +101,9 @@ def file_with_timestamps() -> GTIFileData:
     return GTIFileDataFactory.build(
         id="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         attributes=FileModelFactory.build(
+            sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709",
+            md5="d41d8cd98f00b204e9800998ecf8427e",
             creation_date=1640995200,
             last_modification_date=1641081600,
             first_submission_date=1640995200,
@@ -127,13 +133,16 @@ def file_with_mandiant_score() -> GTIFileData:
     return GTIFileDataFactory.build(
         id="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         attributes=FileModelFactory.build(
+            sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709",
+            md5="d41d8cd98f00b204e9800998ecf8427e",
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
                     mandiant_confidence_score=85
                 ),
                 threat_score=None,
                 verdict=None,
-            )
+            ),
         ),
     )
 
@@ -144,13 +153,16 @@ def file_with_threat_score() -> GTIFileData:
     return GTIFileDataFactory.build(
         id="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         attributes=FileModelFactory.build(
+            sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709",
+            md5="d41d8cd98f00b204e9800998ecf8427e",
             gti_assessment=GTIAssessmentFactory.build(
                 threat_score=ThreatScoreFactory.build(value=75),
                 contributing_factors=ContributingFactorsFactory.build(
                     mandiant_confidence_score=None
                 ),
                 verdict=None,
-            )
+            ),
         ),
     )
 
@@ -161,11 +173,14 @@ def file_with_malicious_verdict() -> GTIFileData:
     return GTIFileDataFactory.build(
         id="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         attributes=FileModelFactory.build(
+            sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709",
+            md5="d41d8cd98f00b204e9800998ecf8427e",
             gti_assessment=GTIAssessmentFactory.build(
                 verdict=VerdictFactory.build(value="MALICIOUS"),
                 contributing_factors=None,
                 threat_score=None,
-            )
+            ),
         ),
     )
 
@@ -176,11 +191,14 @@ def file_with_benign_verdict() -> GTIFileData:
     return GTIFileDataFactory.build(
         id="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         attributes=FileModelFactory.build(
+            sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709",
+            md5="d41d8cd98f00b204e9800998ecf8427e",
             gti_assessment=GTIAssessmentFactory.build(
                 verdict=VerdictFactory.build(value="BENIGN"),
                 contributing_factors=None,
                 threat_score=None,
-            )
+            ),
         ),
     )
 
@@ -191,11 +209,14 @@ def file_with_suspicious_verdict() -> GTIFileData:
     return GTIFileDataFactory.build(
         id="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         attributes=FileModelFactory.build(
+            sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709",
+            md5="d41d8cd98f00b204e9800998ecf8427e",
             gti_assessment=GTIAssessmentFactory.build(
                 verdict=VerdictFactory.build(value="SUSPICIOUS"),
                 contributing_factors=None,
                 threat_score=None,
-            )
+            ),
         ),
     )
 
@@ -228,20 +249,14 @@ def file_with_all_data() -> GTIFileData:
 
 
 @pytest.fixture
-def file_without_attributes() -> GTIFileData:
-    """GTI file data without attributes."""
-    return GTIFileDataFactory.build(
-        id="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        attributes=None,
-    )
-
-
-@pytest.fixture
 def file_with_empty_verdict() -> GTIFileData:
     """GTI file data with empty verdict."""
     return GTIFileDataFactory.build(
         id="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         attributes=FileModelFactory.build(
+            sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709",
+            md5="d41d8cd98f00b204e9800998ecf8427e",
             gti_assessment=GTIAssessmentFactory.build(
                 verdict=VerdictFactory.build(value=""),
                 contributing_factors=None,
@@ -257,6 +272,9 @@ def file_with_invalid_timestamps() -> GTIFileData:
     return GTIFileDataFactory.build(
         id="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         attributes=FileModelFactory.build(
+            sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709",
+            md5="d41d8cd98f00b204e9800998ecf8427e",
             creation_date=-1,
             last_modification_date=0,
             gti_assessment=None,
@@ -470,28 +488,6 @@ def test_gti_file_to_stix_with_all_data(
     _then_stix_indicator_has_type(indicator, IndicatorTypeOV("MALICIOUS"))
     _then_stix_indicator_has_correct_timestamps(indicator, file_with_all_data)
     _then_stix_file_has_hashes(file_observable, file_with_all_data)
-
-
-# Scenario: Convert GTI file without attributes to STIX objects
-@pytest.mark.order(1)
-def test_gti_file_to_stix_without_attributes(
-    file_without_attributes: GTIFileData,
-    mock_organization: Identity,
-    mock_tlp_marking: MarkingDefinition,
-) -> None:
-    """Test conversion of GTI file without attributes to STIX objects."""
-    # Given a GTI file without attributes
-    mapper = _given_gti_file_mapper(
-        file_without_attributes, mock_organization, mock_tlp_marking
-    )
-
-    # When converting to STIX
-    stix_objects = _when_convert_to_stix(mapper)
-
-    # Then objects should still be created with fallback behavior
-    _then_stix_objects_created_successfully(stix_objects)
-    file_observable, indicator, relationship = stix_objects
-    _then_stix_indicator_has_unknown_type(indicator)
 
 
 # Scenario: Convert GTI file with empty verdict to STIX objects
@@ -811,6 +807,8 @@ def test_create_stix_file_method(
         attributes=FileModelFactory.build(
             meaningful_name="test.exe",
             sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709",
+            md5="d41d8cd98f00b204e9800998ecf8427e",
             creation_date=1640995200,
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
@@ -842,9 +840,12 @@ def test_create_stix_indicator_method(
     file_data = GTIFileDataFactory.build(
         id="test_indicator_hash",
         attributes=FileModelFactory.build(
+            sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709",
+            md5="d41d8cd98f00b204e9800998ecf8427e",
             gti_assessment=GTIAssessmentFactory.build(
                 verdict=VerdictFactory.build(value="MALICIOUS")
-            )
+            ),
         ),
     )
     mapper = _given_gti_file_mapper(file_data, mock_organization, mock_tlp_marking)
@@ -866,6 +867,9 @@ def test_file_observable_ctime_property(
     # Given a file with creation_date
     file_data = GTIFileDataFactory.build(
         attributes=FileModelFactory.build(
+            sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709",
+            md5="d41d8cd98f00b204e9800998ecf8427e",
             creation_date=1640995200,
             meaningful_name="test.exe",
         )
@@ -887,6 +891,9 @@ def test_file_observable_without_creation_date(
     # Given a file without creation_date
     file_data = GTIFileDataFactory.build(
         attributes=FileModelFactory.build(
+            sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709",
+            md5="d41d8cd98f00b204e9800998ecf8427e",
             meaningful_name="test.exe",
             creation_date=None,
         )

@@ -1,7 +1,6 @@
 """The module contains the OctiFileModel class, which represents an OpenCTI File."""
 
 from typing import Any, Dict, List, Optional
-from uuid import uuid4
 
 from connector.src.stix.v21.models.scos.file_model import FileModel
 
@@ -49,7 +48,6 @@ class OctiFileModel:
             custom_properties["x_opencti_create_indicator"] = create_indicator
 
         data = {
-            "id": f"file--{uuid4()}",
             "type": "file",
             "spec_version": "2.1",
             "object_marking_refs": marking_ids,
