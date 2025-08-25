@@ -15,7 +15,7 @@ packages = [{include = "connectors_sdk"}]
 
 [tool.poetry.dependencies]
 pydantic = ">=2.11, <3"
-pycti = "6.7.9"
+pycti = "6.7.14"
 stix2 = ">=3.0.1, <4"
 
 # Optional dependencies
@@ -153,6 +153,10 @@ exclude = [
     '^venv',
 ]
 plugins = ['pydantic.mypy']
+
+[[tool.mypy.overrides]]
+module = ["pycti.*", "stix2.*"]
+ignore_missing_imports = true  # pycti and stix2 do not provide stubs
 
 [tool.sphinx]
 project = "Connectors SDK"

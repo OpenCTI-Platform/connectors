@@ -85,7 +85,7 @@ class ConverterToStix:
                 return "  \n"
 
         incident_name = alert.get("DisplayName")
-        incident_created_at = format_datetime(alert.get("TimeGenerated"))
+        incident_created_at = format_datetime(alert.get("StartTime"))
         incident_modified_at = format_datetime(alert.get("EndTime"))
         incident_labels = [alert.get("AlertType")] if alert.get("AlertType") else None
         incident_description = (
@@ -197,14 +197,16 @@ class ConverterToStix:
         :param evidence: Evidence to create User Account from
         :return: User Account in STIX 2.1 format
         """
-        user_account = stix2.UserAccount(
-            account_login=evidence.get("Name"),
-            object_marking_refs=[self.tlp_marking],
-            custom_properties={
-                "created_by_ref": self.author["id"],
-            },
-        )
-        return user_account
+        if evidence.get("Name"):
+            # stix2 lib does not check fields constraints (at least one field must be provided)
+            user_account = stix2.UserAccount(
+                account_login=evidence.get("Name"),
+                object_marking_refs=[self.tlp_marking],
+                custom_properties={
+                    "created_by_ref": self.author["id"],
+                },
+            )
+            return user_account
 
     @handle_stix2_error
     def create_evidence_ipv4(self, evidence: dict) -> stix2.IPv4Address | None:

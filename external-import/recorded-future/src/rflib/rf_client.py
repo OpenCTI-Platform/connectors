@@ -32,6 +32,7 @@ LINKS_PATH = API_BASE + "/links/search"
 ANALYST_NOTES_ENDPOINT = API_BASE + "/analyst-note"
 ANALYST_NOTES_SEARCH_ENDPOINT = API_BASE + "/analyst-note/search"
 ANALYST_NOTES_ATTACHMENT_ENDPOINT = API_BASE + "/analyst-note/attachment"
+ANALYST_NOTES_LOOKUP_ENDPOINT = API_BASE + "/analyst-note/lookup"
 
 
 class RFClient:
@@ -132,6 +133,21 @@ class RFClient:
                                     note["id"]
                                 )
                             )
+
+                    # Call /lookup api, check if 'events'
+                    # if true, add events data used to create relationships in convert_and_send function
+                    payload = {
+                        "tagged_text": False,
+                        "escape_html": False,
+                        "serialization": "full",
+                    }
+                    res = self.session.post(
+                        ANALYST_NOTES_LOOKUP_ENDPOINT + "/" + note["id"], json=payload
+                    )
+                    res.raise_for_status()
+                    data = res.json()
+                    if data.get("attributes") and data["attributes"].get("events"):
+                        note["events"] = data["attributes"]["events"]
 
                     notes.append(note)
                 if total == len(notes):

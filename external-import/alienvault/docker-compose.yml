@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-alienvault:
-    image: opencti/connector-alienvault:6.7.9
+    image: opencti/connector-alienvault:6.7.14
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
@@ -23,6 +23,7 @@ services:
       - ALIENVAULT_EXCLUDED_PULSE_INDICATOR_TYPES=FileHash-MD5,FileHash-SHA1  # Excluded Pulse indicator types.
       - ALIENVAULT_ENABLE_RELATIONSHIPS=true                                  # Enable/Disable relationship creation between SDOs.
       - ALIENVAULT_ENABLE_ATTACK_PATTERNS_INDICATES=false                     # Enable/Disable "indicates" relationships between indicators and attack patterns
+      - ALIENVAULT_FILTER_INDICATORS=false                                    # Filter indicators by their created datetime
       - ALIENVAULT_INTERVAL_SEC=1800
       - ALIENVAULT_DEFAULT_X_OPENCTI_SCORE=50
       - ALIENVAULT_X_OPENCTI_SCORE_IP=60

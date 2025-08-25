@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e  # exit on error 
+set -e  # exit on error
 
 venv_name=".temp_venv"
 
@@ -10,14 +10,22 @@ if [ -d "$venv_name" ]; then
   rm -rf "$venv_name"
 fi
 
-test_requirements_files=$(find . -name "test-requirements.txt")
-
-echo 'Found test-requirements.txt files:' "$test_requirements_files"
+if (( $# )); then
+  test_requirements_files="$@"
+  echo 'Using provided test-requirements.txt files:' "$test_requirements_files"
+else
+  test_requirements_files=$(find . -name "test-requirements.txt")
+  echo 'Found test-requirements.txt files:' "$test_requirements_files"
+fi
 
 for requirements_file in $test_requirements_files
 do
-  project=$(echo "$requirements_file" | cut -d'/' -f1-3)
-  echo 'Running tests pipeline for project' $project
+  project="$(dirname "$requirements_file")"
+  echo 'Running tests pipeline for project' "$project"
+
+  # Per-connector outputs
+  OUT_DIR="test_outputs/$(echo "$project" | tr '/ ' '__')"
+  mkdir -p "$OUT_DIR"
 
   echo 'Creating isolated virtual environment'
   python -m venv "$venv_name"
@@ -30,9 +38,9 @@ do
   echo 'Installing requirements'
   python -m pip install -q -r "$requirements_file"
 
-  
+
   echo 'Running tests'
-  python -m pytest "$project"  # exit non zero if no test run
+  python -m pytest "$project" --junitxml="$OUT_DIR/junit.xml" -q -rA  # exit non zero if no test run
 
   echo 'Removing virtual environment'
   deactivate
