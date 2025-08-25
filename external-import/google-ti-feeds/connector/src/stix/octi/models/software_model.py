@@ -1,7 +1,6 @@
 """The module contains the OctiSoftwareModel class, which represents an OpenCTI Software."""
 
 from typing import Any, List, Optional
-from uuid import uuid4
 
 from connector.src.stix.v21.models.scos.software_model import SoftwareModel
 
@@ -53,7 +52,6 @@ class OctiSoftwareModel:
             custom_properties["x_opencti_product"] = product
 
         data = {
-            "id": f"software--{uuid4()}",
             "type": "software",
             "spec_version": "2.1",
             "object_marking_refs": marking_ids,
