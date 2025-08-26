@@ -103,5 +103,5 @@ class MitreAttack:
                 external_references=props["external_references"],
                 aliases=props["aliases"],
                 created_by_ref=author_id,
-                object_marking_refs=[tlp_marking],
+                object_marking_refs=[tlp_marking.id],
             )

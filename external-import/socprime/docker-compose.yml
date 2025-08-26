@@ -15,5 +15,5 @@ services:
       - SOCPRIME_INDICATOR_SIEM_TYPE=sigma
       # - SOCPRIME_JOB_IDS=ChangeMe
       - SOCPRIME_SIEM_TYPE=
-      - SOCPRIME_TLP_LEVEL=red
+      - SOCPRIME_TLP_LEVEL=amber+strict
     restart: always

@@ -41,4 +41,4 @@ def test_config_settings() -> None:
     assert config["socprime"]["job_ids"] == ["job1", "job2"]
     assert config["socprime"]["siem_type"] == ["devo", "snowflake"]
     assert config["socprime"]["indicator_siem_type"] == "ChangeMe"
-    assert config["socprime"]["tlp_level"] == "red"
+    assert config["socprime"]["tlp_level"] == "amber+strict"

@@ -80,7 +80,7 @@ class SocPrimeConfig(BaseModel):
     siem_type: ListFromString = Field(default=[])
     indicator_siem_type: str = Field(default="sigma")
     tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"] = (
-        Field(default="red")
+        Field(default="amber+strict")
     )
 
     @model_validator(mode="after")

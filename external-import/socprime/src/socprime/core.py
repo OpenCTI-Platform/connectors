@@ -73,10 +73,6 @@ class SocprimeConnector:
                 )
             case "red":
                 return stix2.TLP_RED
-            case _:  # default
-                raise InvalidTlpLevelError(
-                    f"Invalid TLP level: {self.config.socprime.tlp_level}"
-                )
 
     def _load_state(self) -> Dict[str, Any]:
         current_state = self.helper.get_state()
@@ -117,7 +113,7 @@ class SocprimeConnector:
                 rule, siem_types=siem_types
             ),
             created_by_ref=self.author.id,
-            object_marking_refs=[self.tlp_marking],
+            object_marking_refs=[self.tlp_marking.id],
             created=parsed_rule.release_date,
             valid_from=None,
             valid_until=None,
@@ -213,7 +209,7 @@ class SocprimeConnector:
                     source_ref=indicator_id,
                     target_ref=tool.id,
                     created_by_ref=self.author.id,
-                    object_marking_refs=[self.tlp_marking],
+                    object_marking_refs=[self.tlp_marking.id],
                 )
                 res.append(rel)
         return res
@@ -248,7 +244,7 @@ class SocprimeConnector:
                     source_ref=indicator_id,
                     target_ref=technique.id,
                     created_by_ref=self.author.id,
-                    object_marking_refs=[self.tlp_marking],
+                    object_marking_refs=[self.tlp_marking.id],
                 )
                 res.append(rel)
         return res
@@ -280,7 +276,7 @@ class SocprimeConnector:
                     source_ref=indicator_id,
                     target_ref=intusion_set.id,
                     created_by_ref=self.author.id,
-                    object_marking_refs=[self.tlp_marking],
+                    object_marking_refs=[self.tlp_marking.id],
                 )
                 res.append(rel)
         return res
@@ -462,7 +458,7 @@ class SocprimeConnector:
                 + self.start_datetime.isoformat(timespec="seconds"),
             )
             bundle = self.helper.stix2_create_bundle(
-                items=[self.author] + bundle_objects
+                items=[self.author] + [self.tlp_marking] + bundle_objects
             )
             self.helper.send_stix2_bundle(bundle, work_id=self.work_id)
 
@@ -564,7 +560,7 @@ class SocprimeConnector:
                     source_ref=indicator_id,
                     target_ref=vuln.id,
                     created_by_ref=self.author.id,
-                    object_marking_refs=[self.tlp_marking],
+                    object_marking_refs=[self.tlp_marking.id],
                 )
                 res.append(rel)
         return res
@@ -589,5 +585,5 @@ class SocprimeConnector:
                 }
             ],
             created_by_ref=self.author.id,
-            object_marking_refs=[self.tlp_marking],
+            object_marking_refs=[self.tlp_marking.id],
         )
