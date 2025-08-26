@@ -80,40 +80,65 @@ class TeamT5Connector:
     def append_author_tlp(self, objects: list) -> list:
         """
         Adds the required Author (this connector) and specified TLP
-        Marking to each stix object in the parsed list.
+        Marking to each stix object in the parsed list, if they are able
+        to receive these attributes.
 
         :param objects: A list of STIX objects.
         :return: A list of STIX objects with author and TLP information appended.
         """
 
-        new_objects = []
+        # As defined by the stix2.1 standard, all SCOs cannot receive a created_by_ref
+        # TODO: should marking-defintion be added or removed or what!
+        objects_without_author = {
+            "artifact",
+            "autonomous-system",
+            "directory",
+            "domain-name",
+            "email-addr",
+            "email-message",
+            "file",
+            "ipv4-addr",
+            "ipv6-addr",
+            "mac-addr",
+            "mutex",
+            "network-traffic",
+            "process",
+            "software",
+            "url",
+            "user-account",
+            "windows-registry-key",
+            "x509-certificate",
+        }
+
+        """
+        objects_without_markings = {
+            "marking-definition", "extension-definition"
+        }
+        """
+        objects_without_markings = set()
+
+        # Include the author and TLP ref first in the bundle
+
+        new_objects = [self.author, self.tlp_ref]
         for obj in objects:
             obj_dict = dict(obj)
-            # append created_by_ref
-            try:
+            obj_type = obj_dict.get("type")
+
+            # Author
+            if obj_type not in objects_without_author:
                 obj_dict["created_by_ref"] = self.author.id
-            except:
-                pass
 
-            # append TLP marking
-            try:
-                if self.tlp_ref:
-                    obj_dict["object_marking_refs"] = [self.tlp_ref.id]
-            except:
-                pass
+            # Markings
+            if obj_type not in objects_without_markings:
+                existing_markings = obj_dict.get("object_marking_refs", [])
+                if self.tlp_ref.id not in existing_markings:
+                    obj_dict["object_marking_refs"] = existing_markings + [
+                        self.tlp_ref.id
+                    ]
 
-            # Rebuild the object
-            try:
-                new_obj = obj.__class__(**obj_dict)
-            except:
-                new_obj = obj
-
+            # Rebuild
+            new_obj = obj.__class__(**obj_dict)
             new_objects.append(new_obj)
-
-        # Include the author and marking object in the bundle
-        new_objects.append(self.author)
-        if self.tlp_ref:
-            new_objects.append(self.tlp_ref)
 
         return new_objects
 

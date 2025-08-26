@@ -1,6 +1,6 @@
 services:
   teamt5-external-import:
-    image: opencti/teamt5-external-import:6.7.4
+    image: opencti/teamt5-external-import:latest
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=CHANGEME

@@ -3,6 +3,8 @@ from datetime import datetime
 from pycti import OpenCTIConnectorHelper
 from stix2 import Identity, parse
 
+NUM_INDICATORS_PER_PAGE = 16
+
 
 class IndicatorHandler:
 
@@ -35,35 +37,19 @@ class IndicatorHandler:
         self.tlp_ref = tlp_ref
         self.api_url = api_url
 
-    def _determine_optimal_url(self, indicator: dict) -> str | None:
+    def _determine_stix_url(self, indicator: dict) -> str | None:
         """
-        Determines the 'best' URL to fetch indicator data, in the hierarchy of:
-        1. Stix (Best)
-        2. CSV
-        3. Text (Worst)
+        Constructs the STIX bundle URL for a given indicator if available.
 
-        Note: Currently only Bundles that contain Stix URLS are supported. This is
-        appears to be ALL bundles, but in the case that it is not, functionality
-        will be implemented to retrieve data from the CSV and text urls.
-
-        :param indicator: An indicator dictionary.
-        :return: The optimal URL for fetching the indicator STIX bundle, or None.
+        :param indicator: An indicator dictionary containing id and stix availability flag.
+        :return: The STIX bundle download URL, or None if unavailable.
         """
-        # Note: currently only support for stix urls is implemented.
+
         indicator_id = indicator.get("id")
         if not indicator_id:
             return None
-
         if indicator.get("stix"):
             return f"{self.api_url.rstrip('/')}/api/v2/ioc_bundles/{indicator_id}.stix"
-
-        # Non stix urls are not supported.
-        if indicator.get("csv"):
-            # return f"{self.api_url.rstrip('/')}/api/v2/ioc_bundles/{indicator_id}.csv"
-            return None
-        if indicator.get("text"):
-            # return f"{self.api_url.rstrip('/')}/api/v2/ioc_bundles/{indicator_id}.text"
-            return None
         return None
 
     def retrieve_indicators(self, last_run_timestamp: int) -> None:
@@ -82,16 +68,15 @@ class IndicatorHandler:
         while True:
 
             # Retrieve Indicator Bundles at the current offset. Note that the API responds with most to least recent.
-            params = {"offset": num_indicators}
+            params = {"offset": num_indicators, "date[from]": last_run_timestamp}
             response = self._request_data(indicators_url, params)
 
-            # Handle Edge Cases in responses.
             data = response.json()
             if not data.get("success", None) or not data.get("ioc_bundles", None):
                 self.helper.connector_logger.info(
-                    "Failed to retrieve indicators: Indicator Bundle request failed or response is empty"
+                    "No Indicator Bundles retrieved: New Indicator Bundle list body is empty"
                 )
-                continue
+                break
 
             indicators = [
                 {
@@ -107,32 +92,15 @@ class IndicatorHandler:
                 for indicator in data["ioc_bundles"]
             ]
 
-            # Find the index where the Bundle last pushed to OpenCTI is, this is where we should cutoff
-            cutoff_index = next(
-                (
-                    i
-                    for i, bundle in enumerate(indicators)
-                    if bundle.get("created_at") <= last_run_timestamp
-                ),
-                None,
+            self.helper.connector_logger.debug(
+                f"Found {len(indicators)} Indicator Bundles. Total so far: {num_indicators + len(indicators)}"
             )
+            all_indicators.extend(indicators)
+            num_indicators += len(indicators)
 
-            # If such an index is found, exploration stops and the list is appropriately full
-            if cutoff_index is None:
-                self.helper.connector_logger.debug(
-                    f"Found {len(indicators)} Indicator Bundles. Continuing...."
-                )
-                all_indicators.extend(indicators)
-                num_indicators += len(indicators)
-                continue
-
-            # If such an index is not found, further exploration is required to populate the list.
-            self.helper.connector_logger.info(
-                f"Found {len(indicators[:cutoff_index])} more Indicator Bundles. End Reached."
-            )
-            all_indicators.extend(indicators[:cutoff_index])
-            num_indicators += cutoff_index
-            break
+            # If we got less than the defined amount returned each page we've reached the end
+            if len(indicators) < NUM_INDICATORS_PER_PAGE:
+                break
 
         self.indicators = all_indicators
         self.helper.connector_logger.info(
@@ -159,6 +127,7 @@ class IndicatorHandler:
             self.helper.connector_logger.error(
                 f"Failed to decode or parse STIX data: {e}"
             )
+
             return None
 
     def post_indicators(self, work_id: str) -> int:
@@ -180,10 +149,7 @@ class IndicatorHandler:
                     f"Processing Indicator Bundle from: {datetime.fromtimestamp(indicator.get('created_at')).strftime('%H:%M %d/%m/%Y')}"
                 )
 
-                # Determine the 'optimal' URL for a Stix Indicator. Currently this only functions when the Indicator Bundle has a Stix URL,
-                # which has the potential to be ALWAYS, but we are yet to be entirely certain of. If it is not, different retrieval processes based
-                # on the other available URLS can be implemented.
-                bundle_url = self._determine_optimal_url(indicator)
+                bundle_url = self._determine_stix_url(indicator)
                 if bundle_url is None:
                     self.helper.connector_logger.error(
                         "Failed To Push Indicator Bundle: Bundle Has no Stix URl From Which it Can be Downloaded."
@@ -205,7 +171,6 @@ class IndicatorHandler:
                 self.helper.send_stix2_bundle(
                     bundle, work_id=work_id, cleanup_inconsistent_bundle=False
                 )
-
                 self.helper.connector_logger.info(
                     f"Indicator Bundle With {len(stix_content)} Items Pushed to OpenCTI Successfully"
                 )
