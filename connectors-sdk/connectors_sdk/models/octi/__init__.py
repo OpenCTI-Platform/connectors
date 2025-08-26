@@ -11,15 +11,23 @@ from connectors_sdk.models.octi._common import (
 )
 from connectors_sdk.models.octi.activities.analyses import Note, Report
 from connectors_sdk.models.octi.activities.observations import (
+    URL,
+    DomainName,
+    File,
     Indicator,
     IPV4Address,
+    IPV6Address,
     Software,
 )
-from connectors_sdk.models.octi.knowledge.arsenal import Vulnerability
-from connectors_sdk.models.octi.knowledge.entities import Organization, Sector
+from connectors_sdk.models.octi.knowledge.arsenal import Malware, Vulnerability
+from connectors_sdk.models.octi.knowledge.entities import (
+    Individual,
+    Organization,
+    Sector,
+)
 from connectors_sdk.models.octi.knowledge.locations import City, Country
 from connectors_sdk.models.octi.knowledge.techniques import AttackPattern
-from connectors_sdk.models.octi.knowledge.threats import IntrusionSet
+from connectors_sdk.models.octi.knowledge.threats import IntrusionSet, ThreatActorGroup
 from connectors_sdk.models.octi.relationships import (
     Relationship,
     based_on,
@@ -39,11 +47,16 @@ __all__ = [
     "AttackPattern",
     "City",
     "Country",
+    "DomainName",
     "ExternalReference",
+    "File",
     "Indicator",
+    "Individual",
     "IntrusionSet",
     "IPV4Address",
+    "IPV6Address",
     "KillChainPhase",
+    "Malware",
     "Note",
     "Organization",
     "OrganizationAuthor",
@@ -51,7 +64,9 @@ __all__ = [
     "Report",
     "Sector",
     "Software",
+    "ThreatActorGroup",
     "TLPMarking",
+    "URL",
     "Vulnerability",
     # Relationship builders
     "based_on",

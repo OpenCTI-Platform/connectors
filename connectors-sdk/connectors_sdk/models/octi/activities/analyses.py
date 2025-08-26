@@ -24,6 +24,21 @@ from stix2.v21 import Note as Stix2Note
 from stix2.v21 import Report as Stix2Report
 
 
+class NoteStix(Stix2Note):  # type: ignore[misc]
+    # As stix2 is untyped, subclassing one of its element is not handled by type checkers.
+    """Override stix2 Note to not require any object_refs and so be compliant with OpenCTI Note entities."""
+
+    # Copy the parent class properties
+    _properties = OrderedDict(Stix2Note._properties)
+    # Update properties definition to allow missing object_refs
+    _properties["object_refs"] = stix2.properties.ListProperty(
+        stix2.properties.ReferenceProperty(
+            valid_types=["SCO", "SDO", "SRO"], spec_version="2.1"
+        ),
+        required=False,
+    )
+
+
 @MODEL_REGISTRY.register
 class Note(BaseIdentifiedEntity):
     """Represent a note."""
@@ -31,12 +46,23 @@ class Note(BaseIdentifiedEntity):
     content: str = Field(
         description="The main content of the note.",
     )
+    publication_date: AwareDatetime = Field(
+        description="Publication date of the note.",
+    )
     abstract: Optional[str] = Field(
         description="A brief summary of the note content.",
         default=None,
     )
     note_types: Optional[list[NoteType]] = Field(
-        description="Type of the note.",
+        description="Types of the note.",
+        default=None,
+    )
+    labels: Optional[list[str]] = Field(
+        description="Labels of the note.",
+        default=None,
+    )
+    authors: Optional[list[str]] = Field(
+        description="The name of the author(s) of this note (e.g., the analyst(s) that created it).",
         default=None,
     )
     objects: Optional[list[BaseIdentifiedEntity]] = Field(
@@ -46,13 +72,15 @@ class Note(BaseIdentifiedEntity):
 
     def to_stix2_object(self) -> Stix2Note:
         """Make stix object."""
-        return stix2.Note(
+        return NoteStix(
             id=PyctiNote.generate_id(
                 content=self.content,
-                created=None,  # required but never set by SDK
+                created=self.publication_date,
             ),
             abstract=self.abstract,
             content=self.content,
+            labels=self.labels,
+            authors=self.authors,
             object_refs=[obj.id for obj in self.objects or []],
             created_by_ref=self.author.id if self.author else None,
             external_references=[
@@ -60,6 +88,9 @@ class Note(BaseIdentifiedEntity):
                 for external_reference in self.external_references or []
             ],
             object_marking_refs=[marking.id for marking in self.markings or []],
+            created=self.publication_date,  # usually set by stix2 lib but here it MUST be equal to the datetime used for note's id.
+            allow_custom=True,
+            note_types=self.note_types,
         )
 
 
@@ -101,6 +132,10 @@ class Report(BaseIdentifiedEntity):
         description="Report types.",
         default=None,
     )
+    labels: Optional[list[str]] = Field(
+        description="Labels of the report",
+        default=None,
+    )
     reliability: Optional[Reliability] = Field(
         description="Reliability of the report.",
         default=None,
@@ -125,6 +160,7 @@ class Report(BaseIdentifiedEntity):
             published=self.publication_date,
             description=self.description,
             report_types=self.report_types,
+            labels=self.labels,
             object_refs=[obj.id for obj in self.objects or []],
             created_by_ref=self.author.id if self.author else None,
             external_references=[

@@ -1,8 +1,6 @@
 # pragma: no cover  # do not compute coverage on test files
 """Offer tests for observations OpenCTI entities."""
 
-from datetime import datetime, timezone
-
 import pytest
 from connectors_sdk.models.octi._common import BaseIdentifiedEntity
 from connectors_sdk.models.octi.activities.analyses import Note, Report
@@ -45,6 +43,7 @@ def test_note_to_stix2_object_returns_valid_stix_object(
     # Given: A valid Note instance
     note = Note(
         abstract="Test note",
+        publication_date="2025-01-01T12:00:00Z",
         content="Test content",
         note_types=["Test note type"],
         objects=[fake_valid_organization_author],
@@ -93,7 +92,7 @@ def test_report_to_stix2_object_returns_valid_stix_object(
     # Given: A valid Report instance
     report = Report(
         name="Test report",
-        publication_date=datetime(2025, 1, 1, tzinfo=timezone.utc),
+        publication_date="2025-01-01T12:00:00Z",
         description="Test description",
         report_types=["Test report type"],
         reliability=Reliability.A,
