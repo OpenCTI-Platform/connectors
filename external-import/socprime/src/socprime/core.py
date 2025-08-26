@@ -118,7 +118,8 @@ class SocprimeConnector:
             ),
             created_by_ref=self.author.id,
             object_marking_refs=[self.tlp_marking],
-            valid_from=parsed_rule.release_date,
+            created=parsed_rule.release_date,
+            valid_from=None,
             valid_until=None,
         )
         stix_objects.append(indicator)
