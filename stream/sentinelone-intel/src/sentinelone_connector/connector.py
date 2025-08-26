@@ -51,9 +51,8 @@ class SentinelOneIntelConnector:
             raise ValueError("Cannot process the message")
 
         if data["type"] == "indicator" and data["pattern_type"] == "stix":
-            print("indicator")
             if msg.event == "create":
-                self.helper.connector_logger.info("Creating IOC")
+                self.helper.connector_logger.info(f"Attempting to Creating IOC in s1")
                 self.client.create_indicator(data)
 
 

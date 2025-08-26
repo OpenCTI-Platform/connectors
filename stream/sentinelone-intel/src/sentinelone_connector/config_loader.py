@@ -38,6 +38,7 @@ class ConfigConnector:
 
         #SentinelOne API Basic Parameters: Mandatory.
 
+        #Handle existence of suffix / by removing for consistency
         self.api_url = get_config_variable(
             "SENTINELONE-INTEL_API_URL",
             ["sentinelone-intel", "api_url"],
@@ -46,6 +47,7 @@ class ConfigConnector:
             required=True  
         ).strip("/")
 
+
         self.api_key = get_config_variable(
             "SENTINELONE-INTEL_API_KEY",
             ["sentinelone-intel", "api_key"],
@@ -53,7 +55,10 @@ class ConfigConnector:
             default=None,  
             required=True
         )
-        #TODO: strip APIToken doesnt work here so implement other
+        #Handle case of user inputted APIToken ...
+        if self.api_key[0:9] == "APIToken ":
+            self.api_key = self.api_key[9:]
+
 
         #SentinelOne API Filtering Parameters:
 
