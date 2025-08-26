@@ -362,7 +362,7 @@ class TheHive:
                 )
                 updated_last_date = self.get_updated_date(item, updated_last_date)
             else:
-                self.helper.log_warn(
+                self.helper.log_warning(
                     f"Ignoring {item.get('title')} due to TLP too high."
                 )
         message = f"Processing complete, last update: {updated_last_date}"
@@ -372,7 +372,7 @@ class TheHive:
     def process_logic(self, type, last_date_key, bundle_func):
         """Process case or alert based on returned query. Update state once complete."""
         self.helper.log_info(
-            f"here the cureent state of the connector : {self.current_state}..."
+            f"here the current state of the connector : {self.current_state}..."
         )
         last_date = self.get_last_date(last_date_key, self.thehive_import_from_date)
         self.helper.log_info(f"Last Date: {last_date}(s)...")
