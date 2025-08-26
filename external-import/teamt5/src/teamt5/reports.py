@@ -12,6 +12,8 @@ REPORT_TYPE_CONVERSIONS = {
     "Flash Report": ["indicator", "observed-data", "malware"],
 }
 
+NUM_REPORTS_PER_PAGE = 10
+
 
 class ReportHandler:
 
@@ -59,16 +61,15 @@ class ReportHandler:
 
         while True:
             # Retrieve Reports at the current offset. Note that the API responds with most to least recent.
-            params = {"offset": num_reports}
+            params = {"offset": num_reports, "date[from]": last_run_timestamp}
             response = self._request_data(reports_url, params)
 
-            # Handle Edge Cases in responses.
             data = response.json()
             if not data.get("success") or not data.get("reports"):
                 self.helper.connector_logger.info(
-                    "Failed to retrieve Reports: Report request failed or response is empty"
+                    "No Reports retrieved: New Report list body is empty"
                 )
-                continue
+                break
 
             reports = [
                 {
@@ -84,32 +85,15 @@ class ReportHandler:
                 for report in data["reports"]
             ]
 
-            # Find the index where the Report last pushed to OpenCTI is, this is where we should cutoff
-            cutoff_index = next(
-                (
-                    i
-                    for i, report in enumerate(reports)
-                    if report.get("date") <= last_run_timestamp
-                ),
-                None,
+            self.helper.connector_logger.debug(
+                f"Found {len(reports)} Reports. Total so far: {num_reports + len(reports)}"
             )
+            all_reports.extend(reports)
+            num_reports += len(reports)
 
-            # If such an index is found, exploration stops and the list is appropriately full
-            if cutoff_index is None:
-                self.helper.connector_logger.debug(
-                    f"Found {len(reports)} Reports. Continuing...."
-                )
-                all_reports.extend(reports)
-                num_reports += len(reports)
-                continue
-
-            # If such an index is not found, further exploration is required to populate the list.
-            self.helper.connector_logger.info(
-                f"Found {len(reports[:cutoff_index])} more Reports. End Reached."
-            )
-            all_reports.extend(reports[:cutoff_index])
-            num_reports += cutoff_index
-            break
+            # If we got less than the defined amount returned each page we've reached the end
+            if len(reports) < NUM_REPORTS_PER_PAGE:
+                break
 
         self.reports = all_reports
         self.helper.connector_logger.info(
@@ -131,6 +115,7 @@ class ReportHandler:
             self.helper.connector_logger.error(
                 f"Failed to decode or parse STIX data: {e}"
             )
+
             return None
 
     def post_reports(self, work_id: str) -> int:
@@ -177,7 +162,7 @@ class ReportHandler:
 
                 # Create the Report Object,
                 published = datetime.fromtimestamp(report.get("date"), tz=timezone.utc)
-                name = report.get("title", "")
+                name = report["title"]
                 report_obj = Report(
                     id=pyctiReport.generate_id(name, published),
                     name=name,

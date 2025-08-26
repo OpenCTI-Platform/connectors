@@ -26,10 +26,12 @@ class ConnectorClient:
         :param params: Optional dictionary of query parameters.
         :return: A response object on success, or None on failure.
         """
-        TIMEOUT = 5
+        timeout = 10
+
         try:
             # validate the response and add a small delay as to not overload the API
-            response = self.session.get(url, params=params, timeout=TIMEOUT)
+            response = self.session.get(url, params=params, timeout=timeout)
+
             response.raise_for_status()
             return response
 
