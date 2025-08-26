@@ -8,6 +8,7 @@ from connectors_sdk.models.octi.enums import (
     AttackResourceLevel,
     ThreatActorRole,
     ThreatActorSophistication,
+    ThreatActorTypes,
 )
 from pycti import IntrusionSet as PyctiIntrusionSet
 from pycti import ThreatActorGroup as PyctiThreatActorGroup
@@ -89,6 +90,10 @@ class ThreatActorGroup(BaseIdentifiedEntity):
     )
     description: Optional[str] = Field(
         description="A description that provides more details and context about the Threat Actor.",
+        default=None,
+    )
+    threat_actor_types: Optional[list[ThreatActorTypes]] = Field(
+        description="The type(s) of this threat actor.",
         default=None,
     )
     aliases: Optional[list[str]] = Field(

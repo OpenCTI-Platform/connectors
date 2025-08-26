@@ -371,6 +371,26 @@ class ThreatActorSophistication(PermissiveEnum):
     STRATEGIC = "strategic"
 
 
+class ThreatActorTypes(PermissiveEnum):
+    """Threat Actor Types Open Vocabulary.
+
+    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_tqbl8z36yoir
+    """
+
+    ACTIVIST = "activist"
+    COMPETITOR = "competitor"
+    CRIME_SYNDICATE = "crime-syndicate"
+    CRIMINAL = "criminal"
+    HACKER = "hacker"
+    INSIDER_ACCIDENTAL = "insider-accidental"
+    INSIDER_DISGRUNTLED = "insider-disgruntled"
+    NATION_STATE = "nation-state"
+    SENSATIONALIST = "sensationalist"
+    SPY = "spy"
+    TERRORIST = "terrorist"
+    UNKNOWN = "unknown"
+
+
 class TLPLevel(StrEnum):
     """TLP Level Enum.
 
