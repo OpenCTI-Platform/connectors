@@ -87,8 +87,7 @@ class TeamT5Connector:
         :return: A list of STIX objects with author and TLP information appended.
         """
 
-        # As defined by the stix2.1 standard, all SCOs cannot receive a created_by_ref
-        # TODO: should marking-defintion be added or removed or what!
+        # SCOS cannot receive a created_by_ref attribute
         objects_without_author = {
             "artifact",
             "autonomous-system",
@@ -110,15 +109,7 @@ class TeamT5Connector:
             "x509-certificate",
         }
 
-        """
-        objects_without_markings = {
-            "marking-definition", "extension-definition"
-        }
-        """
-        objects_without_markings = set()
-
         # Include the author and TLP ref first in the bundle
-
         new_objects = [self.author, self.tlp_ref]
         for obj in objects:
             obj_dict = dict(obj)
@@ -129,12 +120,8 @@ class TeamT5Connector:
                 obj_dict["created_by_ref"] = self.author.id
 
             # Markings
-            if obj_type not in objects_without_markings:
-                existing_markings = obj_dict.get("object_marking_refs", [])
-                if self.tlp_ref.id not in existing_markings:
-                    obj_dict["object_marking_refs"] = existing_markings + [
-                        self.tlp_ref.id
-                    ]
+            existing_markings = obj_dict.get("object_marking_refs", [])
+            obj_dict["object_marking_refs"] = existing_markings + [self.tlp_ref.id]
 
             # Rebuild
             new_obj = obj.__class__(**obj_dict)

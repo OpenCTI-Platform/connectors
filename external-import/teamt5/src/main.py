@@ -1,7 +1,6 @@
 import traceback
 
 from pycti import OpenCTIConnectorHelper
-
 from teamt5 import TeamT5Connector
 from teamt5.config_loader import ConfigConnector
 
