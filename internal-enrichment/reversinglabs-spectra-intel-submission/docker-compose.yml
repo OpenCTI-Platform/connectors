@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-reversinglabs-spectra-intel-submission:
-    image: opencti/connector-reversinglabs-spectra-intel-submission:6.7.14
+    image: opencti/connector-reversinglabs-spectra-intel-submission:rolling
     environment:
       - CONNECTOR_NAME=ReversingLabs Spectra Intelligence Submission
       - CONNECTOR_SCOPE=Artifact,Url,StixFile,File
