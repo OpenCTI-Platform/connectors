@@ -12,8 +12,13 @@ executors:
         type: string
         default: "rolling"
         description: Image tags
+#      platforms:
+#        type: string
+#        default: "linux/amd64,linux/arm64"
+#        description: Image platforms
     environment:
       BUILD_TAGS: <<parameters.tags>>
+#      BUILDX_PLATFORMS: <<parameters.platforms>>
     docker:
       - image: cimg/python:3.11
   ci_notifications:
@@ -245,7 +250,7 @@ workflows:
           filters:
             branches:
               only:
-                - master
+                - oob/issue/4506-arm-images
       - notify:
           name: "send_notifications_release"
           notification_executor:
