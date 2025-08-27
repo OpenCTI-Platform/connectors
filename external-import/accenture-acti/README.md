@@ -35,7 +35,7 @@ The Accenture ACTI connector ingests reports and related entities exposed by the
 
 ### Requirements
 
-- OpenCTI Platform >= 6.7.14
+- OpenCTI Platform >= 6.7.15
 
 ## Configuration variables
 
