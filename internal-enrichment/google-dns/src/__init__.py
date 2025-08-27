@@ -1,3 +1,3 @@
-from .client import GoogleDNSClient
+from src.models import ConfigLoader
 
-__all__ = ["GoogleDNSClient"]
+__all__ = ["ConfigLoader"]
