@@ -1,2 +1,2 @@
 pycti==6.7.14
-typing-extensions==4.14.1
+typing-extensions==4.15.0
