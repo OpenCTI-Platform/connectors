@@ -1,5 +1,9 @@
 # OpenCTI SOC Prime Connector
 
+| Status            | Date       | Comment |
+| ----------------- |------------| ------- |
+| Filigran Verified | 2025-08-27 |    -    |
+
 The OpenCTI SOC Prime connector can be used to import rules (indicators) from the SOC Prime Platform.
 The connector leverages the SOC Prime Threat Detection Marketplace API to get the rules.
 Rules for importing can be selected using content lists or jobs created on the SOC Prime Platform.
