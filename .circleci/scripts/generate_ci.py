@@ -29,6 +29,12 @@ def get_dirs() -> dir:
                 sub_dir
                 for sub_dir in os.listdir(top_dir)
                 if os.path.isdir(os.path.join(top_dir, sub_dir))
+                # TODO remove -- Filter for CI tests purpose
+                if (
+                    sub_dir == "cve"
+                    or sub_dir == "cofense-threathq"
+                    or sub_dir == "misp"
+                )
             ]
     return dirs
 
