@@ -55,7 +55,7 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     confidence_level: Optional[int] = Field(
         alias="CONNECTOR_CONFIDENCE_LEVEL",
         default=100,
-        description=".",
+        description="The default confidence level (a number between 1 and 100).",
     )
     log_level: Optional[LogLevelToLower] = Field(
         alias="CONNECTOR_LOG_LEVEL",
