@@ -1,5 +1,10 @@
 from pathlib import Path
 
+from models.configs import (
+    ConfigBaseSettings,
+    _ConfigLoaderConnector,
+    _ConfigLoaderOCTI,
+)
 from pydantic import Field
 from pydantic_settings import (
     BaseSettings,
@@ -7,11 +12,6 @@ from pydantic_settings import (
     EnvSettingsSource,
     PydanticBaseSettingsSource,
     YamlConfigSettingsSource,
-)
-from src.models.configs import (
-    ConfigBaseSettings,
-    _ConfigLoaderConnector,
-    _ConfigLoaderOCTI,
 )
 
 

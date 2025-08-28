@@ -1,8 +1,8 @@
+from models import ConfigLoader
 from pydantic import ValidationError
-from src.models import ConfigLoader
 
 
-class IPInfoConfig:
+class GoogleDNSConfig:
     def __init__(self):
         """Initialize the connector with necessary configurations"""
         self.load = self._load_config()
