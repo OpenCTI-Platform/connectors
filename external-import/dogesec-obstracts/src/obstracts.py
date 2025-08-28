@@ -51,8 +51,10 @@ class ObstractsConnector:
 
     def list_feeds(self):
         try:
-            feeds = self.retrieve("v1/feeds/", list_key="feeds")
-            return feeds
+            feeds = self.retrieve(
+                "v1/feeds/", list_key="results", params=dict(show_only_my_feeds=True)
+            )
+            return [feed["obstract_feed_metadata"] for feed in feeds]
         except Exception:
             self.helper.log_error("failed to fetch feeds")
         return []
