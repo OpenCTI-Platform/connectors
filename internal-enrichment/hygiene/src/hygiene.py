@@ -139,10 +139,12 @@ class HygieneConnector:
     ) -> Optional[str]:
         result = None
         for observable in observables:
-            if observable["type"] == "unsupported_type":
+            if observable.get("type") == "unsupported_type":
                 continue
             # Search in warninglist
-            warninglist_hits = self.warninglists.search(observable["value"])
+            warninglist_hits = self.warninglists.search(
+                observable.get("value").lower() if observable.get("value") else None
+            )
 
             # If not found and the domain is a subdomain, search with the parent.
             use_parent, warninglist_hits = self.search_with_parent(

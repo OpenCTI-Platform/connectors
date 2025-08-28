@@ -26,7 +26,7 @@ def fixture_connector(mocked_helper: Mock, test_config: ConnectorSettings) -> Co
         client=ConnectorClient(
             tenant_id=test_config.email_intel_microsoft.tenant_id,
             client_id=test_config.email_intel_microsoft.client_id,
-            client_secret=test_config.email_intel_microsoft.client_secret,
+            client_secret=test_config.email_intel_microsoft.client_secret.get_secret_value(),
             email=test_config.email_intel_microsoft.email,
             mailbox=test_config.email_intel_microsoft.mailbox,
             attachments_mime_types=test_config.email_intel_microsoft.attachments_mime_types,

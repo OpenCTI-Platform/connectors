@@ -1,7 +1,7 @@
 #!/bin/sh
 
-# Correct working directory
-cd /opt/opencti-connector-cve
+# Go to the right directory
+cd /opt
 
-# Start the connector
-python3 main.py
+# Launch the worker
+python -m src

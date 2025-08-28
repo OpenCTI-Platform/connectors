@@ -1,4 +1,4 @@
-pycti==6.7.14
+pycti==6.7.15
 antlr4-python3-runtime
 requests==2.32.4
 stix2==3.0.1

@@ -3,22 +3,40 @@ from typing import List, Optional, Union
 
 import pycti
 import requests
+import stix2
 from stix2 import AttackPattern, Filter, IntrusionSet, Malware, MemoryStore, Tool
 
 
 class MitreAttack:
-    def __init__(self):
-        self._src = self._get_data_from_branch("enterprise-attack")
-        self._tools = self.get_software()
+    _src: MemoryStore
+    _tools: List[Union[Tool, Malware]]
 
     def _get_data_from_branch(self, domain, branch="master"):
         """get the ATT&CK STIX data from MITRE/CTI. Domain should be 'enterprise-attack', 'mobile-attack' or 'ics-attack'. Branch should typically be master."""
         stix_json = requests.get(
-            f"https://raw.githubusercontent.com/mitre/cti/{branch}/{domain}/{domain}.json"
+            url=f"https://raw.githubusercontent.com/mitre/cti/{branch}/{domain}/{domain}.json"
         ).json()
         return MemoryStore(stix_data=stix_json["objects"])
 
-    def get_technique_by_id(self, technique_mitre_id: str) -> Optional[AttackPattern]:
+    def get_software(self) -> List[Union[Tool, Malware]]:
+        return list(
+            chain.from_iterable(
+                self._src.query(f)
+                for f in [Filter("type", "=", "tool"), Filter("type", "=", "malware")]
+            )
+        )
+
+    def initialize(self) -> None:
+        """Initialize the MitreAttack class by fetching the ATT&CK data from the specified branch and domain."""
+        self._src = self._get_data_from_branch("enterprise-attack")
+        self._tools = self.get_software()
+
+    def get_technique_by_id(
+        self,
+        technique_mitre_id: str,
+        author_id: str,
+        tlp_marking: stix2.MarkingDefinition,
+    ) -> Optional[AttackPattern]:
         filt = [
             Filter("type", "=", "attack-pattern"),
             Filter("external_references.external_id", "=", technique_mitre_id),
@@ -34,9 +52,13 @@ class MitreAttack:
                 name=props["name"],
                 description=props["description"],
                 external_references=props["external_references"],
+                created_by_ref=author_id,
+                object_marking_refs=[tlp_marking.id],
             )
 
-    def get_tool_by_name(self, name: str) -> Optional[Union[Tool, Malware]]:
+    def get_tool_by_name(
+        self, name: str, author_id: str, tlp_marking: stix2.MarkingDefinition
+    ) -> Optional[Union[Tool, Malware]]:
         for item in self._tools:
             if item.name.lower() == name.lower():
                 props = item._inner
@@ -46,6 +68,8 @@ class MitreAttack:
                     "labels": props["labels"],
                     "external_references": props["external_references"],
                     "aliases": props["x_mitre_aliases"],
+                    "created_by_ref": author_id,
+                    "object_marking_refs": [tlp_marking.id],
                 }
                 if props["type"] == "malware":
                     return Malware(
@@ -61,15 +85,9 @@ class MitreAttack:
                         **common_props,
                     )
 
-    def get_software(self) -> List[Union[Tool, Malware]]:
-        return list(
-            chain.from_iterable(
-                self._src.query(f)
-                for f in [Filter("type", "=", "tool"), Filter("type", "=", "malware")]
-            )
-        )
-
-    def get_intrusion_set_by_name(self, name: str) -> Optional[IntrusionSet]:
+    def get_intrusion_set_by_name(
+        self, name: str, author_id: str, tlp_marking: stix2.MarkingDefinition
+    ) -> Optional[IntrusionSet]:
         filt = [
             Filter("type", "=", "intrusion-set"),
             Filter("name", "=", name),
@@ -84,4 +102,6 @@ class MitreAttack:
                 description=props["description"],
                 external_references=props["external_references"],
                 aliases=props["aliases"],
+                created_by_ref=author_id,
+                object_marking_refs=[tlp_marking.id],
             )
