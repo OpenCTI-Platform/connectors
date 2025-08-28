@@ -1,12 +1,12 @@
-# AI based OpenCTI Document Import Connector (Powered by Ariane) 
+# AI based OpenCTI Document Import Connector (Powered by Ariane)
 
 | Status            | Date       | Comment |
 | ----------------- |------------| ------- |
 | Filigran Verified | 2025-03-18 |    -    |
 
-This connector allows Enterprise Edition Organizations to feed information from document to OpenCTI, with more capabilities than regular Import Document connector. 
+This connector allows Enterprise Edition Organizations to feed information from documents to OpenCTI, with more capabilities than regular Import Document connector.
 
-This connector add more extraction capabilities : it is possible to extract `Malware`, `Country` and `Intrusion-Set` entities.  
+This connector adds more extraction capabilities : it is possible to extract `Malware`, `Country` and `Intrusion-Set` entities.  
 
 ## General overview
 
@@ -30,16 +30,18 @@ OpenCTI data is coming from *import* connectors.
 | `connector_scope`                | `CONNECTOR_SCOPE`                       |                                        | Yes       | Supported file types: `'application/pdf','text/plain','text/html','text/markdown'`            |
 | `connector_log_level`            | `CONNECTOR_LOG_LEVEL`                   | error                                  | No        | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose). |
 | `connector_create_indicator`     | `CONNECTOR_CREATE_INDICATOR`            | `false`                                | No        | Create an indicator for each extracted observable                                             |
-| `connector_web_service_url`      | `CONNECTOR_WEB_SERVICE_URL`             | `https://importdoc.ariane.filigran.io` | No        | The URL of the extraction service running the AI model (                                      |
+| `connector_web_service_url`      | `CONNECTOR_WEB_SERVICE_URL`             | `https://importdoc.ariane.filigran.io` | No        | The URL of the extraction service running the AI model                                      |
 | `connector_licence_key_pem`      | `CONNECTOR_LICENCE_KEY_PEM`             |                                        | Yes       | The license certificate in a PEM format (provided by Filigran to Enterprise Edition users)    |
 
-### Debugging ###
+### Debugging
 
 In case the connector doesn't behave like it should, please change the `CONNECTOR_LOG_LEVEL` to `debug`.
 This way you will get a log entry for every parsing step to verify each step.
-Example
 
-```
+<details>
+<summary>Example</summary>
+
+```bash
 "timestamp": "2025-02-21T15:36:43.448532Z", "level": "INFO", "name": "api", "message": "Health check (platform version)..."}
 {"timestamp": "2025-02-21T15:36:43.509792Z", "level": "INFO", "name": "api", "message": "Health check (platform version)..."}
 {"timestamp": "2025-02-21T15:36:43.698952Z", "level": "INFO", "name": "ImportDocumentAI", "message": "Connector registered with ID", "attributes": {"id": "ChangeMe"}}
@@ -59,11 +61,14 @@ Example
 [...]
 ```
 
+</details>
+
 ### Supported formats
 
-*Please open a feature requests in case the current implemention doesn't fit your needs*
+*Please open a feature requests in case the current implementation doesn't fit your needs*
 
 **File input format**
+
 - PDF file
 - Text file
 - HTML file
@@ -74,10 +79,12 @@ Example
 | Extractable Entity | Based on                        | Example       | Stix entity type and field              | Note |
 |--------------------|---------------------------------|---------------|-----------------------------------------|------|
 | Attack Pattern     | MITRE ATT&CK Technique          | T1234.001     | AttackPattern.x_mitre_id                |      |
-| Country            | Occurrence in the original text | France        | Location.name, Location.aliases         |      |
+| Location           | Occurrence in the original text | France        | Location.name, Location.aliases, Country and Region         |      |
 | Intrusion Set      | Occurrence in the original text | APT29         | IntrusionSet.name, IntrusionSet.aliases |      |
 | Malware            | Occurrence in the original text | BadPatch      | Malware.name, Malware.aliases           |      |
 | Vulnerability      | CVE Numbers                     | CVE-2020-0688 | Vulnerability.name                      |      |
+| Identity           | Occurrence in the original text | John Doe     | Individual, Organization and Sector     |      |
+| Channel           | Occurrence in the original text | Twitter       | Custom Filigran entity                  |      |
 
 **Extractable Observables/Stix Cyber Observables**
 
@@ -106,4 +113,87 @@ Example
 :heavy_plus_sign: = Not entirely implemented
 :x: = Not implemented
 
-*Reference: https://docs.oasis-open.org/cti/stix/v2.1/cs01/stix-v2.1-cs01.html*
+*Reference: <https://docs.oasis-open.org/cti/stix/v2.1/cs01/stix-v2.1-cs01.html>*
+
+**Extractable Relations/Stix Relations Objects**
+
+Note: When the connector is triggered with a context entity that is not a container (e.g., not a Report, Case, Grouping, etc.), the connector will automatically add `related-to` relationships from all extracted observables to that entity.
+
+<details>
+    <summary>Uses</summary>
+
+    * Attack-Pattern → Malware
+    * Malware → Attack-Pattern
+    * Intrusion-Set → Malware
+    * Intrusion-Set → Attack-Pattern
+    * Channel → Malware
+    * Channel → Intrusion-Set
+    * Channel → Attack-Pattern
+
+</details>
+
+<details>
+    <summary>Targets</summary>
+
+    * Attack-Pattern → Country
+    * Attack-Pattern → Region
+    * Attack-Pattern → Individual
+    * Attack-Pattern → Organization
+    * Attack-Pattern → Sector
+    * Attack-Pattern → Vulnerability
+    * Channel → Country
+    * Channel → Region
+    * Channel → Individual
+    * Channel → Organization
+    * Channel → Sector
+    * Channel → Vulnerability
+    * Malware → Organization
+    * Intrusion-Set → Organization
+    * Malware → Country
+    * Intrusion-Set → Country
+    * Malware → Region
+    * Intrusion-Set → Region
+    * Malware → Sector
+    * Intrusion-Set → Sector
+    * Intrusion-Set → Individual
+    * Malware → Individual
+    * Intrusion-Set → Vulnerability
+    
+</details>
+
+<details>
+    <summary>Exploits</summary>
+
+    * Malware → Vulnerability
+
+</details>
+
+<details>
+    <summary>Originates-from</summary>
+
+    * Intrusion-Set → Country
+    * Malware → Country
+    * Intrusion-Set → Region
+    * Malware → Region
+
+</details>
+
+<details>
+    <summary>Located-at</summary>
+
+    * Sector → Country
+    * Individual → Country
+    * Organization → Country
+    * IPv6-Addr.value → Country
+    * IPv4-Addr.value → Country
+    * Sector → Region
+    * Individual → Region
+    * Organization → Region
+    * IPv6-Addr.value → Region
+    * IPv4-Addr.value → Region
+
+</details>
+
+## Development
+
+A dedicated dev section is available in the [dev directory](./dev/README.md)
