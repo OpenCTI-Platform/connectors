@@ -10,6 +10,22 @@ The connector polls Sublime Security's message groups API endpoint to retrieve f
 - One Case object linked to the Incident for analysis
 - Observables extracted from email content (URLs, domains, IPs, email addresses, attachment file hashes)
 
+Example of event incidents created per message group:
+
+![Incident list](./images/OpenCTI_Sublime_Events.png)
+
+
+Example of cases created per incident:
+
+![Case list](./images/OpenCTI_Sublime_Cases.png)
+
+
+Example details added to an event incident:
+
+![Incident Detail](./images/OpenCTI_Sublime_Incident_Details.png)
+
+
+
 ## Installation
 
 ### Configuration
