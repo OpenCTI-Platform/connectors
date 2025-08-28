@@ -1,5 +1,6 @@
 import base64
 import os
+from collections import OrderedDict
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
@@ -193,6 +194,9 @@ class ReportImporter:
         if not parsed:
             return "No information extracted from report"
 
+        # Early dedupe
+        parsed = self._dedupe_parsed(parsed)
+
         # Step 3: Parse and build STIX entities / observables, and map text to STIX id (for relationship linking)
         observables, entities, uuid_to_stix, uuid_to_text = (
             self._process_parsing_results(parsed, entity)
@@ -212,7 +216,16 @@ class ReportImporter:
         )
 
         # Build an end‐user summary
-        if all(v == 0 for v in counts.values()):
+        if all(
+            counts[k] == 0
+            for k in (
+                "observables",
+                "entities",
+                "relationships",
+                "report",
+                "total_sent",
+            )
+        ):
             return "No STIX objects sent — empty extraction or all filtered out."
 
         skipped = counts.get("skipped_rels", [])
@@ -268,6 +281,70 @@ class ReportImporter:
         buffer.seek(0)
 
         return file_name, buffer
+
+    def _dedupe_parsed(self, parsed: dict) -> dict:
+        """Deduplicate span entities by (label, text, type) and remap relation IDs.
+
+        - First occurrence wins (case-insensitive, text trimmed).
+        - Rewrites relations' from_id/to_id to the kept ID.
+        - Preserves all other top-level and metadata fields.
+
+        Args:
+            parsed (dict): Full JSON payload returned by the Import-Document-AI web service.
+
+        Returns:
+            dict: A new payload with:
+                - `metadata.span_based_entities` deduplicated (first occurrence wins),
+                - `relations` endpoints (`from_id`/`to_id`) rewritten to canonical IDs,
+                - all other fields preserved unchanged.
+        """
+        metadata = parsed.get("metadata", {}) or {}
+        span = parsed.get("metadata", {}).get("span_based_entities", [])
+        rels = parsed.get("relations", [])
+
+        # case-insensitive, whitespace-trimmed key; first occurrence wins
+        buckets: "OrderedDict[tuple, dict]" = OrderedDict()
+        id_map: dict[str, str] = {}
+
+        for item in span:
+            label = str(item.get("label", "")).strip()
+            text = str(item.get("text", "")).strip()
+            typ = item.get("type")
+            key = (label.lower(), text.lower(), typ)
+            if key not in buckets:
+                buckets[key] = {
+                    "id": item["id"],
+                    "label": item["label"],
+                    "text": item["text"],
+                    "type": item["type"],
+                }
+            # map every original id to the kept id
+            id_map[item["id"]] = buckets[key]["id"]
+
+        new_rels = []
+        for relation in rels:
+            new_rels.append(
+                {
+                    **relation,
+                    "from_id": id_map.get(
+                        relation.get("from_id"), relation.get("from_id")
+                    ),
+                    "to_id": id_map.get(relation.get("to_id"), relation.get("to_id")),
+                }
+            )
+
+        if len(span) != len(buckets):
+            self.helper.connector_logger.debug(
+                f"Deduped span entities: kept {len(buckets)} of {len(span)}; "
+                f"remapped {len(new_rels)} relations."
+            )
+
+        new_parsed = dict(parsed)
+        new_metadata = dict(metadata)
+        new_metadata["span_based_entities"] = list(buckets.values())
+        new_parsed["metadata"] = new_metadata
+        new_parsed["relations"] = new_rels
+        return new_parsed
 
     def _process_parsing_results(
         self, parsed: dict, context_entity: dict | None
@@ -330,39 +407,48 @@ class ReportImporter:
                 self.helper.connector_logger.debug(
                     f"Skip object with invalid name: {match["text"]!r}"
                 )
-                assert txt is not None
+                continue
 
             if match["type"] == "entity":
-                # Create a STIX Domain Object (Malware, Identity, etc.)
-                stix_object = create_stix_object(
-                    category,
-                    txt,
-                    object_markings,
-                    custom_properties={
-                        "created_by_ref": author,
-                    },
-                )
+                # ATT&CK patterns: read-first (OR on x_mitre_id/name); create only if not found
                 # If it's an MITRE TTP (Attack-Pattern.x_mitre_id) and already exists, fetch that instead
                 if category == "Attack-Pattern.x_mitre_id":
                     ttp_object = self.helper.api.attack_pattern.read(
                         filters={
-                            "mode": "and",
+                            "mode": "or",
                             "filters": [
-                                {
-                                    "key": "x_mitre_id",
-                                    "values": [txt],
-                                }
+                                {"key": "x_mitre_id", "values": [txt]},
+                                {"key": "name", "values": [txt]},
                             ],
                             "filterGroups": [],
                         }
                     )
                     if ttp_object:  # Handles the case of an existing TTP
-                        stix_ttp = self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
+                        stix_object = self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
                             entity_type=ttp_object["entity_type"],
                             entity_id=ttp_object["id"],
                             only_entity=True,
                         )
-                        stix_object = stix_ttp
+                    else:
+                        stix_object = create_stix_object(
+                            category,
+                            txt,
+                            object_markings,
+                            custom_properties={
+                                "created_by_ref": author,
+                            },
+                        )
+                else:
+                    # Other SDOs: create directly; OpenCTI will merge on deterministic IDs
+                    stix_object = create_stix_object(
+                        category,
+                        txt,
+                        object_markings,
+                        custom_properties={
+                            "created_by_ref": author,
+                        },
+                    )
+
                 if stix_object:
                     entities.append(stix_object)
                     # store full object
@@ -373,7 +459,7 @@ class ReportImporter:
                         f"Unsupported entity category: {match}"
                     )
 
-            if match["type"] == "observable":
+            elif match["type"] == "observable":
                 # Create a STIX Cyber Observable (IPv4Address, DomainName, etc.)
                 stix_object = create_stix_object(
                     category,
@@ -392,6 +478,11 @@ class ReportImporter:
                     self.helper.connector_logger.debug(
                         f"Unsupported observable category: {match}"
                     )
+
+            else:
+                self.helper.connector_logger.debug(
+                    f"Unsupported match type: {match.get('type')!r} for {match}"
+                )
 
         return (
             observables,
@@ -677,10 +768,6 @@ class ReportImporter:
             if obj["id"] in final_ids:
                 self.helper.connector_logger.debug(
                     f"Duplicate object skipped: {obj['id']}"
-                )
-            if "name" not in obj:
-                self.helper.connector_logger.debug(
-                    f"Object without name accepted: {obj}"
                 )
             if obj["id"] not in final_ids and not bad_name:
                 final_ids.append(obj["id"])

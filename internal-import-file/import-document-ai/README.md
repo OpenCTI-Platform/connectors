@@ -30,7 +30,7 @@ OpenCTI data is coming from *import* connectors.
 | `connector_scope`                | `CONNECTOR_SCOPE`                       |                                        | Yes       | Supported file types: `'application/pdf','text/plain','text/html','text/markdown'`            |
 | `connector_log_level`            | `CONNECTOR_LOG_LEVEL`                   | error                                  | No        | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose). |
 | `connector_create_indicator`     | `CONNECTOR_CREATE_INDICATOR`            | `false`                                | No        | Create an indicator for each extracted observable                                             |
-| `connector_web_service_url`      | `CONNECTOR_WEB_SERVICE_URL`             | `https://importdoc.ariane.filigran.io` | No        | The URL of the extraction service running the AI model (                                      |
+| `connector_web_service_url`      | `CONNECTOR_WEB_SERVICE_URL`             | `https://importdoc.ariane.filigran.io` | No        | The URL of the extraction service running the AI model                                      |
 | `connector_licence_key_pem`      | `CONNECTOR_LICENCE_KEY_PEM`             |                                        | Yes       | The license certificate in a PEM format (provided by Filigran to Enterprise Edition users)    |
 
 ### Debugging
