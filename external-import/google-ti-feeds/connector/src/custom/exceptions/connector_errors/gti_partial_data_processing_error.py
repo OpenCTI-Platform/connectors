@@ -28,15 +28,28 @@ class GTIPartialDataProcessingError(GTIWorkProcessingError):
             details: Additional details about the error
 
         """
-        error_msg = f"Error processing partial data: {message}"
         if interruption_type:
-            error_msg = (
-                f"Error processing partial data after {interruption_type}: {message}"
-            )
-
-        if reports_count is not None:
-            error_msg += f" ({reports_count} reports were fetched)"
+            error_msg = "Error processing partial data after interruption: {message}"
+        else:
+            error_msg = f"Error processing partial data: {message}"
 
         super().__init__(error_msg, work_id, reports_count, details)
         self.interruption_type = interruption_type
         self.reports_count = reports_count
+
+        # Add structured data for logging
+        structured_details = details or {}
+        if interruption_type:
+            structured_details.update(
+                {
+                    "interruption_type": interruption_type,
+                    "original_message": message,
+                }
+            )
+        if reports_count is not None:
+            structured_details.update(
+                {
+                    "reports_count": reports_count,
+                }
+            )
+        self.details = structured_details

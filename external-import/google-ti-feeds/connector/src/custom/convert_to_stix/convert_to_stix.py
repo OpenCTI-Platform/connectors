@@ -28,7 +28,7 @@ class ConvertToSTIX:
         self.logger = logger
         self.tlp_level = tlp_level.lower()
 
-        self.logger.info(f"{LOG_PREFIX} Initializing converter")
+        self.logger.info("Initializing converter", {"prefix": LOG_PREFIX})
 
         self.shared_converter = ConvertToSTIXShared(config, logger, tlp_level)
 
@@ -51,7 +51,7 @@ class ConvertToSTIX:
             List of STIX entities (location, identity, report)
 
         """
-        self.logger.debug(f"{LOG_PREFIX} Starting report conversion")
+        self.logger.debug("Starting report conversion", {"prefix": LOG_PREFIX})
         return self.report_converter.convert_report_to_stix(report_data)
 
     def convert_threat_actor_to_stix(self, threat_actor_data: Any) -> List[Any]:
@@ -64,7 +64,7 @@ class ConvertToSTIX:
             List of STIX entities (location, identity, threat_actor)
 
         """
-        self.logger.debug(f"{LOG_PREFIX} Starting threat actor conversion")
+        self.logger.debug("Starting threat actor conversion", {"prefix": LOG_PREFIX})
         return self.threat_actor_converter.convert_threat_actor_to_stix(
             threat_actor_data
         )
@@ -79,7 +79,7 @@ class ConvertToSTIX:
             List of STIX entities (location, identity, malware)
 
         """
-        self.logger.debug(f"{LOG_PREFIX} Starting malware family conversion")
+        self.logger.debug("Starting malware family conversion", {"prefix": LOG_PREFIX})
         return self.malware_converter.convert_malware_family_to_stix(
             malware_family_data
         )

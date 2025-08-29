@@ -22,8 +22,8 @@ from connector.src.custom.exceptions import (
     GTIUrlConversionError,
     GTIVulnerabilityConversionError,
 )
-from connector.src.custom.mappers.gti_attack_techniques.gti_attack_technique_to_stix_attack_pattern import (
-    GTIAttackTechniqueToSTIXAttackPattern,
+from connector.src.custom.mappers.gti_attack_techniques.gti_attack_technique_ids_to_stix_attack_patterns import (
+    GTIAttackTechniqueIDsToSTIXAttackPatterns,
 )
 from connector.src.custom.mappers.gti_iocs.gti_domain_to_stix_domain import (
     GTIDomainToSTIXDomain,
@@ -58,8 +58,8 @@ from connector.src.custom.mappers.gti_threat_actors.gti_threat_actor_to_stix_loc
 from connector.src.custom.mappers.gti_vulnerabilities.gti_vulnerability_to_stix_vulnerability import (
     GTIVulnerabilityToSTIXVulnerability,
 )
-from connector.src.custom.models.gti.gti_attack_technique_model import (
-    GTIAttackTechniqueData,
+from connector.src.custom.models.gti.gti_attack_technique_id_model import (
+    GTIAttackTechniqueIDData,
 )
 from connector.src.custom.models.gti.gti_domain_model import (
     GTIDomainData,
@@ -149,15 +149,15 @@ GTI_THREAT_ACTOR_REPORT_CONVERTER_CONFIG = GenericConverterConfig(
 
 GTI_THREAT_ACTOR_ATTACK_TECHNIQUE_CONVERTER_CONFIG = GenericConverterConfig(
     entity_type="attack_techniques",
-    mapper_class=GTIAttackTechniqueToSTIXAttackPattern,
+    mapper_class=GTIAttackTechniqueIDsToSTIXAttackPatterns,
     output_stix_type="attack-pattern",
     exception_class=GTITechniqueConversionError,
     display_name="attack techniques",
-    input_model=GTIAttackTechniqueData,
+    input_model=GTIAttackTechniqueIDData,
     display_name_singular="attack technique",
     validate_input=True,
     postprocessing_function=uses_relationship(
-        GTIAttackTechniqueToSTIXAttackPattern, "intrusion_set"
+        GTIAttackTechniqueIDsToSTIXAttackPatterns, "intrusion_set"
     ),
 )
 

@@ -13,7 +13,7 @@ class GTIActorFetchError(GTIApiError):
         message: str,
         actor_id: Optional[str] = None,
         endpoint: Optional[str] = None,
-        status_code: Optional[int] = None,
+        status_code: Optional[str] = None,
         details: Optional[Dict[str, Any]] = None,
     ):
         """Initialize the exception.
@@ -27,9 +27,18 @@ class GTIActorFetchError(GTIApiError):
 
         """
         if actor_id:
-            error_msg = f"Error fetching threat actor {actor_id}: {message}"
+            error_msg = "Error fetching threat actor: {message}"
         else:
-            error_msg = f"Error fetching threat actors: {message}"
+            error_msg = "Error fetching threat actors: {message}"
 
         super().__init__(error_msg, status_code, endpoint, details)
         self.actor_id = actor_id
+
+        # Add structured data for logging
+        if hasattr(self, "structured_data"):
+            if actor_id:
+                self.structured_data["actor_id"] = actor_id
+        else:
+            self.structured_data = {}
+            if actor_id:
+                self.structured_data["actor_id"] = actor_id

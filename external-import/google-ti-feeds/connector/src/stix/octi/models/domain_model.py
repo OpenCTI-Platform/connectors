@@ -1,7 +1,6 @@
 """The module contains the OctiDomainModel class, which represents an OpenCTI Domain Name."""
 
 from typing import Any, Optional
-from uuid import uuid4
 
 from connector.src.stix.v21.models.scos.domain_name_model import DomainNameModel
 
@@ -41,7 +40,6 @@ class OctiDomainModel:
             custom_properties["x_opencti_create_indicator"] = create_indicator
 
         data = {
-            "id": f"domain-name--{uuid4()}",
             "type": "domain-name",
             "spec_version": "2.1",
             "value": value,

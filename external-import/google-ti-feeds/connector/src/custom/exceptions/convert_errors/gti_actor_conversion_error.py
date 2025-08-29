@@ -27,5 +27,11 @@ class GTIActorConversionError(GTIEntityConversionError):
         super().__init__(message, actor_id, "ThreatActor")
         self.actor_name = actor_name
 
-        if actor_name and not self.args[0].endswith(f"(name: {actor_name})"):
-            self.args = (f"{self.args[0]} (name: {actor_name})",)
+        # Add structured data for logging
+        if hasattr(self, "structured_data"):
+            if actor_name:
+                self.structured_data["actor_name"] = actor_name
+        else:
+            self.structured_data = {}
+            if actor_name:
+                self.structured_data["actor_name"] = actor_name

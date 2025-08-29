@@ -13,9 +13,13 @@ from connector.src.custom.configs.report.converter_config_report import (
 from connector.src.custom.configs.threat_actor.converter_config_threat_actor import (
     THREAT_ACTOR_CONVERTER_CONFIGS,
 )
+from connector.src.custom.configs.vulnerability.converter_config_vulnerability import (
+    VULNERABILITY_CONVERTER_CONFIGS,
+)
 
 CONVERTER_CONFIGS = {
     **REPORT_CONVERTER_CONFIGS,
     **THREAT_ACTOR_CONVERTER_CONFIGS,
     **MALWARE_CONVERTER_CONFIGS,
+    **VULNERABILITY_CONVERTER_CONFIGS,
 }

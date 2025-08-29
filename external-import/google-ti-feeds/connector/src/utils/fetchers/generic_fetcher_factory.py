@@ -46,7 +46,11 @@ class GenericFetcherFactory:
         """
         self._fetcher_registry[name] = config
         self.logger.debug(
-            f"{LOG_PREFIX} Registered fetcher config '{name}' for entity type '{config.entity_type}'"
+            f"{LOG_PREFIX} Registered fetcher config",
+            {
+                "name": name,
+                "entity_type": config.entity_type,
+            },
         )
 
     def create_fetcher(

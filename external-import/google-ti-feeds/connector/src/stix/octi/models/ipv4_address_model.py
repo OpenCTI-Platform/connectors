@@ -1,7 +1,6 @@
 """The module contains the OctiIPv4AddressModel class, which represents an OpenCTI IPv4 Address."""
 
 from typing import Any, Optional
-from uuid import uuid4
 
 from connector.src.stix.v21.models.scos.ipv4_address_model import IPv4AddressModel
 
@@ -41,7 +40,6 @@ class OctiIPv4AddressModel:
             custom_properties["x_opencti_create_indicator"] = create_indicator
 
         data = {
-            "id": f"ipv4-addr--{uuid4()}",
             "type": "ipv4-addr",
             "spec_version": "2.1",
             "value": value,

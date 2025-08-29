@@ -12,7 +12,7 @@ class GTIUrlFetchError(GTIApiError):
         self,
         message: str,
         endpoint: Optional[str] = None,
-        status_code: Optional[int] = None,
+        status_code: Optional[str] = None,
         details: Optional[Dict[str, Any]] = None,
     ):
         """Initialize the exception.
@@ -24,5 +24,13 @@ class GTIUrlFetchError(GTIApiError):
             details: Additional details about the error
 
         """
-        error_msg = f"Error fetching URLs: {message}"
+        error_msg = "Error fetching URLs: {message}"
         super().__init__(error_msg, status_code, endpoint, details)
+
+        # Add structured data for logging
+        if hasattr(self, "structured_data"):
+            pass  # structured_data will be inherited from parent GTIApiError
+        else:
+            self.structured_data = {
+                "original_message": message,
+            }

@@ -12,19 +12,3434 @@
       "self": "https://www.virustotal.com/api/v3/collections/vulnerability--cve-2021-26855"
     },
     "attributes": {
-      "name": "CVE-2021-26855",
-      "creation_date": 1614723108,
+      "alt_names_details": [
+        {
+          "first_seen": null,
+          "value": "ProxyLogon",
+          "last_seen": null,
+          "confidence": "possible",
+          "description": null
+        }
+      ],
+      "collection_type": "vulnerability",
       "cvss": {
-        "cvssv3": null
+        "cvssv3_x": {
+          "temporal_score": 9.8,
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+          "base_score": 9.8
+        },
+        "cvssv2_0": {
+          "temporal_score": 7.8,
+          "vector": "AV:N/AC:L/Au:N/C:C/I:C/A:N/E:F/RL:OF/RC:C",
+          "base_score": 9.4
+        }
       },
+      "status": "COMPUTED",
+      "cpes": [
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Microsoft",
+            "uri": "cpe:2.3:a:microsoft:exchange_server:2016:cumulative_update_16:*:*:*:*:*:*",
+            "version": "2016 Cumulativeupdate16",
+            "product": "Exchange Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Microsoft",
+            "uri": "cpe:2.3:a:microsoft:exchange_server:2016:cumulative_update_11:*:*:*:*:*:*",
+            "version": "2016 Cumulativeupdate11",
+            "product": "Exchange Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Microsoft",
+            "uri": "cpe:2.3:a:microsoft:exchange_server:2013:cumulative_update_21:*:*:*:*:*:*",
+            "version": "2013 Cumulativeupdate21",
+            "product": "Exchange Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Microsoft",
+            "uri": "cpe:2.3:a:microsoft:exchange_server:2019:cumulative_update_3:*:*:*:*:*:*",
+            "version": "2019 Cumulativeupdate3",
+            "product": "Exchange Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Microsoft",
+            "uri": "cpe:2.3:a:microsoft:exchange_server:2016:cumulative_update_18:*:*:*:*:*:*",
+            "version": "2016 Cumulativeupdate18",
+            "product": "Exchange Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Microsoft",
+            "uri": "cpe:2.3:a:microsoft:exchange_server:2016:cumulative_update_19:*:*:*:*:*:*",
+            "version": "2016 Cumulativeupdate19",
+            "product": "Exchange Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Microsoft",
+            "uri": "cpe:2.3:a:microsoft:exchange_server:2019:cumulative_update_4:*:*:*:*:*:*",
+            "version": "2019 Cumulativeupdate4",
+            "product": "Exchange Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Microsoft",
+            "uri": "cpe:2.3:a:microsoft:exchange_server:2016:cumulative_update_9:*:*:*:*:*:*",
+            "version": "2016 Cumulativeupdate9",
+            "product": "Exchange Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Microsoft",
+            "uri": "cpe:2.3:a:microsoft:exchange_server:2019:cumulative_update_7:*:*:*:*:*:*",
+            "version": "2019 Cumulativeupdate7",
+            "product": "Exchange Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Microsoft",
+            "uri": "cpe:2.3:a:microsoft:exchange_server:2019:cumulative_update_2:*:*:*:*:*:*",
+            "version": "2019 Cumulativeupdate2",
+            "product": "Exchange Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Microsoft",
+            "uri": "cpe:2.3:a:microsoft:exchange_server:2016:cumulative_update_17:*:*:*:*:*:*",
+            "version": "2016 Cumulativeupdate17",
+            "product": "Exchange Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Microsoft",
+            "uri": "cpe:2.3:a:microsoft:exchange_server:2013:cumulative_update_23:*:*:*:*:*:*",
+            "version": "2013 Cumulativeupdate23",
+            "product": "Exchange Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Microsoft",
+            "uri": "cpe:2.3:a:microsoft:exchange_server:2013:cumulative_update_22:*:*:*:*:*:*",
+            "version": "2013 Cumulativeupdate22",
+            "product": "Exchange Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Microsoft",
+            "uri": "cpe:2.3:a:microsoft:exchange_server:2019:-:*:*:*:*:*:*",
+            "version": "2019",
+            "product": "Exchange Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Microsoft",
+            "uri": "cpe:2.3:a:microsoft:exchange_server:2019:cumulative_update_8:*:*:*:*:*:*",
+            "version": "2019 Cumulativeupdate8",
+            "product": "Exchange Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Microsoft",
+            "uri": "cpe:2.3:a:microsoft:exchange_server:2016:cumulative_update_12:*:*:*:*:*:*",
+            "version": "2016 Cumulativeupdate12",
+            "product": "Exchange Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Microsoft",
+            "uri": "cpe:2.3:a:microsoft:exchange_server:2016:cumulative_update_14:*:*:*:*:*:*",
+            "version": "2016 Cumulativeupdate14",
+            "product": "Exchange Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Microsoft",
+            "uri": "cpe:2.3:a:microsoft:exchange_server:2016:cumulative_update_15:*:*:*:*:*:*",
+            "version": "2016 Cumulativeupdate15",
+            "product": "Exchange Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Microsoft",
+            "uri": "cpe:2.3:a:microsoft:exchange_server:2016:cumulative_update_8:*:*:*:*:*:*",
+            "version": "2016 Cumulativeupdate8",
+            "product": "Exchange Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Microsoft",
+            "uri": "cpe:2.3:a:microsoft:exchange_server:2016:cumulative_update_13:*:*:*:*:*:*",
+            "version": "2016 Cumulativeupdate13",
+            "product": "Exchange Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Microsoft",
+            "uri": "cpe:2.3:a:microsoft:exchange_server:2019:cumulative_update_6:*:*:*:*:*:*",
+            "version": "2019 Cumulativeupdate6",
+            "product": "Exchange Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Microsoft",
+            "uri": "cpe:2.3:a:microsoft:exchange_server:2019:cumulative_update_5:*:*:*:*:*:*",
+            "version": "2019 Cumulativeupdate5",
+            "product": "Exchange Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Microsoft",
+            "uri": "cpe:2.3:a:microsoft:exchange_server:2016:cumulative_update_10:*:*:*:*:*:*",
+            "version": "2016 Cumulativeupdate10",
+            "product": "Exchange Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Microsoft",
+            "uri": "cpe:2.3:a:microsoft:exchange_server:2019:cumulative_update_1:*:*:*:*:*:*",
+            "version": "2019 Cumulativeupdate1",
+            "product": "Exchange Server"
+          },
+          "start_rel": "="
+        }
+      ],
+      "priority": "P0",
+      "merged_actors": [],
+      "motivations": [],
+      "subscribers_count": 3,
+      "targeted_regions_hierarchy": [],
+      "top_icon_md5": [],
+      "exploitation": {
+        "tech_details_release_date": 1615248000,
+        "exploit_release_date": 1614729600,
+        "first_exploitation": 1609632000
+      },
+      "targeted_regions": [],
+      "counters": {
+        "files": 15,
+        "domains": 0,
+        "ip_addresses": 0,
+        "urls": 0,
+        "iocs": 15,
+        "subscribers": 3,
+        "attack_techniques": 0
+      },
+      "threat_scape": [],
+      "date_of_disclosure": 1614643200,
+      "alt_names": ["ProxyLogon"],
+      "workarounds": [
+        "<p>Microsoft recommends the following mitigation technique to offset the possibility of exploitation:</p>\n<p>&nbsp;</p>\n<p><strong>Backend Cookie Mitigation</strong></p>\n<p>&nbsp;</p>\n<p>Description:&nbsp;This mitigation will filter https requests that contain malicious X-AnonResource-Backend and malformed X-BEResource cookies which were found to be used in the SSRF attacks in the wild. This will help with defense against the known patterns observed but not the SSRF as a whole.</p>\n<p>&nbsp;</p>\n<p>Note:&nbsp;The IIS Rewrite rules will be removed after Exchange is upgraded and the mitigation will need to be reapplied if the security patch has not been installed.</p>\n<p>&nbsp;</p>\n<p>Requirements:&nbsp;URL Rewrite Module</p>\n<ul>\n<li>For IIS 10 and higher URL Rewrite Module 2.1 is recommended, version 2.1 (x86 and x64) can be downloaded here:\n<ul>\n<li><a href=\"https://www.iis.net/downloads/microsoft/url-rewrite\">https://www.iis.net/downloads/microsoft/url-rewrite</a></li>\n</ul>\n</li>\n<li>For IIS 8.5 and lower Rewrite Module 2.0 is recommended, version 2.0 can be downloaded here:\n<ul>\n<li>x86 &ndash;&nbsp;<a href=\"https://www.microsoft.com/en-us/download/details.aspx?id=5747\">https://www.microsoft.com/en-us/download/details.aspx?id=5747</a></li>\n<li>x64 &ndash;&nbsp;<a href=\"https://www.microsoft.com/en-us/download/details.aspx?id=7435\">https://www.microsoft.com/en-us/download/details.aspx?id=7435</a></li>\n</ul>\n</li>\n</ul>\n<p>&nbsp;</p>\n<p>Impact:&nbsp;No&nbsp;known&nbsp;impact to Exchange functionality if URL Rewrite module is installed as recommended.</p>\n<p>&nbsp;</p>\n<p>Installing URL Rewrite version 2.1 on IIS versions 8.5 and lower may cause IIS and Exchange to become unstable. If there is a mismatch between the URL Rewrite module and IIS version, ExchangeMitigations.ps1 will not apply the mitigation for CVE-2021-26855. You must uninstall the URL Rewrite module and reinstall the correct version.</p>\n<p>&nbsp;</p>\n<p>For more information, please see:&nbsp;<a href=\"https://msrc-blog.microsoft.com/2021/03/05/microsoft-exchange-server-vulnerabilities-mitigations-march-2021/\">Microsoft Exchange Server Vulnerabilities Mitigations &ndash; updated March 9, 2021</a></p>\n<p>&nbsp;</p>\n<p><strong>Exchange On-premises Mitigation Tool (EOMT)</strong></p>\n<p>&nbsp;</p>\n<p>Microsoft has released a new,&nbsp;one-click mitigation tool, Microsoft Exchange On-Premises Mitigation Tool to help customers who do not have dedicated security or IT teams to apply these security updates.</p>\n<p>&nbsp;</p>\n<p>For more details on how to obtain and use the tool, please see: <a href=\"https://msrc-blog.microsoft.com/2021/03/15/one-click-microsoft-exchange-on-premises-mitigation-tool-march-2021/\">One-Click Microsoft Exchange On-Premises Mitigation Tool &ndash; March 2021</a></p>"
+      ],
+      "recent_activity_summary": [0, 3, 4, 9, 7, 4, 12, 14, 8, 6, 4, 8, 16, 6],
+      "operating_systems": [],
+      "available_mitigation": ["Patch", "Workaround"],
+      "executive_summary": "\n\n* A Server-Side Request Forgery (SSRF) vulnerability exists that, when exploited, allows a remote attacker to execute arbitrary code.\n* This vulnerability has been confirmed to be widely exploited in the wild. Non-weaponized and proof-of-concept code is publicly available.\n* Google Threat Intelligence Group (GTIG) considers this a Critical-risk vulnerability due to the potential for arbitrary code execution.\n* Mitigation options include a patch and a workaround.\n",
+      "exploit_availability": "Publicly Available",
+      "name": "CVE-2021-26855",
+      "tags": [
+        "was_zero_day",
+        "has_exploits",
+        "observed_in_the_wild",
+        "media_attention"
+      ],
+      "vendor_fix_references": [
+        {
+          "cvss": null,
+          "title": "Microsoft Exchange Server Remote Code Execution Vulnerability (CVE-2021-26855)",
+          "published_date": 1614672000,
+          "unique_id": null,
+          "name": "Microsoft Corp.",
+          "source_description": null,
+          "md5": null,
+          "url": "https://msrc.microsoft.com/update-guide/en-US/vulnerability/CVE-2021-26855"
+        },
+        {
+          "cvss": null,
+          "title": null,
+          "published_date": null,
+          "unique_id": null,
+          "name": null,
+          "source_description": null,
+          "md5": null,
+          "url": "https://portal.msrc.microsoft.com/en-US/security-guidance/advisory/CVE-2021-26855"
+        },
+        {
+          "cvss": null,
+          "title": null,
+          "published_date": null,
+          "unique_id": "5000871",
+          "name": "Microsoft (5000871) Security Update Information",
+          "source_description": null,
+          "md5": null,
+          "url": "https://support.microsoft.com/en-us/help/5000871"
+        }
+      ],
+      "capabilities": [],
+      "private": true,
+      "risk_factors": [],
+      "predicted_risk_rating": "",
+      "analysis": "\n\nAn attacker could exploit this vulnerability to execute arbitrary code. The attacker needs to send a specially crafted HTTP request to the target server running Exchange with knowledge of the account from which they want to extract information.\n\n  \n\nOn March 2, 2021, Microsoft released information regarding limited and targeted attacks leveraging [CVE-2021-26855](https://intelligence.fireeye.com/reports/21-00004941 \"https://intelligence.fireeye.com/reports/21-00004941\"), [CVE-2021-26857](https://intelligence.fireeye.com/reports/21-00004938 \"https://intelligence.fireeye.com/reports/21-00004938\"), [CVE-2021-26858](https://intelligence.fireeye.com/reports/21-00004944 \"https://intelligence.fireeye.com/reports/21-00004944\"), and [CVE-2021-27065](https://intelligence.fireeye.com/reports/21-00004939 \"https://intelligence.fireeye.com/reports/21-00004939\"). For additional information regarding exploitation, please see: [HAFNIUM targeting Exchange Servers with 0-day exploits](https://www.microsoft.com/security/blog/2021/03/02/hafnium-targeting-exchange-servers/ \"https://www.microsoft.com/security/blog/2021/03/02/hafnium-targeting-exchange-servers/\").\n \nOn March 2, 2021, Volexity released a blog with their findings of exploitation activity in the wild. On March 8, they updated their blog noting they observed cyber espionage operations using the SSRF vulnerability which started occurring on January 3, 2021, three days earlier than initially posted. For more information, please see: [Operation Exchange Marauder: Active Exploitation of Multiple Zero-Day Microsoft Exchange Vulnerabilities](https://www.volexity.com/blog/2021/03/02/active-exploitation-of-microsoft-exchange-zero-day-vulnerabilities/).\n \nSecurity research group, DEVCORE, stated they reported the vulnerabilities and exploit to Microsoft back on January 5, 2021. For more details on their discoveries, please see the document: [ProxyLogon The latest pre-authenticated Remote Code Execution vulnerability on Microsoft Exchange Server](https://proxylogon.com/). Due to the timeline of events, it has been suggested that DEVCORE itself may have been the start of the leak. However, when DEVCORE learned that the ProxyLogon exploit was used by HAFNIUM from Volexity's advisory, they conducted an internal investigation and found no signs of hacking within their own systems. \n \nOn March 2, Rapid7 released a blog detailing potential indicators-of-compromise (IOCs), specifically covering instances of exploitation in which the China Chopper webshell was delivered as the payload. On March 3, this was followed by a second blog post containing mitigation advice and a summary of observed threat activity. For more information, please see the blog posts [Rapid7's InsightIDR Enables Detection And Response to Microsoft Exchange Zero-Day](https://blog.rapid7.com/2021/03/03/rapid7s-insightidr-enables-detection-and-response-to-microsoft-exchange-0-day/) and [Mass Exploitation of Exchange Server Zero-Day CVEs: What You Need to Know](https://blog.rapid7.com/2021/03/03/mass-exploitation-of-exchange-server-zero-day-cves-what-you-need-to-know/).\n \nOn March 3, 2021, CISA released an [Emergency Directive](https://cyber.dhs.gov/ed/21-02/) warning of active exploitation of these vulnerabilities and the required steps for agencies to take.\n \nOn March 10, 2021, Recorded Future reported that the first functional PoC was published by a Vietnamese security researcher on GitHub. For more details, see: [PoC released for Microsoft Exchange ProxyLogon vulnerabilities](https://therecord.media/poc-released-for-microsoft-exchange-proxylogon-vulnerabilities/). Microsoft immediately took this down according to Vice's article: [Researcher Publishes Code to Exploit Microsoft Exchange Vulnerabilities on GitHub](https://www.vice.com/en/article/n7vpaz/researcher-publishes-code-to-exploit-microsoft-exchange-vulnerabilities-on-github). Another security researcher, Marcus Hutchins, of Kryptos Logic, in a tweet, confirmed the availability of a public PoC and reported that the code contains bugs but was able to produce a shell: [MalwareTech's Twitter.](https://twitter.com/MalwareTechBlog?ref_src=twsrc%5Etfw%7Ctwcamp%5Etweetembed%7Ctwterm%5E1369729825104007169%7Ctwgr%5E%7Ctwcon%5Es1_&ref_url=https%3A%2F%2Ftherecord.media%2Fpoc-released-for-microsoft-exchange-proxylogon-vulnerabilities%2F) Mandiant Threat Intelligence was able to locate a backup of the posted code.\n \nOn March 19, 2021, exploit code for this vulnerability was reported added to the SAINT exploitation framework.\n \nIn August 2021, researchers from the security firm Cybereason reported findings indicating that Chinese-affiliated threat actor GALLIUM (also known as SoftCell) had been exploiting this vulnerability and others affiliated with ProxyLogon since, \"long before they became publicly known.\"\n \nIn October 2021, Mandiant observed an advertisement on a Russian exploit forum offering exploit code for sale believed to utilize this vulnerability in conjunction with CVE-2021-27065.\n \nOn Nov. 19, 2021, Trend Micro reported that this vulnerability was being exploited in the wild alongside CVE-2021-34473 and CVE-2021-34523 to deliver the Squirrelwaffle malware loader. For more technical information, please see Trend Micro's article, \"[Squirrelwaffle Exploits ProxyShell and ProxyLogon to Hijack Email Chains](https://www.trendmicro.com/en_us/research/21/k/Squirrelwaffle-Exploits-ProxyShell-and-ProxyLogon-to-Hijack-Email-Chains.html \"Squirrelwaffle Exploits ProxyShell and ProxyLogon to Hijack Email Chains\").\"\n \nAdditionally, Mandiant has published the following blog post containing technical information for multiple instances of threat activity: [Detection and Response to Exploitation of Microsoft Exchange Zero-Day Vulnerabilities](https://www.fireeye.com/blog/threat-research/2021/03/detection-response-to-exploitation-of-microsoft-exchange-zero-day-vulnerabilities.html).\n \nMandiant identified two preliminary clusters of activity exploiting this vulnerability chain. For more details, please see: [Suspected Chinese Espionage Operators Exploit Multiple Zero-Day Vulnerabilities in Microsoft Exchange](https://intelligence.fireeye.com/reports/21-00005010).\n \nIn November 2021, Mandiant observed threat actors on a Russian exploitation forum offering information about vulnerable servers for sale. Mandiant has not confirmed the validity of these listings.\n \nOn March 17, 2022, the Federal Bureau of Investigation (FBI) released a joint advisory stating that this vulnerability, alongside CVE-2021-31207, CVE-2021-34473, and CVE-2021-34523, are being used to deploy AvosLocker ransomware. For more information, please see the FBI's advisory, \"[Indicators of Compromise Associated with AvosLocker Ransomware](https://www.ic3.gov/Media/News/2022/220318.pdf).\"\n \nMandiant Threat Intelligence considers this a Critical-risk vulnerability due to the potential consequences requiring no user interaction, nor requiring any special knowledge.\n\n\n\n  \nCISA added this vulnerability to its Known Exploited Vulnerabilities Catalog on Nov. 3, 2021, with a required remediation date of April 16, 2021.\n\n",
+      "technologies": [],
+      "creation_date": 1614723108,
+      "last_seen_details": [],
+      "cisa_known_exploited": {
+        "ransomware_use": "Known",
+        "added_date": 1635897600,
+        "due_date": 1618531200
+      },
+      "domains_count": 0,
+      "summary_stats": {
+        "first_submission_date": {
+          "min": 1615214264.0,
+          "max": 1696769189.0,
+          "avg": 1633568116.5
+        },
+        "last_submission_date": {
+          "min": 1615309433.0,
+          "max": 1734134885.0,
+          "avg": 1654159139.625
+        },
+        "files_detections": {
+          "min": 0.0,
+          "max": 31.0,
+          "avg": 9.0
+        }
+      },
+      "targeted_industries_tree": [],
+      "exploitation_vectors": ["General Network Connectivity", "Web"],
+      "recent_activity_relative_change": 100.0,
+      "cve_id": "CVE-2021-26855",
+      "autogenerated_tags": [
+        "cve-2021-27065",
+        "cve-2021-26855",
+        "cve-2021-34473"
+      ],
       "epss": {
         "score": 0.94346,
         "percentile": 0.99951
       },
-      "link": null,
-      "last_modification_date": 1747761802,
+      "collection_links": [],
+      "origin": "Google Threat Intelligence",
+      "risk_rating": "CRITICAL",
+      "urls_count": 0,
+      "sources": [
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Threat Advisory: HAFNIUM and Microsoft Exchange zero-day",
+          "published_date": 1614834000,
+          "unique_id": null,
+          "name": "Cisco Systems Inc.",
+          "source_description": null,
+          "md5": null,
+          "url": "https://blog.talosintelligence.com/2021/03/threat-advisory-hafnium-and-microsoft.html"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Emergency Directive 21-02",
+          "published_date": 1614747600,
+          "unique_id": "21-02",
+          "name": "Cybersecurity and Infrastructure Security Agency (CISA)",
+          "source_description": null,
+          "md5": null,
+          "url": "https://cyber.dhs.gov/ed/21-02"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": {
+              "temporal_score": null,
+              "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N/E:F/RL:O/RC:C",
+              "base_score": 9.1
+            },
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": 1614729326,
+          "unique_id": null,
+          "name": "Cybersecurity and Infrastructure Security Agency (CISA)",
+          "source_description": null,
+          "md5": "1c768c8e283e754398199c7eb8aeba0e",
+          "url": "https://github.com/cisagov/vulnrichment/blob/develop/2021/26xxx/CVE-2021-26855.json"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": 1627444800,
+          "unique_id": "AA21-209A",
+          "name": "Cybersecurity and Infrastructure Security Agency (CISA)",
+          "source_description": null,
+          "md5": null,
+          "url": "https://us-cert.cisa.gov/ncas/alerts/aa21-209a"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Mitigate Microsoft Exchange Server Vulnerabilities",
+          "published_date": 1614729600,
+          "unique_id": "AA21-062A",
+          "name": "Cybersecurity and Infrastructure Security Agency (CISA)",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.cisa.gov/news-events/cybersecurity-advisories/aa21-062a"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "2022 Top Routinely Exploited Vulnerabilities",
+          "published_date": 1691020800,
+          "unique_id": "AA23-215A",
+          "name": "Cybersecurity and Infrastructure Security Agency (CISA)",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-215a"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "AA23-215A: 2022's Top Routinely Exploited Vulnerabilities",
+          "published_date": 1691020800,
+          "unique_id": null,
+          "name": "Tenable Inc.",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.tenable.com/blog/aa23-215a-2022s-top-routinely-exploited-vulnerabilities"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": 1648094400,
+          "unique_id": null,
+          "name": "Tenable Inc.",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.tenable.com/blog/contileaks-chats-reveal-over-30-vulnerabilities-used-by-conti-ransomware-affiliates"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "ProxyNotShell, OWASSRF, TabShell: Patch Your Microsoft Exchange Servers Now",
+          "published_date": 1675148400,
+          "unique_id": null,
+          "name": "Tenable Inc.",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.tenable.com/blog/proxynotshell-owassrf-tabshell-patch-your-microsoft-exchange-servers-now"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": 1637362800,
+          "unique_id": null,
+          "name": "Trend Micro Inc.",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.trendmicro.com/en_us/research/21/k/Squirrelwaffle-Exploits-ProxyShell-and-ProxyLogon-to-Hijack-Email-Chains.html"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Operation Diplomatic Specter: An Active Chinese Cyberespionage Campaign Leverages Rare Tool Set to Target Governmental Entities in the Middle East, Africa and Asia",
+          "published_date": 1711152000,
+          "unique_id": null,
+          "name": "Palo Alto Networks Inc.",
+          "source_description": null,
+          "md5": null,
+          "url": "https://unit42.paloaltonetworks.com/operation-diplomatic-specter"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": 1614790800,
+          "unique_id": null,
+          "name": "Rapid7",
+          "source_description": null,
+          "md5": null,
+          "url": "https://blog.rapid7.com/2021/03/03/mass-exploitation-of-exchange-server-zero-day-cves-what-you-need-to-know"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": 1614704400,
+          "unique_id": null,
+          "name": "Rapid7",
+          "source_description": null,
+          "md5": null,
+          "url": "https://blog.rapid7.com/2021/03/03/rapid7s-insightidr-enables-detection-and-response-to-microsoft-exchange-0-day"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Popular Attack Surfaces, August 2021: What You Need to Know",
+          "published_date": 1628740800,
+          "unique_id": null,
+          "name": "Rapid7",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.rapid7.com/blog/post/2021/08/12/popular-attack-surfaces-august-2021-what-you-need-to-know"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": 1614834000,
+          "unique_id": null,
+          "name": "FireEye Inc.",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.fireeye.com/blog/threat-research/2021/03/detection-response-to-exploitation-of-microsoft-exchange-zero-day-vulnerabilities.html"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Multiple Security Updates Released for Exchange Server",
+          "published_date": 1614661200,
+          "unique_id": null,
+          "name": "Microsoft Corp.",
+          "source_description": null,
+          "md5": null,
+          "url": "https://msrc-blog.microsoft.com/2021/03/02/multiple-security-updates-released-for-exchange-server"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Microsoft Exchange Server Vulnerabilities Mitigations – updated March 9, 2021",
+          "published_date": 1614920400,
+          "unique_id": null,
+          "name": "Microsoft Corp.",
+          "source_description": null,
+          "md5": null,
+          "url": "https://msrc-blog.microsoft.com/2021/03/05/microsoft-exchange-server-vulnerabilities-mitigations-march-2021"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "One-Click Microsoft Exchange On-Premises Mitigation Tool – March 2021",
+          "published_date": 1615824000,
+          "unique_id": null,
+          "name": "Microsoft Corp.",
+          "source_description": null,
+          "md5": null,
+          "url": "https://msrc-blog.microsoft.com/2021/03/15/one-click-microsoft-exchange-on-premises-mitigation-tool-march-2021"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Released: March 2021 Exchange Server Security Updates",
+          "published_date": 1614661200,
+          "unique_id": null,
+          "name": "Microsoft Corp.",
+          "source_description": null,
+          "md5": null,
+          "url": "https://techcommunity.microsoft.com/t5/exchange-team-blog/released-march-2021-exchange-server-security-updates/ba-p/2175901"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "HAFNIUM targeting Exchange Servers with 0-day exploits",
+          "published_date": 1614704400,
+          "unique_id": null,
+          "name": "Microsoft Corp.",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.microsoft.com/security/blog/2021/03/02/hafnium-targeting-exchange-servers"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "CISA Known Exploited Vulnerabilities Catalog",
+          "published_date": 1635940800,
+          "unique_id": null,
+          "name": "CISA",
+          "source_description": "CISA's Known Exploited Vulnerabilities Catalog",
+          "md5": null,
+          "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Sensor Intel Series: Top CVEs in August 2023",
+          "published_date": 1695600000,
+          "unique_id": null,
+          "name": "F5, Inc.",
+          "source_description": "<p>F5's Sensor Intelligence Series a recurring monthly summary of vulnerability intelligence based on distributed passive sensor data.</p>",
+          "md5": null,
+          "url": "https://www.f5.com/labs/articles/threat-intelligence/sensor-intel-series-top-cves-august-2023"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Sensor Intel Series: Top CVEs in December 2023",
+          "published_date": 1706054400,
+          "unique_id": null,
+          "name": "F5, Inc.",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.f5.com/labs/articles/threat-intelligence/sensor-intel-series-top-cves-december-2023"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Sensor Intel Series: Top CVEs in February 2024",
+          "published_date": 1711584000,
+          "unique_id": null,
+          "name": "F5, Inc.",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.f5.com/labs/articles/threat-intelligence/sensor-intel-series-top-cves-february-2024"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Introducing the Sensor Intel Series: Top CVEs Jan-Jun 2022",
+          "published_date": 1660024800,
+          "unique_id": null,
+          "name": "F5, Inc.",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.f5.com/labs/articles/threat-intelligence/sensor-intel-series-top-cves-jan-jun-2022"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Sensor Intel Series: Top CVEs in July 2023",
+          "published_date": 1692835200,
+          "unique_id": null,
+          "name": "F5, Inc.",
+          "source_description": "<p>F5's Sensor Intel Series</p>",
+          "md5": null,
+          "url": "https://www.f5.com/labs/articles/threat-intelligence/sensor-intel-series-top-cves-july-2023"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Scanning for CVE-2017-9841 Drops Precipitously",
+          "published_date": 1724284800,
+          "unique_id": null,
+          "name": "F5, Inc.",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.f5.com/labs/articles/threat-intelligence/sensor-intel-series-top-cves-july-2024"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Sensor Intel Series: Top CVEs in June 2023",
+          "published_date": 1689897600,
+          "unique_id": null,
+          "name": "F5, Inc.",
+          "source_description": "<p>F5's Sensor Intel Series</p>",
+          "md5": null,
+          "url": "https://www.f5.com/labs/articles/threat-intelligence/sensor-intel-series-top-cves-june-2023"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Sensor Intel Series: Top CVEs in March 2024",
+          "published_date": 1714435200,
+          "unique_id": null,
+          "name": "F5, Inc.",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.f5.com/labs/articles/threat-intelligence/sensor-intel-series-top-cves-march-2024"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Sensor Intel Series: Top CVEs in May 2023",
+          "published_date": 1686873600,
+          "unique_id": null,
+          "name": "F5, Inc.",
+          "source_description": "<p>F5's Sensor Intel Series</p>",
+          "md5": null,
+          "url": "https://www.f5.com/labs/articles/threat-intelligence/sensor-intel-series-top-cves-may-2023"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Sensor Intel Series: Top CVEs in October 2023",
+          "published_date": 1701043200,
+          "unique_id": null,
+          "name": "F5, Inc.",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.f5.com/labs/articles/threat-intelligence/sensor-intel-series-top-cves-october-2023"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Sensor Intel Series: Top CVEs in September 2023",
+          "published_date": 1697587200,
+          "unique_id": null,
+          "name": "F5, Inc.",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.f5.com/labs/articles/threat-intelligence/sensor-intel-series-top-cves-september-2023"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Continued Intense Scanning From One IP in Lithuania",
+          "published_date": 1729468800,
+          "unique_id": null,
+          "name": "F5, Inc.",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.f5.com/labs/articles/threat-intelligence/sensor-intel-series-top-cves-september-2024"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": {
+              "temporal_score": null,
+              "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N/E:F/RL:O/RC:C",
+              "base_score": 9.1
+            },
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": 1614729326,
+          "unique_id": null,
+          "name": "Mitre Corporation",
+          "source_description": null,
+          "md5": "44fb03e98317996319684f9cf99ebc50",
+          "url": "https://github.com/CVEProject/cvelistV5/blob/main/cves/2021/26xxx/CVE-2021-26855.json"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": {
+              "temporal_score": null,
+              "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N",
+              "base_score": 9.1
+            },
+            "cvssv2_0": {
+              "temporal_score": null,
+              "vector": "AV:N/AC:L/Au:N/C:P/I:P/A:P",
+              "base_score": 7.5
+            },
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": 1614730512,
+          "unique_id": null,
+          "name": "National Vulnerability Database",
+          "source_description": null,
+          "md5": null,
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-26855"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "0day \"In the Wild\"",
+          "published_date": null,
+          "unique_id": null,
+          "name": "Google LLC",
+          "source_description": null,
+          "md5": null,
+          "url": "https://docs.google.com/spreadsheets/d/1lkNJ0uQwbeC1ZTRrxdtuPLCIl7mlUreoKfSIgajnSyY/view"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "New PoC for Microsoft Exchange bugs puts attacks in reach of anyone",
+          "published_date": 1615737600,
+          "unique_id": null,
+          "name": "Bleeping Computer",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.bleepingcomputer.com/news/security/new-poc-for-microsoft-exchange-bugs-puts-attacks-in-reach-of-anyone"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "State hackers rush to exploit unpatched Microsoft Exchange servers",
+          "published_date": 1614790800,
+          "unique_id": null,
+          "name": "Bleeping Computer",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.bleepingcomputer.com/news/security/state-hackers-rush-to-exploit-unpatched-microsoft-exchange-servers"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "The Microsoft Exchange hacks: How they started and where we are",
+          "published_date": 1615910400,
+          "unique_id": null,
+          "name": "Bleeping Computer",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.bleepingcomputer.com/news/security/the-microsoft-exchange-hacks-how-they-started-and-where-we-are"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Microsoft Exchange Server ProxyLogon vulnerability",
+          "published_date": 1616169600,
+          "unique_id": null,
+          "name": "SAINT Corp.",
+          "source_description": null,
+          "md5": null,
+          "url": "http://download.saintcorporation.com/cgi-bin/exploit_info/exchange_proxylogon"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "URGENT — 4 Actively Exploited 0-Day Flaws Found in Microsoft Exchange",
+          "published_date": 1614661200,
+          "unique_id": null,
+          "name": "The Hacker News",
+          "source_description": null,
+          "md5": null,
+          "url": "https://thehackernews.com/2021/03/cisa-issues-emergency-directive-on-in.html"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "14 Exploits Cybersecurity Professionals Are Concerned About",
+          "published_date": 1626840000,
+          "unique_id": null,
+          "name": "Core Security Technologies",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.coresecurity.com/blog/14-exploits-cybersecurity-professionals-are-concerned-about"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Qualys Top 20 Most Exploited Vulnerabilities",
+          "published_date": 1693785600,
+          "unique_id": null,
+          "name": "Qualys Inc.",
+          "source_description": null,
+          "md5": null,
+          "url": "https://blog.qualys.com/vulnerabilities-threat-research/2023/09/04/qualys-top-20-exploited-vulnerabilities"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Defense Lessons From the Black Basta Ransomware Playbook",
+          "published_date": 1740441600,
+          "unique_id": null,
+          "name": "Qualys Inc.",
+          "source_description": null,
+          "md5": null,
+          "url": "https://blog.qualys.com/vulnerabilities-threat-research/2025/02/25/defense-lessons-from-the-black-basta-ransomware-playbook"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "ProxyLogon is just the tip of the iceberg, a new attack surface against Microsoft Exchange Server!",
+          "published_date": 1628308800,
+          "unique_id": null,
+          "name": "DEVCORE",
+          "source_description": null,
+          "md5": null,
+          "url": "https://devco.re/blog/2021/08/07/a-new-attack-surface-on-MS-exchange"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "ProxyLogon The latest pre-authenticated Remote Code Execution vulnerability on Microsoft Exchange Server",
+          "published_date": 1614920400,
+          "unique_id": null,
+          "name": "DEVCORE",
+          "source_description": "<p>ProxyLogon's branded vulnerability page</p>",
+          "md5": null,
+          "url": "https://proxylogon.com"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": 1647900000,
+          "unique_id": null,
+          "name": "Malwarebytes",
+          "source_description": null,
+          "md5": null,
+          "url": "https://blog.malwarebytes.com/ransomware/2022/03/avoslocker-ransomware-uses-microsoft-exchange-server-vulnerabilities-says-fbi"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "From Bugs to Breaches: 25 Significant CVEs As MITRE CVE Turns 25",
+          "published_date": 1729555200,
+          "unique_id": null,
+          "name": "Tenable Blog",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.tenable.com/blog/from-bugs-to-breaches-25-significant-cves-as-mitre-cve-turns-25"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Salt Typhoon: An Analysis of Vulnerabilities Exploited by this State-Sponsored Actor - Blog | Tenable®",
+          "published_date": 1737590400,
+          "unique_id": null,
+          "name": "Tenable Blog",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.tenable.com/blog/salt-typhoon-an-analysis-of-vulnerabilities-exploited-by-this-state-sponsored-actor"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Operation Exchange Marauder: Active Exploitation of Multiple Zero-Day Microsoft Exchange Vulnerabilities",
+          "published_date": 1614704400,
+          "unique_id": null,
+          "name": "Volexity",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.volexity.com/blog/2021/03/02/active-exploitation-of-microsoft-exchange-zero-day-vulnerabilities"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "PoC released for Microsoft Exchange ProxyLogon vulnerabilities",
+          "published_date": 1615352400,
+          "unique_id": null,
+          "name": "The Record",
+          "source_description": null,
+          "md5": null,
+          "url": "https://therecord.media/poc-released-for-microsoft-exchange-proxylogon-vulnerabilities"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "China APT Stole Geopolitical Secrets From Middle East, Africa & Asia",
+          "published_date": 1711152000,
+          "unique_id": null,
+          "name": "Dark Reading",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.darkreading.com/threat-intelligence/china-apt-stole-geopolitical-secrets-from-middle-east-africa-and-asia"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Reproducing the Microsoft Exchange Proxylogon Exploit Chain",
+          "published_date": 1615266000,
+          "unique_id": null,
+          "name": "Praetorian",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.praetorian.com/blog/reproducing-proxylogon-exploit"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": 1627963200,
+          "unique_id": null,
+          "name": "Cybereason",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.cybereason.com/blog/deadringer-exposing-chinese-threat-actors-targeting-major-telcos"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "CU-000164-MW",
+          "published_date": 1647554400,
+          "unique_id": "CU-000164-MW",
+          "name": "Federal Bureau of Investigation Internet Crime Complaint Center IC3",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.ic3.gov/Media/News/2022/220318.pdf"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "White House cites 'active threat,' urges action despite Microsoft patch",
+          "published_date": 1615093200,
+          "unique_id": null,
+          "name": "Reuters",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.reuters.com/article/us-usa-cyber-microsoft/white-house-cites-active-threat-urges-action-despite-microsoft-patch-idUSKBN2AZ0OQ"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Researcher Publishes Code to Exploit Microsoft Exchange Vulnerabilities on Github",
+          "published_date": 1615438800,
+          "unique_id": null,
+          "name": "Vice",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.vice.com/en/article/n7vpaz/researcher-publishes-code-to-exploit-microsoft-exchange-vulnerabilities-on-github"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "BotPoke Scanner Switches IP",
+          "published_date": 1732492800,
+          "unique_id": null,
+          "name": "F5 Labs",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.f5.com/labs/articles/threat-intelligence/botpoke-scanner-switches-ip"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Sensor Intel Series: Top CVEs in January 2024",
+          "published_date": 1708300800,
+          "unique_id": null,
+          "name": "F5 Inc.",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.f5.com/labs/articles/threat-intelligence/sensor-intel-series-top-cves-january-2024"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": "Sensor Intel Series: Top CVEs in November 2023",
+          "published_date": 1702944000,
+          "unique_id": null,
+          "name": "F5 Inc.",
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.f5.com/labs/articles/threat-intelligence/sensor-intel-series-top-cves-november-2023"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": null,
+          "unique_id": null,
+          "name": null,
+          "source_description": null,
+          "md5": null,
+          "url": "http://packetstormsecurity.com/files/161846/Microsoft-Exchange-2019-SSRF-Arbitrary-File-Write.html"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": null,
+          "unique_id": null,
+          "name": null,
+          "source_description": null,
+          "md5": null,
+          "url": "http://packetstormsecurity.com/files/161938/Microsoft-Exchange-ProxyLogon-Remote-Code-Execution.html"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": null,
+          "unique_id": null,
+          "name": null,
+          "source_description": null,
+          "md5": null,
+          "url": "http://packetstormsecurity.com/files/162610/Microsoft-Exchange-2019-Unauthenticated-Email-Download.html"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": null,
+          "unique_id": null,
+          "name": null,
+          "source_description": null,
+          "md5": null,
+          "url": "http://packetstormsecurity.com/files/162736/Microsoft-Exchange-ProxyLogon-Collector.html"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": 1614729600,
+          "unique_id": null,
+          "name": null,
+          "source_description": null,
+          "md5": null,
+          "url": "https://f5.pm/go-62102.html"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": 1615420800,
+          "unique_id": null,
+          "name": null,
+          "source_description": null,
+          "md5": null,
+          "url": "https://git.blackmarble.sh/backup/proxyLogon/-/blob/main/PoC_proxyLogon.py"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": 1633737600,
+          "unique_id": null,
+          "name": null,
+          "source_description": null,
+          "md5": null,
+          "url": "https://github.com/Jumbo-WJB/Exchange_SSRF"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": 1615161600,
+          "unique_id": null,
+          "name": null,
+          "source_description": null,
+          "md5": null,
+          "url": "https://github.com/Udyz/Proxylogon"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": 1614816000,
+          "unique_id": null,
+          "name": null,
+          "source_description": null,
+          "md5": null,
+          "url": "https://github.com/ZephrFish/Exch-CVE-2021-26855"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": 1614988800,
+          "unique_id": null,
+          "name": null,
+          "source_description": null,
+          "md5": null,
+          "url": "https://github.com/charlottelatest/CVE-2021-26855"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": 1614816000,
+          "unique_id": null,
+          "name": null,
+          "source_description": null,
+          "md5": null,
+          "url": "https://github.com/shacojx/CVE_2021_26855_Exploit_Hub"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": 1615075200,
+          "unique_id": null,
+          "name": null,
+          "source_description": null,
+          "md5": null,
+          "url": "https://gitlab.com/gvillegas/ohwaa"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": 1615248000,
+          "unique_id": null,
+          "name": null,
+          "source_description": null,
+          "md5": null,
+          "url": "https://raw.githubusercontent.com/rapid7/metasploit-framework/master/modules/auxiliary/gather/exchange_proxylogon_collector.rb"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": 1615507200,
+          "unique_id": null,
+          "name": null,
+          "source_description": null,
+          "md5": null,
+          "url": "https://raw.githubusercontent.com/rapid7/metasploit-framework/master/modules/exploits/windows/http/exchange_proxylogon_rce.rb"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": 1615420800,
+          "unique_id": null,
+          "name": null,
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.exploit-db.com/exploits/49637"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": 1615680000,
+          "unique_id": null,
+          "name": null,
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.exploit-db.com/exploits/49663"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": 1621296000,
+          "unique_id": null,
+          "name": null,
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.exploit-db.com/exploits/49879"
+        },
+        {
+          "cvss": {
+            "cvssv3_x_translated": null,
+            "cvssv3_x": null,
+            "cvssv2_0": null,
+            "cvssv4_x": null
+          },
+          "title": null,
+          "published_date": 1621555200,
+          "unique_id": null,
+          "name": null,
+          "source_description": null,
+          "md5": null,
+          "url": "https://www.exploit-db.com/exploits/49895"
+        }
+      ],
+      "detection_names": [],
+      "targeted_industries": [],
+      "malware_roles": [],
+      "exploitation_consequence": "Code Execution",
+      "source_regions_hierarchy": [],
+      "mve_id": "MVE-2021-10354",
+      "last_modification_date": 1750839775,
+      "vulnerable_products": "",
+      "mitigations": [],
+      "affected_systems": [],
+      "ip_addresses_count": 0,
+      "intended_effects": [],
+      "references_count": 0,
+      "exploitation_state": "Wide",
+      "targeted_informations": [],
+      "is_content_translated": false,
+      "cwe": {
+        "title": "Server-Side Request Forgery (SSRF)",
+        "id": "CWE-918"
+      },
+      "first_seen_details": [],
+      "files_count": 15,
       "description": "\n\nA remote code execution vulnerability exists in Exchange Server 2019 Cumulative Update 8.  \nAn attacker who successfully exploited the vulnerability could run arbitrary code on the affected system.\n\n",
-      "private": true
+      "version_history": [
+        {
+          "date": 1743029278,
+          "version_notes": ["epss.score: 0.97508 -> 0.94351"]
+        },
+        {
+          "date": 1740607993,
+          "version_notes": [
+            "sources: Added https://blog.qualys.com/vulnerabilities-threat-research/2025/02/25/defense-lessons-from-the-black-basta-ransomware-playbook"
+          ]
+        },
+        {
+          "date": 1739501209,
+          "version_notes": ["priority: Added"]
+        },
+        {
+          "date": 1738740626,
+          "version_notes": [
+            "sources: Added https://github.com/cisagov/vulnrichment/blob/develop/2021/26xxx/CVE-2021-26855.json"
+          ]
+        },
+        {
+          "date": 1737724996,
+          "version_notes": [
+            "sources: Added https://www.tenable.com/blog/salt-typhoon-an-analysis-of-vulnerabilities-exploited-by-this-state-sponsored-actor"
+          ]
+        },
+        {
+          "date": 1736279627,
+          "version_notes": [
+            "sources: Added https://www.exploit-db.com/exploits/49663",
+            "sources: Added https://www.exploit-db.com/exploits/49637",
+            "sources: Added https://www.exploit-db.com/exploits/49879",
+            "sources: Added https://www.exploit-db.com/exploits/49895"
+          ]
+        },
+        {
+          "date": 1736276173,
+          "version_notes": [
+            "sources: Added https://www.f5.com/labs/articles/threat-intelligence/botpoke-scanner-switches-ip"
+          ]
+        },
+        {
+          "date": 1729692397,
+          "version_notes": [
+            "sources: Added https://www.tenable.com/blog/from-bugs-to-breaches-25-significant-cves-as-mitre-cve-turns-25"
+          ]
+        },
+        {
+          "date": 1729679484,
+          "version_notes": [
+            "sources: Added https://www.f5.com/labs/articles/threat-intelligence/sensor-intel-series-top-cves-july-2024"
+          ]
+        },
+        {
+          "date": 1729679352,
+          "version_notes": [
+            "sources: Added https://www.f5.com/labs/articles/threat-intelligence/sensor-intel-series-top-cves-september-2024"
+          ]
+        },
+        {
+          "date": 1722739737,
+          "version_notes": [
+            "sources: Added https://github.com/CVEProject/cvelistV5/blob/main/cves/2021/26xxx/CVE-2021-26855.json"
+          ]
+        },
+        {
+          "date": 1716583367,
+          "version_notes": [
+            "sources: Added https://www.darkreading.com/threat-intelligence/china-apt-stole-geopolitical-secrets-from-middle-east-africa-and-asia"
+          ]
+        },
+        {
+          "date": 1716488915,
+          "version_notes": [
+            "sources: Added https://unit42.paloaltonetworks.com/operation-diplomatic-specter"
+          ]
+        },
+        {
+          "date": 1714593472,
+          "version_notes": [
+            "sources: Added https://www.f5.com/labs/articles/threat-intelligence/sensor-intel-series-top-cves-march-2024"
+          ]
+        },
+        {
+          "date": 1711998556,
+          "version_notes": [
+            "sources: Added https://www.f5.com/labs/articles/threat-intelligence/sensor-intel-series-top-cves-february-2024"
+          ]
+        },
+        {
+          "date": 1708616767,
+          "version_notes": [
+            "sources: Added https://www.f5.com/labs/articles/threat-intelligence/sensor-intel-series-top-cves-january-2024"
+          ]
+        },
+        {
+          "date": 1706216256,
+          "version_notes": [
+            "sources: Added https://www.f5.com/labs/articles/threat-intelligence/sensor-intel-series-top-cves-december-2023"
+          ]
+        },
+        {
+          "date": 1703095283,
+          "version_notes": [
+            "sources: Added https://www.f5.com/labs/articles/threat-intelligence/sensor-intel-series-top-cves-november-2023"
+          ]
+        },
+        {
+          "date": 1701172780,
+          "version_notes": [
+            "sources: Added https://www.f5.com/labs/articles/threat-intelligence/sensor-intel-series-top-cves-october-2023"
+          ]
+        },
+        {
+          "date": 1697772046,
+          "version_notes": ["exploitation.tech_details_release_date: Added"]
+        },
+        {
+          "date": 1697722905,
+          "version_notes": [
+            "sources: Added https://github.com/charlottelatest/CVE-2021-26855",
+            "sources: Added https://github.com/ZephrFish/Exch-CVE-2021-26855",
+            "sources: Added https://git.blackmarble.sh/backup/proxyLogon/-/blob/main/PoC_proxyLogon.py",
+            "sources: Added https://github.com/Jumbo-WJB/Exchange_SSRF",
+            "sources: Added https://f5.pm/go-62102.html",
+            "sources: Added https://gitlab.com/gvillegas/ohwaa",
+            "sources: Added https://github.com/shacojx/CVE_2021_26855_Exploit_Hub",
+            "sources: Added https://github.com/Udyz/Proxylogon"
+          ]
+        },
+        {
+          "date": 1697714011,
+          "version_notes": [
+            "sources: Added https://www.f5.com/labs/articles/threat-intelligence/sensor-intel-series-top-cves-september-2023"
+          ]
+        },
+        {
+          "date": 1695823679,
+          "version_notes": [
+            "sources: Added https://www.f5.com/labs/articles/threat-intelligence/sensor-intel-series-top-cves-june-2023",
+            "sources: Added https://www.f5.com/labs/articles/threat-intelligence/sensor-intel-series-top-cves-may-2023"
+          ]
+        },
+        {
+          "date": 1695822928,
+          "version_notes": [
+            "sources: Added https://www.f5.com/labs/articles/threat-intelligence/sensor-intel-series-top-cves-july-2023"
+          ]
+        },
+        {
+          "date": 1695822288,
+          "version_notes": [
+            "sources: Added https://www.f5.com/labs/articles/threat-intelligence/sensor-intel-series-top-cves-august-2023"
+          ]
+        },
+        {
+          "date": 1695650916,
+          "version_notes": [
+            "sources: Added https://raw.githubusercontent.com/rapid7/metasploit-framework/master/modules/exploits/windows/http/exchange_proxylogon_rce.rb",
+            "sources: Added https://raw.githubusercontent.com/rapid7/metasploit-framework/master/modules/auxiliary/gather/exchange_proxylogon_collector.rb"
+          ]
+        },
+        {
+          "date": 1693944912,
+          "version_notes": [
+            "sources: Added https://blog.qualys.com/vulnerabilities-threat-research/2023/09/04/qualys-top-20-exploited-vulnerabilities"
+          ]
+        },
+        {
+          "date": 1691419179,
+          "version_notes": [
+            "exploitation.exploit_release_date: 2021-02-26 -> 2021-03-03"
+          ]
+        },
+        {
+          "date": 1691155777,
+          "version_notes": [
+            "sources: Added https://www.tenable.com/blog/aa23-215a-2022s-top-routinely-exploited-vulnerabilities"
+          ]
+        },
+        {
+          "date": 1691149544,
+          "version_notes": [
+            "sources: Added https://www.cisa.gov/news-events/cybersecurity-advisories/aa21-062a"
+          ]
+        },
+        {
+          "date": 1691145225,
+          "version_notes": [
+            "sources: Added https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-215a"
+          ]
+        },
+        {
+          "date": 1691071685,
+          "version_notes": [
+            "exploitation.first_exploitation: Added",
+            "exploitation_vectors: Added ['Web'] to existing exploitation_vectors. "
+          ]
+        },
+        {
+          "date": 1688760481,
+          "version_notes": [
+            "exploits: Added https://raw.githubusercontent.com/rapid7/metasploit-framework/master/modules/exploits/windows/http/exchange_proxylogon_rce.rb"
+          ]
+        },
+        {
+          "date": 1688756735,
+          "version_notes": [
+            "exploits: Added https://raw.githubusercontent.com/rapid7/metasploit-framework/master/modules/auxiliary/gather/exchange_proxylogon_collector.rb",
+            "exploits: Added https://raw.githubusercontent.com/rapid7/metasploit-framework/master/modules/auxiliary/scanner/http/exchange_proxylogon.rb"
+          ]
+        },
+        {
+          "date": 1687441080,
+          "version_notes": ["exploitation.exploit_release_date: Added"]
+        },
+        {
+          "date": 1685996412,
+          "version_notes": [
+            "exploits: Added https://www.exploit-db.com/exploits/49879",
+            "exploits: Added https://www.exploit-db.com/exploits/49637",
+            "exploits: Added https://www.exploit-db.com/exploits/49895"
+          ]
+        },
+        {
+          "date": 1685995831,
+          "version_notes": [
+            "exploits: Added https://www.exploit-db.com/exploits/49663"
+          ]
+        },
+        {
+          "date": 1684415346,
+          "version_notes": [
+            "sources: Added https://docs.google.com/spreadsheets/d/1lkNJ0uQwbeC1ZTRrxdtuPLCIl7mlUreoKfSIgajnSyY/view"
+          ]
+        },
+        {
+          "date": 1679575056,
+          "version_notes": ["aliases: Added"]
+        },
+        {
+          "date": 1679523366,
+          "version_notes": [
+            "sources: Added https://nvd.nist.gov/vuln/detail/CVE-2021-26855",
+            "sources: Added http://packetstormsecurity.com/files/161846/Microsoft-Exchange-2019-SSRF-Arbitrary-File-Write.html",
+            "sources: Added http://packetstormsecurity.com/files/162736/Microsoft-Exchange-ProxyLogon-Collector.html",
+            "sources: Added https://portal.msrc.microsoft.com/en-US/security-guidance/advisory/CVE-2021-26855",
+            "sources: Added http://packetstormsecurity.com/files/162610/Microsoft-Exchange-2019-Unauthenticated-Email-Download.html",
+            "sources: Added http://packetstormsecurity.com/files/161938/Microsoft-Exchange-ProxyLogon-Remote-Code-Execution.html"
+          ]
+        },
+        {
+          "date": 1679520665,
+          "version_notes": [
+            "exploits: Added https://gitlab.com/gvillegas/ohwaa",
+            "exploits: Added https://github.com/Jumbo-WJB/Exchange_SSRF",
+            "exploits: Added https://git.blackmarble.sh/backup/proxyLogon/-/blob/main/PoC_proxyLogon.py",
+            "exploits: Added https://f5.pm/go-62102.html",
+            "exploits: Added https://github.com/Udyz/Proxylogon",
+            "exploits: Added https://github.com/ZephrFish/Exch-CVE-2021-26855",
+            "exploits: Added https://github.com/shacojx/CVE_2021_26855_Exploit_Hub",
+            "exploits: Added https://github.com/charlottelatest/CVE-2021-26855"
+          ]
+        },
+        {
+          "date": 1678752000,
+          "version_notes": ["Updated date of disclosure"]
+        },
+        {
+          "date": 1675814400,
+          "version_notes": ["Added Tenable source"]
+        },
+        {
+          "date": 1660608000,
+          "version_notes": ["Updated date of disclosure"]
+        },
+        {
+          "date": 1660262400,
+          "version_notes": [
+            "Added source (F5 Sensor Intel Series: Top CVEs Jan-Jun 2022)"
+          ]
+        },
+        {
+          "date": 1649116800,
+          "version_notes": ["Added Tenable source information"]
+        },
+        {
+          "date": 1647907200,
+          "version_notes": [
+            "Added Malwarebytes and FBI IS3 sources; Added information on this vulnerability being used to deploy AvosLocker ransomware"
+          ]
+        },
+        {
+          "date": 1643414400,
+          "version_notes": [
+            "Added the following sources: CISA; Updated analysis"
+          ]
+        },
+        {
+          "date": 1639353600,
+          "version_notes": ["Added Mandiant Research source"]
+        },
+        {
+          "date": 1639094400,
+          "version_notes": [
+            "Added in-the-wild scanning information from internal source; Updated analysis"
+          ]
+        },
+        {
+          "date": 1637625600,
+          "version_notes": [
+            "Added in-the-wild threat information from internal source"
+          ]
+        },
+        {
+          "date": 1637539200,
+          "version_notes": [
+            "Added Exploit Code (CVE-2021-26855_Jumbo-WJB); Update Analysis with new exploitation report from Trend Micro; Add Trend Micro Source"
+          ]
+        },
+        {
+          "date": 1629763200,
+          "version_notes": [
+            "Added Cybereason source; Updated Analysis with exploitation information"
+          ]
+        },
+        {
+          "date": 1629158400,
+          "version_notes": ["Added Rapid7 source"]
+        },
+        {
+          "date": 1628812800,
+          "version_notes": ["Added Devcore source"]
+        },
+        {
+          "date": 1627516800,
+          "version_notes": [
+            "Added CISA (AA21-209A) source; Added CVSSv3",
+            "Added CISA (AA21-209A) source"
+          ]
+        },
+        {
+          "date": 1627430400,
+          "version_notes": ["Added Core Security third-party source"]
+        },
+        {
+          "date": 1617321600,
+          "version_notes": ["Added exploit code owamails.py"]
+        },
+        {
+          "date": 1616716800,
+          "version_notes": [
+            "Added Exploit Files (CVE-2021-26855_collector.rb.txt, CVE-2021-26855_auth_bypass.rb.txt); Added exploitDB to file replication URLs; Added SAINT source information"
+          ]
+        },
+        {
+          "date": 1616630400,
+          "version_notes": [
+            "Added exploit code (CVE-2021-26855_GreyOrder_exploit); Added replication URLs for PoC \"PoC_proxyLogon.py\""
+          ]
+        },
+        {
+          "date": 1616025600,
+          "version_notes": [
+            "Added exploit (CVE_2021_26855_shacojx_exploit); Added Replication URLs for PoC \"PoC_proxyLogon.py\""
+          ]
+        },
+        {
+          "date": 1615939200,
+          "version_notes": ["Upgraded exploitation rating to Wide"]
+        },
+        {
+          "date": 1615852800,
+          "version_notes": [
+            "Added exchange_proxylogon_rce.rb Metasploit exploit code",
+            "Updated the timeline regarding exploitation observations and DEVCORE's report to Microsoft",
+            "Added exploit code (CVE-2021-26855_Udyz_exploit)",
+            "Added Microsoft mitigation options; Updated vulnerability type"
+          ]
+        },
+        {
+          "date": 1615766400,
+          "version_notes": [
+            "Added PoC codes ex.py and ExchangeSheller.py",
+            "Updated date of disclosure"
+          ]
+        },
+        {
+          "date": 1615507200,
+          "version_notes": [
+            "Added Cisco Talos third-party source",
+            "Added Rapid7 source"
+          ]
+        },
+        {
+          "date": 1615420800,
+          "version_notes": [
+            "Added PoC PoC_proxyLogon.py; Added third-party information regarding the publicly available PoC"
+          ]
+        },
+        {
+          "date": 1615334400,
+          "version_notes": [
+            "Added mitigation options",
+            "Added DEVCORE source and updated Volexity's observations of exploitation activity",
+            "Added Praetorian third-party source",
+            "Added FireEye Blog source"
+          ]
+        },
+        {
+          "date": 1615248000,
+          "version_notes": ["Added Reuters source"]
+        },
+        {
+          "date": 1614816000,
+          "version_notes": [
+            "Added CISA Emergency Directive and Hacker News source; Updated Analysis field"
+          ]
+        },
+        {
+          "date": 1614729600,
+          "version_notes": ["Added exploitation activity observations"]
+        }
+      ],
+      "field_sources": [
+        {
+          "field": "cvss.cvssv3_x",
+          "source": {
+            "source_url": "",
+            "source_name": "Google Threat Intelligence Group (GTIG)",
+            "sources": [],
+            "field_type": "Ranked"
+          }
+        },
+        {
+          "field": "cvss.cvssv2_0",
+          "source": {
+            "source_url": "",
+            "source_name": "Google Threat Intelligence Group (GTIG)",
+            "sources": [],
+            "field_type": "Ranked"
+          }
+        },
+        {
+          "field": "cwe",
+          "source": {
+            "source_url": "",
+            "source_name": "Cybersecurity and Infrastructure Security Agency (CISA)",
+            "sources": [],
+            "field_type": "Ranked"
+          }
+        },
+        {
+          "field": "description",
+          "source": {
+            "source_url": "",
+            "source_name": "Google Threat Intelligence Group (GTIG)",
+            "sources": [],
+            "field_type": "Ranked"
+          }
+        },
+        {
+          "field": "date_of_disclosure",
+          "source": {
+            "source_url": "",
+            "source_name": "Google Threat Intelligence Group (GTIG)",
+            "sources": [],
+            "field_type": "Ranked"
+          }
+        },
+        {
+          "field": "exploitation_consequence",
+          "source": {
+            "source_url": "",
+            "source_name": "Google Threat Intelligence Group (GTIG)",
+            "sources": [],
+            "field_type": "Ranked"
+          }
+        },
+        {
+          "field": "exploitation.first_exploitation",
+          "source": {
+            "source_url": "",
+            "source_name": "Volexity",
+            "sources": [],
+            "field_type": "Minimum"
+          }
+        },
+        {
+          "field": "exploitation.tech_details_release_date",
+          "source": {
+            "source_url": null,
+            "source_name": null,
+            "sources": [
+              {
+                "source_names": ["Praetorian"],
+                "source_urls": []
+              }
+            ],
+            "field_type": "Computed"
+          }
+        },
+        {
+          "field": "workarounds",
+          "source": {
+            "source_url": null,
+            "source_name": null,
+            "sources": [
+              {
+                "source_names": ["Google Threat Intelligence Group (GTIG)"],
+                "source_urls": []
+              }
+            ],
+            "field_type": "Merged"
+          }
+        },
+        {
+          "field": "available_mitigation",
+          "source": {
+            "source_url": null,
+            "source_name": null,
+            "sources": [
+              {
+                "source_names": [
+                  "Google Threat Intelligence Group (GTIG)",
+                  "Tenable Blog"
+                ],
+                "source_urls": []
+              },
+              {
+                "source_names": ["Google Threat Intelligence Group (GTIG)"],
+                "source_urls": []
+              }
+            ],
+            "field_type": "Merged"
+          }
+        },
+        {
+          "field": "aliases",
+          "source": {
+            "source_url": null,
+            "source_name": null,
+            "sources": [
+              {
+                "source_names": [
+                  "Cybersecurity and Infrastructure Security Agency (CISA)",
+                  "Palo Alto Networks Inc.",
+                  "DEVCORE",
+                  "CVE-2021-26855_metasploit",
+                  "CVE-2021-26855_metasploit",
+                  "CVE-2021-26855_CVE-2021-27065_metasploit"
+                ],
+                "source_urls": []
+              }
+            ],
+            "field_type": "Merged"
+          }
+        },
+        {
+          "field": "exploitation_vectors",
+          "source": {
+            "source_url": null,
+            "source_name": null,
+            "sources": [
+              {
+                "source_names": ["Google Threat Intelligence Group (GTIG)"],
+                "source_urls": []
+              },
+              {
+                "source_names": ["Volexity"],
+                "source_urls": []
+              }
+            ],
+            "field_type": "Merged"
+          }
+        },
+        {
+          "field": "tags",
+          "source": {
+            "source_url": null,
+            "source_name": null,
+            "sources": [
+              {
+                "source_names": [
+                  "Bleeping Computer",
+                  "Bleeping Computer",
+                  "Bleeping Computer",
+                  "The Hacker News",
+                  "Malwarebytes",
+                  "The Record",
+                  "Dark Reading"
+                ],
+                "source_urls": []
+              },
+              {
+                "source_names": ["Praetorian"],
+                "source_urls": []
+              }
+            ],
+            "field_type": "Merged"
+          }
+        },
+        {
+          "field": "observed_in_the_wild",
+          "source": {
+            "source_url": "",
+            "source_name": "Google Threat Intelligence Group (GTIG)",
+            "sources": [],
+            "field_type": "Intrinsic"
+          }
+        },
+        {
+          "field": "was_zero_day",
+          "source": {
+            "source_url": "",
+            "source_name": "Google Threat Intelligence Group (GTIG)",
+            "sources": [],
+            "field_type": "Intrinsic"
+          }
+        },
+        {
+          "field": "media_attention",
+          "source": {
+            "source_url": null,
+            "source_name": null,
+            "sources": [
+              {
+                "source_names": [
+                  "Bleeping Computer",
+                  "Bleeping Computer",
+                  "Bleeping Computer",
+                  "The Hacker News",
+                  "Malwarebytes",
+                  "The Record",
+                  "Dark Reading"
+                ],
+                "source_urls": []
+              }
+            ],
+            "field_type": "Computed"
+          }
+        },
+        {
+          "field": "exploitation_state",
+          "source": {
+            "source_url": "",
+            "source_name": "Google Threat Intelligence Group (GTIG)",
+            "sources": [],
+            "field_type": "Severity"
+          }
+        }
+      ],
+      "mati_genids_dict": {
+        "cve_id": "vulnerability--5d1b1359-a45a-5bfc-852b-050032aa64c8",
+        "report_id": "report--891e7021-8149-55a0-b36f-79a5cfc7c334",
+        "mve_id": "vulnerability--b2856d98-bd4b-5ac0-84bb-4b8d55f5b240"
+      },
+      "tags_details": [
+        {
+          "first_seen": null,
+          "value": "was_zero_day",
+          "last_seen": null,
+          "confidence": "possible",
+          "description": null
+        },
+        {
+          "first_seen": null,
+          "value": "media_attention",
+          "last_seen": null,
+          "confidence": "possible",
+          "description": null
+        },
+        {
+          "first_seen": null,
+          "value": "observed_in_the_wild",
+          "last_seen": null,
+          "confidence": "possible",
+          "description": null
+        },
+        {
+          "first_seen": null,
+          "value": "has_exploits",
+          "last_seen": null,
+          "confidence": "possible",
+          "description": null
+        }
+      ],
+      "aggregations": {
+        "files": {
+          "itw_urls": [
+            {
+              "value": "http://drlamer.com/49637",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://exploit-db.com/download/49637",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://codeload.github.com/GreyOrder/CVE-2021-26855/zip/main",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://codeload.github.com/jsdryan/CVE-2021-26855/zip/main",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://github.com/GreyOrder/CVE-2021-26855/archive/main.zip",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://github.com/jsdryan/CVE-2021-26855/archive/main.zip",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://gitlab.com/gvillegas/ohwaa/-/archive/master/ohwaa-master.zip",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            }
+          ],
+          "execution_parents": [
+            {
+              "value": "bda139957a859b9c916e2c943b2eb09f2d4ea35cb11848dc39916bb3877eb576",
+              "count": 1,
+              "total_related": 559,
+              "prevalence": 0.0017889087656529517
+            },
+            {
+              "value": "51ef55d04d783205016b25eed5907aac4023cfe0bc936eecbacb866ad70066fb",
+              "count": 1,
+              "total_related": 560,
+              "prevalence": 0.0017857142857142857
+            }
+          ],
+          "compressed_parents": [
+            {
+              "value": "dd307be354b0d17555bcc1a1e4a329e5ce0da4bf0027e378fac21153699de43e",
+              "count": 1,
+              "total_related": 89,
+              "prevalence": 0.011235955056179775
+            },
+            {
+              "value": "6e009fb39718074b73bca45e85843842a188df4c85c30ec60bd1dbefe6c8d06a",
+              "count": 1,
+              "total_related": 92,
+              "prevalence": 0.010869565217391304
+            },
+            {
+              "value": "c91dccae966d5e637c884a3137e3788361214d8055a2c936d5447271b7b9d069",
+              "count": 1,
+              "total_related": 94,
+              "prevalence": 0.010638297872340425
+            },
+            {
+              "value": "53f038537a02fafd5bfdc9977d4b0dbe2f7fed6ef7214dbabdb1c53ea96a5c1d",
+              "count": 1,
+              "total_related": 892,
+              "prevalence": 0.0011210762331838565
+            },
+            {
+              "value": "2c26b0446d9aa66057cb380167a70ca265984d46565eefa7d596019958f61655",
+              "count": 1,
+              "total_related": 896,
+              "prevalence": 0.0011160714285714285
+            },
+            {
+              "value": "8fd04b4a83f437a88628aef2774f9e54f9673e407f3218b98d5576538f5bd208",
+              "count": 1,
+              "total_related": 896,
+              "prevalence": 0.0011160714285714285
+            },
+            {
+              "value": "e4b16b49d55f50f904893df52b90d6d6663be8cd7d253996799fa9840204a7dd",
+              "count": 1,
+              "total_related": 896,
+              "prevalence": 0.0011160714285714285
+            },
+            {
+              "value": "badda1335ec6b0559dae990c6119299a937087235a3488647023aa366003dc01",
+              "count": 1,
+              "total_related": 898,
+              "prevalence": 0.0011135857461024498
+            },
+            {
+              "value": "ac5157cba1c53d2ae6e664466560897a6daa345dc65ca86579703aec4056a190",
+              "count": 1,
+              "total_related": 899,
+              "prevalence": 0.0011123470522803114
+            },
+            {
+              "value": "c4a556a57b0f4728cd1cc6fd60a6787cc6c86c47cd312a557cf234bfd360b5c6",
+              "count": 1,
+              "total_related": 900,
+              "prevalence": 0.0011111111111111111
+            },
+            {
+              "value": "c302cb24faa05ec2f3ee430085e24cc50ae8b4a1ae116ac8affff41a9d594fb3",
+              "count": 1,
+              "total_related": 901,
+              "prevalence": 0.0011098779134295228
+            },
+            {
+              "value": "36d7f7a98bc8edae71f8741839f8f41f6d921eebfc3a90b87572495b5a34a95e",
+              "count": 1,
+              "total_related": 902,
+              "prevalence": 0.0011086474501108647
+            },
+            {
+              "value": "b70b6eac12062c17c773574650bd92db7c383ae6aa044ff1490c09f756cc558b",
+              "count": 1,
+              "total_related": 902,
+              "prevalence": 0.0011086474501108647
+            },
+            {
+              "value": "492984ebf173980624c6245d2e1677b82d320cd11702cc2bb611408ea47e20bb",
+              "count": 1,
+              "total_related": 907,
+              "prevalence": 0.0011025358324145535
+            },
+            {
+              "value": "ab8706d39d2f4f8d548e1ff7cdf5e68a2c4f2aadb5fd5ab7992c871fc0dc5ce7",
+              "count": 1,
+              "total_related": 925,
+              "prevalence": 0.001081081081081081
+            },
+            {
+              "value": "a3b18a496a37e6420f645f98730dfd4a06fb48f866487ae3e1e7258769e713fc",
+              "count": 1,
+              "total_related": 926,
+              "prevalence": 0.0010799136069114472
+            },
+            {
+              "value": "33b5922d8d6a51777b35e428de8cc04c3771a246cf30c9e5c73ef095aaae541f",
+              "count": 1,
+              "total_related": 933,
+              "prevalence": 0.0010718113612004287
+            },
+            {
+              "value": "5cba1cdbd303cea46da1be74784927b94af7e1efa40b1d3628f0cde4013296b8",
+              "count": 1,
+              "total_related": 934,
+              "prevalence": 0.0010706638115631692
+            },
+            {
+              "value": "72b6d61e37b50b17b90651ca139c802cccf92a811a46099e1a256953b4b0b2a8",
+              "count": 1,
+              "total_related": 936,
+              "prevalence": 0.0010683760683760685
+            },
+            {
+              "value": "da0ff1be18bb63924efdf7249f690c98c7cc5ac0bb5e651f7c1c2d5df52fe292",
+              "count": 1,
+              "total_related": 938,
+              "prevalence": 0.0010660980810234541
+            },
+            {
+              "value": "91064c2e6ba4e71ca50f336c046187a6771f657aaec2fecba04cb0a84d87026a",
+              "count": 1,
+              "total_related": 941,
+              "prevalence": 0.0010626992561105207
+            },
+            {
+              "value": "bd21c2d4e8044f6e8d83b8244c22dd462a40180340c2430c372710e01e1b521e",
+              "count": 1,
+              "total_related": 944,
+              "prevalence": 0.001059322033898305
+            },
+            {
+              "value": "63a3e9ae242da1ce3fac2c1e236ca6c0f761c7b63b7b0f55906c62dfdec4cf5c",
+              "count": 1,
+              "total_related": 946,
+              "prevalence": 0.0010570824524312897
+            },
+            {
+              "value": "2ef4801668a692dc18297116faeb74de5ccceef01808c1f906c3081d13cdf35c",
+              "count": 1,
+              "total_related": 948,
+              "prevalence": 0.0010548523206751054
+            },
+            {
+              "value": "b2b39f5c92eb93b435216baa3636019ee805f488795e31033ef930d297412bf2",
+              "count": 1,
+              "total_related": 948,
+              "prevalence": 0.0010548523206751054
+            },
+            {
+              "value": "00d5873d287a4fae94d96e9278c101a8b8eb92fb36fd9207afc3312e481998ff",
+              "count": 1,
+              "total_related": 1000,
+              "prevalence": 0.001
+            },
+            {
+              "value": "d81c32f6d55e74dedaa4bc98ca2ca90bc54143931308f8713a3b204eb4164153",
+              "count": 1,
+              "total_related": 1002,
+              "prevalence": 0.000998003992015968
+            },
+            {
+              "value": "4e247da836c9031fa74191cc36757df3aff75b6bc9f1bd2eadf1101f44ec9e84",
+              "count": 1,
+              "total_related": 1005,
+              "prevalence": 0.0009950248756218905
+            },
+            {
+              "value": "d448912b5d04f9f9d9ec09a3f4f131535979c6fe8394fe301eb77af8ba0b048b",
+              "count": 1,
+              "total_related": 1005,
+              "prevalence": 0.0009950248756218905
+            },
+            {
+              "value": "8e5a0515ab29a37bc83cd0af07dcb7cec6da3d1b5141a7fe9ba8d33c96d9c222",
+              "count": 1,
+              "total_related": 1006,
+              "prevalence": 0.0009940357852882703
+            },
+            {
+              "value": "cd893ea3b83c21e222668cc71b281f70214fab0328f029eca3845145c97a3451",
+              "count": 1,
+              "total_related": 1009,
+              "prevalence": 0.0009910802775024777
+            },
+            {
+              "value": "2aa1b6699c53fd60dd011faf33096fb3ebb270f5dd283049eaea20cd3a0e2c24",
+              "count": 1,
+              "total_related": 1024,
+              "prevalence": 0.0009765625
+            },
+            {
+              "value": "de38e4952fada4525a5edd7201f4e431227356d3dd878daa907e915816a4fd72",
+              "count": 1,
+              "total_related": 1025,
+              "prevalence": 0.000975609756097561
+            },
+            {
+              "value": "534d3ba1fca004c57fb97e1a25ac405ac09bcaefc5a240cadf526af9e6d07628",
+              "count": 1,
+              "total_related": 1028,
+              "prevalence": 0.0009727626459143969
+            },
+            {
+              "value": "272736e9d72f9686446935af1bae8a4831661099bdd261ea837d264f9a188364",
+              "count": 1,
+              "total_related": 1032,
+              "prevalence": 0.0009689922480620155
+            },
+            {
+              "value": "4d46a576bef4fdf1b97fac25931399574edb696808cc37c3ef40e374dd03fd77",
+              "count": 1,
+              "total_related": 1032,
+              "prevalence": 0.0009689922480620155
+            },
+            {
+              "value": "7a0ef90c3cfcd8036893d4c6be9d138754f0e910575e388f4a4379d45cb6de7f",
+              "count": 1,
+              "total_related": 1046,
+              "prevalence": 0.0009560229445506692
+            },
+            {
+              "value": "b17c9440dd07fc18e71974daa377b6cae25667ddbc7edd9216923c5aa5017c83",
+              "count": 1,
+              "total_related": 1047,
+              "prevalence": 0.0009551098376313276
+            },
+            {
+              "value": "a788942dde178c79c7608d45397db35d86313529330b0289692978d2e83fa915",
+              "count": 1,
+              "total_related": 1049,
+              "prevalence": 0.0009532888465204957
+            },
+            {
+              "value": "f6d8375d0a9e56b5f83d678ac5d80274f7e2db68179b9ede715575a1fff2627b",
+              "count": 1,
+              "total_related": 1052,
+              "prevalence": 0.0009505703422053232
+            },
+            {
+              "value": "118d4a0d6e59e0154c267673f86ce3df7d6dbec554c69d1fe0a55affd002bb37",
+              "count": 1,
+              "total_related": 1053,
+              "prevalence": 0.000949667616334283
+            },
+            {
+              "value": "59fe080a332a2895496ee562167e5dcdb985de918c64dcb8eb892eb6be2fd9d1",
+              "count": 1,
+              "total_related": 1053,
+              "prevalence": 0.000949667616334283
+            },
+            {
+              "value": "831e7ebb64a52157a47387e0024308e11c68b143e36347c9a93a7618175affce",
+              "count": 1,
+              "total_related": 1053,
+              "prevalence": 0.000949667616334283
+            },
+            {
+              "value": "8447abbd8dc15f570f1bb75ac332a92de689699bbc5143a3a9c5f93c68c8a730",
+              "count": 1,
+              "total_related": 1053,
+              "prevalence": 0.000949667616334283
+            },
+            {
+              "value": "c6e366e3e8869fc7c1b407034f3be05076a814c69a25571466740cdfd9a4b685",
+              "count": 1,
+              "total_related": 1053,
+              "prevalence": 0.000949667616334283
+            },
+            {
+              "value": "e73b0313efad22e0048e37f73ce6596eb230696d41d11f9315911ef5ad68d247",
+              "count": 1,
+              "total_related": 1053,
+              "prevalence": 0.000949667616334283
+            },
+            {
+              "value": "250549db5081ad38691b4ab494ba2724b81c9e4721f5567081521850e70e7e82",
+              "count": 1,
+              "total_related": 1054,
+              "prevalence": 0.0009487666034155598
+            },
+            {
+              "value": "32c913259db12efef362e0a958934a554634f0810f27134ec2988595ba3ef154",
+              "count": 1,
+              "total_related": 1059,
+              "prevalence": 0.0009442870632672333
+            },
+            {
+              "value": "e1e154c59f6c208332ecef1fac47ae69656f77a88fea014567d2a22a174ad9bb",
+              "count": 1,
+              "total_related": 1061,
+              "prevalence": 0.000942507068803016
+            },
+            {
+              "value": "0fc8e1bf743b31cfb31c08d226c695c2d6d1c762636d648ccb09afbf5d6d69e7",
+              "count": 1,
+              "total_related": 1062,
+              "prevalence": 0.0009416195856873823
+            },
+            {
+              "value": "c241f76839180141207eba6186531faee57573b488e09ed064238cc3b01e5a04",
+              "count": 1,
+              "total_related": 1064,
+              "prevalence": 0.0009398496240601503
+            },
+            {
+              "value": "73a155efd378fde7461155325b881feff52ddc1ba4973cd638da8896ba64368c",
+              "count": 1,
+              "total_related": 1070,
+              "prevalence": 0.0009345794392523365
+            },
+            {
+              "value": "2fc9094e63e4aaa70052cfba4823e3f63303e3873979fbc42f78b4c4df045d2e",
+              "count": 1,
+              "total_related": 1072,
+              "prevalence": 0.0009328358208955224
+            },
+            {
+              "value": "3583fd145511a43ce731a7683495de566599a46c6ba9971910fc5cf3ccd774e9",
+              "count": 1,
+              "total_related": 1082,
+              "prevalence": 0.0009242144177449168
+            },
+            {
+              "value": "bc2fcda88b311b1d6cba8a370eae5233d8e36528817b0d6e19bf7a54380b11ef",
+              "count": 1,
+              "total_related": 1082,
+              "prevalence": 0.0009242144177449168
+            },
+            {
+              "value": "d2b3e3d25f55113e433656ae13a01e3af50b9d69a6d5232fc705affee02e62a8",
+              "count": 1,
+              "total_related": 1084,
+              "prevalence": 0.0009225092250922509
+            },
+            {
+              "value": "3deb45b52de2116e4e76c25aa3f49319a54e91c6daf9d9503f0c19be5fa97bd1",
+              "count": 1,
+              "total_related": 1085,
+              "prevalence": 0.0009216589861751152
+            },
+            {
+              "value": "f1fa28b8b5efd2da1f47719ef5f90edec1f5ed3c0c69f3cb603e6fdf2bf2e512",
+              "count": 1,
+              "total_related": 1085,
+              "prevalence": 0.0009216589861751152
+            },
+            {
+              "value": "4d5a3d5f7aa02ced533336840555ed31c24d985df86e1ee5276281ccba0c43bf",
+              "count": 1,
+              "total_related": 1089,
+              "prevalence": 0.0009182736455463728
+            },
+            {
+              "value": "1bb49b20f9e3993eefa5f64549fd3cfa119c8882dfc427038f89b022dad9e254",
+              "count": 1,
+              "total_related": 1091,
+              "prevalence": 0.0009165902841429881
+            },
+            {
+              "value": "e70d39f7f233252327dff23523f813b47dbaf7f601379a9ac323f40871eb26de",
+              "count": 1,
+              "total_related": 1092,
+              "prevalence": 0.0009157509157509158
+            },
+            {
+              "value": "01e4a609cd85be15eb65af552492f2855f285fa4acfe2a9e07843cc108dbbdeb",
+              "count": 1,
+              "total_related": 1104,
+              "prevalence": 0.0009057971014492754
+            },
+            {
+              "value": "b36c58765729cac857c2497348d82ac7e8887895a0464068b91096974d5693cb",
+              "count": 1,
+              "total_related": 1104,
+              "prevalence": 0.0009057971014492754
+            },
+            {
+              "value": "e541b6eeeee6d81b38640844cf52168ff6113c764385eef31535453a5f335713",
+              "count": 1,
+              "total_related": 1109,
+              "prevalence": 0.0009017132551848512
+            },
+            {
+              "value": "264833a1084484822a03d25412f00ceedad8413c008f6f827f3b7756fdd15f98",
+              "count": 1,
+              "total_related": 1114,
+              "prevalence": 0.0008976660682226212
+            },
+            {
+              "value": "a53320f1e358fb6e8a5f6f2a0d2f3666c829e3473a57b9189a22616f6429b432",
+              "count": 1,
+              "total_related": 1117,
+              "prevalence": 0.0008952551477170994
+            },
+            {
+              "value": "f202094b4b5b89843fe5013360a41f6c5f8bd624e8c432a3862002500e12ab7f",
+              "count": 1,
+              "total_related": 1122,
+              "prevalence": 0.00089126559714795
+            },
+            {
+              "value": "1f991314e49d37ecb62a23c6ad06ef51430047bfc74ca77ae20d9562afdee9c8",
+              "count": 1,
+              "total_related": 1123,
+              "prevalence": 0.0008904719501335708
+            },
+            {
+              "value": "668b3fba8167b4c9d6ae478b1ce0d72cb7e1d601e03ef72ab3c68b855b6ba51a",
+              "count": 1,
+              "total_related": 1128,
+              "prevalence": 0.0008865248226950354
+            },
+            {
+              "value": "1c10a41c6e39e25e5891530f633b9a6f158d137e3b7d9508071cb2ee2a7269cb",
+              "count": 1,
+              "total_related": 1134,
+              "prevalence": 0.0008818342151675485
+            },
+            {
+              "value": "328ebf6cb164b47c43442a376a363a66f580ce927f97f3055e0b24a6cc464f50",
+              "count": 1,
+              "total_related": 1139,
+              "prevalence": 0.000877963125548727
+            },
+            {
+              "value": "284c3d89b87b3cad2eaac2564ac633b254291d7754263ec74a537d5260483743",
+              "count": 1,
+              "total_related": 1155,
+              "prevalence": 0.0008658008658008658
+            },
+            {
+              "value": "61986f6e92a3f1412b72a08164097a88f1c02c67164fd40f060244fdd4c66898",
+              "count": 1,
+              "total_related": 1166,
+              "prevalence": 0.0008576329331046312
+            },
+            {
+              "value": "6902c45d881c1c34bfdfbf23fffc9babde095f2f27ed6eb27401ed7e617121a8",
+              "count": 1,
+              "total_related": 1169,
+              "prevalence": 0.000855431993156544
+            },
+            {
+              "value": "cfaf5ec0a82512d758a944e103c3b795e0efd1555906c38c6010e66634a8504b",
+              "count": 1,
+              "total_related": 1169,
+              "prevalence": 0.000855431993156544
+            },
+            {
+              "value": "b7e10b7936c62d2aa037963b0ed4acb565d1cf2eec79fb454640d305a8cc5d20",
+              "count": 1,
+              "total_related": 1182,
+              "prevalence": 0.0008460236886632825
+            },
+            {
+              "value": "66da3350ba7d911d19a0719df8d86bbd0754ca6dc95de83a69e0296c07fe9028",
+              "count": 1,
+              "total_related": 1183,
+              "prevalence": 0.0008453085376162299
+            },
+            {
+              "value": "f0b9d60d5f5daaf3f631c3d5f745eb56e4319152dd42ac64cce9195aec8c4c6a",
+              "count": 1,
+              "total_related": 1187,
+              "prevalence": 0.0008424599831508003
+            },
+            {
+              "value": "eba528e2255586835b47bef4d26618e1c4ffecb9b33dd69641d5cb323fd3797f",
+              "count": 1,
+              "total_related": 1195,
+              "prevalence": 0.0008368200836820083
+            },
+            {
+              "value": "f3b831cd002ac754f2d1a5688de16372f280e2a46c1f22b18699443b1f08a64e",
+              "count": 1,
+              "total_related": 1213,
+              "prevalence": 0.0008244023083264633
+            },
+            {
+              "value": "a6a595abed32bd1a1b891a64a18bf29f2dedd40b0773048788918127c2f9f6aa",
+              "count": 1,
+              "total_related": 1229,
+              "prevalence": 0.0008136696501220504
+            },
+            {
+              "value": "5467879fec91b9e4b66bcbd404f368cff1d6c93132c5a098792db9bfe85fbbbd",
+              "count": 1,
+              "total_related": 1233,
+              "prevalence": 0.0008110300081103001
+            },
+            {
+              "value": "3d3b7715ca6abda08d02e265565f793b4f49ba6e2cecf0ab6b65ba47b4aa3c9d",
+              "count": 1,
+              "total_related": 1234,
+              "prevalence": 0.0008103727714748784
+            },
+            {
+              "value": "3e4f08b9e95dfabe8ed918006be7d43e007452cce73b96180473b59b4ee7a5a8",
+              "count": 1,
+              "total_related": 1234,
+              "prevalence": 0.0008103727714748784
+            },
+            {
+              "value": "7d13ab9a28f016b4ce894aa066ffe2ba93c62272a02bd071b0dca154adcd5535",
+              "count": 1,
+              "total_related": 1234,
+              "prevalence": 0.0008103727714748784
+            },
+            {
+              "value": "8520cd601d40478e0b116bbf747de706022c59981d7af6efd6856f398f4244f8",
+              "count": 1,
+              "total_related": 1234,
+              "prevalence": 0.0008103727714748784
+            },
+            {
+              "value": "90e2f01e8dd0b829f476aa158d5e0b2838eceab858195d3d52a395c8028bcebe",
+              "count": 1,
+              "total_related": 1234,
+              "prevalence": 0.0008103727714748784
+            },
+            {
+              "value": "b5d11161d4edecef2fb7e9d63661a413de85ea325f7fc2086c5d1d0fc4112ba8",
+              "count": 1,
+              "total_related": 1273,
+              "prevalence": 0.0007855459544383347
+            },
+            {
+              "value": "8948d123935f72d6bae9480e6065de6bee7d6fe4ff6ce4859af41a7390a96712",
+              "count": 1,
+              "total_related": 1361,
+              "prevalence": 0.0007347538574577516
+            },
+            {
+              "value": "8f7ea9104181180010a856a41f7e257dbd35a5bccfd836e255403a440f6e64e6",
+              "count": 1,
+              "total_related": 1378,
+              "prevalence": 0.000725689404934688
+            },
+            {
+              "value": "1606d681e69cf90aa0e9673c89a28b6f8c18eec60848bd6bc62308fe1bcaa960",
+              "count": 1,
+              "total_related": 1399,
+              "prevalence": 0.0007147962830593281
+            },
+            {
+              "value": "f1986799c969c3ea6d57fb47c0ee07e2a802021d742e3dba79dc7d8ad750e813",
+              "count": 1,
+              "total_related": 1407,
+              "prevalence": 0.0007107320540156361
+            },
+            {
+              "value": "470e0695a9064fa397a24adab0eb26d78896975416d87241bca029f9f003f3d5",
+              "count": 1,
+              "total_related": 1427,
+              "prevalence": 0.000700770847932726
+            },
+            {
+              "value": "5963bd9d8207255dd8f6a8c1ef45f61ff2b8281adb7c0bf41c875bfe03527397",
+              "count": 1,
+              "total_related": 1430,
+              "prevalence": 0.0006993006993006993
+            },
+            {
+              "value": "8b73436e83728da63352eec365dcc32d23ec88b79fbd68de98870873a9ddf105",
+              "count": 1,
+              "total_related": 1430,
+              "prevalence": 0.0006993006993006993
+            },
+            {
+              "value": "627b70755a693d7b772bcbc95ca694a2f58fbfeb954092b94ed4bb49ae71e41b",
+              "count": 1,
+              "total_related": 1432,
+              "prevalence": 0.0006983240223463687
+            },
+            {
+              "value": "01823d6255f9d953f99f2a1d96a29fe3c3abe5952d9f5ad18a000e671b4662e7",
+              "count": 1,
+              "total_related": 1433,
+              "prevalence": 0.0006978367062107466
+            },
+            {
+              "value": "4f5b365f204f0d8a1c09c34f0d253d0cacd21db612c7296e958545f90a6cb23e",
+              "count": 1,
+              "total_related": 1436,
+              "prevalence": 0.0006963788300835655
+            },
+            {
+              "value": "5744a32f5cd4894b2cd1d90315b8a339a93cbbc2f4651d35ecb1a587be7affe7",
+              "count": 1,
+              "total_related": 1436,
+              "prevalence": 0.0006963788300835655
+            },
+            {
+              "value": "30bda4d9607302d6441c8eed9fe08035d096f733fe27485c97c1d4b045c4b2b7",
+              "count": 1,
+              "total_related": 1998,
+              "prevalence": 0.0005005005005005005
+            }
+          ],
+          "tags": [
+            {
+              "value": "exploit",
+              "count": 6
+            },
+            {
+              "value": "cve-2021-26855",
+              "count": 5
+            },
+            {
+              "value": "java",
+              "count": 3
+            },
+            {
+              "value": "zip",
+              "count": 3
+            },
+            {
+              "value": "cve-2021-27065",
+              "count": 2
+            },
+            {
+              "value": "html",
+              "count": 2
+            },
+            {
+              "value": "cpp",
+              "count": 1
+            },
+            {
+              "value": "cve-2021-34473",
+              "count": 1
+            },
+            {
+              "value": "known-distributor",
+              "count": 1
+            },
+            {
+              "value": "ruby",
+              "count": 1
+            }
+          ],
+          "vhash": [
+            {
+              "value": "e2adf132b5495315a4d9ca9fb3d7e038",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "7c1603b1df9777e5ef6f7c5d24d83b33",
+              "count": 1,
+              "total_related": 2,
+              "prevalence": 0.5
+            },
+            {
+              "value": "0a0d5c66e39f53f1675e23d347ecccfb",
+              "count": 1,
+              "total_related": 409,
+              "prevalence": 0.0024449877750611247
+            }
+          ],
+          "tlshhash": [
+            {
+              "value": "T103F1A793949388E593B041D2E45CE700FAE5375B643E1423FA3C5A2F4FBDA1790A21FA",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "T115F1B883949388A593B041D2E45CE700FAE5375B643A1423FB3C5A2F4FB9A1794D21FA",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "T123A42324C412FC5BEE7D89FA083486C5C5381A028B1CD56119CE36F592A64396FBE7BF",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "T13B12C745B0C20139C1F28582AADA9C46CB0E21C3C6E46466B7FC869F0F781D57A736DB",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "T13CA2E8D768A7007A1782C1E26CDF9A019B1D20479A883A34BF5C519D1F4D07AF2F67F2",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "T15F830217693E5EB4C48482C423D12CCBDE6829559C3FAFA54D1C71B29D1C8BEE096ECE",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "T1B1814B80B56FF20FCDE1B4FF6C66911675BB5D1380A8889522A28EB31D4BBC8477026C",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "T1BBF1B943A483C8E583B441C1E058E705FAE6265BA43E6413FB3C9A2F4FB8E1794A15F9",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            }
+          ],
+          "crowdsourced_yara_results": [
+            {
+              "value": {
+                "id": "0007bbfc16|WEBSHELL_ASP_By_String",
+                "ruleset_id": "0007bbfc16",
+                "ruleset_name": "gen_webshells",
+                "rule_name": "WEBSHELL_ASP_By_String",
+                "source": "https://github.com/Neo23x0/signature-base"
+              },
+              "count": 3,
+              "total_related": 1519,
+              "prevalence": 0.0019749835418038184
+            },
+            {
+              "value": {
+                "id": "00095e3ce6|WEBSHELL_HAFNIUM_CISA_10328929_01",
+                "ruleset_id": "00095e3ce6",
+                "ruleset_name": "apt_hafnium",
+                "rule_name": "WEBSHELL_HAFNIUM_CISA_10328929_01",
+                "source": "https://github.com/Neo23x0/signature-base"
+              },
+              "count": 3,
+              "total_related": 3180,
+              "prevalence": 0.0009433962264150943
+            },
+            {
+              "value": {
+                "id": "0007bbfc16|WEBSHELL_ASP_Generic",
+                "ruleset_id": "0007bbfc16",
+                "ruleset_name": "gen_webshells",
+                "rule_name": "WEBSHELL_ASP_Generic",
+                "source": "https://github.com/Neo23x0/signature-base"
+              },
+              "count": 3,
+              "total_related": 4431,
+              "prevalence": 0.0006770480704129993
+            },
+            {
+              "value": {
+                "id": "0007bbfc16|WEBSHELL_ASP_Generic_Eval_On_Input",
+                "ruleset_id": "0007bbfc16",
+                "ruleset_name": "gen_webshells",
+                "rule_name": "WEBSHELL_ASP_Generic_Eval_On_Input",
+                "source": "https://github.com/Neo23x0/signature-base"
+              },
+              "count": 3,
+              "total_related": 13981,
+              "prevalence": 0.0002145769258279093
+            },
+            {
+              "value": {
+                "id": "0007bbfc16|webshell_asp_by_string",
+                "ruleset_id": "0007bbfc16",
+                "ruleset_name": "gen_webshells",
+                "rule_name": "webshell_asp_by_string",
+                "source": "https://github.com/Neo23x0/signature-base"
+              },
+              "count": 2,
+              "total_related": 2313,
+              "prevalence": 0.0008646779074794639
+            },
+            {
+              "value": {
+                "id": "0007bbfc16|WEBSHELL_asp_generic",
+                "ruleset_id": "0007bbfc16",
+                "ruleset_name": "gen_webshells",
+                "rule_name": "WEBSHELL_asp_generic",
+                "source": "https://github.com/Neo23x0/signature-base"
+              },
+              "count": 2,
+              "total_related": 3687,
+              "prevalence": 0.0005424464334147003
+            },
+            {
+              "value": {
+                "id": "0007bbfc16|webshell_asp_generic_eval_on_input",
+                "ruleset_id": "0007bbfc16",
+                "ruleset_name": "gen_webshells",
+                "rule_name": "webshell_asp_generic_eval_on_input",
+                "source": "https://github.com/Neo23x0/signature-base"
+              },
+              "count": 2,
+              "total_related": 7279,
+              "prevalence": 0.0002747630168979255
+            }
+          ],
+          "embedded_domains": [
+            {
+              "value": "proxylogon.com",
+              "count": 2,
+              "total_related": 328,
+              "prevalence": 0.006097560975609756
+            },
+            {
+              "value": "metasploit.com",
+              "count": 2,
+              "total_related": 50792,
+              "prevalence": 0.00003937627972909119
+            },
+            {
+              "value": "btwaf.cn",
+              "count": 1,
+              "total_related": 4,
+              "prevalence": 0.25
+            },
+            {
+              "value": "o2oxy.cn",
+              "count": 1,
+              "total_related": 52,
+              "prevalence": 0.019230769230769232
+            },
+            {
+              "value": "www.o2oxy.cn",
+              "count": 1,
+              "total_related": 73,
+              "prevalence": 0.0136986301369863
+            },
+            {
+              "value": "testbnull.medium.com",
+              "count": 1,
+              "total_related": 289,
+              "prevalence": 0.0034602076124567475
+            },
+            {
+              "value": "praetorian.com",
+              "count": 1,
+              "total_related": 874,
+              "prevalence": 0.0011441647597254005
+            },
+            {
+              "value": "www.praetorian.com",
+              "count": 1,
+              "total_related": 1069,
+              "prevalence": 0.0009354536950420954
+            },
+            {
+              "value": "aka.ms",
+              "count": 2,
+              "total_related": 100000,
+              "prevalence": 0.00002
+            },
+            {
+              "value": "github.com",
+              "count": 2,
+              "total_related": 100000,
+              "prevalence": 0.00002
+            },
+            {
+              "value": "en.wikipedia.org",
+              "count": 1,
+              "total_related": 100000,
+              "prevalence": 0.00001
+            },
+            {
+              "value": "githubusercontent.com",
+              "count": 1,
+              "total_related": 100000,
+              "prevalence": 0.00001
+            },
+            {
+              "value": "medium.com",
+              "count": 1,
+              "total_related": 100000,
+              "prevalence": 0.00001
+            },
+            {
+              "value": "raw.githubusercontent.com",
+              "count": 1,
+              "total_related": 100000,
+              "prevalence": 0.00001
+            },
+            {
+              "value": "schemas.xmlsoap.org",
+              "count": 1,
+              "total_related": 100000,
+              "prevalence": 0.00001
+            },
+            {
+              "value": "twitter.com",
+              "count": 1,
+              "total_related": 100000,
+              "prevalence": 0.00001
+            },
+            {
+              "value": "wikipedia.org",
+              "count": 1,
+              "total_related": 100000,
+              "prevalence": 0.00001
+            },
+            {
+              "value": "xmlsoap.org",
+              "count": 1,
+              "total_related": 100000,
+              "prevalence": 0.00001
+            }
+          ],
+          "embedded_ips": [
+            {
+              "value": "127.0.0.1",
+              "count": 1,
+              "total_related": 100000,
+              "prevalence": 0.00001
+            }
+          ],
+          "file_types": [
+            {
+              "value": "html",
+              "count": 2
+            },
+            {
+              "value": "ruby",
+              "count": 1
+            }
+          ],
+          "filecondis_dhash": [
+            {
+              "value": "ba3cbc9c94868680",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            }
+          ],
+          "popular_threat_category": [
+            {
+              "value": "trojan",
+              "count": 2
+            },
+            {
+              "value": "hacktool",
+              "count": 1
+            }
+          ],
+          "popular_threat_name": [
+            {
+              "value": "python",
+              "count": 2
+            },
+            {
+              "value": "webshell",
+              "count": 2
+            }
+          ],
+          "suggested_threat_label": "trojan.webshell/python",
+          "embedded_urls": [
+            {
+              "value": "https://proxylogon.com/images/logo.jpg",
+              "count": 2,
+              "total_related": 17,
+              "prevalence": 0.11764705882352941
+            },
+            {
+              "value": "http://aka.ms/exchangevulns",
+              "count": 2,
+              "total_related": 30,
+              "prevalence": 0.06666666666666667
+            },
+            {
+              "value": "https://proxylogon.com/",
+              "count": 2,
+              "total_related": 232,
+              "prevalence": 0.008620689655172414
+            },
+            {
+              "value": "https://metasploit.com/download",
+              "count": 2,
+              "total_related": 7819,
+              "prevalence": 0.0002557871850620284
+            },
+            {
+              "value": "https://github.com/rapid7/metasploit-framework",
+              "count": 2,
+              "total_related": 9898,
+              "prevalence": 0.00020206102242877348
+            },
+            {
+              "value": "https://twitter.com/lotusdll/status/1371465073525362691",
+              "count": 1,
+              "total_related": 6,
+              "prevalence": 0.16666666666666666
+            },
+            {
+              "value": "https://en.wikipedia.org/wiki/2,147,483,647",
+              "count": 1,
+              "total_related": 8,
+              "prevalence": 0.125
+            },
+            {
+              "value": "https://github.com/Zeop-CyberSec/proxylogon_writeup",
+              "count": 1,
+              "total_related": 12,
+              "prevalence": 0.08333333333333333
+            },
+            {
+              "value": "https://raw.githubusercontent.com/microsoft/CSS-Exchange/main/Security/http-vuln-cve2021-26855.nse",
+              "count": 1,
+              "total_related": 12,
+              "prevalence": 0.08333333333333333
+            },
+            {
+              "value": "https://www.o2oxy.cn/3169.html",
+              "count": 1,
+              "total_related": 17,
+              "prevalence": 0.058823529411764705
+            },
+            {
+              "value": "https://github.com/praetorian-inc/proxylogon-exploit",
+              "count": 1,
+              "total_related": 18,
+              "prevalence": 0.05555555555555555
+            },
+            {
+              "value": "https://testbnull.medium.com/ph%C3%A2n-t%C3%ADch-l%E1%BB%97-h%E1%BB%95ng-proxylogon-mail-exchange-rce-s%E1%BB%B1-k%E1%BA%BFt-h%E1%BB%A3p-ho%C3%A0n-h%E1%BA%A3o-cve-2021-26855-37f4b6e06265",
+              "count": 1,
+              "total_related": 18,
+              "prevalence": 0.05555555555555555
+            },
+            {
+              "value": "https://www.praetorian.com/blog/reproducing-proxylogon-exploit",
+              "count": 1,
+              "total_related": 18,
+              "prevalence": 0.05555555555555555
+            },
+            {
+              "value": "https://twitter.com/testanull",
+              "count": 1,
+              "total_related": 34,
+              "prevalence": 0.029411764705882353
+            },
+            {
+              "value": "http://127.0.0.1:8080/",
+              "count": 1,
+              "total_related": 100000,
+              "prevalence": 0.00001
+            },
+            {
+              "value": "http://schemas.xmlsoap.org/soap/envelope/",
+              "count": 1,
+              "total_related": 100000,
+              "prevalence": 0.00001
+            }
+          ]
+        }
+      }
+    },
+    "context_attributes": {
+      "shared_with_me": false,
+      "role": "viewer"
     }
   }
 }

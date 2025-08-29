@@ -5,11 +5,11 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from connector.src.custom.client_api.client_api_base import BaseClientAPI
 
-LOG_PREFIX = "[FetcherReport]"
-
 
 class ClientAPIReport(BaseClientAPI):
     """Report-specific client API for fetching and processing report data."""
+
+    LOG_PREFIX = "[FetcherReport]"
 
     def __init__(
         self,
@@ -65,7 +65,8 @@ class ClientAPIReport(BaseClientAPI):
 
         except Exception as e:
             self.logger.error(
-                f"{LOG_PREFIX} Failed to build filter configurations: {str(e)}"
+                "Failed to build filter configurations",
+                {"prefix": self.LOG_PREFIX, "error": str(e)},
             )
             return [
                 {
@@ -102,7 +103,7 @@ class ClientAPIReport(BaseClientAPI):
         elif total_items:
             page_info = f" (total of {total_items} items)"
 
-        return f"{LOG_PREFIX} Fetched {data_count} {entity_description} from API{page_info}{cursor_info}"
+        return f"Fetched {data_count} {entity_description} from API{page_info}{cursor_info}"
 
     async def fetch_reports(
         self, initial_state: Optional[Dict[str, Any]]
@@ -127,14 +128,19 @@ class ClientAPIReport(BaseClientAPI):
             initial_state=initial_state,
         )
         report_fetcher = self.fetcher_factory.create_fetcher_by_name(
-            "main_reports", base_url=self.config.api_url
+            "main_reports", base_url=self.config.api_url.unicode_string()
         )
 
         for filter_config in filter_configs:
             endpoint_params = filter_config.get("params", {})
 
             self.logger.info(
-                f"{LOG_PREFIX} Fetching reports from endpoint 'reports' with filters: {endpoint_params}"
+                "Fetching reports from endpoint 'reports'",
+                {
+                    "prefix": self.LOG_PREFIX,
+                    "endpoint": "reports",
+                    "filters": endpoint_params,
+                },
             )
 
             async for report_data in self._paginate_with_cursor(

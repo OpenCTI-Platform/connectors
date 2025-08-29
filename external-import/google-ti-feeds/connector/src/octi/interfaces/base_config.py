@@ -55,4 +55,4 @@ class BaseConfig(ABC, BaseSettings):
         def yml_settings() -> dict[str, str]:
             return cast(dict[str, str], data)
 
-        return (yml_settings, env_settings, dotenv_settings, file_secret_settings)
+        return (yml_settings, env_settings, dotenv_settings, file_secret_settings)  # type: ignore[return-value]

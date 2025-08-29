@@ -13,7 +13,7 @@ class GTIReportFetchError(GTIApiError):
         message: str,
         report_id: Optional[str] = None,
         endpoint: Optional[str] = None,
-        status_code: Optional[int] = None,
+        status_code: Optional[str] = None,
         details: Optional[Dict[str, Any]] = None,
     ):
         """Initialize the exception.
@@ -27,9 +27,18 @@ class GTIReportFetchError(GTIApiError):
 
         """
         if report_id:
-            error_msg = f"Error fetching report {report_id}: {message}"
+            error_msg = "Error fetching report: {message}"
         else:
-            error_msg = f"Error fetching reports: {message}"
+            error_msg = "Error fetching reports: {message}"
 
         super().__init__(error_msg, status_code, endpoint, details)
         self.report_id = report_id
+
+        # Add structured data for logging
+        if hasattr(self, "structured_data"):
+            if report_id:
+                self.structured_data["report_id"] = report_id
+        else:
+            self.structured_data = {}
+            if report_id:
+                self.structured_data["report_id"] = report_id

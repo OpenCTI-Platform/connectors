@@ -12,7 +12,6 @@ from connector.src.stix.octi.models.url_model import OctiUrlModel
 from connector.src.stix.octi.observable_type_ov_enum import ObservableTypeOV
 from connector.src.stix.octi.pattern_type_ov_enum import PatternTypeOV
 from connector.src.stix.v21.models.ovs.indicator_type_ov_enums import IndicatorTypeOV
-from connector.src.stix.v21.models.scos.url_model import URLModel
 from connector.src.stix.v21.models.sdos.indicator_model import IndicatorModel
 from connector.src.stix.v21.models.sros.relationship_model import RelationshipModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
@@ -20,6 +19,7 @@ from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
     OrganizationAuthor,
     TLPMarking,
 )
+from stix2 import URL  # type: ignore[import-untyped]
 
 
 class GTIUrlToSTIXUrl(BaseMapper):
@@ -84,7 +84,7 @@ class GTIUrlToSTIXUrl(BaseMapper):
         self.organization = organization
         self.tlp_marking = tlp_marking
 
-    def _create_stix_url(self) -> URLModel:
+    def _create_stix_url(self) -> URL:
         """Create the STIX URL observable object.
 
         Returns:
@@ -102,7 +102,7 @@ class GTIUrlToSTIXUrl(BaseMapper):
             score=score,
         )
 
-        return url_model
+        return url_model.to_stix2_object()
 
     def _create_stix_indicator(self) -> IndicatorModel:
         """Create the STIX indicator object.
@@ -138,13 +138,13 @@ class GTIUrlToSTIXUrl(BaseMapper):
         return indicator_model
 
     def _create_relationship_indicator_url(
-        self, indicator: IndicatorModel, url_observable: URLModel
+        self, indicator: IndicatorModel, url_observable: URL
     ) -> RelationshipModel:
         """Create a based-on relationship from indicator to URL observable.
 
         Args:
             indicator (IndicatorModel): The source indicator object.
-            url_observable (URLModel): The target URL observable object.
+            url_observable (URL): The target URL observable object.
 
         Returns:
             RelationshipModel: The relationship model object.

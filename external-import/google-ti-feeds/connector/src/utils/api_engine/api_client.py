@@ -63,8 +63,14 @@ class ApiClient:
 
         """
         self._logger.debug(
-            f"{LOG_PREFIX} Preparing to call API: {method} {url} (Model: {model.__name__ if model else 'No'}, "
-            f"ResponseKey: {response_key}, Timeout: {timeout})"
+            f"{LOG_PREFIX} Preparing to call API",
+            {
+                "method": method,
+                "url": url,
+                "model": model.__name__ if model else None,
+                "response_key": response_key,
+                "timeout": timeout,
+            },
         )
         try:
             api_request = ApiRequestModel(
@@ -79,7 +85,10 @@ class ApiClient:
                 timeout=timeout,
             )
             response = await self.strategy.execute(api_request)
-            self._logger.debug(f"{LOG_PREFIX} API call to {method} {url} successful.")
+            self._logger.debug(
+                f"{LOG_PREFIX} API call successful",
+                {"method": method, "url": url},
+            )
             return response
         except (
             ApiTimeoutError,
@@ -96,16 +105,32 @@ class ApiClient:
             )
 
             self._logger.warning(
-                f"{LOG_PREFIX} {error_prefix} during call_api for {method} {url}: {error_type} - {known_api_err}",
+                f"{LOG_PREFIX} {error_prefix} during call_api",
+                {
+                    "method": method,
+                    "url": url,
+                    "error_type": error_type,
+                    "error": str(known_api_err),
+                },
             )
             raise known_api_err
         except ApiError as api_err:
             self._logger.warning(
-                f"{LOG_PREFIX} API error during call_api for {method} {url}: {api_err}",
+                f"{LOG_PREFIX} API error during call_api",
+                {
+                    "method": method,
+                    "url": url,
+                    "error": str(api_err),
+                },
             )
             raise api_err
         except Exception as e:
             self._logger.warning(
-                f"{LOG_PREFIX} Unexpected failure in call_api for {method} {url}: {e}",
+                f"{LOG_PREFIX} Unexpected failure in call_api",
+                {
+                    "method": method,
+                    "url": url,
+                    "error": str(e),
+                },
             )
             raise ApiError(f"Failed to call API {method} {url}: {e}") from e

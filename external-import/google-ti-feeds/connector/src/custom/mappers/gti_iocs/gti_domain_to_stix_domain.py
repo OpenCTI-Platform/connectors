@@ -12,7 +12,6 @@ from connector.src.stix.octi.models.relationship_model import OctiRelationshipMo
 from connector.src.stix.octi.observable_type_ov_enum import ObservableTypeOV
 from connector.src.stix.octi.pattern_type_ov_enum import PatternTypeOV
 from connector.src.stix.v21.models.ovs.indicator_type_ov_enums import IndicatorTypeOV
-from connector.src.stix.v21.models.scos.domain_name_model import DomainNameModel
 from connector.src.stix.v21.models.sdos.indicator_model import IndicatorModel
 from connector.src.stix.v21.models.sros.relationship_model import RelationshipModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
@@ -20,6 +19,7 @@ from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
     OrganizationAuthor,
     TLPMarking,
 )
+from stix2 import DomainName  # type: ignore[import-untyped]
 
 
 class GTIDomainToSTIXDomain(BaseMapper):
@@ -84,7 +84,7 @@ class GTIDomainToSTIXDomain(BaseMapper):
         self.organization = organization
         self.tlp_marking = tlp_marking
 
-    def _create_stix_domain(self) -> DomainNameModel:
+    def _create_stix_domain(self) -> DomainName:
         """Create the STIX domain observable object.
 
         Returns:
@@ -100,7 +100,7 @@ class GTIDomainToSTIXDomain(BaseMapper):
             score=score,
         )
 
-        return domain_model
+        return domain_model.to_stix2_object()
 
     def _create_stix_indicator(self) -> IndicatorModel:
         """Create the STIX indicator object.
@@ -131,7 +131,7 @@ class GTIDomainToSTIXDomain(BaseMapper):
         return indicator_model
 
     def _create_relationship_indicator_domain(
-        self, indicator: IndicatorModel, domain_observable: DomainNameModel
+        self, indicator: IndicatorModel, domain_observable: DomainName
     ) -> RelationshipModel:
         """Create a based-on relationship from indicator to domain observable.
 

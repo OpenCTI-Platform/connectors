@@ -10,6 +10,9 @@ from connector.src.custom.client_api.report.client_api_report import ClientAPIRe
 from connector.src.custom.client_api.threat_actor.client_api_threat_actor import (
     ClientAPIThreatActor,
 )
+from connector.src.custom.client_api.vulnerability.client_api_vulnerability import (
+    ClientAPIVulnerability,
+)
 from connector.src.custom.configs.fetcher_config import FETCHER_CONFIGS
 from connector.src.utils.api_engine.aio_http_client import AioHttpClient
 from connector.src.utils.api_engine.api_client import ApiClient
@@ -28,13 +31,11 @@ class ClientAPI:
         self.config = config
         self.logger = logger
 
-        self.logger.info(f"{LOG_PREFIX} Initializing client API")
+        self.logger.info("Initializing client API", {"prefix": LOG_PREFIX})
 
-        # Create shared API client and fetcher factory once
         self._shared_api_client = self._create_api_client()
         self._shared_fetcher_factory = self._create_fetcher_factory()
 
-        # Pass shared instances to specialized clients
         if self.config.import_reports:
             self.report_client = ClientAPIReport(
                 config, logger, self._shared_api_client, self._shared_fetcher_factory
@@ -45,6 +46,10 @@ class ClientAPI:
             )
         if self.config.import_malware_families:
             self.malware_client = ClientAPIMalware(
+                config, logger, self._shared_api_client, self._shared_fetcher_factory
+            )
+        if self.config.import_vulnerabilities:
+            self.vulnerability_client = ClientAPIVulnerability(
                 config, logger, self._shared_api_client, self._shared_fetcher_factory
             )
         self.shared_client = ClientAPIShared(
@@ -66,6 +71,11 @@ class ClientAPI:
         """Get the real total number of malware families from the malware client."""
         return self.malware_client.real_total_malware_families
 
+    @property
+    def real_total_vulnerabilities(self) -> int:
+        """Get the real total number of vulnerabilities from the vulnerability client."""
+        return self.vulnerability_client.real_total_vulnerabilities
+
     async def fetch_reports(
         self, initial_state: Optional[Dict[str, Any]]
     ) -> AsyncGenerator[Dict[Any, Any], None]:
@@ -78,7 +88,7 @@ class ClientAPI:
             AsyncGenerator[Dict[str, Any], None]: The fetched reports.
 
         """
-        self.logger.info(f"{LOG_PREFIX} Starting report fetching")
+        self.logger.info("Starting report fetching", {"prefix": LOG_PREFIX})
         async for report_data in self.report_client.fetch_reports(initial_state):
             yield report_data
 
@@ -94,7 +104,7 @@ class ClientAPI:
             AsyncGenerator[Dict[str, Any], None]: The fetched threat actors.
 
         """
-        self.logger.info(f"{LOG_PREFIX} Starting threat actor fetching")
+        self.logger.info("Starting threat actor fetching", {"prefix": LOG_PREFIX})
         async for threat_actor_data in self.threat_actor_client.fetch_threat_actors(
             initial_state
         ):
@@ -112,11 +122,29 @@ class ClientAPI:
             AsyncGenerator[Dict[str, Any], None]: The fetched malware families.
 
         """
-        self.logger.info(f"{LOG_PREFIX} Starting malware family fetching")
+        self.logger.info("Starting malware family fetching", {"prefix": LOG_PREFIX})
         async for malware_family_data in self.malware_client.fetch_malware_families(
             initial_state
         ):
             yield malware_family_data
+
+    async def fetch_vulnerabilities(
+        self, initial_state: Optional[Dict[str, Any]] = None
+    ) -> AsyncGenerator[Dict[Any, Any], None]:
+        """Fetch vulnerabilities from the API.
+
+        Args:
+            initial_state (Optional[Dict[str, Any]]): The initial state of the fetcher.
+
+        Yields:
+            Dict[str, Any]: The fetched vulnerabilities.
+
+        """
+        self.logger.info("Starting vulnerability fetching", {"prefix": LOG_PREFIX})
+        async for vulnerability_data in self.vulnerability_client.fetch_vulnerabilities(
+            initial_state
+        ):
+            yield vulnerability_data
 
     async def fetch_subentities_ids(
         self, entity_name: str, entity_id: str, subentity_types: list[str]
@@ -155,10 +183,14 @@ class ClientAPI:
         base_headers = {"X-Apikey": self.config.api_key, "accept": "application/json"}
 
         if hasattr(self.config, "api_url") and self.config.api_url:
-            self.logger.info(f"[BaseFetcher] Using base API URL: {self.config.api_url}")
+            self.logger.info(
+                "Using base API URL",
+                {"prefix": LOG_PREFIX, "api_url": self.config.api_url.unicode_string()},
+            )
         else:
             self.logger.error(
-                "[BaseFetcher] No API URL configured! Set config.api_url to make API calls work"
+                "No API URL configured! Set config.api_url to make API calls work",
+                {"prefix": LOG_PREFIX},
             )
 
         factory = GenericFetcherFactory(
@@ -170,7 +202,8 @@ class ClientAPI:
         for entity_type, config in FETCHER_CONFIGS.items():
             factory.register_config(entity_type, config)
             self.logger.debug(
-                f"[BaseFetcher] Registered fetcher config for {entity_type}"
+                "Registered fetcher config",
+                {"prefix": LOG_PREFIX, "entity_type": entity_type},
             )
 
         return factory
@@ -197,11 +230,13 @@ class ClientAPI:
 
         if hasattr(self.config, "api_url") and self.config.api_url:
             self.logger.info(
-                f"[BaseFetcher] Created API client for {self.config.api_url}"
+                "Created API client",
+                {"prefix": LOG_PREFIX, "api_url": self.config.api_url.unicode_string()},
             )
         else:
             self.logger.warning(
-                "[BaseFetcher] API URL not configured in config.api_url - API calls will likely fail"
+                "API URL not configured in config.api_url - API calls will likely fail",
+                {"prefix": LOG_PREFIX},
             )
 
         return api_client

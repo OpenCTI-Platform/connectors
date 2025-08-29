@@ -28,7 +28,7 @@ class ConvertToSTIXShared(BaseConvertToSTIX):
             List of converted STIX objects
 
         """
-        self.logger.debug(f"{LOG_PREFIX} Starting subentity conversion")
+        self.logger.debug("Starting subentity conversion", {"prefix": LOG_PREFIX})
         return super().convert_subentities_to_stix(subentities, main_entity)
 
     def convert_subentities_to_stix_with_linking(
@@ -48,7 +48,9 @@ class ConvertToSTIXShared(BaseConvertToSTIX):
             List of converted STIX objects
 
         """
-        self.logger.debug(f"{LOG_PREFIX} Starting subentity conversion with linking")
+        self.logger.debug(
+            "Starting subentity conversion with linking", {"prefix": LOG_PREFIX}
+        )
         return super().convert_subentities_to_stix_with_linking(
             subentities, main_entity, main_entities
         )

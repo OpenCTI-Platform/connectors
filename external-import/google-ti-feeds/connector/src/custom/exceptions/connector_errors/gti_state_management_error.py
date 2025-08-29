@@ -22,10 +22,20 @@ class GTIStateManagementError(GTIBaseError):
             details: Additional details about the error
 
         """
-        error_msg = message
         if state_key:
-            error_msg = f"State management error for key '{state_key}': {message}"
+            error_msg = "State management error for key: {message}"
+        else:
+            error_msg = message
 
         super().__init__(error_msg)
         self.state_key = state_key
         self.details = details or {}
+
+        # Add structured data for logging
+        if state_key:
+            self.details.update(
+                {
+                    "state_key": state_key,
+                    "original_message": message,
+                }
+            )

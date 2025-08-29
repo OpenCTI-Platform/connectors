@@ -27,5 +27,11 @@ class GTIReportConversionError(GTIEntityConversionError):
         super().__init__(message, report_id, "Report")
         self.processing_stage = processing_stage
 
-        if processing_stage:
-            self.args = (f"{self.args[0]} (stage: {processing_stage})",)
+        # Add structured data for logging
+        if hasattr(self, "structured_data"):
+            if processing_stage:
+                self.structured_data["processing_stage"] = processing_stage
+        else:
+            self.structured_data = {}
+            if processing_stage:
+                self.structured_data["processing_stage"] = processing_stage

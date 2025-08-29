@@ -5,7 +5,6 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, AsyncGenerator, Dict, List, Optional
 from uuid import uuid4
 
-import isodate  # type: ignore
 from connector.src.custom.configs.fetcher_config import FETCHER_CONFIGS
 from connector.src.utils.api_engine.aio_http_client import AioHttpClient
 from connector.src.utils.api_engine.api_client import ApiClient
@@ -60,7 +59,10 @@ class BaseClientAPI:
         last_mod_date = initial_state.get(state_key) if initial_state else None
 
         if last_mod_date:
-            self.logger.info(f"{LOG_PREFIX} Resuming from state: {last_mod_date}")
+            self.logger.info(
+                "Resuming from state",
+                {"prefix": LOG_PREFIX, "last_mod_date": last_mod_date},
+            )
             parsed_date = datetime.fromisoformat(last_mod_date) + timedelta(seconds=1)
             start_date = parsed_date.astimezone(timezone.utc).strftime(
                 "%Y-%m-%dT%H:%M:%S"
@@ -68,22 +70,33 @@ class BaseClientAPI:
             return start_date
 
         try:
-            duration = isodate.parse_duration(start_date_config)
+            duration = start_date_config
             if isinstance(duration, timedelta):
                 past_date = datetime.now(timezone.utc) - duration
                 start_date = past_date.strftime("%Y-%m-%dT%H:%M:%S")
                 self.logger.info(
-                    f"{LOG_PREFIX} Calculated start date: {start_date} (from duration: {start_date_config})"
+                    "Calculated start date",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "start_date": start_date,
+                        "duration": start_date_config,
+                    },
                 )
                 return start_date
             else:
                 self.logger.error(
-                    f"{LOG_PREFIX} Could not parse duration: {start_date_config}"
+                    "Could not parse duration",
+                    {"prefix": LOG_PREFIX, "start_date_config": start_date_config},
                 )
                 return None
         except Exception as e:
             self.logger.error(
-                f"{LOG_PREFIX} Error parsing start date config '{start_date_config}': {str(e)}"
+                "Error parsing start date config",
+                {
+                    "prefix": LOG_PREFIX,
+                    "start_date_config": start_date_config,
+                    "error": str(e),
+                },
             )
             return None
 
@@ -157,7 +170,13 @@ class BaseClientAPI:
                 filter_configs.append(config)
 
                 self.logger.info(
-                    f"{LOG_PREFIX} Configured fetching {entity_name} with {description} (from {start_date})"
+                    "Configured fetching",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "entity_name": entity_name,
+                        "description": description,
+                        "start_date": start_date,
+                    },
                 )
 
         return filter_configs
@@ -172,10 +191,14 @@ class BaseClientAPI:
         base_headers = {"X-Apikey": self.config.api_key, "accept": "application/json"}
 
         if hasattr(self.config, "api_url") and self.config.api_url:
-            self.logger.info(f"{LOG_PREFIX} Using base API URL: {self.config.api_url}")
+            self.logger.info(
+                "Using base API URL",
+                {"prefix": LOG_PREFIX, "api_url": self.config.api_url.unicode_string()},
+            )
         else:
             self.logger.error(
-                f"{LOG_PREFIX} No API URL configured! Set config.api_url to make API calls work"
+                "No API URL configured! Set config.api_url to make API calls work",
+                {"prefix": LOG_PREFIX},
             )
 
         factory = GenericFetcherFactory(
@@ -187,7 +210,8 @@ class BaseClientAPI:
         for entity_type, config in FETCHER_CONFIGS.items():
             factory.register_config(entity_type, config)
             self.logger.debug(
-                f"{LOG_PREFIX} Registered fetcher config for {entity_type}"
+                "Registered fetcher config",
+                {"prefix": LOG_PREFIX, "entity_type": entity_type},
             )
 
         return factory
@@ -219,11 +243,13 @@ class BaseClientAPI:
 
         if hasattr(self.config, "api_url") and self.config.api_url:
             self.logger.info(
-                f"{LOG_PREFIX} Created API client for {self.config.api_url}"
+                "Created API client",
+                {"prefix": LOG_PREFIX, "api_url": self.config.api_url.unicode_string()},
             )
         else:
             self.logger.warning(
-                f"{LOG_PREFIX} API URL not configured in config.api_url - API calls will likely fail"
+                "API URL not configured in config.api_url - API calls will likely fail",
+                {"prefix": LOG_PREFIX},
             )
 
         return api_client
@@ -286,7 +312,7 @@ class BaseClientAPI:
         elif total_items:
             page_info = f" (total of {total_items} items)"
 
-        return f"{LOG_PREFIX} Fetched {data_count} {entity_description} from API{page_info}{cursor_info}"
+        return f"Fetched {data_count} {entity_description} from API{page_info}{cursor_info}"
 
     async def _paginate_with_cursor(
         self,
@@ -315,8 +341,14 @@ class BaseClientAPI:
                 response = await fetcher.fetch_single(**params)
 
                 if response is None:
+                    # Use the child class's LOG_PREFIX if available, otherwise use base LOG_PREFIX
+                    prefix = getattr(self.__class__, "LOG_PREFIX", LOG_PREFIX)
                     self.logger.debug(
-                        f"{LOG_PREFIX} No {entity_description} data returned"
+                        "No data returned",
+                        {
+                            "prefix": prefix,
+                            "entity_description": entity_description,
+                        },
                     )
                     break
 
@@ -340,7 +372,9 @@ class BaseClientAPI:
                     total_items,
                     cursor,
                 )
-                self.logger.info(log_message)
+                # Use the child class's LOG_PREFIX if available, otherwise use base LOG_PREFIX
+                prefix = getattr(self.__class__, "LOG_PREFIX", LOG_PREFIX)
+                self.logger.info(log_message, {"prefix": prefix})
 
                 yield data
 
@@ -352,7 +386,15 @@ class BaseClientAPI:
 
         except Exception as e:
             self.logger.error(
-                f"{LOG_PREFIX} Failed to fetch {entity_description} page: {str(e)}"
+                "Failed to fetch page",
+                {
+                    "prefix": LOG_PREFIX,
+                    "entity_description": entity_description,
+                    "error": str(e),
+                },
             )
         finally:
-            self.logger.debug(f"{LOG_PREFIX} Finished fetching {entity_description}")
+            self.logger.debug(
+                "Finished fetching",
+                {"prefix": LOG_PREFIX, "entity_description": entity_description},
+            )
