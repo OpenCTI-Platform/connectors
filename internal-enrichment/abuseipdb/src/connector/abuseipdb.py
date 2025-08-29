@@ -13,6 +13,7 @@ from pycti import (
 )
 from src.connector.models import ConfigLoader
 
+
 class ConnectorAbuseIPDB:
     def __init__(self, config: ConfigLoader, helper: OpenCTIConnectorHelper):
         # Instantiate the connector helper from config

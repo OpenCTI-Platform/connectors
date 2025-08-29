@@ -8,7 +8,14 @@ from pydantic import (
 from src.connector.models.configs import ConfigBaseSettings
 
 TLPToLower = Annotated[
-    Literal["TLP:CLEAR", "TLP:WHITE", "TLP:GREEN", "TLP:AMBER", "TLP:AMBER+STRICT", "TLP:RED"],
+    Literal[
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED",
+    ],
     PlainSerializer(lambda v: "".join(v), return_type=str),
 ]
 
