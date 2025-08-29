@@ -7,7 +7,7 @@ from pydantic import (
     PlainSerializer,
     field_validator,
 )
-from src.connector.models.configs import ConfigBaseSettings
+from src.connector.models.configs.base_settings import ConfigBaseSettings
 
 LogLevelToLower = Annotated[
     Literal["debug", "info", "warn", "error"],
