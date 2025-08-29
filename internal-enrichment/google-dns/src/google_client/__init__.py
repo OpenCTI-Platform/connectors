@@ -1,3 +1,3 @@
-from .client import GoogleDNSClient
+from src.google_client.client import GoogleDNSClient
 
 __all__ = ["GoogleDNSClient"]

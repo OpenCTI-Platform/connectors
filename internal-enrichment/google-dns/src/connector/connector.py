@@ -2,9 +2,8 @@ from typing import Dict
 
 from google_client import GoogleDNSClient
 from pycti import CustomObservableText, OpenCTIConnectorHelper, StixCoreRelationship
+from src.models.configs.config_loader import ConfigLoader
 from stix2 import TLP_WHITE, Bundle, DomainName, IPv4Address, Relationship
-
-from .config_loader import ConfigLoader
 
 
 class GoogleDNSConnector:
