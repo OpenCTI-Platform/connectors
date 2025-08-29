@@ -75,7 +75,7 @@ def all_optional_config(request) -> dict[str, str]:  # type: ignore
         {"connector_log_level": "error"},
         {"connector_name": "Google Threat Intel Feeds"},
         {
-            "connector_scope": "report,location,identity,attack_pattern,domain,file,ipv4,ipv6,malware,sector,intrusion_set,url,vulnerability"
+            "connector_scope": "report,location,identity,attack_pattern,domain,file,ipv4,ipv6,malware,sector,intrusion_set,url,vulnerability,campaign"
         },
         {"connector_queue_threshold": "500"},
         {"connector_tlp_level": "AMBER+STRICT"},

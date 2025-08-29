@@ -1,15 +1,15 @@
-"""Threat actor-specific orchestrator for fetching and processing threat actor data."""
+"""Campaign-specific orchestrator for fetching and processing campaign data."""
 
 import logging
 import re
 from typing import Any, Dict, Optional
 
 from connector.src.custom.configs import (
-    THREAT_ACTOR_BATCH_PROCESSOR_CONFIG,
+    CAMPAIGN_BATCH_PROCESSOR_CONFIG,
     GTIConfig,
 )
-from connector.src.custom.convert_to_stix.threat_actor.convert_to_stix_threat_actor import (
-    ConvertToSTIXThreatActor,
+from connector.src.custom.convert_to_stix.campaign.convert_to_stix_campaign import (
+    ConvertToSTIXCampaign,
 )
 from connector.src.custom.models.gti.gti_attack_technique_id_model import (
     GTIAttackTechniqueIDData,
@@ -18,11 +18,11 @@ from connector.src.custom.orchestrators.base_orchestrator import BaseOrchestrato
 from connector.src.octi.work_manager import WorkManager
 from connector.src.utils.batch_processors import GenericBatchProcessor
 
-LOG_PREFIX = "[OrchestratorThreatActor]"
+LOG_PREFIX = "[OrchestratorCampaign]"
 
 
-class OrchestratorThreatActor(BaseOrchestrator):
-    """Threat actor-specific orchestrator for fetching and processing threat actor data."""
+class OrchestratorCampaign(BaseOrchestrator):
+    """Campaign-specific orchestrator for fetching and processing campaign data."""
 
     def __init__(
         self,
@@ -31,7 +31,7 @@ class OrchestratorThreatActor(BaseOrchestrator):
         config: GTIConfig,
         tlp_level: str,
     ):
-        """Initialize the Threat Actor Orchestrator.
+        """Initialize the Campaign Orchestrator.
 
         Args:
             work_manager: Work manager for handling OpenCTI work operations
@@ -47,19 +47,19 @@ class OrchestratorThreatActor(BaseOrchestrator):
             {"prefix": LOG_PREFIX, "api_url": self.config.api_url.unicode_string()},
         )
         self.logger.info(
-            "Threat actor import start date",
+            "Campaign import start date",
             {
                 "prefix": LOG_PREFIX,
-                "start_date": self.config.threat_actor_import_start_date,
+                "start_date": self.config.campaign_import_start_date,
             },
         )
 
-        self.converter = ConvertToSTIXThreatActor(config, logger, tlp_level)
+        self.converter = ConvertToSTIXCampaign(config, logger, tlp_level)
         self.batch_processor = self._create_batch_processor()
         self.nb_current: int = 0
 
     def _create_batch_processor(self) -> GenericBatchProcessor:
-        """Create and configure the threat actor batch processor.
+        """Create and configure the campaign batch processor.
 
         Returns:
             Configured GenericBatchProcessor instance
@@ -67,12 +67,12 @@ class OrchestratorThreatActor(BaseOrchestrator):
         """
         return GenericBatchProcessor(
             work_manager=self.work_manager,
-            config=THREAT_ACTOR_BATCH_PROCESSOR_CONFIG,
+            config=CAMPAIGN_BATCH_PROCESSOR_CONFIG,
             logger=self.logger,
         )
 
     async def run(self, initial_state: Optional[Dict[str, Any]]) -> None:
-        """Run the threat actor orchestrator.
+        """Run the campaign orchestrator.
 
         Args:
             initial_state: Initial state for the orchestrator
@@ -82,7 +82,7 @@ class OrchestratorThreatActor(BaseOrchestrator):
             "malware_families",
             "attack_techniques",
             "vulnerabilities",
-            "campaigns",
+            "threat_actors",
             # "reports",
             # "domains",
             # "files",
@@ -90,17 +90,15 @@ class OrchestratorThreatActor(BaseOrchestrator):
             # "ip_addresses",
         ]
         try:
-            async for gti_threat_actors in self.client_api.fetch_threat_actors(
-                initial_state
-            ):
-                total_threat_actors = len(gti_threat_actors)
-                for threat_actor_idx, threat_actor in enumerate(gti_threat_actors):
-                    threat_actor_entities = self.converter.convert_threat_actor_to_stix(
-                        threat_actor
+            async for gti_campaigns in self.client_api.fetch_campaigns(initial_state):
+                total_campaigns = len(gti_campaigns)
+                for campaign_idx, campaign in enumerate(gti_campaigns):
+                    campaign_entities = self.converter.convert_campaign_to_stix(
+                        campaign
                     )
                     subentities_ids = await self.client_api.fetch_subentities_ids(
                         entity_name="entity_id",
-                        entity_id=threat_actor.id,
+                        entity_id=campaign.id,
                         subentity_types=subentity_types,
                     )
 
@@ -112,8 +110,8 @@ class OrchestratorThreatActor(BaseOrchestrator):
                             "Found relationships",
                             {
                                 "prefix": LOG_PREFIX,
-                                "current": threat_actor_idx + 1,
-                                "total": total_threat_actors,
+                                "current": campaign_idx + 1,
+                                "total": total_campaigns,
                                 "relationships": rel_summary,
                             },
                         )
@@ -152,12 +150,12 @@ class OrchestratorThreatActor(BaseOrchestrator):
                     subentity_stix = (
                         self.converter.convert_subentities_to_stix_with_linking(
                             subentities=subentities_detailed,
-                            main_entity="threat_actor",
-                            main_entities=threat_actor_entities,
+                            main_entity="campaign",
+                            main_entities=campaign_entities,
                         )
                     )
 
-                    all_entities = threat_actor_entities + (subentity_stix or [])
+                    all_entities = campaign_entities + (subentity_stix or [])
 
                     entity_types: Dict[str, int] = {}
                     for entity in all_entities:
@@ -173,8 +171,8 @@ class OrchestratorThreatActor(BaseOrchestrator):
                         "Converted to STIX entities",
                         {
                             "prefix": LOG_PREFIX,
-                            "current": threat_actor_idx + 1,
-                            "total": total_threat_actors,
+                            "current": campaign_idx + 1,
+                            "total": total_campaigns,
                             "entities_count": len(all_entities),
                             "entities_summary": entities_summary,
                         },
@@ -189,35 +187,35 @@ class OrchestratorThreatActor(BaseOrchestrator):
             self._flush_batch_processor()
 
     def _update_index_inplace(self) -> None:
-        """Update the work message to reflect current threat actor progress."""
+        """Update the work message to reflect current campaign progress."""
 
         def replacer(match: Any) -> str:
-            actual_total = self.client_api.real_total_threat_actors or 0
+            actual_total = self.client_api.real_total_campaigns or 0
 
             if actual_total == 0:
-                return "(~ 0/0 threat actors)"
+                return "(~ 0/0 campaigns)"
 
             self.nb_current += 1
-            return f"(~ {self.nb_current}/{actual_total} threat actors)"
+            return f"(~ {self.nb_current}/{actual_total} campaigns)"
 
-        pattern = r"\(~ (\d+)/(\d+) threat actors\)"
+        pattern = r"\(~ (\d+)/(\d+) campaigns\)"
         template = self.batch_processor.config.work_name_template
         self.batch_processor.config.work_name_template = re.sub(
             pattern, replacer, template
         )
 
     def _flush_batch_processor(self) -> None:
-        """Flush any remaining items in the threat actor batch processor."""
+        """Flush any remaining items in the campaign batch processor."""
         try:
             work_id = self.batch_processor.flush()
             if work_id:
                 self.logger.info(
-                    "Threat actor batch processor: Flushed remaining items",
+                    "Campaign batch processor: Flushed remaining items",
                     {"prefix": LOG_PREFIX},
                 )
             self.batch_processor.update_final_state()
         except Exception as e:
             self.logger.error(
-                "Failed to flush threat actor batch processor",
+                "Failed to flush campaign batch processor",
                 {"prefix": LOG_PREFIX, "error": str(e)},
             )
