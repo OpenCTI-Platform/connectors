@@ -51,7 +51,7 @@ def fetch_country_domain(helper, domain: str):
         # Check README for further explanations
         if not w.get("domain_name", None):
             helper.connector_logger.warning(
-                "WHOIS call impossible for this domain", {"domain": domain}
+                "WHOIS call impossible for this TLD", {"domain": domain}
             )
 
         description = f"Domain:{domain}  \n"

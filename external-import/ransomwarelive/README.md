@@ -69,7 +69,7 @@ Note that logging messages can be added using `self.helper.connector_logger.{LOG
 ### Additional information
 
 The WHOIS protocol retrieves domain data but it can generate errors such as "whois.whois - ERROR - Error trying to connect to socket: closing socket"
-International WHOIS does not support all domains such as .ph, .bb, or .ly. These domains are managed by their own WHOIS protocol, which causes the error above.
+International WHOIS does not support all TLD (top domain level) such as .ph, .bb, or .ly. These TLD are managed by their own WHOIS protocol, which causes the error above.
 This error is for informational purposes only; it does not interfere with the connector process.
 
 <!--
