@@ -27,7 +27,8 @@ class ConverterToStix:
     - generate_id() for each entity from OpenCTI pycti library except observables to create
     """
 
-    def __init__(self):
+    def __init__(self, helper):
+        self.helper = helper
         self.marking = stix2.TLP_WHITE
         self.author = self.create_author()
 
@@ -298,7 +299,7 @@ class ConverterToStix:
             ip_object: stix2 IPv4 or IPv6 linked to the domain name
             relation_domain_ip: stix2 Relationship between domain and ip
         """
-        description = fetch_country_domain(domain_name)
+        description = fetch_country_domain(self.helper, domain_name)
 
         domain = self.create_domain(domain_name=domain_name, description=description)
 
