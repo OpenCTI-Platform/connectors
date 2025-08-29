@@ -8,7 +8,6 @@ from pydantic_settings import (
     PydanticBaseSettingsSource,
     YamlConfigSettingsSource,
 )
-
 from src.connector.models.configs.abuseipdb_configs import _ConfigLoaderAbuseIPDB
 from src.connector.models.configs.base_settings import ConfigBaseSettings
 from src.connector.models.configs.connector_configs import (
