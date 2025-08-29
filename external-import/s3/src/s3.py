@@ -181,9 +181,12 @@ class S3Connector:
 
     def fix_bundle(self, bundle):
         included_entities = []
-        data = json.loads(bundle)
-        new_bundle_objects = []
         new_bundle = []
+        new_bundle_objects = []
+        try:
+            data = json.loads(bundle)
+        except:
+            return new_bundle
         for obj in data["objects"]:
             included_entities.append(obj["id"])
         for obj in data["objects"]:
