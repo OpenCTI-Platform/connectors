@@ -1,6 +1,6 @@
 """Converts a GTI report into STIX relationship objects."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, List, Optional
 
 from connector.src.custom.models.gti.gti_report_model import GTIReportData
@@ -33,8 +33,12 @@ class GTIReportRelationship:
 
         """
         if hasattr(report, "attributes") and report.attributes is not None:
-            created = datetime.fromtimestamp(report.attributes.creation_date)
-            modified = datetime.fromtimestamp(report.attributes.last_modification_date)
+            created = datetime.fromtimestamp(
+                report.attributes.creation_date, tz=timezone.utc
+            )
+            modified = datetime.fromtimestamp(
+                report.attributes.last_modification_date, tz=timezone.utc
+            )
         else:
             raise ValueError("Invalid report data")
 
