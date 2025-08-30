@@ -383,7 +383,7 @@ class S3Connector:
         now = datetime.datetime.now(pytz.UTC)
         # We always re-send 2 days of data before deleting to handle multi instances consuming, we are good with this approach
         # OpenCTI will de-duplicate / upsert if necessary
-        cutoff = now - datetime.timedelta(days=2)
+        cutoff = now - datetime.timedelta(days=1)
         objects = self.s3_client.list_objects(Bucket=self.s3_bucket_name)
         if objects.get("Contents") is not None and len(objects.get("Contents")) > 0:
             friendly_name = "S3 run @ " + now.astimezone(pytz.UTC).isoformat()
