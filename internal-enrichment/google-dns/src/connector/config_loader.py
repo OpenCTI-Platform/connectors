@@ -1,5 +1,5 @@
-from models import ConfigLoader
 from pydantic import ValidationError
+from src.models.configs import ConfigLoader
 
 
 class GoogleDNSConfig:
