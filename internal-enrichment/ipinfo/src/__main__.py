@@ -159,8 +159,11 @@ class IpInfoConnector:
             headers={"accept": "application/json", "content-type": "application/json"},
         )
         json_data = response.json()
-        if "status" in json_data and json_data["status"] == 429:
-            raise ValueError("IpInfo Rate limit exceeded")
+        if "status" in json_data:
+            if json_data["status"] == 403:
+                raise ValueError("Invalid API Token")
+            if json_data["status"] == 429:
+                raise ValueError("IpInfo Rate limit exceeded")
         if "country" not in json_data:
             raise ValueError("Country not found, an error occurred")
         country = pycountry.countries.get(alpha_2=json_data["country"])
