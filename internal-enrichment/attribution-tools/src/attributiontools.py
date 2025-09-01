@@ -3,7 +3,7 @@ import os
 import re
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict
 from urllib.parse import urljoin
 
@@ -174,7 +174,7 @@ class AttributionTools:
                 bundle_objects.append(relationship)
 
         # Create a note from the prediction results
-        timestamp_str = f"{datetime.now(tz=datetime.timezone.utc).isoformat(timespec='seconds')}Z"
+        timestamp_str = f"{datetime.now(tz=timezone.utc).isoformat(timespec='seconds')}Z"
         note_contents = (
             f"Attribution-tools enrichment performed on {timestamp_str}."
             f"\n\nModel version: {self.attribution_model.db_version}"
@@ -280,7 +280,7 @@ class AttributionTools:
     def fetch_data_and_train_model(self):
         self.helper.log_info("Starting data fetch for model training...")
         # Announce upcoming training work
-        now = datetime.now(tz=datetime.timezone.utc)
+        now = datetime.now(tz=timezone.utc)
         friendly_name = f"Model training @ {now.isoformat(timespec='seconds')}Z"
         work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id,
@@ -300,7 +300,7 @@ class AttributionTools:
             else self.attribution_model.db_version
         )
         self.train_model(training_data, db_version)
-        finished_time = datetime.now(tz=datetime.timezone.utc)
+        finished_time = datetime.now(tz=timezone.utc)
         timestamp_str = f"{finished_time.isoformat(timespec='seconds')}Z"
 
         # Save most recent training data
@@ -326,14 +326,14 @@ class AttributionTools:
 
     def scheduled_model_training_loop(self):
         # Create a retraining schedule based on provided cron expression
-        schedule = self.cron.schedule(datetime.now(tz=datetime.timezone.utc))
+        schedule = self.cron.schedule(datetime.now(tz=timezone.utc))
         while True:
             # Find next time matching schedule and wait
             next_datetime = schedule.next()
-            time_difference = next_datetime - datetime.now(tz=datetime.timezone.utc)
+            time_difference = next_datetime - datetime.now(tz=timezone.utc)
             while time_difference.total_seconds() < 0:
                 next_datetime = schedule.next()
-                time_difference = next_datetime - datetime.now(tz=datetime.timezone.utc)
+                time_difference = next_datetime - datetime.now(tz=timezone.utc)
             self.helper.log_info(
                 f"Next model training will happen in {time_difference} at {next_datetime.isoformat()}Z"
             )
