@@ -105,7 +105,10 @@ class S3Connector:
             default=True,
         )
         self.s3_interval = get_config_variable(
-            "S3_INTERVAL", ["s3", "interval"], config, isNumber=True, default=5
+            "S3_INTERVAL", ["s3", "interval"], config, isNumber=True, default=120
+        )
+        self.s3_cutoff = get_config_variable(
+            "S3_CUTOFF", ["s3", "cutoff"], config, isNumber=True, default=360
         )
 
         # Create the identity
@@ -383,7 +386,7 @@ class S3Connector:
         now = datetime.datetime.now(pytz.UTC)
         # We always re-send 2 days of data before deleting to handle multi instances consuming, we are good with this approach
         # OpenCTI will de-duplicate / upsert if necessary
-        cutoff = now - datetime.timedelta(days=1)
+        cutoff = now - datetime.timedelta(minutes=self.s3_cutoff)
         objects = self.s3_client.list_objects(Bucket=self.s3_bucket_name)
         if objects.get("Contents") is not None and len(objects.get("Contents")) > 0:
             friendly_name = "S3 run @ " + now.astimezone(pytz.UTC).isoformat()
