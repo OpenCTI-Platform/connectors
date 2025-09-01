@@ -10,7 +10,7 @@
   "playbook_supported": false,
   "max_confidence_level": 60,
   "support_version": ">= 6.5.1",
-  "subscription_link": "https://www.greynoise.io/",
+  "subscription_link": "https://www.greynoise.io",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/greynoise-feed",
   "manager_supported": true,
   "container_version": "rolling",
