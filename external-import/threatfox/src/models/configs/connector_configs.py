@@ -49,3 +49,7 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
         default="error",
         description="Determines the verbosity of the logs.",
     )
+    update_existing_data: Optional[bool] = Field(
+        default=False,
+        description="Update data alrerady in the platform based on the Threat Fox data pull.",
+    )
