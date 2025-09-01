@@ -54,7 +54,10 @@ class CyberMonitor:
             "CYBER_MONITOR_REPORT_TYPE", ["cyber_monitor", "report_type"], config, False
         )
         self.cyber_monitor_report_status = get_config_variable(
-            "CYBER_MONITOR_REPORT_STATUS", ["cyber_monitor", "report_status"], config, False
+            "CYBER_MONITOR_REPORT_STATUS",
+            ["cyber_monitor", "report_status"],
+            config,
+            False,
         )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
@@ -206,7 +209,9 @@ class CyberMonitor:
                 last_run = current_state["last_run"]
                 self.helper.log_info(
                     "Connector last run: "
-                    + datetime.fromtimestamp(last_run, tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+                    + datetime.fromtimestamp(last_run, tz=timezone.utc).strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
                 )
             else:
                 last_run = None

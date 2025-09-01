@@ -18,7 +18,6 @@ from attribution_tools import parsers
 from attribution_tools.attribution_model import AttributionToolsModel
 from attribution_tools.train_attribution_model import TrainingAttributionToolsModel
 from cron_converter import Cron
-from dataexport import DataExport
 from pycti import (
     OpenCTIApiClient,
     OpenCTIConnectorHelper,
@@ -26,6 +25,8 @@ from pycti import (
     get_config_variable,
 )
 from stix2 import Bundle, Note, Relationship
+
+from dataexport import DataExport
 
 TRAINING_DATA_PATH = os.path.dirname(os.path.abspath(__file__)) + "/data/training_data"
 N_MAX_DATASET_FILES = 3
@@ -174,7 +175,9 @@ class AttributionTools:
                 bundle_objects.append(relationship)
 
         # Create a note from the prediction results
-        timestamp_str = f"{datetime.now(tz=timezone.utc).isoformat(timespec='seconds')}Z"
+        timestamp_str = (
+            f"{datetime.now(tz=timezone.utc).isoformat(timespec='seconds')}Z"
+        )
         note_contents = (
             f"Attribution-tools enrichment performed on {timestamp_str}."
             f"\n\nModel version: {self.attribution_model.db_version}"

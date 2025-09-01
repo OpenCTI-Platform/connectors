@@ -1,15 +1,16 @@
 import uuid
 from typing import Dict, List, Optional
 
+from joblib import Parallel, delayed
+from pycti import OpenCTIApiClient
+from pycti.utils.constants import IdentityTypes, LocationTypes, StixCyberObservableTypes
+
 from custom_attributes import (
     CUSTOM_ATTRIBUTES,
     CUSTOM_ATTRIBUTES_NO_NAME,
     CUSTOM_ATTRIBUTES_OBSERVABLE,
     CUSTOM_ATTRIBUTES_RELATIONSHIP,
 )
-from joblib import Parallel, delayed
-from pycti import OpenCTIApiClient
-from pycti.utils.constants import IdentityTypes, LocationTypes, StixCyberObservableTypes
 
 # Spec version
 SPEC_VERSION = "2.1"
