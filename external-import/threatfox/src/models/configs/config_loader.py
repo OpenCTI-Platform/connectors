@@ -20,18 +20,15 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
     """A concrete implementation of _ConfigLoaderConnector defining default connector configuration values."""
 
     id: str = Field(
-        alias="CONNECTOR_ID",
-        default="ipinfo--43cf861c-72a7-4e45-864a-b19e32e6a8bc",
+        default="threatfox--feb2a3b7-00c8-409f-a43b-bd20ef76e508",
         description="A unique UUIDv4 identifier for this connector instance.",
     )
     name: str = Field(
-        alias="CONNECTOR_NAME",
-        default="IP Info",
+        default="Abuse.ch | ThreatFox",
         description="Name of the connector.",
     )
     scope: str = Field(
-        alias="CONNECTOR_SCOPE",
-        default="IPv4-Addr,IPv6-Addr",
+        default="ThreatFox",
         description="The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
     )
 
