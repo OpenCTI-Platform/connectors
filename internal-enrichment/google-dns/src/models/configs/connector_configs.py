@@ -2,10 +2,10 @@ from datetime import timedelta
 from typing import Annotated, Literal, Optional
 
 from pydantic import Field, HttpUrl, PlainSerializer, field_validator
-from src.models.configs import ConfigBaseSettings
+from src.models.configs.base_settings import ConfigBaseSettings
 
 LogLevelToLower = Annotated[
-    Literal["debug", "info", "warn", "error"],
+    Literal["debug", "info", "warn", "warning", "error"],
     PlainSerializer(lambda v: "".join(v), return_type=str),
 ]
 
@@ -38,59 +38,20 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     scope: str
 
     type: Optional[str] = Field(
-        alias="CONNECTOR_TYPE",
         default="INTERNAL_ENRICHMENT",
         description="Should always be set to INTERNAL_ENRICHMENT for this connector.",
     )
     auto: Optional[bool] = Field(
-        alias="CONNECTOR_AUTO",
         default=False,
         description="Enables or disables automatic enrichment of observables for OpenCTI.",
     )
     confidence_level: Optional[int] = Field(
-        alias="CONNECTOR_CONFIDENCE_LEVEL",
         default=100,
         description="The default confidence level (a number between 1 and 100).",
     )
     log_level: Optional[LogLevelToLower] = Field(
-        alias="CONNECTOR_LOG_LEVEL",
         default="error",
         description="Determines the verbosity of the logs.",
-    )
-    listen_protocol: Optional[str] = Field(
-        alias="CONNECTOR_LISTEN_PROTOCOL",
-        default=None,
-        description="Protocol used for listening.",
-    )
-    listen_protocol_api_port: Optional[int] = Field(
-        alias="CONNECTOR_LISTEN_PROTOCOL_API_PORT",
-        default=None,
-        description="Port used for API listening.",
-    )
-    listen_protocol_api_path: Optional[str] = Field(
-        alias="CONNECTOR_LISTEN_PROTOCOL_API_PATH",
-        default=None,
-        description="API path for callback.",
-    )
-    listen_protocol_api_uri: Optional[str] = Field(
-        alias="CONNECTOR_LISTEN_PROTOCOL_API_URI",
-        default=None,
-        description="Full URI for API listening.",
-    )
-    listen_protocol_api_ssl: Optional[bool] = Field(
-        alias="CONNECTOR_LISTEN_PROTOCOL_API_SSL",
-        default=None,
-        description="Enable SSL for API listening.",
-    )
-    listen_protocol_api_ssl_key: Optional[str] = Field(
-        alias="CONNECTOR_LISTEN_PROTOCOL_API_SSL_KEY",
-        default=None,
-        description="SSL key file path.",
-    )
-    listen_protocol_api_ssl_cert: Optional[str] = Field(
-        alias="CONNECTOR_LISTEN_PROTOCOL_API_SSL_CERT",
-        default=None,
-        description="SSL certificate file path.",
     )
 
     @field_validator("type")

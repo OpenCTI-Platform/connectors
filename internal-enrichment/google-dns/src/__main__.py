@@ -1,7 +1,8 @@
 import traceback
 
 from pycti import OpenCTIConnectorHelper
-from src.connector import GoogleDNSConfig, GoogleDNSConnector
+from src.connector.config_loader import GoogleDNSConfig
+from src.connector.connector import GoogleDNSConnector
 
 if __name__ == "__main__":
     """
