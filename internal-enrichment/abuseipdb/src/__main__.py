@@ -19,7 +19,7 @@ if __name__ == "__main__":
         config_instance = config.load
         # Convert the config into a dictionary, automatically excluding any parameters set to `None`.
         config_dict = config_instance.model_dump(exclude_none=True)
-        helper = OpenCTIConnectorHelper(config=config_dict)
+        helper = OpenCTIConnectorHelper(config=config_dict, playbook_compatible=True)
         connector = ConnectorAbuseIPDB(config_instance, helper)
         connector.run()
     except Exception:
