@@ -39,21 +39,21 @@ class ConfigConnector:
 
         # Connector extra parameters
         self.api_base_url = get_config_variable(
-            "CONNECTOR_SUMOLOGIC_INTEL_API_BASE_URL",
+            "SUMOLOGIC_INTEL_API_BASE_URL",
             ["sumologic_intel", "api_base_url"],
             self.load,
             required=True,
         )
 
         self.access_id = get_config_variable(
-            "CONNECTOR_SUMOLOGIC_INTEL_ACCESS_ID",
+            "SUMOLOGIC_INTEL_ACCESS_ID",
             ["sumologic_intel", "access_id"],
             self.load,
             required=True,
         )
 
         self.access_key = get_config_variable(
-            "CONNECTOR_SUMOLOGIC_INTEL_ACCESS_KEY",
+            "SUMOLOGIC_INTEL_ACCESS_KEY",
             ["sumologic_intel", "access_key"],
             self.load,
             required=True,
