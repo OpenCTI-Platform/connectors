@@ -1,8 +1,4 @@
-from src.connector import (
-    HygieneConfig,
-    HygieneConnector,
-    ConfigLoader
-)
+from src.connector import ConfigLoader, HygieneConfig, HygieneConnector
 
 __all__ = [
     "HygieneConnector",
