@@ -1,23 +1,16 @@
-import os
-import sys
-import time
 from typing import Dict
 
-import yaml
-from client import GoogleDNSClient
 from pycti import CustomObservableText, OpenCTIConnectorHelper, StixCoreRelationship
+from src.google_client.client import GoogleDNSClient
+from src.models.configs.config_loader import ConfigLoader
 from stix2 import TLP_WHITE, Bundle, DomainName, IPv4Address, Relationship
 
 
 class GoogleDNSConnector:
-    def __init__(self):
-        config_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config, playbook_compatible=True)
+    def __init__(self, config: ConfigLoader, helper: OpenCTIConnectorHelper):
+        self.config = config
+        self.helper = helper
+
         self.dns_client = GoogleDNSClient()
 
     def _build_ip_addrs(self, domain, a_records) -> list:
@@ -225,13 +218,3 @@ class GoogleDNSConnector:
     def start(self) -> None:
         self.helper.log_info("Google DNS connector started")
         self.helper.listen(message_callback=self._process_message)
-
-
-if __name__ == "__main__":
-    try:
-        connector = GoogleDNSConnector()
-        connector.start()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        sys.exit(0)
