@@ -175,7 +175,7 @@ class IpInfoConnector:
                 raise ValueError(f"Unexpected HTTP Error {error_status_code}. Reason: {error_reason}")
 
         except requests.exceptions.RequestException:
-            raise ConnectionError(f"API connection error.")
+            raise ConnectionError("API connection error.")
 
         except ValueError:
             raise ValueError("Invalid JSON in response.")
