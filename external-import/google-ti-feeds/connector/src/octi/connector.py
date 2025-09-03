@@ -164,12 +164,14 @@ class Connector:
 
         reports_enabled = gti_config.import_reports
         threat_actors_enabled = gti_config.import_threat_actors
+        campaigns_enabled = gti_config.import_campaigns
         malware_families_enabled = gti_config.import_malware_families
         vulnerabilities_enabled = gti_config.import_vulnerabilities
 
         if (
             not reports_enabled
             and not threat_actors_enabled
+            and not campaigns_enabled
             and not malware_families_enabled
             and not vulnerabilities_enabled
         ):
@@ -182,6 +184,7 @@ class Connector:
             if enable_parallelism and (
                 reports_enabled
                 or threat_actors_enabled
+                or campaigns_enabled
                 or malware_families_enabled
                 or vulnerabilities_enabled
             ):
@@ -191,6 +194,7 @@ class Connector:
                     gti_config,
                     reports_enabled,
                     threat_actors_enabled,
+                    campaigns_enabled,
                     malware_families_enabled,
                     vulnerabilities_enabled,
                 )
@@ -214,6 +218,8 @@ class Connector:
             enabled_imports.append("reports")
         if gti_config.import_threat_actors:
             enabled_imports.append("threat_actors")
+        if gti_config.import_campaigns:
+            enabled_imports.append("campaigns")
         if gti_config.import_malware_families:
             enabled_imports.append("malware_families")
         if gti_config.import_vulnerabilities:
@@ -235,6 +241,12 @@ class Connector:
                 self._process_gti_threat_actors(gti_config), name="threat_actors"
             )
             tasks.append(threat_actors_task)
+
+        if gti_config.import_campaigns:
+            campaigns_task = asyncio.create_task(
+                self._process_gti_campaigns(gti_config), name="campaigns"
+            )
+            tasks.append(campaigns_task)
 
         if gti_config.import_malware_families:
             malware_families_task = asyncio.create_task(
@@ -337,6 +349,7 @@ class Connector:
         gti_config: GTIConfig,
         reports_enabled: bool,
         threat_actors_enabled: bool,
+        campaigns_enabled: bool,
         malware_families_enabled: bool,
         vulnerabilities_enabled: bool,
     ) -> Optional[Any]:
@@ -355,6 +368,15 @@ class Connector:
                 threat_actors_enabled,
                 gti_config,
                 self._process_gti_threat_actors,
+            )
+            if error_result:
+                return error_result
+
+            error_result = await self._process_import_type(
+                "campaigns",
+                campaigns_enabled,
+                gti_config,
+                self._process_gti_campaigns,
             )
             if error_result:
                 return error_result
@@ -445,6 +467,36 @@ class Connector:
             error_msg = f"GTI threat actors processing failed: {str(e)}"
             self._logger.error(
                 "GTI threat actors processing failed",
+                {"prefix": LOG_PREFIX, "error": str(e)},
+            )
+            return error_msg
+
+    async def _process_gti_campaigns(self, gti_config: GTIConfig) -> Optional[str]:
+        """Process GTI campaigns using the orchestrator."""
+        try:
+            orchestrator = Orchestrator(
+                work_manager=self.work_manager,
+                logger=self._logger,
+                config=gti_config,
+                tlp_level=self._config.connector_config.tlp_level,
+            )
+
+            initial_state = self._helper.get_state()
+            self._logger.info(
+                "Retrieved state",
+                {"prefix": LOG_PREFIX, "initial_state": initial_state},
+            )
+
+            self._logger.info(
+                "Starting GTI campaigns ingestion...", {"prefix": LOG_PREFIX}
+            )
+            await orchestrator.run_campaign(initial_state)
+            return None
+
+        except Exception as e:
+            error_msg = f"GTI campaigns processing failed: {str(e)}"
+            self._logger.error(
+                "GTI campaigns processing failed",
                 {"prefix": LOG_PREFIX, "error": str(e)},
             )
             return error_msg

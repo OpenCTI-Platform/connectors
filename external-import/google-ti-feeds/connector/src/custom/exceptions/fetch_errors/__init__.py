@@ -4,6 +4,9 @@ from connector.src.custom.exceptions.fetch_errors.gti_actor_fetch_error import (
     GTIActorFetchError,
 )
 from connector.src.custom.exceptions.fetch_errors.gti_api_error import GTIApiError
+from connector.src.custom.exceptions.fetch_errors.gti_campaign_fetch_error import (
+    GTICampaignFetchError,
+)
 from connector.src.custom.exceptions.fetch_errors.gti_domain_fetch_error import (
     GTIDomainFetchError,
 )
@@ -45,6 +48,7 @@ __all__ = [
     "GTIReportFetchError",
     "GTIMalwareFetchError",
     "GTIActorFetchError",
+    "GTICampaignFetchError",
     "GTITechniqueFetchError",
     "GTIVulnerabilityFetchError",
     "GTIRelationshipFetchError",

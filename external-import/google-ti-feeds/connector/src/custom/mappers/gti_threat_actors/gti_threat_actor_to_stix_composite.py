@@ -1,6 +1,6 @@
 """Composite mapper that handles threat actor to country locations, identity, intrusion set, and relationships conversion in one step."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, List
 
 from connector.src.custom.mappers.gti_threat_actors.gti_threat_actor_to_stix_identity import (
@@ -105,8 +105,10 @@ class GTIThreatActorToSTIXComposite(BaseMapper):
             return relationships
 
         attributes = self.threat_actor.attributes
-        created = datetime.fromtimestamp(attributes.creation_date)
-        modified = datetime.fromtimestamp(attributes.last_modification_date)
+        created = datetime.fromtimestamp(attributes.creation_date, tz=timezone.utc)
+        modified = datetime.fromtimestamp(
+            attributes.last_modification_date, tz=timezone.utc
+        )
 
         targeted_country_locations = self._get_targeted_country_locations(
             country_locations

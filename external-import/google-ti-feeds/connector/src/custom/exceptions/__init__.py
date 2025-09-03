@@ -9,6 +9,7 @@ from connector.src.custom.exceptions.connector_errors import (
 )
 from connector.src.custom.exceptions.convert_errors import (
     GTIActorConversionError,
+    GTICampaignConversionError,
     GTIDomainConversionError,
     GTIEntityConversionError,
     GTIFileConversionError,
@@ -25,6 +26,7 @@ from connector.src.custom.exceptions.convert_errors import (
 from connector.src.custom.exceptions.fetch_errors import (
     GTIActorFetchError,
     GTIApiError,
+    GTICampaignFetchError,
     GTIDomainFetchError,
     GTIFileFetchError,
     GTIIPFetchError,
@@ -56,6 +58,7 @@ __all__ = [
     "GTIReportConversionError",
     "GTIMalwareConversionError",
     "GTIActorConversionError",
+    "GTICampaignConversionError",
     "GTITechniqueConversionError",
     "GTIVulnerabilityConversionError",
     "GTIDomainConversionError",
@@ -68,6 +71,7 @@ __all__ = [
     "GTIReportFetchError",
     "GTIMalwareFetchError",
     "GTIActorFetchError",
+    "GTICampaignFetchError",
     "GTITechniqueFetchError",
     "GTIVulnerabilityFetchError",
     "GTIRelationshipFetchError",
