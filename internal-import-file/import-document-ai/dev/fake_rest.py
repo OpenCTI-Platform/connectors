@@ -171,7 +171,7 @@ app = FastAPI()
 app.add_middleware(V1AuthMiddleware)
 
 
-@app.post("/extract_entities", status_code=202)
+@app.post("/extract_entities", status_code=200, deprecated=True)
 async def extract_entities(file: UploadFile):
     """Fake endpoint to extract entities.
 
@@ -184,14 +184,14 @@ async def extract_entities(file: UploadFile):
         JSONResponse: A response indicating the status of the operation.
     """
     with open(
-        Path(__file__).parent / "responses" / "response_extract_entities_202.json"
+        Path(__file__).parent / "responses" / "response_extract_entities_200.json"
     ) as f:
         content = json.load(f)
     logger.warning(f"Received file: {file.filename}")
-    return JSONResponse(status_code=202, content=content)
+    return JSONResponse(status_code=200, content=content)
 
 
-@app.post("/extract_entities_relations", status_code=202)
+@app.post("/extract_entities_relations", status_code=200)
 async def extract_entities_relations(file: UploadFile):
     """Fake endpoint to extract entities relations.
 
@@ -204,8 +204,8 @@ async def extract_entities_relations(file: UploadFile):
     with open(
         Path(__file__).parent
         / "responses"
-        / "response_extract_entities_relations_202.json"
+        / "response_extract_entities_relations_200.json"
     ) as f:
         content = json.load(f)
     logger.warning(f"Received file: {file.filename}")
-    return JSONResponse(status_code=202, content=content)
+    return JSONResponse(status_code=200, content=content)
