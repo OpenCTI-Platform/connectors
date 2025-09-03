@@ -2,9 +2,9 @@ import os
 import sys
 import uuid
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
-from pytest_mock.plugin import MockerFixture
 
 TEST_DIR = Path(__file__).parent
 SRC_DIR = TEST_DIR.parent / "src"
@@ -13,9 +13,32 @@ SRC_DIR_STR = str(SRC_DIR.absolute())
 if SRC_DIR_STR not in sys.path:
     sys.path.append(SRC_DIR_STR)
 
+DEFAULT_WARNINGLISTS_SLOW_SEARCH = False
+DEFAULT_ENRICH_SUBDOMAINS = False
+DEFAULT_LABEL_NAME = "hygiene"
+DEFAULT_LABEL_COLOR = "#fc0341"
+DEFAULT_LABEL_PARENT_NAME = "hygiene_parent"
+
+
+@pytest.fixture
+def mock_config():
+    config = MagicMock()
+    config.hygiene.warninglists_slow_search = DEFAULT_WARNINGLISTS_SLOW_SEARCH
+    config.hygiene.enrich_subdomains = DEFAULT_ENRICH_SUBDOMAINS
+    config.hygiene.label_name = DEFAULT_LABEL_NAME
+    config.hygiene.label_color = DEFAULT_LABEL_COLOR
+    config.hygiene.label_parent_name = DEFAULT_LABEL_PARENT_NAME
+    config.hygiene.label_parent_color = DEFAULT_LABEL_COLOR
+    return config
+
+
+@pytest.fixture
+def mock_helper():
+    return MagicMock()
+
 
 @pytest.fixture(name="mock_opencti")
-def mock_opencti_env(mocker: MockerFixture):
+def mock_opencti_env(mocker):
     """
     Mocks the environment variables for testing.
     Yields a dictionary containing the original environment variables,
