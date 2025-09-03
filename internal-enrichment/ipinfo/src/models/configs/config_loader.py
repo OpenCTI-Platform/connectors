@@ -26,7 +26,7 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
     )
     name: str = Field(
         alias="CONNECTOR_NAME",
-        default="IP Info",
+        default="IPInfo",
         description="Name of the connector.",
     )
     scope: str = Field(
