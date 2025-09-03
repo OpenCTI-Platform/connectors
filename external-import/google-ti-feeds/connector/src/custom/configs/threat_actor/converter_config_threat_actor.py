@@ -5,6 +5,7 @@ to STIX format using the generic converter system.
 """
 
 from connector.src.custom.configs.converter_config_common import (
+    attributed_to_relationship,
     intrusion_set_to_report,
     related_to_relationship,
     set_intrusion_set_context,
@@ -13,6 +14,7 @@ from connector.src.custom.configs.converter_config_common import (
 )
 from connector.src.custom.exceptions import (
     GTIActorConversionError,
+    GTICampaignConversionError,
     GTIDomainConversionError,
     GTIFileConversionError,
     GTIIPConversionError,
@@ -24,6 +26,12 @@ from connector.src.custom.exceptions import (
 )
 from connector.src.custom.mappers.gti_attack_techniques.gti_attack_technique_ids_to_stix_attack_patterns import (
     GTIAttackTechniqueIDsToSTIXAttackPatterns,
+)
+from connector.src.custom.mappers.gti_campaigns.gti_campaign_to_stix_campaign import (
+    GTICampaignToSTIXCampaign,
+)
+from connector.src.custom.mappers.gti_campaigns.gti_campaign_to_stix_composite import (
+    GTICampaignToSTIXComposite,
 )
 from connector.src.custom.mappers.gti_iocs.gti_domain_to_stix_domain import (
     GTIDomainToSTIXDomain,
@@ -55,11 +63,17 @@ from connector.src.custom.mappers.gti_threat_actors.gti_threat_actor_to_stix_ide
 from connector.src.custom.mappers.gti_threat_actors.gti_threat_actor_to_stix_location import (
     GTIThreatActorToSTIXLocation,
 )
+from connector.src.custom.mappers.gti_vulnerabilities.gti_vulnerability_to_stix_composite import (
+    GTIVulnerabilityToSTIXComposite,
+)
 from connector.src.custom.mappers.gti_vulnerabilities.gti_vulnerability_to_stix_vulnerability import (
     GTIVulnerabilityToSTIXVulnerability,
 )
 from connector.src.custom.models.gti.gti_attack_technique_id_model import (
     GTIAttackTechniqueIDData,
+)
+from connector.src.custom.models.gti.gti_campaign_model import (
+    GTICampaignData,
 )
 from connector.src.custom.models.gti.gti_domain_model import (
     GTIDomainData,
@@ -163,7 +177,7 @@ GTI_THREAT_ACTOR_ATTACK_TECHNIQUE_CONVERTER_CONFIG = GenericConverterConfig(
 
 GTI_THREAT_ACTOR_VULNERABILITY_CONVERTER_CONFIG = GenericConverterConfig(
     entity_type="vulnerabilities",
-    mapper_class=GTIVulnerabilityToSTIXVulnerability,
+    mapper_class=GTIVulnerabilityToSTIXComposite,
     output_stix_type="vulnerability",
     exception_class=GTIVulnerabilityConversionError,
     display_name="vulnerabilities",
@@ -225,6 +239,20 @@ GTI_THREAT_ACTOR_IP_CONVERTER_CONFIG = GenericConverterConfig(
     postprocessing_function=related_to_relationship(GTIIPToSTIXIP, "intrusion_set"),
 )
 
+GTI_THREAT_ACTOR_CAMPAIGN_CONVERTER_CONFIG = GenericConverterConfig(
+    entity_type="campaigns",
+    mapper_class=GTICampaignToSTIXComposite,
+    output_stix_type="campaign",
+    exception_class=GTICampaignConversionError,
+    display_name="Campaigns",
+    input_model=GTICampaignData,
+    display_name_singular="Campaign",
+    validate_input=True,
+    postprocessing_function=attributed_to_relationship(
+        GTICampaignToSTIXCampaign, "intrusion_set", reverse=True
+    ),
+)
+
 THREAT_ACTOR_CONVERTER_CONFIGS = {
     "threat_actor": GTI_THREAT_ACTOR_CONVERTER_CONFIG,
     "threat_actor_locations": GTI_THREAT_ACTOR_LOCATION_CONVERTER_CONFIG,
@@ -237,4 +265,5 @@ THREAT_ACTOR_CONVERTER_CONFIGS = {
     "threat_actor_files": GTI_THREAT_ACTOR_FILE_CONVERTER_CONFIG,
     "threat_actor_urls": GTI_THREAT_ACTOR_URL_CONVERTER_CONFIG,
     "threat_actor_ip_addresses": GTI_THREAT_ACTOR_IP_CONVERTER_CONFIG,
+    "threat_actor_campaigns": GTI_THREAT_ACTOR_CAMPAIGN_CONVERTER_CONFIG,
 }
