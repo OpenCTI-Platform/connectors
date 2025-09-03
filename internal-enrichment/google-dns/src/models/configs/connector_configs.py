@@ -45,10 +45,6 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
         default=False,
         description="Enables or disables automatic enrichment of observables for OpenCTI.",
     )
-    confidence_level: Optional[int] = Field(
-        default=100,
-        description="The default confidence level (a number between 1 and 100).",
-    )
     log_level: Optional[LogLevelToLower] = Field(
         default="error",
         description="Determines the verbosity of the logs.",
