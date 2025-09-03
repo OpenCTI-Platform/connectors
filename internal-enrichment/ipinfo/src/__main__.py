@@ -158,7 +158,10 @@ class IpInfoConnector:
             response = requests.request(
                 "GET",
                 api_url,
-                headers={"accept": "application/json", "content-type": "application/json"},
+                headers={
+                    "accept": "application/json",
+                    "content-type": "application/json",
+                },
             )
             response.raise_for_status()
             json_data = response.json()
@@ -168,11 +171,17 @@ class IpInfoConnector:
             error_reason = getattr(err.response, "reason", None)
 
             if error_status_code == 403:
-                raise ValueError(f"Invalid API Token, Error {error_status_code}. Reason: {error_reason}")
+                raise ValueError(
+                    f"Invalid API Token, Error {error_status_code}. Reason: {error_reason}"
+                )
             elif error_status_code == 429:
-                raise ValueError(f"IpInfo Rate limit exceeded, Error {error_status_code}. Reason: {error_reason}")
+                raise ValueError(
+                    f"IpInfo Rate limit exceeded, Error {error_status_code}. Reason: {error_reason}"
+                )
             else:
-                raise ValueError(f"Unexpected HTTP Error {error_status_code}. Reason: {error_reason}")
+                raise ValueError(
+                    f"Unexpected HTTP Error {error_status_code}. Reason: {error_reason}"
+                )
 
         except requests.exceptions.RequestException:
             raise ConnectionError("API connection error.")
