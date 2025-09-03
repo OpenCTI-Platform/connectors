@@ -74,7 +74,9 @@ class ZscalerConnector:
         )
 
         if response:
-            self.helper.connector_logger.debug(f"Raw response from Zscaler: {response.text}")
+            self.helper.connector_logger.debug(
+                f"Raw response from Zscaler: {response.text}"
+            )
 
         if response and response.status_code == 200:
             # retrieve the JSESSIONID cookie
@@ -103,8 +105,6 @@ class ZscalerConnector:
                 f"Failed to authenticate with Zscaler: {status_code} - {text}"
             )
             self.session_cookie = None
-
-    
 
     def handle_rate_limit(self, request_func, *args, **kwargs):
         """Handle rate limits for the Zscaler API by applying a delay if the limit is reached."""
@@ -283,7 +283,6 @@ class ZscalerConnector:
         status_url = "https://zsapi.zscalertwo.net/api/v1/status"
         activate_url = "https://zsapi.zscalertwo.net/api/v1/status/activate"
 
-        
         time.sleep(5)
 
         for attempt in range(1, max_retries + 1):
@@ -292,7 +291,9 @@ class ZscalerConnector:
             if status_resp and status_resp.status_code == 200:
                 status = status_resp.json().get("status")
                 if status in ("ACTIVE", "PENDING", "INPROGRESS"):
-                    self.helper.connector_logger.info(f"Zscaler config status = {status}, no activation needed.")
+                    self.helper.connector_logger.info(
+                        f"Zscaler config status = {status}, no activation needed."
+                    )
                     return True
 
             # Try activation
@@ -319,26 +320,6 @@ class ZscalerConnector:
 
         self.helper.connector_logger.error("Activation failed after all retries.")
         return False
-
-
-
-    def _process_message(self, msg):
-        """Process messages from the OpenCTI stream."""
-        data = json.loads(msg.data)["data"]
-
-        # Only process indicators with pattern_type 'stix'
-        if data.get("type") == "indicator" and data.get("pattern_type") == "stix":
-            structured_data = {"pattern": data.get("pattern")}
-            if msg.event == "create":
-                self.check_and_send_to_zscaler(structured_data, "create")
-            elif msg.event == "delete":
-                self.check_and_send_to_zscaler(structured_data, "delete")
-        else:
-            msg = "Ignoring non-STIX indicator."
-            self.helper.connector_logger.info(msg)
-
-
-
 
     def _process_message(self, msg):
         """Process messages from the OpenCTI stream."""
