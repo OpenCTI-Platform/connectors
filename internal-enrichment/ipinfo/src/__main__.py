@@ -180,7 +180,6 @@ class IpInfoConnector:
         except ValueError:
             raise ValueError("Invalid JSON in response.")
 
-        print(json_data)
         if "country" not in json_data:
             raise ValueError("Country not found, an error occurred")
         country = pycountry.countries.get(alpha_2=json_data["country"])
