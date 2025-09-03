@@ -8,6 +8,9 @@ import logging
 from typing import Any, Dict, Optional
 
 from connector.src.custom.configs import GTIConfig
+from connector.src.custom.orchestrators.campaign.orchestrator_campaign import (
+    OrchestratorCampaign,
+)
 from connector.src.custom.orchestrators.malware.orchestrator_malware import (
     OrchestratorMalware,
 )
@@ -77,6 +80,17 @@ class Orchestrator:
             self.threat_actor_orchestrator = OrchestratorThreatActor(
                 work_manager, logger, config, tlp_level
             )
+        if self.config.import_campaigns:
+            self.logger.info(
+                "Campaign import start date",
+                {
+                    "prefix": LOG_PREFIX,
+                    "start_date": self.config.campaign_import_start_date,
+                },
+            )
+            self.campaign_orchestrator = OrchestratorCampaign(
+                work_manager, logger, config, tlp_level
+            )
         if self.config.import_malware_families:
             self.logger.info(
                 "Malware family import start date",
@@ -120,6 +134,16 @@ class Orchestrator:
         """
         self.logger.info("Starting threat actor orchestration", {"prefix": LOG_PREFIX})
         await self.threat_actor_orchestrator.run(initial_state)
+
+    async def run_campaign(self, initial_state: Optional[Dict[str, Any]]) -> None:
+        """Run the campaign orchestrator.
+
+        Args:
+            initial_state: Initial state for the orchestrator
+
+        """
+        self.logger.info("Starting campaign orchestration", {"prefix": LOG_PREFIX})
+        await self.campaign_orchestrator.run(initial_state)
 
     async def run_malware_family(self, initial_state: Optional[Dict[str, Any]]) -> None:
         """Run the malware family orchestrator.

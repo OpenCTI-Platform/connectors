@@ -1,8 +1,12 @@
 """Global OpenCTI connector configuration—common settings for all connectors."""
 
+from typing import Annotated
+
 from connector.src.octi.interfaces.base_config import BaseConfig
-from pydantic import Field, HttpUrl
+from pydantic import Field, HttpUrl, PlainSerializer
 from pydantic_settings import SettingsConfigDict
+
+HttpUrlToString = Annotated[HttpUrl, PlainSerializer(str, return_type=str)]
 
 
 class OctiConfig(BaseConfig):
@@ -12,7 +16,7 @@ class OctiConfig(BaseConfig):
 
     model_config = SettingsConfigDict(env_prefix="opencti_")
 
-    url: HttpUrl = Field(
+    url: HttpUrlToString = Field(
         ...,
         description="The URL of the OpenCTI platform instance",
         examples=["http://localhost:8080", "https://opencti.example.com"],
