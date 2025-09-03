@@ -4,4 +4,3 @@ opencti:
 
 abuseipdb:
   api_key: 'ChangeMe'
-  max_tlp: 'ChangeMe'
