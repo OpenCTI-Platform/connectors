@@ -1,8 +1,8 @@
 {
   "title": "Flashpoint",
-  "slug": "flashpoint-imap-connector",
-  "description": "The Email Intel IMAP Connector enables the ingestion of cyber threat intelligence reports received via email into the OpenCTI platform using the IMAP protocol. This connector allows organizations to automate the collection of intelligence shared through email by regularly polling a mailbox and transforming each message into an OpenCTI report.\n\nThis connector is designed to connect to an IMAP-compatible email inbox, extract email content and attachments, and convert the data into structured CTI reports within OpenCTI. The connector is suitable for any threat intel flow that relies on email as a delivery method and is compatible with standard IMAP servers.\n\nThe connector is also compatible with Google Workspace mailboxes.",
-  "short_description": "Flashpoint Ignite consolidates team-tailored intelligence across various groups into a single workspace, enabling security teams to connect, collaborate, and remediate risk more efficiently with timely and active intelligence. It provides visibility into intelligence landscapes, covering cyber threats, vulnerabilities, physical security, and national security. By offering a comprehensive view of risk in one place, security experts can effectively close the gap between data, intelligence, and action.\n\nThe integration with OpenCTI allows for the import of threat intelligence data from Flashpoint, mapping it to relevant entities within the OpenCTI ecosystem. This integration includes alerts, indicators, malware reports, vulnerabilities, and other intelligence, significantly enhancing threat detection and response capabilities.",
+  "slug": "flashpoint",
+  "description": "Flashpoint Ignite consolidates team-tailored intelligence across various groups into a single workspace, enabling security teams to connect, collaborate, and remediate risk more efficiently with timely and active intelligence. It provides visibility into intelligence landscapes, covering cyber threats, vulnerabilities, physical security, and national security. By offering a comprehensive view of risk in one place, security experts can effectively close the gap between data, intelligence, and action.\n\nThe integration with OpenCTI allows for the import of threat intelligence data from Flashpoint, mapping it to relevant entities within the OpenCTI ecosystem. This integration includes alerts, indicators, malware reports, vulnerabilities, and other intelligence, significantly enhancing threat detection and response capabilities.",
+  "short_description": "Flashpoint Ignite consolidates team-tailored intelligence across various groups into a single workspace, enabling security teams to connect, collaborate, and remediate risk more efficiently with timely and active intelligence.",
   "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
   "use_cases": [
     "Commercial Threat Intel"
@@ -12,7 +12,7 @@
   "playbook_supported": false,
   "max_confidence_level": 55,
   "support_version": ">= 6.5.1",
-  "subscription_link": "",
+  "subscription_link": "https://flashpoint.io/ignite/",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/flashpoint",
   "manager_supported": true,
   "container_version": "rolling",
