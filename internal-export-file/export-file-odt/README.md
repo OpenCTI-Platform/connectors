@@ -1,13 +1,6 @@
 # Export File ODT
 
-<!--
-General description of the connector
-* What it does
-* How it works
-* Special requirements
-* Use case description
-* ...
--->
+This connector allows you to export search results in ODT format. It only works for search results.
 
 ## Installation
 
