@@ -58,41 +58,6 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
         default=True,
         description="Enables or disables automatic enrichment of observables for OpenCTI.",
     )
-    listen_protocol: Optional[str] = Field(
-        alias="CONNECTOR_LISTEN_PROTOCOL",
-        default=None,
-        description="Protocol used for listening.",
-    )
-    listen_protocol_api_port: Optional[int] = Field(
-        alias="CONNECTOR_LISTEN_PROTOCOL_API_PORT",
-        default=None,
-        description="Port used for API listening.",
-    )
-    listen_protocol_api_path: Optional[str] = Field(
-        alias="CONNECTOR_LISTEN_PROTOCOL_API_PATH",
-        default=None,
-        description="API path for callback.",
-    )
-    listen_protocol_api_uri: Optional[str] = Field(
-        alias="CONNECTOR_LISTEN_PROTOCOL_API_URI",
-        default=None,
-        description="Full URI for API listening.",
-    )
-    listen_protocol_api_ssl: Optional[bool] = Field(
-        alias="CONNECTOR_LISTEN_PROTOCOL_API_SSL",
-        default=None,
-        description="Enable SSL for API listening.",
-    )
-    listen_protocol_api_ssl_key: Optional[str] = Field(
-        alias="CONNECTOR_LISTEN_PROTOCOL_API_SSL_KEY",
-        default=None,
-        description="SSL key file path.",
-    )
-    listen_protocol_api_ssl_cert: Optional[str] = Field(
-        alias="CONNECTOR_LISTEN_PROTOCOL_API_SSL_CERT",
-        default=None,
-        description="SSL certificate file path.",
-    )
 
     @field_validator("type")
     def force_value_for_type_to_be_internal_enrichment(cls, value):

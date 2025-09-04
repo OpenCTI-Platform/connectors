@@ -153,14 +153,42 @@ class IpInfoConnector:
             + "/json/?token="
             + self.token.get_secret_value()
         )
-        response = requests.request(
-            "GET",
-            api_url,
-            headers={"accept": "application/json", "content-type": "application/json"},
-        )
-        json_data = response.json()
-        if "status" in json_data and json_data["status"] == 429:
-            raise ValueError("IpInfo Rate limit exceeded")
+
+        try:
+            response = requests.request(
+                "GET",
+                api_url,
+                headers={
+                    "accept": "application/json",
+                    "content-type": "application/json",
+                },
+            )
+            response.raise_for_status()
+            json_data = response.json()
+
+        except requests.exceptions.HTTPError as err:
+            error_status_code = getattr(err.response, "status_code", None)
+            error_reason = getattr(err.response, "reason", None)
+
+            if error_status_code == 403:
+                raise ValueError(
+                    f"Invalid API Token, Error {error_status_code}. Reason: {error_reason}"
+                )
+            elif error_status_code == 429:
+                raise ValueError(
+                    f"IpInfo Rate limit exceeded, Error {error_status_code}. Reason: {error_reason}"
+                )
+            else:
+                raise ValueError(
+                    f"Unexpected HTTP Error {error_status_code}. Reason: {error_reason}"
+                )
+
+        except requests.exceptions.RequestException:
+            raise ConnectionError("API connection error.")
+
+        except ValueError:
+            raise ValueError("Invalid JSON in response.")
+
         if "country" not in json_data:
             raise ValueError("Country not found, an error occurred")
         country = pycountry.countries.get(alpha_2=json_data["country"])
