@@ -1,15 +1,8 @@
 # Export File HTML Connector
 
-<!--
-General description of the connector
-* What it does
-* How it works
-* Special requirements
-* Use case description
-* ...
--->
+This connector allows you to export search results in HTML format. It only works for search results.
 
-## Installation
+### Installation
 
 ### Requirements
 
