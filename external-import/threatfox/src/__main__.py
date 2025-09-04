@@ -41,7 +41,7 @@ class ThreatFox:
         # Instantiate the connector helper from config
         self.config = ConfigLoader()
         self.helper = OpenCTIConnectorHelper(
-            config=self.config.model_dump(exclude_none=True), playbook_compatible=True
+            config=self.config.model_dump(exclude_none=True)
         )
 
         # Extra config
@@ -59,8 +59,6 @@ class ThreatFox:
         self.ioc_to_import = [ioc.strip() for ioc in self.ioc_to_import]
         if len(self.ioc_to_import) == 0:
             self.ioc_to_import = [ALL_TYPES]
-
-        self.update_existing_data = self.config.connector.update_existing_data
 
         self.identity: str = self.helper.api.identity.create(
             type="Organization",
@@ -213,7 +211,6 @@ class ThreatFox:
             if "objects" in bundle:
                 self.helper.send_stix2_bundle(
                     bundle,
-                    update=self.update_existing_data,
                     work_id=work_id,
                 )
 

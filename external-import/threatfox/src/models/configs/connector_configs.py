@@ -1,4 +1,3 @@
-from datetime import timedelta
 from typing import Annotated, Literal, Optional
 
 from pydantic import (
@@ -14,9 +13,6 @@ LogLevelToLower = Annotated[
 ]
 
 HttpUrlToString = Annotated[HttpUrl, PlainSerializer(str, return_type=str)]
-TimedeltaInSeconds = Annotated[
-    timedelta, PlainSerializer(lambda v: int(v.total_seconds()), return_type=int)
-]
 
 
 class _ConfigLoaderOCTI(ConfigBaseSettings):
@@ -48,8 +44,4 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     log_level: Optional[LogLevelToLower] = Field(
         default="error",
         description="Determines the verbosity of the logs.",
-    )
-    update_existing_data: Optional[bool] = Field(
-        default=False,
-        description="Update data alrerady in the platform based on the Threat Fox data pull.",
     )

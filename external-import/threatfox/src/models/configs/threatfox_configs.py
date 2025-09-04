@@ -25,19 +25,19 @@ class _ConfigLoaderThreatFox(ConfigBaseSettings):
         description="The default x_opencti_score to use.",
     )
     x_opencti_score_ip: Optional[int] = Field(
-        default=60,
+        default=None,
         description="Set the x_opencti_score for IP observables.",
     )
     x_opencti_score_domain: Optional[int] = Field(
-        default=70,
+        default=None,
         description="Set the x_opencti_score for Domain observables.",
     )
     x_opencti_score_url: Optional[int] = Field(
-        default=75,
+        default=None,
         description="Set the x_opencti_score for URL observables.",
     )
     x_opencti_score_hash: Optional[int] = Field(
-        default=80,
+        default=None,
         description="Set the x_opencti_score for Hash observables.",
     )
     interval: Optional[int] = Field(
@@ -45,6 +45,6 @@ class _ConfigLoaderThreatFox(ConfigBaseSettings):
         description="[DEPRECATED] Interval in days between two scheduled runs of the connector.",
     )
     ioc_to_import: Optional[str] = Field(
-        default="ip:port,domain,url",
-        description="List of IOC types to retrieve, available parameter: all_types, ip:port, domain, url, md5_hash, sha1_hash, sha256_hash",
+        default="all_types",
+        description="List of IOC types to retrieve, available parameters: all_types, ip:port, domain, url, md5_hash, sha1_hash, sha256_hash",
     )
