@@ -1,5 +1,6 @@
 import ipaddress
 import re
+from typing import Literal
 
 
 def validate_mitre_attack_pattern(pattern):
@@ -73,3 +74,53 @@ def validate_ip_or_cidr(input_str):
                 return "IPv6 CIDR"
         except ValueError:
             return "Invalid"
+
+
+def parse_cpe(cpe_string: str) -> dict[str, str]:
+    """
+    Parse a CPE 2.3 string and return its attributes.
+
+    Args:
+        cpe_ctring (str): The CPE 2.3 string to parse
+
+    Returns:
+        dict: A dictionnary of CPE attributes
+
+    Notes:
+        - CPE 2.3 format:
+            "cpe:<cpe_version>:<part>:<vendor>:<product>:<version>:<update>:<edition>:<language>:<sw_edition>:<target_sw>:<target_hw>:<other>"
+    """
+    attributes_names = [
+        "cpe",
+        "cpe_version",
+        "part",
+        "vendor",
+        "product",
+        "version",
+        "update",
+        "edition",
+        "language",
+        "sw_edition",
+        "target_sw",
+        "target_hw",
+        "other",
+    ]
+
+    # split on non-escaped colon (:)
+    attributes_values = re.split(r"(?<!\\):", cpe_string)
+    if len(attributes_values) != len(attributes_names):
+        raise ValueError("Could not parse CPE 2.3 string")
+
+    return {
+        attribute_name: attributes_values[index] or "*"
+        for index, attribute_name in enumerate(attributes_names)
+    }
+
+
+def get_hash_algorithm(hash: str) -> Literal["SHA-256", "SHA-1", "MD5"] | None:
+    if len(hash) == 64:
+        return "SHA-256"
+    elif len(hash) == 40:
+        return "SHA-1"
+    elif len(hash) == 32:
+        return "MD5"
