@@ -27,16 +27,12 @@ class ConnectorMISP:
         # Instantiate the connector helper from config
 
         self.config = ConfigLoader()
-        print(self.config.model_dump(exclude_none=True))
         self.helper = OpenCTIConnectorHelper(
             config=self.config.model_dump(exclude_none=True)
         )
 
         self.misp_url = self.config.misp.url
         self.misp_api_key = self.config.misp.api_key
-        print("je suis la")
-        print(self.misp_url)
-        print(self.misp_api_key.get_secret_value())
         self.converter = Converter()
         self.misp_client = MISPClient(self.misp_url, self.misp_api_key.get_secret_value(), ssl_verify=False)
 
