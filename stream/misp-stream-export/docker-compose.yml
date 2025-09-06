@@ -1,0 +1,21 @@
+version: '3'
+services:
+  connector-misp-stream-export:
+    image: opencti/connector-misp-stream-export:rolling
+    environment:
+      # Connector's generic execution parameters
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      # Connector's definition parameters REQUIRED
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME="MISP Stream Export"
+      - CONNECTOR_SCOPE=misp
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_LIVE_STREAM_ID=live # ID of the live stream created in the OpenCTI UI
+      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
+
+      # Connector's custom execution parameters
+      - MISP_URL=CHANGEME
+      - MISP_API_KEY=CHANGEME
+    restart: always
