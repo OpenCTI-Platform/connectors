@@ -47,24 +47,26 @@ class ConnectorMISP:
         ):
             raise ValueError("Missing stream ID, please check your configurations.")
 
-    def _process_event(self, event_type: str, stix_object: dict) -> None:
+    def _process_event(self, event_type: str, event: dict) -> None:
         """
         This method can handle any type of event with the same logic (_prepare_stix_object)
 
         The API used (upload_stix_objects) to upload the stix objects to Sentinel can handle
           Indicators, AttackPatterns, Identity, ThreatActors and Relationships.
         """
-        print(event_type)
+        stix_object = event['data']
         match event_type:
+
             case "create":
 
                 # going to resolve objects contains:
                 contains_entities = []
                 for contains_stix_object in stix_object.get("object_refs", []):
-                    self.helper.api.report.contains_stix_object_or_stix_relationship()
-                    stix_entity = self.helper.api.stix_core_object.read(id=contains_stix_object)
-                    if stix_entity:
-                        contains_entities.append(stix_entity)
+                    # skipping relationship type objects
+                    if "relationship--" not in contains_stix_object:
+                        stix_entity = self.helper.api.stix_domain_object.read(id=contains_stix_object)
+                        if stix_entity:
+                            contains_entities.append(stix_entity)
                 misp_event = self.converter.convert_to_misp_event(stix_object, contains_entities)
                 created_event_id = self.misp_client.add_event(misp_event)
                 self.misp_client.publish_event(created_event_id)
@@ -72,7 +74,7 @@ class ConnectorMISP:
                 # add external reference to the original container
                 external_reference = self.helper.api.external_reference.create(
                     url=self.misp_url+"/events/view/"+created_event_id,
-                    source_name="MISP",
+                    source_name="MISP Stream Export",
                     external_id=created_event_id,
                     description="MISP Event reference",
                 )
@@ -82,23 +84,24 @@ class ConnectorMISP:
                 )
 
             case "update":
+                if "MISP Stream Export" not in event["message"]:
+                    misp_event_id = None
+                    for external_ref in stix_object.get("external_references", []):
+                        if external_ref.get("source_name", None) == "MISP Stream Export":
+                            if self.misp_url in external_ref.get("url", ""):
+                                misp_event_id = external_ref.get("external_id")
 
-                misp_event_id = None
-                for external_ref in stix_object.get("external_references", []):
-                    if external_ref.get("source_name", None) == "MISP":
-                        if self.misp_url in external_ref.get("url", ""):
-                            misp_event_id = external_ref.get("external_id")
-
-                # going to resolve objects contains:
-                contains_entities = []
-                for contains_stix_object in stix_object.get("object_refs", []):
-                    self.helper.api.report.contains_stix_object_or_stix_relationship()
-                    stix_entity = self.helper.api.stix_core_object.read(id=contains_stix_object)
-                    if stix_entity:
-                        contains_entities.append(stix_entity)
-                misp_event = self.converter.convert_to_misp_event(stix_object, contains_entities)
-                self.misp_client.update_event(misp_event_id, misp_event)
-                self.misp_client.publish_event(misp_event_id)
+                    # going to resolve objects contains:
+                    contains_entities = []
+                    for contains_stix_object in stix_object.get("object_refs", []):
+                        # skipping relationship type objects
+                        if "relationship--" not in contains_stix_object:
+                            stix_entity = self.helper.api.opencti_stix_object_or_stix_relationship.read(id=contains_stix_object)
+                            if stix_entity:
+                                contains_entities.append(stix_entity)
+                    misp_event = self.converter.convert_to_misp_event(stix_object, contains_entities)
+                    self.misp_client.update_event(misp_event_id, misp_event)
+                    self.misp_client.publish_event(misp_event_id)
 
             case "delete":
                 pass
@@ -114,25 +117,25 @@ class ConnectorMISP:
         :return:
         """
         try:
-            data = json.loads(event.data)["data"]
+            data = json.loads(event.data)
         except json.JSONDecodeError as err:
             raise ConnectorError(
                 message="[ERROR] Data cannot be parsed to JSON",
                 metadata={"message_data": event.data, "error": str(err)},
             ) from err
-        if data.get("type") in SUPPORTED_ENTITIES_TYPES:
+        if data["data"].get("type") in SUPPORTED_ENTITIES_TYPES:
             self.helper.connector_logger.info(
                 message=f"[{event.event.upper()}] Processing message",
-                meta={"data": data, "event": event.event},
+                meta={"data": data["data"], "event": event.event},
             )
-            self._process_event(event_type=event.event, stix_object=data)
+            self._process_event(event_type=event.event, event=data)
 
             self.helper.connector_logger.info(
                 message=f"[{event.event.upper()}] entity processed",
-                meta={"opencti_id": data["id"]},
+                meta={"opencti_id": data["data"]["id"]},
             )
         else:
-            self.helper.connector_logger.info(
+            self.helper.connector_logger.debug(
                 message=f"[{event.event.upper()}] Entity not supported"
             )
     def process_message(self, msg) -> None:

@@ -1,5 +1,5 @@
 from dateutil.parser import parse
-from pymisp import MISPEvent, MISPAttribute
+from pymisp import MISPEvent, MISPAttribute, MISPObject
 from src.connector.errors import (
     ConnectorError,
     ConnectorWarning,
@@ -9,10 +9,12 @@ from src.models.configs.config_loader import ConfigLoader
 SUPPORTED_OBSERVABLE_TYPES = [
     "Domain-Name",
     "IPv4-Addr",
-    "IPv6-Addr"
+    "IPv6-Addr",
     "Url",
-    "StixFile"
+    "StixFile",
+    "Hostname"
 ]
+
 class Converter:
     """
     """
@@ -48,9 +50,12 @@ class Converter:
             attribute.category = "Other"
             attribute.value = entity.get("description")
             self.misp_event.add_attribute(**attribute)
-        # TODO: process publication date
+
         # TODO: process external attached files
-        # TODO: process external references
+
+        # model external references
+        if entity.get("external_references", []):
+            self.convert_external_reference(entity)
 
         # process related entities
         for entity in contains_entities:
@@ -65,13 +70,29 @@ class Converter:
             elif entity.get("entity_type") == "Sector":
                 self.convert_sector(entity)
             elif entity.get("entity_type") == "Tool":
-                self.convert_sector(entity)
+                self.convert_tool(entity)
+            elif entity.get("entity_type") == "Malware":
+                self.convert_malware(entity)
             elif entity.get("entity_type") in SUPPORTED_OBSERVABLE_TYPES:
                 self.convert_observable(entity)
             else:
                 print("UNSUPPORTED ENTITY TYPE: " + entity.get("entity_type"))
 
         return self.misp_event
+
+    def convert_external_reference(self, stix_entity):
+        """
+        :param stix_entity:
+        :return:
+        """
+        for external_ref in stix_entity.get("external_references", []):
+            if external_ref.get("source_name", None) != "MISP Stream Export":
+                attribute = MISPAttribute()
+                attribute.type = "link"
+                attribute.category = "External analysis"
+                attribute.value = external_ref.get("url")
+                self.misp_event.add_attribute(**attribute)
+
 
     def convert_observable(self, stix_entity):
         """
@@ -99,7 +120,15 @@ class Converter:
             attribute.value = stix_entity.get("value")
             attribute.comment = stix_entity.get("description", "")
             self.misp_event.add_attribute(**attribute)
+        if stix_entity.get("entity_type") == "Hostname":
+            attribute = MISPAttribute()
+            attribute.type = "hostname"
+            attribute.category = "Network activity"
+            attribute.value = stix_entity.get("value")
+            attribute.comment = stix_entity.get("description", "")
+            self.misp_event.add_attribute(**attribute)
         if stix_entity.get("entity_type") == "StixFile":
+            print(stix_entity)
             for hash_def in stix_entity.get("hashes"):
                 if hash_def.get("algorithm").lower() == "sha-1":
                     attribute = MISPAttribute()
@@ -167,5 +196,18 @@ class Converter:
         attribute.comment = stix_entity.get("description", "")
         self.misp_event.add_attribute(**attribute)
 
+    def convert_malware(self, stix_entity):
+        """
+        :param stix_entity:
+        :return:
+        """
+        tag = 'misp-galaxy:malware="'+stix_entity.get("name")+'"'
+        self.misp_event.add_tag(tag)
 
-
+    def convert_intrusion_set(self, stix_entity):
+        """
+        :param stix_entity:
+        :return:
+        """
+        tag = 'misp-galaxy:threat-actor="'+stix_entity.get("name")+'"'
+        self.misp_event.add_tag(tag)
