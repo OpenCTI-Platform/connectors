@@ -233,7 +233,7 @@ class ConnectorAccenture:
                     )
             else:
                 self.helper.connector_logger.warning(
-                    f"[PROCESS] Failed to process base64 image"
+                    "[PROCESS] Failed to process base64 image"
                 )
 
         self.helper.connector_logger.info(
@@ -328,7 +328,7 @@ class ConnectorAccenture:
                         )
 
                         self.helper.connector_logger.info(
-                            f"[PROCESS] Processing report description for image URLs"
+                            "[PROCESS] Processing report description for image URLs"
                         )
                         modified_description, image_files = self._process_description(
                             stix_object.get("description", "")
@@ -345,7 +345,7 @@ class ConnectorAccenture:
                             stix_object.get("description")
                         )
                         self.helper.connector_logger.info(
-                            f"[PROCESS] Converted description from HTML to Markdown"
+                            "[PROCESS] Converted description from HTML to Markdown"
                         )
 
                         # add custom extension 'x_severity' and 'x_threat_type' as report label
