@@ -1,7 +1,13 @@
+import base64
 import datetime
 import json
+import mimetypes
+import re
 import sys
+import uuid
 
+import boto3
+from botocore.exceptions import ClientError
 from html_to_markdown import convert_to_markdown
 from pycti import OpenCTIConnectorHelper
 
@@ -32,6 +38,208 @@ class ConnectorAccenture:
         # Get entities from external sources
         stix_bundle = self.client.get_reports(since)
         return stix_bundle
+
+    def _extract_sha256_hashes(self, text):
+        # Pattern to match SHA256 hashes (64 hexadecimal characters)
+        pattern = r"/api/v1/axon/files/by/sha256/([a-f0-9]{64})"
+        matches = re.findall(pattern, text, re.IGNORECASE)
+        return matches
+
+    def _extract_base64_images(self, text):
+        """Extract base64 embedded images from HTML.
+
+        Returns list of tuples: (full_data_uri, mime_type, base64_data)
+        """
+        if not text:
+            return []
+
+        # Pattern to match base64 data URIs in img tags
+        # Handles both single and double quotes
+        pattern = (
+            r'<img[^>]*src=[\'"]?(data:(image/[^;]+);base64,([^\'"\s>]+))[\'"]?[^>]*/?>'
+        )
+        matches = re.findall(pattern, text, re.IGNORECASE)
+
+        return matches  # Returns list of (full_data_uri, mime_type, base64_data) tuples
+
+    def _process_base64_image(self, mime_type, base64_data):
+        """Convert base64 data to file object."""
+        try:
+            # Decode base64 data
+            image_data = base64.b64decode(base64_data)
+
+            # Generate random filename with appropriate extension
+            ext = mime_type.split("/")[-1]  # e.g., 'image/png' -> 'png'
+            if ext == "jpeg":
+                ext = "jpg"
+            filename = f"{uuid.uuid4().hex}.{ext}"
+
+            return {
+                "name": filename,
+                "mime_type": mime_type,
+                "data": base64.b64encode(image_data).decode("utf-8"),
+                "embedded": True,
+            }
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                f"[PROCESS] Failed to process base64 image: {e}"
+            )
+            return None
+
+    def _download_image_from_s3(self, hash_value):
+        s3_client = boto3.client(
+            "s3",
+            aws_access_key_id=self.config.acti_s3_bucket_access_key,
+            aws_secret_access_key=self.config.acti_s3_bucket_secret_key,
+            region_name=self.config.acti_s3_bucket_region,
+        )
+        extensions = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg"]
+        for ext in extensions:
+            file_key = f"document-images/{hash_value}{ext}"
+            try:
+                response = s3_client.get_object(
+                    Bucket=self.config.acti_s3_bucket_name, Key=file_key
+                )
+                data = response["Body"].read()
+                mime_type = response.get(
+                    "ContentType",
+                    mimetypes.guess_type(file_key)[0] or "application/octet-stream",
+                )
+                return {
+                    "name": f"{hash_value}{ext}",
+                    "mime_type": mime_type,
+                    "data": base64.b64encode(data).decode(
+                        "utf-8"
+                    ),  # Encode to base64 string
+                    "embedded": True,
+                }
+            except ClientError as e:
+                if e.response["Error"]["Code"] == "NoSuchKey":
+                    continue
+                else:
+                    self.helper.connector_logger.warning(
+                        f"[S3] Error accessing {file_key}: {e.response['Error']['Code']}"
+                    )
+                    continue
+
+        self.helper.connector_logger.warning(
+            f"[S3] Image not found in S3 for any extension. Hash: {hash_value}"
+        )
+        return None
+
+    def _process_description(self, description):
+        # Extract both SHA256 hashes and base64 images
+        hashes = self._extract_sha256_hashes(description)
+        base64_images = self._extract_base64_images(description)
+
+        self.helper.connector_logger.info(
+            f"[PROCESS] Found {len(hashes)} SHA256 image hashes in description"
+        )
+        self.helper.connector_logger.info(
+            f"[PROCESS] Found {len(base64_images)} base64 embedded images in description"
+        )
+
+        if not hashes and not base64_images:
+            return description, []
+
+        modified_description = description
+        results = []
+
+        # Process SHA256 hashes (S3 images)
+        for hash_value in hashes:
+            self.helper.connector_logger.info(
+                f"[PROCESS] Processing SHA256 hash: {hash_value}"
+            )
+            image_data = self._download_image_from_s3(hash_value)
+
+            # Determine the filename - either from successful download or use a default
+            if image_data:
+                results.append(image_data)
+                filename = image_data["name"]
+                self.helper.connector_logger.info(
+                    f"[PROCESS] Successfully downloaded image: {filename}"
+                )
+            else:
+                # Use a default filename pattern if download failed
+                filename = f"{hash_value}.jpg"  # Default to .jpg extension
+                self.helper.connector_logger.warning(
+                    f"[PROCESS] Failed to download image for hash: {hash_value}, using default filename: {filename}"
+                )
+
+            # Replace the old URL pattern with the new OpenCTI storage URL
+            # Handle both single and double quotes around the URL
+            patterns_to_replace = [
+                f"'/api/v1/axon/files/by/sha256/{hash_value}'",
+                f'"/api/v1/axon/files/by/sha256/{hash_value}"',
+                f"/api/v1/axon/files/by/sha256/{hash_value}",
+            ]
+
+            new_url = f"embedded/{filename}"
+
+            for pattern in patterns_to_replace:
+                if pattern in modified_description:
+                    self.helper.connector_logger.info(
+                        f"[PROCESS] Replacing SHA256 URL pattern: {pattern[:50]}..."
+                    )
+                    # If the pattern has quotes, preserve them
+                    if pattern.startswith("'"):
+                        replacement = f"'{new_url}'"
+                    elif pattern.startswith('"'):
+                        replacement = f'"{new_url}"'
+                    else:
+                        replacement = new_url
+                    modified_description = modified_description.replace(
+                        pattern, replacement
+                    )
+                    self.helper.connector_logger.info(
+                        f"[PROCESS] Replaced with: {replacement}"
+                    )
+
+        # Process base64 embedded images
+        for full_data_uri, mime_type, base64_data in base64_images:
+            self.helper.connector_logger.info(
+                f"[PROCESS] Processing base64 {mime_type} image ({len(base64_data)} chars)"
+            )
+
+            # Convert base64 to file object
+            image_data = self._process_base64_image(mime_type, base64_data)
+
+            if image_data:
+                results.append(image_data)
+                filename = image_data["name"]
+
+                # Create the new URL for this image
+                new_url = f"embedded/{filename}"
+
+                # Replace the entire img tag with the new URL
+                # Find the complete img tag containing this data URI
+                img_pattern = (
+                    rf'<img[^>]*src=[\'"]?{re.escape(full_data_uri)}[\'"]?[^>]*/?>'
+                )
+                img_matches = re.findall(
+                    img_pattern, modified_description, re.IGNORECASE
+                )
+
+                for img_tag in img_matches:
+                    # Replace src attribute in the img tag
+                    new_img_tag = re.sub(
+                        r'src=[\'"]?[^\'"\s>]+[\'"]?', f'src="{new_url}"', img_tag
+                    )
+                    modified_description = modified_description.replace(
+                        img_tag, new_img_tag
+                    )
+                    self.helper.connector_logger.info(
+                        f"[PROCESS] Replaced base64 image with: {new_url}"
+                    )
+            else:
+                self.helper.connector_logger.warning(
+                    "[PROCESS] Failed to process base64 image"
+                )
+
+        self.helper.connector_logger.info(
+            f"[PROCESS] Total images processed: {len(results)}"
+        )
+        return modified_description, results
 
     def process_message(self) -> None:
         """
@@ -119,10 +327,27 @@ class ConnectorAccenture:
                             [entity.id for entity in new_entities]
                         )
 
-                        # report description HTML to markdown
+                        self.helper.connector_logger.info(
+                            "[PROCESS] Processing report description for image URLs"
+                        )
+                        modified_description, image_files = self._process_description(
+                            stix_object.get("description", "")
+                        )
+                        stix_object["description"] = modified_description
+                        if image_files:
+                            stix_object["x_opencti_files"] = image_files
+                            self.helper.connector_logger.info(
+                                f"[PROCESS] Attached {len(image_files)} images to report"
+                            )
+
+                        # Convert HTML to markdown after URL replacement
                         stix_object["description"] = convert_to_markdown(
                             stix_object.get("description")
                         )
+                        self.helper.connector_logger.info(
+                            "[PROCESS] Converted description from HTML to Markdown"
+                        )
+
                         # add custom extension 'x_severity' and 'x_threat_type' as report label
                         custom_extension_labels = []
                         if "x_severity" in stix_object and stix_object.get(
