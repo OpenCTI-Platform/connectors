@@ -1,0 +1,22 @@
+{
+  "title": "CAPE Feed",
+  "slug": "cape",
+  "description": "CAPE Sandbox is an Open Source software for automating analysis of suspicious files.\n\nThe OpenCTI CAPE Sandbox Connector integrates CAPE sandbox analysis into OpenCTI by importing analysis reports and indicators of compromise (IOCs). CAPE, which stands for Comprehensive Automated Practical Environment, is a tool designed to analyze malicious files and suspicious behavior in a controlled, isolated environment. By using this connector, organizations can automatically transfer detailed CAPE analysis results into the OpenCTI platform. This allows security teams to enrich their threat intelligence databases with actionable insights derived from dynamic malware analysis, facilitating the identification and understanding of threats within their networks.\n\nIn OpenCTI, the CAPE Sandbox Connector ingests the data from CAPE, transforming reports and IOCs into a structured format that fits seamlessly within the platform's ecosystem.",
+  "short_description": "CAPE Sandbox is an Open Source software for automating analysis of suspicious files.\n\nCAPE Sandbox connector imports malware analysis results into OpenCTI, enriching threat insights.",
+  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "use_cases": [
+    "Malware Analysis",
+    "Threat Intelligence"
+  ],
+  "verified": true,
+  "last_verified_date": "",
+  "playbook_supported": false,
+  "max_confidence_level": 60,
+  "support_version": ">= 6.5.1",
+  "subscription_link": "https://github.com/kevoreilly/CAPEv2",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/cape",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-cape",
+  "container_type": "EXTERNAL_IMPORT"
+}

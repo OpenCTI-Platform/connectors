@@ -1,0 +1,22 @@
+{
+  "title": "SentinelOne Incidents",
+  "slug": "sentinelone-incidents",
+  "description": "SentinelOne delivers passive and active EDR security via AI threat detection and autonomous response.\n\nThe OpenCTI SentinelOne Incidents connector will ingest alert data from SentinelOne into the OpenCTI threat intelligence platform. This integration enables security teams to centralise and enrich incident data from SentinelOne, facilitating comprehensive threat analysis and response.\n\nThis version of the connector creates the following objects in correspondence with a SentinelOne Incident: \n- An Incident with all pivotal information \n- Observable of the affected endpoint \n- Attack Patterns corresponding to the MITRE Attack Patterns identified for the Incident \n- Notes based on the actual notes made for the Incident \n- Indicators for any hashes of malicious files \n- An external reference to the Incident in SentinelOne if deeper analysis is required.",
+  "short_description": "SentinelOne delivers passive and active EDR security via AI threat detection and autonomous response.\n\nThe OpenCTI SentinelOne Incidents connector will ingest alert data from SentinelOne into the OpenCTI threat intelligence platform. This integration enables security teams to centralise and enrich incident data from SentinelOne, facilitating comprehensive threat analysis and response.",
+  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "use_cases": [
+    "Incident Response & Ticketing",
+    "SIEM & Analytics"
+  ],
+  "verified": false,
+  "last_verified_date": "",
+  "playbook_supported": false,
+  "max_confidence_level": 70,
+  "support_version": ">= 6.5.1",
+  "subscription_link": "https://www.sentinelone.com/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/sentinelone-incidents",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-sentinelone-incidents",
+  "container_type": "EXTERNAL_IMPORT"
+}
