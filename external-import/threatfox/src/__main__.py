@@ -17,14 +17,13 @@ from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 import stix2
 import validators
-import yaml
 from pycti import (
     Indicator,
     Malware,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
-    get_config_variable,
 )
+from src.models.configs.config_loader import ConfigLoader
 from stix2.base import _Observable as Observable
 
 ALL_TYPES = "all_types"
@@ -40,96 +39,26 @@ class ThreatFox:
         """Initializer"""
 
         # Instantiate the connector helper from config
-        config_file_path = f"{BASE_PATH}/config.yml"
-        config = (
-            yaml.load(open(config_file_path, encoding="utf-8"), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
+        self.config = ConfigLoader()
+        self.helper = OpenCTIConnectorHelper(
+            config=self.config.model_dump(exclude_none=True)
         )
-        self.helper = OpenCTIConnectorHelper(config)
 
         # Extra config
-        self.threatfox_csv_url: str = get_config_variable(
-            "THREATFOX_CSV_URL",
-            ["threatfox", "csv_url"],
-            config,
-            default="https://threatfox.abuse.ch/export/csv/recent/",
-        )
-        self.threatfox_import_offline: bool = get_config_variable(
-            "THREATFOX_IMPORT_OFFLINE",
-            ["threatfox", "import_offline"],
-            config,
-            default=True,
-        )
-        self.threatfox_interval: int = get_config_variable(
-            "THREATFOX_INTERVAL",
-            ["threatfox", "interval"],
-            config,
-            isNumber=True,
-            default=3,
-        )
-        self.create_indicators: bool = get_config_variable(
-            "THREATFOX_CREATE_INDICATORS",
-            ["threatfox", "create_indicators"],
-            config,
-            default=True,
-        )
-        self.default_x_opencti_score: int = get_config_variable(
-            "THREATFOX_DEFAULT_X_OPENCTI_SCORE",
-            ["threatfox", "default_x_opencti_score"],
-            config,
-            isNumber=True,
-            default=50,
-            required=False,
-        )
-        self.x_opencti_score_ip: int = get_config_variable(
-            "THREATFOX_X_OPENCTI_SCORE_IP",
-            ["threatfox", "x_opencti_score_ip"],
-            config,
-            isNumber=True,
-            default=None,
-            required=False,
-        )
-        self.x_opencti_score_domain: int = get_config_variable(
-            "THREATFOX_X_OPENCTI_SCORE_DOMAIN",
-            ["threatfox", "x_opencti_score_domain"],
-            config,
-            isNumber=True,
-            default=None,
-            required=False,
-        )
-        self.x_opencti_score_url: int = get_config_variable(
-            "THREATFOX_X_OPENCTI_SCORE_URL",
-            ["threatfox", "x_opencti_score_url"],
-            config,
-            isNumber=True,
-            default=None,
-            required=False,
-        )
-        self.x_opencti_score_hash: int = get_config_variable(
-            "THREATFOX_X_OPENCTI_SCORE_HASH",
-            ["threatfox", "x_opencti_score_hash"],
-            config,
-            isNumber=True,
-            default=None,
-            required=False,
-        )
-        self.ioc_to_import: list[str] = get_config_variable(
-            "THREATFOX_IOC_TO_IMPORT",
-            ["threatfox", "ioc_to_import"],
-            config,
-            default=ALL_TYPES,
-        ).split(",")
+        self.threatfox_csv_url = self.config.threatfox.csv_url
+        self.threatfox_import_offline = self.config.threatfox.import_offline
+        self.threatfox_interval = self.config.threatfox.interval
+        self.create_indicators = self.config.threatfox.create_indicators
+        self.default_x_opencti_score = self.config.threatfox.default_x_opencti_score
+        self.x_opencti_score_ip = self.config.threatfox.x_opencti_score_ip
+        self.x_opencti_score_domain = self.config.threatfox.x_opencti_score_domain
+        self.x_opencti_score_url = self.config.threatfox.x_opencti_score_url
+        self.x_opencti_score_hash = self.config.threatfox.x_opencti_score_hash
+
+        self.ioc_to_import = self.config.threatfox.ioc_to_import.split(",")
         self.ioc_to_import = [ioc.strip() for ioc in self.ioc_to_import]
         if len(self.ioc_to_import) == 0:
             self.ioc_to_import = [ALL_TYPES]
-
-        self.update_existing_data: bool = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-            default=False,
-        )
 
         self.identity: str = self.helper.api.identity.create(
             type="Organization",
@@ -237,6 +166,11 @@ class ThreatFox:
             last_processed_entry_running_max = last_processed_entry
 
             for i, row in enumerate(csv_reader):
+                if len(row) > 14:
+                    self.helper.log_info(
+                        f"The csv line is badly formatted and will be ignored.(line: {i}, data: {row})"
+                    )
+                    continue
                 ioc = FeedRow(row)
 
                 # skip unwanted IOC types
@@ -277,7 +211,6 @@ class ThreatFox:
             if "objects" in bundle:
                 self.helper.send_stix2_bundle(
                     bundle,
-                    update=self.update_existing_data,
                     work_id=work_id,
                 )
 
