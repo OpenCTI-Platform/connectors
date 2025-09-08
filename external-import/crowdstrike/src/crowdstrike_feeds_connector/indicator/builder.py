@@ -12,7 +12,8 @@ from crowdstrike_feeds_services.utils import (
     OBSERVATION_FACTORY_FILE_NAME,
     OBSERVATION_FACTORY_FILE_SHA1,
     OBSERVATION_FACTORY_FILE_SHA256,
-    OBSERVATION_FACTORY_IPV4_ADDRESS,
+    OBSERVATION_FACTORY_IP_ADDRESS,
+    OBSERVATION_FACTORY_IP_ADDRESS_BLOCK,
     OBSERVATION_FACTORY_MUTEX,
     OBSERVATION_FACTORY_URL,
     OBSERVATION_FACTORY_USER_AGENT,
@@ -95,8 +96,8 @@ class IndicatorBundleBuilder:
         "hash_md5": OBSERVATION_FACTORY_FILE_MD5,
         "hash_sha1": OBSERVATION_FACTORY_FILE_SHA1,
         "hash_sha256": OBSERVATION_FACTORY_FILE_SHA256,
-        "ip_address": OBSERVATION_FACTORY_IPV4_ADDRESS,
-        "ip_address_block": OBSERVATION_FACTORY_IPV4_ADDRESS,
+        "ip_address": OBSERVATION_FACTORY_IP_ADDRESS,
+        "ip_address_block": OBSERVATION_FACTORY_IP_ADDRESS_BLOCK,
         "mutex_name": OBSERVATION_FACTORY_MUTEX,
         # "password": "",  # Ignore.
         # "persona_name": "",  # Ignore.
