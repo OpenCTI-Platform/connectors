@@ -1,7 +1,7 @@
+import base64
 import json
 import os
 import traceback
-import base64
 from pathlib import Path
 from typing import Generator
 
