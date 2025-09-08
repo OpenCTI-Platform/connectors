@@ -30,7 +30,7 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
         description="Name of the connector.",
     )
     scope: str = Field(
-        default="Domain-Name,Hostname",
+        default="StixFile",
         description="The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
     )
 

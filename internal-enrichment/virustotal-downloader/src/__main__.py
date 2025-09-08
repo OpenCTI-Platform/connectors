@@ -22,7 +22,7 @@ if __name__ == "__main__":
             playbook_compatible=True,
         )
 
-        connector = VirustotalDownloaderConnector(config=config, helper=helper)
+        connector = VirustotalDownloaderConnector(config=config_instance, helper=helper)
         connector.start()
     except Exception:
         traceback.print_exc()
