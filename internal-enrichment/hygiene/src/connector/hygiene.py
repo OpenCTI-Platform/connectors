@@ -1,87 +1,35 @@
-import os
-from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import tldextract
-import yaml
 from pycti import (
     STIX_EXT_OCTI,
     STIX_EXT_OCTI_SCO,
     OpenCTIConnectorHelper,
     OpenCTIStix2,
-    get_config_variable,
 )
 from pymispwarninglists import WarningList, WarningLists
-
-FILE_LOCATION = Path(__file__).parent
+from src.connector.models import ConfigLoader
 
 
 class HygieneConnector:
-    def __init__(self, config_file_path: Optional[Path] = None):
-        # Instantiate the connector helper from config
-        config_file_path = config_file_path or Path(__file__).parent / "config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config, True)
+    def __init__(self, config: ConfigLoader, helper: OpenCTIConnectorHelper):
 
-        warninglists_slow_search = bool(
-            get_config_variable(
-                "HYGIENE_WARNINGLISTS_SLOW_SEARCH",
-                ["hygiene", "warninglists_slow_search"],
-                config,
-                default=False,
-            )
-        )
+        self.config = config
+        self.helper = helper
 
-        self.enrich_subdomains = bool(
-            get_config_variable(
-                "HYGIENE_ENRICH_SUBDOMAINS",
-                ["hygiene", "enrich_subdomains"],
-                config,
-                default=False,
-            )
-        )
-        self.hygiene_label_name = str(
-            get_config_variable(
-                "HYGIENE_LABEL_NAME",
-                ["hygiene", "label_name"],
-                config,
-                default="hygiene",
-            )
-        )
+        self.enrich_subdomains = self.config.hygiene.enrich_subdomains
 
-        self.hygiene_label_parent_name = str(
-            get_config_variable(
-                "HYGIENE_LABEL_PARENT_NAME",
-                ["hygiene", "label_parent_name"],
-                config,
-                default="hygiene_parent",
-            )
-        )
+        self.hygiene_label_name = self.config.hygiene.label_name
+        self.hygiene_label_parent_name = self.config.hygiene.label_parent_name
 
-        self.hygiene_label_color = str(
-            get_config_variable(
-                "HYGIENE_LABEL_COLOR",
-                ["hygiene", "label_color"],
-                config,
-                default="#fc0341",
-            )
-        )
-        self.hygiene_label_parent_color = str(
-            get_config_variable(
-                "HYGIENE_LABEL_PARENT_COLOR",
-                ["hygiene", "label_parent_color"],
-                config,
-                default="#fc0341",
-            )
-        )
+        self.hygiene_label_color = self.config.hygiene.label_color
+        self.hygiene_label_parent_color = self.config.hygiene.label_parent_color
 
-        self.helper.log_info(f"Warning lists slow search: {warninglists_slow_search}")
-
-        self.warninglists = WarningLists(slow_search=warninglists_slow_search)
+        self.warninglists_slow_search = self.config.hygiene.warninglists_slow_search
+        self.helper.log_info(
+            f"Warning lists slow search: {self.warninglists_slow_search}"
+        )
+        self.warninglists = WarningLists(slow_search=self.warninglists_slow_search)
 
         # Create Hygiene Tag
         self.label_hygiene = self.helper.api.label.read_or_create_unchecked(
@@ -351,10 +299,5 @@ class HygieneConnector:
         return self._process_entity(stix_objects, stix_entity, opencti_entity)
 
     # Start the main loop
-    def start(self):
+    def run(self):
         self.helper.listen(message_callback=self._process_message)
-
-
-if __name__ == "__main__":
-    HygieneInstance = HygieneConnector()
-    HygieneInstance.start()
