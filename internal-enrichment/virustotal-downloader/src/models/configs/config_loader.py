@@ -13,6 +13,9 @@ from src.models.configs.connector_configs import (
     _ConfigLoaderConnector,
     _ConfigLoaderOCTI,
 )
+from src.models.configs.virustotal_downloader_configs import (
+    _ConfigLoaderVirusTotalDownloader,
+)
 
 
 class ConfigLoaderConnector(_ConfigLoaderConnector):
@@ -42,6 +45,10 @@ class ConfigLoader(ConfigBaseSettings):
     connector: ConfigLoaderConnector = Field(
         default_factory=ConfigLoaderConnector,
         description="Connector configurations.",
+    )
+    virustotaldownloader: _ConfigLoaderVirusTotalDownloader = Field(
+        default_factory=_ConfigLoaderVirusTotalDownloader,
+        description="VirusTotal Downloader configurations.",
     )
 
     @classmethod

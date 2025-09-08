@@ -1,38 +1,25 @@
 # coding: utf-8
-
-import os
-import sys
-import time
 import urllib.request
 from typing import Dict
 
 import magic
 import stix2
-import yaml
-from pycti import OpenCTIConnectorHelper, StixCoreRelationship, get_config_variable
+from pycti import OpenCTIConnectorHelper, StixCoreRelationship
+from src.models.configs.config_loader import ConfigLoader
 
 
 class VirustotalDownloaderConnector:
-    def __init__(self):
+    def __init__(self, config: ConfigLoader, helper: OpenCTIConnectorHelper):
         # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config)
+        self.config = config
+        self.helper = helper
 
         self.identity = self.helper.api.identity.create(
             type="Organization", name="Virustotal", description="Virustotal"
         )["standard_id"]
 
         # Get other config values
-        api_key = get_config_variable(
-            "VIRUSTOTAL_DOWNLOADER_API_KEY",
-            ["virustotal_downloader", "api_key"],
-            config,
-        )
+        api_key = self.config.virustotaldownloader.api_key
         self.headers = {"x-apikey": api_key}
 
     def _process_hash(self, observable):
@@ -110,13 +97,3 @@ class VirustotalDownloaderConnector:
     # Start the main loop
     def start(self):
         self.helper.listen(message_callback=self._process_message)
-
-
-if __name__ == "__main__":
-    try:
-        virustotal_downloader = VirustotalDownloaderConnector()
-        virustotal_downloader.start()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        sys.exit(0)

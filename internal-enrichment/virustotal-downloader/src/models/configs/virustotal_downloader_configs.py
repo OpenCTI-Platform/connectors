@@ -2,7 +2,7 @@ from pydantic import (
     Field,
     SecretStr,
 )
-from src.connector.models.configs.base_settings import ConfigBaseSettings
+from src.models.configs.base_settings import ConfigBaseSettings
 
 
 class _ConfigLoaderVirusTotalDownloader(ConfigBaseSettings):
