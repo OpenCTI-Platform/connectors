@@ -3,10 +3,9 @@ import os
 import sys
 import time
 
+from lib.internal_export import InternalExportConnector
 from unogenerator import ODS_Standard
 from unogenerator.commons import ColorsNamed
-
-from lib.internal_export import InternalExportConnector
 
 
 def sanitize_cell(value: str) -> str:
