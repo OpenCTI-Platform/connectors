@@ -1,0 +1,21 @@
+{
+  "title": "SOC Prime",
+  "slug": "socprime",
+  "description": "SOC Prime builds collective cyber defense by fusing Detection as Code, Sigma, and MITRE ATT&CK® to help teams proactively defend against emerging threats.\n\nThe OpenCTI SOC Prime connector can be used to import rules (indicators) from the SOC Prime Platform. The connector leverages the SOC Prime Threat Detection Marketplace API to get the rules. Rules for importing can be selected using content lists or jobs created on the SOC Prime Platform.",
+  "short_description": "SOC Prime builds collective cyber defense by fusing Detection as Code, Sigma, and MITRE ATT&CK® to help teams proactively defend against emerging threats.",
+  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": "2025-08-27",
+  "playbook_supported": false,
+  "max_confidence_level": 60,
+  "support_version": ">= 6.5.1",
+  "subscription_link": "https://socprime.com/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/socprime",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-socprime",
+  "container_type": "EXTERNAL_IMPORT"
+}
