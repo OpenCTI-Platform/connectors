@@ -2050,7 +2050,7 @@
     {
       "title": "ThreatFox",
       "slug": "threatfox",
-      "description": "ThreatFox is a platform from abuse.ch and Spamhaus dedicated to sharing indicators of compromise (IOCs) associated with malware, with the infosec community, AV vendors and cyber threat intelligence providers\n\nThe integration of ThreatFox with OpenCTI facilitates the automatic import of IOCs into the threat intelligence platform. This integration incorporates data for OpenCTI observable and indicator types, including file-md5, file-sha1, file-sha256, ipv4-addr, domain-name, and url. Additionally, it adds the Malware entity, enhancing the platform's capability to manage and respond to threats effectively.",
+      "description": "ThreatFox is a platform from abuse.ch and Spamhaus dedicated to sharing indicators of compromise (IOCs) associated with malware, with the infosec community, AV vendors and cyber threat intelligence providers\n\nThe integration of ThreatFox with OpenCTI facilitates the automatic import of IOCs into the threat intelligence platform. This integration imports data for the following OpenCTI observables/indicators: file-md5, file-sha1, file-sha256, ipv4-addr, domain-name, and url. It also incorporates the Malware entity, enhancing the platform's capability to effectively manage and respond to threats.",
       "short_description": "ThreatFox is a platform from abuse.ch and Spamhaus dedicated to sharing indicators of compromise (IOCs) associated with malware, with the infosec community, AV vendors and cyber threat intelligence providers.",
       "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
       "use_cases": [
@@ -2061,12 +2061,117 @@
       "playbook_supported": false,
       "max_confidence_level": 45,
       "support_version": ">= 6.5.1",
-      "subscription_link": "",
+      "subscription_link": "https://threatfox.abuse.ch/",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/oob/connector_manager/external-import/threatfox",
-      "manager_supported": false,
+      "manager_supported": true,
       "container_version": "rolling",
       "container_image": "opencti/connector-threatfox",
-      "container_type": "EXTERNAL_IMPORT"
+      "container_type": "EXTERNAL_IMPORT",
+      "config_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://www.filigran.io/connectors/threatfox_config.schema.json",
+        "type": "object",
+        "properties": {
+          "OPENCTI_URL": {
+            "description": "The OpenCTI platform URL.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "OPENCTI_TOKEN": {
+            "description": "The token of the user who represents the connector in the OpenCTI platform.",
+            "type": "string"
+          },
+          "CONNECTOR_ID": {
+            "default": "threatfox--feb2a3b7-00c8-409f-a43b-bd20ef76e508",
+            "description": "A unique UUIDv4 identifier for this connector instance.",
+            "type": "string"
+          },
+          "CONNECTOR_NAME": {
+            "default": "Abuse.ch | ThreatFox",
+            "description": "Name of the connector.",
+            "type": "string"
+          },
+          "CONNECTOR_SCOPE": {
+            "default": "ThreatFox",
+            "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+            "type": "string"
+          },
+          "CONNECTOR_TYPE": {
+            "default": "EXTERNAL_IMPORT",
+            "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
+            "type": "string"
+          },
+          "CONNECTOR_LOG_LEVEL": {
+            "default": "error",
+            "description": "Determines the verbosity of the logs.",
+            "enum": [
+              "debug",
+              "info",
+              "warn",
+              "warning",
+              "error"
+            ],
+            "type": "string"
+          },
+          "THREATFOX_CSV_URL": {
+            "default": "https://threatfox.abuse.ch/export/csv/recent/",
+            "description": "The Threat Fox URL",
+            "type": "string"
+          },
+          "THREATFOX_IMPORT_OFFLINE": {
+            "default": true,
+            "description": "Create records for indicators that are offline.",
+            "type": "boolean"
+          },
+          "THREATFOX_CREATE_INDICATORS": {
+            "default": true,
+            "description": "Create indicators in addition to observables.",
+            "type": "boolean"
+          },
+          "THREATFOX_DEFAULT_X_OPENCTI_SCORE": {
+            "default": 50,
+            "description": "The default x_opencti_score to use.",
+            "type": "integer"
+          },
+          "THREATFOX_X_OPENCTI_SCORE_IP": {
+            "default": null,
+            "description": "Set the x_opencti_score for IP observables.",
+            "type": "integer"
+          },
+          "THREATFOX_X_OPENCTI_SCORE_DOMAIN": {
+            "default": null,
+            "description": "Set the x_opencti_score for Domain observables.",
+            "type": "integer"
+          },
+          "THREATFOX_X_OPENCTI_SCORE_URL": {
+            "default": null,
+            "description": "Set the x_opencti_score for URL observables.",
+            "type": "integer"
+          },
+          "THREATFOX_X_OPENCTI_SCORE_HASH": {
+            "default": null,
+            "description": "Set the x_opencti_score for Hash observables.",
+            "type": "integer"
+          },
+          "THREATFOX_INTERVAL": {
+            "default": 3,
+            "description": "[DEPRECATED] Interval in days between two scheduled runs of the connector.",
+            "type": "integer"
+          },
+          "THREATFOX_IOC_TO_IMPORT": {
+            "default": "all_types",
+            "description": "List of IOC types to retrieve, available parameters: all_types, ip:port, domain, url, md5_hash, sha1_hash, sha256_hash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "OPENCTI_URL",
+          "OPENCTI_TOKEN"
+        ],
+        "additionalProperties": true
+      }
     },
     {
       "title": "URLhaus",
