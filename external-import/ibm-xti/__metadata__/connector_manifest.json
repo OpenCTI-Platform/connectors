@@ -1,0 +1,21 @@
+{
+  "title": "IBM X-Force",
+  "slug": "ibm-xti",
+  "description": "The OpenCTI External Ingestion Connector for IBM X-Force Premier Threat Intelligence Services is designed to integrate premium threat intelligence from IBM X-Force into the OpenCTI platform. IBM X-Force Threat Intelligence provides valuable insights by combining data from IBM's security operations telemetry, research, incident response investigations, commercial databases, and open sources. This integration aims to help organizations understand emerging threats better and make informed security decisions promptly.\n\nThrough the use of a TAXII 2.1 Server, the connector accesses IBM X-Force Premium Threat Intelligence (XTI) Reports and Indicators of Compromise (IOCs), importing them into OpenCTI. This access allows organizations to enrich their threat intelligence database with comprehensive, real-time information on the latest threats, thereby aiding in the identification, analysis, and response to cyber threats. By integrating IBM X-Force's sophisticated intelligence capabilities, security teams can improve their situational awareness and enhance the overall security posture by correlating this external threat data with internal threat intelligence and incident data.",
+  "short_description": "IBM X-Force Connector integrates X-Force threat reports and IOCs into OpenCTI, enhancing threat intelligence.",
+  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": "",
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">= 6.5.1",
+  "subscription_link": "https://www.ibm.com/services/threat-intelligence",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/ibm-xti",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-ibm-xti",
+  "container_type": "EXTERNAL_IMPORT"
+}

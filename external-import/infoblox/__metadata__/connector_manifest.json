@@ -1,0 +1,21 @@
+{
+  "title": "Infoblox",
+  "slug": "infoblox",
+  "description": "The Infoblox Import Connector for OpenCTI facilitates the integration of threat intelligence data from the Infoblox database into the OpenCTI platform. This connector specifically imports key threat indicators, including URLs, Domain Names, and IPv4 addresses, along with corresponding observables such as URLs, Domain Names, and IPv4 entities. Additionally, it creates an organizational entity for Infoblox, allowing for a structured and organized display of the imported data within OpenCTI.",
+  "short_description": "Infoblox Connector imports threat indicators and observables from Infoblox into OpenCTI, enhancing threat analysis.",
+  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": "",
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">= 6.5.1",
+  "subscription_link": "https://www.infoblox.com/threat-intel/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/infoblox",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-infoblox",
+  "container_type": "EXTERNAL_IMPORT"
+}

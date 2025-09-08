@@ -1,0 +1,21 @@
+{
+  "title": "CRITs",
+  "slug": "crits",
+  "description": "The OpenCTI CRITs Connector facilitates the synchronization of data from a CRITs (Collaborative Research Into Threats) CTI database into the OpenCTI platform. CRITs was once a popular open-source threat intelligence management platform, but as of 2022, it has largely become unmaintained. This connector is designed to assist organizations in migrating their threat intelligence data from their existing CRITs instances to OpenCTI, thereby allowing users to transition smoothly to a more actively developed and supported platform. The connector draws inspiration from other successful integrations, such as the MISP connector, to provide a robust and efficient migration pathway.\n\nIntegrating with OpenCTI through the CRITs Connector involves utilizing the documented authenticated API of CRITs to facilitate secure data transfer. While CRITs offered comprehensive threat intelligence capabilities, OpenCTI provides enhanced features and ongoing support, making it an ideal replacement as organizations seek to modernize their cybersecurity infrastructure. This integration ensures continuity of threat intelligence operations while benefiting from the enriched data analytics and interface capabilities of OpenCTI, thereby improving overall threat detection and response strategies.",
+  "short_description": "CRITs Connector migrates threat data from CRITs to OpenCTI, facilitating platform transition.",
+  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "use_cases": [
+    "Threat Intelligence"
+  ],
+  "verified": false,
+  "last_verified_date": "",
+  "playbook_supported": false,
+  "max_confidence_level": 60,
+  "support_version": ">= 6.5.1",
+  "subscription_link": "",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/crits",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-crits",
+  "container_type": "EXTERNAL_IMPORT"
+}

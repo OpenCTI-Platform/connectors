@@ -1,0 +1,23 @@
+{
+  "title": "Proofpoint TAP",
+  "slug": "proofpoint-tap",
+  "description": "The Proofpoint TAP connector for OpenCTI allows for the ingestion of phishing campaign data from Proofpoint TAP into the OpenCTI platform.\n\nThe OpenCTI Proofpoint TAP Connector integration fetches data such as campaign and their members, and integrates them into OpenCTI for further analysis and correlation with other threat intelligence data.",
+  "short_description": "The Proofpoint TAP connector for OpenCTI allows for the ingestion of phishing campaign data from Proofpoint TAP into the OpenCTI platform.",
+  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "use_cases": [
+    "Commercial Threat Intel",
+    "Incident Response & Ticketing",
+    "Phishing"
+  ],
+  "verified": true,
+  "last_verified_date": "",
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">= 6.5.1",
+  "subscription_link": "https://www.proofpoint.com/us/resources/data-sheets/targeted-attack-protection",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/proofpoint-tap",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-proofpoint-tap",
+  "container_type": "EXTERNAL_IMPORT"
+}

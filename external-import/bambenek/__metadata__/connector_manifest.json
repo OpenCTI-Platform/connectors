@@ -1,0 +1,21 @@
+{
+  "title": "Bambenek Consulting",
+  "slug": "bambenek-consulting",
+  "description": "The Bambenek connector ingests indicators of compromise (IOCs) from Bambenek Consulting Feeds. The connector supports the ingestion of the following data collections: \n- c2_dga: Domain feed of known DGA domains from -2 to +3 days\n- c2_dga_high_conf: High confidence domain feed of known DGA domains from -2 to +3 days\n- c2_domain: Master feed of known, active and non-sinkholed C&Cs domain names\n- c2_domain_highconf: High confidence master feed of known, active and non-sinkholed C&Cs domain names\n- c2_ip: Master feed of known, active and non-sinkholed C&Cs IP Addresses\n- c2_ip_highconf: High confidence master feed of known, active and non-sinkholed C&Cs IP Addresses",
+  "short_description": "The Bambenek connector ingests indicators of compromise (IOCs) from Bambenek Consulting Feeds.",
+  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": "",
+  "playbook_supported": false,
+  "max_confidence_level": 60,
+  "support_version": ">= 6.5.1",
+  "subscription_link": "https://bambeneklabs.com/threat-feeds/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/bambenek",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-bambenek",
+  "container_type": "EXTERNAL_IMPORT"
+}

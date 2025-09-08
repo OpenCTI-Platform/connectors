@@ -1,0 +1,21 @@
+{
+  "title": "Spycloud",
+  "slug": "spycloud",
+  "description": "SpyCloud monitors and tracks compromised data, such as login credentials and personal information, across the web and other sources.\n\nThe OpenCTI SpyCloud connector imports such data, aka _breach records_, from SpyCloud into OpenCTI as incidents and observables.",
+  "short_description": "SpyCloud monitors and tracks compromised data, such as login credentials and personal information, across the web and other sources.",
+  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "use_cases": [
+    "Incident Response & Ticketing"
+  ],
+  "verified": false,
+  "last_verified_date": "",
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">= 6.5.1",
+  "subscription_link": "https://spycloud.com/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/spycloud",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-spycloud",
+  "container_type": "EXTERNAL_IMPORT"
+}

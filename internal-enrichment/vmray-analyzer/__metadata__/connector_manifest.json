@@ -1,0 +1,21 @@
+{
+  "title": "VMray Analyzer",
+  "slug": "vmray-analyzer",
+  "description": "VMRay provides advanced threat analysis and detection by integrating its unique agentless hypervisor-based sandbox with a real-time reputation engine.\n\nThis connector enables the enrichment and analysis of artefact observables through VMRay Analyzer.",
+  "short_description": "VMRay provides advanced threat analysis and detection by integrating its unique agentless hypervisor-based sandbox with a real-time reputation engine.",
+  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "use_cases": [
+    "Malware Analysis"
+  ],
+  "verified": false,
+  "last_verified_date": "",
+  "playbook_supported": true,
+  "max_confidence_level": 70,
+  "support_version": ">= 6.5.1",
+  "subscription_link": "https://www.vmray.com/vmray-analyzer/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/vmray-analyzer",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-vmray-analyzer",
+  "container_type": "INTERNAL_ENRICHMENT"
+}
