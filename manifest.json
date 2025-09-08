@@ -1954,6 +1954,118 @@
       }
     },
     {
+      "title": "Hygiene",
+      "slug": "hygiene",
+      "description": "The Hygiene connector prevents false positives from being pushed to detection or blocking by checking observables against trusted allowlists such as MISP Warninglists and other configurable benign-data sources. When an observable matches a known legitimate artifact (for example, common domains like google.com), the connector lowers its score to a very low value and applies the hygiene label to clearly signal qualification and avoid reprocessing. This systematic downgrading and tagging help analysts and automations de-prioritize benign signals and keep downstream controls focused on real threats.\n\nAs an OpenCTI connector, it consumes events or scheduled batches, queries external warning lists, and updates observables in place by adjusting their scores and adding the hygiene label for idempotency and auditability. To ensure it can reliably override scores set by other sources when appropriate, it is recommended to configure this connector\u2019s maximum confidence level to 100 or at least very high, granting it the authority needed to reduce scores for allowlisted observables. Configuration supports selecting list sources, throttling, and scope, enabling precise, repeatable hygiene across the knowledge base.",
+      "short_description": "Proactively reduces false positives in OpenCTI by matching observables against curated allowlists (e.g., MISP Warninglists), lowering scores for benign items, tagging them with a hygiene label to avoid reprocessing and inform analysts, and when configured with high max confidence safely overriding prior scores so only actionable indicators flow to detection and blocking.",
+      "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+      "use_cases": [
+        "Reduce false positives",
+        "Enforce allowlists"
+      ],
+      "verified": true,
+      "last_verified_date": "",
+      "playbook_supported": true,
+      "max_confidence_level": 50,
+      "support_version": ">=6.5.1",
+      "subscription_link": "",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/hygiene",
+      "manager_supported": true,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-hygiene",
+      "container_type": "INTERNAL_ENRICHMENT",
+      "config_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://www.filigran.io/connectors/hygiene_config.schema.json",
+        "type": "object",
+        "properties": {
+          "OPENCTI_URL": {
+            "description": "The OpenCTI platform URL.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "OPENCTI_TOKEN": {
+            "description": "The token of the user who represents the connector in the OpenCTI platform.",
+            "type": "string"
+          },
+          "CONNECTOR_ID": {
+            "default": "hygiene--c5079b30-4c65-45f0-b02c-eb51a3794b82",
+            "description": "A unique UUIDv4 identifier for this connector instance.",
+            "type": "string"
+          },
+          "CONNECTOR_NAME": {
+            "default": "Hygiene",
+            "description": "Name of the connector.",
+            "type": "string"
+          },
+          "CONNECTOR_SCOPE": {
+            "default": "IPv4-Addr,IPv6-Addr,Artifact,Domain-Name,StixFile,Indicator",
+            "description": "The scope defines the set of entity types that the enrichment connector is allowed to process.",
+            "type": "string"
+          },
+          "CONNECTOR_TYPE": {
+            "default": "INTERNAL_ENRICHMENT",
+            "description": "Should always be set to INTERNAL_ENRICHMENT for this connector.",
+            "type": "string"
+          },
+          "CONNECTOR_LOG_LEVEL": {
+            "default": "error",
+            "description": "Determines the verbosity of the logs.",
+            "enum": [
+              "debug",
+              "info",
+              "warn",
+              "warning",
+              "error"
+            ],
+            "type": "string"
+          },
+          "CONNECTOR_AUTO": {
+            "default": true,
+            "description": "Enables or disables automatic enrichment of observables for OpenCTI.",
+            "type": "boolean"
+          },
+          "HYGIENE_WARNINGLISTS_SLOW_SEARCH": {
+            "default": false,
+            "description": "Enable slow search mode for the warning lists. If true, uses the most appropriate search method. Can be slower. Default: exact match.",
+            "type": "boolean"
+          },
+          "HYGIENE_LABEL_NAME": {
+            "default": "hygiene",
+            "description": "Set the label name.",
+            "type": "string"
+          },
+          "HYGIENE_LABEL_COLOR": {
+            "default": "#fc0341",
+            "description": "Color to use for the label.",
+            "type": "string"
+          },
+          "HYGIENE_LABEL_PARENT_NAME": {
+            "default": "hygiene_parent",
+            "description": "Label name to be used when enriching sub-domains.",
+            "type": "string"
+          },
+          "HYGIENE_LABEL_PARENT_COLOR": {
+            "default": "#fc0341",
+            "description": "Color to use for the label when enriching subdomains.",
+            "type": "string"
+          },
+          "HYGIENE_ENRICH_SUBDOMAINS": {
+            "default": false,
+            "description": "Enable enrichment of sub-domains, This option will add 'hygiene_parent' label and ext refs of the parent domain to the subdomain, if sub-domain is not found but parent is.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "OPENCTI_URL",
+          "OPENCTI_TOKEN"
+        ],
+        "additionalProperties": true
+      }
+    },
+    {
       "title": "IPinfo",
       "slug": "ipinfo",
       "description": "IPinfo.io is a leading provider of IP address data, offering detailed information about IP ownership, geolocation, and more. This service helps organizations better understand the context and origin of network traffic, aiding in threat analysis and geographical-based security decisions.\n\nIntegrating IPinfo.io with OpenCTI allows for the enrichment of threat intelligence with detailed IP address information, enhancing an organization\u2019s ability to analyze network traffic and identify potential threats. By leveraging IPInfo data, security teams can improve incident response and threat detection accuracy by understanding the origins and paths of IP addresses involved in potential security events.",
