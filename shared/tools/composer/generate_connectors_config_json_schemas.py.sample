@@ -22,7 +22,14 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 __CONNECTOR_METADATA_DIRECTORY__ = "__metadata__"
 __CONNECTOR_CONFIG_JSON_SCHEMA_FILENAME__ = "connector_config_schema.json"
 
-__FILTERED_ATTRIBUTES__ = ["CONNECTOR_ID"]
+# attributes filtered from the connector configuration before generating the manifest
+__FILTERED_ATTRIBUTES__ = [
+    # connector id is generated
+    "CONNECTOR_ID",
+    # Deprecated in favor of CONNECTOR_DURATION_PERIOD
+    "MITRE_INTERVAL",
+    "CVE_INTERVAL"
+]
 
 def get_connector_config_schema_generator(connector_name: str) -> GenerateJsonSchema:
     class ConnectorConfigSchemaGenerator(GenerateJsonSchema):
@@ -101,7 +108,6 @@ def get_connector_config_schema_generator(connector_name: str) -> GenerateJsonSc
         @override
         def generate(self, schema, mode="validation"):
             json_schema = super().generate(schema, mode=mode)
-            print(json_schema)
 
             json_schema["$schema"] = self.schema_dialect
             json_schema["$id"] = (
