@@ -8,7 +8,7 @@
     "Open Source Threat Intel"
   ],
   "verified": true,
-  "last_verified_date": "01-01-2025",
+  "last_verified_date": "2025-01-01",
   "playbook_supported": false,
   "max_confidence_level": 50,
   "support_version": ">= 6.7.0",

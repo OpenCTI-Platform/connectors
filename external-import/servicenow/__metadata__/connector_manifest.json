@@ -8,13 +8,13 @@
     "Incident Response & Ticketing"
   ],
   "verified": true,
-  "last_verified_date": "15-06-2025",
+  "last_verified_date": "2025-06-15",
   "playbook_supported": false,
   "max_confidence_level": 50,
   "support_version": ">= 6.5.1",
   "subscription_link": "https://www.servicenow.com/contact-us.html",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/servicenow",
-  "manager_supported": true,
+  "manager_supported": false,
   "container_version": "rolling",
   "container_image": "opencti/connector-servicenow",
   "container_type": "EXTERNAL_IMPORT"
