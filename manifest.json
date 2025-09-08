@@ -26,6 +26,49 @@
       "container_type": "EXTERNAL_IMPORT"
     },
     {
+      "title": "Bambenek Consulting",
+      "slug": "bambenek-consulting",
+      "description": "The Bambenek connector ingests indicators of compromise (IOCs) from Bambenek Consulting Feeds. The connector supports the ingestion of the following data collections: \n- c2_dga: Domain feed of known DGA domains from -2 to +3 days\n- c2_dga_high_conf: High confidence domain feed of known DGA domains from -2 to +3 days\n- c2_domain: Master feed of known, active and non-sinkholed C&Cs domain names\n- c2_domain_highconf: High confidence master feed of known, active and non-sinkholed C&Cs domain names\n- c2_ip: Master feed of known, active and non-sinkholed C&Cs IP Addresses\n- c2_ip_highconf: High confidence master feed of known, active and non-sinkholed C&Cs IP Addresses",
+      "short_description": "The Bambenek connector ingests indicators of compromise (IOCs) from Bambenek Consulting Feeds.",
+      "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+      "use_cases": [
+        "Commercial Threat Intel"
+      ],
+      "verified": true,
+      "last_verified_date": "",
+      "playbook_supported": false,
+      "max_confidence_level": 60,
+      "support_version": ">= 6.5.1",
+      "subscription_link": "https://bambeneklabs.com/threat-feeds/",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/bambenek",
+      "manager_supported": false,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-bambenek",
+      "container_type": "EXTERNAL_IMPORT"
+    },
+    {
+      "title": "CAPE Feed",
+      "slug": "cape",
+      "description": "CAPE Sandbox is an Open Source software for automating analysis of suspicious files.\n\nThe OpenCTI CAPE Sandbox Connector integrates CAPE sandbox analysis into OpenCTI by importing analysis reports and indicators of compromise (IOCs). CAPE, which stands for Comprehensive Automated Practical Environment, is a tool designed to analyze malicious files and suspicious behavior in a controlled, isolated environment. By using this connector, organizations can automatically transfer detailed CAPE analysis results into the OpenCTI platform. This allows security teams to enrich their threat intelligence databases with actionable insights derived from dynamic malware analysis, facilitating the identification and understanding of threats within their networks.\n\nIn OpenCTI, the CAPE Sandbox Connector ingests the data from CAPE, transforming reports and IOCs into a structured format that fits seamlessly within the platform's ecosystem.",
+      "short_description": "CAPE Sandbox is an Open Source software for automating analysis of suspicious files.\n\nCAPE Sandbox connector imports malware analysis results into OpenCTI, enriching threat insights.",
+      "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+      "use_cases": [
+        "Malware Analysis",
+        "Threat Intelligence"
+      ],
+      "verified": true,
+      "last_verified_date": "",
+      "playbook_supported": false,
+      "max_confidence_level": 60,
+      "support_version": ">= 6.5.1",
+      "subscription_link": "https://github.com/kevoreilly/CAPEv2",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/cape",
+      "manager_supported": false,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-cape",
+      "container_type": "EXTERNAL_IMPORT"
+    },
+    {
       "title": "CISA Known Exploited Vulnerabilities (KEV)",
       "slug": "cisa-kev",
       "description": "CISA KEV (Known Exploited Vulnerabilities) is a catalog maintained by the Cybersecurity and Infrastructure Security Agency that lists vulnerabilities actively exploited in the wild. It serves as an authoritative resource for organizations to prioritize vulnerability remediation and enhance their security resilience.\n\nThe integration of the CISA KEV source with OpenCTI enables the ingestion of vulnerabilities known to be actively exploited. This process involves parsing out Identity, Infrastructure, and Vulnerability STIX Objects, which are then imported into OpenCTI.",
@@ -45,6 +88,27 @@
       "manager_supported": false,
       "container_version": "rolling",
       "container_image": "opencti/connector-cisa-known-exploited-vulnerabilities",
+      "container_type": "EXTERNAL_IMPORT"
+    },
+    {
+      "title": "CRITs",
+      "slug": "crits",
+      "description": "The OpenCTI CRITs Connector facilitates the synchronization of data from a CRITs (Collaborative Research Into Threats) CTI database into the OpenCTI platform. CRITs was once a popular open-source threat intelligence management platform, but as of 2022, it has largely become unmaintained. This connector is designed to assist organizations in migrating their threat intelligence data from their existing CRITs instances to OpenCTI, thereby allowing users to transition smoothly to a more actively developed and supported platform. The connector draws inspiration from other successful integrations, such as the MISP connector, to provide a robust and efficient migration pathway.\n\nIntegrating with OpenCTI through the CRITs Connector involves utilizing the documented authenticated API of CRITs to facilitate secure data transfer. While CRITs offered comprehensive threat intelligence capabilities, OpenCTI provides enhanced features and ongoing support, making it an ideal replacement as organizations seek to modernize their cybersecurity infrastructure. This integration ensures continuity of threat intelligence operations while benefiting from the enriched data analytics and interface capabilities of OpenCTI, thereby improving overall threat detection and response strategies.",
+      "short_description": "CRITs Connector migrates threat data from CRITs to OpenCTI, facilitating platform transition.",
+      "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+      "use_cases": [
+        "Threat Intelligence"
+      ],
+      "verified": false,
+      "last_verified_date": "",
+      "playbook_supported": false,
+      "max_confidence_level": 60,
+      "support_version": ">= 6.5.1",
+      "subscription_link": "",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/crits",
+      "manager_supported": false,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-crits",
       "container_type": "EXTERNAL_IMPORT"
     },
     {
@@ -221,6 +285,48 @@
         ],
         "additionalProperties": true
       }
+    },
+    {
+      "title": "DISARM Framework",
+      "slug": "disarm-framework",
+      "description": "DISARM is a framework designed for describing and understanding disinformation incidents.\n\nThis connector import DISARM framework into OpenCTI as Attack Pattern STIX SDO, allowing user to map FIMI and disinformation behaviors. \n\nEach Techniques of the DISARM framework is added as an Attack Pattern, mapped to its proper tactic and linked to its parent of child techniques. \n\nA link to the technique\u2019s page on the DISARM Github repository let you pivot to the source of the framework.",
+      "short_description": "DISARM is a framework designed for describing and understanding disinformation incidents.\n\nThis connector import DISARM framework into OpenCTI.",
+      "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+      "use_cases": [
+        "Open Source Threat Intel"
+      ],
+      "verified": true,
+      "last_verified_date": "",
+      "playbook_supported": false,
+      "max_confidence_level": 75,
+      "support_version": ">= 6.5.1",
+      "subscription_link": "https://github.com/DISARMFoundation/DISARMframeworks",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/disarm-framework",
+      "manager_supported": false,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-disarm-framework",
+      "container_type": "EXTERNAL_IMPORT"
+    },
+    {
+      "title": "Doppel",
+      "slug": "doppel",
+      "description": "Doppel is a modern Digital Risk Protection solution that detects phishing and brand cyberattacks across channels like social media, domains, ads, and the dark web. By identifying malicious content and threats early, Doppel helps organizations proactively remove digital risks.\n\nThe integration of Doppel with OpenCTI enables the ingestion of alerts from the Doppel Threat Intelligence platform in the form of STIX 2.1 Indicators. Utilizing the Doppel API, alerts are retrieved and imported into OpenCTI as Indicators. Each alert is converted into a STIX 2.1 Indicator object and is enriched with detailed metadata, such as severity, entity state, platform, audit logs, and more, delivering comprehensive threat insights and enhancing the organization's cybersecurity posture.",
+      "short_description": "Doppel is a modern Digital Risk Protection solution that detects phishing and brand cyberattacks across channels like social media, domains, ads, and the dark web. By identifying malicious content and threats early, Doppel helps organizations proactively remove digital risks.",
+      "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+      "use_cases": [
+        "Commercial Threat Intel"
+      ],
+      "verified": true,
+      "last_verified_date": "",
+      "playbook_supported": false,
+      "max_confidence_level": 50,
+      "support_version": ">= 6.5.1",
+      "subscription_link": "https://www.doppel.com",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/doppel",
+      "manager_supported": false,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-doppel",
+      "container_type": "EXTERNAL_IMPORT"
     },
     {
       "title": "Dragos",
@@ -622,6 +728,27 @@
         ],
         "additionalProperties": false
       }
+    },
+    {
+      "title": "Feedly",
+      "slug": "feedly",
+      "description": "The OpenCTI Feedly Connector is designed to integrate curated intelligence from Feedly directly into the OpenCTI platform. By leveraging the Feedly API, this connector retrieves the latest articles from designated Feedly boards and folders, importing them along with relevant entities, indicators, detection rules, and inter-entity relationships. This ensures that organizations have access to the most recent and relevant open-source intelligence available, enriching their threat intelligence efforts with up-to-date insights from a wide array of sources.\n\nTo utilize this integration, users need the Feedly for Threat Intelligence package, which facilitates access to specialized features and data retrieval capabilities tailored for cybersecurity purposes. Once configured, the connector automates the ingestion of structured intelligence from Feedly into OpenCTI, enhancing analysts' ability to track emerging threats and correlate this information with existing internal data. This integration strengthens an organization's intelligence framework, improving its ability to detect, analyze, and respond to threats rapidly.",
+      "short_description": "Feedly Connector imports curated intelligence from Feedly into OpenCTI, enhancing threat tracking.",
+      "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+      "use_cases": [
+        "Commercial Threat Intel"
+      ],
+      "verified": true,
+      "last_verified_date": "2025-04-22",
+      "playbook_supported": false,
+      "max_confidence_level": 60,
+      "support_version": ">= 6.5.1",
+      "subscription_link": "https://feedly.com/threat-intelligence",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/feedly",
+      "manager_supported": false,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-feedly",
+      "container_type": "EXTERNAL_IMPORT"
     },
     {
       "title": "Flashpoint",
@@ -1072,6 +1199,112 @@
       }
     },
     {
+      "title": "HarfangLab Incidents",
+      "slug": "harfanglab-incidents",
+      "description": "The OpenCTI HarfangLab Incidents External Import Connector is designed to integrate incident data from Harfanglab's Endpoint Detection and Response (EDR) solution into the OpenCTI platform. By leveraging HarfangLab's expertise in detecting and analyzing cyber threats at the endpoint level, this connector facilitates the import of incident-related intelligence, enriching OpenCTI's threat database with detailed insights and analysis derived from real-world endpoint detections.",
+      "short_description": "HarfangLab Connector imports endpoint incident data from HarfangLab EDR into OpenCTI, enriching threat intelligence.",
+      "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+      "use_cases": [
+        "Incident Response & Ticketing",
+        "EDR"
+      ],
+      "verified": true,
+      "last_verified_date": "",
+      "playbook_supported": false,
+      "max_confidence_level": 75,
+      "support_version": ">= 6.5.1",
+      "subscription_link": "https://harfanglab.io",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/harfanglab-incidents",
+      "manager_supported": false,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-harfanglab-incidents",
+      "container_type": "EXTERNAL_IMPORT"
+    },
+    {
+      "title": "Hunt.io",
+      "slug": "hunt-io",
+      "description": "Hunt.io connector imports Observables linked to C2 infrastructures detected by HuntIO sensors.\n\nYou need to provides a HuntIO API key.\n\nThe connector will convert scanned C2 Infrastructure data into various related STIX 2.1 Objects and relationships to ingest into OpenCTI:\n- IPv4, domains, network-traffic Observables\n- Infrastructure \u201cconsist-of\u201d ipv4 and domains Observables\n- The infrastructure \u201ccontrols\u201d a Malware\n- url Indicator \u201cindicates\u201d a Malware\n- Observed Data wrapping up domain, ip and network traffic\n\nWarning: The volume of data to ingest at first launch may take a long time.",
+      "short_description": "Hunt.io connector imports Observables linked to C2 infrastructures detected by HuntIO sensors.",
+      "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+      "use_cases": [
+        "Commercial Threat Intel"
+      ],
+      "verified": false,
+      "last_verified_date": "",
+      "playbook_supported": false,
+      "max_confidence_level": 60,
+      "support_version": ">= 6.5.1",
+      "subscription_link": "https://hunt.io",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/hunt-io",
+      "manager_supported": false,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-hunt-io",
+      "container_type": "EXTERNAL_IMPORT"
+    },
+    {
+      "title": "IBM X-Force",
+      "slug": "ibm-xti",
+      "description": "The OpenCTI External Ingestion Connector for IBM X-Force Premier Threat Intelligence Services is designed to integrate premium threat intelligence from IBM X-Force into the OpenCTI platform. IBM X-Force Threat Intelligence provides valuable insights by combining data from IBM's security operations telemetry, research, incident response investigations, commercial databases, and open sources. This integration aims to help organizations understand emerging threats better and make informed security decisions promptly.\n\nThrough the use of a TAXII 2.1 Server, the connector accesses IBM X-Force Premium Threat Intelligence (XTI) Reports and Indicators of Compromise (IOCs), importing them into OpenCTI. This access allows organizations to enrich their threat intelligence database with comprehensive, real-time information on the latest threats, thereby aiding in the identification, analysis, and response to cyber threats. By integrating IBM X-Force's sophisticated intelligence capabilities, security teams can improve their situational awareness and enhance the overall security posture by correlating this external threat data with internal threat intelligence and incident data.",
+      "short_description": "IBM X-Force Connector integrates X-Force threat reports and IOCs into OpenCTI, enhancing threat intelligence.",
+      "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+      "use_cases": [
+        "Commercial Threat Intel"
+      ],
+      "verified": true,
+      "last_verified_date": "",
+      "playbook_supported": false,
+      "max_confidence_level": 50,
+      "support_version": ">= 6.5.1",
+      "subscription_link": "https://www.ibm.com/services/threat-intelligence",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/ibm-xti",
+      "manager_supported": false,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-ibm-xti",
+      "container_type": "EXTERNAL_IMPORT"
+    },
+    {
+      "title": "Infoblox",
+      "slug": "infoblox",
+      "description": "The Infoblox Import Connector for OpenCTI facilitates the integration of threat intelligence data from the Infoblox database into the OpenCTI platform. This connector specifically imports key threat indicators, including URLs, Domain Names, and IPv4 addresses, along with corresponding observables such as URLs, Domain Names, and IPv4 entities. Additionally, it creates an organizational entity for Infoblox, allowing for a structured and organized display of the imported data within OpenCTI.",
+      "short_description": "Infoblox Connector imports threat indicators and observables from Infoblox into OpenCTI, enhancing threat analysis.",
+      "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+      "use_cases": [
+        "Commercial Threat Intel"
+      ],
+      "verified": true,
+      "last_verified_date": "",
+      "playbook_supported": false,
+      "max_confidence_level": 50,
+      "support_version": ">= 6.5.1",
+      "subscription_link": "https://www.infoblox.com/threat-intel/",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/infoblox",
+      "manager_supported": false,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-infoblox",
+      "container_type": "EXTERNAL_IMPORT"
+    },
+    {
+      "title": "Cognyte Luminar",
+      "slug": "luminar",
+      "description": "Cognyte is a global leader in security analytics software that empowers governments and enterprises with Actionable Intelligence for a safer world. Our open software fuses, analyzes and visualizes disparate data sets at scale to help security organizations find the needles in the haystacks. Over 1,000 government and enterprise customers in more than 100 countries rely on Cognyte\u2019s solutions to accelerate security investigations and connect the dots to successfully identify, neutralize, and prevent threats to national security, business continuity and cyber security. Luminar is an asset-based cybersecurity intelligence platform that empowers enterprise organizations to build and maintain a proactive threat intelligence operation that enables to anticipate and mitigate cyber threats, reduce risk, and enhance security resilience. Luminar enables security teams to define a customized, dynamic monitoring plan to uncover malicious activity in its earliest stages on all layers of the Web.\n\nThis integration connects with the Luminar Threat Intelligence TAXII version 2 server and feed OpenCTI Platform with the following feeds: IOC, Leaked Records, Cyber Feeds.",
+      "short_description": "Cognyte is a global leader in security analytics software that empowers governments and enterprises with Actionable Intelligence for a safer world. Our open software fuses, analyzes and visualizes disparate data sets at scale to help security organizations find the needles in the haystacks.",
+      "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+      "use_cases": [
+        "Commercial Threat Intel"
+      ],
+      "verified": false,
+      "last_verified_date": "",
+      "playbook_supported": false,
+      "max_confidence_level": 50,
+      "support_version": ">= 6.5.1",
+      "subscription_link": "https://www.cognyte.com/solutions/external-threat-intelligence/",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/luminar",
+      "manager_supported": false,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-luminar",
+      "container_type": "EXTERNAL_IMPORT"
+    },
+    {
       "title": "MITRE ATT&CK",
       "slug": "mitre",
       "description": "MITRE ATT&CK is a globally-accessible knowledge base of adversary tactics and techniques based on real-world observations. The ATT&CK knowledge base is used as a foundation for the development of specific threat models and methodologies in the private sector, in government, and in the cybersecurity product and service community. The integration of MITRE ATT&CK with OpenCTI allows for the ingestion of data from MITRE datasets, facilitating the pre-population of your OpenCTI instance. This includes importing information on tools, malware, campaigns, intrusion sets, attack patterns, courses of action, alongside MITRE-specific frameworks such as x-mitre-matrix, x-mitre-tactic, x-mitre-collection, x-mitre-data-source, and x-mitre-data-component. The connector supports the ingestion of data from MITRE Enterprise, MITRE Mobile, and MITRE ICS matrices.",
@@ -1235,6 +1468,29 @@
       "manager_supported": false,
       "container_version": "rolling",
       "container_image": "opencti/connector-phishunt",
+      "container_type": "EXTERNAL_IMPORT"
+    },
+    {
+      "title": "Proofpoint TAP",
+      "slug": "proofpoint-tap",
+      "description": "The Proofpoint TAP connector for OpenCTI allows for the ingestion of phishing campaign data from Proofpoint TAP into the OpenCTI platform.\n\nThe OpenCTI Proofpoint TAP Connector integration fetches data such as campaign and their members, and integrates them into OpenCTI for further analysis and correlation with other threat intelligence data.",
+      "short_description": "The Proofpoint TAP connector for OpenCTI allows for the ingestion of phishing campaign data from Proofpoint TAP into the OpenCTI platform.",
+      "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+      "use_cases": [
+        "Commercial Threat Intel",
+        "Incident Response & Ticketing",
+        "Phishing"
+      ],
+      "verified": true,
+      "last_verified_date": "",
+      "playbook_supported": false,
+      "max_confidence_level": 50,
+      "support_version": ">= 6.5.1",
+      "subscription_link": "https://www.proofpoint.com/us/resources/data-sheets/targeted-attack-protection",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/proofpoint-tap",
+      "manager_supported": false,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-proofpoint-tap",
       "container_type": "EXTERNAL_IMPORT"
     },
     {
@@ -1408,6 +1664,27 @@
       "container_type": "EXTERNAL_IMPORT"
     },
     {
+      "title": "Red Flag Domains",
+      "slug": "red-flag-domains",
+      "description": "Red Flag Domains are lists of very recently registered probably malicious domain names in french TLDs. More details can be found\u00a0\u201dhttps://red.flag.domains/\u201d.\n\nThe OpenCTI Red Flag Domain Connector facilitates the import of domain names from the Red Flag Domains platform into OpenCTI. ",
+      "short_description": "Red Flag Domains are lists of very recently registered probably malicious domain names in french TLDs.",
+      "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+      "use_cases": [
+        "Open Source Threat Intel"
+      ],
+      "verified": true,
+      "last_verified_date": "",
+      "playbook_supported": false,
+      "max_confidence_level": 55,
+      "support_version": ">= 6.5.1",
+      "subscription_link": "https://red.flag.domains",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/red-flag-domains",
+      "manager_supported": false,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-red-flag-domains",
+      "container_type": "EXTERNAL_IMPORT"
+    },
+    {
       "title": "Sekoia.io",
       "slug": "sekoia",
       "description": "Sekoia.io Cyber Threat Intelligence provides assimilable and relevant reports on the evolving threat landscape, accessible to a broader audience. Sekoia.io's threat intelligence is contextual, actionable, and precise. Sekoia.io Intelligence (CTI) consists of exclusive data produced by Sekoia.io, sourced from C2 trackers, VirusTotal trackers, honeypots, and more, as well as refined data from open sources.\n\nThe integration of Sekoia.io with OpenCTI facilitates the collection of Sekoia.io CTI data within an existing OpenCTI instance, supporting various operational purposes like CTI aggregation, dissemination, and threat hunting.",
@@ -1426,6 +1703,28 @@
       "manager_supported": false,
       "container_version": "rolling",
       "container_image": "opencti/connector-sekoia",
+      "container_type": "EXTERNAL_IMPORT"
+    },
+    {
+      "title": "SentinelOne Incidents",
+      "slug": "sentinelone-incidents",
+      "description": "SentinelOne delivers passive and active EDR security via AI threat detection and autonomous response.\n\nThe OpenCTI SentinelOne Incidents connector will ingest alert data from SentinelOne into the OpenCTI threat intelligence platform. This integration enables security teams to centralise and enrich incident data from SentinelOne, facilitating comprehensive threat analysis and response.\n\nThis version of the connector creates the following objects in correspondence with a SentinelOne Incident: \n- An Incident with all pivotal information \n- Observable of the affected endpoint \n- Attack Patterns corresponding to the MITRE Attack Patterns identified for the Incident \n- Notes based on the actual notes made for the Incident \n- Indicators for any hashes of malicious files \n- An external reference to the Incident in SentinelOne if deeper analysis is required.",
+      "short_description": "SentinelOne delivers passive and active EDR security via AI threat detection and autonomous response.\n\nThe OpenCTI SentinelOne Incidents connector will ingest alert data from SentinelOne into the OpenCTI threat intelligence platform. This integration enables security teams to centralise and enrich incident data from SentinelOne, facilitating comprehensive threat analysis and response.",
+      "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+      "use_cases": [
+        "Incident Response & Ticketing",
+        "SIEM & Analytics"
+      ],
+      "verified": false,
+      "last_verified_date": "",
+      "playbook_supported": false,
+      "max_confidence_level": 70,
+      "support_version": ">= 6.5.1",
+      "subscription_link": "https://www.sentinelone.com/",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/sentinelone-incidents",
+      "manager_supported": false,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-sentinelone-incidents",
       "container_type": "EXTERNAL_IMPORT"
     },
     {
@@ -1665,6 +1964,69 @@
       }
     },
     {
+      "title": "Silobreaker",
+      "slug": "Silobreaker",
+      "description": "Silobreaker helps organizations transform data from millions of open and dark web sources into timely, actionable intelligence for a range of use cases.\n\nThe OpenCTI Silobreaker connector facilitates the import of Silobreaker Threat data into OpenCTI. The connector connects to the Silobreaker and gather all data from a given date.",
+      "short_description": "Silobreaker helps organizations transform data from millions of open and dark web sources into timely, actionable intelligence for a range of use cases.",
+      "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+      "use_cases": [
+        "Commercial Threat Intel"
+      ],
+      "verified": false,
+      "last_verified_date": "2025-03-06",
+      "playbook_supported": false,
+      "max_confidence_level": 55,
+      "support_version": ">= 6.5.1",
+      "subscription_link": "https://www.silobreaker.com/",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/silobreaker",
+      "manager_supported": false,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-silobreaker",
+      "container_type": "EXTERNAL_IMPORT"
+    },
+    {
+      "title": "SOC Prime",
+      "slug": "socprime",
+      "description": "SOC Prime builds collective cyber defense by fusing Detection as Code, Sigma, and MITRE ATT&CK\u00ae to help teams proactively defend against emerging threats.\n\nThe OpenCTI SOC Prime connector can be used to import rules (indicators) from the SOC Prime Platform. The connector leverages the SOC Prime Threat Detection Marketplace API to get the rules. Rules for importing can be selected using content lists or jobs created on the SOC Prime Platform.",
+      "short_description": "SOC Prime builds collective cyber defense by fusing Detection as Code, Sigma, and MITRE ATT&CK\u00ae to help teams proactively defend against emerging threats.",
+      "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+      "use_cases": [
+        "Commercial Threat Intel"
+      ],
+      "verified": true,
+      "last_verified_date": "2025-08-27",
+      "playbook_supported": false,
+      "max_confidence_level": 60,
+      "support_version": ">= 6.5.1",
+      "subscription_link": "https://socprime.com/",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/socprime",
+      "manager_supported": false,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-socprime",
+      "container_type": "EXTERNAL_IMPORT"
+    },
+    {
+      "title": "Spycloud",
+      "slug": "spycloud",
+      "description": "SpyCloud monitors and tracks compromised data, such as login credentials and personal information, across the web and other sources.\n\nThe OpenCTI SpyCloud connector imports such data, aka _breach records_, from SpyCloud into OpenCTI as incidents and observables.",
+      "short_description": "SpyCloud monitors and tracks compromised data, such as login credentials and personal information, across the web and other sources.",
+      "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+      "use_cases": [
+        "Incident Response & Ticketing"
+      ],
+      "verified": false,
+      "last_verified_date": "",
+      "playbook_supported": false,
+      "max_confidence_level": 50,
+      "support_version": ">= 6.5.1",
+      "subscription_link": "https://spycloud.com/",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/spycloud",
+      "manager_supported": false,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-spycloud",
+      "container_type": "EXTERNAL_IMPORT"
+    },
+    {
       "title": "Tenable Vulnerability Management",
       "slug": "tenable-vuln-management",
       "description": "Tenable provides comprehensive solutions for identifying and managing vulnerabilities within an organization's IT infrastructure. By offering detailed assessments and prioritization of vulnerabilities, Tenable helps organizations reduce their cyber risk exposure effectively. Using advanced analytics and continuous monitoring, it enables security teams to understand and mitigate potential threats posed by vulnerabilities in their environments.\n\nThe integration of Tenable Vulnerability Management with OpenCTI enables the seamless import of detailed vulnerability data into the OpenCTI platform, aligning it with relevant entities in the ecosystem. This encompasses vulnerabilities, CVEs, severity levels, and affected assets, which can be utilized to enhance threat intelligence, optimize vulnerability management, and improve security operation workflows within OpenCTI.",
@@ -1743,10 +2105,31 @@
       "max_confidence_level": 50,
       "support_version": ">= 6.5.1",
       "subscription_link": "https://www.vulncheck.com/",
-      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/oob/connector_manager/external-import/vulncheck",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/vulncheck",
       "manager_supported": false,
       "container_version": "rolling",
       "container_image": "opencti/connector-vulncheck",
+      "container_type": "EXTERNAL_IMPORT"
+    },
+    {
+      "title": "Zvelo",
+      "slug": "zvelo",
+      "description": "The Zvelo connector ingests indicators of compromise (IOCs) from Zvelo Cyber Threat Intelligence Feeds.The connector supports the ingestion of the two following data collections:\n- Zvelo PhishBlocklist: Phishing threat intelligence data feed\n- Zvelo Malicious Detailed Detection: Malicious threat intelligence data feed.\n\nThe connector ingests the following entities:\n- Indicators: Malicious Indicators are ingested as Indicators\n- Observables: Some related information linked to the malicious IOC are ingested as observables and linked to the Indicator. Example: IP addresses associated with the malicious indicator (ip_info)\n- Malware: When defined, malware families associated to the Indicator are ingested as Malware and associated to the Indicator\n\nAPI documentation: https://docs.zvelo.io.",
+      "short_description": "The Zvelo connector ingests indicators of compromise (IOCs) from Zvelo Cyber Threat Intelligence Feeds.",
+      "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+      "use_cases": [
+        "Commercial Threat Intel"
+      ],
+      "verified": true,
+      "last_verified_date": "2025-06-12",
+      "playbook_supported": false,
+      "max_confidence_level": 60,
+      "support_version": ">= 6.5.1",
+      "subscription_link": "https://zvelo.com/zvelocti-cyber-threat-intelligence/malicious-detailed-detection-feed/",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/zvelo",
+      "manager_supported": false,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-zvelo",
       "container_type": "EXTERNAL_IMPORT"
     },
     {
@@ -2223,6 +2606,70 @@
       "manager_supported": false,
       "container_version": "rolling",
       "container_image": "opencti/connector-urlscan-enrichment",
+      "container_type": "INTERNAL_ENRICHMENT"
+    },
+    {
+      "title": "VirusTotal Downloader",
+      "slug": "virustotal-downloader",
+      "description": "VirusTotal Downloader Connector is an internal enrichment Connector that enables automated and manual submissions of file hashes (MD5, SHA1, and SHA256) to VirusTotal to attempt to retrieve associated file contents. If the file is found in VirusTotal, a new Observable of type Artifact will be uploaded.",
+      "short_description": "VirusTotal Downloader Connector is an internal enrichment Connector that enables automated and manual submissions of file hashes (MD5, SHA1, and SHA256) to VirusTotal to attempt to retrieve associated file contents. If the file is found in VirusTotal, a new Observable of type Artifact will be uploaded.",
+      "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+      "use_cases": [
+        "Enrichment & Analysis",
+        "Malware Analysis"
+      ],
+      "verified": true,
+      "last_verified_date": "",
+      "playbook_supported": true,
+      "max_confidence_level": 70,
+      "support_version": ">= 6.5.1",
+      "subscription_link": "https://www.virustotal.com/",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/virustotal-downloader",
+      "manager_supported": false,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-virustotal-downloader",
+      "container_type": "INTERNAL_ENRICHMENT"
+    },
+    {
+      "title": "VMray Analyzer",
+      "slug": "vmray-analyzer",
+      "description": "VMRay provides advanced threat analysis and detection by integrating its unique agentless hypervisor-based sandbox with a real-time reputation engine.\n\nThis connector enables the enrichment and analysis of artefact observables through VMRay Analyzer.",
+      "short_description": "VMRay provides advanced threat analysis and detection by integrating its unique agentless hypervisor-based sandbox with a real-time reputation engine.",
+      "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+      "use_cases": [
+        "Malware Analysis"
+      ],
+      "verified": false,
+      "last_verified_date": "",
+      "playbook_supported": true,
+      "max_confidence_level": 70,
+      "support_version": ">= 6.5.1",
+      "subscription_link": "https://www.vmray.com/vmray-analyzer/",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/vmray-analyzer",
+      "manager_supported": false,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-vmray-analyzer",
+      "container_type": "INTERNAL_ENRICHMENT"
+    },
+    {
+      "title": "YARA Scan",
+      "slug": "yara-scan",
+      "description": "This OpenCTI connector enriches Artifact Observables by scanning their contents using every YARA Indicator in the system. When a rule matches, the connector creates a relationship between the Artifact and Indicator.",
+      "short_description": "This OpenCTI connector enriches Artifact Observables by scanning their contents using every YARA Indicator in the system. When a rule matches, the connector creates a relationship between the Artifact and Indicator.",
+      "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+      "use_cases": [
+        "Malware Analysis"
+      ],
+      "verified": false,
+      "last_verified_date": "",
+      "playbook_supported": true,
+      "max_confidence_level": 70,
+      "support_version": ">= 6.5.1",
+      "subscription_link": "",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/yara",
+      "manager_supported": false,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-yara",
       "container_type": "INTERNAL_ENRICHMENT"
     },
     {
