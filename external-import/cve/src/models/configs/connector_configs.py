@@ -5,7 +5,6 @@ from pydantic import (
     Field,
     HttpUrl,
     PlainSerializer,
-    PositiveInt,
     field_validator,
 )
 from src.models.configs import ConfigBaseSettings
