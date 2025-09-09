@@ -86,7 +86,7 @@ zscaler:
 version: '3'
 services:
   connector-zscaler:
-    image: opencti/connector-zscaler:6.7.17
+    image: opencti/connector-zscaler:6.7.18
     environment:
       OPENCTI_URL: "https://your-opencti-instance.com"
       OPENCTI_TOKEN: "YOUR_OPENCTI_TOKEN"
