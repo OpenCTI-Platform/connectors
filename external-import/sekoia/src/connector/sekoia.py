@@ -9,10 +9,10 @@ from posixpath import join as urljoin
 from typing import Any, Dict, Iterable, List, Set
 
 import requests
-import yaml
 from dateutil.parser import ParserError, parse
 from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils, get_config_variable
 from requests import RequestException
+from src.connector.models import ConfigLoader
 
 ## MODIFICATION BY CYRILYXE (OPENCTI 6.0.5, the 2022-08-12)
 # By default, the def '_load_data_sets' (line 370ish in this file) uses relative path
@@ -24,58 +24,27 @@ gbl_scriptDir: str = os.path.dirname(os.path.realpath(__file__))
 # so i propose the change on the relative path with the concat of the script dir path (go to line 374)
 
 
-class Sekoia(object):
-    def __init__(self):
+class SekoiaConnector(object):
+    def __init__(self, config: ConfigLoader, helper: OpenCTIConnectorHelper):
         # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config)
+
+        self.config = config
+        self.helper = helper
 
         self._cache = {}
-        # Extra config
-        self.duration_period = get_config_variable(
-            "CONNECTOR_DURATION_PERIOD",
-            ["connector", "duration_period"],
-            config,
-            default="PT60S",
-        )
+        self.duration_period = self.config.connector.duration_period
 
-        self.base_url = self.get_config("base_url", config, "https://api.sekoia.io")
-        self.start_date: str = self.get_config("start_date", config, None)
-        self.limit = get_config_variable(
-            "SEKOIA_LIMIT",
-            ["sekoia", "limit"],
-            config,
-            isNumber=True,
-            default=200,
-        )
-        self.collection = self.get_config(
-            "collection", config, "d6092c37-d8d7-45c3-8aff-c4dc26030608"
-        )
-        self.create_observables = self.get_config("create_observables", config, True)
-        self.import_source_list = get_config_variable(
-            "SEKOIA_IMPORT_SOURCE_LIST",
-            ["sekoia", "import_source_list"],
-            config,
-            default=False,
-        )
-        self.import_ioc_relationships = get_config_variable(
-            "SEKOIA_IMPORT_IOC_RELATIONSHIPS",
-            ["sekoia", "import_ioc_relationships"],
-            config,
-            default=True,
-        )
+        # Extra config Sekoia
+        self.api_key = self.config.sekoia.api_key.get_secret_value()
+        self.base_url = self.config.sekoia.base_url
+        self.start_date = self.config.sekoia.start_date
+        self.limit = self.config.sekoia.limit
+        self.collection = self.config.sekoia.collection
+        self.create_observables = self.config.sekoia.create_observables
+        self.import_source_list = self.config.sekoia.import_source_list
+        self.import_ioc_relationships = self.config.sekoia.import_ioc_relationships
+
         self.all_labels = []
-
-        self.helper.connector_logger.info("Setting up api key")
-        self.api_key = self.get_config("api_key", config)
-        if not self.api_key:
-            self.helper.connector_logger.error("API key is Missing")
-            raise ValueError("API key is Missing")
 
         self._load_data_sets()
         self.helper.connector_logger.info("All datasets has been loaded")
@@ -492,22 +461,22 @@ class Sekoia(object):
         global gbl_scriptDir  # noqa: F824
 
         self.helper.connector_logger.info("Loading locations mapping")
-        with open(gbl_scriptDir + "/data/geography_mapping.json") as fp:
+        with open(os.path.join(gbl_scriptDir, "../data/geography_mapping.json")) as fp:
             self._geography_mapping: Dict = json.load(fp)
 
         self.helper.connector_logger.info("Loading sectors mapping")
-        with open(gbl_scriptDir + "/data/sectors_mapping.json") as fp:
+        with open(os.path.join(gbl_scriptDir, "../data/sectors_mapping.json")) as fp:
             self._sectors_mapping: Dict = json.load(fp)
 
         # Adds OpenCTI sectors/locations to cache
         self.helper.connector_logger.info("Loading OpenCTI sectors")
-        with open(gbl_scriptDir + "/data/sectors.json") as fp:
+        with open(os.path.join(gbl_scriptDir, "../data/sectors.json")) as fp:
             objects = json.load(fp)["objects"]
             for sector in objects:
                 self._clean_and_add_to_cache(sector)
 
         self.helper.connector_logger.info("Loading OpenCTI locations")
-        with open(gbl_scriptDir + "/data/geography.json") as fp:
+        with open(os.path.join(gbl_scriptDir, "../data/geography.json")) as fp:
             for geography in json.load(fp)["objects"]:
                 self._clean_and_add_to_cache(geography)
 
