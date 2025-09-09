@@ -2,7 +2,6 @@ import base64
 import json
 import os
 import sys
-import time
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
 from posixpath import join as urljoin
@@ -548,13 +547,3 @@ class SekoiaConnector(object):
             object_list.append(item)
 
         return object_list
-
-
-if __name__ == "__main__":
-    try:
-        sekoiaConnector = Sekoia()
-        sekoiaConnector.run()
-    except Exception as err:
-        print(err)
-        time.sleep(10)
-        sys.exit(0)
