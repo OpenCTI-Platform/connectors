@@ -178,7 +178,6 @@ class TeamT5Connector:
             else:
                 self.helper.connector_logger.info("No new Indicator Bundles found")
 
-
             # Store the current timestamp as a last run of the connector
             self.helper.connector_logger.debug("Updating Last Run")
             current_state = self.helper.get_state()
