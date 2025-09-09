@@ -575,14 +575,14 @@ class DataToSTIXAdapter:
                 _malware_aliases = _e.get("aliases")
 
                 _portal_links = self._retrieve_link(_e)
-                
+
                 if _name:
                     if isinstance(_name, list):
                         self.helper.connector_logger.debug(
                             f"Processing list of malware names: {_name}"
                         )
                         for n in _name:
-                            
+
                             malware = ds.Malware(
                                 name=n,
                                 aliases=_malware_aliases,
@@ -601,9 +601,6 @@ class DataToSTIXAdapter:
 
                             _stix_objects.append(malware)
                     else:
-                        self.helper.connector_logger.info(
-                                f"TESTself.tlp_color {self.tlp_color}"
-                            )
                         malware = ds.Malware(
                             name=_name,
                             aliases=_malware_aliases,
@@ -623,9 +620,6 @@ class DataToSTIXAdapter:
                         _stix_objects.append(malware)
 
         else:
-            self.helper.connector_logger.info(
-                                f"TESTself.tlp_color {self.tlp_color}"
-                            )
             _name = obj.get("name")
             _malware_types = obj.get("category")
             _malware_aliases = obj.get("aliases")

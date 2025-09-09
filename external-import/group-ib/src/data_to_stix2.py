@@ -99,7 +99,9 @@ class _CommonUtils:
         """Generate TLP object. Defaults to WHITE if color is None/unknown"""
         if not color:
             return ConfigConnector.STIX_TLP_MAP.get("white")
-        return ConfigConnector.STIX_TLP_MAP.get(str(color).lower(), ConfigConnector.STIX_TLP_MAP.get("white"))
+        return ConfigConnector.STIX_TLP_MAP.get(
+            str(color).lower(), ConfigConnector.STIX_TLP_MAP.get("white")
+        )
 
     @staticmethod
     def _generate_main_observable_type(obj_type):
@@ -175,7 +177,9 @@ class BaseEntity(_CommonUtils):
         """Generate a custom statement marking with text equal to AUTHOR"""
         if self.config.get_extra_settings_by_name("enable_statement_marking"):
             try:
-                marking_id = pycti.MarkingDefinition.generate_id("statement", ConfigConnector.AUTHOR)
+                marking_id = pycti.MarkingDefinition.generate_id(
+                    "statement", ConfigConnector.AUTHOR
+                )
             except Exception:
                 marking_id = None
             statement_marking = stix2.MarkingDefinition(
@@ -189,7 +193,7 @@ class BaseEntity(_CommonUtils):
         """Return both standard TLP and the custom statement marking"""
         markings = [self.tlp]
         if self.config.get_extra_settings_by_name("enable_statement_marking"):
-            markings.append(self.statement_marking) 
+            markings.append(self.statement_marking)
         return markings
 
     @staticmethod
@@ -775,7 +779,7 @@ class Vulnerability(_BaseSDO):
         else:
             self.cvss_severity = None
 
-    def _build_cvss_properties(self) :
+    def _build_cvss_properties(self):
         props = {}
         vector = self.cvss_vector
         if not vector:
@@ -785,57 +789,90 @@ class Vulnerability(_BaseSDO):
         # Detect version
         vector_upper = str(vector).upper()
         is_v2 = ("AU:" in vector_upper) or vector_upper.startswith("CVSS:2")
-        is_v3 = ("PR:" in vector_upper or "UI:" in vector_upper or "S:" in vector_upper or vector_upper.startswith("CVSS:3")) and not is_v2
+        is_v3 = (
+            "PR:" in vector_upper
+            or "UI:" in vector_upper
+            or "S:" in vector_upper
+            or vector_upper.startswith("CVSS:3")
+        ) and not is_v2
 
         # Normalize tokens, skip any token that doesn't contain ':' (e.g., 'CVSS:3.1')
-        tokens = [t for t in vector_upper.split('/') if ':' in t]
+        tokens = [t for t in vector_upper.split("/") if ":" in t]
         kv = {}
         for token in tokens:
             try:
-                k, v = token.split(':', 1)
+                k, v = token.split(":", 1)
                 kv[k] = v
             except Exception:
                 continue
 
-        if is_v2 or (not is_v3 and 'AU' in kv):
+        if is_v2 or (not is_v3 and "AU" in kv):
             # CVSS v2 mapping
-            av_map = {'L': 'LOCAL', 'A': 'ADJACENT_NETWORK', 'N': 'NETWORK'}
-            ac_map = {'L': 'LOW', 'M': 'MEDIUM', 'H': 'HIGH'}
-            au_map = {'N': 'NONE', 'S': 'SINGLE', 'M': 'MULTIPLE'}
-            imp_map = {'N': 'NONE', 'P': 'PARTIAL', 'C': 'COMPLETE'}
+            av_map = {"L": "LOCAL", "A": "ADJACENT_NETWORK", "N": "NETWORK"}
+            ac_map = {"L": "LOW", "M": "MEDIUM", "H": "HIGH"}
+            au_map = {"N": "NONE", "S": "SINGLE", "M": "MULTIPLE"}
+            imp_map = {"N": "NONE", "P": "PARTIAL", "C": "COMPLETE"}
 
-            props.update({
-                'x_opencti_cvss_v2_vector_string': vector,
-                'x_opencti_cvss_v2_base_score': self.cvss_score,
-                'x_opencti_cvss_v2_access_vector': av_map.get(kv.get('AV', ''), None),
-                'x_opencti_cvss_v2_access_complexity': ac_map.get(kv.get('AC', ''), None),
-                'x_opencti_cvss_v2_authentication': au_map.get(kv.get('AU', ''), None),
-                'x_opencti_cvss_v2_confidentiality_impact': imp_map.get(kv.get('C', ''), None),
-                'x_opencti_cvss_v2_integrity_impact': imp_map.get(kv.get('I', ''), None),
-                'x_opencti_cvss_v2_availability_impact': imp_map.get(kv.get('A', ''), None),
-            })
+            props.update(
+                {
+                    "x_opencti_cvss_v2_vector_string": vector,
+                    "x_opencti_cvss_v2_base_score": self.cvss_score,
+                    "x_opencti_cvss_v2_access_vector": av_map.get(
+                        kv.get("AV", ""), None
+                    ),
+                    "x_opencti_cvss_v2_access_complexity": ac_map.get(
+                        kv.get("AC", ""), None
+                    ),
+                    "x_opencti_cvss_v2_authentication": au_map.get(
+                        kv.get("AU", ""), None
+                    ),
+                    "x_opencti_cvss_v2_confidentiality_impact": imp_map.get(
+                        kv.get("C", ""), None
+                    ),
+                    "x_opencti_cvss_v2_integrity_impact": imp_map.get(
+                        kv.get("I", ""), None
+                    ),
+                    "x_opencti_cvss_v2_availability_impact": imp_map.get(
+                        kv.get("A", ""), None
+                    ),
+                }
+            )
         else:
             # CVSS v3 mapping
-            av_map = {'N': 'NETWORK', 'A': 'ADJACENT', 'L': 'LOCAL', 'P': 'PHYSICAL'}
-            ac_map = {'L': 'LOW', 'H': 'HIGH'}
-            pr_map = {'N': 'NONE', 'L': 'LOW', 'H': 'HIGH'}
-            ui_map = {'N': 'NONE', 'R': 'REQUIRED'}
-            scope_map = {'U': 'UNCHANGED', 'C': 'CHANGED'}
-            imp_map = {'N': 'NONE', 'L': 'LOW', 'H': 'HIGH'}
+            av_map = {"N": "NETWORK", "A": "ADJACENT", "L": "LOCAL", "P": "PHYSICAL"}
+            ac_map = {"L": "LOW", "H": "HIGH"}
+            pr_map = {"N": "NONE", "L": "LOW", "H": "HIGH"}
+            ui_map = {"N": "NONE", "R": "REQUIRED"}
+            scope_map = {"U": "UNCHANGED", "C": "CHANGED"}
+            imp_map = {"N": "NONE", "L": "LOW", "H": "HIGH"}
 
-            props.update({
-                'x_opencti_cvss_vector_string': vector,
-                'x_opencti_cvss_base_score': self.cvss_score,
-                'x_opencti_cvss_base_severity': self.cvss_severity,
-                'x_opencti_cvss_attack_vector': av_map.get(kv.get('AV', ''), None),
-                'x_opencti_cvss_attack_complexity': ac_map.get(kv.get('AC', ''), None),
-                'x_opencti_cvss_privileges_required': pr_map.get(kv.get('PR', ''), None),
-                'x_opencti_cvss_user_interaction': ui_map.get(kv.get('UI', ''), None),
-                'x_opencti_cvss_scope': scope_map.get(kv.get('S', ''), None),
-                'x_opencti_cvss_confidentiality_impact': imp_map.get(kv.get('C', ''), None),
-                'x_opencti_cvss_integrity_impact': imp_map.get(kv.get('I', ''), None),
-                'x_opencti_cvss_availability_impact': imp_map.get(kv.get('A', ''), None),
-            })
+            props.update(
+                {
+                    "x_opencti_cvss_vector_string": vector,
+                    "x_opencti_cvss_base_score": self.cvss_score,
+                    "x_opencti_cvss_base_severity": self.cvss_severity,
+                    "x_opencti_cvss_attack_vector": av_map.get(kv.get("AV", ""), None),
+                    "x_opencti_cvss_attack_complexity": ac_map.get(
+                        kv.get("AC", ""), None
+                    ),
+                    "x_opencti_cvss_privileges_required": pr_map.get(
+                        kv.get("PR", ""), None
+                    ),
+                    "x_opencti_cvss_user_interaction": ui_map.get(
+                        kv.get("UI", ""), None
+                    ),
+                    "x_opencti_cvss_scope": scope_map.get(kv.get("S", ""), None),
+                    "x_opencti_cvss_confidentiality_impact": imp_map.get(
+                        kv.get("C", ""), None
+                    ),
+                    "x_opencti_cvss_integrity_impact": imp_map.get(
+                        kv.get("I", ""), None
+                    ),
+                    "x_opencti_cvss_availability_impact": imp_map.get(
+                        kv.get("A", ""), None
+                    ),
+                }
+            )
 
         return props
 
