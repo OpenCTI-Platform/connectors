@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/ipinfo_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The OpenCTI platform URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "type": "string"
+    },
+    "CONNECTOR_ID": {
+      "default": "ipinfo--43cf861c-72a7-4e45-864a-b19e32e6a8bc",
+      "description": "A unique UUIDv4 identifier for this connector instance.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "IPInfo",
+      "description": "Name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": "IPv4-Addr,IPv6-Addr",
+      "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "default": "INTERNAL_ENRICHMENT",
+      "description": "Should always be set to INTERNAL_ENRICHMENT for this connector.",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "Determines the verbosity of the logs.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": true,
+      "description": "Enables or disables automatic enrichment of observables for OpenCTI.",
+      "type": "boolean"
+    },
+    "IPINFO_TOKEN": {
+      "description": "API token used to authenticate requests to the IPInfo service.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "IPINFO_MAX_TLP": {
+      "default": "TLP:AMBER",
+      "description": "Traffic Light Protocol (TLP) level to apply on objects imported into OpenCTI.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
+    },
+    "IPINFO_USE_ASN_NAME": {
+      "default": true,
+      "description": "If enabled, uses the ASN name instead of the ASN number in enrichment results.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "IPINFO_TOKEN"
+  ],
+  "additionalProperties": true
+}

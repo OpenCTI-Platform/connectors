@@ -3,6 +3,9 @@
 from connector.src.custom.exceptions.convert_errors.gti_actor_conversion_error import (
     GTIActorConversionError,
 )
+from connector.src.custom.exceptions.convert_errors.gti_campaign_conversion_error import (
+    GTICampaignConversionError,
+)
 from connector.src.custom.exceptions.convert_errors.gti_domain_conversion_error import (
     GTIDomainConversionError,
 )
@@ -48,6 +51,7 @@ __all__ = [
     "GTIReportConversionError",
     "GTIMalwareConversionError",
     "GTIActorConversionError",
+    "GTICampaignConversionError",
     "GTITechniqueConversionError",
     "GTIVulnerabilityConversionError",
     "GTIDomainConversionError",

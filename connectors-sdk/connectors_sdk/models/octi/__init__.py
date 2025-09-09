@@ -1,43 +1,84 @@
 """Offer OpenCTI models."""
 
-import stix2  # type: ignore[import-untyped]  # stix2 does not provide stubs
 from connectors_sdk.models.octi._common import (
     MODEL_REGISTRY,
     AssociatedFile,
     Author,
     BaseEntity,
+    BaseIdentifiedEntity,
     ExternalReference,
     TLPMarking,
 )
+from connectors_sdk.models.octi.activities.analyses import Note, Report
 from connectors_sdk.models.octi.activities.observations import (
+    URL,
+    DomainName,
+    File,
     Indicator,
     IPV4Address,
+    IPV6Address,
+    Software,
 )
-from connectors_sdk.models.octi.knowledge.entities import Organization
+from connectors_sdk.models.octi.knowledge.arsenal import Malware, Vulnerability
+from connectors_sdk.models.octi.knowledge.entities import (
+    Individual,
+    Organization,
+    Sector,
+)
+from connectors_sdk.models.octi.knowledge.locations import City, Country
+from connectors_sdk.models.octi.knowledge.techniques import AttackPattern
+from connectors_sdk.models.octi.knowledge.threats import IntrusionSet, ThreatActorGroup
 from connectors_sdk.models.octi.relationships import (
-    AnyRelatedToAny,
-    IndicatorBasedOnObservable,
-    IndicatorDerivedFromIndicator,
+    Relationship,
     based_on,
+    derived_from,
+    has,
+    indicates,
+    located_at,
     related_to,
+    targets,
 )
 from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
+from stix2.v21 import Identity as Stix2Identity
 
 __all__ = [
-    "AnyRelatedToAny",
+    # Models flat list
     "AssociatedFile",
-    "BaseEntity",  # for typing purpose.
+    "AttackPattern",
+    "City",
+    "Country",
+    "DomainName",
     "ExternalReference",
+    "File",
     "Indicator",
-    "IndicatorBasedOnObservable",
-    "IndicatorDerivedFromIndicator",
+    "Individual",
+    "IntrusionSet",
     "IPV4Address",
+    "IPV6Address",
     "KillChainPhase",
+    "Malware",
+    "Note",
     "Organization",
     "OrganizationAuthor",
+    "Relationship",
+    "Report",
+    "Sector",
+    "Software",
+    "ThreatActorGroup",
     "TLPMarking",
-    "related_to",
+    "URL",
+    "Vulnerability",
+    # Relationship builders
     "based_on",
+    "derived_from",
+    "has",
+    "indicates",
+    "located_at",
+    "related_to",
+    "targets",
+    # Typing purpose
+    "BaseEntity",
+    "BaseIdentifiedEntity",
 ]
 
 
@@ -55,7 +96,7 @@ class OrganizationAuthor(Author, Organization):
 
     """
 
-    def to_stix2_object(self) -> stix2.v21.Identity:
+    def to_stix2_object(self) -> Stix2Identity:
         """Make stix object."""
         return Organization.to_stix2_object(self)
 

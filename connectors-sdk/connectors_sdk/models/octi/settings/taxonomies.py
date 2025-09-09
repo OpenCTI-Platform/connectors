@@ -1,6 +1,6 @@
 """Offers a set of taxonomies entities for the Octi connector."""
 
-import stix2  # type: ignore[import-untyped]  # stix2 does not provide stubs
+import stix2
 from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseEntity
 from pydantic import Field
 

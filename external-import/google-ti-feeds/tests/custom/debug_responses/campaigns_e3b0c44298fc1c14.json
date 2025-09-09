@@ -1,0 +1,1710 @@
+{
+  "request_info": {
+    "endpoint": "https://www.virustotal.com/api/v3/collections",
+    "query_params": {
+      "filter": "collection_type:report last_modification_date:2024-06-03T09:30:31+",
+      "limit": 40,
+      "order": "last_modification_date+"
+    },
+    "entity_type": "reports",
+    "method": "GET"
+  },
+  "response": {
+    "id": "campaign--6e13a583-6805-5dd6-a3df-7ddc57de2bdc",
+    "type": "collection",
+    "links": {
+      "self": "https://www.virustotal.com/api/v3/collections/campaign--6e13a583-6805-5dd6-a3df-7ddc57de2bdc"
+    },
+    "attributes": {
+      "targeted_industries": [],
+      "collection_type": "campaign",
+      "last_seen_details": [
+        {
+          "description": null,
+          "confidence": "unconfirmed",
+          "value": "2023-11-20T00:00:00Z",
+          "last_seen": null,
+          "first_seen": null
+        }
+      ],
+      "references_count": 14,
+      "name": "Exploitation of CVE-2023-4966 in Citrix Netscaler / ADC Appliances",
+      "tags_details": [],
+      "version_history": [],
+      "targeted_informations": [],
+      "merged_actors": [],
+      "motivations": [
+        {
+          "description": null,
+          "confidence": "confirmed",
+          "value": "Financial Gain",
+          "last_seen": null,
+          "first_seen": null
+        },
+        {
+          "description": null,
+          "confidence": "confirmed",
+          "value": "Espionage",
+          "last_seen": null,
+          "first_seen": null
+        }
+      ],
+      "risk_factors": [],
+      "description": "In October 2023, Mandiant initiated a Global Event in response to the exploitation of a zero-day vulnerability in Citrix Netscaler ADC and Gateway Security products. Exploitation involves an Improper Restriction of Operations within the Bounds of a Memory Buffer vulnerability (CVE-2023-4966) that allows an attacker to collect potentially sensitive information. A failed attempt at exploitation could potentially cause a crash of the application, resulting in a denial-of-service condition. This vulnerability was first disclosed to the public in October 2023, when the U.S. Cybersecurity and Infrastructure Security Agency (CISA) also added the vulnerability to their Exploited Catalog. Citrix has released a patch to mitigate this issue, and Mandiant suggests prioritizing these patches. \n\nMandiant has confirmed that multiple threat clusters driven by unknown motivations have exploited this vulnerability to gather data and gain initial access since August 2023. Impacted organizations have included both public and private sector entities based in the U.S. and Austria, although targeting is likely opportunistic and broader than directly observed, and subject to the geographic distribution of affected products. The targeting of edge infrastructure and technologies that do not support endpoint detection and response (EDR) solutions to gain persistence and traverse a victim's environment enables threat actors to avoid detection and complicate attribution.",
+      "domains_count": 1,
+      "malware_roles": [],
+      "field_sources": [],
+      "recent_activity_summary": [7, 7, 7, 14, 3, 2, 7, 6, 3, 6, 4, 3, 3, 5],
+      "targeted_regions": ["US", "AU", "AT", "CA"],
+      "targeted_regions_hierarchy": [
+        {
+          "region": "Oceania",
+          "sub_region": "Australia and New Zealand",
+          "country": "Australia",
+          "country_iso2": "AU",
+          "confidence": "confirmed",
+          "first_seen": null,
+          "last_seen": null,
+          "description": null,
+          "source": null
+        },
+        {
+          "region": "Europe",
+          "sub_region": "Western Europe",
+          "country": "Austria",
+          "country_iso2": "AT",
+          "confidence": "confirmed",
+          "first_seen": null,
+          "last_seen": null,
+          "description": null,
+          "source": null
+        },
+        {
+          "region": "Americas",
+          "sub_region": "Northern America",
+          "country": "Canada",
+          "country_iso2": "CA",
+          "confidence": "confirmed",
+          "first_seen": null,
+          "last_seen": null,
+          "description": null,
+          "source": null
+        },
+        {
+          "region": "Americas",
+          "sub_region": "Northern America",
+          "country": "United States",
+          "country_iso2": "US",
+          "confidence": "confirmed",
+          "first_seen": null,
+          "last_seen": null,
+          "description": null,
+          "source": null
+        }
+      ],
+      "first_seen_details": [
+        {
+          "description": "Mandiant Observed First Activity of Campaign",
+          "confidence": "unconfirmed",
+          "value": "2023-08-09T00:00:00Z",
+          "last_seen": null,
+          "first_seen": null
+        }
+      ],
+      "subscribers_count": 1,
+      "affected_systems": [],
+      "autogenerated_tags": [],
+      "source_regions_hierarchy": [
+        {
+          "region": "Americas",
+          "sub_region": "Northern America",
+          "country": "United States",
+          "country_iso2": "US",
+          "confidence": "confirmed",
+          "first_seen": null,
+          "last_seen": null,
+          "description": null,
+          "source": null
+        },
+        {
+          "region": "Asia",
+          "sub_region": "Eastern Asia",
+          "country": "China",
+          "country_iso2": "CN",
+          "confidence": "confirmed",
+          "first_seen": null,
+          "last_seen": null,
+          "description": null,
+          "source": null
+        }
+      ],
+      "ip_addresses_count": 27,
+      "source_region": "US",
+      "origin": "Google Threat Intelligence",
+      "exploitation_vectors": [],
+      "targeted_industries_tree": [
+        {
+          "industry_group": "Agriculture",
+          "industry": null,
+          "confidence": "confirmed",
+          "first_seen": null,
+          "last_seen": null,
+          "description": null,
+          "source": null
+        },
+        {
+          "industry_group": "Construction & Engineering",
+          "industry": null,
+          "confidence": "confirmed",
+          "first_seen": null,
+          "last_seen": null,
+          "description": null,
+          "source": null
+        },
+        {
+          "industry_group": "Financial Services",
+          "industry": null,
+          "confidence": "confirmed",
+          "first_seen": null,
+          "last_seen": null,
+          "description": null,
+          "source": null
+        },
+        {
+          "industry_group": "Government",
+          "industry": null,
+          "confidence": "confirmed",
+          "first_seen": null,
+          "last_seen": null,
+          "description": null,
+          "source": null
+        },
+        {
+          "industry_group": "Healthcare",
+          "industry": null,
+          "confidence": "confirmed",
+          "first_seen": null,
+          "last_seen": null,
+          "description": null,
+          "source": null
+        },
+        {
+          "industry_group": "Legal & Professional Services",
+          "industry": null,
+          "confidence": "confirmed",
+          "first_seen": null,
+          "last_seen": null,
+          "description": null,
+          "source": null
+        },
+        {
+          "industry_group": "Manufacturing",
+          "industry": null,
+          "confidence": "confirmed",
+          "first_seen": null,
+          "last_seen": null,
+          "description": null,
+          "source": null
+        },
+        {
+          "industry_group": "Technology",
+          "industry": null,
+          "confidence": "confirmed",
+          "first_seen": null,
+          "last_seen": null,
+          "description": null,
+          "source": null
+        },
+        {
+          "industry_group": "Telecommunications",
+          "industry": null,
+          "confidence": "confirmed",
+          "first_seen": null,
+          "last_seen": null,
+          "description": null,
+          "source": null
+        }
+      ],
+      "campaign_type": "GLOBAL",
+      "counters": {
+        "files": 0,
+        "domains": 1,
+        "ip_addresses": 27,
+        "urls": 0,
+        "iocs": 28,
+        "subscribers": 1,
+        "attack_techniques": 106
+      },
+      "tags": [],
+      "last_modification_date": 1753912865,
+      "mitigations": [],
+      "vulnerable_products": "",
+      "urls_count": 0,
+      "detection_names": [],
+      "capabilities": [],
+      "files_count": 0,
+      "status": "COMPUTED",
+      "technologies": [],
+      "available_mitigation": [],
+      "is_content_translated": false,
+      "collection_links": [],
+      "operating_systems": [],
+      "last_seen": 1700438400,
+      "workarounds": [],
+      "first_seen": 1691539200,
+      "private": true,
+      "alt_names": ["GLOBAL.23.004"],
+      "vendor_fix_references": [],
+      "threat_scape": [],
+      "recent_activity_relative_change": 0.14925373134328357,
+      "intended_effects": [],
+      "top_icon_md5": [],
+      "alt_names_details": [
+        {
+          "description": null,
+          "confidence": "confirmed",
+          "value": "GLOBAL.23.004",
+          "last_seen": null,
+          "first_seen": null
+        }
+      ],
+      "creation_date": 1698878816,
+      "aggregations": {
+        "domains": {
+          "communicating_files": [
+            {
+              "value": "ed5d694d561c97b4d70efe934936286fe562addf7d6836f795b336d9791a5c44",
+              "count": 1,
+              "total_related": 3,
+              "prevalence": 0.3333333333333333
+            }
+          ],
+          "downloaded_files": [
+            {
+              "value": "ed5d694d561c97b4d70efe934936286fe562addf7d6836f795b336d9791a5c44",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+              "count": 1,
+              "total_related": 100000,
+              "prevalence": 0.00001
+            }
+          ],
+          "urls": [
+            {
+              "value": "http://adobe-us-updatefiles.digital/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://adobe-us-updatefiles.digital/$",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://adobe-us-updatefiles.digital/index.php",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://adobe-us-updatefiles.digital/index.php/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://adobe-us-updatefiles.digital/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://adobe-us-updatefiles.digital/123.ps1",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://adobe-us-updatefiles.digital/index.php",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://adobe-us-updatefiles.digital/index.php/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://adobe-us-updatefiles.digital/index.php2",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://adobe-us-updatefiles.digital/index.php~",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            }
+          ],
+          "registrant_names": [
+            {
+              "value": "1f8f4166599d23ee",
+              "count": 1,
+              "total_related": 100000,
+              "prevalence": 0.00001
+            }
+          ]
+        },
+        "ip_addresses": {
+          "attributions": [
+            {
+              "value": "whipweave",
+              "count": 1,
+              "total_related": 1520,
+              "prevalence": 0.0006578947368421052
+            },
+            {
+              "value": "meterpreter",
+              "count": 1,
+              "total_related": 3151,
+              "prevalence": 0.00031735956839098697
+            },
+            {
+              "value": "mirai",
+              "count": 1,
+              "total_related": 14046,
+              "prevalence": 0.00007119464616260858
+            },
+            {
+              "value": "metasploit",
+              "count": 1,
+              "total_related": 24498,
+              "prevalence": 0.00004081965874765287
+            }
+          ],
+          "communicating_files": [
+            {
+              "value": "013c29c08812411b8da0e8b811ade227f2d7c15e82cfd4f88328be6947acb71f",
+              "count": 1,
+              "total_related": 4,
+              "prevalence": 0.25
+            },
+            {
+              "value": "003f171386e88cc59fe12091634ed4454ea664a7c45f976f87fd6bdb684aab05",
+              "count": 1,
+              "total_related": 5,
+              "prevalence": 0.2
+            },
+            {
+              "value": "00717cf1973e3a18b3bc8237699c907bd7afbc48614b9d46f6634e77e105e2c5",
+              "count": 1,
+              "total_related": 5,
+              "prevalence": 0.2
+            },
+            {
+              "value": "009784dbb8d934054ec98ab60586cb7064d617c8f28fdd03d51271aa447ff316",
+              "count": 1,
+              "total_related": 5,
+              "prevalence": 0.2
+            },
+            {
+              "value": "0129fe7b6e06db832620d72bb9d5a7c9f3c70e33802d41aababcd3486434d6de",
+              "count": 1,
+              "total_related": 5,
+              "prevalence": 0.2
+            },
+            {
+              "value": "014f532918ad7fa1b01bbb8a556659dff706b1621e70016c7b9cc6ec28a62da8",
+              "count": 1,
+              "total_related": 5,
+              "prevalence": 0.2
+            },
+            {
+              "value": "0631a89f68921700be23aece8ea3cf1aa29ec4d50965c8cb6ab990899ea154b3",
+              "count": 1,
+              "total_related": 5,
+              "prevalence": 0.2
+            },
+            {
+              "value": "078ff994d96384d1734c4049743531f44729a2757bb2a47185b486dc04be7b28",
+              "count": 1,
+              "total_related": 5,
+              "prevalence": 0.2
+            },
+            {
+              "value": "098925559a963d485cc03884716d9684bb7d65bf3fca78135c77be1483f06253",
+              "count": 1,
+              "total_related": 5,
+              "prevalence": 0.2
+            },
+            {
+              "value": "0c03f024ec9b1a05afbd4d88463f9921600a6784d06f2bb52a7af0b81fcf3f73",
+              "count": 1,
+              "total_related": 5,
+              "prevalence": 0.2
+            },
+            {
+              "value": "01339013790756cb14c9b6bb5e047617bf6c15eff1cd58ef1dece8ce5a3e6c3e",
+              "count": 1,
+              "total_related": 6,
+              "prevalence": 0.16666666666666666
+            },
+            {
+              "value": "026470a2f8a1edc1286f940f5444302ccbfc7a105b8b1e82a2ed63b4ad6f05c8",
+              "count": 1,
+              "total_related": 6,
+              "prevalence": 0.16666666666666666
+            },
+            {
+              "value": "048931291a2789d5a97bc448cc7a9b2e9d55a14b01377036bbeafbe8ba9e4098",
+              "count": 1,
+              "total_related": 6,
+              "prevalence": 0.16666666666666666
+            },
+            {
+              "value": "0626042a954a2848d94cbaa06f5f3112b50b0ec8e81364c734bbbac739e8a62d",
+              "count": 1,
+              "total_related": 6,
+              "prevalence": 0.16666666666666666
+            },
+            {
+              "value": "0abf179addc08fd4613273637f9b66fb8f3eee709086f0e47a35d657289f7eca",
+              "count": 1,
+              "total_related": 6,
+              "prevalence": 0.16666666666666666
+            },
+            {
+              "value": "0085212025ca998683ee4d275e62927d79d4cd14eef667cdb5871a97b222a7b8",
+              "count": 1,
+              "total_related": 7,
+              "prevalence": 0.14285714285714285
+            },
+            {
+              "value": "022b43c639806d2215e22670af8c02213fc35d140bb0b83b65072e50bf2f1d95",
+              "count": 1,
+              "total_related": 7,
+              "prevalence": 0.14285714285714285
+            },
+            {
+              "value": "050149b4d37d65560ce08347228ef41592f36ae2e94c9e4a05dc9f86dab3d644",
+              "count": 1,
+              "total_related": 7,
+              "prevalence": 0.14285714285714285
+            },
+            {
+              "value": "051248e5ca487e92d52d21eadbab25b05a172c0338096e0b800d5de9344236f1",
+              "count": 1,
+              "total_related": 7,
+              "prevalence": 0.14285714285714285
+            },
+            {
+              "value": "07865e1e1c0de0b6bb31a48b8bb2b12077021de6f4edc91088f78d574962398b",
+              "count": 1,
+              "total_related": 7,
+              "prevalence": 0.14285714285714285
+            },
+            {
+              "value": "0a09c17afe509c0f04c26d42646711a686c9b58e4a134419fc8ddcaa2889214c",
+              "count": 1,
+              "total_related": 7,
+              "prevalence": 0.14285714285714285
+            },
+            {
+              "value": "0ba7fc77cfdec4ede5e6b366675852b85bfdf453f0cf27254d31997b2864cc10",
+              "count": 1,
+              "total_related": 7,
+              "prevalence": 0.14285714285714285
+            },
+            {
+              "value": "0c0553c78c4a9840ae06a21ea199d7931a22ebe34d8fc2643ed043808e76f512",
+              "count": 1,
+              "total_related": 7,
+              "prevalence": 0.14285714285714285
+            },
+            {
+              "value": "01a5de6b96f789fa86b5683d111f5956b8e5c583323c93ef6af1c66a55ab9097",
+              "count": 1,
+              "total_related": 8,
+              "prevalence": 0.125
+            },
+            {
+              "value": "02ff9fb0b2abc9fe513651deaa24b03245caac626344cf6e13e5be4d4b5c2793",
+              "count": 1,
+              "total_related": 8,
+              "prevalence": 0.125
+            },
+            {
+              "value": "031e7657fc3adc508dd411bb5626d7e4f9fc74458ecffce3ca7f82b6628594f5",
+              "count": 1,
+              "total_related": 8,
+              "prevalence": 0.125
+            },
+            {
+              "value": "03c655128175d821fd52396092252af712d43c029a48e351e9e6be570c470981",
+              "count": 1,
+              "total_related": 8,
+              "prevalence": 0.125
+            },
+            {
+              "value": "0448b8e9cb6841169002c8ccb0acc4ce76259b2e7ff9a4c2b5626debf5d2a0b3",
+              "count": 1,
+              "total_related": 8,
+              "prevalence": 0.125
+            },
+            {
+              "value": "05da7831a789c3a404d4228ee0010dfca5412a800158cdf61728b03c673c6446",
+              "count": 1,
+              "total_related": 8,
+              "prevalence": 0.125
+            },
+            {
+              "value": "07a10c877d8230218b595d6a661646f5ee8f4a0aada03a2fe352c3a8f6e363df",
+              "count": 1,
+              "total_related": 8,
+              "prevalence": 0.125
+            },
+            {
+              "value": "0842cf38e162db241aa5ea594003f8d22513c5b3bc549c5fdf48bd8effb43428",
+              "count": 1,
+              "total_related": 8,
+              "prevalence": 0.125
+            },
+            {
+              "value": "08adb51467d078b09f9b225e756be4f50db720f4b6d05e26971b5863d2c4779d",
+              "count": 1,
+              "total_related": 8,
+              "prevalence": 0.125
+            },
+            {
+              "value": "01242fd5877618fcecf3a3c66a51d13b7972cfa1c3098f18d534f9b7e9881720",
+              "count": 1,
+              "total_related": 9,
+              "prevalence": 0.1111111111111111
+            },
+            {
+              "value": "01f19bc94cab9d2a7a0eb70b9eaeeade718dbd3af4109d3b6c5151963e2f71cf",
+              "count": 1,
+              "total_related": 10,
+              "prevalence": 0.1
+            },
+            {
+              "value": "03e4c3301947fa6c56e275219ef229a668577aaf0092f16439d0c033b224661e",
+              "count": 1,
+              "total_related": 10,
+              "prevalence": 0.1
+            },
+            {
+              "value": "04c97b6f5168c03de9bf0b867d77a6b29e9e2ebf47a63f64e8ad66240ad200ea",
+              "count": 1,
+              "total_related": 10,
+              "prevalence": 0.1
+            },
+            {
+              "value": "06118b197d34b6525c008013775bf77eee1f105671ff4de355a65798e0a6dbaa",
+              "count": 1,
+              "total_related": 10,
+              "prevalence": 0.1
+            },
+            {
+              "value": "0aaa57576a0128051371c5cc64b205eea77f5a60cf2a8a2c2aced501f5cec952",
+              "count": 1,
+              "total_related": 10,
+              "prevalence": 0.1
+            },
+            {
+              "value": "013aa151d8b1bf08c78df04a33e20678e9074ec5338c455a52b41e0299ce1f04",
+              "count": 1,
+              "total_related": 11,
+              "prevalence": 0.09090909090909091
+            },
+            {
+              "value": "01f67b1f1e441292d6e95f141f61ac028ce59f552184c1510de1707ea5049063",
+              "count": 1,
+              "total_related": 12,
+              "prevalence": 0.08333333333333333
+            },
+            {
+              "value": "04ad04c2753449184a270d85519acdae9680d397312c3aa2714ad7f699d108c7",
+              "count": 1,
+              "total_related": 12,
+              "prevalence": 0.08333333333333333
+            },
+            {
+              "value": "0945d5df2295c332cc7b80af1aed93c0b3da898fdc05983852f54dc4fb29bfa6",
+              "count": 1,
+              "total_related": 12,
+              "prevalence": 0.08333333333333333
+            },
+            {
+              "value": "0171913794181469e6e72260d6ead7f01be6f9e785d65785869f9eda707246c3",
+              "count": 1,
+              "total_related": 13,
+              "prevalence": 0.07692307692307693
+            },
+            {
+              "value": "0386cb7dcf496d7f2211e71af7502653161df2dc0a1c4ba5c3dc7f5aa7f12360",
+              "count": 1,
+              "total_related": 13,
+              "prevalence": 0.07692307692307693
+            },
+            {
+              "value": "06e2285a5bd2e056e98ed49c90470a579754941cf9085808ef597e1c077937c3",
+              "count": 1,
+              "total_related": 13,
+              "prevalence": 0.07692307692307693
+            },
+            {
+              "value": "0a4fd27f67bd85f5413f14c7648b928a58682f0a2256145475d6a4c7249f4fbd",
+              "count": 1,
+              "total_related": 13,
+              "prevalence": 0.07692307692307693
+            },
+            {
+              "value": "0c33c3cc66783ac4d8eaf2b1945fe6a280ccf3047df3c11a7f358bb2e32dde61",
+              "count": 1,
+              "total_related": 13,
+              "prevalence": 0.07692307692307693
+            },
+            {
+              "value": "0308bb8f2badeb297237c79f0468f17510bafde59a3f8e0ade5b5854acc4eefd",
+              "count": 1,
+              "total_related": 14,
+              "prevalence": 0.07142857142857142
+            },
+            {
+              "value": "079b6448f4c36adb55099511f4b9dc42cbfe7a5d10e7d2679e4db6c214b17e25",
+              "count": 1,
+              "total_related": 14,
+              "prevalence": 0.07142857142857142
+            },
+            {
+              "value": "087e3029643c57cbf4e4854c34193827e8b61c9cc59a3a1f5386d3cc283254e5",
+              "count": 1,
+              "total_related": 15,
+              "prevalence": 0.06666666666666667
+            },
+            {
+              "value": "0640c4aab87860b76215945b634fdc8138b1bac80d6feaea09eef9f93f3d9125",
+              "count": 1,
+              "total_related": 16,
+              "prevalence": 0.0625
+            },
+            {
+              "value": "084e6d55df4c7b53b5147d7b483f9a03f9ce4a971918f74998dfbfab4cfe23e5",
+              "count": 1,
+              "total_related": 16,
+              "prevalence": 0.0625
+            },
+            {
+              "value": "00873276fbc116c8e7d74890b72d86e076b23c8d293a565bb675f0c70826bb67",
+              "count": 1,
+              "total_related": 17,
+              "prevalence": 0.058823529411764705
+            },
+            {
+              "value": "07cdb3a98a85d57ee4c26b9df477fcdc46bd5ba89af1074a4cbd30cd869787cd",
+              "count": 1,
+              "total_related": 17,
+              "prevalence": 0.058823529411764705
+            },
+            {
+              "value": "09b33989964d9620215919217530ef11cd8a1439da8725bbd28df4293e379dc6",
+              "count": 1,
+              "total_related": 17,
+              "prevalence": 0.058823529411764705
+            },
+            {
+              "value": "0adbae74be8dd5150490743a9c9fc833db0ac0bde64c1d6188098bccf621c9e7",
+              "count": 1,
+              "total_related": 17,
+              "prevalence": 0.058823529411764705
+            },
+            {
+              "value": "04697777fd7666053fbbcd97630ce7b1edeecea91d6b154b53a3bcf3f64a80d3",
+              "count": 1,
+              "total_related": 19,
+              "prevalence": 0.05263157894736842
+            },
+            {
+              "value": "0595c38598502f06152db01207632865a26d6109d27baecb1755a3420a024f5f",
+              "count": 1,
+              "total_related": 19,
+              "prevalence": 0.05263157894736842
+            },
+            {
+              "value": "075b5d2cf3f12233552dc816ee25a0afc482ffe9f3af1024a5dc0270cda53496",
+              "count": 1,
+              "total_related": 19,
+              "prevalence": 0.05263157894736842
+            },
+            {
+              "value": "0b1b5c191c546a759a22532f6d1f94ac34777e9a5d988aac4698ef6fb08c0efd",
+              "count": 1,
+              "total_related": 19,
+              "prevalence": 0.05263157894736842
+            },
+            {
+              "value": "03a9fb7ee683e175411a76851579e25373c56cf7325e6df77e895775d3f05ab5",
+              "count": 1,
+              "total_related": 20,
+              "prevalence": 0.05
+            },
+            {
+              "value": "040512e9f28d5d47aa828526faed5d01f30699b6aaefb1ab2a1c5d63a78f9913",
+              "count": 1,
+              "total_related": 20,
+              "prevalence": 0.05
+            },
+            {
+              "value": "0910cacdb4b0f0537fde80acb696e8c4b52dbd0542e9d5afedaac3e6f2cddda0",
+              "count": 1,
+              "total_related": 20,
+              "prevalence": 0.05
+            },
+            {
+              "value": "099124420232ee286cc927ac3787f2531dfdd684cb087253fc2847ac4f28b139",
+              "count": 1,
+              "total_related": 20,
+              "prevalence": 0.05
+            },
+            {
+              "value": "071a91730cf71c8de5fd363085b2b8b90f3d33dcdbd253c0ee6e12ebfc6aa759",
+              "count": 1,
+              "total_related": 21,
+              "prevalence": 0.047619047619047616
+            },
+            {
+              "value": "026b5f4d73cb2c885bc87d8bdc7332efd67064b1796f6f6192702c9622d046e5",
+              "count": 1,
+              "total_related": 22,
+              "prevalence": 0.045454545454545456
+            },
+            {
+              "value": "09e25b4f00f51071feb8340658115cd0f0363029824d4de71d6213187fbe8905",
+              "count": 1,
+              "total_related": 22,
+              "prevalence": 0.045454545454545456
+            },
+            {
+              "value": "058d172672703f383fb81bb89598bc8acdeb09ea0b31dd89fd57497a6f223e19",
+              "count": 1,
+              "total_related": 23,
+              "prevalence": 0.043478260869565216
+            },
+            {
+              "value": "07706a6d22e0478f2cc4903c98a5f844cafbaa90caf0d99d268241f157861698",
+              "count": 1,
+              "total_related": 23,
+              "prevalence": 0.043478260869565216
+            },
+            {
+              "value": "09e3c99008ef1eec9fac6603133a5caba56831552002437b795208c17f5dce58",
+              "count": 1,
+              "total_related": 23,
+              "prevalence": 0.043478260869565216
+            },
+            {
+              "value": "0a24179884457a3b4703e0aaa18dd763051bd6f3e2519508f3b99915bbdbc426",
+              "count": 1,
+              "total_related": 23,
+              "prevalence": 0.043478260869565216
+            },
+            {
+              "value": "015de6517877954c0de4bac35a36419e40fc0d65f2837bccaa4463714e417177",
+              "count": 1,
+              "total_related": 25,
+              "prevalence": 0.04
+            },
+            {
+              "value": "02bea87aaf700c9e9ac627318b41e4c97b0544cea8ef26ee17788e407aeb3930",
+              "count": 1,
+              "total_related": 25,
+              "prevalence": 0.04
+            },
+            {
+              "value": "058bcc12eeec1cb5bb5d16ea77443798cb5e55506f83a9c3e87f8095e0ea2ec6",
+              "count": 1,
+              "total_related": 26,
+              "prevalence": 0.038461538461538464
+            },
+            {
+              "value": "030b17c14423e4f9c4467214a7558efe47ee469220af6061375d1ea227dfc1ac",
+              "count": 1,
+              "total_related": 29,
+              "prevalence": 0.034482758620689655
+            },
+            {
+              "value": "09ddc77d18052899e46b60f966aefe23830421e990e40600a1c5e87b76e747b1",
+              "count": 1,
+              "total_related": 29,
+              "prevalence": 0.034482758620689655
+            },
+            {
+              "value": "004360a165b781977fa392db9d7a47d5ba8772eb1138e40505c65a01d525dada",
+              "count": 1,
+              "total_related": 30,
+              "prevalence": 0.03333333333333333
+            },
+            {
+              "value": "060ac51f03729b67849476b0cb956e7181fab8641d709a8b79fb8c1a4fcbb676",
+              "count": 1,
+              "total_related": 30,
+              "prevalence": 0.03333333333333333
+            },
+            {
+              "value": "088be3dcbfdae92ddb3b06728e2fcb3cee27cc4ee5c6c5b5b304d35814fa889e",
+              "count": 1,
+              "total_related": 30,
+              "prevalence": 0.03333333333333333
+            },
+            {
+              "value": "0a920e831a9425b615f0a14f51371cdbd4c4dfc422675827170953a24211a567",
+              "count": 1,
+              "total_related": 31,
+              "prevalence": 0.03225806451612903
+            },
+            {
+              "value": "034951a0395fc079812052af8958e5aa8b3eab52a00513fafd8c2aa260885a5c",
+              "count": 1,
+              "total_related": 32,
+              "prevalence": 0.03125
+            },
+            {
+              "value": "0921e58478a117b8b970e55ba3cab20ff7faccce31888f17990ddc1670601d4c",
+              "count": 1,
+              "total_related": 34,
+              "prevalence": 0.029411764705882353
+            },
+            {
+              "value": "019afd28256bc30cdec81aae88f5d219eaef96be40bde2b25c3adb8d74a8541d",
+              "count": 1,
+              "total_related": 36,
+              "prevalence": 0.027777777777777776
+            },
+            {
+              "value": "0c51926f05e7ecb0331f7ea137abee67caef9067be02b1edb0fad5cd724127c3",
+              "count": 1,
+              "total_related": 37,
+              "prevalence": 0.02702702702702703
+            },
+            {
+              "value": "09c013a7056b000168998a521a14f3442bd30bf0b8ac8bdcda8ca222ebb05790",
+              "count": 1,
+              "total_related": 40,
+              "prevalence": 0.025
+            },
+            {
+              "value": "0a4dd300fbfcd87485e2d26f497d19c72e84edb4f74a13b2e3ea18673a6501d3",
+              "count": 1,
+              "total_related": 40,
+              "prevalence": 0.025
+            },
+            {
+              "value": "01638f004d4528061bc92625d58ac31f727113a40204b791bf1905d93b3ffb87",
+              "count": 1,
+              "total_related": 42,
+              "prevalence": 0.023809523809523808
+            },
+            {
+              "value": "066507120efec3a0b46b2737c1212441fcf8c7ed908beca5b8091e9e18b8e6e9",
+              "count": 1,
+              "total_related": 43,
+              "prevalence": 0.023255813953488372
+            },
+            {
+              "value": "0685130f1e0a3312bc9db0f58e20dcbc22c23eef5132e3f4a69e2b8d7a8bb6e3",
+              "count": 1,
+              "total_related": 44,
+              "prevalence": 0.022727272727272728
+            },
+            {
+              "value": "0ae320fd6c91f30952eb0935a49d88856f5791cf19dc668e39d3882316743ee8",
+              "count": 1,
+              "total_related": 48,
+              "prevalence": 0.020833333333333332
+            },
+            {
+              "value": "00350587b629ab43262250660b659b35748c017c33cdeed5f4a28d81eb1bee2d",
+              "count": 1,
+              "total_related": 49,
+              "prevalence": 0.02040816326530612
+            },
+            {
+              "value": "04c795cd23ed1fa640d10422af4cc4c36fbd9c4ed468ff4a33f4934b23637c52",
+              "count": 1,
+              "total_related": 49,
+              "prevalence": 0.02040816326530612
+            },
+            {
+              "value": "093872d9ec84565ae046573b05fd5197d82997968caf7e26336a23c2cb8c3b53",
+              "count": 1,
+              "total_related": 55,
+              "prevalence": 0.01818181818181818
+            },
+            {
+              "value": "0bcd426e4d286919cc66497817373e7ca4c0c154cfd6b985200b92fe295df9c1",
+              "count": 1,
+              "total_related": 57,
+              "prevalence": 0.017543859649122806
+            },
+            {
+              "value": "0667bf5c6f885134811ef8608d8fc2b559068a5c3f2b6b069408671b14db5eca",
+              "count": 1,
+              "total_related": 62,
+              "prevalence": 0.016129032258064516
+            },
+            {
+              "value": "0a0fa4fe54c4986dd4535795cd9f49f2ddedb792d51dc69e3f18d2c7e8dcedef",
+              "count": 1,
+              "total_related": 69,
+              "prevalence": 0.014492753623188406
+            },
+            {
+              "value": "00d65673a38f3596ca0bba76a12b59adb3b127d52e4d376d4e7e26413b07573f",
+              "count": 1,
+              "total_related": 77,
+              "prevalence": 0.012987012987012988
+            },
+            {
+              "value": "03ebae51a4174fe378d728ed3c152af0c785ec7ca9592d8b55f8e49a26579228",
+              "count": 1,
+              "total_related": 81,
+              "prevalence": 0.012345679012345678
+            },
+            {
+              "value": "0a19e1ce165a16fe62b8791f2bff38dfb88ca0591fda2cd0c59db9a72420b03c",
+              "count": 1,
+              "total_related": 90,
+              "prevalence": 0.011111111111111112
+            },
+            {
+              "value": "06c0a62394a0a5f44b9368cfb0d969a4414682c1f0102f723bc1cb3603c465a8",
+              "count": 1,
+              "total_related": 105,
+              "prevalence": 0.009523809523809525
+            }
+          ],
+          "downloaded_files": [
+            {
+              "value": "6e24d74ebc881e1e97331bb72d6edee8431485a8a0cafd7c4a913a3819817b84",
+              "count": 2,
+              "total_related": 17174,
+              "prevalence": 0.0001164551065564225
+            },
+            {
+              "value": "a31fa060fca32efa78eec2bcb6c46cd3d0c6d63f07444b58a64376d50d760553",
+              "count": 1,
+              "total_related": 2,
+              "prevalence": 0.5
+            },
+            {
+              "value": "58189cbd4e6dc0c7d8e66b6a6f75652fc9f4afc7ce0eba7d67d8c3feb0d5381f",
+              "count": 1,
+              "total_related": 87,
+              "prevalence": 0.011494252873563218
+            },
+            {
+              "value": "bd5e20a01410e913c8a02fbbaa6422c7deb768f34486c060c4efcf4a6f6c6957",
+              "count": 1,
+              "total_related": 132,
+              "prevalence": 0.007575757575757576
+            },
+            {
+              "value": "07cc9ced9e5ad4b52a06fd244b30a47c183ccef20834eea011881d6096fa0353",
+              "count": 1,
+              "total_related": 552,
+              "prevalence": 0.0018115942028985507
+            },
+            {
+              "value": "e4d1318baabd1316a645ed86cd0cfb4320a1ba5b60cffe91381ed6f1f6ba9741",
+              "count": 1,
+              "total_related": 4338,
+              "prevalence": 0.0002305209774089442
+            },
+            {
+              "value": "fe5cb372aa2fc74c4e1458045868e7d13c64ea2f48640a8e9bea6ab15a5bd9fb",
+              "count": 1,
+              "total_related": 4808,
+              "prevalence": 0.00020798668885191348
+            },
+            {
+              "value": "8d70b3e6badb6973663b398d297bb32eaedd08826a1af98d0a1cfce5324ffce0",
+              "count": 1,
+              "total_related": 6261,
+              "prevalence": 0.00015971889474524837
+            },
+            {
+              "value": "533a1ca5d6595793725bca7641d9461a0f00dd1732dded3e4281196f5dd21736",
+              "count": 1,
+              "total_related": 8852,
+              "prevalence": 0.00011296882060551288
+            },
+            {
+              "value": "77df749f6bbe85442500437f7e798f46b9635da344811ae3b4bf7d43048ee9bb",
+              "count": 1,
+              "total_related": 12694,
+              "prevalence": 0.00007877737513786041
+            },
+            {
+              "value": "9c8c654fe26ffff624d54b10e91c30938ac4019fe8c64eb6d739783b9b5f10d0",
+              "count": 1,
+              "total_related": 30730,
+              "prevalence": 0.00003254149040026033
+            },
+            {
+              "value": "8548215da9bc3fa053e973155fb99462a65aea8b9ee8f6419a1d2c11ca0189f6",
+              "count": 1,
+              "total_related": 56361,
+              "prevalence": 0.000017742765387413283
+            },
+            {
+              "value": "3c8cc37a98346bd0123b35e5ccd87bd07d69914dae04f8b49f61c150d96e9d1f",
+              "count": 1,
+              "total_related": 93600,
+              "prevalence": 0.000010683760683760684
+            },
+            {
+              "value": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+              "count": 2,
+              "total_related": 100000,
+              "prevalence": 0.00002
+            },
+            {
+              "value": "38ffd4972ae513a0c79a8be4573403edcd709f0f572105362b08ff50cf6de521",
+              "count": 2,
+              "total_related": 100000,
+              "prevalence": 0.00002
+            },
+            {
+              "value": "2c3adc6b6fb69d3a4e7b75b64e913dc96d21dbaf436bf69e773589b6a6952c47",
+              "count": 1,
+              "total_related": 100000,
+              "prevalence": 0.00001
+            },
+            {
+              "value": "fb47468a2cd3953c7131431991afcc6a2703f14640520102eea0a685a7e8d6de",
+              "count": 1,
+              "total_related": 100000,
+              "prevalence": 0.00001
+            }
+          ],
+          "urls": [
+            {
+              "value": "http://103.140.186.146/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://110.235.236.88/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://155.94.208.144/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://168.100.11.35/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://169.150.196.39/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://172.86.75.141/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://172.86.75.141/1.exe",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://172.86.75.141/2.dll",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://172.86.75.141/index.php(",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://172.86.75.141/index.php86g",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://172.86.75.141/index.phpJ",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://172.86.75.141/x",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://185.112.82.109/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://185.236.231.74/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://188.126.94.46/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://193.70.71.112/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://206.166.251.8/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://206.166.251.8/calc.exe",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://206.166.251.8/index.php",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://217.182.199.126/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://23.30.25.177/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://23.62.222.58/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://23.94.197.143/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://35.158.56.195/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://45.14.71.12/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://50.232.120.126/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://50.250.225.213/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://61.195.145.68/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://80.76.51.13/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://80.76.51.13:3790/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://81.161.229.113/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://81.161.229.113/asd.zip",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://81.161.229.113:55579/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://81.19.135.217/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://81.19.135.219/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://81.19.135.219/AnyDesk.msi",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://81.19.135.219/F8PtZ87fE8dJWqe.hta",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://81.19.135.219/f8ptz87fe8djwqe.hta",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://81.19.135.219/q0X5wzEh6P7.hta",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://81.19.135.219/q0x5wzeh6p7.hta",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://81.19.135.219:4321/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://81.19.135.219:443/MIDR98KuvzM2pzp.hta",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://81.19.135.219:443/QfJzVIfbQT0H.hta",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://81.19.135.219:443/XDYL3a9GDheDbRQ.hta",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://81.19.135.219:443/q0X5wzEh6P7.hta",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://81.19.135.219:443/q0x5wzeh6p7.hta",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://81.19.135.219:443/ttuq8ECceo9.hta",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://83.97.73.87/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://83.97.73.87/favicon.ico",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://83.97.73.87/solr/admin/info/system?wt=json",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://83.97.73.87/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://83.97.73.87:443/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://83.97.73.87:9000/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://95.101.23.43/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://95.101.23.81/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://admiralx-407.ru/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://androcloud-static.com/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://checkthis.live/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://connectinghere.cam/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://cpanel.my-apple-wallet-id4.com/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://gosignhere.digital/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://ip112.ip-193-70-71.eu/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://maplehot.party/ff584cf1ae33dc2800/4w356lj2",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://my-amazon-login.com/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://my-apple-wallet-id4.com/_resources/media",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://no-tjenester.top/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://preservla.com/ff0d0fe1f8627ec800/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://signupherenow.cam/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://sli.law360news.com/imp?s=125919412&li=142&m=e71882d5c1924f6d642c1ed491308a2b&p=159760",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://www.together2night.com/aff.php?data2=wqjli5rdj9eknog93dkn781l&utm_funnel=tds&tds_ps=a&tds_oid=4375779&tdsId=b1853pet_lp_a_1618412475605_t2n&utm_campaign=497f5345&utm_source=int&p_tds_cid=&tds_path=/tds/ae&_disAL=true&utm_sub=opnfnl&tds_ao=1&btUrl=aHR0cHM6Ly9yb21hbmNldGFzdGljLmNvbS90ZHMvYWUvY2Ivcy9mZDY3ZjIyZmI0NDIwN2Y5ZGQxM2FlM2I0Njk2ODRlMT9fX3Q9MTc0NjAwMzQ1OTQyOCZfX2w9MzYwMCZfX2M9NTA1OWMzZmZhMDk4NDk4ZmJkODY1ZTk0MTc0YWU1ZmM0NmIzMmRhZA==&s1=ps&tds_id=b1853pet_lp_a_1618412475605_t2n&tds_reason=direct&gf=2168&utm_ex=a&tds_ac_id=s7017yas&dynamicpage=all_wlp_5st_halfphoto_v2_a&s3=wqjli5rdj9eknog93dkn781l&tds_cid=5059c3ffa098498fbd865e94174ae5fc46b32dad&tds_campaign=b1853pet&tds_host=romancetastic.com&dci=c43fbd58d3482463603230709b51212047f7efc0&utm_content=0d74cbe8-f881-4e63-b725-8a597feef9fb",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://103.140.186.146/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://155.94.208.144/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://168.100.11.35/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://169.150.196.39/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://172.86.75.141/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://172.86.75.141/1.exe/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://185.112.82.109/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://185.236.231.74/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://188.126.94.46/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://193.70.71.112/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://206.166.251.8/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://217.182.199.126/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://23.30.25.177/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://35.158.56.195/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://45.14.71.12/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://50.232.120.126/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://50.232.120.126:4443/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://50.250.225.213/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "https://61.195.145.68/",
+              "count": 1,
+              "total_related": 1,
+              "prevalence": 1.0
+            },
+            {
+              "value": "http://canadapos-ptc.buzz/",
+              "count": 1,
+              "total_related": 2,
+              "prevalence": 0.5
+            },
+            {
+              "value": "http://cdnsync.com/",
+              "count": 1,
+              "total_related": 2,
+              "prevalence": 0.5
+            },
+            {
+              "value": "http://king-oreoo-36.com/",
+              "count": 1,
+              "total_related": 2,
+              "prevalence": 0.5
+            },
+            {
+              "value": "http://konto-bestaetigen.de/",
+              "count": 1,
+              "total_related": 2,
+              "prevalence": 0.5
+            },
+            {
+              "value": "http://mpoxl-bth.xyz/",
+              "count": 1,
+              "total_related": 2,
+              "prevalence": 0.5
+            },
+            {
+              "value": "http://duasinggit.shop/",
+              "count": 1,
+              "total_related": 3,
+              "prevalence": 0.3333333333333333
+            },
+            {
+              "value": "http://jap77oke.rest/",
+              "count": 1,
+              "total_related": 3,
+              "prevalence": 0.3333333333333333
+            },
+            {
+              "value": "http://maplehot.party/",
+              "count": 1,
+              "total_related": 3,
+              "prevalence": 0.3333333333333333
+            },
+            {
+              "value": "http://my-apple-wallet-id4.com/",
+              "count": 1,
+              "total_related": 3,
+              "prevalence": 0.3333333333333333
+            },
+            {
+              "value": "http://www.oewheelsllc.com/",
+              "count": 1,
+              "total_related": 14,
+              "prevalence": 0.07142857142857142
+            },
+            {
+              "value": "http://antitrots.ru/",
+              "count": 1,
+              "total_related": 15,
+              "prevalence": 0.06666666666666667
+            }
+          ]
+        }
+      }
+    },
+    "context_attributes": {
+      "shared_with_me": false,
+      "role": "viewer"
+    }
+  }
+}

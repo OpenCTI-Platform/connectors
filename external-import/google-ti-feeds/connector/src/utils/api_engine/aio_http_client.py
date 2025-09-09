@@ -112,8 +112,14 @@ class AioHttpClient(BaseHttpClient):
         """
         actual_timeout = ClientTimeout(total=timeout or self.default_timeout)
         self._logger.debug(
-            f"{LOG_PREFIX} Making {method} request to {url} with timeout {actual_timeout.total}s. "
-            f"Params: {params is not None}, JSON: {json_payload is not None}"
+            f"{LOG_PREFIX} Making request",
+            {
+                "method": method,
+                "url": url,
+                "timeout": actual_timeout.total,
+                "has_params": params is not None,
+                "has_json": json_payload is not None,
+            },
         )
         try:
             async with ClientSession(timeout=actual_timeout, trust_env=True) as session:
@@ -126,42 +132,76 @@ class AioHttpClient(BaseHttpClient):
                     json=json_payload,
                 ) as response:
                     self._logger.debug(
-                        f"{LOG_PREFIX} Received response with status {response.status} for {method} {url}"
+                        f"{LOG_PREFIX} Received response",
+                        {
+                            "status": response.status,
+                            "method": method,
+                            "url": url,
+                        },
                     )
                     if response.status >= 400:
                         response_text = await response.text()
 
-                        self._logger.error(
-                            f"{LOG_PREFIX} HTTP Error {response.status} for {method} {url}: {response_text}",
+                        self._logger.warning(
+                            f"{LOG_PREFIX} HTTP Error",
+                            {
+                                "status": response.status,
+                                "method": method,
+                                "url": url,
+                                "response_text": response_text,
+                            },
                         )
                         raise ApiHttpError(response.status, response_text)
                     return await response.json(content_type=None)
         except TimeoutError as e:
-            self._logger.error(
-                f"{LOG_PREFIX} Request to {url} timed out after {actual_timeout.total}s: {e}",
+            self._logger.warning(
+                f"{LOG_PREFIX} Request timed out",
+                {
+                    "url": url,
+                    "timeout": actual_timeout.total,
+                    "error": str(e),
+                },
             )
             raise ApiTimeoutError("Request timed out") from e
         except ClientError as e:
             if self._is_network_error(e):
-                self._logger.error(
-                    f"{LOG_PREFIX} Network connectivity issue for {method} {url}: {str(e)}",
+                self._logger.warning(
+                    f"{LOG_PREFIX} Network connectivity issue",
+                    {
+                        "method": method,
+                        "url": url,
+                        "error": str(e),
+                    },
                 )
                 raise ApiNetworkError(f"Network connectivity issue: {str(e)}") from e
             else:
-                self._logger.error(
-                    f"{LOG_PREFIX} ClientError for {url}: {e}",
+                self._logger.warning(
+                    f"{LOG_PREFIX} ClientError",
+                    {
+                        "url": url,
+                        "error": str(e),
+                    },
                 )
                 raise ApiHttpError(0, str(e)) from e
         except ApiHttpError:
             raise
         except Exception as e:
             if self._is_network_error(e):
-                self._logger.error(
-                    f"{LOG_PREFIX} Network connectivity issue for {method} {url}: {str(e)}",
+                self._logger.warning(
+                    f"{LOG_PREFIX} Network connectivity issue",
+                    {
+                        "method": method,
+                        "url": url,
+                        "error": str(e),
+                    },
                 )
                 raise ApiNetworkError(f"Network connectivity issue: {str(e)}") from e
 
-            self._logger.error(
-                f"{LOG_PREFIX} Unexpected error during request to {url}: {e}",
+            self._logger.warning(
+                f"{LOG_PREFIX} Unexpected error during request",
+                {
+                    "url": url,
+                    "error": str(e),
+                },
             )
             raise ApiError(f"Unexpected error: {str(e)}") from e

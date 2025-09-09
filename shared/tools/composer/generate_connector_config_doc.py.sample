@@ -1,0 +1,57 @@
+import jsonschema_markdown
+import json
+import os
+import traceback
+
+__CONNECTOR_METADATA_DIRECTORY__ = "__metadata__"
+__CONNECTOR_CONFIG_JSON_SCHEMA_FILENAME__ = "connector_config_schema.json"
+__CONNECTOR_CONFIG_DOC_FILENAME__ = "CONNECTOR_CONFIG_DOC.md"
+CUSTOM_CONFIG_DOC_DESCRIPTION = "Below is an exhaustive enumeration of all configurable parameters available, each accompanied by detailed explanations of their purposes, default behaviors, and usage guidelines to help you understand and utilize them effectively."
+
+
+class ConnectorConfigDocGenerator:
+
+    @staticmethod
+    def generate_connector_config_doc():
+        schema_filepath = os.path.join(
+            os.path.dirname(__file__),
+            __CONNECTOR_METADATA_DIRECTORY__,
+            __CONNECTOR_CONFIG_JSON_SCHEMA_FILENAME__,
+        )
+        config_filepath = os.path.join(
+            os.path.dirname(__file__),
+            __CONNECTOR_METADATA_DIRECTORY__,
+            __CONNECTOR_CONFIG_DOC_FILENAME__,
+        )
+
+        with open(schema_filepath) as f:
+            schema = json.load(f)
+            # Add or modify the description key at the root of the schema
+            schema["description"] = CUSTOM_CONFIG_DOC_DESCRIPTION
+
+        markdown = jsonschema_markdown.generate(
+            schema,
+            title="Connector Configurations",
+            hide_empty_columns=True,
+            footer=False,
+        )
+
+        # Save to a Markdown file or append to an existing file
+        with open(config_filepath, "w", encoding="utf-8") as md_file:
+            md_file.write(markdown)
+            print(
+                "Connector configurations documentation generated successfully in: "
+                + config_filepath
+            )
+
+
+if __name__ == "__main__":
+    """
+    Entry point of the script
+    """
+    try:
+        connector_config_doc_generator = ConnectorConfigDocGenerator()
+        connector_config_doc_generator.generate_connector_config_doc()
+    except Exception:
+        traceback.print_exc()
+        exit(1)

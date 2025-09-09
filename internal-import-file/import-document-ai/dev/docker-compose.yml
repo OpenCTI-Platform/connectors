@@ -1,0 +1,179 @@
+services:
+  redis:
+    image: redis:7.2.5
+    volumes:
+      - redisdata4:/data
+    networks:
+      - dev-opencti
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.19.3
+    volumes:
+      - esdata4:/usr/share/elasticsearch/data
+      - essnapshots:/usr/share/elasticsearch/snapshots
+    environment:
+      # Comment-out the line below for a cluster of multiple nodes
+      - discovery.type=single-node
+      # Uncomment the line below below for a cluster of multiple nodes
+      # - cluster.name=docker-cluster
+      - xpack.ml.enabled=false
+      - xpack.security.enabled=false
+      - thread_pool.search.queue_size=5000
+      - logger.org.elasticsearch.discovery="INFO"
+      - "ES_JAVA_OPTS=-Xms${ELASTIC_MEMORY_SIZE} -Xmx${ELASTIC_MEMORY_SIZE}"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    networks:
+      - dev-opencti
+
+  minio:
+    image: minio/minio:latest
+    volumes:
+      - s3data4:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+      - "35300:35300"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}    
+    command: server /data
+    networks:
+      - dev-opencti
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+      - RABBITMQ_NODENAME=rabbit01@localhost
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - amqpdata4:/var/lib/rabbitmq
+    networks:
+      - dev-opencti
+
+  opencti:
+    image: opencti/platform:6.7.7
+    environment:
+      - NODE_OPTIONS=--max-old-space-size=8096
+      - APP__PORT=8080
+      - APP__BASE_URL=http://localhost:8080
+      - APP__ADMIN__EMAIL=${OPENCTI_ADMIN_EMAIL}
+      - APP__ADMIN__PASSWORD=${OPENCTI_ADMIN_PASSWORD}
+      - APP__ADMIN__TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - APP__APP_LOGS__LOGS_LEVEL=debug
+      - REDIS__HOSTNAME=redis
+      - REDIS__PORT=6379
+      - ELASTICSEARCH__URL=http://elasticsearch:9200
+      - MINIO__ENDPOINT=minio
+      - MINIO__PORT=9000
+      - MINIO__USE_SSL=false
+      - MINIO__ACCESS_KEY=${MINIO_ROOT_USER}
+      - MINIO__SECRET_KEY=${MINIO_ROOT_PASSWORD}
+      - RABBITMQ__HOSTNAME=rabbitmq
+      - RABBITMQ__PORT=5672
+      - RABBITMQ__PORT_MANAGEMENT=15672
+      - RABBITMQ__MANAGEMENT_SSL=false
+      - RABBITMQ__USERNAME=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ__PASSWORD=${RABBITMQ_DEFAULT_PASS}
+      - SMTP__HOSTNAME=${SMTP_HOSTNAME}
+      - SMTP__PORT=25
+      - PROVIDERS__LOCAL__STRATEGY=LocalStrategy
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redis
+      - elasticsearch
+      - minio
+      - rabbitmq
+    networks:
+      - dev-opencti
+    restart: unless-stopped
+
+  worker:
+    image: opencti/worker:6.7.7
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - WORKER_LOG_LEVEL=info
+    depends_on:
+      - opencti
+    deploy:
+      mode: replicated
+      replicas: 1
+    networks:
+      - dev-opencti
+    restart: unless-stopped
+
+  webservice:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./responses:/app/responses
+    ports:
+     - "5000:80"
+    networks:
+      - dev-opencti
+
+  connector-import-document-ai:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_ID=54263257-26dc-4cca-8c45-deea44cdecf1
+      - CONNECTOR_NAME=ImportDocumentAI
+      - CONNECTOR_VALIDATE_BEFORE_IMPORT=true # Validate any bundle before import
+      - CONNECTOR_SCOPE=application/pdf,text/plain,text/html,text/markdown
+      - CONNECTOR_AUTO=false # Enable/disable auto-import of file
+      - CONNECTOR_WEB_SERVICE_URL=http://webservice:80
+      - CONNECTOR_LOG_LEVEL=debug
+      - CONNECTOR_LICENCE_KEY_PEM=${CONNECTOR_LICENCE_KEY_PEM}
+    depends_on:
+      - opencti
+      - webservice
+    networks:
+      - dev-opencti
+    restart: unless-stopped
+
+  # is it really needed ?
+  connector-import-file-stix:
+    image: opencti/connector-import-file-stix:6.7.7
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_ID=430a1606-f9d9-47f9-8f1d-939e7c1ab76d
+      - CONNECTOR_NAME=ImportFileStix
+      - CONNECTOR_VALIDATE_BEFORE_IMPORT=true # Validate any bundle before import
+      - CONNECTOR_SCOPE=application/json,application/xml
+      - CONNECTOR_AUTO=false # Enable/disable auto-import of file
+      - CONNECTOR_LOG_LEVEL=debug
+    restart: unless-stopped
+    networks:
+      - dev-opencti
+
+
+networks:
+  dev-opencti:
+    driver: bridge
+
+volumes:
+  esdata4:
+  s3data4:
+  redisdata4:
+  amqpdata4:
+  essnapshots:
+
