@@ -1,5 +1,4 @@
 import base64
-import json
 import os
 import sys
 import time
@@ -11,7 +10,9 @@ from lib.external_import import ExternalImportConnector
 from mattermostdriver import Driver
 from pycti.entities.opencti_channel import Channel as PyctiChannel
 from pycti.entities.opencti_identity import Identity as PyctiIdentity
-from pycti.entities.opencti_stix_core_relationship import StixcoreRelationship as PyctiSCR
+from pycti.entities.opencti_stix_core_relationship import (
+    StixcoreRelationship as PyctiSCR,
+)
 from stix2 import CustomObject, CustomObservable
 from stix2.canonicalization.Canonicalize import canonicalize
 
@@ -46,7 +47,7 @@ class MediaContent:
 @CustomObject(
     "channel",
     [
-        ("id", stix2.properties.StringProperty(required=True)
+        ("id", stix2.properties.StringProperty(required=True)),
         ("name", stix2.properties.StringProperty(required=True)),
         ("description", stix2.properties.StringProperty()),
         ("object_marking_refs", stix2.properties.StringProperty()),
@@ -191,7 +192,7 @@ class MattermostConnector(ExternalImportConnector):
 
         if len(channel_list) == 0:
             x_channel = Channel(
-                id=PyctiChannel.generate_id(channel["name"]),     
+                id=PyctiChannel.generate_id(channel["name"]),
                 name=channel["name"],
                 description=x_description,
                 object_marking_refs=self.mattermost_tlp,
@@ -308,7 +309,7 @@ class MattermostConnector(ExternalImportConnector):
             link[p] = [src, x_url]
             self.helper.log_debug(f"source_ref: {src} /  target_ref: {tgt}")
             x_relationship = stix2.Relationship(
-                id=PyctiSCR.generate_id("related-to",src, tgt, None, None),
+                id=PyctiSCR.generate_id("related-to", src, tgt, None, None),
                 relationship_type="related-to",
                 source_ref=src,
                 target_ref=tgt,
@@ -338,7 +339,9 @@ class MattermostConnector(ExternalImportConnector):
                 # create relationship
                 if root_octi_id:
                     x_relationship = stix2.Relationship(
-                        id=PyctiSCR.generate_id("related-to", link[p][0], root_octi_id, None, None),
+                        id=PyctiSCR.generate_id(
+                            "related-to", link[p][0], root_octi_id, None, None
+                        ),
                         relationship_type="related-to",
                         source_ref=link[p][0],
                         target_ref=root_octi_id,
