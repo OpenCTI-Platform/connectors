@@ -14,4 +14,4 @@ teamt5:
   api_base_url: 'ChangeMe'
   api_key: 'ChangeMe'
   tlp_level: 'clear' # available values are: clear, white, green, amber, amber+strict, red - Default: 'clear'
-  first_run_retrieval_timestamp: 0
+  first_run_retrieval_timestamp: 'ChangeMe'

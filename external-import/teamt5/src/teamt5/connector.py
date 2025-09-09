@@ -31,33 +31,7 @@ class TeamT5Connector:
             identity_class="organization",
         )
 
-        # Normalise the TLP level and translate "clear" to "white"
-        tlp_level = self.config.tlp_level.lower()
-        if tlp_level == "clear":
-            tlp_level = "white"
-
-        tlp_level_markings = {
-            "white": stix2.TLP_WHITE,
-            "green": stix2.TLP_GREEN,
-            "amber": stix2.TLP_AMBER,
-            "amber+strict": stix2.MarkingDefinition(
-                id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
-                definition_type="statement",
-                definition={"statement": "custom"},
-                custom_properties=dict(
-                    x_opencti_definition_type="TLP",
-                    x_opencti_definition="TLP:AMBER+STRICT",
-                ),
-            ),
-            "red": stix2.TLP_RED,
-        }
-
-        self.tlp_ref = tlp_level_markings.get(tlp_level)
-        if not self.tlp_ref:
-            self.helper.connector_logger.error(
-                "Error: Invalid TLP Level in Configuration. Please see the documentation and change it to an allowed value."
-            )
-            sys.exit(1)
+        self.tlp_ref = self._create_tlp_marking(self.config.tlp_level.lower())
 
         self.report_handler = ReportHandler(
             helper=helper,
@@ -222,6 +196,28 @@ class TeamT5Connector:
             sys.exit(0)
         except Exception as err:
             self.helper.connector_logger.error(str(err))
+
+    @staticmethod
+    def _create_tlp_marking(level) -> stix2.MarkingDefinition:
+        mapping = {
+            "white": stix2.TLP_WHITE,
+            "clear": stix2.TLP_WHITE,
+            "green": stix2.TLP_GREEN,
+            "amber": stix2.TLP_AMBER,
+            "amber+strict": stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                custom_properties={
+                    "x_opencti_definition_type": "TLP",
+                    "x_opencti_definition": "TLP:AMBER+STRICT",
+                },
+            ),
+            "red": stix2.TLP_RED,
+        }
+        if level not in mapping:
+            return mapping["clear"]
+        return mapping[level]
 
     def run(self) -> None:
         """
