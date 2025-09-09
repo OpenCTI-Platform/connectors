@@ -26,7 +26,7 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
     )
     name: str = Field(
         alias="CONNECTOR_NAME",
-        default="Common Vulnerabilities and Exposures",
+        default="NIST NVD CVE",
         description="Name of the connector.",
     )
     scope: str = Field(
