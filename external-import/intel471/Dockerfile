@@ -1,4 +1,4 @@
-FROM python:3.12-alpine
+FROM python:3.13-alpine
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 COPY src /opt/opencti-intel471
