@@ -61,23 +61,20 @@ class ConnectorClient:
         if last_activity_timestamp.endswith("+00:00"):
             last_activity_timestamp = last_activity_timestamp.replace("+00:00", "")
 
-        params = {
-            "last_activity_timestamp": last_activity_timestamp,
-            "page": page,
-        }
-
-        self.helper.connector_logger.info("[DoppelConnector] Fetching alerts", params)
-
         # Dynamically set retry settings
         self._request_data.retry.wait = wait_fixed(self.config.retry_delay)
         self._request_data.retry.stop = stop_after_attempt(self.config.max_retries)
 
-        response = self._request_data(url, params=params)
-
-        alerts = response.json().get("alerts")
-        if not alerts:
-            return []
-
-        self.helper.connector_logger.info("Fetched alerts", {"count": len(alerts)})
-
-        return alerts + self.get_alerts(last_activity_timestamp, page + 1)
+        res = []
+        while True:
+            params = {"last_activity_timestamp": last_activity_timestamp, "page": page}
+            response = self._request_data(url, params=params)
+            self.helper.connector_logger.info(
+                "[DoppelConnector] Fetching alerts", params
+            )
+            if not (alerts := response.json().get("alerts")):
+                break
+            self.helper.connector_logger.info("Fetched alerts", {"count": len(alerts)})
+            res.extend(alerts)
+            page += 1
+        return res
