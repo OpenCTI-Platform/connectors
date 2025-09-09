@@ -116,7 +116,7 @@ class ConfigConnector:
     PRODUCT_NAME = "OpenCTI"
     PRODUCT_VERSION = "unknown"
     INTEGRATION = "GroupIB_TI_OpenCTI_Connector"
-    INTEGRATION_VERSION = "1.0.0"
+    INTEGRATION_VERSION = "1.1.0"
 
     # Author
     AUTHOR = "Group-IB"

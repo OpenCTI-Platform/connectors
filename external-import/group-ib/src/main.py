@@ -4,6 +4,7 @@ import traceback
 import dotenv
 from adapter import DataToSTIXAdapter
 from lib.external_import import ExternalImportConnector
+from config import ConfigConnector
 
 dotenv.load_dotenv()
 
@@ -33,6 +34,7 @@ class CustomConnector(ExternalImportConnector):
         ttl,
         event,
         mitre_mapper,
+        config: ConfigConnector,
         flag_instrusion_set_instead_of_threat_actor=False,
     ) -> []:
         """Collects intelligence from channels
@@ -100,7 +102,8 @@ class CustomConnector(ExternalImportConnector):
         json_network_obj = event.get("network", {})
         json_yara_obj = event.get("yara_report", {})
         json_suricata_obj = event.get("suricata_report", {})
-        json_cvss_obj = event.get("cvssv3", {})
+        # Prefer CVSS v3, fallback to v2 if only v2 is present
+        json_cvss_obj = event.get("cvssv3") or event.get("cvssv2") or {}
         json_malware_report_obj = event.get("malware_report", {})
         json_threat_actor_obj = event.get("threat_actor", {})
         json_vulnerability_obj = event.get("vulnerability", {})
@@ -265,9 +268,13 @@ class CustomConnector(ExternalImportConnector):
             x += stix_report.stix_objects
             x += [stix_report.author]
             x += [stix_report.tlp]
+            if config.get_extra_settings_by_name("enable_statement_marking"):
+                x += [stix_report.statement_marking]
         else:
             if any(x):
                 x += [report_adapter.author]
+                if config.get_extra_settings_by_name("enable_statement_marking"):
+                    x += [report_adapter.statement_marking]
 
         stix_objects += x
 

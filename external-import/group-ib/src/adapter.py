@@ -29,7 +29,10 @@ class DataToSTIXAdapter:
         self.tlp_color = tlp_color
         self.is_ioc = is_ioc
         self.helper.connector_logger.info("Initializing DataToSTIXAdapter")
-        self.author = ds.BaseEntity("", "", "white").author
+        _dummy = ds.BaseEntity("", "", "white")
+        self.author = _dummy.author
+        self.statement_marking = _dummy.statement_marking
+        self.tlp_white = _dummy.tlp
         self.helper.connector_logger.info(
             f"DataToSTIXAdapter initialized with collection: {collection}, tlp_color: {tlp_color}, is_ioc: {is_ioc}"
         )
@@ -572,20 +575,21 @@ class DataToSTIXAdapter:
                 _malware_aliases = _e.get("aliases")
 
                 _portal_links = self._retrieve_link(_e)
-
+                
                 if _name:
                     if isinstance(_name, list):
                         self.helper.connector_logger.debug(
                             f"Processing list of malware names: {_name}"
                         )
                         for n in _name:
+                            
                             malware = ds.Malware(
                                 name=n,
                                 aliases=_malware_aliases,
                                 # last_seen=_date_updated,
                                 c_type=_type,
                                 malware_types=_malware_types or [],
-                                tlp_color="red",
+                                # tlp_color="red",
                                 labels=[self.collection],
                             )
                             malware.set_description(_description)
@@ -597,13 +601,16 @@ class DataToSTIXAdapter:
 
                             _stix_objects.append(malware)
                     else:
+                        self.helper.connector_logger.info(
+                                f"TESTself.tlp_color {self.tlp_color}"
+                            )
                         malware = ds.Malware(
                             name=_name,
                             aliases=_malware_aliases,
                             # last_seen=_date_updated,
                             c_type=_type,
                             malware_types=_malware_types,
-                            tlp_color="red",
+                            # tlp_color="red",
                             labels=[self.collection],
                         )
                         malware.set_description(_description)
@@ -616,6 +623,9 @@ class DataToSTIXAdapter:
                         _stix_objects.append(malware)
 
         else:
+            self.helper.connector_logger.info(
+                                f"TESTself.tlp_color {self.tlp_color}"
+                            )
             _name = obj.get("name")
             _malware_types = obj.get("category")
             _malware_aliases = obj.get("aliases")
@@ -629,7 +639,7 @@ class DataToSTIXAdapter:
                     # last_seen=_date_updated,
                     c_type=_type,
                     malware_types=_malware_types,
-                    tlp_color="red",
+                    # tlp_color="red",
                     labels=[self.collection],
                 )
                 malware.set_description(_description)
@@ -860,7 +870,7 @@ class DataToSTIXAdapter:
                 name=_threat_actor_name,
                 c_type=_type,
                 global_label=_global_label,
-                tlp_color="red",
+                # tlp_color="red",
                 labels=[self.collection],
                 aliases=_threat_actor_aliases,
                 # first_seen=_date_first_seen,
@@ -972,7 +982,7 @@ class DataToSTIXAdapter:
                 name=_intrusion_set_name,
                 c_type=_type,
                 global_label=_global_label,
-                tlp_color="red",
+                # tlp_color="red",
                 labels=[self.collection],
                 aliases=_intrusion_set_aliases,
                 # first_seen=_date_first_seen,
