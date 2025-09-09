@@ -19,6 +19,7 @@ TimedeltaInSeconds = Annotated[
     timedelta, PlainSerializer(lambda v: int(v.total_seconds()), return_type=int)
 ]
 
+
 class _ConfigLoaderOCTI(ConfigBaseSettings):
     """Interface for loading OpenCTI dedicated configuration."""
 

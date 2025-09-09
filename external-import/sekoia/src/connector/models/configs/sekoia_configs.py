@@ -2,14 +2,15 @@ from typing import Annotated, Optional
 
 from pydantic import (
     Field,
-    SecretStr,
     HttpUrl,
     PlainSerializer,
     PositiveInt,
+    SecretStr,
 )
 from src.connector.models.configs import ConfigBaseSettings
 
 HttpUrlToString = Annotated[HttpUrl, PlainSerializer(str, return_type=str)]
+
 
 class _ConfigLoaderSekoia(ConfigBaseSettings):
     """Interface for loading Sekoia dedicated configuration."""
