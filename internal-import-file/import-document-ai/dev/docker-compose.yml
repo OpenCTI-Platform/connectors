@@ -7,7 +7,7 @@ services:
       - dev-opencti
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.1
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.19.3
     volumes:
       - esdata4:/usr/share/elasticsearch/data
       - essnapshots:/usr/share/elasticsearch/snapshots
