@@ -493,9 +493,9 @@ class RansomwareAPIConnector:
                         self.last_run = datetime.fromisoformat(
                             current_state["last_run"]
                         )
-                if "last_run_datetime_with_ingested_data" in current_state:
+                if current_state.get("last_run_datetime_with_ingested_data", None):
                     self.last_run_datetime_with_ingested_data = datetime.fromisoformat(
-                        current_state.get("last_run_datetime_with_ingested_data")
+                        current_state["last_run_datetime_with_ingested_data"]
                     )
 
             self.helper.connector_logger.info(
