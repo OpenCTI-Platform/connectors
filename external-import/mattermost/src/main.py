@@ -1,18 +1,25 @@
 import base64
+import json
 import os
 import sys
 import time
+import uuid
 from datetime import datetime
 
 import stix2
 from lib.external_import import ExternalImportConnector
 from mattermostdriver import Driver
+from pycti.entities.opencti_channel import Channel as PyctiChannel
+from pycti.entities.opencti_identity import Identity as PyctiIdentity
+from pycti.entities.opencti_stix_core_relationship import StixcoreRelationship as PyctiSCR
 from stix2 import CustomObject, CustomObservable
+from stix2.canonicalization.Canonicalize import canonicalize
 
 
 @CustomObservable(
     "media-content",
     [
+        ("id", stix2.properties.StringProperty(required=True)),
         ("url", stix2.properties.StringProperty(required=True)),
         ("content", stix2.properties.StringProperty()),
         ("description", stix2.properties.StringProperty()),
@@ -27,12 +34,19 @@ from stix2 import CustomObject, CustomObservable
     ],
 )
 class MediaContent:
-    pass
+    @staticmethod
+    def generate_id(url):
+        url = url.lower().strip()
+        data = {"url": url}
+        data = canonicalize(data, utf8=False)
+        id = str(uuid.uuid5(uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7"), data))
+        return "media-content--" + id
 
 
 @CustomObject(
     "channel",
     [
+        ("id", stix2.properties.StringProperty(required=True)
         ("name", stix2.properties.StringProperty(required=True)),
         ("description", stix2.properties.StringProperty()),
         ("object_marking_refs", stix2.properties.StringProperty()),
@@ -177,6 +191,7 @@ class MattermostConnector(ExternalImportConnector):
 
         if len(channel_list) == 0:
             x_channel = Channel(
+                id=PyctiChannel.generate_id(channel["name"]),     
                 name=channel["name"],
                 description=x_description,
                 object_marking_refs=self.mattermost_tlp,
@@ -239,6 +254,7 @@ class MattermostConnector(ExternalImportConnector):
             )
             if len(identity_list) == 0:
                 x_author = stix2.Identity(
+                    id=PyctiIdentity.generate_id(email, "individual"),
                     name=email,
                     object_marking_refs=self.mattermost_tlp,
                     identity_class="individual",
@@ -276,6 +292,7 @@ class MattermostConnector(ExternalImportConnector):
 
             # create content and channel relationship
             x_media_content = MediaContent(
+                id=MediaContent.generate_id(x_url),
                 url=x_url,
                 content=x_content,
                 description=x_content,
@@ -291,6 +308,7 @@ class MattermostConnector(ExternalImportConnector):
             link[p] = [src, x_url]
             self.helper.log_debug(f"source_ref: {src} /  target_ref: {tgt}")
             x_relationship = stix2.Relationship(
+                id=PyctiSCR.generate_id("related-to",src, tgt, None, None),
                 relationship_type="related-to",
                 source_ref=src,
                 target_ref=tgt,
@@ -320,6 +338,7 @@ class MattermostConnector(ExternalImportConnector):
                 # create relationship
                 if root_octi_id:
                     x_relationship = stix2.Relationship(
+                        id=PyctiSCR.generate_id("related-to", link[p][0], root_octi_id, None, None),
                         relationship_type="related-to",
                         source_ref=link[p][0],
                         target_ref=root_octi_id,
