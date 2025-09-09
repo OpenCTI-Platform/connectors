@@ -176,7 +176,7 @@ class BaseEntity(_CommonUtils):
         if self.config.get_extra_settings_by_name("enable_statement_marking"):
             try:
                 marking_id = pycti.MarkingDefinition.generate_id("statement", ConfigConnector.AUTHOR)
-            except Exception as e:
+            except Exception:
                 marking_id = None
             statement_marking = stix2.MarkingDefinition(
                 id=marking_id,
