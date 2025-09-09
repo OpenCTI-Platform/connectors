@@ -120,7 +120,7 @@ class TeamT5Connector:
         self.helper.connector_logger.info(f"{self.config.name}: Starting Run")
 
         try:
-            now = datetime.now()
+            now = datetime.now(tz=timezone.utc)
             current_timestamp = int(datetime.timestamp(now))
             current_state = self.helper.get_state()
 
@@ -146,14 +146,17 @@ class TeamT5Connector:
             self.helper.connector_logger.info("Finished retrieving reports")
 
             # Upload Reports via Worker
-            work_name = "Creating OpenCTI Reports"
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, work_name
-            )
-            num_pushed = self.report_handler.post_reports(work_id)
-            push_message = f"Connector created {num_pushed} reports"
-            self.helper.connector_logger.info(push_message)
-            self.helper.api.work.to_processed(work_id, push_message)
+            if self.report_handler.reports:
+                work_name = "Creating OpenCTI Reports"
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id, work_name
+                )
+                num_pushed = self.report_handler.post_reports(work_id)
+                push_message = f"Connector created {num_pushed} reports"
+                self.helper.connector_logger.info(push_message)
+                self.helper.api.work.to_processed(work_id, push_message)
+            else:
+                self.helper.connector_logger.info("No new Reports found")
 
             # Retrieve Indicators from TT5
             self.helper.connector_logger.info(
@@ -163,19 +166,23 @@ class TeamT5Connector:
             self.helper.connector_logger.info("Finished retrieving Indicator Bundles")
 
             # Upload Indicators via Worker
-            work_name = "Pushing Indicator Bundles to OpenCTI"
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, work_name
-            )
-            num_pushed = self.indicator_handler.post_indicators(work_id)
-            push_message = f"Connector Pushed {num_pushed} indicator bundles"
-            self.helper.connector_logger.info(push_message)
-            self.helper.api.work.to_processed(work_id, push_message)
+            if self.indicator_handler.indicators:
+                work_name = "Pushing Indicator Bundles to OpenCTI"
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id, work_name
+                )
+                num_pushed = self.indicator_handler.post_indicators(work_id)
+                push_message = f"Connector Pushed {num_pushed} indicator bundles"
+                self.helper.connector_logger.info(push_message)
+                self.helper.api.work.to_processed(work_id, push_message)
+            else:
+                self.helper.connector_logger.info("No new Indicator Bundles found")
+
 
             # Store the current timestamp as a last run of the connector
             self.helper.connector_logger.debug("Updating Last Run")
             current_state = self.helper.get_state()
-            current_state_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
+            current_state_datetime = now.isoformat(timespec="seconds")
             last_run_datetime = datetime.fromtimestamp(
                 current_timestamp, tz=timezone.utc
             ).strftime("%Y-%m-%d %H:%M:%S")

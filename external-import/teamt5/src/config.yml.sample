@@ -7,7 +7,7 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'Team T5 External Import Connector'
   scope: 'ChangeMe'
-  log_level: 'info'
+  log_level: 'error'
   duration_period: 'P1D' # Interval given for scheduler process in ISO-8601 format
 
 teamt5:

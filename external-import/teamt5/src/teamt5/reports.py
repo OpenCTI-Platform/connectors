@@ -110,13 +110,15 @@ class ReportHandler:
         """
         try:
             response = self._request_data(stix_url)
-            return parse(response.content.decode("utf-8"), allow_custom=True)
+            if response is not None:
+                return parse(response.content.decode("utf-8"), allow_custom=True)
+
         except (UnicodeDecodeError, Exception) as e:
             self.helper.connector_logger.error(
                 f"Failed to decode or parse STIX data: {e}"
             )
 
-            return None
+        return None
 
     def post_reports(self, work_id: str) -> int:
         """
