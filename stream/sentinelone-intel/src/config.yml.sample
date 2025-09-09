@@ -14,6 +14,6 @@ connector:
 sentinelone-intel:
   api_url: 'ChangeMe'
   api_key: 'ChangeMe'
-  account_id: 'ChangeMeOrRemove'
-  site_id: 'ChangeMeOrRemove'
-  group_id: 'ChangeMeOrRemove'
+  account_id: 'ChangeMeOrEmpty'
+  site_id: 'ChangeMeOrEmpty'
+  group_id: 'ChangeMeOrEmpty'

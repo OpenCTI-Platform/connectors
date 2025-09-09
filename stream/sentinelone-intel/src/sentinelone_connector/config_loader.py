@@ -6,11 +6,11 @@ from pycti import get_config_variable
 
 
 class ConfigConnector:
-    def __init__(self):
+    def __init__(self, helper=None):
         """
         Initialize the connector with necessary configurations
         """
-
+        self.helper = helper
         # Load configuration file
         self.load = self._load_config()
         self._initialize_configurations()
@@ -55,9 +55,11 @@ class ConfigConnector:
             default=None,  
             required=True
         )
-        #Handle case of user inputted APIToken ...
-        if self.api_key[0:9] == "APIToken ":
+        #Users commonly input "APIToken eyj..." or just "eyj.." as such we strip
+        #"APIToken " and append it in code for consistency 
+        if self.api_key.startswith("APIToken "):
             self.api_key = self.api_key[9:]
+
 
 
         #SentinelOne API Filtering Parameters:
@@ -67,29 +69,34 @@ class ConfigConnector:
             ["sentinelone-intel", "account_id"],
             self.load,
             default=None,
-            isNumber=True
         )
+        if self.account_id:
+            self.account_id = int(self.account_id)
 
         self.site_id = get_config_variable(
             "SENTINELONE-INTEL_SITE_ID",
             ["sentinelone-intel", "site_id"],
             self.load,
             default=None,
-            isNumber=True
         )
+        if self.site_id:
+            self.site_id = int(self.site_id)
 
         self.group_id = get_config_variable(
             "SENTINELONE-INTEL_GROUP_ID", 
             ["sentinelone-intel", "group_id"],
             self.load,
             default=None,
-            isNumber=True
         )
-
+        if self.group_id:
+            self.group_id = int(self.group_id)
+        print(self.account_id)
+        print(self.site_id)
+        print(self.group_id)
         #At least one of the three IDs are required to interface with the API (see README for more info)
         if (self.account_id is None and self.group_id is None and self.site_id is None):
-            raise ValueError("Need to put one of acc group site, see README for more info")
+            raise ValueError("[CONFIG] Missing required ID configuration: need at least one of account_id, group_id, or site_id")
         
         #API requests cannot use both an account and site ID (see README for more info)
         if (self.account_id is not None and self.site_id is not None):
-            raise ValueError("Cannot use both account id and site id at same time, see README for more info")
+            raise ValueError("[CONFIG] Invalid configuration: cannot use both account_id and site_id simultaneously")
