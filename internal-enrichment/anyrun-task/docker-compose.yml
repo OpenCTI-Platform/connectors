@@ -9,8 +9,6 @@ services:
       - CONNECTOR_NAME=ANY.RUN task
       - CONNECTOR_SCOPE=Artifact,Url
       - CONNECTOR_AUTO=false
-      - CONNECTOR_CONFIDENCE_LEVEL=75 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=info
       - ANYRUN_TOKEN=ChangeMe
       - ANYRUN_TASK_TIMER=120
       - ANYRUN_OS=windows

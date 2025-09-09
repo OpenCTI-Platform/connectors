@@ -9,7 +9,6 @@ services:
       - "CONNECTOR_NAME=CAPEv2 Sandbox"
       - CONNECTOR_SCOPE=StixFile,Artifact
       - CONNECTOR_AUTO=false # Enable/disable auto-enrichment of observables
-      - CONNECTOR_LOG_LEVEL=error
       - CAPE_SANDBOX_URL=ChangeMe # https://Base_URL/apiv2
       - CAPE_SANDBOX_TOKEN=ChangeMe # Change if using auth
       - CAPE_SANDBOX_ROUTE=tor # Network routing, other examples include: none, internet, vpn0
