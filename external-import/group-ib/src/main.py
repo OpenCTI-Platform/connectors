@@ -2,7 +2,6 @@ import traceback
 
 # WARN: python-dotenv is used for integration manual run
 import dotenv
-
 from adapter import DataToSTIXAdapter
 from config import ConfigConnector
 from lib.external_import import ExternalImportConnector
