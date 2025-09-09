@@ -18,17 +18,16 @@ classifiers = [
 requires-python = ">=3.11, <3.13"
 
 dependencies = [
-    "PyYAML ~=6.0.2",
-    "aiohttp ~=3.12.14",
-    "Markdown ~=3.9.0",
-    "markdownify ~=1.2.0",
-    "pycti ~=6.7.7",
-    "pydantic ~=2.11.7",
-    "pydantic_settings ~=2.10.1",
-    "python-dotenv ~=1.1.1",
-    "stix2 ~=3.0.1",
-    "dotenv ~= 0.9.9",
-    "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.7.7#subdirectory=connectors-sdk",
+    "pycti==6.7.17",
+    "aiohttp~=3.12.14",
+    "Markdown~=3.9.0",
+    "markdownify~=1.2.0",
+    "pydantic~=2.11.7",
+    "pydantic_settings~=2.10.1",
+    "python-dotenv~=1.1.1",
+    "stix2~=3.0.1",
+    "dotenv~= 0.9.9",
+    "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.7.17#subdirectory=connectors-sdk",
 ]
 
 [project.optional-dependencies]
