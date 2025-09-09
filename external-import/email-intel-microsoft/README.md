@@ -207,7 +207,7 @@ To restrict the app’s access to specific mailboxes, configure **Application Ac
 | Client ID          | `client_id`                  | `EMAIL_INTEL_MICROSOFT_CLIENT_ID`                  | —                                   | ✅        | App **Application ID**           |
 | Client Secret      | `client_secret`              | `EMAIL_INTEL_MICROSOFT_CLIENT_SECRET`              | —                                   | ✅        | App **Client Secret**            |
 | Mailbox address    | `email`                      | `EMAIL_INTEL_MICROSOFT_EMAIL`                      | —                                   | ✅        | Email address                    |
-| Folder             | `inbox`                      | `EMAIL_INTEL_MICROSOFT_MAILBOX`                    | Inbox                               | ❌        | Mail folder to poll              |
+| Folder             | `mailbox`                      | `EMAIL_INTEL_MICROSOFT_MAILBOX`                      | Mailbox                               | ❌        | Mail folder to poll              |
 | TLP Level          | `tlp_level`                  | `EMAIL_INTEL_MICROSOFT_TLP_LEVEL`                  | amber+strict                        | ❌        | Default TLP marking              |
 | Look‑back window   | `relative_import_start_date` | `EMAIL_INTEL_MICROSOFT_RELATIVE_IMPORT_START_DATE` | P30D                                | ❌        | How far back the first run looks |
 | Allowed MIME types | `attachments_mime_types`     | `EMAIL_INTEL_MICROSOFT_ATTACHMENTS_MIME_TYPES`     | application/pdf,text/csv,text/plain | ❌        | Accepted attachment file type    |
