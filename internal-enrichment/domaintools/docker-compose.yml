@@ -9,8 +9,6 @@ services:
       - CONNECTOR_NAME=DomainTools
       - CONNECTOR_SCOPE=Domain-Name,Ipv4-Addr
       - CONNECTOR_AUTO=false # Enable/disable auto-enrichment of observables
-      - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=error
       - DOMAINTOOLS_API_USERNAME=ChangeMe
       - DOMAINTOOLS_API_KEY=ChangeMe
       - DOMAINTOOLS_MAX_TLP=TLP:AMBER
