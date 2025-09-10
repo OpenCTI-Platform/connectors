@@ -1,0 +1,4 @@
+pycti
+requests
+bs4
+lxml
