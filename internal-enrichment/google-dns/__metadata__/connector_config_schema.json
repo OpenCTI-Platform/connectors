@@ -14,11 +14,6 @@
       "description": "The token of the user who represents the connector in the OpenCTI platform.",
       "type": "string"
     },
-    "CONNECTOR_ID": {
-      "default": "googledns--0c1ac73d-f173-4349-9580-322c22fa7768",
-      "description": "A unique UUIDv4 identifier for this connector instance.",
-      "type": "string"
-    },
     "CONNECTOR_NAME": {
       "default": "Google DNS",
       "description": "Name of the connector.",

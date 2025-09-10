@@ -8,7 +8,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The OpenCTI platform URL. |
 | OPENCTI_TOKEN | `string` | ✅ | string |  | The token of the user who represents the connector in the OpenCTI platform. |
-| CONNECTOR_ID | `string` |  | string | `"mitre--c9dacf68-b0e6-476d-a24f-4269b1b9cd25"` | A unique UUIDv4 identifier for this connector instance. |
 | CONNECTOR_NAME | `string` |  | string | `"Mitre Att&ck"` | Name of the connector. |
 | CONNECTOR_SCOPE | `string` |  | string | `"tool,report,malware,identity,campaign,intrusion-set,attack-pattern,course-of-action,x-mitre-data-source,x-mitre-data-component,x-mitre-matrix,x-mitre-tactic,x-mitre-collection"` | The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only). |
 | CONNECTOR_TYPE | `string` |  | string | `"EXTERNAL_IMPORT"` | Should always be set to EXTERNAL_IMPORT for this connector. |
@@ -21,7 +20,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_SEND_TO_DIRECTORY_PATH | `string` |  | string | `null` | Connector send-to-directory path. |
 | CONNECTOR_SEND_TO_DIRECTORY_RETENTION | `integer` |  | `0 < x ` | `null` | Connector send-to-directory retention in days. |
 | MITRE_REMOVE_STATEMENT_MARKING | `boolean` |  | boolean | `false` | Whether to remove statement markings from the ingested MITRE data. Useful when marking metadata is unnecessary or interferes with processing. |
-| MITRE_INTERVAL | `integer` |  | `0 < x ` | `7` | Polling interval in days for fetching and refreshing MITRE data. Determines how often the system checks for updates to ATT&CK datasets. |
 | MITRE_ENTERPRISE_FILE_URL | `string` |  | string | `"https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json"` | URL to the MITRE ATT&CK Enterprise JSON file. This dataset includes tactics, techniques, and procedures (TTPs) for enterprise IT environments. |
 | MITRE_MOBILE_ATTACK_FILE_URL | `string` |  | string | `"https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/mobile-attack/mobile-attack.json"` | URL to the MITRE Mobile ATT&CK JSON file. Contains mobile-specific attack techniques and mappings. |
 | MITRE_ICS_ATTACK_FILE_URL | `string` |  | string | `"https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/ics-attack/ics-attack.json"` | URL to the MITRE ICS ATT&CK JSON file. Pertains to attack techniques targeting industrial control systems. |

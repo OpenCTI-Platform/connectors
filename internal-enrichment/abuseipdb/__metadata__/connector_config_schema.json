@@ -14,11 +14,6 @@
       "description": "The token of the user who represents the connector in the OpenCTI platform.",
       "type": "string"
     },
-    "CONNECTOR_ID": {
-      "default": "abuseipdb--829f7f84-37d9-4c5a-a8f7-4d5cc60a4d6b",
-      "description": "A unique UUIDv4 identifier for this connector instance.",
-      "type": "string"
-    },
     "CONNECTOR_NAME": {
       "default": "AbuseIPDB",
       "description": "Name of the connector.",

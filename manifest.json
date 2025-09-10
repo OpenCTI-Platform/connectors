@@ -344,9 +344,6 @@
             "default": false,
             "type": "boolean"
           },
-          "CONNECTOR_ID": {
-            "type": "string"
-          },
           "CONNECTOR_NAME": {
             "default": "Email Intel IMAP",
             "type": "string"
@@ -536,9 +533,6 @@
           "OPENCTI_SSL_VERIFY": {
             "default": false,
             "type": "boolean"
-          },
-          "CONNECTOR_ID": {
-            "type": "string"
           },
           "CONNECTOR_NAME": {
             "default": "Email Intel Microsoft",
@@ -747,10 +741,6 @@
             "default": false,
             "description": "Whether to check SSL certificate or not.",
             "type": "boolean"
-          },
-          "CONNECTOR_ID": {
-            "description": "A UUID v4 to identify the connector in OpenCTI.",
-            "type": "string"
           },
           "CONNECTOR_NAME": {
             "description": "The name of the connector.",
@@ -991,10 +981,6 @@
           "CONNECTOR_TYPE": {
             "const": "EXTERNAL_IMPORT",
             "default": "EXTERNAL_IMPORT",
-            "type": "string"
-          },
-          "CONNECTOR_ID": {
-            "description": "A UUID v4 to identify the connector in OpenCTI.",
             "type": "string"
           },
           "CONNECTOR_NAME": {
@@ -1292,11 +1278,6 @@
             "description": "The token of the user who represents the connector in the OpenCTI platform.",
             "type": "string"
           },
-          "CONNECTOR_ID": {
-            "default": "mitre--c9dacf68-b0e6-476d-a24f-4269b1b9cd25",
-            "description": "A unique UUIDv4 identifier for this connector instance.",
-            "type": "string"
-          },
           "CONNECTOR_NAME": {
             "default": "Mitre Att&ck",
             "description": "Name of the connector.",
@@ -1365,12 +1346,6 @@
             "default": false,
             "description": "Whether to remove statement markings from the ingested MITRE data. Useful when marking metadata is unnecessary or interferes with processing.",
             "type": "boolean"
-          },
-          "MITRE_INTERVAL": {
-            "default": 7,
-            "description": "Polling interval in days for fetching and refreshing MITRE data. Determines how often the system checks for updates to ATT&CK datasets.",
-            "exclusiveMinimum": 0,
-            "type": "integer"
           },
           "MITRE_ENTERPRISE_FILE_URL": {
             "default": "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json",
@@ -1712,10 +1687,6 @@
             "description": "The token of the user who represents the connector in the OpenCTI platform.",
             "type": "string"
           },
-          "CONNECTOR_ID": {
-            "description": "A unique UUIDv4 identifier for this connector instance.",
-            "type": "string"
-          },
           "CONNECTOR_TYPE": {
             "default": "EXTERNAL_IMPORT",
             "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
@@ -2032,11 +2003,6 @@
             "description": "The token of the user who represents the connector in the OpenCTI platform.",
             "type": "string"
           },
-          "CONNECTOR_ID": {
-            "default": "threatfox--feb2a3b7-00c8-409f-a43b-bd20ef76e508",
-            "description": "A unique UUIDv4 identifier for this connector instance.",
-            "type": "string"
-          },
           "CONNECTOR_NAME": {
             "default": "Abuse.ch | ThreatFox",
             "description": "Name of the connector.",
@@ -2222,11 +2188,6 @@
             "description": "The token of the user who represents the connector in the OpenCTI platform.",
             "type": "string"
           },
-          "CONNECTOR_ID": {
-            "default": "abuseipdb--829f7f84-37d9-4c5a-a8f7-4d5cc60a4d6b",
-            "description": "A unique UUIDv4 identifier for this connector instance.",
-            "type": "string"
-          },
           "CONNECTOR_NAME": {
             "default": "AbuseIPDB",
             "description": "Name of the connector.",
@@ -2345,11 +2306,6 @@
             "description": "The token of the user who represents the connector in the OpenCTI platform.",
             "type": "string"
           },
-          "CONNECTOR_ID": {
-            "default": "googledns--0c1ac73d-f173-4349-9580-322c22fa7768",
-            "description": "A unique UUIDv4 identifier for this connector instance.",
-            "type": "string"
-          },
           "CONNECTOR_NAME": {
             "default": "Google DNS",
             "description": "Name of the connector.",
@@ -2424,11 +2380,6 @@
           },
           "OPENCTI_TOKEN": {
             "description": "The token of the user who represents the connector in the OpenCTI platform.",
-            "type": "string"
-          },
-          "CONNECTOR_ID": {
-            "default": "hygiene--c5079b30-4c65-45f0-b02c-eb51a3794b82",
-            "description": "A unique UUIDv4 identifier for this connector instance.",
             "type": "string"
           },
           "CONNECTOR_NAME": {
@@ -2535,11 +2486,6 @@
           },
           "OPENCTI_TOKEN": {
             "description": "The token of the user who represents the connector in the OpenCTI platform.",
-            "type": "string"
-          },
-          "CONNECTOR_ID": {
-            "default": "ipinfo--43cf861c-72a7-4e45-864a-b19e32e6a8bc",
-            "description": "A unique UUIDv4 identifier for this connector instance.",
             "type": "string"
           },
           "CONNECTOR_NAME": {
