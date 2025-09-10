@@ -103,7 +103,11 @@ def ip_fetcher(domain: str):
         params=params,
         timeout=(20000, 20000),
     )
-    response.raise_for_status()
+    # response.raise_for_status()
+    # Google DNS does not take into account characters with accents.
+    # In this case, a status_code = 400 is raise and stop all the process.
+    # In a first step, we disable raise_for_status
+    # Then we will search to another management instead of dns google
 
     if response.status_code == 200:
         response_json = response.json()
