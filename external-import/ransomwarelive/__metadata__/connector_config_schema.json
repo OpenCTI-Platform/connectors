@@ -20,9 +20,6 @@
       "default": false,
       "type": "boolean"
     },
-    "CONNECTOR_ID": {
-      "type": "string"
-    },
     "CONNECTOR_NAME": {
       "description": "Name of the connector",
       "minLength": 1,

@@ -10,7 +10,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  |
 | OPENCTI_TOKEN | `string` | ✅ | string |  |  |
-| CONNECTOR_ID | `string` | ✅ | string |  |  |
 | CONNECTOR_NAME | `string` | ✅ | Length: `string >= 1` |  | Name of the connector |
 | CONNECTOR_SCOPE | `array` | ✅ | string |  | The scope of the connector |
 | OPENCTI_JSON_LOGGING | `boolean` |  | boolean | `true` |  |
