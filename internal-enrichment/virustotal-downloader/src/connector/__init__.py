@@ -1,7 +1,9 @@
-from src.connector.config_loader import VirusTotalDownloaderConfig
 from src.connector.connector import VirustotalDownloaderConnector
+from src.connector.models import ConfigLoader
+from src.connector.services import VirusTotalDownloaderConfig
 
 __all__ = [
-    "VirusTotalDownloaderConfig",
+    "ConfigLoader",
     "VirustotalDownloaderConnector",
+    "VirusTotalDownloaderConfig",
 ]

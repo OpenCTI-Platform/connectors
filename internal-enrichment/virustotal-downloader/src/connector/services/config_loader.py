@@ -1,5 +1,5 @@
 from pydantic import ValidationError
-from src.models.configs.config_loader import ConfigLoader
+from src.connector.models.configs.config_loader import ConfigLoader
 
 
 class VirusTotalDownloaderConfig:
@@ -23,7 +23,6 @@ class VirusTotalDownloaderConfig:
             ConfigLoader: A model containing the validated configuration.
         """
         try:
-
             load_settings = ConfigLoader()
             return load_settings
 

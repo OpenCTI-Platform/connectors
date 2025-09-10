@@ -5,7 +5,7 @@ from typing import Dict
 import magic
 import stix2
 from pycti import OpenCTIConnectorHelper, StixCoreRelationship
-from src.models.configs.config_loader import ConfigLoader
+from src.connector.models.configs.config_loader import ConfigLoader
 
 
 class VirustotalDownloaderConnector:

@@ -8,12 +8,12 @@ from pydantic_settings import (
     PydanticBaseSettingsSource,
     YamlConfigSettingsSource,
 )
-from src.models.configs.base_settings import ConfigBaseSettings
-from src.models.configs.connector_configs import (
+from src.connector.models.configs.base_settings import ConfigBaseSettings
+from src.connector.models.configs.connector_configs import (
     _ConfigLoaderConnector,
     _ConfigLoaderOCTI,
 )
-from src.models.configs.virustotal_downloader_configs import (
+from src.connector.models.configs.virustotal_downloader_configs import (
     _ConfigLoaderVirusTotalDownloader,
 )
 
@@ -60,8 +60,8 @@ class ConfigLoader(ConfigBaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource]:
-        env_path = Path(__file__).parents[2] / ".env"
-        yaml_path = Path(__file__).parents[2] / "config.yml"
+        env_path = Path(__file__).parents[3] / ".env"
+        yaml_path = Path(__file__).parents[3] / "config.yml"
 
         if env_path.exists():
             return (

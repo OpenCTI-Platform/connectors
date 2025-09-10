@@ -1,8 +1,8 @@
 import traceback
 
 from pycti import OpenCTIConnectorHelper
-from src.connector.config_loader import VirusTotalDownloaderConfig
-from src.connector.connector import VirustotalDownloaderConnector
+from src.connector import VirustotalDownloaderConnector
+from src.connector.services import VirusTotalDownloaderConfig
 
 if __name__ == "__main__":
     """
