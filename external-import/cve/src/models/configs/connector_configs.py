@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal
 
 from pydantic import (
     Field,
