@@ -20,9 +20,6 @@
       "default": false,
       "type": "boolean"
     },
-    "CONNECTOR_ID": {
-      "type": "string"
-    },
     "CONNECTOR_NAME": {
       "default": "Email Intel IMAP",
       "type": "string"

@@ -10,7 +10,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  |
 | OPENCTI_TOKEN | `string` | ✅ | string |  |  |
-| CONNECTOR_ID | `string` | ✅ | string |  |  |
 | EMAIL_INTEL_MICROSOFT_TENANT_ID | `string` | ✅ | string |  |  |
 | EMAIL_INTEL_MICROSOFT_CLIENT_ID | `string` | ✅ | string |  |  |
 | EMAIL_INTEL_MICROSOFT_CLIENT_SECRET | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  |

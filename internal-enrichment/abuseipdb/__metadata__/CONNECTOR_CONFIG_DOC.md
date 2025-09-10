@@ -9,7 +9,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The OpenCTI platform URL. |
 | OPENCTI_TOKEN | `string` | ✅ | string |  | The token of the user who represents the connector in the OpenCTI platform. |
 | ABUSEIPDB_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | API key used to authenticate requests to the AbuseIPDB service. |
-| CONNECTOR_ID | `string` |  | string | `"abuseipdb--829f7f84-37d9-4c5a-a8f7-4d5cc60a4d6b"` | A unique UUIDv4 identifier for this connector instance. |
 | CONNECTOR_NAME | `string` |  | string | `"AbuseIPDB"` | Name of the connector. |
 | CONNECTOR_SCOPE | `string` |  | string | `"IPv4-Addr"` | The scope defines the set of entity types that the enrichment connector is allowed to process. |
 | CONNECTOR_TYPE | `string` |  | string | `"INTERNAL_ENRICHMENT"` | Should always be set to INTERNAL_ENRICHMENT for this connector. |

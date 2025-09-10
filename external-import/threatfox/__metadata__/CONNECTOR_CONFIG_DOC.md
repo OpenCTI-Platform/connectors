@@ -8,7 +8,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | -------- | ---- | -------- | --------------- | ---------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The OpenCTI platform URL. |
 | OPENCTI_TOKEN | `string` | ✅ | string |  |  | The token of the user who represents the connector in the OpenCTI platform. |
-| CONNECTOR_ID | `string` |  | string |  | `"threatfox--feb2a3b7-00c8-409f-a43b-bd20ef76e508"` | A unique UUIDv4 identifier for this connector instance. |
 | CONNECTOR_NAME | `string` |  | string |  | `"Abuse.ch | ThreatFox"` | Name of the connector. |
 | CONNECTOR_SCOPE | `string` |  | string |  | `"ThreatFox"` | The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only). |
 | CONNECTOR_TYPE | `string` |  | string |  | `"EXTERNAL_IMPORT"` | Should always be set to EXTERNAL_IMPORT for this connector. |

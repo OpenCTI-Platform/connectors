@@ -8,7 +8,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The OpenCTI platform URL. |
 | OPENCTI_TOKEN | `string` | ✅ | string |  | The token of the user who represents the connector in the OpenCTI platform. |
-| CONNECTOR_ID | `string` |  | string | `"hygiene--c5079b30-4c65-45f0-b02c-eb51a3794b82"` | A unique UUIDv4 identifier for this connector instance. |
 | CONNECTOR_NAME | `string` |  | string | `"Hygiene"` | Name of the connector. |
 | CONNECTOR_SCOPE | `string` |  | string | `"IPv4-Addr,IPv6-Addr,Artifact,Domain-Name,StixFile,Indicator"` | The scope defines the set of entity types that the enrichment connector is allowed to process. |
 | CONNECTOR_TYPE | `string` |  | string | `"INTERNAL_ENRICHMENT"` | Should always be set to INTERNAL_ENRICHMENT for this connector. |

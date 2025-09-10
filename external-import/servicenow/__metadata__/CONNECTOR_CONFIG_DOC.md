@@ -8,7 +8,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The OpenCTI platform URL. |
 | OPENCTI_TOKEN | `string` | ✅ | string |  | The token of the user who represents the connector in the OpenCTI platform. |
-| CONNECTOR_ID | `string` | ✅ | string |  | A unique UUIDv4 identifier for this connector instance. |
 | SERVICENOW_INSTANCE_NAME | `string` | ✅ | string |  | Corresponds to server instance name (will be used for API requests). |
 | SERVICENOW_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Secure identifier used to validate access to ServiceNow APIs. |
 | CONNECTOR_TYPE | `string` |  | string | `"EXTERNAL_IMPORT"` | Should always be set to EXTERNAL_IMPORT for this connector. |

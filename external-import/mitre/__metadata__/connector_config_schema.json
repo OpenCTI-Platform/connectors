@@ -14,11 +14,6 @@
       "description": "The token of the user who represents the connector in the OpenCTI platform.",
       "type": "string"
     },
-    "CONNECTOR_ID": {
-      "default": "mitre--c9dacf68-b0e6-476d-a24f-4269b1b9cd25",
-      "description": "A unique UUIDv4 identifier for this connector instance.",
-      "type": "string"
-    },
     "CONNECTOR_NAME": {
       "default": "Mitre Att&ck",
       "description": "Name of the connector.",
@@ -87,12 +82,6 @@
       "default": false,
       "description": "Whether to remove statement markings from the ingested MITRE data. Useful when marking metadata is unnecessary or interferes with processing.",
       "type": "boolean"
-    },
-    "MITRE_INTERVAL": {
-      "default": 7,
-      "description": "Polling interval in days for fetching and refreshing MITRE data. Determines how often the system checks for updates to ATT&CK datasets.",
-      "exclusiveMinimum": 0,
-      "type": "integer"
     },
     "MITRE_ENTERPRISE_FILE_URL": {
       "default": "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json",

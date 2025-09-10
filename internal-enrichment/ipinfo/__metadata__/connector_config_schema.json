@@ -14,11 +14,6 @@
       "description": "The token of the user who represents the connector in the OpenCTI platform.",
       "type": "string"
     },
-    "CONNECTOR_ID": {
-      "default": "ipinfo--43cf861c-72a7-4e45-864a-b19e32e6a8bc",
-      "description": "A unique UUIDv4 identifier for this connector instance.",
-      "type": "string"
-    },
     "CONNECTOR_NAME": {
       "default": "IPInfo",
       "description": "Name of the connector.",
