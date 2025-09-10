@@ -9,9 +9,9 @@ from typing import Generator
 __OPENCTI_CURRENT_VERSION__ = "rolling"
 __CONNECTOR_METADATA_DIRECTORY__ = "__metadata__"
 __CONNECTOR_MANIFEST_FILENAME__ = "connector_manifest.json"
-__CONNECTOR_LOGO_FILENAME__ = "logo.png"
 __CONNECTOR_CONFIG_JSON_SCHEMA_FILENAME__ = "connector_config_schema.json"
 __CATALOG_ID__ = "filigran-catalog-id"
+
 
 class ManifestGenerator:
     @staticmethod
@@ -39,6 +39,19 @@ class ManifestGenerator:
                         connector_config_json_schema_file_path,
                     )
 
+    def find_logo_file(self, metadata_dir: str) -> str:
+        """
+        Find logo file in metadata directory (any file starting with 'logo.')
+        """
+        try:
+            files = os.listdir(metadata_dir)
+            for file in files:
+                if file.startswith("logo."):
+                    return os.path.join(metadata_dir, file)
+        except Exception as e:
+            print(f"⚠️ Warning: Could not list files in {metadata_dir}: {e}")
+        return None
+
     def encode_logo_to_base64(self, logo_path: str) -> str:
         """
         Read logo file and encode it to base64 string
@@ -49,18 +62,20 @@ class ManifestGenerator:
                 # Get file extension to determine MIME type
                 file_ext = os.path.splitext(logo_path)[1].lower()
                 mime_type = {
-                    '.png': 'image/png',
-                    '.jpg': 'image/jpeg',
-                    '.jpeg': 'image/jpeg',
-                    '.gif': 'image/gif',
-                    '.svg': 'image/svg+xml'
-                }.get(file_ext, 'image/png')  # default to png
+                    ".png": "image/png",
+                    ".jpg": "image/jpeg",
+                    ".jpeg": "image/jpeg",
+                    ".gif": "image/gif",
+                    ".svg": "image/svg+xml",
+                }.get(
+                    file_ext, "image/png"
+                )  # default to png
 
                 # Encode to base64 and create data URL
-                encoded_logo = base64.b64encode(logo_data).decode('utf-8')
+                encoded_logo = base64.b64encode(logo_data).decode("utf-8")
                 return f"data:{mime_type};base64,{encoded_logo}"
         except Exception as e:
-            print(f"Warning: Could not encode logo {logo_path}: {e}")
+            print(f"⚠️ Warning: Could not encode logo {logo_path}: {e}")
             return None
 
     def get_connectors_contracts(self):
@@ -78,22 +93,26 @@ class ManifestGenerator:
                 with open(config_json_schema_file_path, encoding="utf-8") as file:
                     connector_config_json_schema = json.load(file)
 
+            connector_name = connector_manifest["title"]
+
             # if a logo is provided, encode it in base64 and add it to the manifest
+            metadata_dir = os.path.dirname(manifest_file_path)
+            logo_path = self.find_logo_file(metadata_dir)
+
             if connector_manifest and "logo" in connector_manifest:
-                metadata_dir = os.path.dirname(manifest_file_path)
-                logo_path = os.path.join(metadata_dir, __CONNECTOR_LOGO_FILENAME__)
-                if os.path.exists(logo_path):
+                if logo_path:
                     encoded_logo = self.encode_logo_to_base64(logo_path)
                     if encoded_logo:
-                        connector_manifest.update(
-                            {"logo": encoded_logo }
-                        )
+                        connector_manifest.update({"logo": encoded_logo})
                     else:
-                        print(f"Warning: Logo for connector [{connector_manifest["title"]}] could not be encoded")
+                        print(
+                            f"⚠️ Warning: Logo for connector {connector_name} could not be encoded"
+                        )
                 else:
-                    print(f"Warning: Logo file for connector [{connector_manifest["title"]}] not found")
-
-            print(f"New contract added for [{connector_manifest["title"]}]")
+                    print(
+                        f"⚠️ Warning: Logo file for connector {connector_name} not found"
+                    )
+            print(f"> {connector_name} added to manifest")
             connector_contract = connector_manifest
             if connector_config_json_schema:
                 connector_contract.update(
@@ -117,6 +136,7 @@ class ManifestGenerator:
         with open(manifest_path, "w", encoding="utf-8") as manifest_file:
             manifest_json = json.dumps(manifest, indent=2)
             manifest_file.write(manifest_json)
+
 
 if __name__ == "__main__":
     """
