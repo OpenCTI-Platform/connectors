@@ -2092,11 +2092,14 @@ class MispFeed:
                 else:
                     objects = self.s3.objects.all()
 
+                number_events = 0
+                file_name = None
                 for obj in objects:
                     try:
                         file_name = obj.key.split("/")[-1]
                         self.s3.download_file(obj.key, file_name)
                         events = json.load(open(file_name, "r"))
+                        number_events += len(events)
                         bundle = self._process_event(events)
                         self._send_bundle(work_id, bundle)
                         self.s3.Object(obj.key).delete()
@@ -2106,6 +2109,14 @@ class MispFeed:
 
                     except Exception as e:
                         self.helper.log_error(str(e))
+
+                message = (
+                    "Connector successfully run ("
+                    + str(number_events)
+                    + " events have been processed), storing state (last_file="
+                    + str(file_name)
+                    + ")"
+                )
 
             if self.source_type == "url":
                 if (
