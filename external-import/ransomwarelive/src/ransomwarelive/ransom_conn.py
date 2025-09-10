@@ -3,12 +3,11 @@ from datetime import datetime, timedelta, timezone
 
 import pycti
 import stix2
+from models.configs.config_loader import ConfigLoader
 from pycti import OpenCTIConnectorHelper
-
-from .api_client import RansomwareAPIClient, RansomwareAPIError
-from .config import ConnectorSettings
-from .converter_to_stix import ConverterToStix
-from .utils import domain_extractor, is_domain, safe_datetime
+from ransomwarelive.api_client import RansomwareAPIClient, RansomwareAPIError
+from ransomwarelive.converter_to_stix import ConverterToStix
+from ransomwarelive.utils import domain_extractor, is_domain, safe_datetime
 
 ONE_DAY_IN_SECONDS = 86400
 
@@ -21,9 +20,7 @@ class RansomwareAPIConnector:
     will be complemented per each connector type.
     """
 
-    def __init__(
-        self, helper: OpenCTIConnectorHelper, config: ConnectorSettings
-    ) -> None:
+    def __init__(self, helper: OpenCTIConnectorHelper, config: ConfigLoader) -> None:
         self.helper = helper
         self.config = config
         self.work_id = None
@@ -143,7 +140,7 @@ class RansomwareAPIConnector:
 
         # Creating Threat Actor object
         threat_actor = None
-        if self.config.connector.create_threat_actor:
+        if self.config.ransomwarelive.create_threat_actor:
             threat_actor, target_relation = self.converter_to_stix.process_threat_actor(
                 threat_actor_name=item.get("group"),
                 group_data=group_data,
@@ -169,7 +166,7 @@ class RansomwareAPIConnector:
         bundle_objects.append(intrusion_set)
         bundle_objects.append(relation_victim_intrusion)
 
-        if self.config.connector.create_threat_actor:
+        if self.config.ransomwarelive.create_threat_actor:
             relation_intrusion_threat_actor = (
                 self.converter_to_stix.create_relationship(
                     intrusion_set.get("id"), threat_actor.get("id"), "attributed-to"
@@ -186,7 +183,7 @@ class RansomwareAPIConnector:
             intrusion_set.get("id"),
             relation_victim_intrusion.get("id"),
         ]
-        if self.config.connector.create_threat_actor:
+        if self.config.ransomwarelive.create_threat_actor:
             object_refs.append(target_relation.get("id"))
             object_refs.append(relation_intrusion_threat_actor.get("id"))
 
@@ -212,7 +209,7 @@ class RansomwareAPIConnector:
                     relation_intrusion_sector,
                 ) = self.converter_to_stix.process_sector(
                     victim=victim,
-                    create_threat_actor=self.config.connector.create_threat_actor,
+                    create_threat_actor=self.config.ransomwarelive.create_threat_actor,
                     intrusion_set=intrusion_set,
                     threat_actor=threat_actor,
                     sector_id=sector_id,
@@ -222,7 +219,7 @@ class RansomwareAPIConnector:
 
                 bundle_objects.append(relation_sector_victim)
 
-                if self.config.connector.create_threat_actor:
+                if self.config.ransomwarelive.create_threat_actor:
                     bundle_objects.append(relation_sector_threat_actor)
                     report.get("object_refs").append(
                         relation_sector_threat_actor.get("id")
@@ -283,7 +280,7 @@ class RansomwareAPIConnector:
                 country_name=country_name,
                 victim=victim,
                 intrusion_set=intrusion_set,
-                create_threat_actor=self.config.connector.create_threat_actor,
+                create_threat_actor=self.config.ransomwarelive.create_threat_actor,
                 threat_actor=threat_actor,
                 country_stix_id=country_stix_id,
                 attack_date_iso=attack_date_iso,
@@ -297,7 +294,7 @@ class RansomwareAPIConnector:
             bundle_objects.append(location_relation)
             bundle_objects.append(relation_intrusion_location)
 
-            if self.config.connector.create_threat_actor:
+            if self.config.ransomwarelive.create_threat_actor:
                 bundle_objects.append(relation_threat_actor_location)
                 report.get("object_refs").append(
                     relation_threat_actor_location.get("id")
@@ -322,8 +319,8 @@ class RansomwareAPIConnector:
 
         # Checking if the historic year is less than 2020 as there is no data past 2020
         year = (
-            self.config.connector.history_start_year
-            if self.config.connector.history_start_year >= 2020
+            self.config.ransomwarelive.history_start_year
+            if self.config.ransomwarelive.history_start_year >= 2020
             else 2020
         )
 
@@ -520,7 +517,7 @@ class RansomwareAPIConnector:
 
             # Perform the collect of intelligence
             try:
-                if not self.last_run and self.config.connector.pull_history:
+                if not self.last_run and self.config.ransomwarelive.pull_history:
                     self.collect_historic_intelligence()
                 else:
                     self.collect_intelligence()

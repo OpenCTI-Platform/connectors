@@ -2,13 +2,15 @@ import sys
 import traceback
 
 from pycti import OpenCTIConnectorHelper
-from ransomwarelive.config import ConnectorSettings as ConfigLoader
 from ransomwarelive.ransom_conn import RansomwareAPIConnector
+from services.config_loader import RansomwareLiveConfig
 
 if __name__ == "__main__":
     try:
-        config = ConfigLoader()
-        helper = OpenCTIConnectorHelper(config=config.model_dump_pycti())
+        config = RansomwareLiveConfig()
+        config_instance = config.load
+        config_dict = config_instance.model_dump()
+        helper = OpenCTIConnectorHelper(config=config_dict)
         connector = RansomwareAPIConnector(helper=helper, config=config)
         connector.run()
     except Exception:
