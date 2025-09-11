@@ -60,6 +60,7 @@ class _OpenCTIConfig(BaseModel):
     url: HttpUrl
     token: str
 
+
 class ConnectorConfig(BaseModel):
     id: str
     name: str
