@@ -1,4 +1,4 @@
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal
 
 from pydantic import (
     Field,
@@ -37,11 +37,11 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     name: str
     scope: str
 
-    type: Optional[str] = Field(
+    type: str = Field(
         default="EXTERNAL_IMPORT",
         description="Should always be set to EXTERNAL_IMPORT for this connector.",
     )
-    log_level: Optional[LogLevelToLower] = Field(
+    log_level: LogLevelToLower = Field(
         default="error",
         description="Determines the verbosity of the logs.",
     )

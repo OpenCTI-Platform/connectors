@@ -10,7 +10,7 @@ class ConfigBaseSettings(BaseSettings):
         frozen=True,
         str_strip_whitespace=True,
         str_min_length=1,
-        extra="ignore",
+        extra="allow",
         # Allow both alias and field name for input
         validate_by_name=True,
         validate_by_alias=True,
