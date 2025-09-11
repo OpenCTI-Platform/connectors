@@ -16,7 +16,7 @@ To perform this data collection, you must give:
 
 - OpenCTI Platform >= 6.4.3
 
-##sage Configuration
+### Configuration
 
 Configuration parameters are provided using environment variables as described below.
 Some of them are placed directly in the `docker-compose.yml` since they are not expected to be modified by final users once that they have been defined by the developer of the connector.

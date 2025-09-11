@@ -1,3 +1,3 @@
-pycti
+pycti==6.1.4
 mattermostdriver
 stix2
