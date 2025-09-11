@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Any
 
+from connectors_sdk.core.pydantic import ListFromString
 from pydantic import Field
 from pydantic_settings import (
     BaseSettings,
@@ -28,8 +29,15 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
         default="Hygiene",
         description="Name of the connector.",
     )
-    scope: str = Field(
-        default="IPv4-Addr,IPv6-Addr,Artifact,Domain-Name,StixFile,Indicator",
+    scope: ListFromString = Field(
+        default=[
+            "IPv4-Addr",
+            "IPv6-Addr",
+            "Artifact",
+            "Domain-Name",
+            "StixFile",
+            "Indicator",
+        ],
         description="The scope defines the set of entity types that the enrichment connector is allowed to process.",
     )
 
