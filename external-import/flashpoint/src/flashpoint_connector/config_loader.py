@@ -142,12 +142,9 @@ class ConnectorConfig(ConfigBaseModel):
 
     id: str = Field(
         default="flashpoint--31419f2c-4239-4584-92fb-016b963ef01c",
-        description="A UUID v4 to identify the connector in OpenCTI."
+        description="A UUID v4 to identify the connector in OpenCTI.",
     )
-    name: str = Field(
-        default="Flashpoint",
-        description="The name of the connector."
-    )
+    name: str = Field(default="Flashpoint", description="The name of the connector.")
     type: Literal["EXTERNAL_IMPORT"] = "EXTERNAL_IMPORT"
     scope: ListFromString = Field(
         description="The scope of the connector, e.g. 'flashpoint'.",
