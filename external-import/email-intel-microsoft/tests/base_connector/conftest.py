@@ -13,30 +13,16 @@ from pytest_mock import MockerFixture
 def fixture_config_dict() -> dict[str, dict[str, Any]]:
     return {
         "opencti": {
-            "json_logging": True,
-            "ssl_verify": False,
-            "token": "test-opencti-token",
             "url": "http://test-opencti-url/",
+            "token": "test-opencti-token",
         },
         "connector": {
-            "auto": False,
-            "duration_period": "PT5M",
-            "expose_metrics": False,
             "id": "test-connector-id",
-            "log_level": "info",
-            "metrics_port": 9095,
             "name": "External Import Connector Template",
-            "only_contextual": False,
-            "queue_protocol": "amqp",
-            "queue_threshold": 500,
-            "run_and_terminate": False,
-            "scope": "ChangeMe",
-            "send_to_directory": False,
-            "send_to_directory_path": None,
-            "send_to_directory_retention": 7,
-            "send_to_queue": True,
             "type": "EXTERNAL_IMPORT",
-            "validate_before_import": False,
+            "scope": "ChangeMe",
+            "log_level": "info",
+            "duration_period": "PT5M",
         },
     }
 
