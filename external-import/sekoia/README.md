@@ -21,7 +21,7 @@ Collect Sekoia.io CTI data in an existing OpenCTI instance for any operational p
 - python-dateutil==2.9.0.post0
 
 ## Configuration variables environment
-Find all the configuration variables available (default/required) here: Connector Configurations
+Find all the configuration variables available (default/required) here: [Connector Configurations](./__metadata__)
 
 ## OpenCTI on-prem version configuration
 

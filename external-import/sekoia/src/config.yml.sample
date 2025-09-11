@@ -1,3 +1,6 @@
 opencti:
   url: 'http://localhost:8080'
   token: 'ChangeMe'
+
+sekoia:
+  api_key: 'ChangeMe'
