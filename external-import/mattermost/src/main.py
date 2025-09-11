@@ -11,7 +11,7 @@ from mattermostdriver import Driver
 from pycti.entities.opencti_channel import Channel as PyctiChannel
 from pycti.entities.opencti_identity import Identity as PyctiIdentity
 from pycti.entities.opencti_stix_core_relationship import (
-    StixcoreRelationship as PyctiSCR,
+    StixCoreRelationship as PyctiSCR,
 )
 from stix2 import CustomObject, CustomObservable
 from stix2.canonicalization.Canonicalize import canonicalize
