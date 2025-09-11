@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Any
 
+from connectors_sdk.core.pydantic import ListFromString
 from pydantic import Field
 from pydantic_settings import (
     BaseSettings,
@@ -28,8 +29,8 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
         default="NIST NVD CVE",
         description="Name of the connector.",
     )
-    scope: str = Field(
-        default="cve",
+    scope: ListFromString = Field(
+        default=["cve"],
         description="The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
     )
 
