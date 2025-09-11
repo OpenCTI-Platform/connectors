@@ -28,8 +28,8 @@ class _EmailIntelConfig(BaseModel):
     host: str
     port: int = Field(default=993)
     username: str
-    password: SecretStr = Field(default=None)
-    google_token_json: SecretStr = Field(
+    password: SecretStr | None = Field(default=None)
+    google_token_json: SecretStr | None = Field(
         default=None, description="Content of the token.json file from Google API"
     )
     mailbox: str = Field(default="INBOX")
