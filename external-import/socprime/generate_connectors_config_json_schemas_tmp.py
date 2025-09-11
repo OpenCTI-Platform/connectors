@@ -28,8 +28,9 @@ __FILTERED_ATTRIBUTES__ = [
     "CONNECTOR_ID",
     # Deprecated in favor of CONNECTOR_DURATION_PERIOD
     "MITRE_INTERVAL",
-    "CVE_INTERVAL"
+    "CVE_INTERVAL",
 ]
+
 
 def get_connector_config_schema_generator(connector_name: str) -> GenerateJsonSchema:
     class ConnectorConfigSchemaGenerator(GenerateJsonSchema):
