@@ -35,7 +35,6 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     # Config Loader Connector
     id: str
     name: str
-    scope: str
 
     type: Optional[str] = Field(
         default="EXTERNAL_IMPORT",

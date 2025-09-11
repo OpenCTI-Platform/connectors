@@ -24,12 +24,8 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
         description="A unique UUIDv4 identifier for this connector instance.",
     )
     name: str = Field(
-        default="Ransomware Live",
+        default="Ransomware Connector",
         description="Name of the connector.",
-    )
-    scope: str = Field(
-        default="identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report",
-        description="The scope defines the set of entity types that the enrichment connector is allowed to process.",
     )
 
 
