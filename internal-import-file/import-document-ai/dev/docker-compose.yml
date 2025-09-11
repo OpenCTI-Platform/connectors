@@ -1,6 +1,6 @@
 services:
   redis:
-    image: redis:7.2.5
+    image: redis:8.2.1
     volumes:
       - redisdata4:/data
     networks:
