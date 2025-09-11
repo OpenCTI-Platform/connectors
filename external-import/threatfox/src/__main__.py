@@ -40,9 +40,7 @@ class ThreatFox:
 
         # Instantiate the connector helper from config
         self.config = ConfigLoader()
-        self.helper = OpenCTIConnectorHelper(
-            config=self.config.model_dump(exclude_none=True)
-        )
+        self.helper = OpenCTIConnectorHelper(config=self.config.model_dump_pycti())
 
         # Extra config
         self.threatfox_csv_url = self.config.threatfox.csv_url
