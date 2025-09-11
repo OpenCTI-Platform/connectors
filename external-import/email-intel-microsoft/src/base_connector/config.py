@@ -59,9 +59,6 @@ ListFromString = Annotated[
 class _OpenCTIConfig(BaseModel):
     url: HttpUrl
     token: str
-    json_logging: bool = Field(default=True)
-    ssl_verify: bool = Field(default=False)
-
 
 class ConnectorConfig(BaseModel):
     id: str
