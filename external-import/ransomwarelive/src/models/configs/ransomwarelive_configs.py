@@ -1,12 +1,7 @@
 from typing import Annotated, Optional
 
 from models.configs import ConfigBaseSettings
-from pydantic import (
-    Field,
-    HttpUrl,
-    PlainSerializer,
-    PositiveInt,
-)
+from pydantic import Field, HttpUrl, PlainSerializer, PositiveInt
 
 HttpUrlToString = Annotated[HttpUrl, PlainSerializer(str, return_type=str)]
 

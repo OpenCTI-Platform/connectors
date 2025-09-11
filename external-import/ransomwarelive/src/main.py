@@ -11,7 +11,7 @@ if __name__ == "__main__":
         config_instance = config.load
         config_dict = config_instance.model_dump()
         helper = OpenCTIConnectorHelper(config=config_dict)
-        connector = RansomwareAPIConnector(helper=helper, config=config)
+        connector = RansomwareAPIConnector(helper=helper, config=config_instance)
         connector.run()
     except Exception:
         traceback.print_exc()

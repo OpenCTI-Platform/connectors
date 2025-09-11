@@ -1,3 +1,3 @@
-from src.services.config_loader import RansomwareLiveConfig
+from services.config_loader import RansomwareLiveConfig
 
 __all__ = ["RansomwareLiveConfig"]

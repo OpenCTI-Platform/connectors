@@ -1,3 +1,5 @@
+import warnings
+from datetime import timedelta
 from pathlib import Path
 
 from models.configs.base_settings import ConfigBaseSettings
@@ -6,7 +8,7 @@ from models.configs.connector_configs import (
     _ConfigLoaderOCTI,
 )
 from models.configs.ransomwarelive_configs import _ConfigLoaderRansomwareLive
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import (
     BaseSettings,
     DotEnvSettingsSource,
@@ -81,3 +83,34 @@ class ConfigLoader(ConfigBaseSettings):
                     env_ignore_empty=True,
                 ),
             )
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_deprecated_interval(cls, data: dict) -> dict:
+        """
+        Env var `CONNECTOR_RUN_EVERY` is deprecated.
+        This is a workaround to keep the old config working while we migrate to `CONNECTOR_DURATION_PERIOD`.
+        """
+        connector_data: dict = data.get("connector", {})
+
+        if run_every := connector_data.pop("run_every", None):
+            warnings.warn(
+                "Env var 'CONNECTOR_RUN_EVERY' is deprecated. Use 'CONNECTOR_DURATION_PERIOD' instead."
+            )
+            unit_run_every = run_every[-1:]
+            if unit_run_every == "d":
+                connector_data["duration_period"] = timedelta(days=int(run_every[:-1]))
+            elif unit_run_every == "h":
+                connector_data["duration_period"] = timedelta(hours=int(run_every[:-1]))
+            elif unit_run_every == "m":
+                connector_data["duration_period"] = timedelta(
+                    minutes=int(run_every[:-1])
+                )
+            elif unit_run_every == "s":
+                connector_data["duration_period"] = timedelta(
+                    seconds=int(run_every[:-1])
+                )
+            else:
+                raise ValueError(f"Invalid value for CONNECTOR_RUN_EVERY: {run_every}")
+
+        return data

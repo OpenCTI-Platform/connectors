@@ -1,5 +1,5 @@
+from models.configs.config_loader import ConfigLoader
 from pydantic import ValidationError
-from src.models.configs.config_loader import ConfigLoader
 
 
 class RansomwareLiveConfig:
