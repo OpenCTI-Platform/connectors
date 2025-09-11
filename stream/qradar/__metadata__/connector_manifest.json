@@ -1,0 +1,21 @@
+{
+  "title": "IBM QRadar",
+  "slug": "qradar",
+  "description": "IBM® QRadar® is a threat detection and response solution designed to help security teams manage and respond to incidents more efficiently. It supports enterprise-scale operations and enables organizations to strengthen their security posture across core technologies.\n\nThe integration of QRadar with OpenCTI enables the automatic dissemination, update, and deletion of STIX indicators into QRadar. The connector consumes STIX Indicators from an OpenCTI stream and manages them in QRadar Reference Sets, allowing security teams to leverage threat intelligence for enhanced detection and response capabilities.",
+  "short_description": "IBM® QRadar® is a threat detection and response solution designed to help security teams manage and respond to incidents more efficiently. It supports enterprise-scale operations and enables organizations to strengthen their security posture across core technologies.",
+  "logo": "",
+  "use_cases": [
+    "SIEM & Analytics"
+  ],
+  "verified": true,
+  "last_verified_date": "",
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">= 5.8.0",
+  "subscription_link": "https://www.ibm.com/products/qradar-siem",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/qradar",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-qradar",
+  "container_type": "STREAM"
+}
