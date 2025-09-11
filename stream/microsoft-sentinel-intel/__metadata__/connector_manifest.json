@@ -16,6 +16,6 @@
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/microsoft-sentinel-intel",
   "manager_supported": false,
   "container_version": "rolling",
-  "container_image": "opencti/onnector-microsoft-sentinel-intel",
+  "container_image": "opencti/connector-microsoft-sentinel-intel",
   "container_type": "STREAM"
 }
