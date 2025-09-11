@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal
 
 from pydantic import Field, HttpUrl, PlainSerializer, field_validator
 from src.connector.models.configs.base_settings import ConfigBaseSettings
@@ -37,15 +37,15 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     name: str
     scope: str
 
-    type: Optional[str] = Field(
+    type: str = Field(
         default="INTERNAL_ENRICHMENT",
         description="Should always be set to INTERNAL_ENRICHMENT for this connector.",
     )
-    auto: Optional[bool] = Field(
+    auto: bool = Field(
         default=False,
         description="Enables or disables automatic enrichment of observables for OpenCTI.",
     )
-    log_level: Optional[LogLevelToLower] = Field(
+    log_level: LogLevelToLower = Field(
         default="error",
         description="Determines the verbosity of the logs.",
     )
