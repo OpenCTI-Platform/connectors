@@ -1,8 +1,8 @@
 import traceback
 
 from pycti import OpenCTIConnectorHelper
+from src import ConfigLoader
 from src.connector import ConnectorAbuseIPDB
-from src.connector.services import AbuseIPDBConfig
 
 if __name__ == "__main__":
     """
@@ -15,12 +15,11 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        config = AbuseIPDBConfig()
-        config_instance = config.load
-        # Convert the config into a dictionary, automatically excluding any parameters set to `None`.
-        config_dict = config_instance.model_dump(exclude_none=True)
-        helper = OpenCTIConnectorHelper(config=config_dict, playbook_compatible=True)
-        connector = ConnectorAbuseIPDB(config_instance, helper)
+        config = ConfigLoader()
+        helper = OpenCTIConnectorHelper(
+            config=config.model_dump_pycti(), playbook_compatible=True
+        )
+        connector = ConnectorAbuseIPDB(config, helper)
         connector.run()
     except Exception:
         traceback.print_exc()
