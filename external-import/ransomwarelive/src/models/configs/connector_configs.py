@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal
 
 from models.configs import ConfigBaseSettings
 from pydantic import (
@@ -36,15 +36,15 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     id: str
     name: str
 
-    type: Optional[str] = Field(
+    type: str = Field(
         default="EXTERNAL_IMPORT",
         description="Should always be set to EXTERNAL_IMPORT for this connector.",
     )
-    log_level: Optional[LogLevelToLower] = Field(
+    log_level: LogLevelToLower = Field(
         default="error",
         description="Determines the verbosity of the logs.",
     )
-    duration_period: Optional[timedelta] = Field(
+    duration_period: timedelta = Field(
         default="PT10M",
         description="Duration between two scheduled runs of the connector (ISO 8601 format).",
     )
