@@ -158,7 +158,7 @@ $ grep -Ri template
 
 # Output
 ./docker-compose.yml:  connector-template:
-./docker-compose.yml:    image: opencti/connector-template:6.7.16
+./docker-compose.yml:    image: opencti/connector-template:6.7.19
 ./docker-compose.yml:      - CONNECTOR_TEMPLATE_API_BASE_URL=CHANGEME
 ./docker-compose.yml:      - CONNECTOR_TEMPLATE_API_KEY=CHANGEME
 ./Dockerfile:COPY src /opt/opencti-connector-template

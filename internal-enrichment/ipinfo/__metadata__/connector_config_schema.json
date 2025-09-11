@@ -14,13 +14,8 @@
       "description": "The token of the user who represents the connector in the OpenCTI platform.",
       "type": "string"
     },
-    "CONNECTOR_ID": {
-      "default": "ipinfo--43cf861c-72a7-4e45-864a-b19e32e6a8bc",
-      "description": "A unique UUIDv4 identifier for this connector instance.",
-      "type": "string"
-    },
     "CONNECTOR_NAME": {
-      "default": "IP Info",
+      "default": "IPInfo",
       "description": "Name of the connector.",
       "type": "string"
     },
@@ -49,41 +44,6 @@
       "default": true,
       "description": "Enables or disables automatic enrichment of observables for OpenCTI.",
       "type": "boolean"
-    },
-    "CONNECTOR_LISTEN_PROTOCOL": {
-      "default": null,
-      "description": "Protocol used for listening.",
-      "type": "string"
-    },
-    "CONNECTOR_LISTEN_PROTOCOL_API_PORT": {
-      "default": null,
-      "description": "Port used for API listening.",
-      "type": "integer"
-    },
-    "CONNECTOR_LISTEN_PROTOCOL_API_PATH": {
-      "default": null,
-      "description": "API path for callback.",
-      "type": "string"
-    },
-    "CONNECTOR_LISTEN_PROTOCOL_API_URI": {
-      "default": null,
-      "description": "Full URI for API listening.",
-      "type": "string"
-    },
-    "CONNECTOR_LISTEN_PROTOCOL_API_SSL": {
-      "default": null,
-      "description": "Enable SSL for API listening.",
-      "type": "boolean"
-    },
-    "CONNECTOR_LISTEN_PROTOCOL_API_SSL_KEY": {
-      "default": null,
-      "description": "SSL key file path.",
-      "type": "string"
-    },
-    "CONNECTOR_LISTEN_PROTOCOL_API_SSL_CERT": {
-      "default": null,
-      "description": "SSL certificate file path.",
-      "type": "string"
     },
     "IPINFO_TOKEN": {
       "description": "API token used to authenticate requests to the IPInfo service.",

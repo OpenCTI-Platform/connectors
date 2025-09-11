@@ -14,10 +14,6 @@
       "description": "The token of the user who represents the connector in the OpenCTI platform.",
       "type": "string"
     },
-    "CONNECTOR_ID": {
-      "description": "A unique UUIDv4 identifier for this connector instance.",
-      "type": "string"
-    },
     "CONNECTOR_TYPE": {
       "default": "EXTERNAL_IMPORT",
       "description": "Should always be set to EXTERNAL_IMPORT for this connector.",

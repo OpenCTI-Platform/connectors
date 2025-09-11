@@ -22,6 +22,11 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 __CONNECTOR_METADATA_DIRECTORY__ = "__metadata__"
 __CONNECTOR_CONFIG_JSON_SCHEMA_FILENAME__ = "connector_config_schema.json"
 
+# attributes filtered from the connector configuration before generating the manifest
+__FILTERED_ATTRIBUTES__ = [
+    # connector id is generated
+    "CONNECTOR_ID",
+]
 
 def get_connector_config_schema_generator(connector_name: str) -> GenerateJsonSchema:
     class ConnectorConfigSchemaGenerator(GenerateJsonSchema):
@@ -90,6 +95,15 @@ def get_connector_config_schema_generator(connector_name: str) -> GenerateJsonSc
 
             return flat_json_schema
 
+        @staticmethod
+        def filter_schema(schema):
+            for filtered_attribute in __FILTERED_ATTRIBUTES__:
+                if filtered_attribute in schema["properties"]:
+                    del schema["properties"][filtered_attribute]
+                    schema.update({ "required": [item for item in schema["required"] if item != filtered_attribute] })
+
+            return schema
+
         @override
         def generate(self, schema, mode="validation"):
             json_schema = super().generate(schema, mode=mode)
@@ -98,9 +112,9 @@ def get_connector_config_schema_generator(connector_name: str) -> GenerateJsonSc
             json_schema["$id"] = (
                 f"https://www.filigran.io/connectors/{connector_name}_config.schema.json"
             )
-            return self.flatten_config_loader_schema(
-                self.dereference_schema(json_schema)
-            )
+            dereferenced_schema = self.dereference_schema(json_schema)
+            flattened_schema = self.flatten_config_loader_schema(dereferenced_schema)
+            return self.filter_schema(flattened_schema)
 
         @override
         def nullable_schema(self, schema):

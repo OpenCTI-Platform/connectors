@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/hygiene_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The OpenCTI platform URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Hygiene",
+      "description": "Name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": "IPv4-Addr,IPv6-Addr,Artifact,Domain-Name,StixFile,Indicator",
+      "description": "The scope defines the set of entity types that the enrichment connector is allowed to process.",
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "default": "INTERNAL_ENRICHMENT",
+      "description": "Should always be set to INTERNAL_ENRICHMENT for this connector.",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "Determines the verbosity of the logs.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": true,
+      "description": "Enables or disables automatic enrichment of observables for OpenCTI.",
+      "type": "boolean"
+    },
+    "HYGIENE_WARNINGLISTS_SLOW_SEARCH": {
+      "default": false,
+      "description": "Enable slow search mode for the warning lists. If true, uses the most appropriate search method. Can be slower. Default: exact match.",
+      "type": "boolean"
+    },
+    "HYGIENE_LABEL_NAME": {
+      "default": "hygiene",
+      "description": "Set the label name.",
+      "type": "string"
+    },
+    "HYGIENE_LABEL_COLOR": {
+      "default": "#fc0341",
+      "description": "Color to use for the label.",
+      "type": "string"
+    },
+    "HYGIENE_LABEL_PARENT_NAME": {
+      "default": "hygiene_parent",
+      "description": "Label name to be used when enriching sub-domains.",
+      "type": "string"
+    },
+    "HYGIENE_LABEL_PARENT_COLOR": {
+      "default": "#fc0341",
+      "description": "Color to use for the label when enriching subdomains.",
+      "type": "string"
+    },
+    "HYGIENE_ENRICH_SUBDOMAINS": {
+      "default": false,
+      "description": "Enable enrichment of sub-domains, This option will add 'hygiene_parent' label and ext refs of the parent domain to the subdomain, if sub-domain is not found but parent is.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}

@@ -24,10 +24,6 @@
       "description": "Whether to check SSL certificate or not.",
       "type": "boolean"
     },
-    "CONNECTOR_ID": {
-      "description": "A UUID v4 to identify the connector in OpenCTI.",
-      "type": "string"
-    },
     "CONNECTOR_NAME": {
       "description": "The name of the connector.",
       "type": "string"

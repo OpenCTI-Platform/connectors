@@ -1,5 +1,5 @@
 import pytest
-from hygiene import HygieneConnector
+from src.connector.hygiene import HygieneConnector
 
 
 def _generate_mock_stix_domain_entity(domain_name: str) -> dict:
@@ -11,7 +11,7 @@ def _generate_mock_stix_domain_entity(domain_name: str) -> dict:
     return entity
 
 
-def _generate_mock_opencti_indiator_entity(domain_name: str) -> dict:
+def _generate_mock_opencti_indicator_entity(domain_name: str) -> dict:
     entity = {
         "entity_type": "Indicator",
         "value": domain_name,
@@ -22,16 +22,16 @@ def _generate_mock_opencti_indiator_entity(domain_name: str) -> dict:
 
 
 @pytest.fixture()
-def mock_hygiene_connector(mock_opencti) -> HygieneConnector:
+def mock_hygiene_connector(mock_opencti, mock_config, mock_helper) -> HygieneConnector:
     """Dummy Hygiene Connector."""
-    return HygieneConnector()
+    return HygieneConnector(mock_config, mock_helper)
 
 
 @pytest.fixture()
 def mock_hygiene_connector_with_subdomain_search(
-    mock_opencti, mock_config_path
+    mock_opencti, mock_config, mock_helper
 ) -> HygieneConnector:
-    return HygieneConnector(config_file_path=mock_config_path)
+    return HygieneConnector(mock_config, mock_helper)
 
 
 def test_warninglist_search_functions(mock_hygiene_connector: HygieneConnector):
@@ -45,7 +45,7 @@ def test_warninglist_search_functions(mock_hygiene_connector: HygieneConnector):
     assert isinstance(warninglist_hits, list)
     assert isinstance(use_parent, bool)
     assert use_parent is False
-    octi_entity = _generate_mock_opencti_indiator_entity(domain_name=mock_domain)
+    octi_entity = _generate_mock_opencti_indicator_entity(domain_name=mock_domain)
     score = mock_hygiene_connector.process_result(
         warninglist_hits=warninglist_hits,
         stix_entity=mock_stix_entity,

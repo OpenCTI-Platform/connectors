@@ -1,0 +1,21 @@
+{
+  "title": "Zvelo",
+  "slug": "zvelo",
+  "description": "The Zvelo connector ingests indicators of compromise (IOCs) from Zvelo Cyber Threat Intelligence Feeds.The connector supports the ingestion of the two following data collections:\n- Zvelo PhishBlocklist: Phishing threat intelligence data feed\n- Zvelo Malicious Detailed Detection: Malicious threat intelligence data feed.\n\nThe connector ingests the following entities:\n- Indicators: Malicious Indicators are ingested as Indicators\n- Observables: Some related information linked to the malicious IOC are ingested as observables and linked to the Indicator. Example: IP addresses associated with the malicious indicator (ip_info)\n- Malware: When defined, malware families associated to the Indicator are ingested as Malware and associated to the Indicator\n\nAPI documentation: https://docs.zvelo.io.",
+  "short_description": "The Zvelo connector ingests indicators of compromise (IOCs) from Zvelo Cyber Threat Intelligence Feeds.",
+  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": "2025-06-12",
+  "playbook_supported": false,
+  "max_confidence_level": 60,
+  "support_version": ">= 6.5.1",
+  "subscription_link": "https://zvelo.com/zvelocti-cyber-threat-intelligence/malicious-detailed-detection-feed/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/zvelo",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-zvelo",
+  "container_type": "EXTERNAL_IMPORT"
+}

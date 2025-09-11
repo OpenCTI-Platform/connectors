@@ -1,16 +1,8 @@
-antlr4-python3-runtime
-chardet
-datefinder
-idna
-pika
-pycti
-python-dateutil
-pytz
-regex
-rfapi
-simplejson
-six
-sseclient
-stix2
-stix2-patterns
-urllib3
+pycti==6.7.19
+pydantic==2.11.7
+pydantic-settings==2.10.1
+regex==2024.11.6
+requests==2.32.4
+stix2==3.0.1
+stix2-patterns==2.0.0
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.7.19#subdirectory=connectors-sdk

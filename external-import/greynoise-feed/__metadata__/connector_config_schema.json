@@ -29,10 +29,6 @@
       "default": "EXTERNAL_IMPORT",
       "type": "string"
     },
-    "CONNECTOR_ID": {
-      "description": "A UUID v4 to identify the connector in OpenCTI.",
-      "type": "string"
-    },
     "CONNECTOR_NAME": {
       "default": "GreyNoise Feed",
       "description": "The name of the connector.",

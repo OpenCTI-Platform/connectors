@@ -20,17 +20,14 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
     """A concrete implementation of _ConfigLoaderConnector defining default connector configuration values."""
 
     id: str = Field(
-        alias="CONNECTOR_ID",
         default="cve--e0c380ad-6665-4f2e-8558-5d2610e5abcf",
         description="A unique UUIDv4 identifier for this connector instance.",
     )
     name: str = Field(
-        alias="CONNECTOR_NAME",
-        default="Common Vulnerabilities and Exposures",
+        default="NIST NVD CVE",
         description="Name of the connector.",
     )
     scope: str = Field(
-        alias="CONNECTOR_SCOPE",
         default="cve",
         description="The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
     )

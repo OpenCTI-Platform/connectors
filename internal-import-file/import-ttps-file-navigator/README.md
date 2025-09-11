@@ -40,7 +40,7 @@ Be sure to download files with the .json extension so that they are taken into a
 
 ### Requirements
 
-- OpenCTI Platform >= 6.7.16
+- OpenCTI Platform >= 6.7.19
 
 ## Configuration variables
 
@@ -73,7 +73,7 @@ Below are the parameters you'll need to set for running the connector properly:
 ### Docker Deployment
 
 Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==6.7.16`. If you don't, it will take the latest version, but
+version of OpenCTI you're running. Example, `pycti==6.7.19`. If you don't, it will take the latest version, but
 sometimes the OpenCTI SDK fails to initialize.
 
 Build a Docker Image using the provided `Dockerfile`.

@@ -80,13 +80,14 @@ class OrchestratorThreatActor(BaseOrchestrator):
         """
         subentity_types = [
             "malware_families",
-            # "reports",
             "attack_techniques",
             "vulnerabilities",
-            #            "domains",
-            #            "files",
-            #            "urls",
-            #            "ip_addresses",
+            "campaigns",
+            # "reports",
+            # "domains",
+            # "files",
+            # "urls",
+            # "ip_addresses",
         ]
         try:
             async for gti_threat_actors in self.client_api.fetch_threat_actors(

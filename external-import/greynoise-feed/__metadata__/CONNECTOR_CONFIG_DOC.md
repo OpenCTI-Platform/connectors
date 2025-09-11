@@ -8,7 +8,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
 | OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |
-| CONNECTOR_ID | `string` | ✅ | string |  | A UUID v4 to identify the connector in OpenCTI. |
 | GREYNOISE_FEED_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API key to connect to Greynoise. |
 | OPENCTI_JSON_LOGGING | `boolean` |  | boolean | `true` | Whether to format logs as JSON or not. |
 | OPENCTI_SSL_VERIFY | `boolean` |  | boolean | `false` | Whether to check SSL certificate or not. |

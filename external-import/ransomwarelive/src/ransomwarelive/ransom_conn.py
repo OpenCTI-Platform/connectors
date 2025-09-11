@@ -483,19 +483,20 @@ class RansomwareAPIConnector:
             now = datetime.now(tz=timezone.utc)
             current_state = self.helper.get_state()
 
-            if current_state and "last_run" in current_state:
-                if isinstance(current_state["last_run"], int):
-                    self.last_run = datetime.fromtimestamp(
-                        current_state["last_run"]
-                    ).replace(tzinfo=timezone.utc)
-                else:
-                    self.last_run = datetime.fromisoformat(current_state["last_run"])
-
-            self.last_run_datetime_with_ingested_data = (
-                current_state.get("last_run_datetime_with_ingested_data")
-                if current_state
-                else None
-            )
+            if current_state:
+                if "last_run" in current_state:
+                    if isinstance(current_state["last_run"], int):
+                        self.last_run = datetime.fromtimestamp(
+                            current_state["last_run"]
+                        ).replace(tzinfo=timezone.utc)
+                    else:
+                        self.last_run = datetime.fromisoformat(
+                            current_state["last_run"]
+                        )
+                if current_state.get("last_run_datetime_with_ingested_data", None):
+                    self.last_run_datetime_with_ingested_data = datetime.fromisoformat(
+                        current_state["last_run_datetime_with_ingested_data"]
+                    )
 
             self.helper.connector_logger.info(
                 "[CONNECTOR] Starting connector...",

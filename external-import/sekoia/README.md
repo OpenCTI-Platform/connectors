@@ -14,7 +14,7 @@ Collect Sekoia.io CTI data in an existing OpenCTI instance for any operational p
 
 ```
 connector-sekoia:
-    image: opencti/connector-sekoia:6.7.16
+    image: opencti/connector-sekoia:6.7.19
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe

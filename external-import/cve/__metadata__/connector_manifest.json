@@ -1,15 +1,15 @@
 {
-  "title": "CVE - Common Vulnerabilities and Exposures",
-  "slug": "cve",
-  "description": "The OpenCTI CVE connector is a software component designed to automatically import information about Common Vulnerabilities and Exposures (CVEs) into the OpenCTI platform",
-  "short_description": "Collecting and updating CVE data in OpenCTI",
+  "title": "NIST NVD CVE",
+  "slug": "nist-nvd-cve",
+  "description": "The NVD facilitates automated vulnerability management, security measurement, and compliance processes by providing comprehensive databases that include:\n• Vulnerability catalogs\n• Software vulnerability details\n• Product identifiers\n• Severity scoring metrics\nCommon Vulnerabilities and Exposures (CVE) provides a standardized dictionary of publicly disclosed cybersecurity vulnerabilities and exposures, serving as a universal reference system for the security community.\nThis connector seamlessly integrates with the NVD to retrieve CVE data, transform it into STIX2 format, and automatically import it into OpenCTI on a scheduled basis, ensuring your threat intelligence platform remains current with the latest vulnerability information.”",
+  "short_description": "The NVD facilitates automated vulnerability management, security measurement, and compliance processes by providing comprehensive databases that include:\n• Vulnerability catalogs\n• Software vulnerability details\n• Product identifiers\n• Severity scoring metrics\n",
   "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
   "use_cases": [
     "Vulnerability Management",
     "Open Source Threat Intel"
   ],
   "verified": true,
-  "last_verified_date": "15-12-2023",
+  "last_verified_date": "2023-12-15",
   "playbook_supported": false,
   "max_confidence_level": 80,
   "support_version": ">= 6.5.1",

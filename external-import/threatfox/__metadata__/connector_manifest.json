@@ -1,7 +1,7 @@
 {
   "title": "ThreatFox",
   "slug": "threatfox",
-  "description": "ThreatFox is a platform from abuse.ch and Spamhaus dedicated to sharing indicators of compromise (IOCs) associated with malware, with the infosec community, AV vendors and cyber threat intelligence providers\n\nThe integration of ThreatFox with OpenCTI facilitates the automatic import of IOCs into the threat intelligence platform. This integration incorporates data for OpenCTI observable and indicator types, including file-md5, file-sha1, file-sha256, ipv4-addr, domain-name, and url. Additionally, it adds the Malware entity, enhancing the platform's capability to manage and respond to threats effectively.",
+  "description": "ThreatFox is a platform from abuse.ch and Spamhaus dedicated to sharing indicators of compromise (IOCs) associated with malware, with the infosec community, AV vendors and cyber threat intelligence providers\n\nThe integration of ThreatFox with OpenCTI facilitates the automatic import of IOCs into the threat intelligence platform. This integration imports data for the following OpenCTI observables/indicators: file-md5, file-sha1, file-sha256, ipv4-addr, domain-name, and url. It also incorporates the Malware entity, enhancing the platform's capability to effectively manage and respond to threats.",
   "short_description": "ThreatFox is a platform from abuse.ch and Spamhaus dedicated to sharing indicators of compromise (IOCs) associated with malware, with the infosec community, AV vendors and cyber threat intelligence providers.",
   "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
   "use_cases": [
@@ -12,9 +12,9 @@
   "playbook_supported": false,
   "max_confidence_level": 45,
   "support_version": ">= 6.5.1",
-  "subscription_link": "",
-  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/oob/connector_manager/external-import/threatfox",
-  "manager_supported": false,
+  "subscription_link": "https://threatfox.abuse.ch/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/threatfox",
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-threatfox",
   "container_type": "EXTERNAL_IMPORT"

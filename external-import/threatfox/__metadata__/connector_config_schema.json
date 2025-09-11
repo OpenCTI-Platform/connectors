@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/threatfox_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The OpenCTI platform URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Abuse.ch | ThreatFox",
+      "description": "Name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": "ThreatFox",
+      "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "default": "EXTERNAL_IMPORT",
+      "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "Determines the verbosity of the logs.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "THREATFOX_CSV_URL": {
+      "default": "https://threatfox.abuse.ch/export/csv/recent/",
+      "description": "The Threat Fox URL",
+      "type": "string"
+    },
+    "THREATFOX_IMPORT_OFFLINE": {
+      "default": true,
+      "description": "Create records for indicators that are offline.",
+      "type": "boolean"
+    },
+    "THREATFOX_CREATE_INDICATORS": {
+      "default": true,
+      "description": "Create indicators in addition to observables.",
+      "type": "boolean"
+    },
+    "THREATFOX_DEFAULT_X_OPENCTI_SCORE": {
+      "default": 50,
+      "description": "The default x_opencti_score to use.",
+      "type": "integer"
+    },
+    "THREATFOX_X_OPENCTI_SCORE_IP": {
+      "default": null,
+      "description": "Set the x_opencti_score for IP observables.",
+      "type": "integer"
+    },
+    "THREATFOX_X_OPENCTI_SCORE_DOMAIN": {
+      "default": null,
+      "description": "Set the x_opencti_score for Domain observables.",
+      "type": "integer"
+    },
+    "THREATFOX_X_OPENCTI_SCORE_URL": {
+      "default": null,
+      "description": "Set the x_opencti_score for URL observables.",
+      "type": "integer"
+    },
+    "THREATFOX_X_OPENCTI_SCORE_HASH": {
+      "default": null,
+      "description": "Set the x_opencti_score for Hash observables.",
+      "type": "integer"
+    },
+    "THREATFOX_INTERVAL": {
+      "default": 3,
+      "description": "[DEPRECATED] Interval in days between two scheduled runs of the connector.",
+      "type": "integer"
+    },
+    "THREATFOX_IOC_TO_IMPORT": {
+      "default": "all_types",
+      "description": "List of IOC types to retrieve, available parameters: all_types, ip:port, domain, url, md5_hash, sha1_hash, sha256_hash",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}
