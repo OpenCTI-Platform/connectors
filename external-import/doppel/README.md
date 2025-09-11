@@ -36,7 +36,7 @@ STIX 2.1 Indicator object, enriched with metadata such as severity, entity state
 ### Requirements
 
 - OpenCTI Platform version >= 6.x
-- Doppel API access (URL + API Key)
+- Doppel API access (URL + API Key + User API Key (optional))
 
 ## Configuration variables
 
@@ -66,6 +66,7 @@ There are a number of configuration options, which are set either in `docker-com
 |-------------------------|--------------------------------|----------------------------------|---------|-----------|---------------------------------------|
 | API base URL            | doppel.api_base_url            | `DOPPEL_API_BASE_URL`            | https://api.doppel.com/v1        | Yes       | Doppel API base URL                   |
 | API key                 | doppel.api_key                 | `DOPPEL_API_KEY`                 |         | Yes       | Doppel API key                        |
+| User API key                 | doppel.user_api_key                 | `DOPPEL_USER_API_KEY`                 |         | No      | Doppel User API key                        |
 | Alerts endpoint         | doppel.alerts_endpoint         | `DOPPEL_ALERTS_ENDPOINT`         | /alerts        | Yes       | API endpoint for fetching alerts      |
 | Historical polling days | doppel.historical_polling_days | `DOPPEL_HISTORICAL_POLLING_DAYS` | 30      | No        | Days of data to fetch on first run    |
 | Max retries             | doppel.max_retries             | `DOPPEL_MAX_RETRIES`             | 3       | No        | Retry attempts on API errors          |
@@ -81,14 +82,14 @@ There are a number of configuration options, which are set either in `docker-com
 2. Build Docker image:
 
 ```bash
-docker build -t opencti/connector-doppel:6.7.4 .
+docker build -t opencti/connector-doppel:rolling .
 ```
 
 3. Register connector in the **main** OpenCTI `docker-compose.yml`:
 
 ```yaml
   connector-doppel:
-    image: doppel-connector:latest
+    image: opencti/connector-doppel:rolling
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=changeme
@@ -99,6 +100,7 @@ docker build -t opencti/connector-doppel:6.7.4 .
       - CONNECTOR_DURATION_PERIOD=PT1H
       - DOPPEL_API_BASE_URL=https://api.doppel.com
       - DOPPEL_API_KEY=changeme
+      - DOPPEL_USER_API_KEY=changeme
       - DOPPEL_ALERTS_ENDPOINT=/v1/alerts
       - DOPPEL_HISTORICAL_POLLING_DAYS=30
       - DOPPEL_MAX_RETRIES=3
