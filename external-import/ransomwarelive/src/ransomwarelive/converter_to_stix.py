@@ -9,8 +9,7 @@ from pycti import (
     StixCoreRelationship,
     ThreatActorGroup,
 )
-
-from .utils import (
+from ransomwarelive.utils import (
     fetch_country_domain,
     ip_fetcher,
     is_ipv4,

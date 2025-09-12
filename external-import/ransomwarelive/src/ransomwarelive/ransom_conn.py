@@ -3,12 +3,11 @@ from datetime import datetime, timedelta, timezone
 
 import pycti
 import stix2
+from models.configs.config_loader import ConfigLoader
 from pycti import OpenCTIConnectorHelper
-
-from .api_client import RansomwareAPIClient, RansomwareAPIError
-from .config import ConnectorSettings
-from .converter_to_stix import ConverterToStix
-from .utils import domain_extractor, is_domain, safe_datetime
+from ransomwarelive.api_client import RansomwareAPIClient, RansomwareAPIError
+from ransomwarelive.converter_to_stix import ConverterToStix
+from ransomwarelive.utils import domain_extractor, is_domain, safe_datetime
 
 ONE_DAY_IN_SECONDS = 86400
 
@@ -21,9 +20,7 @@ class RansomwareAPIConnector:
     will be complemented per each connector type.
     """
 
-    def __init__(
-        self, helper: OpenCTIConnectorHelper, config: ConnectorSettings
-    ) -> None:
+    def __init__(self, helper: OpenCTIConnectorHelper, config: ConfigLoader) -> None:
         self.helper = helper
         self.config = config
         self.work_id = None
