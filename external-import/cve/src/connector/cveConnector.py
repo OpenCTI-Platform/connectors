@@ -3,10 +3,10 @@ import time
 from datetime import datetime, timedelta
 
 from pycti import OpenCTIConnectorHelper  # type: ignore
+from src import ConfigLoader
 from src.services import CVEConverter  # type: ignore
 from src.services.utils import (  # type: ignore
     MAX_AUTHORIZED,
-    CVEConfig,
     convert_hours_to_seconds,
 )
 
@@ -19,14 +19,11 @@ class CVEConnector:
 
         # Load configuration file and connection helper
         # Instantiate the connector helper from config
-        self.config = CVEConfig()
-        self.config_instance = self.config.load
-        self.interval = convert_hours_to_seconds(self.config_instance.cve.interval)
-        # Convert the config into a dictionary, automatically excluding any parameters set to `None`.
-        self.config_dict = self.config_instance.model_dump(exclude_none=True)
-        self.helper = OpenCTIConnectorHelper(config=self.config_dict)
+        self.config = ConfigLoader()
+        self.helper = OpenCTIConnectorHelper(config=self.config.model_dump_pycti())
 
-        self.converter = CVEConverter(self.helper)
+        self.interval = convert_hours_to_seconds(self.config.cve.interval)
+        self.converter = CVEConverter(self.helper, self.config)
 
     def run(self) -> None:
         """
@@ -88,13 +85,13 @@ class CVEConnector:
         :param now: Current date in datetime
         :param work_id: Work id in string
         """
-        if self.config_instance.cve.max_date_range > MAX_AUTHORIZED:
+        if self.config.cve.max_date_range > MAX_AUTHORIZED:
             error_msg = "The max_date_range cannot exceed {} days".format(
                 MAX_AUTHORIZED
             )
             raise Exception(error_msg)
 
-        date_range = timedelta(days=self.config_instance.cve.max_date_range)
+        date_range = timedelta(days=self.config.cve.max_date_range)
         start_date = now - date_range
 
         cve_params = self._update_cve_params(start_date, now)
@@ -251,10 +248,8 @@ class CVEConnector:
                 If the connector never runs and user wants to pull CVE history
                 =================================================================
                 """
-                if self.config_instance.cve.pull_history:
-                    start_date = datetime(
-                        self.config_instance.cve.history_start_year, 1, 1
-                    )
+                if self.config.cve.pull_history:
+                    start_date = datetime(self.config.cve.history_start_year, 1, 1)
                     end_date = now
                     self._import_history(start_date, end_date, work_id)
                 else:
@@ -270,7 +265,7 @@ class CVEConnector:
                 """
             elif (
                 last_run is not None
-                and self.config_instance.cve.maintain_data
+                and self.config.cve.maintain_data
                 and (current_time - last_run) >= int(self.interval)
             ):
                 # Initiate work_id to track the job

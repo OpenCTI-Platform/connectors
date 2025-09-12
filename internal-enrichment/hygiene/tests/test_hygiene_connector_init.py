@@ -1,8 +1,8 @@
 from unittest.mock import MagicMock
 
 import pytest
+from src import ConfigLoader
 from src.connector.hygiene import HygieneConnector
-from src.connector.services.config_loader import ConfigLoader
 
 DEFAULT_WARNINGLISTS_SLOW_SEARCH = False
 DEFAULT_ENRICH_SUBDOMAINS = False
@@ -28,7 +28,8 @@ def test_hygiene_connector_default_settings(mock_config, mock_helper):
 
 @pytest.mark.usefixtures("mock_opencti")
 def test_hygiene_connector_settings_env_parsing(sample_config_path):
-    config = ConfigLoader(sample_config_path)
+    ConfigLoader.model_config["yaml_file"] = sample_config_path
+    config = ConfigLoader()
     helper = MagicMock()
     hygiene_connector = HygieneConnector(config, helper)
     # hygiene_connector = HygieneConnector(sample_config_path)

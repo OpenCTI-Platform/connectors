@@ -1,7 +1,7 @@
 import traceback
 
 from pycti import OpenCTIConnectorHelper
-from src.connector.config_loader import GoogleDNSConfig
+from src import ConfigLoader
 from src.connector.connector import GoogleDNSConnector
 
 if __name__ == "__main__":
@@ -15,11 +15,9 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        config = GoogleDNSConfig()
-        config_instance = config.load
-        # playbook_compatible=True only if a bundle is sent !
+        config = ConfigLoader()
         helper = OpenCTIConnectorHelper(
-            config=config_instance.model_dump(exclude_none=True),
+            config=config.model_dump_pycti(),
             playbook_compatible=True,
         )
 

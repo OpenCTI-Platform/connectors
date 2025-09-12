@@ -1,8 +1,8 @@
 import traceback
 
 from pycti import OpenCTIConnectorHelper
+from src import ConfigLoader
 from src.connector import VirustotalDownloaderConnector
-from src.connector.services import VirusTotalDownloaderConfig
 
 if __name__ == "__main__":
     """
@@ -15,14 +15,12 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        config = VirusTotalDownloaderConfig()
-        config_instance = config.load
+        config = ConfigLoader()
         helper = OpenCTIConnectorHelper(
-            config=config_instance.model_dump_pycti(),
-            playbook_compatible=True,
+            config=config.model_dump_pycti(), playbook_compatible=True
         )
 
-        connector = VirustotalDownloaderConnector(config=config_instance, helper=helper)
+        connector = VirustotalDownloaderConnector(config=config, helper=helper)
         connector.start()
     except Exception:
         traceback.print_exc()

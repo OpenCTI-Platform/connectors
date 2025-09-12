@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 from pydantic import Field
 from pydantic_settings import (
@@ -85,3 +86,6 @@ class ConfigLoader(ConfigBaseSettings):
                     env_ignore_empty=True,
                 ),
             )
+
+    def model_dump_pycti(self) -> dict[str, Any]:
+        return self.model_dump(mode="json", context={"mode": "pycti"})

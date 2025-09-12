@@ -1,5 +1,7 @@
 from pathlib import Path
+from typing import Any
 
+from connectors_sdk.core.pydantic import ListFromString
 from pydantic import Field
 from pydantic_settings import (
     BaseSettings,
@@ -26,8 +28,8 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
         default="Google DNS",
         description="Name of the connector.",
     )
-    scope: str = Field(
-        default="Domain-Name,Hostname",
+    scope: ListFromString = Field(
+        default=["Domain-Name", "Hostname"],
         description="The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
     )
 
@@ -80,3 +82,6 @@ class ConfigLoader(ConfigBaseSettings):
                     env_ignore_empty=True,
                 ),
             )
+
+    def model_dump_pycti(self) -> dict[str, Any]:
+        return self.model_dump(mode="json", context={"mode": "pycti"})
