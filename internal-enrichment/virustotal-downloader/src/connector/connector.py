@@ -19,7 +19,7 @@ class VirustotalDownloaderConnector:
         )["standard_id"]
 
         # Get other config values
-        api_key = self.config.virustotaldownloader.api_key
+        api_key = self.config.virustotal_downloader.api_key
         self.headers = {"x-apikey": api_key.get_secret_value()}
 
     def _process_hash(self, observable):

@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 from connectors_sdk.core.pydantic import ListFromString
 from pydantic import Field
@@ -47,7 +48,7 @@ class ConfigLoader(ConfigBaseSettings):
         default_factory=ConfigLoaderConnector,
         description="Connector configurations.",
     )
-    virustotaldownloader: _ConfigLoaderVirusTotalDownloader = Field(
+    virustotal_downloader: _ConfigLoaderVirusTotalDownloader = Field(
         default_factory=_ConfigLoaderVirusTotalDownloader,
         description="VirusTotal Downloader configurations.",
     )
@@ -88,3 +89,6 @@ class ConfigLoader(ConfigBaseSettings):
                     env_ignore_empty=True,
                 ),
             )
+
+    def model_dump_pycti(self) -> dict[str, Any]:
+        return self.model_dump(mode="json", context={"mode": "pycti"})

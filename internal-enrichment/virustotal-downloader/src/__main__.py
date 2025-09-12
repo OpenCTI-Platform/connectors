@@ -18,7 +18,7 @@ if __name__ == "__main__":
         config = VirusTotalDownloaderConfig()
         config_instance = config.load
         helper = OpenCTIConnectorHelper(
-            config=config_instance.model_dump(exclude_none=True),
+            config=config_instance.model_dump_pycti(),
             playbook_compatible=True,
         )
 
