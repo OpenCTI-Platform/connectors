@@ -67,9 +67,16 @@ for connector_directory_path in $connector_directories_path
 do
   if [ -d "$connector_directory_path" ]; then
     # Only generate schema for directory that changed
-    directory_has_changed=$(git diff HEAD~1 HEAD -- "$connector_directory_path")
+    if [ "$CIRCLE_BRANCH" = "master" ]; then
+      directory_has_changed=$(git diff HEAD~1 HEAD -- "$connector_directory_path")
+    else
+      directory_has_changed=$(git diff origin/master "$connector_directory_path")
+    fi
+
     if [ -z "$directory_has_changed" ] ; then
       echo "Nothing has changed in: " "$connector_directory_path"
+    elif grep -q '"manager_supported": false,' "$connector_directory_path"/"$CONNECTOR_METADATA_DIRECTORY"/connector_manifest.json; then
+      echo "Connector is not supported: " "$connector_directory_path"
     else
       echo "Changes in: " "$connector_directory_path"
       echo "> Looking for a config loader in " "$connector_directory_path"
@@ -92,7 +99,7 @@ do
           rm "$connector_directory_path/generate_connector_config_doc_tmp.py"
 
           deactivate_venv "$connector_directory_path/$VENV_NAME"
-        ) &
+        )
       fi
     fi
   fi
