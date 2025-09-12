@@ -1,13 +1,9 @@
 from datetime import timedelta
 from typing import Annotated, Literal
 
+from connectors_sdk.core.pydantic import ListFromString
 from models.configs import ConfigBaseSettings
-from pydantic import (
-    Field,
-    HttpUrl,
-    PlainSerializer,
-    field_validator,
-)
+from pydantic import Field, HttpUrl, PlainSerializer, PositiveInt, field_validator
 
 LogLevelToLower = Annotated[
     Literal["debug", "info", "warn", "warning", "error"],
@@ -35,6 +31,7 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     # Config Loader Connector
     id: str
     name: str
+    scope: ListFromString
 
     type: str = Field(
         default="EXTERNAL_IMPORT",
@@ -47,6 +44,24 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     duration_period: timedelta = Field(
         default="PT10M",
         description="Duration between two scheduled runs of the connector (ISO 8601 format).",
+    )
+
+    # Connector's custom parameters
+    pull_history: bool = Field(
+        default=False,
+        description="Whether to pull historic data. It is not recommended to set it to true as there will a large influx of data",
+    )
+    history_start_year: PositiveInt = Field(
+        default=2023,
+        description="The year to start from",
+    )
+    create_threat_actor: bool = Field(
+        default=False,
+        description="Whether to create a Threat Actor object",
+    )
+    run_every: str = Field(
+        default="10m",
+        description="[DEPRECATED] Interval in days between two scheduled runs of the connector.",
     )
 
     @field_validator("type")

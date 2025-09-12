@@ -1,13 +1,14 @@
 import warnings
 from datetime import timedelta
 from pathlib import Path
+from typing import Any
 
+from connectors_sdk.core.pydantic import ListFromString
 from models.configs.base_settings import ConfigBaseSettings
 from models.configs.connector_configs import (
     _ConfigLoaderConnector,
     _ConfigLoaderOCTI,
 )
-from models.configs.ransomwarelive_configs import _ConfigLoaderRansomwareLive
 from pydantic import Field, model_validator
 from pydantic_settings import (
     BaseSettings,
@@ -29,6 +30,12 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
         default="Ransomware Connector",
         description="Name of the connector.",
     )
+    scope: ListFromString = Field(
+        default=[
+            "identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report"
+        ],
+        description="The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+    )
 
 
 class ConfigLoader(ConfigBaseSettings):
@@ -41,10 +48,6 @@ class ConfigLoader(ConfigBaseSettings):
     connector: ConfigLoaderConnector = Field(
         default_factory=ConfigLoaderConnector,
         description="Connector configurations.",
-    )
-    ransomwarelive: _ConfigLoaderRansomwareLive = Field(
-        default_factory=_ConfigLoaderRansomwareLive,
-        description="Ransomware Live configurations.",
     )
 
     @classmethod
@@ -114,3 +117,6 @@ class ConfigLoader(ConfigBaseSettings):
                 raise ValueError(f"Invalid value for CONNECTOR_RUN_EVERY: {run_every}")
 
         return data
+
+    def model_dump_pycti(self) -> dict[str, Any]:
+        return self.model_dump(mode="json", context={"mode": "pycti"})

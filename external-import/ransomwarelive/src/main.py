@@ -9,7 +9,7 @@ if __name__ == "__main__":
     try:
         config = RansomwareLiveConfig()
         config_instance = config.load
-        config_dict = config_instance.model_dump()
+        config_dict = config_instance.model_dump_pycti()
         helper = OpenCTIConnectorHelper(config=config_dict)
         connector = RansomwareAPIConnector(helper=helper, config=config_instance)
         connector.run()
