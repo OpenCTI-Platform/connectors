@@ -11,6 +11,7 @@ _FILE_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
 class _ConnectorConfig(ConnectorConfig):
+    id: str = Field(default="email-intel-imap--ee2beb6c-4e99-47e6-ab5b-f3eea350f601")
     name: str = Field(default="Email Intel IMAP")
     scope: ListFromString = Field(default=["email-intel-imap"])
     duration_period: datetime.timedelta = Field(default=datetime.timedelta(hours=1))

@@ -7,7 +7,7 @@ services:
       OPENCTI_URL: http://localhost:PORT
       OPENCTI_TOKEN: ChangeMe
       # Common connector configuration
-      CONNECTOR_ID: ChangeMe
+#      CONNECTOR_ID: email-intel-imap--ee2beb6c-4e99-47e6-ab5b-f3eea350f601
 #      CONNECTOR_NAME: Email Intel IMAP
 #      CONNECTOR_SCOPE: email-intel-imap
 #      CONNECTOR_LOG_LEVEL: error

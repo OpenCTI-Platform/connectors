@@ -1,5 +1,4 @@
-from datetime import timedelta
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal
 
 from pydantic import (
     Field,
@@ -15,9 +14,6 @@ LogLevelToLower = Annotated[
 ]
 
 HttpUrlToString = Annotated[HttpUrl, PlainSerializer(str, return_type=str)]
-TimedeltaInSeconds = Annotated[
-    timedelta, PlainSerializer(lambda v: int(v.total_seconds()), return_type=int)
-]
 
 
 class _ConfigLoaderOCTI(ConfigBaseSettings):
@@ -40,15 +36,15 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     name: str
     scope: str
 
-    type: Optional[str] = Field(
+    type: str = Field(
         default="INTERNAL_ENRICHMENT",
         description="Should always be set to INTERNAL_ENRICHMENT for this connector.",
     )
-    log_level: Optional[LogLevelToLower] = Field(
+    log_level: LogLevelToLower = Field(
         default="error",
         description="Determines the verbosity of the logs.",
     )
-    auto: Optional[bool] = Field(
+    auto: bool = Field(
         default=True,
         description="Enables or disables automatic enrichment of observables for OpenCTI.",
     )

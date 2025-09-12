@@ -1,4 +1,3 @@
-from datetime import timedelta
 from typing import Annotated, Literal
 
 from pydantic import (
@@ -9,19 +8,12 @@ from pydantic import (
 )
 from src.models.configs import ConfigBaseSettings
 
-TLPToLower = Annotated[
-    Literal["clear", "green", "amber", "amber+strict", "red"],
-    PlainSerializer(lambda v: "".join(v), return_type=str),
-]
 LogLevelToLower = Annotated[
     Literal["debug", "info", "warn", "warning", "error"],
     PlainSerializer(lambda v: "".join(v), return_type=str),
 ]
 
 HttpUrlToString = Annotated[HttpUrl, PlainSerializer(str, return_type=str)]
-TimedeltaInSeconds = Annotated[
-    timedelta, PlainSerializer(lambda v: int(v.total_seconds()), return_type=int)
-]
 
 
 class _ConfigLoaderOCTI(ConfigBaseSettings):

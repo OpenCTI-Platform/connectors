@@ -20,17 +20,14 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
     """A concrete implementation of _ConfigLoaderConnector defining default connector configuration values."""
 
     id: str = Field(
-        alias="CONNECTOR_ID",
         default="mitre--c9dacf68-b0e6-476d-a24f-4269b1b9cd25",
         description="A unique UUIDv4 identifier for this connector instance.",
     )
     name: str = Field(
-        alias="CONNECTOR_NAME",
         default="Mitre Att&ck",
         description="Name of the connector.",
     )
     scope: str = Field(
-        alias="CONNECTOR_SCOPE",
         default="tool,report,malware,identity,campaign,intrusion-set,attack-pattern,course-of-action,x-mitre-data-source,x-mitre-data-component,x-mitre-matrix,x-mitre-tactic,x-mitre-collection",
         description="The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
     )

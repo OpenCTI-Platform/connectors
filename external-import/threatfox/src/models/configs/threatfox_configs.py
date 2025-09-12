@@ -8,19 +8,19 @@ class _ConfigLoaderThreatFox(ConfigBaseSettings):
     """Interface for loading Threat Fox dedicated configuration."""
 
     # Config Loader
-    csv_url: Optional[str] = Field(
+    csv_url: str = Field(
         default="https://threatfox.abuse.ch/export/csv/recent/",
         description="The Threat Fox URL",
     )
-    import_offline: Optional[bool] = Field(
+    import_offline: bool = Field(
         default=True,
         description="Create records for indicators that are offline.",
     )
-    create_indicators: Optional[bool] = Field(
+    create_indicators: bool = Field(
         default=True,
         description="Create indicators in addition to observables.",
     )
-    default_x_opencti_score: Optional[int] = Field(
+    default_x_opencti_score: int = Field(
         default=50,
         description="The default x_opencti_score to use.",
     )
@@ -40,11 +40,11 @@ class _ConfigLoaderThreatFox(ConfigBaseSettings):
         default=None,
         description="Set the x_opencti_score for Hash observables.",
     )
-    interval: Optional[int] = Field(
+    interval: int = Field(
         default=3,
         description="[DEPRECATED] Interval in days between two scheduled runs of the connector.",
     )
-    ioc_to_import: Optional[str] = Field(
+    ioc_to_import: str = Field(
         default="all_types",
         description="List of IOC types to retrieve, available parameters: all_types, ip:port, domain, url, md5_hash, sha1_hash, sha256_hash",
     )
