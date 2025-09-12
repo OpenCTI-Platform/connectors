@@ -4,3 +4,4 @@ stix2
 taxii2-client
 markdown-it-py
 cvss
+fastapi[standard]
