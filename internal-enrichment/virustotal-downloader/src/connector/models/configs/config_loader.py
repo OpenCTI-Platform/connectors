@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from connectors_sdk.core.pydantic import ListFromString
 from pydantic import Field
 from pydantic_settings import (
     BaseSettings,
@@ -29,8 +30,8 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
         default="VirusTotal Downloader",
         description="Name of the connector.",
     )
-    scope: str = Field(
-        default="StixFile",
+    scope: ListFromString = Field(
+        default=["StixFile"],
         description="The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
     )
 
