@@ -1,9 +1,7 @@
 # syntax=docker/dockerfile:1
 
 ARG PYTHON_VERSION=3.12.5
-FROM python:${PYTHON_VERSION}-alpine as base
-
-ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
+FROM python:${PYTHON_VERSION}-alpine AS base
 
 # Prevents Python from writing pyc files.
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -14,20 +12,19 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
+RUN apk add --no-cache libmagic && pip install --no-cache-dir pycti==6.7.8
+
 # Install dependencies
-RUN apk update && apk upgrade && \
-  apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
-
-# Leverage a bind mount to requirements.txt to avoid having to copy them into
-# into this layer.
+# Avoid an image layer for those files.
 RUN --mount=type=bind,source=src/requirements.txt,target=requirements.txt \
-  python -m pip install --no-cache-dir -r requirements.txt
-
-# Remove dependencies for pip installing after completed
-RUN apk del git build-base
+    apk --no-cache add build-base libffi-dev && \
+    python -m pip install --no-cache-dir -r requirements.txt && \
+    apk del build-base libffi-dev
 
 # Copy the connector
 COPY src .
 
 # Execute the connector
 CMD [ "python", "main.py" ]
+
+ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
