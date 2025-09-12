@@ -9,10 +9,12 @@ import traceback
 import uuid
 from datetime import datetime
 
+import lib.intel2stix
 import requests
 import stix2
 from bs4 import BeautifulSoup
 from lib.external_import import ExternalImportConnector
+from lib.intel2stix import get_date
 from pycti.entities.opencti_channel import Channel as PyctiChannel
 from pycti.entities.opencti_identity import Identity as PyctiIdentity
 from pycti.entities.opencti_incident import Incident as PyctiIncident
@@ -32,9 +34,6 @@ from stix2 import (
     Report,
 )
 from stix2.canonicalization.Canonicalize import canonicalize
-
-import intel2stix
-from intel2stix import get_date
 
 
 @CustomObservable(
@@ -301,9 +300,9 @@ class Intel471AlertsConnector(ExternalImportConnector):
             if len(identity_list) == 0:
                 x_sender = Identity(
                     id=PyctiIdentity.generate_id(
-                        intel2stix.sanitizeName(x_actor), "individual"
+                        lib.intel2stix.sanitizeName(x_actor), "individual"
                     ),
-                    name=intel2stix.sanitizeName(x_actor),
+                    name=lib.intel2stix.sanitizeName(x_actor),
                     object_marking_refs=self.intel471_darknet_tlp,
                     identity_class="individual",
                     created_by_ref=self.intel471_id,
@@ -330,9 +329,9 @@ class Intel471AlertsConnector(ExternalImportConnector):
             if len(identity_list) == 0:
                 x_receiver = Identity(
                     id=PyctiIdentity.generate_id(
-                        intel2stix.sanitizeName(x_recipient), "individual"
+                        lib.intel2stix.sanitizeName(x_recipient), "individual"
                     ),
-                    name=intel2stix.sanitizeName(x_recipient),
+                    name=lib.intel2stix.sanitizeName(x_recipient),
                     object_marking_refs=self.intel471_darknet_tlp,
                     identity_class="individual",
                     created_by_ref=self.intel471_id,
@@ -537,9 +536,9 @@ class Intel471AlertsConnector(ExternalImportConnector):
             if len(identity_list) == 0:
                 x_author = Identity(
                     id=PyctiIdentity.generate_id(
-                        intel2stix.sanitizeName(x_actor), "individual"
+                        lib.intel2stix.sanitizeName(x_actor), "individual"
                     ),
-                    name=intel2stix.sanitizeName(x_actor),
+                    name=lib.intel2stix.sanitizeName(x_actor),
                     object_marking_refs=self.intel471_darknet_tlp,
                     identity_class="individual",
                     created_by_ref=self.intel471_id,
@@ -690,9 +689,9 @@ class Intel471AlertsConnector(ExternalImportConnector):
             if len(identity_list) == 0:
                 x_author = Identity(
                     id=PyctiIdentity.generate_id(
-                        intel2stix.sanitizeName(x_actor), "individual"
+                        lib.intel2stix.sanitizeName(x_actor), "individual"
                     ),
-                    name=intel2stix.sanitizeName(x_actor),
+                    name=lib.intel2stix.sanitizeName(x_actor),
                     object_marking_refs=self.intel471_darknet_tlp,
                     identity_class="individual",
                     created_by_ref=self.intel471_id,
@@ -799,12 +798,12 @@ class Intel471AlertsConnector(ExternalImportConnector):
             else ""
         )
         x_adm_code = (
-            intel2stix.getAdmiralty(report["admiraltyCode"])
+            lib.intel2stix.getAdmiralty(report["admiraltyCode"])
             if "admiraltyCode" in report
             else (None, None)
         )
         x_motivation = (
-            intel2stix.getMotivation(report["motivation"])
+            lib.intel2stix.getMotivation(report["motivation"])
             if "motivation" in report
             else ""
         )
@@ -843,7 +842,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
         # add threat actors
         if "actorSubjectOfReport" in report:
             for actor in report["actorSubjectOfReport"]:
-                a = intel2stix.getThreatActorContent(
+                a = lib.intel2stix.getThreatActorContent(
                     actor, self.intel471_darknet_tlp, self.intel471_id
                 )
                 objects.append(a)
@@ -853,7 +852,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
         # add victims
         if "victims" in report:
             for victim in report["victims"]:
-                v = intel2stix.getVictimContent(
+                v = lib.intel2stix.getVictimContent(
                     victim, self.intel471_darknet_tlp, self.intel471_id
                 )
                 objects.append(v)
@@ -873,7 +872,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
         # add entities
         if "entities" in report:
             for entity in report["entities"]:
-                e = intel2stix.getTypeValueContent(
+                e = lib.intel2stix.getTypeValueContent(
                     entity, self.intel471_darknet_tlp, self.intel471_id
                 )
                 if e:
@@ -904,7 +903,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
         # add locations
         if "locations" in report:
             for location in report["locations"]:
-                l = intel2stix.getLocationContent(
+                l = lib.intel2stix.getLocationContent(
                     location, self.intel471_darknet_tlp, self.intel471_id
                 )
                 objects.append(l[1])
@@ -1038,7 +1037,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
         # add entities
         if "entities" in spotReport["data"]:
             for entity in spotReport["data"]["entities"]:
-                e = intel2stix.getTypeValueContent(
+                e = lib.intel2stix.getTypeValueContent(
                     entity, self.intel471_darknet_tlp, self.intel471_id
                 )
                 if e:
@@ -1058,7 +1057,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
             for victim in spotReport["data"]["spot_report"]["spot_report_data"][
                 "victims"
             ]:
-                v = intel2stix.getVictimContent(
+                v = lib.intel2stix.getVictimContent(
                     victim, self.intel471_darknet_tlp, self.intel471_id
                 )
                 objects.append(v)
@@ -1118,7 +1117,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
             stix2.utils._TIMESTAMP_FORMAT_FRAC
         )
         x_confidence = breachAlert["data"]["breach_alert"]["confidence"]
-        x_confidence_int = intel2stix.getBreachConfidence(x_confidence["level"])
+        x_confidence_int = lib.intel2stix.getBreachConfidence(x_confidence["level"])
         self.helper.log_debug(
             f"Breach Confidence: {x_confidence['level']} aka {x_confidence_int}"
         )
@@ -1153,7 +1152,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
             handles.append(splt[0])
             if len(splt) > 1:
                 handles.extend(splt[1].split(", "))
-            a = intel2stix.getThreatActorContent(
+            a = lib.intel2stix.getThreatActorContent(
                 {"handle": handles[0], "aliases": handles[1:]},
                 self.intel471_darknet_tlp,
                 self.intel471_id,
@@ -1165,7 +1164,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
         # add entities
         if "entities" in breachAlert["data"]:
             for entity in breachAlert["data"]["entities"]:
-                e = intel2stix.getTypeValueContent(
+                e = lib.intel2stix.getTypeValueContent(
                     entity, self.intel471_darknet_tlp, self.intel471_id
                 )
                 if e:
@@ -1194,7 +1193,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
         # add victim, industries and location
         if "victim" in breachAlert["data"]["breach_alert"]:
             victim = breachAlert["data"]["breach_alert"]["victim"]
-            v = intel2stix.getVictimContent(
+            v = lib.intel2stix.getVictimContent(
                 victim, self.intel471_darknet_tlp, self.intel471_id
             )
             objects.append(v)
@@ -1210,7 +1209,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
             objects.append(r)
             x_obj_refs.append(r)
             for i in victim["industries"]:
-                s = intel2stix.getIndustriesContent(
+                s = lib.intel2stix.getIndustriesContent(
                     i, self.intel471_darknet_tlp, self.intel471_id
                 )
                 objects.append(s[0])
@@ -1249,7 +1248,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
                     object_marking_refs=self.intel471_darknet_tlp,
                 )
                 objects.append(r)
-            l = intel2stix.getLocationContent(
+            l = lib.intel2stix.getLocationContent(
                 victim, self.intel471_darknet_tlp, self.intel471_id
             )
             objects.append(l[1])
@@ -1297,7 +1296,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
             published=x_released,
             created_by_ref=self.intel471_id,
             external_references=x_ext_refs,
-            confidence=intel2stix.getBreachConfidence(x_confidence["level"]),
+            confidence=lib.intel2stix.getBreachConfidence(x_confidence["level"]),
             object_marking_refs=self.intel471_darknet_tlp,
             custom_properties={
                 "x_opencti_files": octi_filelist,
@@ -1335,7 +1334,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
                 x_forums += f["name"] + " - "
                 if "contactInfo" in actor["links"]["forums"]:
                     for c in actor["links"]["forums"]["contactInfo"]:
-                        contact = intel2stix.getTypeValueContent(
+                        contact = lib.intel2stix.getTypeValueContent(
                             c, self.intel471_darknet_tlp, self.intel471_id
                         )
                         if contact[0] == "Object":
@@ -1481,7 +1480,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
                 )
 
         # get entity
-        x_entity = intel2stix.getTypeValueContent(
+        x_entity = lib.intel2stix.getTypeValueContent(
             entity, self.intel471_darknet_tlp, self.intel471_id
         )
         result = None
