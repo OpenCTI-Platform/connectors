@@ -471,7 +471,7 @@ class CybelAngel:
 
         if victim_organizations:
             if len(victim_organizations) > 1:
-                campaign_name = f"{final_actor} targets multiple organizations"
+                campaign_name = f"{final_actor} targets multiple organizations - " + (f" ({published_at})" if published_at else "")
                 campaign_description = (
                     f"{campaign_objective.capitalize()} campaign by {final_actor} targeting multiple "
                     f"organizations: {', '.join(victim_organizations)} "
