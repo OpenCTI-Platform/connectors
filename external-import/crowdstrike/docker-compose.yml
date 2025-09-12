@@ -25,7 +25,7 @@ services:
       - CROWDSTRIKE_REPORT_TARGET_INDUSTRIES= # Can be used to retrieve only reports related to a sector
       - CROWDSTRIKE_REPORT_GUESS_MALWARE=false # Use report tags to guess malware
       - CROWDSTRIKE_INDICATOR_START_TIMESTAMP=0 # BEWARE! A lot of indicators!
-      - CROWDSTRIKE_INDICATOR_EXCLUDE_TYPES=hash_ion,hash_md5,hash_sha1
+      - CROWDSTRIKE_INDICATOR_EXCLUDE_TYPES=hash_ion,hash_md5,hash_sha1,password,username
       - CROWDSTRIKE_DEFAULT_X_OPENCTI_SCORE=50
       - CROWDSTRIKE_INDICATOR_LOW_SCORE=40
       - CROWDSTRIKE_INDICATOR_LOW_SCORE_LABELS=MaliciousConfidence/Low
