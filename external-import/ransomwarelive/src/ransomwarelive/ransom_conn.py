@@ -30,7 +30,7 @@ class RansomwareAPIConnector:
         self.marking = stix2.TLP_WHITE
         self.last_run = None
         self.last_run_datetime_with_ingested_data = None
-        self.converter_to_stix = ConverterToStix()
+        self.converter_to_stix = ConverterToStix(self.helper)
         self.author = self.converter_to_stix.author
         self.api_client = RansomwareAPIClient()
 
@@ -383,6 +383,10 @@ class RansomwareAPIConnector:
                         "Sending STIX objects to OpenCTI...",
                         {"len_bundle_list": len(bundle_list)},
                     )
+
+                    message = f"Collect of historic intelligence successfully run for date {month}/{year}"
+                    self.helper.api.work.to_processed(self.work_id, message)
+                    self.work_id = None
 
         if nb_stix_objects:
             self.last_run_datetime_with_ingested_data = datetime.now(
