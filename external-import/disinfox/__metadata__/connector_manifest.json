@@ -13,9 +13,9 @@
   "max_confidence_level": 50,
   "support_version": ">= 6.6.6",
   "subscription_link": "https://disinfo.inf.um.es/disinfox/",
-  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/accenture-acti",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/disinfox",
   "manager_supported": false,
   "container_version": "rolling",
-  "container_image": "opencti/connector-accenture-acti",
+  "container_image": "opencti/connector-disinfox",
   "container_type": "EXTERNAL_IMPORT"
 }
