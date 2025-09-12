@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike indicator utilities module."""
-
+import ipaddress
 from typing import List, NamedTuple
 
 from stix2 import ObjectPath  # type: ignore
@@ -81,14 +81,22 @@ def _create_indicator_pattern_with_value(
     return _create_indicator_pattern(object_type, ["value"], value)
 
 
-def create_indicator_pattern_ipv4_address(value: str) -> IndicatorPattern:
-    """Create an indicator pattern for an IPv4 address."""
-    return _create_indicator_pattern_with_value(_OBJECT_TYPE_IPV4_ADDR, value)
+def create_indicator_pattern_ip_address_block(value: str) -> IndicatorPattern:
+    """Create an indicator pattern for an IPv4 or IPv6 address blocks."""
+    ip_network = ipaddress.ip_network(value)
+    return _create_indicator_pattern_with_value(
+        _OBJECT_TYPE_IPV6_ADDR if ip_network.version == 6 else _OBJECT_TYPE_IPV4_ADDR,
+        value,
+    )
 
 
-def create_indicator_pattern_ipv6_address(value: str) -> IndicatorPattern:
-    """Create an indicator pattern for an IPv6 address."""
-    return _create_indicator_pattern_with_value(_OBJECT_TYPE_IPV6_ADDR, value)
+def create_indicator_pattern_ip_address(value: str) -> IndicatorPattern:
+    """Create an indicator pattern for an IPv4 or IPv6 address."""
+    ip_address = ipaddress.ip_address(value)
+    return _create_indicator_pattern_with_value(
+        _OBJECT_TYPE_IPV6_ADDR if ip_address.version == 6 else _OBJECT_TYPE_IPV4_ADDR,
+        value,
+    )
 
 
 def create_indicator_pattern_domain_name(value: str) -> IndicatorPattern:

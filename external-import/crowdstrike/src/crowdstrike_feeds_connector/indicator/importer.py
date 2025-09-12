@@ -176,9 +176,14 @@ class IndicatorImporter(BaseImporter):
 
         failed = 0
         for indicator in indicators:
-            result = self._process_indicator(indicator)
-            if not result:
-                failed += 1
+            try:
+                result = self._process_indicator(indicator)
+                if not result:
+                    failed += 1
+            except Exception as e:
+                self.helper.connector_logger.warning(
+                    "Failed to process indicator, skipping...", {"error": str(e)}
+                )
 
             updated_date = timestamp_to_datetime(indicator["last_updated"])
             if (
