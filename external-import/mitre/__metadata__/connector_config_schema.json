@@ -36,52 +36,21 @@
         "debug",
         "info",
         "warn",
+        "warning",
         "error"
       ],
       "type": "string"
-    },
-    "CONNECTOR_DURATION_PERIOD": {
-      "default": "PT24H",
-      "description": "Duration between two scheduled runs of the connector (ISO 8601 format).",
-      "format": "duration",
-      "type": "string"
-    },
-    "CONNECTOR_QUEUE_THRESHOLD": {
-      "default": null,
-      "description": "Connector queue max size in Mbytes. Default to 500.",
-      "exclusiveMinimum": 0,
-      "type": "integer"
-    },
-    "CONNECTOR_RUN_AND_TERMINATE": {
-      "default": null,
-      "description": "Connector run-and-terminate flag.",
-      "type": "boolean"
-    },
-    "CONNECTOR_SEND_TO_QUEUE": {
-      "default": null,
-      "description": "Connector send-to-queue flag.",
-      "type": "boolean"
-    },
-    "CONNECTOR_SEND_TO_DIRECTORY": {
-      "default": null,
-      "description": "Connector send-to-directory flag.",
-      "type": "boolean"
-    },
-    "CONNECTOR_SEND_TO_DIRECTORY_PATH": {
-      "default": null,
-      "description": "Connector send-to-directory path.",
-      "type": "string"
-    },
-    "CONNECTOR_SEND_TO_DIRECTORY_RETENTION": {
-      "default": null,
-      "description": "Connector send-to-directory retention in days.",
-      "exclusiveMinimum": 0,
-      "type": "integer"
     },
     "MITRE_REMOVE_STATEMENT_MARKING": {
       "default": false,
       "description": "Whether to remove statement markings from the ingested MITRE data. Useful when marking metadata is unnecessary or interferes with processing.",
       "type": "boolean"
+    },
+    "MITRE_INTERVAL": {
+      "default": 7,
+      "description": "Polling interval in days for fetching and refreshing MITRE data. Determines how often the system checks for updates to ATT&CK datasets.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
     },
     "MITRE_ENTERPRISE_FILE_URL": {
       "default": "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json",

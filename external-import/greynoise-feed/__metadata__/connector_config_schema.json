@@ -14,16 +14,6 @@
       "description": "The API token to connect to OpenCTI.",
       "type": "string"
     },
-    "OPENCTI_JSON_LOGGING": {
-      "default": true,
-      "description": "Whether to format logs as JSON or not.",
-      "type": "boolean"
-    },
-    "OPENCTI_SSL_VERIFY": {
-      "default": false,
-      "description": "Whether to check SSL certificate or not.",
-      "type": "boolean"
-    },
     "CONNECTOR_TYPE": {
       "const": "EXTERNAL_IMPORT",
       "default": "EXTERNAL_IMPORT",
@@ -57,64 +47,10 @@
         "debug",
         "info",
         "warn",
+        "warning",
         "error"
       ],
       "type": "string"
-    },
-    "CONNECTOR_EXPOSE_METRICS": {
-      "default": false,
-      "description": "Whether to expose metrics or not.",
-      "type": "boolean"
-    },
-    "CONNECTOR_METRICS_PORT": {
-      "default": 9095,
-      "description": "The port to expose metrics.",
-      "type": "integer"
-    },
-    "CONNECTOR_ONLY_CONTEXTUAL": {
-      "default": false,
-      "description": "Whether to expose metrics or not.",
-      "type": "boolean"
-    },
-    "CONNECTOR_RUN_AND_TERMINATE": {
-      "default": false,
-      "description": "Connector run-and-terminate flag.",
-      "type": "boolean"
-    },
-    "CONNECTOR_VALIDATE_BEFORE_IMPORT": {
-      "default": false,
-      "description": "Whether to validate data before import or not.",
-      "type": "boolean"
-    },
-    "CONNECTOR_QUEUE_PROTOCOL": {
-      "default": "amqp",
-      "description": "The queue protocol to use.",
-      "type": "string"
-    },
-    "CONNECTOR_QUEUE_THRESHOLD": {
-      "default": 500,
-      "description": "Connector queue max size in Mbytes. Default to pycti value.",
-      "type": "integer"
-    },
-    "CONNECTOR_SEND_TO_QUEUE": {
-      "default": true,
-      "description": "Connector send-to-queue flag. Default to True.",
-      "type": "boolean"
-    },
-    "CONNECTOR_SEND_TO_DIRECTORY": {
-      "default": false,
-      "description": "Connector send-to-directory flag.",
-      "type": "boolean"
-    },
-    "CONNECTOR_SEND_TO_DIRECTORY_PATH": {
-      "default": null,
-      "description": "Connector send-to-directory path.",
-      "type": "string"
-    },
-    "CONNECTOR_SEND_TO_DIRECTORY_RETENTION": {
-      "default": 7,
-      "description": "Connector send-to-directory retention.",
-      "type": "integer"
     },
     "GREYNOISE_FEED_API_KEY": {
       "description": "The API key to connect to Greynoise.",
@@ -176,7 +112,6 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "CONNECTOR_ID",
     "GREYNOISE_FEED_API_KEY"
   ],
   "additionalProperties": true
