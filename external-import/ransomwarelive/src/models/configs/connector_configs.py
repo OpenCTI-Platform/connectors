@@ -59,10 +59,6 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
         default=False,
         description="Whether to create a Threat Actor object",
     )
-    run_every: str = Field(
-        default="10m",
-        description="[DEPRECATED] Interval in days between two scheduled runs of the connector.",
-    )
 
     @field_validator("type")
     def force_value_for_type_to_be_internal_enrichment(cls, value):
