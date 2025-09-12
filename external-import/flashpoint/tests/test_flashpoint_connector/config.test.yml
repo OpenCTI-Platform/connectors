@@ -7,7 +7,6 @@ connector:
   name: "External Import Connector"
   scope: "test"
   log_level: "info"
-  run_and_terminate: false
   duration_period: "PT1H" # Interval given for scheduler process in ISO-8601 format
 
 flashpoint:

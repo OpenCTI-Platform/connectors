@@ -2,8 +2,8 @@ opencti:
   url: 'http://localhost:PORT'
   token: 'ChangeMe'
 
-connector:
-  id: 'ChangeMe'
+#connector:
+#  id: 'email-intel-microsoft--5d44401f-0b96-4169-a657-61b49176fc62'
 #  name: 'Email Intel Microsoft'
 #  scope: 'email-intel-microsoft'
 #  log_level: 'error'

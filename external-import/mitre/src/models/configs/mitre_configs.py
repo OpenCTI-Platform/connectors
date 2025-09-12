@@ -1,5 +1,3 @@
-from typing import Optional
-
 from pydantic import (
     Field,
     PositiveInt,
@@ -18,24 +16,21 @@ class _ConfigLoaderMitre(ConfigBaseSettings):
     """Interface for loading dedicated configuration."""
 
     # Config Loader
-    remove_statement_marking: Optional[bool] = Field(
-        alias="MITRE_REMOVE_STATEMENT_MARKING",
+    remove_statement_marking: bool = Field(
         default=False,
         description=(
             "Whether to remove statement markings from the ingested MITRE data. "
             "Useful when marking metadata is unnecessary or interferes with processing."
         ),
     )
-    interval: Optional[PositiveInt] = Field(
-        alias="MITRE_INTERVAL",
+    interval: PositiveInt = Field(
         default=7,
         description=(
             "Polling interval in days for fetching and refreshing MITRE data. "
             "Determines how often the system checks for updates to ATT&CK datasets."
         ),
     )
-    enterprise_file_url: Optional[str] = Field(
-        alias="MITRE_ENTERPRISE_FILE_URL",
+    enterprise_file_url: str = Field(
         default=MITRE_ENTERPRISE_FILE_URL,
         description=(
             "URL to the MITRE ATT&CK Enterprise JSON file. "
@@ -43,24 +38,21 @@ class _ConfigLoaderMitre(ConfigBaseSettings):
             "for enterprise IT environments."
         ),
     )
-    mobile_attack_file_url: Optional[str] = Field(
-        alias="MITRE_MOBILE_ATTACK_FILE_URL",
+    mobile_attack_file_url: str = Field(
         default=MITRE_MOBILE_ATTACK_FILE_URL,
         description=(
             "URL to the MITRE Mobile ATT&CK JSON file. "
             "Contains mobile-specific attack techniques and mappings."
         ),
     )
-    ics_attack_file_url: Optional[str] = Field(
-        alias="MITRE_ICS_ATTACK_FILE_URL",
+    ics_attack_file_url: str = Field(
         default=MITRE_ICS_ATTACK_FILE_URL,
         description=(
             "URL to the MITRE ICS ATT&CK JSON file. "
             "Pertains to attack techniques targeting industrial control systems."
         ),
     )
-    capec_file_url: Optional[str] = Field(
-        alias="MITRE_CAPEC_FILE_URL",
+    capec_file_url: str = Field(
         default=MITRE_CAPEC_FILE_URL,
         description=(
             "URL to the CAPEC (Common Attack Pattern Enumeration and Classification) JSON file. "

@@ -20,17 +20,14 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
     """A concrete implementation of _ConfigLoaderConnector defining default connector configuration values."""
 
     id: str = Field(
-        alias="CONNECTOR_ID",
         default="ipinfo--43cf861c-72a7-4e45-864a-b19e32e6a8bc",
         description="A unique UUIDv4 identifier for this connector instance.",
     )
     name: str = Field(
-        alias="CONNECTOR_NAME",
         default="IPInfo",
         description="Name of the connector.",
     )
     scope: str = Field(
-        alias="CONNECTOR_SCOPE",
         default="IPv4-Addr,IPv6-Addr",
         description="The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
     )
