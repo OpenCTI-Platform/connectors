@@ -20,6 +20,9 @@ from pycti.entities.opencti_report import Report as PyctiReport
 from pycti.entities.opencti_stix_core_relationship import (
     StixCoreRelationship as PyctiSCR,
 )
+from pycti.entities.opencti_threat_actor_individual import (
+    ThreatActorIndividual as PyctiTAI,
+)
 from stix2 import (
     CustomObject,
     CustomObservable,
@@ -28,6 +31,7 @@ from stix2 import (
     Relationship,
     Report,
 )
+from stix2.canonicalization.Canonicalize import canonicalize
 
 import intel2stix
 from intel2stix import get_date
@@ -1389,6 +1393,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
 
         # create threat actor
         x_actor = stix2.ThreatActor(
+            id=PyctiTAI.generate_id(x_name),
             name=x_name,
             description=x_actor_description,
             aliases=x_aliases,

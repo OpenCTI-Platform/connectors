@@ -1,3 +1,4 @@
+import uuid
 from ipaddress import IPv4Address, IPv6Address, ip_address
 
 import stix2
@@ -13,6 +14,7 @@ from pycti.entities.opencti_threat_actor_individual import (
 )
 from pycti.entities.opencti_vulnerability import Vulnerability as PyctiVulnerability
 from stix2 import CustomObservable
+from stix2.canonicalization.Canonicalize import canonicalize
 
 
 @CustomObservable(
@@ -269,7 +271,7 @@ def getTypeValueContent(entity: dict, markings, creator) -> ():
                 "Object",
                 [
                     stix2.File(
-                        id=generate_file_id(name, "", "", ""),
+                        id=generate_file_id(entity["value"], "", "", ""),
                         name=entity["value"],
                         custom_properties={
                             "description": entity["type"],
@@ -668,7 +670,7 @@ def getTypeValueContent(entity: dict, markings, creator) -> ():
                 "Object",
                 [
                     stix2.File(
-                        id=generate_file_id(name, "", "", ""),
+                        id=generate_file_id(entity["value"], "", "", ""),
                         name=entity["value"],
                         custom_properties={"created_by_ref": creator},
                         object_marking_refs=markings,
