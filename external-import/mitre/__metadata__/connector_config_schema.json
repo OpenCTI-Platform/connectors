@@ -20,9 +20,26 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": "tool,report,malware,identity,campaign,intrusion-set,attack-pattern,course-of-action,x-mitre-data-source,x-mitre-data-component,x-mitre-matrix,x-mitre-tactic,x-mitre-collection",
+      "default": [
+        "tool",
+        "report",
+        "malware",
+        "identity",
+        "campaign",
+        "intrusion-set",
+        "attack-pattern",
+        "course-of-action",
+        "x-mitre-data-source",
+        "x-mitre-data-component",
+        "x-mitre-matrix",
+        "x-mitre-tactic",
+        "x-mitre-collection"
+      ],
       "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
-      "type": "string"
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "CONNECTOR_TYPE": {
       "default": "EXTERNAL_IMPORT",
