@@ -32,7 +32,13 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
     )
     scope: ListFromString = Field(
         default=[
-            "identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report"
+            "identity",
+            "attack-pattern",
+            "course-of-action",
+            "intrusion-set",
+            "malware",
+            "tool",
+            "report",
         ],
         description="The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
     )
