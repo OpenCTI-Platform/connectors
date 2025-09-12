@@ -203,7 +203,6 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "CONNECTOR_ID",
     "SERVICENOW_INSTANCE_NAME",
     "SERVICENOW_API_KEY"
   ],
