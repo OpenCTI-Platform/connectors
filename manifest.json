@@ -207,6 +207,12 @@
             "type": "string",
             "writeOnly": true
           },
+          "CVE_INTERVAL": {
+            "default": 6,
+            "description": "Interval in hours to check and import new CVEs. Must be strictly greater than 1, advice from NIST minimum 2 hours.",
+            "exclusiveMinimum": 0,
+            "type": "integer"
+          },
           "CVE_MAX_DATE_RANGE": {
             "default": 120,
             "description": "Determines how many days to collect CVE. Maximum of 120 days.",
@@ -336,14 +342,6 @@
           "OPENCTI_TOKEN": {
             "type": "string"
           },
-          "OPENCTI_JSON_LOGGING": {
-            "default": true,
-            "type": "boolean"
-          },
-          "OPENCTI_SSL_VERIFY": {
-            "default": false,
-            "type": "boolean"
-          },
           "CONNECTOR_NAME": {
             "default": "Email Intel IMAP",
             "type": "string"
@@ -376,54 +374,6 @@
               "critical"
             ],
             "type": "string"
-          },
-          "CONNECTOR_AUTO": {
-            "default": false,
-            "type": "boolean"
-          },
-          "CONNECTOR_EXPOSE_METRICS": {
-            "default": false,
-            "type": "boolean"
-          },
-          "CONNECTOR_METRICS_PORT": {
-            "default": 9095,
-            "type": "integer"
-          },
-          "CONNECTOR_ONLY_CONTEXTUAL": {
-            "default": false,
-            "type": "boolean"
-          },
-          "CONNECTOR_RUN_AND_TERMINATE": {
-            "default": false,
-            "type": "boolean"
-          },
-          "CONNECTOR_VALIDATE_BEFORE_IMPORT": {
-            "default": false,
-            "type": "boolean"
-          },
-          "CONNECTOR_QUEUE_PROTOCOL": {
-            "default": "amqp",
-            "type": "string"
-          },
-          "CONNECTOR_QUEUE_THRESHOLD": {
-            "default": 500,
-            "type": "integer"
-          },
-          "CONNECTOR_SEND_TO_QUEUE": {
-            "default": true,
-            "type": "boolean"
-          },
-          "CONNECTOR_SEND_TO_DIRECTORY": {
-            "default": false,
-            "type": "boolean"
-          },
-          "CONNECTOR_SEND_TO_DIRECTORY_PATH": {
-            "default": null,
-            "type": "string"
-          },
-          "CONNECTOR_SEND_TO_DIRECTORY_RETENTION": {
-            "default": 7,
-            "type": "integer"
           },
           "EMAIL_INTEL_IMAP_TLP_LEVEL": {
             "default": "amber+strict",
@@ -484,11 +434,10 @@
         "required": [
           "OPENCTI_URL",
           "OPENCTI_TOKEN",
-          "CONNECTOR_ID",
           "EMAIL_INTEL_IMAP_HOST",
           "EMAIL_INTEL_IMAP_USERNAME"
         ],
-        "additionalProperties": false
+        "additionalProperties": true
       }
     },
     {
@@ -526,14 +475,6 @@
           "OPENCTI_TOKEN": {
             "type": "string"
           },
-          "OPENCTI_JSON_LOGGING": {
-            "default": true,
-            "type": "boolean"
-          },
-          "OPENCTI_SSL_VERIFY": {
-            "default": false,
-            "type": "boolean"
-          },
           "CONNECTOR_NAME": {
             "default": "Email Intel Microsoft",
             "type": "string"
@@ -566,54 +507,6 @@
               "critical"
             ],
             "type": "string"
-          },
-          "CONNECTOR_AUTO": {
-            "default": false,
-            "type": "boolean"
-          },
-          "CONNECTOR_EXPOSE_METRICS": {
-            "default": false,
-            "type": "boolean"
-          },
-          "CONNECTOR_METRICS_PORT": {
-            "default": 9095,
-            "type": "integer"
-          },
-          "CONNECTOR_ONLY_CONTEXTUAL": {
-            "default": false,
-            "type": "boolean"
-          },
-          "CONNECTOR_RUN_AND_TERMINATE": {
-            "default": false,
-            "type": "boolean"
-          },
-          "CONNECTOR_VALIDATE_BEFORE_IMPORT": {
-            "default": false,
-            "type": "boolean"
-          },
-          "CONNECTOR_QUEUE_PROTOCOL": {
-            "default": "amqp",
-            "type": "string"
-          },
-          "CONNECTOR_QUEUE_THRESHOLD": {
-            "default": 500,
-            "type": "integer"
-          },
-          "CONNECTOR_SEND_TO_QUEUE": {
-            "default": true,
-            "type": "boolean"
-          },
-          "CONNECTOR_SEND_TO_DIRECTORY": {
-            "default": false,
-            "type": "boolean"
-          },
-          "CONNECTOR_SEND_TO_DIRECTORY_PATH": {
-            "default": null,
-            "type": "string"
-          },
-          "CONNECTOR_SEND_TO_DIRECTORY_RETENTION": {
-            "default": 7,
-            "type": "integer"
           },
           "EMAIL_INTEL_MICROSOFT_TLP_LEVEL": {
             "default": "amber+strict",
@@ -666,13 +559,12 @@
         "required": [
           "OPENCTI_URL",
           "OPENCTI_TOKEN",
-          "CONNECTOR_ID",
           "EMAIL_INTEL_MICROSOFT_TENANT_ID",
           "EMAIL_INTEL_MICROSOFT_CLIENT_ID",
           "EMAIL_INTEL_MICROSOFT_CLIENT_SECRET",
           "EMAIL_INTEL_MICROSOFT_EMAIL"
         ],
-        "additionalProperties": false
+        "additionalProperties": true
       }
     },
     {
@@ -732,17 +624,8 @@
             "description": "The API token to connect to OpenCTI.",
             "type": "string"
           },
-          "OPENCTI_JSON_LOGGING": {
-            "default": true,
-            "description": "Whether to format logs as JSON or not.",
-            "type": "boolean"
-          },
-          "OPENCTI_SSL_VERIFY": {
-            "default": false,
-            "description": "Whether to check SSL certificate or not.",
-            "type": "boolean"
-          },
           "CONNECTOR_NAME": {
+            "default": "Flashpoint",
             "description": "The name of the connector.",
             "type": "string"
           },
@@ -774,64 +657,10 @@
               "debug",
               "info",
               "warn",
+              "warning",
               "error"
             ],
             "type": "string"
-          },
-          "CONNECTOR_EXPOSE_METRICS": {
-            "default": false,
-            "description": "Whether to expose metrics or not.",
-            "type": "boolean"
-          },
-          "CONNECTOR_METRICS_PORT": {
-            "default": 9095,
-            "description": "The port to expose metrics.",
-            "type": "integer"
-          },
-          "CONNECTOR_ONLY_CONTEXTUAL": {
-            "default": false,
-            "description": "Whether to expose metrics or not.",
-            "type": "boolean"
-          },
-          "CONNECTOR_RUN_AND_TERMINATE": {
-            "default": false,
-            "description": "Connector run-and-terminate flag.",
-            "type": "boolean"
-          },
-          "CONNECTOR_VALIDATE_BEFORE_IMPORT": {
-            "default": false,
-            "description": "Whether to validate data before import or not.",
-            "type": "boolean"
-          },
-          "CONNECTOR_QUEUE_PROTOCOL": {
-            "default": "amqp",
-            "description": "The queue protocol to use.",
-            "type": "string"
-          },
-          "CONNECTOR_QUEUE_THRESHOLD": {
-            "default": 500,
-            "description": "Connector queue max size in Mbytes. Default to pycti value.",
-            "type": "integer"
-          },
-          "CONNECTOR_SEND_TO_QUEUE": {
-            "default": true,
-            "description": "Connector send-to-queue flag. Default to True.",
-            "type": "boolean"
-          },
-          "CONNECTOR_SEND_TO_DIRECTORY": {
-            "default": false,
-            "description": "Connector send-to-directory flag.",
-            "type": "boolean"
-          },
-          "CONNECTOR_SEND_TO_DIRECTORY_PATH": {
-            "default": null,
-            "description": "Connector send-to-directory path.",
-            "type": "string"
-          },
-          "CONNECTOR_SEND_TO_DIRECTORY_RETENTION": {
-            "default": 7,
-            "description": "Connector send-to-directory retention.",
-            "type": "integer"
           },
           "FLASHPOINT_API_KEY": {
             "description": "The API key to connect to Flashpoint.",
@@ -904,8 +733,6 @@
         "required": [
           "OPENCTI_URL",
           "OPENCTI_TOKEN",
-          "CONNECTOR_ID",
-          "CONNECTOR_NAME",
           "FLASHPOINT_API_KEY"
         ],
         "additionalProperties": false
@@ -968,16 +795,6 @@
             "description": "The API token to connect to OpenCTI.",
             "type": "string"
           },
-          "OPENCTI_JSON_LOGGING": {
-            "default": true,
-            "description": "Whether to format logs as JSON or not.",
-            "type": "boolean"
-          },
-          "OPENCTI_SSL_VERIFY": {
-            "default": false,
-            "description": "Whether to check SSL certificate or not.",
-            "type": "boolean"
-          },
           "CONNECTOR_TYPE": {
             "const": "EXTERNAL_IMPORT",
             "default": "EXTERNAL_IMPORT",
@@ -1011,64 +828,10 @@
               "debug",
               "info",
               "warn",
+              "warning",
               "error"
             ],
             "type": "string"
-          },
-          "CONNECTOR_EXPOSE_METRICS": {
-            "default": false,
-            "description": "Whether to expose metrics or not.",
-            "type": "boolean"
-          },
-          "CONNECTOR_METRICS_PORT": {
-            "default": 9095,
-            "description": "The port to expose metrics.",
-            "type": "integer"
-          },
-          "CONNECTOR_ONLY_CONTEXTUAL": {
-            "default": false,
-            "description": "Whether to expose metrics or not.",
-            "type": "boolean"
-          },
-          "CONNECTOR_RUN_AND_TERMINATE": {
-            "default": false,
-            "description": "Connector run-and-terminate flag.",
-            "type": "boolean"
-          },
-          "CONNECTOR_VALIDATE_BEFORE_IMPORT": {
-            "default": false,
-            "description": "Whether to validate data before import or not.",
-            "type": "boolean"
-          },
-          "CONNECTOR_QUEUE_PROTOCOL": {
-            "default": "amqp",
-            "description": "The queue protocol to use.",
-            "type": "string"
-          },
-          "CONNECTOR_QUEUE_THRESHOLD": {
-            "default": 500,
-            "description": "Connector queue max size in Mbytes. Default to pycti value.",
-            "type": "integer"
-          },
-          "CONNECTOR_SEND_TO_QUEUE": {
-            "default": true,
-            "description": "Connector send-to-queue flag. Default to True.",
-            "type": "boolean"
-          },
-          "CONNECTOR_SEND_TO_DIRECTORY": {
-            "default": false,
-            "description": "Connector send-to-directory flag.",
-            "type": "boolean"
-          },
-          "CONNECTOR_SEND_TO_DIRECTORY_PATH": {
-            "default": null,
-            "description": "Connector send-to-directory path.",
-            "type": "string"
-          },
-          "CONNECTOR_SEND_TO_DIRECTORY_RETENTION": {
-            "default": 7,
-            "description": "Connector send-to-directory retention.",
-            "type": "integer"
           },
           "GREYNOISE_FEED_API_KEY": {
             "description": "The API key to connect to Greynoise.",
@@ -1130,7 +893,6 @@
         "required": [
           "OPENCTI_URL",
           "OPENCTI_TOKEN",
-          "CONNECTOR_ID",
           "GREYNOISE_FEED_API_KEY"
         ],
         "additionalProperties": true
@@ -1300,52 +1062,21 @@
               "debug",
               "info",
               "warn",
+              "warning",
               "error"
             ],
             "type": "string"
-          },
-          "CONNECTOR_DURATION_PERIOD": {
-            "default": "PT24H",
-            "description": "Duration between two scheduled runs of the connector (ISO 8601 format).",
-            "format": "duration",
-            "type": "string"
-          },
-          "CONNECTOR_QUEUE_THRESHOLD": {
-            "default": null,
-            "description": "Connector queue max size in Mbytes. Default to 500.",
-            "exclusiveMinimum": 0,
-            "type": "integer"
-          },
-          "CONNECTOR_RUN_AND_TERMINATE": {
-            "default": null,
-            "description": "Connector run-and-terminate flag.",
-            "type": "boolean"
-          },
-          "CONNECTOR_SEND_TO_QUEUE": {
-            "default": null,
-            "description": "Connector send-to-queue flag.",
-            "type": "boolean"
-          },
-          "CONNECTOR_SEND_TO_DIRECTORY": {
-            "default": null,
-            "description": "Connector send-to-directory flag.",
-            "type": "boolean"
-          },
-          "CONNECTOR_SEND_TO_DIRECTORY_PATH": {
-            "default": null,
-            "description": "Connector send-to-directory path.",
-            "type": "string"
-          },
-          "CONNECTOR_SEND_TO_DIRECTORY_RETENTION": {
-            "default": null,
-            "description": "Connector send-to-directory retention in days.",
-            "exclusiveMinimum": 0,
-            "type": "integer"
           },
           "MITRE_REMOVE_STATEMENT_MARKING": {
             "default": false,
             "description": "Whether to remove statement markings from the ingested MITRE data. Useful when marking metadata is unnecessary or interferes with processing.",
             "type": "boolean"
+          },
+          "MITRE_INTERVAL": {
+            "default": 7,
+            "description": "Polling interval in days for fetching and refreshing MITRE data. Determines how often the system checks for updates to ATT&CK datasets.",
+            "exclusiveMinimum": 0,
+            "type": "integer"
           },
           "MITRE_ENTERPRISE_FILE_URL": {
             "default": "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json",
@@ -1624,7 +1355,7 @@
       "support_version": ">= 6.5.1",
       "subscription_link": "https://www.sekoia.io/en/product/cti/",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/sekoia",
-      "manager_supported": false,
+      "manager_supported": true,
       "container_version": "rolling",
       "container_image": "opencti/connector-sekoia",
       "container_type": "EXTERNAL_IMPORT"
@@ -2510,6 +2241,7 @@
               "debug",
               "info",
               "warn",
+              "warning",
               "error"
             ],
             "type": "string"
