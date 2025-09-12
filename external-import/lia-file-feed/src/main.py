@@ -166,7 +166,7 @@ class LIAFileFeed:
                 labels=["malicious", "url", source_family, source_botnet, detected_as],
                 created_by_ref=self.identity["standard_id"],
                 external_references=[lia_external_reference],
-                custom_properties={"x_opencti_main_observable_type": "URL"},
+                custom_properties={"x_opencti_main_observable_type": "Url"},
             )
 
             url_object = stix2.URL(value=source_url)
