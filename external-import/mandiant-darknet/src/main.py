@@ -293,6 +293,7 @@ class MandiantAlertsConnector(ExternalImportConnector):
             f"### Author\n\n{x_actor}\n\n" f"### Description\n\n{x_actor_desc}\n\n"
         )
         x_media_content = MediaContent(
+            id=MediaContent.generate_id(x_url),
             url=x_url,
             content=x_message,
             description=x_mc_description,
@@ -428,6 +429,7 @@ class MandiantAlertsConnector(ExternalImportConnector):
             f"### Channel\n\n{x_channel_desc}\n\n" f"### Messenger\n\n{x_messenger}\n\n"
         )
         x_media_content = MediaContent(
+            id=MediaContent.generate_id(x_url),
             url=x_url,
             content=x_message,
             description=x_mc_description,
@@ -575,6 +577,7 @@ class MandiantAlertsConnector(ExternalImportConnector):
             f"### Forum\n\n{x_forum}\n\n"
         )
         x_media_content = MediaContent(
+            id=MediaContent.generate_id(x_url),
             url=x_url,
             content=x_message,
             description=x_mc_description,
@@ -680,6 +683,7 @@ class MandiantAlertsConnector(ExternalImportConnector):
         # content creation
         x_mc_description = f"### Title\n\n{defang(doc.get('title'))}\n\n"
         x_media_content = MediaContent(
+            id=MediaContent.generate_id(x_url),
             url=x_url,
             content=x_content,
             description=x_mc_description,
@@ -817,6 +821,7 @@ class MandiantAlertsConnector(ExternalImportConnector):
         # content creation
         x_mc_description = f"### Title\n\n{defang(doc.get('title'))}\n\n"
         x_media_content = MediaContent(
+            id=MediaContent.generate_id(x_url),
             url=x_url,
             content=x_content,
             description=x_mc_description,
@@ -936,6 +941,7 @@ class MandiantAlertsConnector(ExternalImportConnector):
 
         # listing creation
         x_media_content = MediaContent(
+            id=MediaContent.generate_id(x_id),
             url=x_id,
             content=x_content,
             description=x_description,
