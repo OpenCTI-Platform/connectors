@@ -1,5 +1,6 @@
 from typing import Annotated, Literal
 
+from connectors_sdk.core.pydantic import ListFromString
 from pydantic import Field, HttpUrl, PlainSerializer, field_validator
 from src.models.configs.base_settings import ConfigBaseSettings
 
@@ -29,7 +30,7 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     # Config Loader Connector
     id: str
     name: str
-    scope: str
+    scope: ListFromString
 
     type: str = Field(
         default="INTERNAL_ENRICHMENT",

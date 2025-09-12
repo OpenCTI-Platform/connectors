@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Optional
 
 from pycti import OpenCTIConnectorHelper
-from src.services.config_loader import MitreConfig
+from src import ConfigLoader
 
 MITRE_ENTERPRISE_FILE_URL = "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json"
 MITRE_MOBILE_ATTACK_FILE_URL = "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/mobile-attack/mobile-attack.json"
@@ -60,23 +60,17 @@ class Mitre:
     def __init__(self):
         # Load configuration file and connection helper
         # Instantiate the connector helper from config
-        self.config = MitreConfig()
-        self.config_instance = self.config.load
+        self.config = ConfigLoader()
+        self.helper = OpenCTIConnectorHelper(config=self.config.model_dump_pycti())
 
-        # Convert the config into a dictionary, automatically excluding any parameters set to `None`.
-        self.config_dict = self.config_instance.model_dump(exclude_none=True)
-        self.helper = OpenCTIConnectorHelper(config=self.config_dict)
+        self.mitre_remove_statement_marking = self.config.mitre.remove_statement_marking
 
-        self.mitre_remove_statement_marking = (
-            self.config_instance.mitre.remove_statement_marking
-        )
-
-        self.mitre_interval = self.config_instance.mitre.interval
+        self.mitre_interval = self.config.mitre.interval
         urls = [
-            self.config_instance.mitre.enterprise_file_url,
-            self.config_instance.mitre.mobile_attack_file_url,
-            self.config_instance.mitre.ics_attack_file_url,
-            self.config_instance.mitre.capec_file_url,
+            self.config.mitre.enterprise_file_url,
+            self.config.mitre.mobile_attack_file_url,
+            self.config.mitre.ics_attack_file_url,
+            self.config.mitre.capec_file_url,
         ]
         self.mitre_urls = list(filter(lambda url: url is not False, urls))
         self.interval = days_to_seconds(self.mitre_interval)

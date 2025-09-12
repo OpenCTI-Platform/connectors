@@ -1,10 +1,7 @@
 import traceback
 
 from pycti import OpenCTIConnectorHelper
-from src import (
-    HygieneConfig,
-    HygieneConnector,
-)
+from src import ConfigLoader, HygieneConnector
 
 if __name__ == "__main__":
     """
@@ -17,12 +14,11 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        config = HygieneConfig()
-        config_instance = config.load
-        # Convert the config into a dictionary, automatically excluding any parameters set to `None`.
-        config_dict = config_instance.model_dump(exclude_none=True)
-        helper = OpenCTIConnectorHelper(config=config_dict, playbook_compatible=True)
-        connector = HygieneConnector(config_instance, helper)
+        config = ConfigLoader()
+        helper = OpenCTIConnectorHelper(
+            config=config.model_dump_pycti(), playbook_compatible=True
+        )
+        connector = HygieneConnector(config, helper)
         connector.run()
     except Exception:
         traceback.print_exc()
