@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://www.filigran.io/connectors/ipinfo_config.schema.json",
+  "$id": "https://www.filigran.io/connectors/virustotal-downloader_config.schema.json",
   "type": "object",
   "properties": {
     "OPENCTI_URL": {
@@ -15,14 +15,13 @@
       "type": "string"
     },
     "CONNECTOR_NAME": {
-      "default": "IPInfo",
+      "default": "VirusTotal Downloader",
       "description": "Name of the connector.",
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
       "default": [
-        "IPv4-Addr",
-        "IPv6-Addr"
+        "StixFile"
       ],
       "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
       "items": {
@@ -34,6 +33,11 @@
       "default": "INTERNAL_ENRICHMENT",
       "description": "Should always be set to INTERNAL_ENRICHMENT for this connector.",
       "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Enables or disables automatic enrichment of observables for OpenCTI.",
+      "type": "boolean"
     },
     "CONNECTOR_LOG_LEVEL": {
       "default": "error",
@@ -47,39 +51,17 @@
       ],
       "type": "string"
     },
-    "CONNECTOR_AUTO": {
-      "default": true,
-      "description": "Enables or disables automatic enrichment of observables for OpenCTI.",
-      "type": "boolean"
-    },
-    "IPINFO_TOKEN": {
-      "description": "API token used to authenticate requests to the IPInfo service.",
+    "VIRUSTOTAL_DOWNLOADER_API_KEY": {
+      "description": "API key used to authenticate requests to the VirusTotal Downloader service.",
       "format": "password",
       "type": "string",
       "writeOnly": true
-    },
-    "IPINFO_MAX_TLP": {
-      "default": "TLP:AMBER",
-      "description": "Traffic Light Protocol (TLP) level to apply on objects imported into OpenCTI.",
-      "enum": [
-        "TLP:CLEAR",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED"
-      ],
-      "type": "string"
-    },
-    "IPINFO_USE_ASN_NAME": {
-      "default": true,
-      "description": "If enabled, uses the ASN name instead of the ASN number in enrichment results.",
-      "type": "boolean"
     }
   },
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "IPINFO_TOKEN"
+    "VIRUSTOTAL_DOWNLOADER_API_KEY"
   ],
   "additionalProperties": true
 }

@@ -20,9 +20,19 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": "IPv4-Addr,IPv6-Addr,Artifact,Domain-Name,StixFile,Indicator",
+      "default": [
+        "IPv4-Addr",
+        "IPv6-Addr",
+        "Artifact",
+        "Domain-Name",
+        "StixFile",
+        "Indicator"
+      ],
       "description": "The scope defines the set of entity types that the enrichment connector is allowed to process.",
-      "type": "string"
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "CONNECTOR_TYPE": {
       "default": "INTERNAL_ENRICHMENT",
