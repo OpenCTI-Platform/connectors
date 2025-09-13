@@ -1,5 +1,5 @@
 pycti==6.7.19
-pydantic==2.11.7
+pydantic==2.11.9
 pydantic-settings==2.10.1
 regex==2024.11.6
 requests==2.32.4
