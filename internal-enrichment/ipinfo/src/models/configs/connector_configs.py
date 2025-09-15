@@ -1,6 +1,6 @@
-from datetime import timedelta
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal
 
+from connectors_sdk.core.pydantic import ListFromString
 from pydantic import (
     Field,
     HttpUrl,
@@ -10,14 +10,11 @@ from pydantic import (
 from src.models.configs import ConfigBaseSettings
 
 LogLevelToLower = Annotated[
-    Literal["debug", "info", "warn", "error"],
+    Literal["debug", "info", "warn", "warning", "error"],
     PlainSerializer(lambda v: "".join(v), return_type=str),
 ]
 
 HttpUrlToString = Annotated[HttpUrl, PlainSerializer(str, return_type=str)]
-TimedeltaInSeconds = Annotated[
-    timedelta, PlainSerializer(lambda v: int(v.total_seconds()), return_type=int)
-]
 
 
 class _ConfigLoaderOCTI(ConfigBaseSettings):
@@ -40,21 +37,18 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     # Config Loader Connector
     id: str
     name: str
-    scope: str
+    scope: ListFromString
 
-    type: Optional[str] = Field(
-        alias="CONNECTOR_TYPE",
+    type: str = Field(
         default="INTERNAL_ENRICHMENT",
         description="Should always be set to INTERNAL_ENRICHMENT for this connector.",
     )
 
-    log_level: Optional[LogLevelToLower] = Field(
-        alias="CONNECTOR_LOG_LEVEL",
+    log_level: LogLevelToLower = Field(
         default="error",
         description="Determines the verbosity of the logs.",
     )
-    auto: Optional[bool] = Field(
-        alias="CONNECTOR_AUTO",
+    auto: bool = Field(
         default=True,
         description="Enables or disables automatic enrichment of observables for OpenCTI.",
     )

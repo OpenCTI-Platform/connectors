@@ -1,5 +1,6 @@
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal
 
+from connectors_sdk.core.pydantic import ListFromString
 from pydantic import (
     Field,
     HttpUrl,
@@ -35,13 +36,13 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     # Config Loader Connector
     id: str
     name: str
-    scope: str
+    scope: ListFromString
 
-    type: Optional[str] = Field(
+    type: str = Field(
         default="EXTERNAL_IMPORT",
         description="Should always be set to EXTERNAL_IMPORT for this connector.",
     )
-    log_level: Optional[LogLevelToLower] = Field(
+    log_level: LogLevelToLower = Field(
         default="error",
         description="Determines the verbosity of the logs.",
     )

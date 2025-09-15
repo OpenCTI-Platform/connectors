@@ -10,22 +10,19 @@ from pycti import (
     OpenCTIConnectorHelper,
     StixCoreRelationship,
 )
-from src.services import IPInfoConfig
+from src import ConfigLoader
 
 
 class IpInfoConnector:
     def __init__(self):
         # Instantiate the connector helper from config
-        self.config = IPInfoConfig()
-        self.config_instance = self.config.load
-        # Convert the config into a dictionary, automatically excluding any parameters set to `None`.
-        self.config_dict = self.config_instance.model_dump(exclude_none=True)
+        self.config = ConfigLoader()
         self.helper = OpenCTIConnectorHelper(
-            config=self.config_dict, playbook_compatible=True
+            config=self.config.model_dump_pycti(), playbook_compatible=True
         )
-        self.token = self.config_instance.ipinfo.token
-        self.max_tlp = self.config_instance.ipinfo.max_tlp
-        self.use_asn_name = self.config_instance.ipinfo.use_asn_name
+        self.token = self.config.ipinfo.token
+        self.max_tlp = self.config.ipinfo.max_tlp
+        self.use_asn_name = self.config.ipinfo.use_asn_name
 
     def _generate_stix_bundle(
         self, stix_objects, stix_entity, country, city, loc, asn, privacy

@@ -20,9 +20,15 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": "IPv4-Addr,IPv6-Addr",
+      "default": [
+        "IPv4-Addr",
+        "IPv6-Addr"
+      ],
       "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
-      "type": "string"
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "CONNECTOR_TYPE": {
       "default": "INTERNAL_ENRICHMENT",
@@ -36,6 +42,7 @@
         "debug",
         "info",
         "warn",
+        "warning",
         "error"
       ],
       "type": "string"

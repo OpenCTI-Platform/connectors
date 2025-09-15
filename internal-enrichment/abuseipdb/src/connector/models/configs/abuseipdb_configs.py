@@ -1,4 +1,4 @@
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal
 
 from pydantic import (
     Field,
@@ -27,7 +27,7 @@ class _ConfigLoaderAbuseIPDB(ConfigBaseSettings):
     api_key: SecretStr = Field(
         description="API key used to authenticate requests to the AbuseIPDB service.",
     )
-    max_tlp: Optional[TLPToLower] = Field(
+    max_tlp: TLPToLower = Field(
         default="TLP:AMBER",
         description="Traffic Light Protocol (TLP) level to apply on objects imported into OpenCTI.",
     )

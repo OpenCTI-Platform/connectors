@@ -125,7 +125,7 @@ class ConfigBaseModel(BaseModel):
     """
 
     model_config = ConfigDict(
-        extra="ignore",
+        extra="allow",
         validate_default=True,
         frozen=True,
     )
@@ -138,14 +138,6 @@ class OpenCTIConfig(ConfigBaseModel):
 
     url: HttpUrl = Field(description="The base URL of the OpenCTI instance.")
     token: str = Field(description="The API token to connect to OpenCTI.")
-    json_logging: bool = Field(
-        description="Whether to format logs as JSON or not.",
-        default=True,
-    )
-    ssl_verify: bool = Field(
-        description="Whether to check SSL certificate or not.",
-        default=False,
-    )
 
 
 class ConnectorConfig(ConfigBaseModel):
@@ -154,16 +146,19 @@ class ConnectorConfig(ConfigBaseModel):
     """
 
     type: Literal["EXTERNAL_IMPORT"] = "EXTERNAL_IMPORT"
-    id: str = Field(description="A UUID v4 to identify the connector in OpenCTI.")
+    id: str = Field(
+        default="greynoise-feed--d063e13b-194a-44e3-8654-eb0609c57737",
+        description="A unique UUIDv4 identifier for this connector instance.",
+    )
     name: str = Field(
         description="The name of the connector.",
         default="GreyNoise Feed",
     )
-    scope: Optional[ListFromString] = Field(
+    scope: ListFromString = Field(
         description="The scope of the connector, e.g. 'greynoise'.",
         default=["greynoisefeed"],
     )
-    duration_period: Optional[timedelta] = Field(
+    duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
         default=timedelta(hours=24),
     )
@@ -172,56 +167,12 @@ class ConnectorConfig(ConfigBaseModel):
             "debug",
             "info",
             "warn",
+            "warning",
             "error",
         ]
     ] = Field(
         description="The minimum level of logs to display.",
         default="error",
-    )
-
-    expose_metrics: bool = Field(
-        description="Whether to expose metrics or not.",
-        default=False,
-    )
-    metrics_port: int = Field(
-        description="The port to expose metrics.",
-        default=9095,
-    )
-    only_contextual: bool = Field(
-        description="Whether to expose metrics or not.",
-        default=False,
-    )
-    run_and_terminate: bool = Field(
-        description="Connector run-and-terminate flag.",
-        default=False,
-    )
-    validate_before_import: bool = Field(
-        description="Whether to validate data before import or not.",
-        default=False,
-    )
-    queue_protocol: str = Field(
-        description="The queue protocol to use.",
-        default="amqp",
-    )
-    queue_threshold: int = Field(
-        description="Connector queue max size in Mbytes. Default to pycti value.",
-        default=500,
-    )
-    send_to_queue: bool = Field(
-        description="Connector send-to-queue flag. Default to True.",
-        default=True,
-    )
-    send_to_directory: bool = Field(
-        description="Connector send-to-directory flag.",
-        default=False,
-    )
-    send_to_directory_path: str | None = Field(
-        description="Connector send-to-directory path.",
-        default=None,
-    )
-    send_to_directory_retention: int = Field(
-        description="Connector send-to-directory retention.",
-        default=7,
     )
 
 
@@ -241,31 +192,31 @@ class GreynoiseConfig(ConfigBaseModel):
         description="Type of feed to import.",
         default="malicious",
     )
-    limit: Optional[int] = Field(
+    limit: int = Field(
         description="Max number of indicators to ingest.",
         default=10_000,
     )
-    import_metadata: Optional[bool] = Field(
+    import_metadata: bool = Field(
         description="Import metadata (cities, sightings, etc.). ⚠️ Can generate a lot of data.",
         default=False,
     )
-    import_destination_sightings: Optional[bool] = Field(
+    import_destination_sightings: bool = Field(
         description="Import indicator's countries (from metadata) as a Sighting.",
         default=False,
     )
-    indicator_score_malicious: Optional[int] = Field(
+    indicator_score_malicious: int = Field(
         description="Default indicator score for malicious indicators.",
         ge=0,
         le=100,
         default=75,
     )
-    indicator_score_suspicious: Optional[int] = Field(
+    indicator_score_suspicious: int = Field(
         description="Default indicator score for suspicious indicators.",
         ge=0,
         le=100,
         default=50,
     )
-    indicator_score_benign: Optional[int] = Field(
+    indicator_score_benign: int = Field(
         description="Default indicator score for benign indicators.",
         ge=0,
         le=100,

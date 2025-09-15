@@ -20,9 +20,14 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": "cve",
+      "default": [
+        "cve"
+      ],
       "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
-      "type": "string"
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "CONNECTOR_TYPE": {
       "default": "EXTERNAL_IMPORT",
@@ -51,6 +56,12 @@
       "format": "password",
       "type": "string",
       "writeOnly": true
+    },
+    "CVE_INTERVAL": {
+      "default": 6,
+      "description": "Interval in hours to check and import new CVEs. Must be strictly greater than 1, advice from NIST minimum 2 hours.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
     },
     "CVE_MAX_DATE_RANGE": {
       "default": 120,

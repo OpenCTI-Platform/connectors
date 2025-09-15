@@ -11,6 +11,7 @@ _FILE_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
 class _ConnectorConfig(ConnectorConfig):
+    id: str = Field(default="email-intel-imap--ee2beb6c-4e99-47e6-ab5b-f3eea350f601")
     name: str = Field(default="Email Intel IMAP")
     scope: ListFromString = Field(default=["email-intel-imap"])
     duration_period: datetime.timedelta = Field(default=datetime.timedelta(hours=1))
@@ -28,8 +29,8 @@ class _EmailIntelConfig(BaseModel):
     host: str
     port: int = Field(default=993)
     username: str
-    password: SecretStr = Field(default=None)
-    google_token_json: SecretStr = Field(
+    password: SecretStr | None = Field(default=None)
+    google_token_json: SecretStr | None = Field(
         default=None, description="Content of the token.json file from Google API"
     )
     mailbox: str = Field(default="INBOX")

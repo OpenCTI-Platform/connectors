@@ -1,4 +1,4 @@
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal
 
 from pydantic import (
     Field,
@@ -18,16 +18,13 @@ class _ConfigLoaderIPInfo(ConfigBaseSettings):
 
     # Config Loader
     token: SecretStr = Field(
-        alias="IPINFO_TOKEN",
         description="API token used to authenticate requests to the IPInfo service.",
     )
-    max_tlp: Optional[TLPToLower] = Field(
-        alias="IPINFO_MAX_TLP",
+    max_tlp: TLPToLower = Field(
         default="TLP:AMBER",
         description="Traffic Light Protocol (TLP) level to apply on objects imported into OpenCTI.",
     )
-    use_asn_name: Optional[bool] = Field(
-        alias="IPINFO_USE_ASN_NAME",
+    use_asn_name: bool = Field(
         default=True,
         description="If enabled, uses the ASN name instead of the ASN number in enrichment results.",
     )
