@@ -330,6 +330,29 @@ class S3Connector:
                 else:
                     obj["external_references"] = [external_ref]
 
+            # x_credit mapping
+            if "x_credit" in obj and obj["x_credit"]:
+                individual_credit = stix2.Identity(
+                    id=Identity.generate_id(name=obj["x_credit"], identity_class="individual"),
+                    name=obj["x_credit"],
+                    identity_class="individual",
+                    object_marking_refs=[self.s3_marking["id"]],
+                )
+                credit_relationship = stix2.Relationship(
+                    id=StixCoreRelationship.generate_id("related-to", obj["id"], individual_credit.id),
+                    relationship_type="related-to",
+                    source_ref=obj["id"],
+                    target_ref=individual_credit.id,
+                    object_marking_refs=[self.s3_marking["id"]],
+                    created_by_ref=(
+                        self.identity["standard_id"]
+                        if self.identity is not None
+                        else None
+                    )
+                )
+                new_bundle_objects.append(json.loads(individual_credit.serialize()))
+                new_bundle_objects.append(json.loads(credit_relationship.serialize()))
+
             # Relationships "has"
             if (
                 obj["type"] == "relationship"
