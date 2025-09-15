@@ -1,6 +1,6 @@
 import json
-from pycti import OpenCTIConnectorHelper
 
+from pycti import OpenCTIConnectorHelper
 from sentinelone_services import SentinelOneClient
 from .config_loader import ConfigConnector
 
