@@ -335,14 +335,27 @@ class IndicatorBundleBuilder:
         if not self.create_observables:
             return None
 
-        indicator_value = self.indicator["indicator"]
+        try:
+            indicator_value = self.indicator["indicator"]
 
-        observable_properties = self._create_observable_properties(
-            indicator_value, labels, score
-        )
-        observable = self.observation_factory.create_observable(observable_properties)
+            observable_properties = self._create_observable_properties(
+                indicator_value, labels, score
+            )
+            observable = self.observation_factory.create_observable(
+                observable_properties
+            )
 
-        return observable
+            return observable
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                "[ERROR] Observable creation failed.",
+                {
+                    "error": str(e),
+                    "indicator_id": self.indicator.get("id"),
+                    "indicator_type": self.indicator.get("type"),
+                },
+            )
+            return None
 
     def _create_observable_properties(
         self,
@@ -382,28 +395,40 @@ class IndicatorBundleBuilder:
     ) -> Optional[STIXIndicator]:
         if not self.create_indicators:
             return None
+        try:
+            indicator_value = self.indicator["indicator"]
+            indicator_pattern = self.observation_factory.create_indicator_pattern(
+                indicator_value
+            )
+            indicator_pattern_type = self._INDICATOR_PATTERN_TYPE_STIX
+            indicator_published = timestamp_to_datetime(
+                self.indicator["published_date"]
+            )
 
-        indicator_value = self.indicator["indicator"]
-        indicator_pattern = self.observation_factory.create_indicator_pattern(
-            indicator_value
-        )
-        indicator_pattern_type = self._INDICATOR_PATTERN_TYPE_STIX
-        indicator_published = timestamp_to_datetime(self.indicator["published_date"])
-
-        return create_indicator(
-            indicator_pattern.pattern,
-            indicator_pattern_type,
-            created_by=self.author,
-            name=indicator_value,
-            valid_from=indicator_published,
-            created=indicator_published,
-            kill_chain_phases=kill_chain_phases,
-            labels=labels,
-            confidence=self.confidence_level,
-            object_markings=self.object_markings,
-            x_opencti_main_observable_type=indicator_pattern.main_observable_type,
-            x_opencti_score=score,
-        )
+            return create_indicator(
+                indicator_pattern.pattern,
+                indicator_pattern_type,
+                created_by=self.author,
+                name=indicator_value,
+                valid_from=indicator_published,
+                created=indicator_published,
+                kill_chain_phases=kill_chain_phases,
+                labels=labels,
+                confidence=self.confidence_level,
+                object_markings=self.object_markings,
+                x_opencti_main_observable_type=indicator_pattern.main_observable_type,
+                x_opencti_score=score,
+            )
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                "[ERROR] Indicator creation failed.",
+                {
+                    "error": str(e),
+                    "indicator_id": self.indicator.get("id"),
+                    "indicator_type": self.indicator.get("type"),
+                },
+            )
+            return None
 
     def _create_based_on_relationships(
         self, sources: List[_DomainObject], targets: List[_DomainObject]
