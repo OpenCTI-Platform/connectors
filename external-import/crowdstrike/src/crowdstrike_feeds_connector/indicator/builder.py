@@ -348,7 +348,7 @@ class IndicatorBundleBuilder:
             return observable
         except Exception as e:
             self.helper.connector_logger.warning(
-                "[ERROR] Observable creation failed.",
+                "[WARNING] Observable creation failed.",
                 {
                     "error": str(e),
                     "indicator_id": self.indicator.get("id"),
