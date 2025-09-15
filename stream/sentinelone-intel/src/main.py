@@ -1,6 +1,7 @@
 import traceback
 
 from pycti import OpenCTIConnectorHelper
+
 from sentinelone_connector import SentinelOneIntelConnector
 from sentinelone_connector.config_loader import ConfigConnector
 

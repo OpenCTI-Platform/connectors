@@ -1,22 +1,17 @@
 version: '3'
 services:
-  connector-template:
-    #image: opencti/connector-template:6.7.11
+  connector-sentinelone-intel:
+    image: opencti/connector-sentinelone-intel:rolling
     environment:
-      # Connector's generic execution parameters
-      - OPENCTI_URL=http://192.168.1.155:8080
-      - OPENCTI_TOKEN=ff7fdfe0-4b41-47d3-b82b-58b3f140ca8f
-      # Connector's definition parameters REQUIRED
-
-      - CONNECTOR_ID=e47da89e-ae1e-4340-9fff-2ec35a88388c
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=CHANGEME
+      - CONNECTOR_ID=CHANGEME
       - CONNECTOR_NAME=SentinelOne Intel Stream Connector
-      - CONNECTOR_SCOPE=all
-      - CONNECTOR_LOG_LEVEL=debug
-      - CONNECTOR_LIVE_STREAM_ID=live # ID of the live stream created in the OpenCTI UI
+      - CONNECTOR_SCOPE=CHANGEME
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_LIVE_STREAM_ID=CHANGEME # ID of the live stream created in the OpenCTI UI
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
-
-      # Connector's custom execution parameters
       - SENTINELONE-INTEL_API_URL=CHANGEME
       - SENTINELONE-INTEL_API_KEY=CHANGEME
       - SENTINELONE-INTEL_ACCOUNT_ID=CHANGEME_OR_EMPTY

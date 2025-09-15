@@ -3,11 +3,11 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  id: 'e47da89e-ae1e-4340-9fff-2ec35a883889'
+  id: 'ChangeMe'
   name: 'SentinelOne Intel Stream Connector'
   scope: 'ChangeMe'
-  log_level: 'info'
-  live_stream_id: 'live' # ID of the live stream created in the OpenCTI UI
+  log_level: 'error'
+  live_stream_id: 'ChangeMe' # ID of the live stream created in the OpenCTI UI
   live_stream_listen_delete: true
   live_stream_no_dependencies: true
 
