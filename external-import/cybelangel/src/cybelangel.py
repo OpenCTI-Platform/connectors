@@ -469,21 +469,23 @@ class CybelAngel:
             threat_actors[0] if threat_actors and threat_actors[0] else "Unknown actor"
         )
 
+        if published_at:
+            published_date = datetime.strptime(published_at[:10], "%Y-%m-%d").date()
+            campaign_date = f" ({published_date})"
+        else:
+            campaign_date = ""
         if victim_organizations:
             if len(victim_organizations) > 1:
-                campaign_name = f"{final_actor} targets multiple organizations - " + (f" ({published_at})" if published_at else "")
+                campaign_name = f"{final_actor} targets multiple organizations - {campaign_date}".rstrip(" - ")
                 campaign_description = (
                     f"{campaign_objective.capitalize()} campaign by {final_actor} targeting multiple "
                     f"organizations: {', '.join(victim_organizations)} "
                 )
             else:
-                campaign_name = f"{final_actor} targets {victim_organizations[0]}"
-                campaign_description = f"{campaign_objective.capitalize()} campaign by {final_actor} targeting {victim_organizations[0]} "
+                campaign_name = f"{final_actor} targets {victim_organizations[0]} - {campaign_date}".rstrip(" - ")
+                campaign_description = f"{campaign_objective.capitalize()} campaign by {final_actor} targeting {victim_organizations[0]}"
         else:
-            campaign_name = (
-                f"{campaign_objective.capitalize()} campaign by {final_actor}"
-                + (f" ({published_at})" if published_at else "")
-            )
+            campaign_name = f"{campaign_objective.capitalize()} campaign by {final_actor} - {campaign_date}".rstrip(" - ")
             campaign_description = f"{campaign_objective.capitalize()} campaign by {final_actor} with no specific target"
 
         campaign = stix2.Campaign(
