@@ -421,7 +421,7 @@ class IndicatorBundleBuilder:
             )
         except Exception as e:
             self.helper.connector_logger.warning(
-                "[ERROR] Indicator creation failed.",
+                "[WARNING] Indicator creation failed.",
                 {
                     "error": str(e),
                     "indicator_id": self.indicator.get("id"),
