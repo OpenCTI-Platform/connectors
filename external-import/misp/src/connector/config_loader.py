@@ -174,8 +174,6 @@ class _OpenCTIConfig(_ConfigBaseModel):
 
     url: HttpUrl
     token: str
-    json_logging: bool = Field(default=True)
-    ssl_verify: bool = Field(default=False)
 
 
 class _ConnectorConfig(_ConfigBaseModel):
@@ -198,7 +196,6 @@ class _ConnectorConfig(_ConfigBaseModel):
         description="The period of time to await between two runs of the connector.",
         default=timedelta(minutes=5),
     )
-
     log_level: Literal[
         "debug",
         "info",
@@ -206,19 +203,6 @@ class _ConnectorConfig(_ConfigBaseModel):
         "warning",
         "error",
     ] = Field(default="error")
-    auto: bool = Field(default=False)
-    expose_metrics: bool = Field(default=False)
-    metrics_port: int = Field(default=9095)
-    only_contextual: bool = Field(default=False)
-    run_and_terminate: bool = Field(default=False)
-    validate_before_import: bool = Field(default=False)
-    queue_protocol: str = Field(default="amqp")
-    queue_threshold: int = Field(default=500)
-
-    send_to_queue: bool = Field(default=True)
-    send_to_directory: bool = Field(default=False)
-    send_to_directory_path: str | None = Field(default=None)
-    send_to_directory_retention: int = Field(default=7)
 
 
 class _MISPConfig(_ConfigBaseModel):
