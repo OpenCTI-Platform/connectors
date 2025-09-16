@@ -1,0 +1,20 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe' # Valid UUIDv4
+  live_stream_id: 'ChangeMe' # ID of the live stream created in OpenCTI
+  name: 'Elastic Security Intel'
+  scope: 'elastic-security-intel'
+  log_level: 'info'
+
+elastic_security:
+  url: 'https://localhost:9200' # Elasticsearch URL for data operations
+  kibana_url: '' # Optional: Kibana URL for SIEM rules (auto-detected from ES URL if not set)
+  opencti_external_url: '' # Optional: Public URL for OpenCTI reference links in Elastic docs (NOT for API - uses opencti:url if empty)
+  api_key: 'ChangeMe' # Elasticsearch API Key (Base64 encoded id:api_key)
+  verify_ssl: true # Verify SSL certificates
+  index_name: 'logs-ti_custom_opencti.indicator' # Custom index with proper mappings
+  indicator_expire_time: 90 # Days before indicators expire
+  batch_size: 100 # Batch size for bulk operations
