@@ -1,6 +1,5 @@
 import os
 import warnings
-from abc import ABC
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Annotated, Literal, Optional
@@ -373,7 +372,7 @@ class _MISPConfig(_ConfigBaseModel):
     )
 
 
-class ConfigLoader(BaseSettings, ABC):
+class ConfigLoader(BaseSettings):
     """
     Define a complete config for a connector with:
         - opencti: the config specific to OpenCTI
