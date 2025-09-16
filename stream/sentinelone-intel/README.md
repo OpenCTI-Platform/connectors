@@ -24,11 +24,13 @@ Table of Contents
 
 ## Introduction
 
-The SentinelOne Intel Stream Connector enables real-time synchronization of threat intelligence indicators from OpenCTI to SentinelOne's threat intelligence platform. When indicators are created in OpenCTI, this connector automatically evaluates their STIX patterns and pushes compatible indicators to SentinelOne through their IOC API endpoint.
+The SentinelOne Intel Stream Connector enables real-time synchronization of threat intelligence indicators from OpenCTI to SentinelOne's threat intelligence platform as Indicators of compromise. Upon the creation of Indicators within the OpenCTI platform, the connector automatically evaluates their STIX patterns and pushes compatible indicators to a SentinelOne Instance. 
 
 SentinelOne supports the following Indicator of Compromise (IOC) types:
 - **File Hashes**: SHA256, SHA1, MD5
 - **Network Indicators**: URLs, Domain names, IPv4 addresses
+
+As such, the connector supports Indicators with **single-element** patterns corresponding to the above STIX SCOs. 
 
 ## Installation
 
@@ -91,6 +93,8 @@ Below are the parameters you'll need to set for running the connector properly:
 ### Connector extra parameters environment variables
 
 Below are the parameters you'll need to set for the connector:
+
+> **Note:** At least one scope ID (Account, Site, or Group) must be configured. Account ID and Site ID cannot be used together.
 
 | Parameter    | config.yml   | Docker environment variable | Mandatory | Description |
 |--------------|--------------|-----------------------------|-----------|-----------| 
