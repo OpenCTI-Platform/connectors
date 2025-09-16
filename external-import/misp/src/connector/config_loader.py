@@ -202,9 +202,9 @@ class _ConnectorConfig(_ConfigBaseModel):
     log_level: Literal[
         "debug",
         "info",
+        "warn",  # alias of warning
         "warning",
         "error",
-        "critical",
     ] = Field(default="error")
     auto: bool = Field(default=False)
     expose_metrics: bool = Field(default=False)
