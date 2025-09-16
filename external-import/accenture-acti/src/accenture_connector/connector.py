@@ -308,6 +308,9 @@ class ConnectorAccenture:
                     # add default connector marking
                     stix_object["object_marking_refs"] = [marking.id]
 
+                    if stix_object.get("type") == "indicator":
+                        stix_object["x_opencti_create_observables"] = True
+
                     if stix_object.get("type") == "report":
                         # generate entities from labels
                         generated_entities = self.converter_to_stix.generate_entities(
