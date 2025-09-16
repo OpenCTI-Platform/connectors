@@ -1,14 +1,13 @@
 FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=STREAM
 
-# Copy the worker
-COPY src /opt/opencti-connector-elastic
+# Copy the connector
+COPY src /opt/opencti-connector-elastic-security-intel
 
 # Install Python modules
 # hadolint ignore=DL3003
-RUN apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
-
-RUN cd /opt/opencti-connector-elastic && \
+RUN apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev && \
+    cd /opt/opencti-connector-elastic-security-intel && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
