@@ -2,10 +2,9 @@
 Converter for Elastic Security data to STIX 2.1 format
 """
 
-import hashlib
 import ipaddress
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
 import stix2
 import stix2.exceptions
@@ -16,7 +15,6 @@ from pycti import (
     CustomObservableHostname,
     Identity,
     Incident,
-    Malware,
     Note,
     StixCoreRelationship,
 )
@@ -99,9 +97,6 @@ class ConverterToStix:
         :return: STIX Incident object
         """
         # Extract key fields from alert - note the correct path structure
-        kibana_alert = alert.get("kibana.alert", {})
-        kibana_rule = alert.get("kibana.alert.rule", {})
-
         # Get alert UUID
         alert_id = alert.get("kibana.alert.uuid", "")
 
@@ -133,7 +128,7 @@ class ConverterToStix:
             description += f"**Alert reason**\n\n{alert_reason}\n\n"
 
         # Add additional context
-        description += f"**Details**\n\n"
+        description += "**Details**\n\n"
         description += f"- Risk Score: {risk_score}\n"
         description += f"- Severity: {severity_text}\n"
         description += (
@@ -143,7 +138,7 @@ class ConverterToStix:
         # Add threshold results if available
         threshold_result = alert.get("kibana.alert.threshold_result", {})
         if threshold_result:
-            description += f"\n**Threshold Results**\n\n"
+            description += "\n**Threshold Results**\n\n"
             description += f"- Count: {threshold_result.get('count', 'N/A')}\n"
             terms = threshold_result.get("terms", [])
             if terms:
@@ -336,7 +331,7 @@ class ConverterToStix:
                     {
                         "source_name": "Elastic Security Case Comment",
                         "external_id": comment_id,
-                        "description": f"Comment on case in Elastic Security",
+                        "description": "Comment on case in Elastic Security",
                     }
                 ]
                 if comment_id

@@ -3,9 +3,7 @@ Elastic Security API Handler for threat intelligence and SIEM rules management
 """
 
 import hashlib
-import json
-import re
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -314,7 +312,7 @@ class ElasticApiHandler:
 
             if response.status_code in [200, 404]:  # 404 is ok, already deleted
                 self.helper.connector_logger.info(
-                    f"Deleted SIEM rule", {"rule_id": rule_id}
+                    "Deleted SIEM rule", {"rule_id": rule_id}
                 )
                 return True
             else:
@@ -916,7 +914,7 @@ class ElasticApiHandler:
             if response.status_code in [200, 201]:
                 result = response.json()
                 self.helper.connector_logger.debug(
-                    f"Successfully created indicator in Elastic",
+                    "Successfully created indicator in Elastic",
                     {
                         "elastic_id": result.get("_id"),
                         "opencti_doc_id": doc_id,
@@ -936,7 +934,7 @@ class ElasticApiHandler:
 
         except requests.exceptions.RequestException as e:
             raise ElasticApiHandlerError(
-                f"Request failed while creating indicator", {"error": str(e)}
+                "Request failed while creating indicator", {"error": str(e)}
             )
 
     def update_indicator(self, observable_data: dict) -> Optional[dict]:
@@ -953,7 +951,7 @@ class ElasticApiHandler:
             delete_query = {"query": {"term": {"opencti_doc_id": doc_id}}}
 
             delete_url = f"{self.elastic_url}/{self.index_name}/_delete_by_query"
-            delete_response = requests.post(
+            requests.post(
                 delete_url,
                 headers=self.headers,
                 json=delete_query,
@@ -974,7 +972,7 @@ class ElasticApiHandler:
             if response.status_code in [200, 201]:
                 result = response.json()
                 self.helper.connector_logger.debug(
-                    f"Successfully updated indicator in Elastic (via delete and recreate)",
+                    "Successfully updated indicator in Elastic (via delete and recreate)",
                     {
                         "elastic_id": result.get("_id"),
                         "opencti_doc_id": doc_id,
@@ -994,7 +992,7 @@ class ElasticApiHandler:
 
         except requests.exceptions.RequestException as e:
             raise ElasticApiHandlerError(
-                f"Request failed while updating indicator", {"error": str(e)}
+                "Request failed while updating indicator", {"error": str(e)}
             )
 
     def delete_indicator(self, observable_data: dict) -> bool:
@@ -1018,7 +1016,7 @@ class ElasticApiHandler:
                 result = response.json() if response.status_code == 200 else {}
                 deleted_count = result.get("deleted", 0)
                 self.helper.connector_logger.debug(
-                    f"Successfully deleted indicator(s) from Elastic",
+                    "Successfully deleted indicator(s) from Elastic",
                     {"opencti_doc_id": doc_id, "deleted_count": deleted_count},
                 )
                 return True
@@ -1030,7 +1028,7 @@ class ElasticApiHandler:
 
         except requests.exceptions.RequestException as e:
             raise ElasticApiHandlerError(
-                f"Request failed while deleting indicator", {"error": str(e)}
+                "Request failed while deleting indicator", {"error": str(e)}
             )
 
     def test_connection(self) -> bool:
@@ -1096,7 +1094,7 @@ class ElasticApiHandler:
 
         except requests.exceptions.RequestException as e:
             self.helper.connector_logger.error(
-                f"Connection test failed", {"error": str(e)}
+                "Connection test failed", {"error": str(e)}
             )
             return False
 
@@ -1359,6 +1357,6 @@ class ElasticApiHandler:
 
         except Exception as e:
             self.helper.connector_logger.error(
-                f"Error setting up index template", {"error": str(e)}
+                "Error setting up index template", {"error": str(e)}
             )
             return False

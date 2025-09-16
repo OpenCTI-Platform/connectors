@@ -8,7 +8,7 @@ It also supports custom pattern types for Elastic query languages.
 
 import json
 from json import JSONDecodeError
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from pycti import OpenCTIConnectorHelper
 
@@ -220,7 +220,7 @@ class ElasticSecurityIntelConnector:
             if "pattern" in data:
                 # Process as SIEM rule and threat intel
                 self.helper.connector_logger.info(
-                    f"[CREATE] Processing pattern-based indicator",
+                    "[CREATE] Processing pattern-based indicator",
                     {
                         "opencti_id": opencti_id,
                         "pattern_type": data.get("pattern_type", "stix"),
@@ -238,7 +238,7 @@ class ElasticSecurityIntelConnector:
                     self._process_observable_batch(observables, "create")
         elif is_observable(data):
             self.helper.connector_logger.info(
-                f"[CREATE] Processing observable",
+                "[CREATE] Processing observable",
                 {"opencti_id": opencti_id, "type": data.get("type")},
             )
             self._process_observable_batch([data], "create")
@@ -255,7 +255,7 @@ class ElasticSecurityIntelConnector:
             if "pattern" in data:
                 # Process as SIEM rule and threat intel
                 self.helper.connector_logger.info(
-                    f"[UPDATE] Processing pattern-based indicator",
+                    "[UPDATE] Processing pattern-based indicator",
                     {
                         "opencti_id": opencti_id,
                         "pattern_type": data.get("pattern_type", "stix"),
@@ -273,7 +273,7 @@ class ElasticSecurityIntelConnector:
                     self._process_observable_batch(observables, "update")
         elif is_observable(data):
             self.helper.connector_logger.info(
-                f"[UPDATE] Processing observable",
+                "[UPDATE] Processing observable",
                 {"opencti_id": opencti_id, "type": data.get("type")},
             )
             self._process_observable_batch([data], "update")
@@ -290,7 +290,7 @@ class ElasticSecurityIntelConnector:
             if "pattern" in data:
                 # Process as SIEM rule and threat intel
                 self.helper.connector_logger.info(
-                    f"[DELETE] Processing pattern-based indicator",
+                    "[DELETE] Processing pattern-based indicator",
                     {
                         "opencti_id": opencti_id,
                         "pattern_type": data.get("pattern_type", "stix"),
@@ -308,7 +308,7 @@ class ElasticSecurityIntelConnector:
                     self._process_observable_batch(observables, "delete")
         elif is_observable(data):
             self.helper.connector_logger.info(
-                f"[DELETE] Processing observable",
+                "[DELETE] Processing observable",
                 {"opencti_id": opencti_id, "type": data.get("type")},
             )
             self._process_observable_batch([data], "delete")

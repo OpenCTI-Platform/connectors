@@ -2,9 +2,8 @@
 Elastic Security API Client for alerts and cases
 """
 
-import json
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from datetime import datetime
+from typing import Dict, List, Optional
 
 import requests
 from pycti import OpenCTIConnectorHelper
@@ -63,7 +62,7 @@ class ElasticApiClient:
 
         except requests.exceptions.RequestException as e:
             self.helper.connector_logger.error(
-                f"Connection test failed", {"error": str(e)}
+                "Connection test failed", {"error": str(e)}
             )
             return False
 
@@ -140,7 +139,7 @@ class ElasticApiClient:
 
         except requests.exceptions.RequestException as e:
             self.helper.connector_logger.error(
-                f"Error retrieving alerts", {"error": str(e)}
+                "Error retrieving alerts", {"error": str(e)}
             )
             return []
 
@@ -174,12 +173,12 @@ class ElasticApiClient:
                     kibana_url = kibana_url.replace(".es.", ".kb.")
                     kibana_url = kibana_url.replace(":9243", "")  # Remove ES port
                 self.helper.connector_logger.debug(
-                    f"Using converted Kibana URL for cases", {"kibana_url": kibana_url}
+                    "Using converted Kibana URL for cases", {"kibana_url": kibana_url}
                 )
 
             url = f"{kibana_url}/api/cases/_find"
             self.helper.connector_logger.debug(
-                f"Fetching cases from Kibana", {"url": url}
+                "Fetching cases from Kibana", {"url": url}
             )
 
             # Collect all cases with pagination
@@ -214,7 +213,7 @@ class ElasticApiClient:
                     all_cases.extend(page_cases)
 
                     self.helper.connector_logger.debug(
-                        f"Got cases from page {page}",
+                        "Got cases from page {}".format(page),
                         {"count": len(page_cases), "total": result.get("total", 0)},
                     )
 
@@ -234,7 +233,7 @@ class ElasticApiClient:
 
             cases = all_cases
             self.helper.connector_logger.debug(
-                f"Total cases before filtering", {"count": len(cases)}
+                "Total cases before filtering", {"count": len(cases)}
             )
 
             # Filter by date range
@@ -250,7 +249,7 @@ class ElasticApiClient:
                 end_dt = datetime.utcnow().replace(tzinfo=timezone.utc)
 
             self.helper.connector_logger.debug(
-                f"Filtering cases by date range",
+                "Filtering cases by date range",
                 {"start": start_dt.isoformat(), "end": end_dt.isoformat()},
             )
 
@@ -264,7 +263,7 @@ class ElasticApiClient:
                 )
                 if not created_at_str:
                     self.helper.connector_logger.warning(
-                        f"No created date found for case", {"case_id": case.get("id")}
+                        "No created date found for case", {"case_id": case.get("id")}
                     )
                     continue
 
@@ -306,7 +305,7 @@ class ElasticApiClient:
                     start_dt <= updated_at <= end_dt
                 ):
                     self.helper.connector_logger.debug(
-                        f"Case in date range, fetching details",
+                        "Case in date range, fetching details",
                         {
                             "case_id": case["id"],
                             "created": created_at.isoformat(),
@@ -319,7 +318,7 @@ class ElasticApiClient:
                         filtered_cases.append(case_details)
                 else:
                     self.helper.connector_logger.debug(
-                        f"Case outside date range",
+                        "Case outside date range",
                         {
                             "case_id": case["id"],
                             "created": created_at.isoformat(),
@@ -335,7 +334,7 @@ class ElasticApiClient:
 
         except requests.exceptions.RequestException as e:
             self.helper.connector_logger.error(
-                f"Error retrieving cases", {"error": str(e)}
+                "Error retrieving cases", {"error": str(e)}
             )
             return []
 
@@ -391,7 +390,7 @@ class ElasticApiClient:
                 case_data["url"] = f"{kibana_url}/app/security/cases/{case_id}"
 
                 self.helper.connector_logger.debug(
-                    f"Case details fetched",
+                    "Case details fetched",
                     {
                         "case_id": case_id,
                         "alerts_count": len(alerts),
@@ -402,14 +401,14 @@ class ElasticApiClient:
                 return case_data
             else:
                 self.helper.connector_logger.warning(
-                    f"Failed to get case details: {response.status_code}",
+                    "Failed to get case details: {}".format(response.status_code),
                     {"case_id": case_id, "response": response.text},
                 )
                 return None
 
         except requests.exceptions.RequestException as e:
             self.helper.connector_logger.error(
-                f"Error retrieving case details", {"case_id": case_id, "error": str(e)}
+                "Error retrieving case details", {"case_id": case_id, "error": str(e)}
             )
             return None
 
@@ -440,14 +439,14 @@ class ElasticApiClient:
                 return response.json()
             else:
                 self.helper.connector_logger.warning(
-                    f"Failed to get case comments: {response.status_code}",
+                    "Failed to get case comments: {}".format(response.status_code),
                     {"case_id": case_id},
                 )
                 return []
 
         except requests.exceptions.RequestException as e:
             self.helper.connector_logger.error(
-                f"Error retrieving case comments", {"case_id": case_id, "error": str(e)}
+                "Error retrieving case comments", {"case_id": case_id, "error": str(e)}
             )
             return []
 
@@ -510,7 +509,7 @@ class ElasticApiClient:
                                 full_alerts.append(alert_data)
                         else:
                             self.helper.connector_logger.debug(
-                                f"Could not fetch full alert data",
+                                "Could not fetch full alert data",
                                 {
                                     "alert_id": alert_id,
                                     "status": alert_response.status_code,
@@ -518,7 +517,7 @@ class ElasticApiClient:
                             )
 
                 self.helper.connector_logger.debug(
-                    f"Fetched {len(full_alerts)} full alerts for case",
+                    "Fetched {} full alerts for case".format(len(full_alerts)),
                     {"case_id": case_id, "references_count": len(alert_references)},
                 )
                 return full_alerts
@@ -532,7 +531,7 @@ class ElasticApiClient:
 
         except requests.exceptions.RequestException as e:
             self.helper.connector_logger.debug(
-                f"Error retrieving case alerts", {"case_id": case_id, "error": str(e)}
+                "Error retrieving case alerts", {"case_id": case_id, "error": str(e)}
             )
             return []
 
@@ -559,12 +558,12 @@ class ElasticApiClient:
                 return response.json()
             else:
                 self.helper.connector_logger.debug(
-                    f"Could not get rule details", {"rule_id": rule_id}
+                    "Could not get rule details", {"rule_id": rule_id}
                 )
                 return None
 
         except requests.exceptions.RequestException as e:
             self.helper.connector_logger.debug(
-                f"Error retrieving rule details", {"rule_id": rule_id, "error": str(e)}
+                "Error retrieving rule details", {"rule_id": rule_id, "error": str(e)}
             )
             return None
