@@ -7,9 +7,7 @@ from typing import Annotated, Literal, Optional
 import __main__
 from pydantic import (
     AliasChoices,
-    BaseModel,
     BeforeValidator,
-    ConfigDict,
     Field,
     HttpUrl,
     PlainSerializer,
@@ -119,15 +117,20 @@ DatetimeFromIsoString = Annotated[
 ]
 
 
-class ConfigBaseModel(BaseModel):
-    """
-    Base class for frozen config models, i.e. not alter-able after `model_post_init()`.
-    """
+class ConfigBaseModel(BaseSettings):
+    """Base class for global config models. To prevent attributes from being modified after initialization."""
 
-    model_config = ConfigDict(
-        extra="allow",
-        validate_default=True,
+    model_config = SettingsConfigDict(
+        env_nested_delimiter="_",
+        env_nested_max_split=1,
         frozen=True,
+        str_strip_whitespace=True,
+        str_min_length=1,
+        extra="allow",
+        enable_decoding=False,
+        # Allow both alias and field name for input
+        validate_by_name=True,
+        validate_by_alias=True,
     )
 
 
