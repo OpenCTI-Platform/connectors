@@ -595,7 +595,10 @@ class ElasticApiHandler:
                                 ecs_doc.setdefault("related", {})["hosts"] = [
                                     parsed.hostname
                                 ]
-                        except:
+                        except (ValueError, AttributeError) as e:
+                            self.helper.connector_logger.debug(
+                                f"Could not parse URL '{url_value}': {str(e)}"
+                            )
                             threat_indicator["url"] = {
                                 "original": url_value,
                                 "full": url_value,
@@ -712,7 +715,10 @@ class ElasticApiHandler:
                     # Add domain to related hosts if extracted
                     if parsed.hostname:
                         ecs_doc.setdefault("related", {})["hosts"] = [parsed.hostname]
-                except:
+                except (ValueError, AttributeError) as e:
+                    self.helper.connector_logger.debug(
+                        f"Could not parse URL '{obs_value}': {str(e)}"
+                    )
                     threat_indicator["url"] = {"original": obs_value, "full": obs_value}
 
             elif obs_type == "email-addr" or obs_type == "email-address":
@@ -765,8 +771,10 @@ class ElasticApiHandler:
                             "name": observable_data.get("name", f"AS{as_number}")
                         },
                     }
-                except:
-                    pass
+                except (ValueError, TypeError) as e:
+                    self.helper.connector_logger.debug(
+                        f"Could not parse AS number '{as_number}': {str(e)}"
+                    )
 
             elif obs_type == "mac-addr":
                 threat_indicator["type"] = "mac-addr"
@@ -1079,10 +1087,10 @@ class ElasticApiHandler:
                                 "status": health.get("status"),
                             },
                         )
-                except:
+                except (ValueError, requests.exceptions.JSONDecodeError) as e:
                     # If JSON parsing fails but we got a 200, consider it a success
                     self.helper.connector_logger.info(
-                        "Connected to Elastic (non-JSON response, likely Kibana web interface)"
+                        f"Connected to Elastic (non-JSON response, likely Kibana web interface): {str(e)}"
                     )
                 return True
             else:

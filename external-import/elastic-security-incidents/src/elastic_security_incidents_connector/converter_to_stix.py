@@ -385,8 +385,10 @@ class ConverterToStix:
                             "created_by_ref": self.author["id"],
                         },
                     )
-            except:
-                pass
+            except (ValueError, ipaddress.AddressValueError) as e:
+                self.helper.connector_logger.debug(
+                    f"Could not parse IP address '{obs_value}': {str(e)}"
+                )
         elif obs_type == "user" or obs_type == "username":
             return stix2.UserAccount(
                 user_id=obs_value,
@@ -578,8 +580,10 @@ class ConverterToStix:
                             object_marking_refs=[self.tlp_marking],
                             custom_properties={"created_by_ref": self.author["id"]},
                         )
-                except:
-                    pass
+                except (ValueError, ipaddress.AddressValueError) as e:
+                    self.helper.connector_logger.debug(
+                        f"Could not parse IP address '{field_value}': {str(e)}"
+                    )
 
             # Domain names
             elif field_name in [
@@ -662,7 +666,7 @@ class ConverterToStix:
                     custom_properties={"created_by_ref": self.author["id"]},
                 )
 
-        except Exception as e:
+        except (stix2.exceptions.STIXError, ValueError, TypeError) as e:
             self.helper.connector_logger.debug(
                 f"Could not create observable for {field_name}: {str(e)}"
             )
