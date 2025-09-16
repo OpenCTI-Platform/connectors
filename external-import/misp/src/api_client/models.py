@@ -310,16 +310,16 @@ class ExtendedAttributeItem(MISPBaseModel):
     category: Optional[AttributeCategory] = Field(default=None)
     type: Optional[AttributeType] = Field(default=None)
     value: Optional[str] = Field(default=None)
-    to_ids: Optional[bool] = True
+    to_ids: Optional[bool] = Field(default=True)
     uuid: Optional[str] = Field(default=None)
-    timestamp: Optional[str] = "0"
+    timestamp: Optional[str] = Field(default="0")
     distribution: Optional[DistributionLevelId] = Field(
         default=None, coerce_numbers_to_str=True
     )
     sharing_group_id: Optional[str] = Field(default=None)
     comment: Optional[str] = Field(default=None)
-    deleted: Optional[bool] = False
-    disable_correlation: Optional[bool] = False
+    deleted: Optional[bool] = Field(default=False)
+    disable_correlation: Optional[bool] = Field(default=False)
     first_seen: Optional[Union[str, datetime]] = Field(default=None)
     last_seen: Optional[Union[str, datetime]] = Field(default=None)
     Tag: Optional[List["TagItem"]] = Field(default=None)
@@ -339,7 +339,7 @@ class GalaxyItem(MISPBaseModel):
     icon: Optional[str] = Field(default=None)
     namespace: Optional[str] = Field(default=None)
     kill_chain_order: Optional[Dict[str, Any]] = Field(
-        None,
+        default=None,
         example={
             "fraud-tactics": [
                 "Initiation",
@@ -362,7 +362,7 @@ class ObjectItem(MISPBaseModel):
     template_version: Optional[str] = Field(default=None)
     event_id: Optional[str] = Field(default=None)
     uuid: Optional[str] = Field(default=None)
-    timestamp: Optional[str] = "0"
+    timestamp: Optional[str] = Field(default="0")
     distribution: Optional[DistributionLevelId] = Field(
         default=None, coerce_numbers_to_str=True
     )
@@ -378,14 +378,14 @@ class TagItem(MISPBaseModel):
     id: Optional[str] = Field(default=None)
     name: Optional[str] = Field(default=None)
     colour: Optional[str] = Field(default=None)
-    exportable: Optional[bool] = True
+    exportable: Optional[bool] = Field(default=True)
     org_id: Optional[str] = Field(default=None)
     user_id: Optional[str] = Field(default=None)
-    hide_tag: Optional[bool] = False
+    hide_tag: Optional[bool] = Field(default=False)
     numerical_value: Optional[str] = Field(default=None)
-    is_galaxy: Optional[bool] = True
-    is_custom_galaxy: Optional[bool] = True
-    inherited: Optional[bool] = True
+    is_galaxy: Optional[bool] = Field(default=True)
+    is_custom_galaxy: Optional[bool] = Field(default=True)
+    inherited: Optional[bool] = Field(default=True)
 
 
 class EventFeed(MISPBaseModel):
@@ -405,7 +405,7 @@ class EventFeed(MISPBaseModel):
     fixed_event: Optional[bool] = Field(default=None)
     delta_merge: Optional[bool] = Field(default=None)
     event_id: Optional[str] = Field(default=None)
-    publish: Optional[bool] = False
+    publish: Optional[bool] = Field(default=False)
     override_ids: Optional[bool] = Field(default=None)
     settings: Optional[str] = Field(default=None)
     input_source: Optional[FeedInputSource] = Field(default=None)
@@ -434,8 +434,8 @@ class EventReportItem(MISPBaseModel):
         default=None, coerce_numbers_to_str=True
     )
     sharing_group_id: Optional[str] = Field(default=None)
-    timestamp: Optional[str] = "0"
-    deleted: Optional[bool] = False
+    timestamp: Optional[str] = Field(default="0")
+    deleted: Optional[bool] = Field(default=False)
 
 
 class ExtendedEvent(MISPBaseModel):
@@ -449,21 +449,21 @@ class ExtendedEvent(MISPBaseModel):
     orgc_uuid: Optional[str] = Field(default=None)  # from SlimEvent
     uuid: Optional[str] = Field(default=None)
     date: Optional[str] = Field(default=None, example="1991-01-15")
-    published: Optional[bool] = False
+    published: Optional[bool] = Field(default=False)
     analysis: Optional[AnalysisLevelId] = Field(
         default=None, coerce_numbers_to_str=True
     )
     attribute_count: Optional[str] = Field(default=None)
-    timestamp: Optional[str] = "0"
+    timestamp: Optional[str] = Field(default="0")
     sharing_group_id: Optional[str] = Field(default=None)
     proposal_email_lock: Optional[bool] = Field(default=None)
     locked: Optional[bool] = Field(default=None)
     threat_level_id: Optional[ThreatLevelId] = Field(
         default=None, coerce_numbers_to_str=True
     )
-    publish_timestamp: Optional[str] = "0"
-    sighting_timestamp: Optional[str] = "0"
-    disable_correlation: Optional[bool] = False
+    publish_timestamp: Optional[str] = Field(default="0")
+    sighting_timestamp: Optional[str] = Field(default="0")
+    disable_correlation: Optional[bool] = Field(default=False)
     extends_uuid: Optional[str] = Field(default=None)
     event_creator_email: Optional[str] = Field(default=None)
     Feed: Optional[EventFeed] = Field(default=None)
