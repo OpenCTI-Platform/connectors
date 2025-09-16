@@ -156,7 +156,8 @@ class ElasticApiClient:
             if self.config.elastic_kibana_url:
                 kibana_url = self.config.elastic_kibana_url
                 self.helper.connector_logger.debug(
-                    f"Using configured Kibana URL for cases: {kibana_url}", {"kibana_url": kibana_url}
+                    f"Using configured Kibana URL for cases: {kibana_url}",
+                    {"kibana_url": kibana_url},
                 )
             else:
                 # Check if this is a Kibana URL (for Cases API)
