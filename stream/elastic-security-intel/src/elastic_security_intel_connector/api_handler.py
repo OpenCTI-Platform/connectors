@@ -939,7 +939,7 @@ class ElasticApiHandler:
     def bulk_create_indicators(self, observables_data: List[dict]) -> dict:
         """
         Bulk create threat indicators in Elastic Security using the _bulk API
-        
+
         :param observables_data: List of observable data dictionaries
         :return: Dictionary with creation statistics and any errors
         """
@@ -947,23 +947,23 @@ class ElasticApiHandler:
             # Build bulk request body
             bulk_body = []
             doc_ids = []
-            
+
             for observable_data in observables_data:
                 doc_id = self._generate_doc_id(observable_data)
                 ecs_doc = self._convert_to_ecs_threat(observable_data)
-                
+
                 # Add document ID as a field for reference
                 ecs_doc["opencti_doc_id"] = doc_id
                 doc_ids.append(doc_id)
-                
+
                 # Add index action for bulk API
                 # For data streams, we use "create" action to ensure documents aren't overwritten
                 bulk_body.append({"create": {"_index": self.index_name}})
                 bulk_body.append(ecs_doc)
-            
+
             # Convert to newline-delimited JSON format required by _bulk API
             bulk_data = "\n".join([json.dumps(item) for item in bulk_body]) + "\n"
-            
+
             # Use _bulk API
             url = f"{self.elastic_url}/_bulk"
             response = requests.post(
@@ -973,14 +973,14 @@ class ElasticApiHandler:
                 verify=self._get_verify_config(),
                 timeout=60,  # Longer timeout for bulk operations
             )
-            
+
             if response.status_code in [200, 201]:
                 result = response.json()
-                
+
                 # Process bulk response
                 created = 0
                 errors = []
-                
+
                 for idx, item in enumerate(result.get("items", [])):
                     if "create" in item:
                         create_result = item["create"]
@@ -988,25 +988,33 @@ class ElasticApiHandler:
                             created += 1
                         else:
                             # Track error details
-                            errors.append({
-                                "opencti_doc_id": doc_ids[idx] if idx < len(doc_ids) else "unknown",
-                                "error": create_result.get("error", "Unknown error"),
-                                "status": create_result.get("status"),
-                            })
-                
+                            errors.append(
+                                {
+                                    "opencti_doc_id": (
+                                        doc_ids[idx]
+                                        if idx < len(doc_ids)
+                                        else "unknown"
+                                    ),
+                                    "error": create_result.get(
+                                        "error", "Unknown error"
+                                    ),
+                                    "status": create_result.get("status"),
+                                }
+                            )
+
                 # Log results
                 self.helper.connector_logger.info(
                     f"Bulk operation completed: created {created}/{len(observables_data)} indicators",
                     {"errors_count": len(errors), "took_ms": result.get("took", 0)},
                 )
-                
+
                 if errors:
                     # Log first few errors for debugging
                     self.helper.connector_logger.warning(
                         "Some indicators failed to create",
                         {"sample_errors": errors[:5]},  # Only log first 5 errors
                     )
-                
+
                 return {
                     "created": created,
                     "total": len(observables_data),
@@ -1018,7 +1026,7 @@ class ElasticApiHandler:
                     f"Failed to bulk create indicators: {response.status_code}",
                     {"response": response.text[:500]},  # Limit response size in logs
                 )
-                
+
         except requests.exceptions.RequestException as e:
             raise ElasticApiHandlerError(
                 "Request failed during bulk create operation", {"error": str(e)}
