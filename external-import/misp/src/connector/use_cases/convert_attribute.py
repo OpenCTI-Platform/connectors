@@ -105,7 +105,7 @@ def build_stix_pattern(observables: list[stix2.v21._Observable]) -> str:
                 objects_paths_comparisons.append(object_path_comparison)
 
     if not objects_paths_comparisons:
-        return AttributeConverterError(
+        raise AttributeConverterError(
             "Error while converting attribute to STIX pattern"
         )
 
