@@ -15,7 +15,7 @@
   "support_version": ">= 6.5.1",
   "subscription_link": "",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/email-intel-imap",
-  "manager_supported": true,
+  "manager_supported": false,
   "container_version": "rolling",
   "container_image": "opencti/connector-email-intel-imap",
   "container_type": "EXTERNAL_IMPORT"
