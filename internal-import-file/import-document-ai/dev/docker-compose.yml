@@ -142,6 +142,7 @@ services:
       - CONNECTOR_WEB_SERVICE_URL=http://webservice:80
       - CONNECTOR_LOG_LEVEL=debug
       - CONNECTOR_LICENCE_KEY_PEM=${CONNECTOR_LICENCE_KEY_PEM}
+      - IMPORT_DOCUMENT_INCLUDE_RELATIONSHIPS=true
     depends_on:
       - opencti
       - webservice
