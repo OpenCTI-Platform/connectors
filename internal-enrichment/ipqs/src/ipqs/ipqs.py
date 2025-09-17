@@ -12,13 +12,13 @@ from yaml import FullLoader, load
 from .builder import IPQSBuilder
 from .client import IPQSClient
 from .constants import (
-    SOURCE_NAME,
-    IP_ENRICH,
-    URL_ENRICH,
     EMAIL_ENRICH,
-    PHONE_ENRICH,
-    LEAK_ENRICH_USERNAME,
+    IP_ENRICH,
     LEAK_ENRICH_PASSWORD,
+    LEAK_ENRICH_USERNAME,
+    PHONE_ENRICH,
+    SOURCE_NAME,
+    URL_ENRICH,
 )
 
 
@@ -179,7 +179,9 @@ class IPQSConnector:
         )
 
         if response is None:
-            return "Invalid/nonexistent phone number or country specified is not possible."
+            return (
+                "Invalid/nonexistent phone number or country specified is not possible."
+            )
         else:
             builder = IPQSBuilder(
                 self.helper,
