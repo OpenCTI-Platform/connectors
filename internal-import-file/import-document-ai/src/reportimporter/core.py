@@ -19,7 +19,7 @@ from reportimporter.relations_allowed import (
     load_allowed_relations,
     stix_lookup_type,
 )
-from reportimporter.util import create_stix_object
+from reportimporter.util import create_stix_object, remove_all_relationships
 from requests.exceptions import ConnectionError, HTTPError
 
 # ---------------------------------------------------------------------------
@@ -77,6 +77,14 @@ class ReportImporter:
             "CONNECTOR_LICENCE_KEY_PEM", ["connector", "licence_key_pem"], config
         )
         self.licence_key_base64 = base64.b64encode(license_key_pem.encode())
+
+        self.include_relationships = get_config_variable(
+            "IMPORT_DOCUMENT_INCLUDE_RELATIONSHIPS",
+            ["import_document", "include_relationships"],
+            config,
+            default=False,
+        )
+
         # Retrieve the OpenCTI instance ID (used as a header for the ML service)
         # TODO make the connector more resilient to OpenCTI being down at startup,
         # by wraping the initial helper.api.query() in a try/except with retries and logging
@@ -773,9 +781,13 @@ class ReportImporter:
                 final_ids.append(obj["id"])
                 final_objects.append(obj)
 
-        bundle = stix2.Bundle(objects=final_objects, allow_custom=True).serialize()
+        bundle = stix2.Bundle(objects=final_objects, allow_custom=True)
+
+        if not self.include_relationships:
+            bundle = remove_all_relationships(bundle)
+
         bundles_sent = self.helper.send_stix2_bundle(
-            bundle=bundle,
+            bundle=bundle.serialize(),
             bypass_validation=bypass_validation,
             file_name="import-document-ai-" + Path(file_name).stem + ".json",
             entity_id=entity["id"] if entity else None,

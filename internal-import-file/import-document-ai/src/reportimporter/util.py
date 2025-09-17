@@ -1,3 +1,4 @@
+import json
 import stix2
 from pycti import (
     AttackPattern,
@@ -212,3 +213,56 @@ stix_object_mapping = {
         allow_custom=True,
     ),
 }
+
+def remove_all_relationships(bundle: stix2.Bundle) -> stix2.Bundle:
+    """Remove all relationship objects from a STIX bundle.
+
+    Args:
+        bundle (stix2.Bundle): The STIX bundle to process.
+
+    Returns:
+        stix2.Bundle: The processed STIX bundle without relationship objects.
+
+    Examples:
+        >>> import stix2
+        >>> identity = stix2.Identity(name="Example Org", identity_class="organization")
+        >>> malware = stix2.Malware(name="Example Malware", is_family=False)
+        >>> relationship = stix2.Relationship(
+        ...     source_ref=identity["id"],
+        ...     target_ref=malware["id"],
+        ...     relationship_type="uses",
+        ... )
+        >>> report = stix2.Report(
+        ...     name="Example Report",
+        ...     description="An example report containing relationships.",
+        ...     object_refs=[identity["id"], malware["id"], relationship["id"]],
+        ...     published="2024-10-01T12:00:00Z",
+        ... )
+        >>> bundle = stix2.Bundle(
+        ...     objects=[
+        ...         identity,
+        ...         malware,
+        ...         relationship,
+        ...         report,
+        ...     ],
+        ...     allow_custom=True,
+        ... )
+        >>> filtered_bundle = remove_all_relationships(bundle)
+    """
+    # remove relationships from the bundle
+    objects = [obj for obj in bundle["objects"] if obj.get("type") != "relationship"]
+    # remove all references to relationships in container objects
+    for i, obj in enumerate(objects):
+        if "object_refs" in obj:
+            # as we cannot reassign stix object properties,
+            # we use dict representation not to alter other properties
+            object_dict = json.loads(obj.serialize())
+            object_dict["object_refs"] = [
+                ref for ref in obj["object_refs"] if not ref.startswith("relationship--")
+            ]
+            obj = stix2.parse(object_dict, allow_custom=True)
+            objects[i] = obj
+    return stix2.Bundle(
+        objects=objects,
+        allow_custom=True,
+    )
