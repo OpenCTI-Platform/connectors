@@ -11,7 +11,7 @@ from stix2 import (
     Relationship,
 )
 
-from .constants import RiskCriticality, RiskColor
+from .constants import RiskColor, RiskCriticality
 
 
 class IPQSBuilder:
