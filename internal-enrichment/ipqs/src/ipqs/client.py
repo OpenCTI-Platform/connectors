@@ -8,10 +8,10 @@ from requests import Response, session
 from requests.exceptions import ConnectTimeout, HTTPError, InvalidURL, ProxyError
 
 from .constants import (
-    IP_ENRICH_FIELDS,
-    URL_ENRICH_FIELDS,
     EMAIL_ENRICH_FIELDS,
+    IP_ENRICH_FIELDS,
     PHONE_ENRICH_FIELDS,
+    URL_ENRICH_FIELDS,
 )
 
 
