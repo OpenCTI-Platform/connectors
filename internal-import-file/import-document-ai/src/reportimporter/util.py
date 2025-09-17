@@ -214,6 +214,7 @@ stix_object_mapping = {
     ),
 }
 
+
 def remove_all_relationships(bundle: stix2.Bundle) -> stix2.Bundle:
     """Remove all relationship objects from a STIX bundle.
 
@@ -258,7 +259,9 @@ def remove_all_relationships(bundle: stix2.Bundle) -> stix2.Bundle:
             # we use dict representation not to alter other properties
             object_dict = json.loads(obj.serialize())
             object_dict["object_refs"] = [
-                ref for ref in obj["object_refs"] if not ref.startswith("relationship--")
+                ref
+                for ref in obj["object_refs"]
+                if not ref.startswith("relationship--")
             ]
             obj = stix2.parse(object_dict, allow_custom=True)
             objects[i] = obj
@@ -266,6 +269,7 @@ def remove_all_relationships(bundle: stix2.Bundle) -> stix2.Bundle:
         objects=objects,
         allow_custom=True,
     )
+
 
 def compute_bundle_stats(bundle: stix2.Bundle) -> dict:
     """Compute statistics about a STIX bundle.
@@ -325,7 +329,7 @@ def compute_bundle_stats(bundle: stix2.Bundle) -> dict:
                 stats["reports"] += 1
             else:
                 stats["entities"] += 1
-            
+
         elif isinstance(obj, stix2.v21._Observable):
             stats["observables"] += 1
     return stats

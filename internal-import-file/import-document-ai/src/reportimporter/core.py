@@ -19,7 +19,11 @@ from reportimporter.relations_allowed import (
     load_allowed_relations,
     stix_lookup_type,
 )
-from reportimporter.util import compute_bundle_stats, create_stix_object, remove_all_relationships
+from reportimporter.util import (
+    compute_bundle_stats,
+    create_stix_object,
+    remove_all_relationships,
+)
 from requests.exceptions import ConnectionError, HTTPError
 
 # ---------------------------------------------------------------------------
