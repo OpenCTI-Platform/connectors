@@ -20,12 +20,15 @@ class ExportTTPsFileNavigator:
         self.helper = OpenCTIConnectorHelper(config)
 
     def _process_message(self, data):
+        if "entity_type" not in data or "entity_id" not in data:
+            raise ValueError(
+                "This Connector currently only handles direct export (single entity and not list)"
+            )
         file_name = data["file_name"]
         export_scope = data["export_scope"]  # query or selection or single
         export_type = data["export_type"]  # Simple or Full
         entity_name = data["entity_name"]
         entity_type = data["entity_type"]
-        file_markings = data.get("file_markings", [])
 
         # handle single export
         if export_scope == "single":
@@ -52,72 +55,6 @@ class ExportTTPsFileNavigator:
                 + file_name
             )
 
-        # handle selection export
-        if export_scope == "selection":
-            self.helper.log_info(f"Exporting SELECTION ({export_type}) to {file_name}")
-            main_filter = data.get("main_filter")
-            stix_objects = self.helper.api_impersonate.opencti_stix_object_or_stix_relationship.list(
-                filters=main_filter, getAll=True
-            )
-            all_ttps = {}
-            for obj in stix_objects:
-                ttps = self._collect_ttps(
-                    obj["id"], obj.get("name", obj["entity_type"])
-                )
-                for ttp in ttps:
-                    all_ttps[ttp["x_mitre_id"]] = ttp
-
-            layer = self.build_layer(
-                f"Selection export ({entity_type})", list(all_ttps.values())
-            )
-            json_bundle = json.dumps(layer, indent=4)
-
-            self.helper.api.stix_domain_object.push_list_export(
-                entity_id=None,
-                entity_type=entity_type,
-                file_name=file_name,
-                file_markings=file_markings,
-                data=json_bundle,
-                list_filters="selected_ids",
-            )
-
-            self.helper.log_info(f"Selection export done to {file_name}")
-
-        # handle query export
-        if export_scope == "query":
-            list_params = data["list_params"]
-            self.helper.log_info(f"Exporting QUERY ({export_type}) to {file_name}")
-
-            entities = self.helper.api_impersonate.opencti_stix_object_or_stix_relationship.list(
-                filters=list_params.get("filters"), getAll=True
-            )
-
-            all_ttps = {}
-            for obj in entities:
-                ttps = self._collect_ttps(
-                    obj["id"], obj.get("name", obj["entity_type"])
-                )
-                for ttp in ttps:
-                    if "x_mitre_id" in ttp:
-                        all_ttps[ttp["x_mitre_id"]] = ttp
-
-            layer = self.build_layer(
-                f"Query export ({entity_type})", list(all_ttps.values())
-            )
-            json_bundle = json.dumps(layer, indent=4)
-
-            self.helper.api.stix_domain_object.push_list_export(
-                entity_id=None,
-                entity_type=entity_type,
-                file_name=file_name,
-                file_markings=file_markings,
-                data=json_bundle,
-                list_filters=json.dumps(list_params),
-            )
-
-            self.helper.log_info(f"Query export done to {file_name}")
-        return "Export done"
-
     def _process_entity_export(self, entity_id, entity_name):
         related_ttps = []
         # Get the relations from the main entity to attack pattern
@@ -131,20 +68,6 @@ class ExportTTPsFileNavigator:
             )
             related_ttps.append(attack_pattern)
         return self.build_layer(entity_name, related_ttps)
-
-    def _collect_ttps(self, entity_id, entity_name):
-        related_ttps = []
-        stix_relations = self.helper.api_impersonate.stix_core_relationship.list(
-            fromId=entity_id,
-            toTypes=["Attack-Pattern"],
-        )
-        for relation in stix_relations:
-            attack_pattern = self.helper.api_impersonate.attack_pattern.read(
-                id=relation["to"]["id"]
-            )
-            if attack_pattern:
-                related_ttps.append(attack_pattern)
-        return related_ttps
 
     @staticmethod
     def build_layer(entity_name, ttps):
