@@ -587,7 +587,6 @@ class ReportImporter:
 
         relationships: list[stix2.Relationship] = []  # accumulate all relationships
 
-
         # Build relationships defined by the connector's own rules
         # 1. Add relationships that stem from the contextual “entity”
         if entity is not None:
