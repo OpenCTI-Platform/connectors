@@ -234,7 +234,7 @@ class ReportImporter:
                 "observables",
                 "entities",
                 "relationships",
-                "report",
+                "reports",
                 "total_sent",
             )
         ):
@@ -249,7 +249,7 @@ class ReportImporter:
                 f"{counts['observables']} observables, "
                 f"{counts['entities']} entities, "
                 f"{counts['relationships']} relationships"
-                + (f", {counts['report']} report" if counts["report"] else "")
+                + (f", {counts['reports']} reports" if counts["reports"] else "")
             )
         else:
             summary_lines.append(
@@ -257,7 +257,7 @@ class ReportImporter:
                 f"{counts['observables']} observables, "
                 f"{counts['entities']} entities, "
                 f"{counts['relationships']} relationships"
-                + (f", {counts['report']} report" if counts["report"] else "")
+                + (f", {counts['reports']} reports" if counts["reports"] else "")
                 + f" (total sent = {counts['total_sent']})"
             )
         if skipped:
@@ -587,7 +587,6 @@ class ReportImporter:
 
         relationships: list[stix2.Relationship] = []  # accumulate all relationships
 
-        report_is_update = entity is not None
 
         # Build relationships defined by the connector's own rules
         # 1. Add relationships that stem from the contextual “entity”
@@ -790,7 +789,7 @@ class ReportImporter:
         if not self.include_relationships:
             bundle = remove_all_relationships(bundle)
 
-        bundles_sent = self.helper.send_stix2_bundle(
+        self.helper.send_stix2_bundle(
             bundle=bundle.serialize(),
             bypass_validation=bypass_validation,
             file_name="import-document-ai-" + Path(file_name).stem + ".json",
