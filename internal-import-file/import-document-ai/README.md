@@ -32,7 +32,7 @@ OpenCTI data is coming from *import* connectors.
 | `connector_create_indicator`     | `CONNECTOR_CREATE_INDICATOR`            | `false`                                | No        | Create an indicator for each extracted observable                                             |
 | `connector_web_service_url`      | `CONNECTOR_WEB_SERVICE_URL`             | `https://importdoc.ariane.filigran.io` | No        | The URL of the extraction service running the AI model                                      |
 | `connector_licence_key_pem`      | `CONNECTOR_LICENCE_KEY_PEM`             |                                        | Yes       | The license certificate in a PEM format (provided by Filigran to Enterprise Edition users)    |
-| `import_document:include_relationships` | `IMPORT_DOCUMENT_INCLUDE_RELATIONSHIPS` | `false` | No | Whether to include relationships in the imported bundle. If set to `false`, relationships will be removed from the bundle and any references to them in container objects will also be removed. |
+| `import_document:include_relationships` | `IMPORT_DOCUMENT_INCLUDE_RELATIONSHIPS` | `true` | No | Whether to include relationships in the imported bundle. If set to `false`, relationships will be removed from the bundle and any references to them in container objects will also be removed. |
 
 ### Debugging
 

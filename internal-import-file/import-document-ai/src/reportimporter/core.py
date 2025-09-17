@@ -86,7 +86,7 @@ class ReportImporter:
             "IMPORT_DOCUMENT_INCLUDE_RELATIONSHIPS",
             ["import_document", "include_relationships"],
             config,
-            default=False,
+            default=True,
         )
 
         # Retrieve the OpenCTI instance ID (used as a header for the ML service)
