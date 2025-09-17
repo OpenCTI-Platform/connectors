@@ -19,7 +19,7 @@ from reportimporter.relations_allowed import (
     load_allowed_relations,
     stix_lookup_type,
 )
-from reportimporter.util import create_stix_object, remove_all_relationships
+from reportimporter.util import compute_bundle_stats, create_stix_object, remove_all_relationships
 from requests.exceptions import ConnectionError, HTTPError
 
 # ---------------------------------------------------------------------------
@@ -793,14 +793,7 @@ class ReportImporter:
             entity_id=entity["id"] if entity else None,
         )
 
-        # Correction if updated report counted as observable
-        actual_count = len(bundles_sent) - 1 if report_is_update else len(bundles_sent)
-
         return {
-            "observables": len(observables_ids),
-            "entities": len(entities_ids),
-            "relationships": len(relationship_ids),
-            "report": 0 if report_is_update else 1,
-            "total_sent": actual_count,
+            **compute_bundle_stats(bundle),
             "skipped_rels": list(skipped_rels),
         }
