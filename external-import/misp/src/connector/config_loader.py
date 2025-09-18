@@ -2,7 +2,7 @@ import os
 import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal
 
 import __main__
 from pydantic import (
@@ -217,11 +217,11 @@ class _MISPConfig(_ConfigBaseModel):
     ssl_verify: bool = Field(
         description="Whether to check if the SSL certificate is valid when using `HTTPS` protocol or not.",
     )
-    client_cert: Optional[str] = Field(
+    client_cert: str | None = Field(
         description="Filepath to the client certificate to use for MISP API calls. Required if `ssl_verify` is enabled.",
         default=None,
     )
-    reference_url: Optional[str] = Field(
+    reference_url: str | None = Field(
         description="MISP base URL used for External References",
         default=None,
     )
@@ -235,104 +235,104 @@ class _MISPConfig(_ConfigBaseModel):
         description="Whether to create an observable for each imported MISP attribute or not.",
     )
     # TODO: check if Literal is correct
-    datetime_attribute: Optional[Literal["date", "timestamp"]] = Field(
+    datetime_attribute: Literal["date", "timestamp"] = Field(
         description="The attribute to use as MISP events date.",
         default="timestamp",
     )
     # TODO: check if Literal is correct
-    date_filter_field: Optional[Literal["date_from", "timestamp"]] = Field(
+    date_filter_field: Literal["date_from", "timestamp"] = Field(
         description="The attribute to use as filter to query new MISP events by date.",
         default="timestamp",
     )
     # ? What does it means??
-    report_description_attribute_filters: Optional[DictFromString] = Field(
+    report_description_attribute_filters: DictFromString = Field(
         description="Filter to use to find the attribute that will be used for report description (example: 'type=comment,category=Internal reference')",
         default={},
         alias="report_description_attribute_filter",  # backward compatibility with mispelled env var
     )
-    create_object_observables: Optional[bool] = Field(
+    create_object_observables: bool = Field(
         description="Whether to create a text observable for each MISP Event's object or not.",
         default=False,
     )
-    create_tags_as_labels: Optional[bool] = Field(
+    create_tags_as_labels: bool = Field(
         description="Whether to create labels from MISP tags or not.",
         default=True,
     )
     # ! Not documented in README
-    guess_threats_from_tags: Optional[bool] = Field(
+    guess_threats_from_tags: bool = Field(
         description="Whether to **guess** and create Threats from MISP tags or not.",
         default=False,
         alias="guess_threat_from_tags",  # backward compatibility with mispelled env var
     )
     # ! Not documented in README
-    author_from_tags: Optional[bool] = Field(
+    author_from_tags: bool = Field(
         description="Whether to create Authors from MISP tags or not.",
         default=False,
     )
     # ! Not documented in README
-    markings_from_tags: Optional[bool] = Field(
+    markings_from_tags: bool = Field(
         description="Whether to create Markings from MISP tags or not.",
         default=False,
     )
     # ! Not documented in README
-    keep_original_tags_as_label: Optional[ListFromString] = Field(
+    keep_original_tags_as_label: ListFromString = Field(
         description="List of original MISP tags to keep as labels.",
         default=[],
     )
     # ! Not documented in README
-    enforce_warning_list: Optional[bool] = Field(
+    enforce_warning_list: bool = Field(
         description="Whether to enforce the warning list for MISP events or not.",
         default=False,
     )
     # ! Documented as MISP_REPORT_CLASS in README
-    report_type: Optional[str] = Field(
+    report_type: str = Field(
         description="The type of report to create on OpenCTI from MISP events.",
         default="misp-event",
     )
-    import_from_date: Optional[SafeAwareDatetime] = Field(
+    import_from_date: SafeAwareDatetime | None = Field(
         description="A date (ISO-8601) from which to start importing MISP events (based on events creation date).",
         default=None,
     )
-    import_tags: Optional[ListFromString] = Field(
+    import_tags: ListFromString = Field(
         description="List of tags to filter MISP events to import, **including** only events with these tags.",
         default=[],
     )
-    import_tags_not: Optional[ListFromString] = Field(
+    import_tags_not: ListFromString = Field(
         description="List of tags to filter MISP events to import, **excluding** events with these tags.",
         default=[],
     )
-    import_creator_orgs: Optional[ListFromString] = Field(
+    import_creator_orgs: ListFromString = Field(
         description="List of organization identifiers to filter MISP events to import, **including** only events created by these organizations.",
         default=[],
     )
-    import_creator_orgs_not: Optional[ListFromString] = Field(
+    import_creator_orgs_not: ListFromString = Field(
         description="List of organization identifiers to filter MISP events to import, **excluding** events created by these organizations.",
         default=[],
     )
-    import_owner_orgs: Optional[ListFromString] = Field(
+    import_owner_orgs: ListFromString = Field(
         description="List of organization identifiers to filter MISP events to import, **including** only events owned by these organizations.",
         default=[],
     )
-    import_owner_orgs_not: Optional[ListFromString] = Field(
+    import_owner_orgs_not: ListFromString = Field(
         description="List of organization identifiers to filter MISP events to import, **excluding** events owned by these organizations.",
         default=[],
     )
-    import_keyword: Optional[str] = Field(
+    import_keyword: str | None = Field(
         description="Keyword to use as filter to import MISP events.",
         default=None,
     )
-    import_distribution_levels: Optional[ListFromString] = Field(
+    import_distribution_levels: ListFromString = Field(
         description="List of distribution levels to filter MISP events to import, **including** only events with these distribution levels.",
         default=[],
     )
-    import_threat_levels: Optional[ListFromString] = Field(
+    import_threat_levels: ListFromString = Field(
         description="List of threat levels to filter MISP events to import, **including** only events with these threat levels.",
         default=[],
     )
     import_only_published: bool = Field(
         description="Whether to only import published MISP events or not.",
     )
-    import_with_attachments: Optional[bool] = Field(
+    import_with_attachments: bool = Field(
         description="Whether to import attachment attribute content as a file (works only with PDF).",
         default=False,
     )
@@ -341,16 +341,16 @@ class _MISPConfig(_ConfigBaseModel):
         description="A score value for the indicator/observable if the attribute `to_ids` value is no.",
     )
     # ? What does it mean ??
-    import_unsupported_observables_as_text: Optional[bool] = Field(
+    import_unsupported_observables_as_text: bool = Field(
         description="Whether to import unsupported observable as x_opencti_text or not.",
         default=False,
     )
     # ? What does it mean ??
-    import_unsupported_observables_as_text_transparent: Optional[bool] = Field(
+    import_unsupported_observables_as_text_transparent: bool = Field(
         description="Whether to import unsupported observable as x_opencti_text or not (just with the value).",
         default=True,
     )
-    propagate_labels: Optional[bool] = Field(
+    propagate_labels: bool = Field(
         description="Whether to apply labels from MISP events to OpenCTI observables on top of MISP Attribute labels or not.",
         default=False,
     )
