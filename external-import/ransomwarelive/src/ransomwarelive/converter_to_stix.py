@@ -2,10 +2,10 @@ import datetime
 
 import stix2
 from connectors_sdk.models.octi.knowledge.entities import Sector
+from connectors_sdk.models.octi.knowledge.locations import Country
 from pycti import (
     Identity,
     IntrusionSet,
-    Location,
     Report,
     StixCoreRelationship,
     ThreatActorGroup,
@@ -168,25 +168,18 @@ class ConverterToStix:
         )
         return intrusionset
 
-    def create_location(self, country_stix_id: str, country_name: str):
+    def create_country(self, country_name: str):
         """
-        Create STIX 2.1 Location object
+        Create STIX 2.1 Location (country) object with connectors_sdk
 
         Params:
-            country_stix_id: id of the country STIX2.1 object in string
-            country_name: description in string
+            country_name: name of in string
         Return:
             Location in STIX 2.1 format
         """
-        location = stix2.Location(
-            id=country_stix_id or Location.generate_id(country_name, "Country"),
-            name=country_name,
-            country=country_name,
-            type="location",
-            created_by_ref=self.author.get("id"),
-            object_marking_refs=[self.marking.get("id")],
-        )
-        return location
+        country = Country(name=country_name)
+        country_obj = country.to_stix2_object()
+        return country_obj
 
     def create_relationship(
         self,
@@ -419,7 +412,6 @@ class ConverterToStix:
         intrusion_set: stix2.IntrusionSet,
         create_threat_actor: bool,
         threat_actor: stix2.ThreatActor = None,
-        country_stix_id: str = None,
         attack_date_iso: datetime = None,
         discovered_iso: datetime = None,
     ):
@@ -432,7 +424,6 @@ class ConverterToStix:
             intrusion_set (IntrusionSet): stix2 IntrusionSet object
             create_threat_actor (bool): env variable to create a Threat Actor object
             threat_actor (ThreatActor): stix2 ThreatActor object
-            country_stix_id (str): Location id retrieve from country_name value
             attack_date_iso (datetime): attack date in datetime
             discovered_iso (datetime): discovered datetime
         Returns:
@@ -441,9 +432,7 @@ class ConverterToStix:
             relation_intrusion_location: stix2 Relationship between location and intrusionset
             relation_threat_actor_location: stix2 Relationship between location and threatactor
         """
-        location = self.create_location(
-            country_stix_id=country_stix_id, country_name=country_name
-        )
+        location = self.create_country(country_name=country_name)
 
         location_relation = self.create_relationship(
             source_ref=victim.get("id"),

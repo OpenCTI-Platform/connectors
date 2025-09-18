@@ -1,7 +1,6 @@
 import sys
 from datetime import datetime, timedelta, timezone
 
-import pycti
 import stix2
 from models.configs.config_loader import ConfigLoader
 from pycti import OpenCTIConnectorHelper
@@ -30,27 +29,6 @@ class RansomwareAPIConnector:
         self.converter_to_stix = ConverterToStix()
         self.author = self.converter_to_stix.author
         self.api_client = RansomwareAPIClient()
-
-    def location_fetcher(self, country: str):
-        """
-        Fetches the location object from OpenCTI
-
-        Param:
-            country: country code format ISO 3166-1 alpha-2
-        Return:
-            country stix id if retrieve else None
-        """
-        country_id = pycti.Location.generate_id(country, "Country")
-        try:
-            country_out = self.helper.api.stix_domain_object.read(id=country_id)
-            if country_out and country_out.get("standard_id").startswith("location--"):
-                return country_out.get("standard_id")
-            return None
-        except Exception as e:
-            self.helper.connector_logger.error(
-                "Error fetching location", {"country": country, "error": e}
-            )
-            return None
 
     def create_bundle_list(self, item, group_data):
         """
@@ -205,9 +183,8 @@ class RansomwareAPIConnector:
             report.get("object_refs").append(relation_victim_domain.get("id"))
 
         # Creating Location object
-        if item.get("country") and len(item.get("country", "Four")) < 4:
-            country_name = item.get("country")
-            country_stix_id = self.location_fetcher(country_name)
+        if item.get("country"):
+            country_name = item["country"]
 
             (
                 location,
@@ -220,15 +197,11 @@ class RansomwareAPIConnector:
                 intrusion_set=intrusion_set,
                 create_threat_actor=self.config.connector.create_threat_actor,
                 threat_actor=threat_actor,
-                country_stix_id=country_stix_id,
                 attack_date_iso=attack_date_iso,
                 discovered_iso=discovered_iso,
             )
 
-            # If country not yet available, add it in the bundle_objects for creation
-            if country_stix_id is None:
-                bundle_objects.append(location)
-
+            bundle_objects.append(location)
             bundle_objects.append(location_relation)
             bundle_objects.append(relation_intrusion_location)
 
@@ -241,8 +214,6 @@ class RansomwareAPIConnector:
             report.get("object_refs").append(location.get("id"))
             report.get("object_refs").append(relation_intrusion_location.get("id"))
             report.get("object_refs").append(location_relation.get("id"))
-
-            bundle_objects.append(report)
 
         self.helper.connector_logger.info(
             "Sending STIX objects to collect_intelligence.",
