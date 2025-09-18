@@ -80,3 +80,10 @@ class ConfigConnector:
             "1",
         )
         self.tanium_computer_groups = tanium_computer_groups_var.split(",")
+        self.tanium_deploy_intel = get_config_variable(
+            "TANIUM_INTEL_DEPLOY_INTEL",
+            ["tanium_intel", "deploy_intel"],
+            self.load,
+            False,
+            True,
+        )

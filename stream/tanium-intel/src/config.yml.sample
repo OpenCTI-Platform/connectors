@@ -21,3 +21,4 @@ tanium_intel:
   no_hashes_in_intels: true
   auto_ondemand_scan: true # trigger a quick scan when an intel document is imported
   computer_groups: '1' # computer groups targeted by the auto quick scan (separated by ,)
+  deploy_intel: true
