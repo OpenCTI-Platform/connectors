@@ -136,7 +136,6 @@ class TheHive:
         for mapping in self.thehive_severity_mapping:
             self.severity_mapping[int(mapping.split(":")[0])] = mapping.split(":")[1]
 
-    
         self.thehive_api = TheHiveApi(
             self.thehive_url, self.thehive_api_key, verify=self.thehive_check_ssl
         )
@@ -162,7 +161,7 @@ class TheHive:
             )
         else:
             raise ValueError(f"Unsupported type in construct_query: {type}")
-        
+
     def convert_observable(self, observable, markings):
         """Converts the Hive Observable to a STIX observable."""
         stix_observable = None
@@ -240,7 +239,9 @@ class TheHive:
 
     def generate_case_bundle(self, case):
         """Generates a STIX bundle from a TheHive case, with attachments."""
-        self.helper.log_info(f"Starting generation of STIX bundle for case: {case.get('title')}")
+        self.helper.log_info(
+            f"Starting generation of STIX bundle for case: {case.get('title')}"
+        )
         bundle_objects = []
 
         try:
@@ -249,16 +250,25 @@ class TheHive:
         except Exception as e:
             self.helper.log_error(f"Error processing markings: {str(e)}")
 
-        processed_observables, case_object_refs = self.process_observables(case, markings)
+        processed_observables, case_object_refs = self.process_observables(
+            case, markings
+        )
 
         bundle_objects.extend(processed_observables)
 
         # Temporary creation of a STIX object to retrieve its ID
         dummy_case = CustomObjectCaseIncident(
-            id=CaseIncident.generate_id(case.get("title"), format_datetime(int(case.get("_createdAt")) / 1000, DEFAULT_UTC_DATETIME)),
+            id=CaseIncident.generate_id(
+                case.get("title"),
+                format_datetime(
+                    int(case.get("_createdAt")) / 1000, DEFAULT_UTC_DATETIME
+                ),
+            ),
             name=case.get("title"),
-            created=format_datetime(int(case.get("_createdAt")) / 1000, DEFAULT_UTC_DATETIME),
-            custom_properties={"dummy": True}  
+            created=format_datetime(
+                int(case.get("_createdAt")) / 1000, DEFAULT_UTC_DATETIME
+            ),
+            custom_properties={"dummy": True},
         )
 
         attachments, opencti_files = self.process_attachments(case, dummy_case)
@@ -279,7 +289,9 @@ class TheHive:
 
         try:
             bundle = self.helper.stix2_create_bundle(bundle_objects)
-            self.helper.log_info(f"Completed generation of STIX bundle for case: {case.get('title')}")
+            self.helper.log_info(
+                f"Completed generation of STIX bundle for case: {case.get('title')}"
+            )
             self.helper.send_stix2_bundle(bundle, update=self.update_existing_data)
         except Exception as e:
             self.helper.log_error(f"Error serializing STIX bundle for 'case': {str(e)}")
@@ -291,17 +303,18 @@ class TheHive:
                 self.helper.log_info("Sending STIX artifacts bundle (attachments)...")
                 self.helper.send_stix2_bundle(
                     self.helper.stix2_create_bundle(attachments),
-                    update=self.update_existing_data
+                    update=self.update_existing_data,
                 )
             except Exception as e:
                 self.helper.log_error(f"Error when sending artifacts: {str(e)}")
 
         return bundle
 
-
     def send_attachments(self, case, stix_case):
         """Asynchronous sending of attachments for a given box."""
-        self.helper.log_info(f"Starting asynchronous attachments processing for case: {case.get('title')}")
+        self.helper.log_info(
+            f"Starting asynchronous attachments processing for case: {case.get('title')}"
+        )
         attachments = self.process_attachements(case, stix_case)
         if attachments:
             bundle_objects = []
@@ -312,7 +325,9 @@ class TheHive:
                 self.helper.send_stix2_bundle(bundle, update=self.update_existing_data)
                 self.helper.log_info(f"Attachments sent for case: {case.get('title')}")
             except Exception as e:
-                self.helper.log_error(f"Error sending attachments for case: {case.get('title')}: {str(e)}")
+                self.helper.log_error(
+                    f"Error sending attachments for case: {case.get('title')}: {str(e)}"
+                )
         else:
             self.helper.log_info(f"No attachments found for case: {case.get('title')}")
 
@@ -477,11 +492,13 @@ class TheHive:
             object_marking_refs=markings,
             labels=case.get("tags") if case.get("tags") else None,
             created_by_ref=self.identity.get("standard_id"),
-            severity=(self.severity_mapping[case.get("severity")]
-                      if case.get("severity") in self.severity_mapping
-                      else None),
+            severity=(
+                self.severity_mapping[case.get("severity")]
+                if case.get("severity") in self.severity_mapping
+                else None
+            ),
             x_opencti_workflow_id=opencti_case_status,
-            x_opencti_assignee_ids=( 
+            x_opencti_assignee_ids=(
                 [opencti_case_user] if opencti_case_user is not None else None
             ),
             object_refs=object_refs if object_refs is not None else [],
@@ -499,7 +516,7 @@ class TheHive:
         """Process all observables from a case."""
         try:
             case_id = case.get("_id")
-            
+
             self.helper.log_info(f"!!! here the value of case_id : {case_id}")
             response = self.thehive_api.case.find_observables(case_id=case.get("_id"))
             if response and len(response) > 0:
@@ -593,7 +610,7 @@ class TheHive:
                 name=task.get("title"),
                 description=task.get("description"),
                 created=created,
-                due_date=( 
+                due_date=(
                     format_datetime(task.get("dueDate") / 1000, DEFAULT_UTC_DATETIME)
                     if "dueDate" in task
                     else None
@@ -640,14 +657,15 @@ class TheHive:
             processed_comments.append(stix_comment)
         return processed_comments
 
-
     def process_attachments(self, case, stix_case):
         """
         Downloading attachments and creating STIX Artifacts objects + OpenCTI files.
         """
-        case_id=case.get("_id")
+        case_id = case.get("_id")
         attachments = self.thehive_api.case.find_attachments(case_id=case_id)
-        self.helper.log_info(f"Processing {len(attachments)} attachments for case: {case.get('title')}")
+        self.helper.log_info(
+            f"Processing {len(attachments)} attachments for case: {case.get('title')}"
+        )
 
         processed_attachments = []
         opencti_files = []
@@ -661,19 +679,25 @@ class TheHive:
                 if file_id and file_name:
                     try:
                         url = f"{self.thehive_url}/api/v1/attachment/{file_id}/download"
-                        self.helper.log_info(f"Download attachment {file_name} depuis {url}")
+                        self.helper.log_info(
+                            f"Download attachment {file_name} depuis {url}"
+                        )
 
                         response = requests.get(
                             url,
                             headers={"Authorization": f"Bearer {self.thehive_api_key}"},
-                            verify=self.thehive_check_ssl
+                            verify=self.thehive_check_ssl,
                         )
 
                         if response.status_code != 200:
-                            self.helper.log_error(f"http Error {response.status_code} when downloading {file_name}")
+                            self.helper.log_error(
+                                f"http Error {response.status_code} when downloading {file_name}"
+                            )
                             continue
 
-                        encoded_content = base64.b64encode(response.content).decode("utf-8")
+                        encoded_content = base64.b64encode(response.content).decode(
+                            "utf-8"
+                        )
                         artifact_id = f"artifact--{uuid.uuid4()}"
 
                         file_artifact = stix2.Artifact(
@@ -698,20 +722,25 @@ class TheHive:
                         processed_attachments.append(file_artifact)
                         processed_attachments.append(artifact_relationship)
 
-                        opencti_files.append({
-                            "name": file_name,
-                            "data": encoded_content,
-                            "mime_type": content_type,
-                            "no_trigger_import": True,
-                        })
+                        opencti_files.append(
+                            {
+                                "name": file_name,
+                                "data": encoded_content,
+                                "mime_type": content_type,
+                                "no_trigger_import": True,
+                            }
+                        )
 
                     except Exception as ex:
-                        self.helper.log_error(f"Error processing attachment {file_name}: {str(ex)}")
+                        self.helper.log_error(
+                            f"Error processing attachment {file_name}: {str(ex)}"
+                        )
         else:
-            self.helper.log_info(f"No attachments found for the case {case.get('title')}")
+            self.helper.log_info(
+                f"No attachments found for the case {case.get('title')}"
+            )
 
         return processed_attachments, opencti_files
-
 
     def run(self):
         """Function to process cases, alerts, and pause based on provided interval."""
@@ -739,7 +768,6 @@ class TheHive:
                 f"End of current run loop, running next interval in {self.get_interval()} second(s)."
             )
             time.sleep(self.get_interval())
-
 
 
 if __name__ == "__main__":
