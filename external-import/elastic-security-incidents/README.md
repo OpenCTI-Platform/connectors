@@ -16,7 +16,7 @@ This connector imports alerts and cases from Elastic Security into OpenCTI as in
   - Host systems
   - MITRE ATT&CK techniques
 - **Incremental Import**: Tracks last run time to avoid duplicate imports
-- **Flexible Configuration**: Configure which alert/case statuses to import
+- **Flexible Configuration**: Configure which alert/case statuses to import (imports all by default)
 
 ## Configuration
 
@@ -34,8 +34,8 @@ This connector imports alerts and cases from Elastic Security into OpenCTI as in
 | Import Start Date | `ELASTIC_SECURITY_IMPORT_START_DATE` | Initial import start date | 7 days ago |
 | Import Alerts | `ELASTIC_SECURITY_IMPORT_ALERTS` | Import security alerts | true |
 | Import Cases | `ELASTIC_SECURITY_IMPORT_CASES` | Import security cases | true |
-| Alert Statuses | `ELASTIC_SECURITY_ALERT_STATUSES` | Alert statuses to import | open,acknowledged,closed |
-| Case Statuses | `ELASTIC_SECURITY_CASE_STATUSES` | Case statuses to import | open,in-progress,closed |
+| Alert Statuses | `ELASTIC_SECURITY_ALERT_STATUSES` | Alert statuses to import (comma-separated, empty to import all) | (empty - imports all) |
+| Case Statuses | `ELASTIC_SECURITY_CASE_STATUSES` | Case statuses to import (comma-separated, empty to import all) | (empty - imports all) |
 
 ## Prerequisites
 
@@ -114,11 +114,16 @@ The connector runs on a schedule defined by `CONNECTOR_DURATION_PERIOD` using IS
 - For self-signed certificates, set `ELASTIC_SECURITY_VERIFY_SSL=false` for testing
 
 ### Missing Data
-- Ensure the configured alert/case statuses match your environment
+- By default, all alert/case statuses are imported. To filter, set `ELASTIC_SECURITY_ALERT_STATUSES` and `ELASTIC_SECURITY_CASE_STATUSES`
+- Valid alert statuses: `open`, `acknowledged`, `closed` (comma-separated)
+- Valid case statuses: `open`, `in-progress`, `closed` (comma-separated)
+- Note: Alerts without a workflow_status field are considered "open"
 - Check if the time range includes the expected data
 - Verify index patterns exist (`.alerts-security.alerts-*`)
 
 ### Performance
 - Adjust `CONNECTOR_DURATION_PERIOD` based on alert volume
 - Monitor connector logs for processing times
-- Consider filtering by specific alert/case statuses to reduce volume
+- Consider filtering by specific alert/case statuses to reduce volume:
+  - Set `ELASTIC_SECURITY_ALERT_STATUSES=open,acknowledged` to exclude closed alerts
+  - Set `ELASTIC_SECURITY_CASE_STATUSES=open,in-progress` to exclude closed cases

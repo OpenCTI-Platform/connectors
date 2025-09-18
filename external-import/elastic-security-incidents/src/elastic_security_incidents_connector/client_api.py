@@ -100,14 +100,44 @@ class ElasticApiClient:
             }
 
             # Add status filter if configured
-            if self.config.alert_statuses:
-                query["query"]["bool"]["filter"].append(
-                    {
-                        "terms": {
-                            "kibana.alert.workflow_status": self.config.alert_statuses
+            # Note: kibana.alert.workflow_status may not exist initially on alerts
+            # Alerts without this field are considered "open" by default
+            if self.config.alert_statuses and len(self.config.alert_statuses) > 0:
+                # Build the filter based on whether "open" is included
+                if "open" in self.config.alert_statuses:
+                    # Include alerts with workflow_status in our list OR alerts without the field (which are open)
+                    query["query"]["bool"]["filter"].append(
+                        {
+                            "bool": {
+                                "should": [
+                                    {
+                                        "terms": {
+                                            "kibana.alert.workflow_status": self.config.alert_statuses
+                                        }
+                                    },
+                                    {
+                                        "bool": {
+                                            "must_not": {
+                                                "exists": {
+                                                    "field": "kibana.alert.workflow_status"
+                                                }
+                                            }
+                                        }
+                                    },
+                                ],
+                                "minimum_should_match": 1,
+                            }
                         }
-                    }
-                )
+                    )
+                else:
+                    # Only include alerts with workflow_status in our list
+                    query["query"]["bool"]["filter"].append(
+                        {
+                            "terms": {
+                                "kibana.alert.workflow_status": self.config.alert_statuses
+                            }
+                        }
+                    )
 
             # Search for alerts using the .alerts-* index pattern
             url = f"{self.elastic_url}/.alerts-security.alerts-*/_search"
@@ -197,7 +227,9 @@ class ElasticApiClient:
                 }
 
                 # Add status filter if configured
-                if self.config.case_statuses:
+                # Kibana Cases API expects multiple statuses as array (becomes multiple query params)
+                if self.config.case_statuses and len(self.config.case_statuses) > 0:
+                    # Pass the list directly - requests will create multiple status params
                     params["status"] = self.config.case_statuses
 
                 response = requests.get(

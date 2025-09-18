@@ -95,18 +95,49 @@ class ConfigConnector:
             self.load,
             default=True,
         )
-        self.alert_statuses = get_config_variable(
+        alert_statuses_raw = get_config_variable(
             "ELASTIC_SECURITY_ALERT_STATUSES",
             ["elastic_security", "alert_statuses"],
             self.load,
-            default=["open", "acknowledged", "closed"],
+            default=None,  # Default to None for no filtering
         )
-        self.case_statuses = get_config_variable(
+        # Parse comma-separated string and trim whitespace
+        if alert_statuses_raw is None:
+            self.alert_statuses = []  # Empty list means no filtering
+        elif isinstance(alert_statuses_raw, str):
+            # Handle empty string or "none" as no filtering
+            if alert_statuses_raw.strip().lower() in ["", "none"]:
+                self.alert_statuses = []
+            else:
+                self.alert_statuses = [
+                    s.strip() for s in alert_statuses_raw.split(",") if s.strip()
+                ]
+        elif isinstance(alert_statuses_raw, list):
+            self.alert_statuses = alert_statuses_raw
+        else:
+            self.alert_statuses = []  # Default to no filtering
+
+        case_statuses_raw = get_config_variable(
             "ELASTIC_SECURITY_CASE_STATUSES",
             ["elastic_security", "case_statuses"],
             self.load,
-            default=["open", "in-progress", "closed"],
+            default=None,  # Default to None for no filtering
         )
+        # Parse comma-separated string and trim whitespace
+        if case_statuses_raw is None:
+            self.case_statuses = []  # Empty list means no filtering
+        elif isinstance(case_statuses_raw, str):
+            # Handle empty string or "none" as no filtering
+            if case_statuses_raw.strip().lower() in ["", "none"]:
+                self.case_statuses = []
+            else:
+                self.case_statuses = [
+                    s.strip() for s in case_statuses_raw.split(",") if s.strip()
+                ]
+        elif isinstance(case_statuses_raw, list):
+            self.case_statuses = case_statuses_raw
+        else:
+            self.case_statuses = []  # Default to no filtering
 
         # Connector run settings
         self.duration_period = get_config_variable(

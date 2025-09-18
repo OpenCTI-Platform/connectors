@@ -16,11 +16,5 @@ elastic_security:
   import_start_date: '2024-01-01T00:00:00Z' # Initial import start date (ISO-8601)
   import_alerts: true # Import security alerts
   import_cases: false # Import security cases (requires Kibana URL - set to true only if using Kibana)
-  alert_statuses: # Alert statuses to import
-    - 'open'
-    - 'acknowledged'
-    - 'closed'
-  case_statuses: # Case statuses to import
-    - 'open'
-    - 'in-progress'
-    - 'closed'
+  alert_statuses: '' # Alert statuses to import (comma-separated, leave empty to import all)
+  case_statuses: '' # Case statuses to import (comma-separated, leave empty to import all)
