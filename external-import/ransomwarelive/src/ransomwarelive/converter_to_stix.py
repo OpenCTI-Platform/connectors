@@ -1,6 +1,7 @@
 import datetime
 
 import stix2
+from connectors_sdk.models.octi.knowledge.entities import Sector
 from pycti import (
     Identity,
     IntrusionSet,
@@ -260,6 +261,19 @@ class ConverterToStix:
         )
         return report
 
+    def create_sector(self, name: str):
+        """
+        Create STIX2.1 Sector object with connector_sdk
+
+        Params:
+            name: name of sector in string
+        Return:
+            Sector in STIX 2.1 format
+        """
+        sector = Sector(name=name)
+        sector_obj = sector.to_stix2_object()
+        return sector_obj
+
     def create_threat_actor(
         self,
         threat_actor_name: str,
@@ -499,11 +513,11 @@ class ConverterToStix:
 
     def process_sector(
         self,
+        sector_name: str,
         victim: stix2.Identity,
         create_threat_actor: bool,
         intrusion_set: stix2.IntrusionSet,
         threat_actor: stix2.ThreatActor = None,
-        sector_id: str = None,
         attack_date_iso: datetime = None,
         discovered_iso: datetime = None,
     ):
@@ -511,11 +525,11 @@ class ConverterToStix:
         Create stix2 relationship linked to the given sector
 
         Params:
+            sector_name (str): name of sector to create
             victim (Identity): stix2 Identity object of victim
             create_threat_actor (bool): env variable to create a Threat Actor object
             intrusion_set (IntrusionSet): stix2 IntrusionSet object
             threat_actor (ThreatActor): stix2 ThreatActor object or None
-            sector_id (str): Location id from sector activity or None
             attack_date_iso (datetime): attack date in datetime
             discovered_iso (datetime): discovered datetime
         Returns:
@@ -523,9 +537,11 @@ class ConverterToStix:
             relation_sector_threat_actor: stix2 Relationship between sector and threatactor or None
             relation_intrusion_sector: stix2 Relationship between sector and intrusionset
         """
+        sector = self.create_sector(sector_name)
+
         relation_sector_victim = self.create_relationship(
             source_ref=victim.get("id"),
-            target_ref=sector_id,
+            target_ref=sector.id,
             relationship_type="part-of",
         )
 
@@ -533,7 +549,7 @@ class ConverterToStix:
         if create_threat_actor:
             relation_sector_threat_actor = self.create_relationship(
                 source_ref=threat_actor.get("id"),
-                target_ref=sector_id,
+                target_ref=sector.id,
                 relationship_type="targets",
                 start_time=attack_date_iso,
                 created=discovered_iso,
@@ -541,13 +557,14 @@ class ConverterToStix:
 
         relation_intrusion_sector = self.create_relationship(
             intrusion_set.get("id"),
-            sector_id,
+            sector.id,
             "targets",
             attack_date_iso,
             discovered_iso,
         )
 
         return (
+            sector,
             relation_sector_victim,
             relation_sector_threat_actor,
             relation_intrusion_sector,

@@ -52,65 +52,6 @@ class RansomwareAPIConnector:
             )
             return None
 
-    def sector_fetcher(self, sector: str):
-        """
-        Fetch the sector object related to param by searching with conditions:
-            - entity_type is "sector"
-            - name is egual to sector string OR x_opencti_aliases is egual to sector string
-
-        Param:
-            sector: sector in string
-        Return:
-            sector id or None
-        """
-        if sector == "":
-            return None
-
-        try:
-            sector_out = None
-            rubbish = [" and ", " or ", " ", ";"]
-            for item in rubbish:
-                sector = " ".join(sector.split(item))
-
-            sector_out = self.helper.api.identity.read(
-                filters={
-                    "mode": "and",
-                    "filters": [
-                        {
-                            "key": "entity_type",
-                            "values": ["Sector"],
-                            "operator": "eq",
-                        },
-                    ],
-                    "filterGroups": [
-                        {
-                            "mode": "or",
-                            "filters": [
-                                {
-                                    "key": "name",
-                                    "values": sector,
-                                    "operator": "eq",
-                                },
-                                {
-                                    "key": "x_opencti_aliases",
-                                    "values": sector,
-                                    "operator": "eq",
-                                },
-                            ],
-                            "filterGroups": [],
-                        }
-                    ],
-                },
-            )
-
-            if sector_out and sector_out.get("standard_id").startswith("identity--"):
-                return sector_out.get("standard_id")
-        except Exception as e:
-            self.helper.connector_logger.error(
-                "Error fetching sector", {"sector": sector, "error": e}
-            )
-            return None
-
     def create_bundle_list(self, item, group_data):
         """
         Retrieve STIX objects from the ransomware.live API data and add it in bundle list
@@ -198,36 +139,33 @@ class RansomwareAPIConnector:
         )
 
         # Creating Sector object
-        if item.get("activity"):
-            sector_id = self.sector_fetcher(item.get("activity"))
-            if sector_id:
-                report.get("object_refs").append(sector_id)
+        if item.get("activity") and item["activity"] != "Not Found":
+            (
+                sector,
+                relation_sector_victim,
+                relation_sector_threat_actor,
+                relation_intrusion_sector,
+            ) = self.converter_to_stix.process_sector(
+                sector_name=item["activity"],
+                victim=victim,
+                create_threat_actor=self.config.connector.create_threat_actor,
+                intrusion_set=intrusion_set,
+                threat_actor=threat_actor,
+                attack_date_iso=attack_date_iso,
+                discovered_iso=discovered_iso,
+            )
 
-                (
-                    relation_sector_victim,
-                    relation_sector_threat_actor,
-                    relation_intrusion_sector,
-                ) = self.converter_to_stix.process_sector(
-                    victim=victim,
-                    create_threat_actor=self.config.connector.create_threat_actor,
-                    intrusion_set=intrusion_set,
-                    threat_actor=threat_actor,
-                    sector_id=sector_id,
-                    attack_date_iso=attack_date_iso,
-                    discovered_iso=discovered_iso,
-                )
+            bundle_objects.append(sector)
+            report.get("object_refs").append(sector.get("id"))
 
-                bundle_objects.append(relation_sector_victim)
+            if self.config.connector.create_threat_actor:
+                bundle_objects.append(relation_sector_threat_actor)
+                report.get("object_refs").append(relation_sector_threat_actor.get("id"))
 
-                if self.config.connector.create_threat_actor:
-                    bundle_objects.append(relation_sector_threat_actor)
-                    report.get("object_refs").append(
-                        relation_sector_threat_actor.get("id")
-                    )
-
-                report.get("object_refs").append(relation_sector_victim.get("id"))
-                bundle_objects.append(relation_intrusion_sector)
-                report.get("object_refs").append(relation_intrusion_sector.get("id"))
+            bundle_objects.append(relation_sector_victim)
+            report.get("object_refs").append(relation_sector_victim.get("id"))
+            bundle_objects.append(relation_intrusion_sector)
+            report.get("object_refs").append(relation_intrusion_sector.get("id"))
 
         domain_name = None
 
