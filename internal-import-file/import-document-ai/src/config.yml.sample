@@ -14,3 +14,7 @@ connector:
     -----BEGIN CERTIFICATE-----
     ...
     -----END CERTIFICATE-----
+
+import_document:
+  include_relationships: 'true'
+  

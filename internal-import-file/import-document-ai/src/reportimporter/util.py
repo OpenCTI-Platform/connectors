@@ -1,3 +1,5 @@
+import json
+
 import stix2
 from pycti import (
     AttackPattern,
@@ -212,3 +214,123 @@ stix_object_mapping = {
         allow_custom=True,
     ),
 }
+
+
+def remove_all_relationships(bundle: stix2.Bundle) -> stix2.Bundle:
+    """Remove all relationship objects from a STIX bundle.
+
+    Args:
+        bundle (stix2.Bundle): The STIX bundle to process.
+
+    Returns:
+        stix2.Bundle: The processed STIX bundle without relationship objects.
+
+    Examples:
+        >>> import stix2
+        >>> identity = stix2.Identity(name="Example Org", identity_class="organization")
+        >>> malware = stix2.Malware(name="Example Malware", is_family=False)
+        >>> relationship = stix2.Relationship(
+        ...     source_ref=identity["id"],
+        ...     target_ref=malware["id"],
+        ...     relationship_type="uses",
+        ... )
+        >>> report = stix2.Report(
+        ...     name="Example Report",
+        ...     description="An example report containing relationships.",
+        ...     object_refs=[identity["id"], malware["id"], relationship["id"]],
+        ...     published="2024-10-01T12:00:00Z",
+        ... )
+        >>> bundle = stix2.Bundle(
+        ...     objects=[
+        ...         identity,
+        ...         malware,
+        ...         relationship,
+        ...         report,
+        ...     ],
+        ...     allow_custom=True,
+        ... )
+        >>> filtered_bundle = remove_all_relationships(bundle)
+    """
+    # remove relationships from the bundle
+    objects = [obj for obj in bundle["objects"] if obj.get("type") != "relationship"]
+    # remove all references to relationships in container objects
+    for i, obj in enumerate(objects):
+        if "object_refs" in obj:
+            # as we cannot reassign stix object properties,
+            # we use dict representation not to alter other properties
+            object_dict = json.loads(obj.serialize())
+            object_dict["object_refs"] = [
+                ref
+                for ref in obj["object_refs"]
+                if not ref.startswith("relationship--")
+            ]
+            obj = stix2.parse(object_dict, allow_custom=True)
+            objects[i] = obj
+    return stix2.Bundle(
+        objects=objects,
+        allow_custom=True,
+    )
+
+
+def compute_bundle_stats(bundle: stix2.Bundle) -> dict:
+    """Compute statistics about a STIX bundle.
+
+    Args:
+        bundle (stix2.Bundle): The STIX bundle to analyze.
+
+    Returns:
+        dict: A dictionary containing statistics about the bundle, including:
+            - observables: Count of observable objects in the bundle.
+            - entities: Count of entity objects in the bundle.
+            - relationships: Count of relationship objects in the bundle.
+            - reports: Count of report objects in the bundle.
+            - total_sent: Total number of objects sent for processing.
+
+    Examples:
+        >>> import stix2
+        >>> identity = stix2.Identity(name="Example Org", identity_class="organization")
+        >>> malware = stix2.Malware(name="Example Malware", is_family=False)
+        >>> relationship = stix2.Relationship(
+        ...     source_ref=identity["id"],
+        ...     target_ref=malware["id"],
+        ...     relationship_type="uses",
+        ... )
+        >>> ip = stix2.IPv4Address(value="127.0.0.1")
+        >>> report = stix2.Report(
+        ...     name="Example Report",
+        ...     description="An example report containing relationships.",
+        ...     object_refs=[identity["id"], malware["id"], relationship["id"], ip["id"]],
+        ...     published="2024-10-01T12:00:00Z",
+        ... )
+        >>> bundle = stix2.Bundle(
+        ...     objects=[
+        ...         identity,
+        ...         malware,
+        ...         relationship,
+        ...         ip,
+        ...         report,
+        ...     ],
+        ...     allow_custom=True,
+        ... )
+        >>> stats = compute_bundle_stats(bundle)
+
+    """
+    stats = {
+        "observables": 0,
+        "entities": 0,
+        "relationships": 0,
+        "reports": 0,
+        "total_sent": len(bundle.objects),
+    }
+    for obj in bundle["objects"]:
+        if isinstance(obj, stix2.Relationship):
+            stats["relationships"] += 1
+        elif isinstance(obj, stix2.v21._DomainObject):
+            if obj.type == "report":
+                stats["reports"] += 1
+            else:
+                stats["entities"] += 1
+
+        elif isinstance(obj, stix2.v21._Observable):
+            stats["observables"] += 1
+    return stats
