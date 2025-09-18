@@ -23,7 +23,7 @@ from pycti import (
     get_config_variable,
 )
 from thehive4py import TheHiveApi
-from thehive4py.query import Eq, Gt
+from thehive4py.query import Gt
 from thehive4py.query.page import Paginate
 from thehive4py.query.sort import Asc
 from thehive4py.types.alert import OutputAlert
