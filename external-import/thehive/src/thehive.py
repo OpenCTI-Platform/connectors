@@ -1,24 +1,16 @@
+import base64
+import json
 import os
 import sys
 import time
 import traceback
-import base64
 import uuid
-
 from datetime import datetime
+
 import requests
-import base64
-import json
-
-
 import stix2
 import yaml
-from constants import DEFAULT_DATETIME, DEFAULT_UTC_DATETIME, PAP_MAPPINGS, TLP_MAPPINGS
 from dateutil.parser import parse
-from hive_observable_transform import (
-    HiveObservableTransform,
-    UnsupportedIndicatorTypeError,
-)
 from pycti import (
     CaseIncident,
     CustomObjectCaseIncident,
@@ -36,6 +28,12 @@ from thehive4py.query.page import Paginate
 from thehive4py.query.sort import Asc
 from thehive4py.types.alert import OutputAlert
 from thehive4py.types.case import OutputCase
+
+from constants import DEFAULT_DATETIME, DEFAULT_UTC_DATETIME, PAP_MAPPINGS, TLP_MAPPINGS
+from hive_observable_transform import (
+    HiveObservableTransform,
+    UnsupportedIndicatorTypeError,
+)
 
 from utils import format_datetime  # isort: skip
 
