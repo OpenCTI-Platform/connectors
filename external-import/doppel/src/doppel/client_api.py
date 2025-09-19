@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 import requests
@@ -112,7 +113,13 @@ class ConnectorClient:
             "[DoppelConnector] Fetched first page of alerts",
             {"url": url, "params": params, "metadata": metadata},
         )
-        for page in range(1, metadata["total_pages"]):
-            alerts = self._get_alerts(url, params, page, metadata["total_pages"])
-            res.extend(alerts)
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            futures = [
+                executor.submit(
+                    self._get_alerts, url, params, page, metadata["total_pages"]
+                )
+                for page in range(1, metadata["total_pages"] + 1)
+            ]
+            for future in as_completed(futures):
+                res.extend(future.result())
         return res
