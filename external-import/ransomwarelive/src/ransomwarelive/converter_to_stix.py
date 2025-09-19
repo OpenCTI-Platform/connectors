@@ -272,7 +272,6 @@ class ConverterToStix:
             id=Identity.generate_id(name=name, identity_class="class"),
             name=name,
             identity_class="class",
-            type="Sector",
             object_marking_refs=[self.marking.get("id")],
             allow_custom=True,
         )
@@ -536,7 +535,7 @@ class ConverterToStix:
         """
         relation_sector_victim = self.create_relationship(
             source_ref=victim.get("id"),
-            target_ref=sector.id,
+            target_ref=sector.get("id"),
             relationship_type="part-of",
         )
 
@@ -544,7 +543,7 @@ class ConverterToStix:
         if create_threat_actor:
             relation_sector_threat_actor = self.create_relationship(
                 source_ref=threat_actor.get("id"),
-                target_ref=sector.id,
+                target_ref=sector.get("id"),
                 relationship_type="targets",
                 start_time=attack_date_iso,
                 created=discovered_iso,
@@ -552,7 +551,7 @@ class ConverterToStix:
 
         relation_intrusion_sector = self.create_relationship(
             intrusion_set.get("id"),
-            sector.id,
+            sector.get("id"),
             "targets",
             attack_date_iso,
             discovered_iso,

@@ -45,7 +45,7 @@ class RansomwareAPIConnector:
             if country_out and country_out.get("standard_id").startswith("location--"):
                 country_obj = (
                     self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
-                        entity_type="location",
+                        entity_type="country",
                         entity_id=country_out["standard_id"],
                         only_entity=True,
                     )
@@ -222,31 +222,35 @@ class RansomwareAPIConnector:
         # Creating Sector object
         if item.get("activity") and item["activity"] != "Not Found":
             sector = self.sector_fetcher(item["activity"])
-            (
-                relation_sector_victim,
-                relation_sector_threat_actor,
-                relation_intrusion_sector,
-            ) = self.converter_to_stix.process_sector(
-                sector=sector,
-                victim=victim,
-                create_threat_actor=self.config.connector.create_threat_actor,
-                intrusion_set=intrusion_set,
-                threat_actor=threat_actor,
-                attack_date_iso=attack_date_iso,
-                discovered_iso=discovered_iso,
-            )
 
-            bundle_objects.append(sector)
-            report.get("object_refs").append(sector.get("id"))
+            if sector:
+                (
+                    relation_sector_victim,
+                    relation_sector_threat_actor,
+                    relation_intrusion_sector,
+                ) = self.converter_to_stix.process_sector(
+                    sector=sector,
+                    victim=victim,
+                    create_threat_actor=self.config.connector.create_threat_actor,
+                    intrusion_set=intrusion_set,
+                    threat_actor=threat_actor,
+                    attack_date_iso=attack_date_iso,
+                    discovered_iso=discovered_iso,
+                )
 
-            if self.config.connector.create_threat_actor:
-                bundle_objects.append(relation_sector_threat_actor)
-                report.get("object_refs").append(relation_sector_threat_actor.get("id"))
+                bundle_objects.append(sector)
+                report.get("object_refs").append(sector.get("id"))
 
-            bundle_objects.append(relation_sector_victim)
-            report.get("object_refs").append(relation_sector_victim.get("id"))
-            bundle_objects.append(relation_intrusion_sector)
-            report.get("object_refs").append(relation_intrusion_sector.get("id"))
+                if self.config.connector.create_threat_actor:
+                    bundle_objects.append(relation_sector_threat_actor)
+                    report.get("object_refs").append(
+                        relation_sector_threat_actor.get("id")
+                    )
+
+                bundle_objects.append(relation_sector_victim)
+                report.get("object_refs").append(relation_sector_victim.get("id"))
+                bundle_objects.append(relation_intrusion_sector)
+                report.get("object_refs").append(relation_intrusion_sector.get("id"))
 
         domain_name = None
 
@@ -290,33 +294,34 @@ class RansomwareAPIConnector:
             country_name = item["country"]
             location = self.location_fetcher(country_name)
 
-            (
-                location_relation,
-                relation_intrusion_location,
-                relation_threat_actor_location,
-            ) = self.converter_to_stix.process_location(
-                location=location,
-                victim=victim,
-                intrusion_set=intrusion_set,
-                create_threat_actor=self.config.connector.create_threat_actor,
-                threat_actor=threat_actor,
-                attack_date_iso=attack_date_iso,
-                discovered_iso=discovered_iso,
-            )
-
-            bundle_objects.append(location)
-            bundle_objects.append(location_relation)
-            bundle_objects.append(relation_intrusion_location)
-
-            if self.config.connector.create_threat_actor:
-                bundle_objects.append(relation_threat_actor_location)
-                report.get("object_refs").append(
-                    relation_threat_actor_location.get("id")
+            if location:
+                (
+                    location_relation,
+                    relation_intrusion_location,
+                    relation_threat_actor_location,
+                ) = self.converter_to_stix.process_location(
+                    location=location,
+                    victim=victim,
+                    intrusion_set=intrusion_set,
+                    create_threat_actor=self.config.connector.create_threat_actor,
+                    threat_actor=threat_actor,
+                    attack_date_iso=attack_date_iso,
+                    discovered_iso=discovered_iso,
                 )
 
-            report.get("object_refs").append(location.get("id"))
-            report.get("object_refs").append(relation_intrusion_location.get("id"))
-            report.get("object_refs").append(location_relation.get("id"))
+                bundle_objects.append(location)
+                bundle_objects.append(location_relation)
+                bundle_objects.append(relation_intrusion_location)
+
+                if self.config.connector.create_threat_actor:
+                    bundle_objects.append(relation_threat_actor_location)
+                    report.get("object_refs").append(
+                        relation_threat_actor_location.get("id")
+                    )
+
+                report.get("object_refs").append(location.get("id"))
+                report.get("object_refs").append(relation_intrusion_location.get("id"))
+                report.get("object_refs").append(location_relation.get("id"))
 
         self.helper.connector_logger.info(
             "Sending STIX objects to collect_intelligence.",
