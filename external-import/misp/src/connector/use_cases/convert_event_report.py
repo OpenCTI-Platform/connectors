@@ -71,7 +71,7 @@ class EventReportConverter:
         event_report: EventReportItem,
         author: stix2.Identity,
         markings: list[stix2.MarkingDefinition],
-        object_refs: list[stix2.v21._STIXBase21],
+        object_refs: list[stix2.v21.Report],
         bundle_objects: list[stix2.v21._STIXBase21],
     ) -> tuple[list[stix2.v21._STIXBase21], list[stix2.v21._RelationshipObject]]:
         """This method helps to keep consistency between converters APIs."""

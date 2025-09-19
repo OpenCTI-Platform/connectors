@@ -137,11 +137,8 @@ class EventConverter:
         else:
             description = event.Event.info
 
-        published_at = datetime.fromisoformat(event.Event.date).replace(
-            tzinfo=timezone.utc
-        )
-        created_at = datetime.fromisoformat(event.Event.date).replace(
-            tzinfo=timezone.utc
+        created_at = datetime.fromisoformat(event.Event.date).astimezone(
+            tz=timezone.utc
         )
         modified_at = datetime.fromtimestamp(
             int(event.Event.timestamp), tz=timezone.utc
@@ -150,11 +147,11 @@ class EventConverter:
         return stix2.Report(
             id=pycti.Report.generate_id(
                 name=event.Event.info,
-                published=published_at,
+                published=created_at,
             ),
             name=event.Event.info,
             description=description,
-            published=published_at,
+            published=created_at,
             created=created_at,
             modified=modified_at,
             report_types=[self.config.report_type],
@@ -401,7 +398,7 @@ class EventConverter:
                         event_report,
                         author=author,
                         markings=markings,
-                        object_refs=object_refs,
+                        object_refs=[report.id],
                         bundle_objects=bundle_objects,
                     )
                 )
