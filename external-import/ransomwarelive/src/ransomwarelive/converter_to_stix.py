@@ -1,7 +1,6 @@
 import datetime
 
 import stix2
-from connectors_sdk.models.octi.knowledge.entities import Sector
 from connectors_sdk.models.octi.knowledge.locations import Country
 from pycti import (
     Identity,
@@ -256,16 +255,22 @@ class ConverterToStix:
 
     def create_sector(self, name: str):
         """
-        Create STIX2.1 Sector object with connector_sdk
+        Create STIX2.1 Sector object
 
         Params:
             name: name of sector in string
         Return:
             Sector in STIX 2.1 format
         """
-        sector = Sector(name=name)
-        sector_obj = sector.to_stix2_object()
-        return sector_obj
+        sector = stix2.Identity(
+            id=Identity.generate_id(name=name, identity_class="class"),
+            name=name,
+            identity_class="class",
+            type="Sector",
+            object_marking_refs=[self.marking.get("id")],
+            allow_custom=True,
+        )
+        return sector
 
     def create_threat_actor(
         self,
@@ -502,7 +507,7 @@ class ConverterToStix:
 
     def process_sector(
         self,
-        sector_name: str,
+        sector: stix2.Identity,
         victim: stix2.Identity,
         create_threat_actor: bool,
         intrusion_set: stix2.IntrusionSet,
@@ -526,8 +531,6 @@ class ConverterToStix:
             relation_sector_threat_actor: stix2 Relationship between sector and threatactor or None
             relation_intrusion_sector: stix2 Relationship between sector and intrusionset
         """
-        sector = self.create_sector(sector_name)
-
         relation_sector_victim = self.create_relationship(
             source_ref=victim.get("id"),
             target_ref=sector.id,
@@ -553,7 +556,6 @@ class ConverterToStix:
         )
 
         return (
-            sector,
             relation_sector_victim,
             relation_sector_threat_actor,
             relation_intrusion_sector,

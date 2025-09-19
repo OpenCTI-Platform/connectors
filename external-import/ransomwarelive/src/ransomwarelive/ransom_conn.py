@@ -30,6 +30,76 @@ class RansomwareAPIConnector:
         self.author = self.converter_to_stix.author
         self.api_client = RansomwareAPIClient()
 
+    def sector_fetcher(self, sector: str):
+        """
+        Fetch the sector object related to param by searching with conditions:
+            - entity_type is "sector"
+            - name is egual to sector string OR x_opencti_aliases is egual to sector string
+        Param:
+            sector: sector in string
+        Return:
+            sector id or None
+        """
+        if sector == "":
+            return None
+
+        try:
+            sector_out = None
+            rubbish = [" and ", " or ", " ", ";"]
+            for item in rubbish:
+                sector = " ".join(sector.split(item))
+
+            sector_out = self.helper.api.identity.read(
+                filters={
+                    "mode": "and",
+                    "filters": [
+                        {
+                            "key": "entity_type",
+                            "values": ["Sector"],
+                            "operator": "eq",
+                        },
+                    ],
+                    "filterGroups": [
+                        {
+                            "mode": "or",
+                            "filters": [
+                                {
+                                    "key": "name",
+                                    "values": sector,
+                                    "operator": "eq",
+                                },
+                                {
+                                    "key": "x_opencti_aliases",
+                                    "values": sector,
+                                    "operator": "eq",
+                                },
+                            ],
+                            "filterGroups": [],
+                        }
+                    ],
+                },
+            )
+
+            if sector_out and sector_out.get("standard_id").startswith("identity--"):
+                # get stix bundle or object from entity
+                sector_obj = (
+                    self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
+                        entity_type="Sector",
+                        entity_id=sector_out["standard_id"],
+                        only_entity=True,
+                    )
+                )
+                return sector_obj
+            else:
+                sector_obj = self.converter_to_stix.create_sector(name=sector)
+                return sector_obj
+
+        except Exception as e:
+            self.helper.connector_logger.error(
+                "Error fetching sector", {"sector": sector, "error": e}
+            )
+            return None
+
     def create_bundle_list(self, item, group_data):
         """
         Retrieve STIX objects from the ransomware.live API data and add it in bundle list
@@ -118,13 +188,13 @@ class RansomwareAPIConnector:
 
         # Creating Sector object
         if item.get("activity") and item["activity"] != "Not Found":
+            sector = self.sector_fetcher(item["activity"])
             (
-                sector,
                 relation_sector_victim,
                 relation_sector_threat_actor,
                 relation_intrusion_sector,
             ) = self.converter_to_stix.process_sector(
-                sector_name=item["activity"],
+                sector=sector,
                 victim=victim,
                 create_threat_actor=self.config.connector.create_threat_actor,
                 intrusion_set=intrusion_set,
