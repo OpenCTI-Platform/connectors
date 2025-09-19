@@ -53,7 +53,9 @@ class ConnectorClient:
             )
             raise
 
-    def get_alerts(self, last_activity_timestamp: str, page: int = 0):
+    def get_alerts(
+        self, last_activity_timestamp: str, page: int = 0, page_size: int = 100
+    ) -> list:
         """
         Retrieve alerts from api
         """
@@ -68,7 +70,11 @@ class ConnectorClient:
 
         res = []
         while True:
-            params = {"last_activity_timestamp": last_activity_timestamp, "page": page}
+            params = {
+                "last_activity_timestamp": last_activity_timestamp,
+                "page": page,
+                "page_size": page_size,
+            }
             response = self._request_data(url, params=params)
             data = response.json()
             self.helper.connector_logger.info(
