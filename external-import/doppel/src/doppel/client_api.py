@@ -23,7 +23,6 @@ class ConnectorClient:
         """
         try:
             response = self.session.get(api_url, params=params)
-            self.helper.connector_logger.info("[API] Requesting data", {"url": api_url})
             response.raise_for_status()
             return response
         except requests.HTTPError as http_err:
@@ -68,22 +67,37 @@ class ConnectorClient:
         self._request_data.retry.wait = wait_fixed(self.config.retry_delay)
         self._request_data.retry.stop = stop_after_attempt(self.config.max_retries)
 
-        res = []
-        while True:
-            params = {
-                "last_activity_timestamp": last_activity_timestamp,
-                "page": page,
-                "page_size": page_size,
-            }
-            response = self._request_data(url, params=params)
-            data = response.json()
+        params = {
+            "last_activity_timestamp": last_activity_timestamp,
+            "page": page,
+            "page_size": page_size,
+        }
+
+        self.helper.connector_logger.info(
+            "[DoppelConnector] Fetching first page of alerts",
+            {"url": url, "params": params},
+        )
+
+        response = self._request_data(url, params=params)
+        data = response.json()
+        metadata = data.get("metadata", {})
+        res = data.get("alerts", [])
+
+        self.helper.connector_logger.info(
+            "[DoppelConnector] Fetched first page of alerts",
+            {"url": url, "params": params, "metadata": metadata},
+        )
+        for page in range(1, metadata["total_pages"]):
             self.helper.connector_logger.info(
-                "[DoppelConnector] Fetching alerts",
-                {**params, **data.get("metadata", {})},
+                "[DoppelConnector] Fetching page {}/{}".format(
+                    page, metadata["total_pages"]
+                )
             )
-            if not (alerts := data.get("alerts")):
-                break
-            self.helper.connector_logger.info("Fetched alerts", {"count": len(alerts)})
+            response = self._request_data(url, params={**params, "page": page})
+            data = response.json()
+            alerts = data.get("alerts", [])
+            self.helper.connector_logger.info(
+                "[DoppelConnector] Successfully fetched {} alerts".format(len(alerts))
+            )
             res.extend(alerts)
-            page += 1
         return res
