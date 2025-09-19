@@ -61,5 +61,5 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     )
 
     @field_validator("type")
-    def force_value_for_type_to_be_internal_enrichment(cls, value):
+    def force_value_for_type_to_be_external_import(cls, value):
         return "EXTERNAL_IMPORT"
