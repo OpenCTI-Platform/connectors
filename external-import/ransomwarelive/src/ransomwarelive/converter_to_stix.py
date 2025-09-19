@@ -167,18 +167,17 @@ class ConverterToStix:
         )
         return intrusionset
 
-    def create_location(self, country_stix_id: str, country_name: str):
+    def create_country(self, country_name: str):
         """
-        Create STIX 2.1 Location object
+        Create STIX 2.1 Location (country) object with connectors_sdk
 
         Params:
-            country_stix_id: id of the country STIX2.1 object in string
-            country_name: description in string
+            country_name: name of in string
         Return:
             Location in STIX 2.1 format
         """
         location = stix2.Location(
-            id=country_stix_id or Location.generate_id(country_name, "Country"),
+            id=Location.generate_id(country_name, "Country"),
             name=country_name,
             country=country_name,
             type="location",
@@ -259,6 +258,24 @@ class ConverterToStix:
             external_references=external_references,
         )
         return report
+
+    def create_sector(self, name: str):
+        """
+        Create STIX2.1 Sector object
+
+        Params:
+            name: name of sector in string
+        Return:
+            Sector in STIX 2.1 format
+        """
+        sector = stix2.Identity(
+            id=Identity.generate_id(name=name, identity_class="class"),
+            name=name,
+            identity_class="class",
+            object_marking_refs=[self.marking.get("id")],
+            allow_custom=True,
+        )
+        return sector
 
     def create_threat_actor(
         self,
@@ -400,12 +417,11 @@ class ConverterToStix:
 
     def process_location(
         self,
-        country_name: str,
+        location: stix2.Location,
         victim: stix2.Identity,
         intrusion_set: stix2.IntrusionSet,
         create_threat_actor: bool,
         threat_actor: stix2.ThreatActor = None,
-        country_stix_id: str = None,
         attack_date_iso: datetime = None,
         discovered_iso: datetime = None,
     ):
@@ -418,7 +434,6 @@ class ConverterToStix:
             intrusion_set (IntrusionSet): stix2 IntrusionSet object
             create_threat_actor (bool): env variable to create a Threat Actor object
             threat_actor (ThreatActor): stix2 ThreatActor object
-            country_stix_id (str): Location id retrieve from country_name value
             attack_date_iso (datetime): attack date in datetime
             discovered_iso (datetime): discovered datetime
         Returns:
@@ -427,10 +442,6 @@ class ConverterToStix:
             relation_intrusion_location: stix2 Relationship between location and intrusionset
             relation_threat_actor_location: stix2 Relationship between location and threatactor
         """
-        location = self.create_location(
-            country_stix_id=country_stix_id, country_name=country_name
-        )
-
         location_relation = self.create_relationship(
             source_ref=victim.get("id"),
             target_ref=location.get("id"),
@@ -455,7 +466,6 @@ class ConverterToStix:
                 created=discovered_iso,
             )
         return (
-            location,
             location_relation,
             relation_intrusion_location,
             relation_threat_actor_location,
@@ -499,11 +509,11 @@ class ConverterToStix:
 
     def process_sector(
         self,
+        sector: stix2.Identity,
         victim: stix2.Identity,
         create_threat_actor: bool,
         intrusion_set: stix2.IntrusionSet,
         threat_actor: stix2.ThreatActor = None,
-        sector_id: str = None,
         attack_date_iso: datetime = None,
         discovered_iso: datetime = None,
     ):
@@ -511,11 +521,11 @@ class ConverterToStix:
         Create stix2 relationship linked to the given sector
 
         Params:
+            sector_name (str): name of sector to create
             victim (Identity): stix2 Identity object of victim
             create_threat_actor (bool): env variable to create a Threat Actor object
             intrusion_set (IntrusionSet): stix2 IntrusionSet object
             threat_actor (ThreatActor): stix2 ThreatActor object or None
-            sector_id (str): Location id from sector activity or None
             attack_date_iso (datetime): attack date in datetime
             discovered_iso (datetime): discovered datetime
         Returns:
@@ -525,7 +535,7 @@ class ConverterToStix:
         """
         relation_sector_victim = self.create_relationship(
             source_ref=victim.get("id"),
-            target_ref=sector_id,
+            target_ref=sector.get("id"),
             relationship_type="part-of",
         )
 
@@ -533,7 +543,7 @@ class ConverterToStix:
         if create_threat_actor:
             relation_sector_threat_actor = self.create_relationship(
                 source_ref=threat_actor.get("id"),
-                target_ref=sector_id,
+                target_ref=sector.get("id"),
                 relationship_type="targets",
                 start_time=attack_date_iso,
                 created=discovered_iso,
@@ -541,7 +551,7 @@ class ConverterToStix:
 
         relation_intrusion_sector = self.create_relationship(
             intrusion_set.get("id"),
-            sector_id,
+            sector.get("id"),
             "targets",
             attack_date_iso,
             discovered_iso,
