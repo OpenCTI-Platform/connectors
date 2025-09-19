@@ -152,8 +152,9 @@ class ExternalImportConnector:
         self,
         collection,
         ttl,
-        portion,
+        event,
         mitre_mapper,
+        config,
         flag_instrusion_set_instead_of_threat_actor=False,
     ) -> list:
         """Collect intelligence from the source"""
@@ -417,10 +418,11 @@ class ExternalImportConnector:
                                         f"Processing event for collection: {collection}. All data from the received event: {event}"
                                     )
                                     bundle_objects = self._collect_intelligence(
-                                        collection,
-                                        self.ttl,
-                                        event,
-                                        self.MITRE_MAPPER,
+                                        collection=collection,
+                                        ttl=self.ttl,
+                                        event=event,
+                                        mitre_mapper=self.MITRE_MAPPER,
+                                        config=self.cfg,
                                         flag_instrusion_set_instead_of_threat_actor=self.INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR,
                                     )
                                     self.helper.connector_logger.debug(
