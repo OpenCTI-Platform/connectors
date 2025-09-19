@@ -22,14 +22,12 @@ API_BASE = "https://api.recordedfuture.com"
 API_BASE_V2 = urllib.parse.urljoin(API_BASE, "/v2")
 
 VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS = [
-    "analystNotes",
     "aiInsights",
     "risk",
 ]
 
 VulnerabilityEnrichmentOptionalFields = list[
     Literal[
-        "analystNotes",
         "aiInsights",
         "risk",
     ]

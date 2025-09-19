@@ -237,79 +237,6 @@ class Entity(RecordedFutureBaseModel):
     )
 
 
-class AnalystNoteAttributeTopic(RecordedFutureBaseModel):
-    id: Optional[str] = Field(
-        description="The unique identifier key for the topic in Recorded Future.",
-        default=None,
-    )
-    name: Optional[str] = Field(
-        description="The name for the topic in Recorded Future.",
-        default=None,
-    )
-    type: Optional[str] = Field(
-        description="The type of the topic in Recorded Future.",
-        default=None,
-    )
-    description: Optional[str] = Field(
-        description="The description of the topic",
-        default=None,
-    )
-
-
-class AnalystNoteAttribute(RecordedFutureBaseModel):
-    published: Optional[datetime] = Field(
-        description="Publication date of the analyst note.",
-        default=None,
-    )
-    title: Optional[str] = Field(
-        description="Title of the analyst note.",
-        default=None,
-    )
-    text: Optional[str] = Field(
-        description="Content of the analyst note.",
-        default=None,
-    )
-    attachment: Optional[str] = Field(
-        description="Attachment of the analyst note.",
-        default=None,
-    )
-    topic: Optional[AnalystNoteAttributeTopic] = Field(
-        description="Subject of the analyst note.",
-        default=None,
-    )
-    note_entities: Optional[list[Entity]] = Field(
-        description="Entities related to the analyst note.",
-        default=None,
-    )
-    context_entities: Optional[list[Entity]] = Field(
-        description="Entities related to the analyst note.",
-        default=None,
-    )
-    validation_urls: Optional[list[Entity]] = Field(
-        description="Validation URLs of the analyst note.",
-        default=None,
-    )
-    validated_on: Optional[datetime] = Field(
-        description="Validation date of the analyst note.",
-        default=None,
-    )
-
-
-class AnalystNote(RecordedFutureBaseModel):
-    id: Optional[str] = Field(
-        description="Analyst note ID.",
-        default=None,
-    )
-    attributes: Optional[AnalystNoteAttribute] = Field(
-        description="Attributes of the analyst note.",
-        default=None,
-    )
-    source: Optional[Entity] = Field(
-        description="Source of the analyst note.",
-        default=None,
-    )
-
-
 class RiskEvidence(RecordedFutureBaseModel):
     criticality: Optional[int] = Field(
         description="Severity level of the risk.",
@@ -417,10 +344,6 @@ class VulnerabilityEnrichment(RecordedFutureBaseModel):
     )
     aiInsights: Optional[AIInsights] = Field(
         description="AI-generated summary of risk rules.",
-        default=None,
-    )
-    analystNotes: Optional[list[AnalystNote]] = Field(
-        description="Threat research notes for this entity.",
         default=None,
     )
     risk: Optional[Risk] = Field(

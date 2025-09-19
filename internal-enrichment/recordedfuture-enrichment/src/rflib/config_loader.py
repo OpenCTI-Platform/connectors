@@ -32,7 +32,6 @@ SCOPE_ENTITIES = [
 ]
 
 VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS = [
-    "analystNotes",
     "aiInsights",
     "risk",
 ]
