@@ -16,6 +16,7 @@ from pycti import (
     Note,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
+    Vulnerability,
     get_config_variable,
 )
 
@@ -40,13 +41,9 @@ mapped_keys = [
     "x_acti_uuid",
     "x_product",
     "x_and_prior_versions",
-]
-ignored_keys = [
-    "x_acti_guid",
-    "x_version",
-    "x_vendor",
     "x_credit",
 ]
+ignored_keys = ["x_acti_guid", "x_version", "x_vendor"]
 
 
 class S3Connector:
@@ -136,6 +133,11 @@ class S3Connector:
         for obj in objects:
             obj_type = obj.get("type")
 
+            if obj_type == "vulnerability":
+                old_id = obj["id"]
+                new_id = Vulnerability.generate_id(obj["name"])
+                id_mapping[old_id] = new_id
+
             if obj_type == "infrastructure":
                 old_id = obj["id"]
                 new_id = Infrastructure.generate_id(obj["name"])
@@ -174,7 +176,12 @@ class S3Connector:
                 if target_ref in id_mapping:
                     obj["target_ref"] = id_mapping[target_ref]
 
-            elif obj_type in ("infrastructure", "identity", "course-of-action"):
+            elif obj_type in (
+                "infrastructure",
+                "identity",
+                "course-of-action",
+                "vulnerability",
+            ):
                 # Update the object's ID from the mapping
                 old_id = obj["id"]
                 if old_id in id_mapping:
