@@ -1,3 +1,5 @@
+from typing import Any
+
 import requests
 from tenacity import retry, stop_after_attempt, wait_fixed
 
@@ -59,6 +61,22 @@ class ConnectorClient:
             )
             raise
 
+    def _get_alerts(
+        self, url: str, params: dict[str, Any], page: int, total_pages: int
+    ) -> list:
+        self.helper.connector_logger.info(
+            "[DoppelConnector] Fetching page {}/{}".format(page, total_pages)
+        )
+        response = self._request_data(url, params={**params, "page": page})
+        data = response.json()
+        alerts = data.get("alerts", [])
+        self.helper.connector_logger.info(
+            "[DoppelConnector] Successfully fetched page {}/{} with {} alerts".format(
+                page, total_pages, len(alerts)
+            )
+        )
+        return alerts
+
     def get_alerts(
         self, last_activity_timestamp: str, page: int = 0, page_size: int = 100
     ) -> list:
@@ -95,16 +113,6 @@ class ConnectorClient:
             {"url": url, "params": params, "metadata": metadata},
         )
         for page in range(1, metadata["total_pages"]):
-            self.helper.connector_logger.info(
-                "[DoppelConnector] Fetching page {}/{}".format(
-                    page, metadata["total_pages"]
-                )
-            )
-            response = self._request_data(url, params={**params, "page": page})
-            data = response.json()
-            alerts = data.get("alerts", [])
-            self.helper.connector_logger.info(
-                "[DoppelConnector] Successfully fetched {} alerts".format(len(alerts))
-            )
+            alerts = self._get_alerts(url, params, page, metadata["total_pages"])
             res.extend(alerts)
         return res
