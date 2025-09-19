@@ -21,6 +21,20 @@ fi
 for requirements_file in $test_requirements_files
 do
   project="$(dirname "$requirements_file")"
+
+  if [ "$CIRCLE_BRANCH" = "master" ]; then
+    directory_has_changed=$(git diff HEAD~1 HEAD -- "$project/..")
+  else
+    directory_has_changed=$(git diff $(git merge-base master HEAD) HEAD "$project/..")
+  fi
+
+  if [ -z "$directory_has_changed" ] ; then
+    echo "☑️ Nothing has changed in: " "$project"
+    continue
+  else
+    echo "🔄 Changes detected in: " "$project"
+  fi
+
   echo 'Running tests pipeline for project' "$project"
 
   # Per-connector outputs
