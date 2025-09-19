@@ -39,6 +39,7 @@ class ConnectorClient:
                     "url": api_url,
                     "status_code": http_err.response.status_code,
                     "error": error_msg,
+                    "params": params,
                 },
             )
             raise
@@ -69,10 +70,12 @@ class ConnectorClient:
         while True:
             params = {"last_activity_timestamp": last_activity_timestamp, "page": page}
             response = self._request_data(url, params=params)
+            data = response.json()
             self.helper.connector_logger.info(
-                "[DoppelConnector] Fetching alerts", params
+                "[DoppelConnector] Fetching alerts",
+                {**params, **data.get("metadata", {})},
             )
-            if not (alerts := response.json().get("alerts")):
+            if not (alerts := data.get("alerts")):
                 break
             self.helper.connector_logger.info("Fetched alerts", {"count": len(alerts)})
             res.extend(alerts)
