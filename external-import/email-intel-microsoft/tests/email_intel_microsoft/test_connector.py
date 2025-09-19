@@ -1,7 +1,7 @@
 import datetime
 from types import SimpleNamespace
 from typing import Any, Callable
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock, Mock, patch
 
 import freezegun
 import pytest
@@ -26,7 +26,7 @@ def fixture_connector(mocked_helper: Mock, test_config: ConnectorSettings) -> Co
         client=ConnectorClient(
             tenant_id=test_config.email_intel_microsoft.tenant_id,
             client_id=test_config.email_intel_microsoft.client_id,
-            client_secret=test_config.email_intel_microsoft.client_secret,
+            client_secret=test_config.email_intel_microsoft.client_secret.get_secret_value(),
             email=test_config.email_intel_microsoft.email,
             mailbox=test_config.email_intel_microsoft.mailbox,
             attachments_mime_types=test_config.email_intel_microsoft.attachments_mime_types,
@@ -34,6 +34,18 @@ def fixture_connector(mocked_helper: Mock, test_config: ConnectorSettings) -> Co
     )
 
 
+@pytest.fixture(name="patch_client_context")
+def patch_client_context():
+    async def fake_context(self, *args, **kwargs):
+        return self
+
+    with patch(
+        "email_intel_microsoft.client.ConnectorClient.__aenter__", fake_context
+    ), patch("email_intel_microsoft.client.ConnectorClient.__aexit__", fake_context):
+        yield
+
+
+@pytest.mark.usefixtures("patch_client_context")
 @pytest.mark.asyncio
 def test_connector_process_data(
     connector: Connector,

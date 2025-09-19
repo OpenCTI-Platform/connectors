@@ -46,7 +46,12 @@ class GenericConverterFactory:
         """
         self._converter_registry[name] = config
         self.logger.debug(
-            f"{LOG_PREFIX} Registered converter config '{name}' for entity type '{config.entity_type}'"
+            "Registered converter config",
+            {
+                "prefix": LOG_PREFIX,
+                "name": name,
+                "entity_type": config.entity_type,
+            },
         )
 
     def create_converter(
@@ -229,7 +234,12 @@ class GenericConverterFactory:
             )
 
         self.logger.info(
-            f"{LOG_PREFIX} Created conversion pipeline with {len(pipeline)} converters: {', '.join(converter_names)}"
+            "Created conversion pipeline",
+            {
+                "prefix": LOG_PREFIX,
+                "converter_count": len(pipeline),
+                "converter_names": converter_names,
+            },
         )
         return pipeline
 
@@ -246,8 +256,25 @@ class GenericConverterFactory:
             self.register_config(name, config)
 
         self.logger.info(
-            f"{LOG_PREFIX} Registered {len(configs)} converter configurations: {', '.join(configs.keys())}"
+            "Registered converter configurations",
+            {
+                "prefix": LOG_PREFIX,
+                "count": len(configs),
+                "config_names": list(configs.keys()),
+            },
         )
+
+    def get_config(self, name: str) -> Optional[GenericConverterConfig]:
+        """Get a registered converter configuration by name.
+
+        Args:
+            name: Name of the registered configuration
+
+        Returns:
+            The converter configuration if found, None otherwise
+
+        """
+        return self._converter_registry.get(name)
 
     def _merge_dependencies(
         self,

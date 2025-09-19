@@ -59,7 +59,8 @@ class ExportTTPsFileNavigator:
         related_ttps = []
         # Get the relations from the main entity to attack pattern
         stix_relations = self.helper.api_impersonate.stix_core_relationship.list(
-            fromId=entity_id, toTypes=["Attack-Pattern"]
+            fromId=entity_id,
+            toTypes=["Attack-Pattern"],
         )
         for relation in stix_relations:
             attack_pattern = self.helper.api_impersonate.attack_pattern.read(

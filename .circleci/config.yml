@@ -70,10 +70,55 @@ jobs:
       - slack/notify:
           event: fail
           template: basic_fail_1
+  build_manifest:
+    docker:
+      - image: cimg/python:3.12
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - run:
+          name: Build Connectors Schemas for XTM composer and Update Config Documentation
+          command: |
+              bash ./shared/tools/composer/generate_connectors_config_json_schemas.sh
+      - run:
+          name: Build Manifest for XTM composer
+          command: |
+              bash ./shared/tools/composer/generate_connectors_manifest.sh
+      - run:
+          name: Commit Manifest if changed
+          command: |
+            if [ "$CIRCLE_BRANCH" = "master" ]; then
+              git config credential.helper 'cache --timeout=120'
+              git config user.email "automation@filigran.io"
+              git config user.name "Filigran Automation"
+              manifest_changed=$(git diff manifest.json)
+              flag_detected=$(git log -1 --pretty=%B | grep '\[ci build-manifest\]' || echo "")
+              if [ -n "$manifest_changed" ] && [ -z "$flag_detected" ] ; then
+                echo "Manifest changed. Committing changes..."
+                git add .
+                # Add custom flag to avoid triggering workflows
+                git commit -m "[Automation] Build and update manifest [ci build-manifest]"
+                # Push quietly to prevent showing the token in log
+                git push -q https://${GITHUB_TOKEN}@github.com/OpenCTI-Platform/connectors.git ${CIRCLE_BRANCH}   
+              else
+                echo "Manifest not changed. Skipping commit."
+                exit 0
+              fi
+            else
+              echo "Skipping, not master"
+            fi
+      - run:
+          name: Skip steps if flag detected
+          command: |
+            if git log -1 --pretty=%B | grep -q '\[ci build-manifest\]'; then
+              echo "Skipping steps due to [ci build-manifest] flag."
+              exit 0
+            fi
   test:
     docker:
       - image: cimg/python:3.11
     working_directory: ~/repo
+    parallelism: 4
     steps:
       - checkout
       - run: | 
@@ -87,7 +132,19 @@ jobs:
           command: pip install -r ci-requirements.txt --user
       - run:
           name: Run tests
-          command: bash run_test.sh
+          command: |
+            set -euo pipefail
+            circleci tests glob "**/test-requirements.txt" \
+              | circleci tests run \
+                  --split-by=timings \
+                  --command="xargs bash run_test.sh"
+        # Save JUnit so CircleCI can show pass/fail per connector and build timings history
+      - store_test_results:
+          path: test_outputs
+
+      # Save logs/reports as downloadable artifacts
+      - store_artifacts:
+          path: test_outputs
   build:
     parameters:
       ci_executor:
@@ -140,6 +197,12 @@ workflows:
           filters:
             tags:
               only: /.*/
+      - build_manifest:
+          requires:
+            - ensure_formatting
+            - base_linter
+            - linter
+            - test
       - build:
           name: "build_release"
           ci_executor:

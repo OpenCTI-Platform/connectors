@@ -1,0 +1,21 @@
+{
+  "title": "Doppel",
+  "slug": "doppel",
+  "description": "Doppel is a modern Digital Risk Protection solution that detects phishing and brand cyberattacks across channels like social media, domains, ads, and the dark web. By identifying malicious content and threats early, Doppel helps organizations proactively remove digital risks.\n\nThe integration of Doppel with OpenCTI enables the ingestion of alerts from the Doppel Threat Intelligence platform in the form of STIX 2.1 Indicators. Utilizing the Doppel API, alerts are retrieved and imported into OpenCTI as Indicators. Each alert is converted into a STIX 2.1 Indicator object and is enriched with detailed metadata, such as severity, entity state, platform, audit logs, and more, delivering comprehensive threat insights and enhancing the organization's cybersecurity posture.",
+  "short_description": "Doppel is a modern Digital Risk Protection solution that detects phishing and brand cyberattacks across channels like social media, domains, ads, and the dark web. By identifying malicious content and threats early, Doppel helps organizations proactively remove digital risks.",
+  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": "",
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">= 6.5.1",
+  "subscription_link": "https://www.doppel.com",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/doppel",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-doppel",
+  "container_type": "EXTERNAL_IMPORT"
+}

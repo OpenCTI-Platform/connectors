@@ -112,6 +112,9 @@ class VirusTotalConnector:
             return stix_entity["hashes"]["SHA-1"]
         if "hashes" in stix_entity and "MD5" in stix_entity["hashes"]:
             return stix_entity["hashes"]["MD5"]
+        raise ValueError(
+            "Unable to enrich the observable, the observable does not have an SHA256, SHA1, or MD5"
+        )
 
     def _retrieve_yara_ruleset(self, ruleset_id: str) -> dict:
         """

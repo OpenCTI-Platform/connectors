@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/email-intel-imap_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Email Intel IMAP",
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "email-intel-imap"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "format": "duration",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "enum": [
+        "debug",
+        "info",
+        "warning",
+        "error",
+        "critical"
+      ],
+      "type": "string"
+    },
+    "EMAIL_INTEL_IMAP_TLP_LEVEL": {
+      "default": "amber+strict",
+      "enum": [
+        "white",
+        "clear",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string"
+    },
+    "EMAIL_INTEL_IMAP_RELATIVE_IMPORT_START_DATE": {
+      "default": "P30D",
+      "format": "duration",
+      "type": "string"
+    },
+    "EMAIL_INTEL_IMAP_HOST": {
+      "type": "string"
+    },
+    "EMAIL_INTEL_IMAP_PORT": {
+      "default": 993,
+      "type": "integer"
+    },
+    "EMAIL_INTEL_IMAP_USERNAME": {
+      "type": "string"
+    },
+    "EMAIL_INTEL_IMAP_PASSWORD": {
+      "default": null,
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "EMAIL_INTEL_IMAP_GOOGLE_TOKEN_JSON": {
+      "default": null,
+      "description": "Content of the token.json file from Google API",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "EMAIL_INTEL_IMAP_MAILBOX": {
+      "default": "INBOX",
+      "type": "string"
+    },
+    "EMAIL_INTEL_IMAP_ATTACHMENTS_MIME_TYPES": {
+      "default": [
+        "application/pdf",
+        "text/csv",
+        "text/plain"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "EMAIL_INTEL_IMAP_HOST",
+    "EMAIL_INTEL_IMAP_USERNAME"
+  ],
+  "additionalProperties": true
+}

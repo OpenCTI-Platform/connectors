@@ -12,6 +12,7 @@ from pydantic import (
     Field,
     HttpUrl,
     PlainSerializer,
+    SecretStr,
     TypeAdapter,
     model_validator,
 )
@@ -122,7 +123,7 @@ class ConfigBaseModel(BaseModel):
     Base class for frozen config models, i.e. not alter-able after `model_post_init()`.
     """
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(extra="allow", frozen=True)
 
 
 class OpenCTIConfig(ConfigBaseModel):
@@ -132,14 +133,6 @@ class OpenCTIConfig(ConfigBaseModel):
 
     url: HttpUrl = Field(description="The base URL of the OpenCTI instance.")
     token: str = Field(description="The API token to connect to OpenCTI.")
-    json_logging: bool = Field(
-        description="Whether to format logs as JSON or not.",
-        default=True,
-    )
-    ssl_verify: bool = Field(
-        description="Whether to check SSL certificate or not.",
-        default=False,
-    )
 
 
 class ConnectorConfig(ConfigBaseModel):
@@ -147,8 +140,11 @@ class ConnectorConfig(ConfigBaseModel):
     Define config specific to this type of connector, e.g. an `external-import`.
     """
 
-    id: str = Field(description="A UUID v4 to identify the connector in OpenCTI.")
-    name: str = Field(description="The name of the connector.")
+    id: str = Field(
+        default="flashpoint--31419f2c-4239-4584-92fb-016b963ef01c",
+        description="A UUID v4 to identify the connector in OpenCTI.",
+    )
+    name: str = Field(default="Flashpoint", description="The name of the connector.")
     type: Literal["EXTERNAL_IMPORT"] = "EXTERNAL_IMPORT"
     scope: ListFromString = Field(
         description="The scope of the connector, e.g. 'flashpoint'.",
@@ -163,59 +159,16 @@ class ConnectorConfig(ConfigBaseModel):
         "debug",
         "info",
         "warn",
+        "warning",
         "error",
     ] = Field(
         description="The minimum level of logs to display.",
         default="error",
     )
-    expose_metrics: bool = Field(
-        description="Whether to expose metrics or not.",
-        default=False,
-    )
-    metrics_port: int = Field(
-        description="The port to expose metrics.",
-        default=9095,
-    )
-    only_contextual: bool = Field(
-        description="Whether to expose metrics or not.",
-        default=False,
-    )
-    run_and_terminate: bool = Field(
-        description="Connector run-and-terminate flag.",
-        default=False,
-    )
-    validate_before_import: bool = Field(
-        description="Whether to validate data before import or not.",
-        default=False,
-    )
-    queue_protocol: str = Field(
-        description="The queue protocol to use.",
-        default="amqp",
-    )
-    queue_threshold: int = Field(
-        description="Connector queue max size in Mbytes. Default to pycti value.",
-        default=500,
-    )
-    send_to_queue: bool = Field(
-        description="Connector send-to-queue flag. Default to True.",
-        default=True,
-    )
-    send_to_directory: bool = Field(
-        description="Connector send-to-directory flag.",
-        default=False,
-    )
-    send_to_directory_path: str | None = Field(
-        description="Connector send-to-directory path.",
-        default=None,
-    )
-    send_to_directory_retention: int = Field(
-        description="Connector send-to-directory retention.",
-        default=7,
-    )
 
 
 class FlashpointConfig(ConfigBaseModel):
-    api_key: str = Field(description="The API key to connect to Flashpoint.")
+    api_key: SecretStr = Field(description="The API key to connect to Flashpoint.")
     import_start_date: DatetimeFromIsoString = Field(
         description="The date from which to start importing data.",
         default_factory=lambda: iso_string_validator("P30D"),  # 30 days ago
