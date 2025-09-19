@@ -1,3 +1,6 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any
+
 import requests
 from tenacity import retry, stop_after_attempt, wait_fixed
 
@@ -23,25 +26,32 @@ class ConnectorClient:
         """
         try:
             response = self.session.get(api_url, params=params)
-            self.helper.connector_logger.info("[API] Requesting data", {"url": api_url})
             response.raise_for_status()
             return response
         except requests.HTTPError as http_err:
-            try:
-                error_json = http_err.response.json()
-                error_msg = error_json.get("message", http_err.response.text)
-            except Exception:
-                error_msg = http_err.response.text or str(http_err)
+            if http_err.response.status_code == 504:
+                self.helper.connector_logger.warning(
+                    "[API] Gateway Timeout, retrying...",
+                    {"url": api_url, "params": params},
+                )
+                raise
+            else:
+                try:
+                    error_json = http_err.response.json()
+                    error_msg = error_json.get("message", http_err.response.text)
+                except Exception:
+                    error_msg = http_err.response.text or str(http_err)
 
-            self.helper.connector_logger.error(
-                "[API] HTTP error during fetch",
-                {
-                    "url": api_url,
-                    "status_code": http_err.response.status_code,
-                    "error": error_msg,
-                },
-            )
-            raise
+                self.helper.connector_logger.error(
+                    "[API] HTTP error during fetch",
+                    {
+                        "url": api_url,
+                        "status_code": http_err.response.status_code,
+                        "error": error_msg,
+                        "params": params,
+                    },
+                )
+                raise
         except requests.RequestException as err:
             self.helper.connector_logger.error(
                 "[API] Request error during fetch",
@@ -52,7 +62,25 @@ class ConnectorClient:
             )
             raise
 
-    def get_alerts(self, last_activity_timestamp: str, page: int = 0):
+    def _get_alerts(
+        self, url: str, params: dict[str, Any], page: int, total_pages: int
+    ) -> list:
+        self.helper.connector_logger.info(
+            "[DoppelConnector] Fetching page {}/{}".format(page, total_pages)
+        )
+        response = self._request_data(url, params={**params, "page": page})
+        data = response.json()
+        alerts = data.get("alerts", [])
+        self.helper.connector_logger.info(
+            "[DoppelConnector] Successfully fetched page {}/{} with {} alerts".format(
+                page, total_pages, len(alerts)
+            )
+        )
+        return alerts
+
+    def get_alerts(
+        self, last_activity_timestamp: str, page: int = 0, page_size: int = 100
+    ) -> list:
         """
         Retrieve alerts from api
         """
@@ -65,16 +93,33 @@ class ConnectorClient:
         self._request_data.retry.wait = wait_fixed(self.config.retry_delay)
         self._request_data.retry.stop = stop_after_attempt(self.config.max_retries)
 
-        res = []
-        while True:
-            params = {"last_activity_timestamp": last_activity_timestamp, "page": page}
-            response = self._request_data(url, params=params)
-            self.helper.connector_logger.info(
-                "[DoppelConnector] Fetching alerts", params
-            )
-            if not (alerts := response.json().get("alerts")):
-                break
-            self.helper.connector_logger.info("Fetched alerts", {"count": len(alerts)})
-            res.extend(alerts)
-            page += 1
+        params = {
+            "last_activity_timestamp": last_activity_timestamp,
+            "page": page,
+            "page_size": page_size,
+        }
+
+        self.helper.connector_logger.info(
+            "[DoppelConnector] Fetching first page of alerts",
+            {"url": url, "params": params},
+        )
+
+        response = self._request_data(url, params=params)
+        data = response.json()
+        metadata = data.get("metadata", {})
+        res = data.get("alerts", [])
+
+        self.helper.connector_logger.info(
+            "[DoppelConnector] Fetched first page of alerts",
+            {"url": url, "params": params, "metadata": metadata},
+        )
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            futures = [
+                executor.submit(
+                    self._get_alerts, url, params, page, metadata["total_pages"]
+                )
+                for page in range(1, metadata["total_pages"] + 1)
+            ]
+            for future in as_completed(futures):
+                res.extend(future.result())
         return res
