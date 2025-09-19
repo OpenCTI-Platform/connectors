@@ -1,10 +1,10 @@
 import datetime
 
 import stix2
-from connectors_sdk.models.octi.knowledge.locations import Country
 from pycti import (
     Identity,
     IntrusionSet,
+    Location,
     Report,
     StixCoreRelationship,
     ThreatActorGroup,
@@ -176,9 +176,15 @@ class ConverterToStix:
         Return:
             Location in STIX 2.1 format
         """
-        country = Country(name=country_name)
-        country_obj = country.to_stix2_object()
-        return country_obj
+        location = stix2.Location(
+            id=Location.generate_id(country_name, "Country"),
+            name=country_name,
+            country=country_name,
+            type="location",
+            created_by_ref=self.author.get("id"),
+            object_marking_refs=[self.marking.get("id")],
+        )
+        return location
 
     def create_relationship(
         self,
@@ -412,7 +418,7 @@ class ConverterToStix:
 
     def process_location(
         self,
-        country_name: str,
+        location: stix2.Location,
         victim: stix2.Identity,
         intrusion_set: stix2.IntrusionSet,
         create_threat_actor: bool,
@@ -437,8 +443,6 @@ class ConverterToStix:
             relation_intrusion_location: stix2 Relationship between location and intrusionset
             relation_threat_actor_location: stix2 Relationship between location and threatactor
         """
-        location = self.create_country(country_name=country_name)
-
         location_relation = self.create_relationship(
             source_ref=victim.get("id"),
             target_ref=location.get("id"),
@@ -463,7 +467,6 @@ class ConverterToStix:
                 created=discovered_iso,
             )
         return (
-            location,
             location_relation,
             relation_intrusion_location,
             relation_threat_actor_location,

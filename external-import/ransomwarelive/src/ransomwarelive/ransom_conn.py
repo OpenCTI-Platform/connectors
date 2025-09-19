@@ -1,6 +1,7 @@
 import sys
 from datetime import datetime, timedelta, timezone
 
+import pycti
 import stix2
 from models.configs.config_loader import ConfigLoader
 from pycti import OpenCTIConnectorHelper
@@ -29,6 +30,38 @@ class RansomwareAPIConnector:
         self.converter_to_stix = ConverterToStix()
         self.author = self.converter_to_stix.author
         self.api_client = RansomwareAPIClient()
+
+    def location_fetcher(self, country: str):
+        """
+        Fetches the location object from OpenCTI
+        Param:
+            country: country code format ISO 3166-1 alpha-2
+        Return:
+            country stix id if retrieve else None
+        """
+        country_id = pycti.Location.generate_id(country, "Country")
+        try:
+            country_out = self.helper.api.stix_domain_object.read(id=country_id)
+            if country_out and country_out.get("standard_id").startswith("location--"):
+                country_obj = (
+                    self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
+                        entity_type="location",
+                        entity_id=country_out["standard_id"],
+                        only_entity=True,
+                    )
+                )
+                return country_obj
+            else:
+                country_obj = self.converter_to_stix.create_country(
+                    country_name=country
+                )
+                return country_obj
+
+        except Exception as e:
+            self.helper.connector_logger.error(
+                "Error fetching location", {"country": country, "error": e}
+            )
+            return None
 
     def sector_fetcher(self, sector: str):
         """
@@ -255,14 +288,14 @@ class RansomwareAPIConnector:
         # Creating Location object
         if item.get("country"):
             country_name = item["country"]
+            location = self.location_fetcher(country_name)
 
             (
-                location,
                 location_relation,
                 relation_intrusion_location,
                 relation_threat_actor_location,
             ) = self.converter_to_stix.process_location(
-                country_name=country_name,
+                location=location,
                 victim=victim,
                 intrusion_set=intrusion_set,
                 create_threat_actor=self.config.connector.create_threat_actor,
