@@ -86,11 +86,16 @@ class DataProcessor:
                         # Track latest timestamp for next incremental run
                         entity_timestamp = entity_data.get("timestamp")
                         if entity_timestamp:
-                            if not latest_timestamp or entity_timestamp > latest_timestamp:
+                            if (
+                                not latest_timestamp
+                                or entity_timestamp > latest_timestamp
+                            ):
                                 latest_timestamp = entity_timestamp
 
                     except json.JSONDecodeError:
-                        self.helper.connector_logger.warning(f"Skipping invalid JSON line: {line}")
+                        self.helper.connector_logger.warning(
+                            f"Skipping invalid JSON line: {line}"
+                        )
 
             self.latest_timestamp = latest_timestamp
 
@@ -128,7 +133,9 @@ class DataProcessor:
 
         # Debug: Log some sample timestamps for troubleshooting
         if len(entities) > 0:
-            sample_timestamps = [entities[i].get("timestamp") for i in range(min(5, len(entities)))]
+            sample_timestamps = [
+                entities[i].get("timestamp") for i in range(min(5, len(entities)))
+            ]
             self.helper.connector_logger.info(
                 f"{LoggingPrefixes.DEBUG} Sample entity timestamps: {sample_timestamps}, "
                 f"since_timestamp: {since_timestamp}"
@@ -188,7 +195,9 @@ class ConnectorClient:
         """Get the latest timestamp from the data processor."""
         return self.data_processor.latest_timestamp
 
-    def _request_data(self, api_url: str, params: Optional[dict] = None) -> requests.Response:
+    def _request_data(
+        self, api_url: str, params: Optional[dict] = None
+    ) -> requests.Response:
         """
         Sends a GET request to the specified API URL with enhanced error handling and timeouts.
 
@@ -208,7 +217,8 @@ class ConnectorClient:
 
         try:
             self.helper.connector_logger.info(
-                f"{LoggingPrefixes.API} HTTP GET Request to endpoint", {"url_path": api_url}
+                f"{LoggingPrefixes.API} HTTP GET Request to endpoint",
+                {"url_path": api_url},
             )
 
             # Make request with configured timeouts
@@ -241,9 +251,7 @@ class ConnectorClient:
 
         except ReadTimeout as timeout_err:
             elapsed_time = time.time() - start_time
-            error_msg = (
-                f"Read timeout after {elapsed_time:.2f}s (limit: {APIConstants.READ_TIMEOUT}s)"
-            )
+            error_msg = f"Read timeout after {elapsed_time:.2f}s (limit: {APIConstants.READ_TIMEOUT}s)"
             self.helper.connector_logger.error(
                 f"{LoggingPrefixes.HTTP_RESILIENCE} {error_msg}",
                 {"url_path": api_url, "error": str(timeout_err)},
@@ -253,7 +261,9 @@ class ConnectorClient:
 
         except HTTPError as http_err:
             elapsed_time = time.time() - start_time
-            status_code = http_err.response.status_code if http_err.response else "unknown"
+            status_code = (
+                http_err.response.status_code if http_err.response else "unknown"
+            )
             error_msg = f"HTTP {status_code} error after {elapsed_time:.2f}s"
 
             self.helper.connector_logger.error(
@@ -342,7 +352,9 @@ class ConnectorClient:
                 )
 
             # Make API request
-            response = self._request_data(self.config.api_base_url, params=request_params)
+            response = self._request_data(
+                self.config.api_base_url, params=request_params
+            )
 
             # Process response data
             all_entities = self.data_processor.process_gzipped_response(response)
@@ -353,13 +365,19 @@ class ConnectorClient:
             )
 
             # Apply emergency limits
-            final_entities = self.data_processor.apply_emergency_limits(filtered_entities)
+            final_entities = self.data_processor.apply_emergency_limits(
+                filtered_entities
+            )
 
             return final_entities
 
         except (APIError, RetryableError, NonRetryableError) as api_err:
-            self.helper.connector_logger.error(f"API error while retrieving entities: {api_err}")
+            self.helper.connector_logger.error(
+                f"API error while retrieving entities: {api_err}"
+            )
         except Exception as err:
-            self.helper.connector_logger.error(f"Unexpected error while retrieving entities: {err}")
+            self.helper.connector_logger.error(
+                f"Unexpected error while retrieving entities: {err}"
+            )
 
         return None

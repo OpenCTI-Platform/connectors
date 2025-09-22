@@ -86,7 +86,9 @@ class QueueHealthMonitor:
 
         # Store emergency state for monitoring
         current_state = self.helper.get_state() or {}
-        current_state[StateKeys.LAST_EMERGENCY_STOP] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        current_state[StateKeys.LAST_EMERGENCY_STOP] = datetime.now().strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
         current_state[StateKeys.EMERGENCY_QUEUE_SIZE] = queue_messages
         current_state[StateKeys.EMERGENCY_QUEUE_MB] = queue_size_mb
         self.helper.set_state(current_state)
@@ -152,7 +154,9 @@ class BundleSender:
     def send_bundle(self, stix_objects: List, description: str = "") -> None:
         """Send a STIX bundle with retry logic."""
         if not stix_objects:
-            self.helper.connector_logger.warning(f"No objects to send for {description}")
+            self.helper.connector_logger.warning(
+                f"No objects to send for {description}"
+            )
             return
 
         total_objects = len(stix_objects)
@@ -165,7 +169,9 @@ class BundleSender:
                 stix_bundle = stix2.Bundle(objects=stix_objects, allow_custom=True)
 
                 self.helper.send_stix2_bundle(
-                    stix_bundle.serialize(), update=True, cleanup_inconsistent_bundle=True
+                    stix_bundle.serialize(),
+                    update=True,
+                    cleanup_inconsistent_bundle=True,
                 )
 
                 self.helper.connector_logger.info(
@@ -175,7 +181,10 @@ class BundleSender:
                 return  # Success
 
             except Exception as e:
-                if self._is_retryable_error(e) and attempt < RetryConfig.MAX_RETRIES - 1:
+                if (
+                    self._is_retryable_error(e)
+                    and attempt < RetryConfig.MAX_RETRIES - 1
+                ):
                     delay = RetryConfig.EXPONENTIAL_BASE**attempt
                     self.helper.connector_logger.warning(
                         f"Bundle sending failed (attempt {attempt + 1}/{RetryConfig.MAX_RETRIES}), "
@@ -183,7 +192,9 @@ class BundleSender:
                     )
                     time.sleep(delay)
                 else:
-                    error_msg = f"Failed to send bundle after {attempt + 1} attempts: {e}"
+                    error_msg = (
+                        f"Failed to send bundle after {attempt + 1} attempts: {e}"
+                    )
                     self.helper.connector_logger.error(error_msg)
                     raise BatchProcessingError(error_msg) from e
 
@@ -212,7 +223,9 @@ class BatchManager:
 
     def get_optimal_batch_size(self) -> int:
         """Get the optimal batch size based on current system conditions."""
-        return self.queue_monitor.get_adaptive_batch_size(ProcessingLimits.DEFAULT_BATCH_SIZE)
+        return self.queue_monitor.get_adaptive_batch_size(
+            ProcessingLimits.DEFAULT_BATCH_SIZE
+        )
 
     def apply_emergency_limits(self, entities: List[C2]) -> List[C2]:
         """Apply emergency limits to prevent queue explosion."""

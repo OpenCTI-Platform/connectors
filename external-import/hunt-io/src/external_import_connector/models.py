@@ -309,14 +309,18 @@ class Malware(BaseModel):
             id=PyCTIMalware.generate_id(self.name),
             name=self.name,
             is_family=self.is_family,
-            malware_types=[self.malware_subsystem] if self.malware_subsystem else ["unknown"],
+            malware_types=(
+                [self.malware_subsystem] if self.malware_subsystem else ["unknown"]
+            ),
         )
 
 
 class URL(BaseModel):
     """URL indicator."""
 
-    def __init__(self, scan_uri: str, valid_from: datetime, author_id: str, description: str = ""):
+    def __init__(
+        self, scan_uri: str, valid_from: datetime, author_id: str, description: str = ""
+    ):
         super().__init__()
         self.scan_uri = scan_uri
         self.description = description

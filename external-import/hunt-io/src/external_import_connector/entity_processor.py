@@ -58,8 +58,12 @@ class STIXObjectCreator:
             malware_object = self.converter.create_malware_object(
                 entity_result.malware_name, entity_result.malware_subsystem
             )
-            url_indicator = self.converter.create_url_indicator(entity_result.scan_uri, timestamp)
-            domain_object = self.converter.create_domain_observable(entity_result.hostname)
+            url_indicator = self.converter.create_url_indicator(
+                entity_result.scan_uri, timestamp
+            )
+            domain_object = self.converter.create_domain_observable(
+                entity_result.hostname
+            )
             c2_infrastructure = self.converter.create_c2_infrastructure(
                 entity_result.malware_name, "command-and-control", timestamp
             )
@@ -119,7 +123,9 @@ class STIXObjectCreator:
             }
 
         except Exception as e:
-            raise STIXConversionError(f"Failed to create STIX objects for entity: {e}") from e
+            raise STIXConversionError(
+                f"Failed to create STIX objects for entity: {e}"
+            ) from e
 
 
 class RelationshipCreator:
@@ -128,7 +134,9 @@ class RelationshipCreator:
     def __init__(self, converter: ConverterToStix):
         self.converter = converter
 
-    def create_relationships_for_entity(self, metadata: EntityMetadata, object_refs: Dict) -> List:
+    def create_relationships_for_entity(
+        self, metadata: EntityMetadata, object_refs: Dict
+    ) -> List:
         """Create all relationships for a single entity."""
         relationships = []
 
@@ -184,7 +192,9 @@ class RelationshipCreator:
             return relationships
 
         except Exception as e:
-            raise STIXConversionError(f"Failed to create relationships for entity: {e}") from e
+            raise STIXConversionError(
+                f"Failed to create relationships for entity: {e}"
+            ) from e
 
 
 class EntityProcessor:
@@ -210,7 +220,8 @@ class EntityProcessor:
 
         total_batches = (len(entities) + batch_size - 1) // batch_size
         self.helper.connector_logger.info(
-            f"{LoggingPrefixes.PHASE_1} Processing {len(entities)} entities in {total_batches} object-creation batches"
+            f"{LoggingPrefixes.PHASE_1} Processing {len(entities)} entities in "
+            f"{total_batches} object-creation batches"
         )
 
         for batch_idx in range(0, len(entities), batch_size):
@@ -236,7 +247,9 @@ class EntityProcessor:
 
         return all_objects, entity_metadata_list
 
-    def _process_batch_objects(self, entities: List[C2]) -> Tuple[List, List[EntityMetadata]]:
+    def _process_batch_objects(
+        self, entities: List[C2]
+    ) -> Tuple[List, List[EntityMetadata]]:
         """Process a batch of entities to create objects."""
         batch_objects = []
         batch_metadata = []
@@ -248,8 +261,10 @@ class EntityProcessor:
                 timestamp = convert_timestamp_to_iso_format(entity_result.timestamp)
 
                 # Create STIX objects
-                stix_objects, object_refs = self.object_creator.create_objects_for_entity(
-                    entity_result, timestamp
+                stix_objects, object_refs = (
+                    self.object_creator.create_objects_for_entity(
+                        entity_result, timestamp
+                    )
                 )
 
                 batch_objects.extend(stix_objects)
@@ -308,7 +323,9 @@ class EntityProcessor:
 
         return all_relationships
 
-    def _process_batch_relationships(self, metadata_batch: List[EntityMetadata]) -> List:
+    def _process_batch_relationships(
+        self, metadata_batch: List[EntityMetadata]
+    ) -> List:
         """Process a batch of metadata to create relationships."""
         batch_relationships = []
 
@@ -323,8 +340,10 @@ class EntityProcessor:
                     "c2_infrastructure": metadata.c2_infrastructure,
                 }
 
-                relationships = self.relationship_creator.create_relationships_for_entity(
-                    metadata, object_refs
+                relationships = (
+                    self.relationship_creator.create_relationships_for_entity(
+                        metadata, object_refs
+                    )
                 )
                 batch_relationships.extend(relationships)
 

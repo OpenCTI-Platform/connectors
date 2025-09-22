@@ -16,7 +16,10 @@ class APIError(HuntIOConnectorError):
     """Raised when API operations fail."""
 
     def __init__(
-        self, message: str, status_code: Optional[int] = None, details: Optional[dict] = None
+        self,
+        message: str,
+        status_code: Optional[int] = None,
+        details: Optional[dict] = None,
     ):
         super().__init__(message, details)
         self.status_code = status_code
@@ -30,7 +33,10 @@ class QueueHealthError(HuntIOConnectorError):
     """Raised when queue health checks fail or thresholds are exceeded."""
 
     def __init__(
-        self, message: str, queue_size: Optional[int] = None, queue_size_mb: Optional[float] = None
+        self,
+        message: str,
+        queue_size: Optional[int] = None,
+        queue_size_mb: Optional[float] = None,
     ):
         super().__init__(message)
         self.queue_size = queue_size
@@ -49,7 +55,10 @@ class BatchProcessingError(HuntIOConnectorError):
     """Raised when batch processing fails."""
 
     def __init__(
-        self, message: str, batch_number: Optional[int] = None, entity_count: Optional[int] = None
+        self,
+        message: str,
+        batch_number: Optional[int] = None,
+        entity_count: Optional[int] = None,
     ):
         super().__init__(message)
         self.batch_number = batch_number

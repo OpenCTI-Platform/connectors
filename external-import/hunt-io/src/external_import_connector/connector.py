@@ -37,14 +37,18 @@ class StateManager:
         current_state = self.helper.get_state()
         return current_state and current_state.get(StateKeys.PROCESSING, False)
 
-    def update_run_state(self, latest_timestamp: Optional[str], entities_processed: int) -> None:
+    def update_run_state(
+        self, latest_timestamp: Optional[str], entities_processed: int
+    ) -> None:
         """Update state after successful run."""
         current_state = self.helper.get_state() or {}
 
         if latest_timestamp:
             current_state[StateKeys.LAST_TIMESTAMP] = latest_timestamp
 
-        current_state[StateKeys.LAST_RUN] = datetime.now().strftime(DateTimeFormats.STANDARD_FORMAT)
+        current_state[StateKeys.LAST_RUN] = datetime.now().strftime(
+            DateTimeFormats.STANDARD_FORMAT
+        )
         current_state[StateKeys.ENTITIES_PROCESSED] = entities_processed
         current_state[StateKeys.PROCESSING] = False
 
@@ -86,7 +90,9 @@ class IntelligenceCollector:
             )
 
         # Fetch entities incrementally to prevent reprocessing large datasets
-        entities: List[C2] = self.client.get_entities(since_timestamp=last_timestamp) or []
+        entities: List[C2] = (
+            self.client.get_entities(since_timestamp=last_timestamp) or []
+        )
 
         if not entities:
             self.helper.connector_logger.info(
@@ -110,7 +116,9 @@ class IntelligenceCollector:
 
         # Update state with latest timestamp for next incremental run
         if hasattr(self.client, "latest_timestamp") and self.client.latest_timestamp:
-            self.state_manager.update_run_state(self.client.latest_timestamp, len(entities))
+            self.state_manager.update_run_state(
+                self.client.latest_timestamp, len(entities)
+            )
 
             self.helper.connector_logger.info(
                 f"{LoggingPrefixes.CONNECTOR} Updated state - last_timestamp: {self.client.latest_timestamp}, "
@@ -135,8 +143,8 @@ class IntelligenceCollector:
         self.helper.connector_logger.info(
             f"{LoggingPrefixes.SEQUENTIAL_BATCH} Phase 1: Creating all STIX objects..."
         )
-        all_objects, entity_metadata = self.entity_processor.process_entities_objects_phase(
-            entities, batch_size
+        all_objects, entity_metadata = (
+            self.entity_processor.process_entities_objects_phase(entities, batch_size)
         )
 
         # Phase 2: Process all relationships using the created objects
@@ -151,7 +159,9 @@ class IntelligenceCollector:
         self.helper.connector_logger.info(
             f"{LoggingPrefixes.SEQUENTIAL_BATCH} Phase 3: Sending consolidated bundle..."
         )
-        self.batch_manager.send_consolidated_bundle(all_objects, all_relationships, len(entities))
+        self.batch_manager.send_consolidated_bundle(
+            all_objects, all_relationships, len(entities)
+        )
 
 
 class ConnectorHuntIo:
@@ -232,7 +242,9 @@ class ConnectorHuntIo:
             friendly_name = "Connector Hunt IO feed"
 
             # Initiate a new work
-            work_id = self.helper.api.work.initiate_work(self.helper.connect_id, friendly_name)
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, friendly_name
+            )
 
             self.helper.connector_logger.info(
                 f"{LoggingPrefixes.CONNECTOR} Running connector...",

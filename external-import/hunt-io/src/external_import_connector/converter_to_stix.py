@@ -53,7 +53,9 @@ class ConverterToStix:
         created: Optional[datetime] = None,
     ) -> Infrastructure:
         """Creates a Command and Control (C2) infrastructure object."""
-        infrastructure = Infrastructure(name, infrastructure_types, self.author["id"], created)
+        infrastructure = Infrastructure(
+            name, infrastructure_types, self.author["id"], created
+        )
         return infrastructure
 
     def create_ipv4_observable(self, ip: str) -> IPv4Address:
@@ -77,14 +79,18 @@ class ConverterToStix:
         indicator = URL(scan_uri, timestamp, self.author["id"])
         return indicator
 
-    def create_malware_object(self, malware_name: str, malware_subsystem: str) -> Malware:
+    def create_malware_object(
+        self, malware_name: str, malware_subsystem: str
+    ) -> Malware:
         """
         Creates a malware object.
         """
         malware = Malware(malware_name, malware_subsystem)
         return malware
 
-    def create_network_traffic(self, port: int | None, src_ref: str | None) -> NetworkTraffic:
+    def create_network_traffic(
+        self, port: int | None, src_ref: str | None
+    ) -> NetworkTraffic:
         """
         Creates a network traffic object.
         """
