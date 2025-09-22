@@ -9,6 +9,9 @@ SCOPE_LOCATION = "location"
 SCOPE_IP = "ip-addr"
 SCOPE_INDICATOR = "indicator"
 SCOPE_EXTERNAL_REF = "external-reference"
+SCOPE_ATTACK_PATTERN = "attack-pattern"
+SCOPE_COURSE_OF_ACTION = "course-of-action"
+SCOPE_DATA_SOURCE = "x-mitre-data-source"
 
 
 def compare_config_to_target_scope(
