@@ -22,5 +22,6 @@ services:
       - DOPPEL_HISTORICAL_POLLING_DAYS=30
       - DOPPEL_MAX_RETRIES=3
       - DOPPEL_RETRY_DELAY=30
+      - DOPPEL_PAGE_SIZE=100
 
     restart: always
