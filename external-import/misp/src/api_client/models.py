@@ -351,6 +351,23 @@ class GalaxyItem(MISPBaseModel):
             ]
         },
     )
+    GalaxyCluster: Optional[List[Dict[str, Any]]] = Field(default=None)
+
+
+class ObjectItemObjectReference(MISPBaseModel):
+    id: Optional[str] = Field(default=None)
+    uuid: Optional[str] = Field(default=None)
+    timestamp: Optional[str] = Field(default=None)
+    object_id: Optional[str] = Field(default=None)
+    referenced_id: Optional[str] = Field(default=None)
+    referenced_uuid: Optional[str] = Field(default=None)
+    reference_type: Optional[str] = Field(default=None)
+    relationship_type: Optional[str] = Field(default=None)
+    comment: Optional[str] = Field(default=None)
+    deleted: Optional[bool] = Field(default=None)
+    event_id: Optional[str] = Field(default=None)
+    source_uuid: Optional[str] = Field(default=None)
+    Attribute: Optional[ExtendedAttributeItem] = Field(default=None)
 
 
 class ObjectItem(MISPBaseModel):
@@ -372,6 +389,7 @@ class ObjectItem(MISPBaseModel):
     first_seen: Optional[Union[str, datetime]] = Field(default=None)
     last_seen: Optional[Union[str, datetime]] = Field(default=None)
     Attribute: Optional[List[ExtendedAttributeItem]] = Field(default=None)
+    ObjectReference: Optional[List[ObjectItemObjectReference]] = Field(default=None)
 
 
 class TagItem(MISPBaseModel):
