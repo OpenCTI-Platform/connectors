@@ -21,7 +21,7 @@ class _ConnectorConfig(ConnectorConfig):
     )
     scope: ListFromString = Field(
         default=["email-intel-imap"],
-        description="The scope of the connector, e.g. 'flashpoint'.",
+        description="The scope of the connector.",
     )
     duration_period: datetime.timedelta = Field(
         default=datetime.timedelta(hours=1),
@@ -53,15 +53,15 @@ class _EmailIntelConfig(BaseModel):
         description="IMAP server port number",
     )
     username: str = Field(
-        description="Username to authenticate to the IMAP server",
+        description="Username to authenticate to the IMAP server. Either `password` or `google_token_json` must be set as well.",
     )
     password: SecretStr | None = Field(
         default=None,
-        description="Password to authenticate to the IMAP server",
+        description="Password to authenticate to the IMAP server. Either `password` or `google_token_json` must be set.",
     )
     google_token_json: SecretStr | None = Field(
         default=None,
-        description="Content of the token.json file from Google API",
+        description="Content of the token.json file from Google API. Either `password` or `google_token_json` must be set.",
     )
     mailbox: str = Field(
         default="INBOX",
@@ -81,7 +81,8 @@ class _EmailIntelConfig(BaseModel):
         google_token_json = values.get("google_token_json")
         if (password and google_token_json) or not (password or google_token_json):
             raise ValueError(
-                "Auth method is not valid. Either password or Google token must be set."
+                "Auth method is not valid. Either password or Google token must be set. "
+                "Providing both or neither will cause this error."
             )
         return values
 

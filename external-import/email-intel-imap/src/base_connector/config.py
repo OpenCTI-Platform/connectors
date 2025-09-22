@@ -73,7 +73,7 @@ class ConnectorConfig(BaseModel):
         description="The type of the connector.",
     )
     scope: ListFromString = Field(
-        description="The scope of the connector, e.g. 'flashpoint'.",
+        description="The scope of the connector.",
     )
     duration_period: datetime.timedelta = Field(
         description="The period of time to await between two runs of the connector.",
