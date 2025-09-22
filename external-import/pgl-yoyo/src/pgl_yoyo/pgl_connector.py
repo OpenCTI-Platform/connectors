@@ -135,7 +135,7 @@ class PGLConnector:
         self,
         url: str,
     ) -> Tuple[List[str], bool]:
-        headers = {}
+        headers: dict[str, str] = {}
 
         try:
             resp = self.session.get(url, headers=headers, timeout=30)

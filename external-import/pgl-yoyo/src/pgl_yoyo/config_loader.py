@@ -155,27 +155,6 @@ class ConfigConnector:
             default="",
         )
 
-        # Try to load feeds, default to static list if not present
-        # feeds:
-        # - name: "PGL - Trackers (Hostnames)"
-        #     url: "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=plain&showintro=0&onlytrackers=1&mimetype=plaintext"
-        #     type: "domain"
-        #     labels: ["OSINT", "Blocklist", "AdTech", "Tracker"]
-        #
-        # - name: "PGL - Trackers (IPs)"
-        #     url: "https://pgl.yoyo.org/adservers/iplist.php?ipformat=plain&showintro=0&onlytrackers=1&mimetype=plaintext"
-        #     type: "ipv4"
-        #     labels: ["OSINT", "Blocklist", "AdTech", "Tracker"]
-        #
-        # - name: "PGL - Non-Trackers (Hostnames)"
-        #     url: "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=plain&showintro=0&notrackers=1&mimetype=plaintext"
-        #     type: "domain"
-        #     labels: ["OSINT", "Blocklist", "AdTech", "Non-Tracker"]
-        #
-        # - name: "PGL - Non-Trackers (IPs)"
-        #     url: "https://pgl.yoyo.org/adservers/iplist.php?ipformat=plain&showintro=0&notrackers=1&mimetype=plaintext"
-        #     type: "ipv4"
-        #     labels: ["OSINT", "Blocklist", "AdTech", "Non-Tracker"]
         self.feeds = self.load.get("pgl", {}).get("feeds")
         if not isinstance(self.feeds, list) or not self.feeds:
             self.feeds = [
