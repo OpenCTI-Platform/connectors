@@ -180,23 +180,23 @@ class GalaxyConverter:
         galaxy: GalaxyItem,
         author: stix2.Identity,
         markings: list[stix2.MarkingDefinition],
-    ) -> tuple[list[stix2.v21._STIXBase21], list[stix2.v21._RelationshipObject]]:
+    ) -> list[stix2.v21._STIXBase21]:
         stix_objects = []
-        stix_relationships = []
 
         try:
             # Get the linked intrusion sets
             if (
-                (galaxy.namespace == "mitre-attack" and galaxy.name == "Intrusion Set")
-                or (galaxy.namespace == "misp" and galaxy.name == "Threat Actor")
-                or (
-                    galaxy.namespace == "misp"
-                    and galaxy.name == "Microsoft Activity Group actor"
-                )
-                or (galaxy.namespace == "misp" and galaxy.name == "ESET Threat Actor")
+                galaxy.namespace == "mitre-attack" and galaxy.name == "Intrusion Set"
+            ) or (
+                galaxy.namespace == "misp"
+                and galaxy.name
+                in [
+                    "Threat Actor",
+                    "Microsoft Activity Group actor",
+                    "ESET Threat Actor",
+                ]
             ):
-                # ? The for loop below seems to never be reached
-                for galaxy_entity in getattr(galaxy, "GalaxyCluster", []):
+                for galaxy_entity in galaxy.GalaxyCluster or []:
                     intrusion_set = self.create_intrusion_set(
                         galaxy_entity, author=author, markings=markings
                     )
@@ -205,8 +205,7 @@ class GalaxyConverter:
 
             # Get the linked tools
             if galaxy.namespace == "mitre-attack" and galaxy.name == "Tool":
-                # ? The for loop below seems to never be reached
-                for galaxy_entity in getattr(galaxy, "GalaxyCluster", []):
+                for galaxy_entity in galaxy.GalaxyCluster or []:
                     tool = self.create_tool(
                         galaxy_entity, author=author, markings=markings
                     )
@@ -214,15 +213,11 @@ class GalaxyConverter:
                         stix_objects.append(tool)
 
             # Get the linked malwares
-            if (
-                (galaxy.namespace == "mitre-attack" and galaxy.name == "Malware")
-                or (galaxy.namespace == "misp" and galaxy.name == "Tool")
-                or (galaxy.namespace == "misp" and galaxy.name == "Ransomware")
-                or (galaxy.namespace == "misp" and galaxy.name == "Android")
-                or (galaxy.namespace == "misp" and galaxy.name == "Malpedia")
+            if (galaxy.namespace == "mitre-attack" and galaxy.name == "Malware") or (
+                galaxy.namespace == "misp"
+                and galaxy.name in ["Tool", "Ransomware", "Android", "Malpedia"]
             ):
-                # ? The for loop below seems to never be reached
-                for galaxy_entity in getattr(galaxy, "GalaxyCluster", []):
+                for galaxy_entity in galaxy.GalaxyCluster or []:
                     malware = self.create_malware(
                         galaxy_entity,
                         labels=[galaxy.name],
@@ -234,8 +229,7 @@ class GalaxyConverter:
 
             # Get the linked attack_patterns
             if galaxy.namespace == "mitre-attack" and galaxy.name == "Attack Pattern":
-                # ? The for loop below seems to never be reached
-                for galaxy_entity in getattr(galaxy, "GalaxyCluster", []):
+                for galaxy_entity in galaxy.GalaxyCluster or []:
                     attack_pattern = self.create_attack_pattern(
                         galaxy_entity, author=author, markings=markings
                     )
@@ -244,8 +238,7 @@ class GalaxyConverter:
 
             # Get the linked sectors
             if galaxy.namespace == "misp" and galaxy.name == "Sector":
-                # ? The for loop below seems to never be reached
-                for galaxy_entity in getattr(galaxy, "GalaxyCluster", []):
+                for galaxy_entity in galaxy.GalaxyCluster or []:
                     sector = self.create_sector(
                         galaxy_entity, author=author, markings=markings
                     )
@@ -254,8 +247,7 @@ class GalaxyConverter:
 
             # Get the linked countries
             if galaxy.namespace == "misp" and galaxy.name == "Country":
-                # ? The for loop below seems to never be reached
-                for galaxy_entity in getattr(galaxy, "GalaxyCluster", []):
+                for galaxy_entity in galaxy.GalaxyCluster or []:
                     country = self.create_country(
                         galaxy_entity, author=author, markings=markings
                     )
@@ -268,42 +260,14 @@ class GalaxyConverter:
                 and galaxy.type == "region"
                 and galaxy.name == "Regions UN M49"
             ):
-                # ? The for loop below seems to never be reached
-                for galaxy_entity in getattr(galaxy, "GalaxyCluster", []):
+                for galaxy_entity in galaxy.GalaxyCluster or []:
                     region = self.create_region(
                         galaxy_entity, author=author, markings=markings
                     )
                     if region:
                         stix_objects.append(region)
 
-            attack_patterns = [
-                stix_object
-                for stix_object in stix_objects
-                if stix_object["type"] == "attack-pattern"
-            ]
-            threats = [
-                stix_object
-                for stix_object in stix_objects
-                if stix_object["type"] in ["malware", "intrusion-set"]
-            ]
-            for attack_pattern in attack_patterns:
-                for threat in threats:
-                    relationship_uses = stix2.Relationship(
-                        id=pycti.StixCoreRelationship.generate_id(
-                            relationship_type="uses",
-                            source_ref=threat["id"],
-                            target_ref=attack_pattern["id"],
-                        ),
-                        relationship_type="uses",
-                        created_by_ref=author["id"],
-                        source_ref=threat["id"],
-                        target_ref=attack_pattern["id"],
-                        object_marking_refs=markings,
-                        allow_custom=True,
-                    )
-                    stix_relationships.append(relationship_uses)
-
         except stix2.exceptions.STIXError as err:
             raise GalaxyConverterError("Error while converting event's galaxy") from err
 
-        return (stix_objects, stix_relationships)
+        return stix_objects

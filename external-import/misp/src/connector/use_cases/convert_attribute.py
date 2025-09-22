@@ -478,16 +478,15 @@ class AttributeConverter:
         author: stix2.Identity,
         markings: list[stix2.MarkingDefinition],
         external_references: list[stix2.ExternalReference],
-    ) -> tuple[list[stix2.v21._STIXBase21], list[stix2.v21._RelationshipObject]]:
+    ) -> list[stix2.v21._STIXBase21 | stix2.v21._RelationshipObject]:
         stix_objects = []
-        stix_relationships = []
 
         is_external_reference = (
             attribute.type == "link" and attribute.category == "External analysis"
         )
         is_attachment = attribute.type == "attachment"
         if is_external_reference or is_attachment:
-            return (stix_objects, stix_relationships)
+            return stix_objects
 
         # Extract STIX indicator's metadata from MISP event's attribute's tag
         indicator_labels = labels
@@ -512,37 +511,20 @@ class AttributeConverter:
 
         # Extract more STIX data from MISP event's attribute's tag
         for galaxy in attribute.Galaxy or []:
-            galaxy_stix_objects, galaxy_stix_relationships = (
-                self.galaxy_converter.process(
-                    galaxy, author=author, markings=indicator_markings
-                )
+            galaxy_stix_objects = self.galaxy_converter.process(
+                galaxy, author=author, markings=indicator_markings
             )
             stix_objects.extend(galaxy_stix_objects)
-            stix_relationships.extend(galaxy_stix_relationships)
 
         for tag in attribute.Tag or []:
-            tag_stix_objects, tag_stix_relationships = self.tag_converter.process(
+            # Skip tags that would resolve to duplicate STIX objects
+            if any(stix_object.get("name") in tag.name for stix_object in stix_objects):
+                continue
+
+            tag_stix_objects = self.tag_converter.process(
                 tag, author=author, markings=indicator_markings
             )
             stix_objects.extend(tag_stix_objects)
-            stix_relationships.extend(tag_stix_relationships)
-
-        threats = [
-            stix_object
-            for stix_object in stix_objects
-            if stix_object in ["intrusion-set", "malware", "tool"]
-        ]
-        countries = [
-            stix_object
-            for stix_object in stix_objects
-            if stix_object["type"] == "location" and stix_object["country"]
-        ]
-        sectors = [
-            stix_object
-            for stix_object in stix_objects
-            if stix_object["type"] == "identity"
-            and stix_object["identity_class"] == "class"
-        ]
 
         observables = []
         if self.config.convert_attribute_to_observable:
@@ -555,25 +537,6 @@ class AttributeConverter:
                 external_references=external_references,
             )
             stix_objects.extend(observables)
-
-        for observable in observables:
-            for entity in threats + countries + sectors:
-                stix_relationships.append(
-                    stix2.Relationship(
-                        id=pycti.StixCoreRelationship.generate_id(
-                            relationship_type="related-to",
-                            source_ref=observable.id,
-                            target_ref=entity.id,
-                        ),
-                        relationship_type="related-to",
-                        created_by_ref=author.id,
-                        source_ref=observable.id,
-                        target_ref=entity.id,
-                        description=attribute.comment,
-                        object_marking_refs=indicator_markings,
-                        allow_custom=True,
-                    )
-                )
 
         indicator = None
         if observables and self.config.convert_attribute_to_indicator:
@@ -627,10 +590,10 @@ class AttributeConverter:
                                 [sighted_by] if sighted_by is not None else None
                             ),
                         )
-                        stix_relationships.append(sighting)
+                        stix_objects.append(sighting)
 
                 for observable in observables:
-                    stix_relationships.append(
+                    stix_objects.append(
                         stix2.Relationship(
                             id=pycti.StixCoreRelationship.generate_id(
                                 relationship_type="based-on",
@@ -645,39 +608,4 @@ class AttributeConverter:
                         )
                     )
 
-                for threat in threats:
-                    stix_relationships.append(
-                        stix2.Relationship(
-                            id=pycti.StixCoreRelationship.generate_id(
-                                relationship_type="indicates",
-                                source_ref=indicator.id,
-                                target_ref=threat.id,
-                            ),
-                            relationship_type="indicates",
-                            created_by_ref=author.id,
-                            source_ref=indicator.id,
-                            target_ref=threat.id,
-                            description=attribute.comment,
-                            object_marking_refs=indicator_markings,
-                            allow_custom=True,
-                        )
-                    )
-                for entity in countries + sectors:
-                    stix_relationships.append(
-                        stix2.Relationship(
-                            id=pycti.StixCoreRelationship.generate_id(
-                                relationship_type="related-to",
-                                source_ref=indicator.id,
-                                target_ref=entity.id,
-                            ),
-                            relationship_type="related-to",
-                            created_by_ref=author["id"],
-                            source_ref=indicator.id,
-                            target_ref=entity.id,
-                            description=attribute.comment,
-                            object_marking_refs=indicator_markings,
-                            allow_custom=True,
-                        )
-                    )
-
-        return (indicator_markings + stix_objects, stix_relationships)
+        return indicator_markings + stix_objects

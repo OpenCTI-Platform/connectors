@@ -244,21 +244,22 @@ class EventConverter:
 
         # Extract report's object refs from Event's galaxies, tags, attributes and objects
         stix_objects = []
-        stix_relationships = []
 
         for galaxy in event.Event.Galaxy or []:
-            galaxy_stix_objects, galaxy_stix_relationships = (
-                self.galaxy_converter.process(galaxy, author=author, markings=markings)
+            galaxy_stix_objects = self.galaxy_converter.process(
+                galaxy, author=author, markings=markings
             )
             stix_objects.extend(galaxy_stix_objects)
-            stix_relationships.extend(galaxy_stix_relationships)
 
         for tag in event.Event.Tag or []:
-            tag_stix_objects, tag_stix_relationships = self.tag_converter.process(
+            # Skip tags that would resolve to duplicate STIX objects
+            if any(stix_object.get("name") in tag.name for stix_object in stix_objects):
+                continue
+
+            tag_stix_objects = self.tag_converter.process(
                 tag, author=author, markings=markings
             )
             stix_objects.extend(tag_stix_objects)
-            stix_relationships.extend(tag_stix_relationships)
 
         score = (
             event_threat_level_to_opencti_score(event.Event.threat_level_id)
@@ -266,35 +267,163 @@ class EventConverter:
             else None
         )
         for attribute in event.Event.Attribute or []:
-            attribute_stix_objects, attribute_stix_relationships = (
-                self.attribute_converter.process(
-                    attribute,
-                    labels=(
-                        deepcopy(labels) if self.config.propagate_report_labels else []
-                    ),
-                    score=score,
-                    author=author,
-                    markings=markings,
-                    external_references=external_references,
-                )
+            attribute_stix_objects = self.attribute_converter.process(
+                attribute,
+                labels=(
+                    deepcopy(labels) if self.config.propagate_report_labels else []
+                ),
+                score=score,
+                author=author,
+                markings=markings,
+                external_references=external_references,
             )
             stix_objects.extend(attribute_stix_objects)
-            stix_relationships.extend(attribute_stix_relationships)
 
         for object in event.Event.Object or []:
             # Process any other type of objects
-            object_stix_objects, object_stix_relationships = (
-                self.object_converter.process(
-                    object,
-                    labels=labels,
-                    score=score,
-                    author=author,
-                    markings=markings,
-                    external_references=external_references,
-                )
+            object_stix_objects = self.object_converter.process(
+                object,
+                labels=labels,
+                score=score,
+                author=author,
+                markings=markings,
+                external_references=external_references,
             )
             stix_objects.extend(object_stix_objects)
-            stix_relationships.extend(object_stix_relationships)
+
+        # Create relationships between objects
+        threats = [
+            stix_object
+            for stix_object in stix_objects
+            if stix_object["type"] in ["intrusion-set", "malware", "tool"]
+        ]
+        countries = [
+            stix_object
+            for stix_object in stix_objects
+            if stix_object["type"] == "location" and stix_object["country"]
+        ]
+        sectors = [
+            stix_object
+            for stix_object in stix_objects
+            if stix_object["type"] == "identity"
+            and stix_object["identity_class"] == "class"
+        ]
+
+        observables = [
+            stix_object
+            for stix_object in stix_objects
+            if isinstance(stix_object, stix2.v21._Observable)
+        ]
+        for observable in observables:
+            for entity in threats + countries + sectors:
+                stix_objects.append(
+                    stix2.Relationship(
+                        id=pycti.StixCoreRelationship.generate_id(
+                            relationship_type="related-to",
+                            source_ref=observable.id,
+                            target_ref=entity.id,
+                        ),
+                        relationship_type="related-to",
+                        created_by_ref=author.id,
+                        source_ref=observable.id,
+                        target_ref=entity.id,
+                        description=attribute.comment,
+                        # object_marking_refs=indicator_markings,
+                        allow_custom=True,
+                    )
+                )
+
+        indicators = [
+            stix_object
+            for stix_object in stix_objects
+            if stix_object["type"] == "indicator"
+        ]
+        for indicator in indicators:
+            for threat in threats:
+                stix_objects.append(
+                    stix2.Relationship(
+                        id=pycti.StixCoreRelationship.generate_id(
+                            relationship_type="indicates",
+                            source_ref=indicator.id,
+                            target_ref=threat.id,
+                        ),
+                        relationship_type="indicates",
+                        created_by_ref=author.id,
+                        source_ref=indicator.id,
+                        target_ref=threat.id,
+                        description=attribute.comment,
+                        # object_marking_refs=indicator_markings,
+                        allow_custom=True,
+                    )
+                )
+            for entity in countries + sectors:
+                stix_objects.append(
+                    stix2.Relationship(
+                        id=pycti.StixCoreRelationship.generate_id(
+                            relationship_type="related-to",
+                            source_ref=indicator.id,
+                            target_ref=entity.id,
+                        ),
+                        relationship_type="related-to",
+                        created_by_ref=author["id"],
+                        source_ref=indicator.id,
+                        target_ref=entity.id,
+                        description=attribute.comment,
+                        # object_marking_refs=indicator_markings,
+                        allow_custom=True,
+                    )
+                )
+
+        attack_patterns = [
+            stix_object
+            for stix_object in stix_objects
+            if stix_object["type"] == "attack-pattern"
+        ]
+        for attack_pattern in attack_patterns:
+            for threat in threats:  # TODO: check if threats should contain tools here
+                relationship_uses = stix2.Relationship(
+                    id=pycti.StixCoreRelationship.generate_id(
+                        relationship_type="uses",
+                        source_ref=threat["id"],
+                        target_ref=attack_pattern["id"],
+                    ),
+                    relationship_type="uses",
+                    created_by_ref=author["id"],
+                    source_ref=threat["id"],
+                    target_ref=attack_pattern["id"],
+                    # object_marking_refs=markings,
+                    allow_custom=True,
+                )
+                stix_objects.append(relationship_uses)
+
+        # Extract relationships from event's objects references
+        for object in event.Event.Object or []:
+            for object_reference in object.ObjectReference or []:
+                ref_src = object_reference.source_uuid
+                ref_target = object_reference.referenced_uuid
+                if ref_src and ref_target:
+                    # ! Seems to always return None as MISP uuids are different from generated STIX ids
+                    src_result = find_type_by_uuid(ref_src, stix_objects)
+                    target_result = find_type_by_uuid(ref_target, stix_objects)
+                    if src_result and target_result:
+                        stix_objects.append(
+                            stix2.Relationship(
+                                id=pycti.StixCoreRelationship.generate_id(
+                                    relationship_type="related-to",
+                                    source_ref=src_result["entity"]["id"],
+                                    target_ref=target_result["entity"]["id"],
+                                ),
+                                relationship_type="related-to",
+                                created_by_ref=author["id"],
+                                description="Original Relationship: "
+                                + object_reference["relationship_type"]
+                                + "  \nComment: "
+                                + object_reference["comment"],
+                                source_ref=src_result["entity"]["id"],
+                                target_ref=target_result["entity"]["id"],
+                                allow_custom=True,
+                            )
+                        )
 
         # Prepare the bundle
         bundle_objects = [author]
@@ -320,55 +449,6 @@ class EventConverter:
                 object_refs.append(stix_object)
                 added_object_refs.append(stix_object["id"])
 
-        # ? The for loop below seems to never be reached
-        # Link all objects with each other, now so we can find the correct entity type prefix in bundle_objects
-        for object in event.Event.Object or []:
-            for ref in getattr(object, "ObjectReference", []):
-                ref_src = ref.get("source_uuid")
-                ref_target = ref.get("referenced_uuid")
-                if ref_src is not None and ref_target is not None:
-                    src_result = find_type_by_uuid(ref_src, bundle_objects)
-                    target_result = find_type_by_uuid(ref_target, bundle_objects)
-                    if src_result is not None and target_result is not None:
-                        stix_relationships.append(
-                            stix2.Relationship(
-                                id=pycti.StixCoreRelationship.generate_id(
-                                    "related-to",
-                                    src_result["entity"]["id"],
-                                    target_result["entity"]["id"],
-                                ),
-                                relationship_type="related-to",
-                                created_by_ref=author["id"],
-                                description="Original Relationship: "
-                                + ref["relationship_type"]
-                                + "  \nComment: "
-                                + ref["comment"],
-                                source_ref=src_result["entity"]["id"],
-                                target_ref=target_result["entity"]["id"],
-                                allow_custom=True,
-                            )
-                        )
-
-        # Add STIX relationships
-        for stix_relationship in stix_relationships:
-            if (
-                stix_relationship["source_ref"] + stix_relationship["target_ref"]
-                not in bundled_refs
-            ):
-                bundle_objects.append(stix_relationship)
-                bundled_refs.append(
-                    stix_relationship["source_ref"] + stix_relationship["target_ref"]
-                )
-            # ? what is the purpose of linking relationships ?
-            if (
-                stix_relationship["source_ref"] + stix_relationship["target_ref"]
-                not in added_object_refs
-            ):
-                object_refs.append(stix_relationship)
-                added_object_refs.append(
-                    stix_relationship["source_ref"] + stix_relationship["target_ref"]
-                )
-
         if self.config.convert_event_to_report:
             try:
                 # Report in STIX lib must have at least one object_refs
@@ -393,15 +473,13 @@ class EventConverter:
                 raise EventConverterError("Error while converting event") from err
 
             for event_report in event.Event.EventReport or []:
-                note_stix_objects, note_stix_relationships = (
-                    self.event_report_converter.process(
-                        event_report,
-                        author=author,
-                        markings=markings,
-                        object_refs=[report.id],
-                        bundle_objects=bundle_objects,
-                    )
+                note_stix_objects = self.event_report_converter.process(
+                    event_report,
+                    author=author,
+                    markings=markings,
+                    object_refs=[report.id],
+                    bundle_objects=bundle_objects,
                 )
-                bundle_objects.extend(note_stix_objects + note_stix_relationships)
+                bundle_objects.extend(note_stix_objects)
 
         return bundle_objects

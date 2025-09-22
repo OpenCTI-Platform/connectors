@@ -63,11 +63,10 @@ class ObjectConverter:
         author: stix2.Identity,
         markings: list[stix2.MarkingDefinition],
         external_references: list[stix2.ExternalReference],
-    ) -> tuple[list[stix2.v21._STIXBase21], list[stix2.v21._RelationshipObject]]:
+    ) -> list[stix2.v21._STIXBase21 | stix2.v21._RelationshipObject]:
         """This method helps to keep consistency between converters APIs."""
 
         stix_objects = []
-        stix_relationships = []
 
         observable = None
         if self.config.convert_object_to_observable:
@@ -100,18 +99,15 @@ class ObjectConverter:
 
         # Process any other type of attributes
         for attribute in object.Attribute or []:
-            attribute_stix_objects, attribute_stix_relationships = (
-                self.attribute_converter.process(
-                    attribute,
-                    labels=labels,
-                    score=score,
-                    author=author,
-                    markings=markings,
-                    external_references=external_references,
-                )
+            attribute_stix_objects = self.attribute_converter.process(
+                attribute,
+                labels=labels,
+                score=score,
+                author=author,
+                markings=markings,
+                external_references=external_references,
             )
             stix_objects.extend(attribute_stix_objects)
-            stix_relationships.extend(attribute_stix_relationships)
 
             if observable:
                 attribute_observables = [
@@ -122,7 +118,7 @@ class ObjectConverter:
                     # ! Sometimes object and attribute resolve to the same observable
                 ]
                 for attribute_observable in attribute_observables:
-                    stix_relationships.append(
+                    stix_objects.append(
                         stix2.Relationship(
                             id=pycti.StixCoreRelationship.generate_id(
                                 relationship_type="related-to",
@@ -137,39 +133,4 @@ class ObjectConverter:
                         )
                     )
 
-        if observable:
-            threats = [
-                stix_object
-                for stix_object in stix_objects
-                if stix_object in ["intrusion-set", "malware", "tool"]
-            ]
-            countries = [
-                stix_object
-                for stix_object in stix_objects
-                if stix_object["type"] == "location" and stix_object["country"]
-            ]
-            sectors = [
-                stix_object
-                for stix_object in stix_objects
-                if stix_object["type"] == "identity"
-                and stix_object["identity_class"] == "class"
-            ]
-            for entity in threats + countries + sectors:
-                stix_relationships.append(
-                    stix2.Relationship(
-                        id=pycti.StixCoreRelationship.generate_id(
-                            relationship_type="related-to",
-                            source_ref=observable.id,
-                            target_ref=entity.id,
-                        ),
-                        relationship_type="related-to",
-                        created_by_ref=author["id"],
-                        source_ref=observable.id,
-                        target_ref=entity.id,
-                        description=attribute.comment,
-                        object_marking_refs=markings,
-                        allow_custom=True,
-                    )
-                )
-
-        return (stix_objects, stix_relationships)
+        return stix_objects

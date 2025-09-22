@@ -73,11 +73,10 @@ class EventReportConverter:
         markings: list[stix2.MarkingDefinition],
         object_refs: list[stix2.v21.Report],
         bundle_objects: list[stix2.v21._STIXBase21],
-    ) -> tuple[list[stix2.v21._STIXBase21], list[stix2.v21._RelationshipObject]]:
+    ) -> list[stix2.v21._STIXBase21]:
         """This method helps to keep consistency between converters APIs."""
 
         stix_objects = []
-        stix_relationships = []
 
         try:
             note = self.create_note(
@@ -94,4 +93,4 @@ class EventReportConverter:
                 "Error while converting event's report"
             ) from err
 
-        return (stix_objects, stix_relationships)
+        return stix_objects

@@ -380,11 +380,11 @@ class TagConverter:
         tag: TagItem,
         author: stix2.Identity,
         markings: list[stix2.MarkingDefinition],
-    ) -> tuple[list[stix2.v21._STIXBase21], list[stix2.v21._RelationshipObject]]:
+    ) -> list[stix2.v21._STIXBase21]:
         stix_objects = []
-        stix_relationships = []
 
-        added_names = []
+        # Keep track of created objects names to avoid duplicates
+        stix_objects_names = []
 
         try:
             # Try to guess from tags
@@ -392,7 +392,7 @@ class TagConverter:
                 stix_objects.extend(
                     self.guess_threats(tag, author=author, markings=markings)
                 )
-                added_names.extend(
+                stix_objects_names.extend(
                     [stix_object["name"] for stix_object in stix_objects]
                 )
 
@@ -409,9 +409,9 @@ class TagConverter:
             )
             if tag.name.startswith(intrusion_set_tag_names):
                 intrusion_set = self.create_intrusion_set(tag, author, markings)
-                if intrusion_set and intrusion_set["name"] not in added_names:
+                if intrusion_set and intrusion_set["name"] not in stix_objects_names:
                     stix_objects.append(intrusion_set)
-                    added_names.append(intrusion_set["name"])
+                    stix_objects_names.append(intrusion_set["name"])
 
             # Get the linked tools
             tool_tag_names = (
@@ -421,9 +421,9 @@ class TagConverter:
             )
             if tag.name.startswith(tool_tag_names):
                 tool = self.create_tool(tag, author, markings)
-                if tool and tool["name"] not in added_names:
+                if tool and tool["name"] not in stix_objects_names:
                     stix_objects.append(tool)
-                    added_names.append(tool["name"])
+                    stix_objects_names.append(tool["name"])
 
             # Get the linked malwares
             malware_tag_names = (
@@ -437,9 +437,9 @@ class TagConverter:
             )
             if tag.name.startswith(malware_tag_names):
                 malware = self.create_malware(tag, author, markings)
-                if malware and malware["name"] not in added_names:
+                if malware and malware["name"] not in stix_objects_names:
                     stix_objects.append(malware)
-                    added_names.append(malware["name"])
+                    stix_objects_names.append(malware["name"])
 
             # Get the linked attack_patterns
             attack_pattern_tag_names = (
@@ -450,47 +450,18 @@ class TagConverter:
             )
             if tag.name.startswith(attack_pattern_tag_names):
                 attack_pattern = self.create_attack_pattern(tag, author, markings)
-                if attack_pattern and attack_pattern["name"] not in added_names:
+                if attack_pattern and attack_pattern["name"] not in stix_objects_names:
                     stix_objects.append(attack_pattern)
-                    added_names.append(attack_pattern["name"])
+                    stix_objects_names.append(attack_pattern["name"])
 
             # Get the linked sectors
             if tag.name.startswith("misp-galaxy:sector"):
                 sector = self.create_sector(tag, author, markings)
-                if sector and sector["name"] not in added_names:
+                if sector and sector["name"] not in stix_objects_names:
                     stix_objects.append(sector)
-                    added_names.append(sector["name"])
-
-            # Create relationships
-            attack_patterns = [
-                stix_object
-                for stix_object in stix_objects
-                if stix_object["type"] == "attack-pattern"
-            ]
-            threats = [
-                stix_object
-                for stix_object in stix_objects
-                if stix_object["type"] in ["malware", "intrusion-set"]
-            ]
-            for attack_pattern in attack_patterns:
-                for threat in threats:
-                    stix_relationships.append(
-                        stix2.Relationship(
-                            id=pycti.StixCoreRelationship.generate_id(
-                                relationship_type="uses",
-                                source_ref=threat["id"],
-                                target_ref=attack_pattern.id,
-                            ),
-                            relationship_type="uses",
-                            created_by_ref=author["id"],
-                            source_ref=threat["id"],
-                            target_ref=attack_pattern.id,
-                            object_marking_refs=markings,
-                            allow_custom=True,
-                        )
-                    )
+                    stix_objects_names.append(sector["name"])
 
         except stix2.exceptions.STIXError as err:
             raise TagConverterError("Error while converting event's tag") from err
 
-        return (stix_objects, stix_relationships)
+        return stix_objects
