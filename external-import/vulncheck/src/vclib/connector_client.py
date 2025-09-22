@@ -1,4 +1,3 @@
-from datetime import datetime, timedelta
 from typing import Any, Callable, List
 
 import requests
@@ -159,7 +158,7 @@ class ConnectorClient:
         with vulncheck_sdk.ApiClient(self.vc_config) as api_client:
             session = vulncheck_sdk.IndicesApi(api_client)
 
-            limit = kwargs.pop("limit", 5)
+            limit = 2000
             api_response = index_func(
                 session, start_cursor="true", limit=limit, **kwargs
             )
@@ -189,76 +188,60 @@ class ConnectorClient:
         return self.get_data(
             lambda session, **kwargs: session.index_ipintel3d_get(id="c2", **kwargs),
             source_name=data_source.IPINTEL,
-            limit=2000,
         )
 
     def get_vckev(self) -> list[AdvisoryVulnCheckKEV]:
         return self.get_data(
             lambda session, **kwargs: session.index_vulncheck_kev_get(**kwargs),
             source_name=data_source.VULNCHECK_KEV,
-            limit=250,
         )
 
     def get_epss(self) -> list[ApiEPSSData]:
         return self.get_data(
             lambda session, **kwargs: session.index_epss_get(**kwargs),
             source_name=data_source.EPSS,
-            limit=2000,
         )
 
     def get_vcnvd2(self) -> list[ApiNVD20CVEExtended]:
-        yesterday = (datetime.now() - timedelta(1)).strftime("%Y-%m-%d")
         return self.get_data(
-            lambda session, **kwargs: session.index_vulncheck_nvd2_get(
-                published=yesterday, **kwargs
-            ),
+            lambda session, **kwargs: session.index_vulncheck_nvd2_get(**kwargs),
             source_name=data_source.VULNCHECK_NVD2,
-            limit=5,
         )
 
     def get_nistnvd2(self) -> list[ApiNVD20CVE]:
-        yesterday = (datetime.now() - timedelta(1)).strftime("%Y-%m-%d")
         return self.get_data(
-            lambda session, **kwargs: session.index_nist_nvd2_get(
-                published=yesterday, **kwargs
-            ),
+            lambda session, **kwargs: session.index_nist_nvd2_get(**kwargs),
             source_name=data_source.NIST_NVD2,
-            limit=5,
         )
 
     def get_botnets(self) -> list[AdvisoryBotnet]:
         return self.get_data(
             lambda session, **kwargs: session.index_botnets_get(**kwargs),
             source_name=data_source.BOTNETS,
-            limit=2000,
         )
 
     def get_ransomware(self) -> list[AdvisoryRansomwareExploit]:
         return self.get_data(
             lambda session, **kwargs: session.index_ransomware_get(**kwargs),
             source_name=data_source.RANSOMWARE,
-            limit=2000,
         )
 
     def get_threat_actors(self) -> list[AdvisoryThreatActorWithExternalObjects]:
         return self.get_data(
             lambda session, **kwargs: session.index_threat_actors_get(**kwargs),
             source_name=data_source.THREAT_ACTORS,
-            limit=2000,
         )
 
     def get_exploits(self) -> list[ApiExploitV3Result]:
         return self.get_data(
             lambda session, **kwargs: session.index_exploits_get(**kwargs),
             source_name=data_source.EXPLOITS,
-            limit=1500,
         )
 
     def get_initial_access(self) -> list[ApiInitialAccess]:
         return self.get_data(
             lambda session, **kwargs: session.index_initial_access_get(**kwargs),
             source_name=data_source.INITIAL_ACCESS,
-            limit=1000,
         )
 
     def get_rules(self, rule_type: str) -> str:

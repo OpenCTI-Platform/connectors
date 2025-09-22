@@ -46,12 +46,14 @@ def _create_threat_actor(
         name=entity.threat_actor_name,
         first_seen=datetime.fromisoformat(entity.date_added),
         external_refs=external_refs,
+        labels=[entity.threat_actor_name],
     )
 
 
 def _create_rel_targets(
     threat_actor: stix2.ThreatActor,
     vulnerability: stix2.Vulnerability,
+    labels: list[str],
     converter_to_stix,
     logger,
 ) -> stix2.Relationship:
@@ -62,6 +64,7 @@ def _create_rel_targets(
         source_id=threat_actor["id"],
         relationship_type="targets",
         target_id=vulnerability["id"],
+        labels=labels,
     )
 
 
@@ -117,6 +120,11 @@ def _extract_threat_actors(
                     _create_rel_targets(
                         threat_actor=threat_actor,
                         vulnerability=vulnerability,
+                        labels=(
+                            [entity.threat_actor_name]
+                            if entity.threat_actor_name is not None
+                            else []
+                        ),
                         converter_to_stix=converter_to_stix,
                         logger=logger,
                     )
