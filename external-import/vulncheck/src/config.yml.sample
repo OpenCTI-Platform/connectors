@@ -4,7 +4,7 @@ opencti:
 
 connector:
   id: "ChangeMe"
- # scope: "vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference,software"
+ # scope: "vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference,software,attack-pattern,course-of-action"
 
 connector_vulncheck:
   api_key: "ChangeMe"
