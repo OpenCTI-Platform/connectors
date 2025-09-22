@@ -1,4 +1,4 @@
 # Main dependencies needs to be installed
--r ./requirements.txt
+-r ../requirements.txt
 pytest
 pytest-mock

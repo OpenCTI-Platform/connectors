@@ -17,7 +17,7 @@ This connector streams threat intelligence from OpenCTI to Elastic Security, cre
 ## Configuration
 
 | Parameter | Environment Variable | Description | Default |
-|-----------|---------------------|-------------|---------|
+|-----------|---------------------|-------------|----|
 | OpenCTI URL | `OPENCTI_URL` | The URL of the OpenCTI platform | - |
 | OpenCTI Token | `OPENCTI_TOKEN` | The OpenCTI token | - |
 | Connector ID | `CONNECTOR_ID` | A valid arbitrary UUID | - |
@@ -26,7 +26,7 @@ This connector streams threat intelligence from OpenCTI to Elastic Security, cre
 | Elastic API Key | `ELASTIC_SECURITY_API_KEY` | API key for Elasticsearch | - |
 | Verify SSL | `ELASTIC_SECURITY_VERIFY_SSL` | Verify SSL certificates | true |
 | CA Certificate | `ELASTIC_SECURITY_CA_CERT` | Path to CA certificate file | - |
-| Index Name | `ELASTIC_SECURITY_INDEX_NAME` | Threat intel index name | .items |
+| Index Name | `ELASTIC_SECURITY_INDEX_NAME` | Threat intel index name | `logs-ti_custom_opencti.indicator` |
 | Expire Time | `ELASTIC_SECURITY_INDICATOR_EXPIRE_TIME` | Days before indicators expire | 90 |
 | Batch Size | `ELASTIC_SECURITY_BATCH_SIZE` | Batch size for bulk operations | 100 |
 
