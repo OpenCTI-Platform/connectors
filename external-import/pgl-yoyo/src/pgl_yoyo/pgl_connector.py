@@ -63,7 +63,7 @@ class PGLConnector:
             typ = feed["type"]
 
             # Fetch without conditional headers
-            lines, _not_modified = self._fetch_feed_lines(url)
+            lines, _ = self._fetch_feed_lines(url)
 
             if lines:
                 obs = self._build_sco_observables(lines, typ, labels, identity)
@@ -76,8 +76,8 @@ class PGLConnector:
         self.helper.connector_logger.info(
             f"PGL collected {total_lines} raw entries, into {len(all_obs)} observables"
         )
-        for n, c in per_feed_counts:
-            self.helper.connector_logger.info(f"  - {n}: {c}")
+        for feed_name, count in per_feed_counts:
+            self.helper.connector_logger.info(f"  - {feed_name}: {count}")
 
         if not all_obs:
             self.helper.connector_logger.info("Nothing new to ingest; ending run")

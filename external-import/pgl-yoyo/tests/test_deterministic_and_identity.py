@@ -15,7 +15,7 @@ def test_config_defaults_present():
 def test_identity_builds_without_helper():
     # Create a fake helper minimally sufficient for construction
     fake_helper = SimpleNamespace()
-    fake_helper.connector_logger = SimpleNamespace(info=lambda *a, **k: None)
+    fake_helper.connector_logger = SimpleNamespace(info=lambda *args, **kwargs: None)
     fake_helper.connect_name = "pgl-yoyo-test"
 
     cfg = ConfigConnector(

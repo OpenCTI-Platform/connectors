@@ -10,13 +10,16 @@ class DummyHelper:
         self.connect_id = "connector--test"
         self.connector_logger = self
 
-    def info(self, *a, **k):
+    def log_info(self, *args, **kwargs):
+        """Log informational messages (dummy implementation)."""
+        _ = args
+        _ = kwargs
         pass
 
-    def log_info(self, *a, **k):
-        pass
-
-    def log_error(self, *a, **k):
+    def log_error(self, *args, **kwargs):
+        """Log error messages (dummy implementation)."""
+        _ = args
+        _ = kwargs
         pass
 
 
@@ -43,11 +46,14 @@ def test_x_opencti_extension_present():
         ["1.2.3.4"], "IPv4-Addr", ["testlabel"], identity
     )
     assert len(objs) == 1
-    ind = objs[0]
+    indicator = objs[0]
 
     # Current implementation returns an Indicator with expected fields
-    assert getattr(ind, "type", None) == "indicator"
-    assert getattr(ind, "created_by_ref", None) == identity.id
-    assert "testlabel" in getattr(ind, "labels", [])
-    assert getattr(ind, "pattern_type", None) == "stix"
-    assert "[ipv4-addr:value = '1.2.3.4']" in getattr(ind, "pattern", "")
+    assert getattr(indicator, "type", None) == "indicator"
+    assert getattr(indicator, "created_by_ref", None) == identity.id
+    assert "testlabel" in getattr(indicator, "labels", [])
+    assert getattr(indicator, "pattern_type", None) == "stix"
+    assert "[ipv4-addr:value = '1.2.3.4']" in getattr(indicator, "pattern", "")
+    assert "testlabel" in getattr(indicator, "labels", [])
+    assert getattr(indicator, "pattern_type", None) == "stix"
+    assert "[ipv4-addr:value = '1.2.3.4']" in getattr(indicator, "pattern", "")
