@@ -199,8 +199,6 @@ class EventConverter:
             marking = self.tag_converter.create_marking(tag)
             if marking:
                 markings.append(marking)
-            else:
-                markings.append(TLP_CLEAR)
 
         # Detect attributes of type "link" for report's external references
         for attribute in event.Event.Attribute or []:
