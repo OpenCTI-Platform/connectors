@@ -1,3 +1,5 @@
+"""Configuration loader for the PGL Yoyo Connector."""
+
 from pathlib import Path
 
 import yaml
@@ -5,6 +7,8 @@ from pycti import get_config_variable
 
 
 class ConfigConnector:
+    """Configuration loader for the PGL Yoyo Connector."""
+
     def __init__(self, config=None):
         """
         Initialize the connector with necessary configurations.
@@ -202,7 +206,9 @@ class ConfigConnector:
             ]
 
     def __getitem__(self, item):
+        """Allow dict-like access to configuration items."""
         return self.load.get(item)
 
     def get(self, item, default=None):
+        """Get configuration item with optional default."""
         return self.load.get(item, default)

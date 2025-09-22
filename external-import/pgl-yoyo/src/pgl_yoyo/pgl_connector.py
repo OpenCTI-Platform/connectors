@@ -1,3 +1,5 @@
+"""PGL Yoyo Connector for OpenCTI."""
+
 import re
 import uuid
 from datetime import datetime, timezone
@@ -8,28 +10,33 @@ import requests
 import stix2
 from pycti import Indicator, OpenCTIConnectorHelper
 
-from .config_loader import ConfigConnector
+from pgl_yoyo.config_loader import ConfigConnector
 
 # Known OpenCTI TLP:WHITE marking-definition UUID
 TLP_WHITE_ID = "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
 
 
 class PGLConnector:
+    """
+    PGL Yoyo Connector for OpenCTI
+    """
+
     def __init__(self, config: ConfigConnector, helper: OpenCTIConnectorHelper):
         self.helper = helper
         self.conf = config
         # support the config loader which exposes defaults and env overrides
-        self.confidence = int(self.conf.confidence_level)
+        self.confidence = int(self.conf.confidence_level or 0)
         self.feeds = self.conf.feeds
         self.identity_name = self.conf.identity_name
         self.identity_class = self.conf.identity_class
         self.identity_description = self.conf.identity_description
-        self.identity_id_cfg = (self.conf.identity_id or "").strip()
+        self.identity_id_cfg = str(self.conf.identity_id or "").strip()
 
         self.session = requests.Session()
         self.session.headers.update({"User-Agent": "opencti-connector-pgl/1.0"})
 
     def run(self):
+        """Start the connector by scheduling periodic runs."""
         # Use helper.schedule_iso to run process_message periodically
         self.helper.connector_logger.info(
             "[CONNECTOR] Starting PGL connector...",
@@ -39,7 +46,6 @@ class PGLConnector:
             message_callback=self.process_message,
             duration_period=self.conf.duration_period,
         )
-        return
 
     def process_message(self) -> None:
         """Main processing executed by the helper scheduler."""
@@ -55,23 +61,19 @@ class PGLConnector:
         total_lines = 0
         per_feed_counts: List[Tuple[str, int]] = []
 
-        feeds = self.feeds
-        for feed in feeds:
-            name = feed["name"]
-            url = feed["url"]
-            labels = list(feed.get("labels", []))
-            typ = feed["type"]
-
+        for feed in self.feeds:
             # Fetch without conditional headers
-            lines, _ = self._fetch_feed_lines(url)
+            lines, _ = self._fetch_feed_lines(feed["url"])
 
             if lines:
-                obs = self._build_sco_observables(lines, typ, labels, identity)
+                obs = self._build_sco_observables(
+                    lines, feed["type"], feed["labels"], identity
+                )
                 all_obs.extend(obs)
                 total_lines += len(lines)
-                per_feed_counts.append((name, len(lines)))
+                per_feed_counts.append((feed["name"], len(lines)))
             else:
-                per_feed_counts.append((name, 0))
+                per_feed_counts.append((feed["name"], 0))
 
         self.helper.connector_logger.info(
             f"PGL collected {total_lines} raw entries, into {len(all_obs)} observables"
@@ -93,11 +95,10 @@ class PGLConnector:
         ).serialize()
 
         # Initiate a new work for this run and send the bundle
-        friendly_name = "PGL Yoyo Blocklist Import"
         work_id = None
         try:
             work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
+                self.helper.connect_id, "PGL Yoyo Blocklist Import"
             )
         except Exception:
             work_id = None
@@ -105,6 +106,23 @@ class PGLConnector:
         self.helper.send_stix2_bundle(bundle, update=True, work_id=work_id)
 
         # Persist last_run state
+        self._update_last_run()
+
+        # Mark the work as processed when possible
+        if work_id is not None:
+            try:
+                self.helper.api.work.to_processed(
+                    work_id, f"{self.helper.connect_name} connector successfully run"
+                )
+            except Exception:
+                pass
+
+        self.helper.connector_logger.info("PGL connector run completed")
+
+    # ---------- helpers ----------
+
+    def _update_last_run(self) -> None:
+        """Update the last_run state to current time."""
         try:
             now = datetime.now()
             current_state = self.helper.get_state() or {}
@@ -112,18 +130,6 @@ class PGLConnector:
             self.helper.set_state(current_state)
         except Exception:
             pass
-
-        # Mark the work as processed when possible
-        if work_id is not None:
-            try:
-                message = f"{self.helper.connect_name} connector successfully run"
-                self.helper.api.work.to_processed(work_id, message)
-            except Exception:
-                pass
-
-        self.helper.connector_logger.info("PGL connector run completed")
-
-    # ---------- helpers ----------
 
     def _fetch_feed_lines(
         self,
@@ -175,12 +181,15 @@ class PGLConnector:
         return identity
 
     def _is_valid_domain(self, domain: str) -> bool:
-        if not domain:
-            return False
-        d = domain.strip().rstrip(".").lower()
+        """Basic validation for domain names, including IDN support."""
         # Convert to ASCII for validation (supports IDN)
         try:
-            ascii_d = d.encode("idna").decode("ascii")
+            d = domain.strip().rstrip(".").lower()
+            # Only encode if non-ASCII characters are present
+            if any(ord(c) > 127 for c in d):
+                ascii_d = d.encode("idna").decode("ascii")
+            else:
+                ascii_d = d
         except Exception:
             return False
         if len(ascii_d) > 253:
@@ -189,11 +198,13 @@ class PGLConnector:
         if len(labels) < 2:
             return False
         for label in labels:
-            if not (1 <= len(label) <= 63):
-                return False
-            if label.startswith("-") or label.endswith("-"):
-                return False
-            if not re.fullmatch(r"[a-z0-9-]+", label):
+            # Accept Unicode word characters and hyphens for IDN labels
+            if (
+                not 1 <= len(label) <= 63
+                or label.startswith("-")
+                or label.endswith("-")
+                or not re.fullmatch(r"[a-zA-Z0-9\-]+", label)
+            ):
                 return False
         return True
 

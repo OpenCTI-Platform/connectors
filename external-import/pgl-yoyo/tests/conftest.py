@@ -1,9 +1,12 @@
+"""Pytest configuration for the pgl-yoyo connector tests."""
+
 import sys
 from pathlib import Path
 
 
 def pytest_configure(config):
-    # Ensure the `src` directory is on sys.path so tests can import package modules
+    """Pytest configuration hook to set up the test environment."""
+    _ = config
     here = Path(__file__).resolve().parent
     src = here.parent / "src"
     src_path = str(src)

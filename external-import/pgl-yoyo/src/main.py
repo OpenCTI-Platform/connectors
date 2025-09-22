@@ -1,3 +1,6 @@
+"""Main entry point for the PGL Yoyo Connector."""
+
+import sys
 import traceback
 
 from pycti import OpenCTIConnectorHelper
@@ -14,4 +17,4 @@ if __name__ == "__main__":
         connector.run()
     except Exception:
         traceback.print_exc()
-        exit(1)
+        sys.exit(1)

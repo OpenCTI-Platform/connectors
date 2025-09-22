@@ -1,7 +1,10 @@
+"""Tests for config loader keys in the PGL Yoyo connector."""
+
 from pgl_yoyo.config_loader import ConfigConnector
 
 
 def test_loader_exposes_sample_defaults():
+    """Test that the config loader exposes expected default keys."""
     cfg = ConfigConnector(config={})
 
     # Connector-level

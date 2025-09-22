@@ -1,3 +1,5 @@
+"""Tests for STIX2 extension on SCOs in the PGL Yoyo connector."""
+
 import stix2
 
 from pgl_yoyo.config_loader import ConfigConnector
@@ -5,6 +7,8 @@ from pgl_yoyo.pgl_connector import PGLConnector
 
 
 class DummyHelper:
+    """A minimal dummy helper to satisfy PGLConnector dependencies."""
+
     def __init__(self):
         self.connect_name = "pgl-yoyo-test"
         self.connect_id = "connector--test"
@@ -14,16 +18,15 @@ class DummyHelper:
         """Log informational messages (dummy implementation)."""
         _ = args
         _ = kwargs
-        pass
 
     def log_error(self, *args, **kwargs):
         """Log error messages (dummy implementation)."""
         _ = args
         _ = kwargs
-        pass
 
 
-def test_x_opencti_extension_present():
+def test_expected_fields_present():
+    """Test that the expected fields are present on created SCOs."""
     cfg = ConfigConnector()
     cfg.confidence_level = 50
     cfg.feeds = [
