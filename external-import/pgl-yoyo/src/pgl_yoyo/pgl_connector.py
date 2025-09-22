@@ -6,7 +6,7 @@ from typing import Any, List, Tuple
 
 import requests
 import stix2
-from pycti import OpenCTIConnectorHelper
+from pycti import Indicator, OpenCTIConnectorHelper
 
 from .config_loader import ConfigConnector
 
@@ -242,10 +242,13 @@ class PGLConnector:
                         )
                         return []
 
+                pattern = f"[{pt}:value = '{val}']"
+
                 sco = stix2.Indicator(
+                    id=Indicator.generate_id(pattern),
                     name=f"Indicator for {val}",
                     pattern_type="stix",
-                    pattern=f"[{pt}:value = '{val}']",
+                    pattern=pattern,
                     valid_from=datetime.now(timezone.utc),
                     created_by_ref=identity.id,
                     labels=labels,
