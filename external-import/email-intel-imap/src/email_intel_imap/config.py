@@ -1,6 +1,6 @@
 import datetime
 import os
-from typing import Literal
+from typing import Any, Literal
 
 from base_connector.config import BaseConnectorSettings, ConnectorConfig, ListFromString
 from base_connector.enums import LogLevelType
@@ -72,20 +72,18 @@ class _EmailIntelConfig(BaseModel):
         description="List of attachment MIME types to process (comma-separated)",
     )
 
-    @model_validator(mode="after")
-    def check_auth(self: "_EmailIntelConfig") -> "_EmailIntelConfig":
+    @model_validator(mode="before")
+    def check_auth(cls, values: dict[str, Any]) -> dict[str, Any]:
         """Check the autentivication method."""
         # Condition fo unicity to select proprer adapter should be added here
         # Only one of these conditions must be True
-        conditions = [
-            self.password is not None
-            and all(other is None for other in [self.google_token_json]),
-            self.google_token_json is not None
-            and all(other is None for other in [self.password]),
-        ]
-        if sum(conditions) != 1:
-            raise ValueError("Auth method is not valid.")
-        return self
+        password = values.get("password")
+        google_token_json = values.get("google_token_json")
+        if (password and google_token_json) or not (password or google_token_json):
+            raise ValueError(
+                "Auth method is not valid. Either password or Google token must be set."
+            )
+        return values
 
 
 class ConnectorSettings(BaseConnectorSettings):
