@@ -1,7 +1,6 @@
 """Tests for STIX2 extension on SCOs in the PGL Yoyo connector."""
 
 import stix2
-
 from pgl_yoyo.config_loader import ConfigConnector
 from pgl_yoyo.pgl_connector import PGLConnector
 

@@ -8,9 +8,8 @@ from typing import Any, List, Tuple
 
 import requests
 import stix2
-from pycti import Indicator, OpenCTIConnectorHelper
-
 from pgl_yoyo.config_loader import ConfigConnector
+from pycti import Indicator, OpenCTIConnectorHelper
 
 # Known OpenCTI TLP:WHITE marking-definition UUID
 TLP_WHITE_ID = "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"

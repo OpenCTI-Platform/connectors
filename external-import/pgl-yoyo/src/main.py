@@ -3,10 +3,9 @@
 import sys
 import traceback
 
-from pycti import OpenCTIConnectorHelper
-
 from pgl_yoyo.config_loader import ConfigConnector
 from pgl_yoyo.pgl_connector import PGLConnector
+from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
     try:
