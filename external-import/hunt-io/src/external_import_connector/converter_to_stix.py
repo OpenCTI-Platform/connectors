@@ -1,7 +1,9 @@
 from datetime import datetime
+from typing import List, Optional
 
 import stix2
 
+from .constants import AuthorInfo, ExternalReferences, InfrastructureTypes
 from .models import (
     URL,
     Author,
@@ -28,41 +30,30 @@ class ConverterToStix:
         self.external_reference = self.create_external_reference()
 
     @staticmethod
-    def create_external_reference() -> list:
-        """
-        Create external reference
-        :return: External reference STIX2 list
-        """
+    def create_external_reference() -> List[stix2.ExternalReference]:
+        """Create external reference for Hunt.IO."""
         external_reference = stix2.ExternalReference(
-            source_name="Hunt IO",
-            url="https://hunt.io",
-            description="Hunt IO",
+            source_name=ExternalReferences.SOURCE_NAME,
+            url=ExternalReferences.URL,
+            description=ExternalReferences.DESCRIPTION,
         )
         return [external_reference]
 
     @staticmethod
     def create_author() -> dict:
-        """
-        Create Author
-        :return: Author in Stix2 object
-        """
-        author = Author("Hunt IO", "Hunt IO").stix2_object
+        """Create Author identity object."""
+        author = Author(AuthorInfo.NAME, AuthorInfo.DESCRIPTION).stix2_object
         assert author is not None
-
         return author
 
     def create_c2_infrastructure(
         self,
         name: str,
-        infrastructure_types: str,
-        created: datetime | None = None,
-    ):
-        """
-        Creates a Command and Control (C2) infrastructure object.
-        """
-        infrastructure = Infrastructure(
-            name, infrastructure_types, self.author["id"], created
-        )
+        infrastructure_types: str = InfrastructureTypes.COMMAND_AND_CONTROL,
+        created: Optional[datetime] = None,
+    ) -> Infrastructure:
+        """Creates a Command and Control (C2) infrastructure object."""
+        infrastructure = Infrastructure(name, infrastructure_types, self.author["id"], created)
         return infrastructure
 
     def create_ipv4_observable(self, ip: str) -> IPv4Address:
@@ -86,18 +77,14 @@ class ConverterToStix:
         indicator = URL(scan_uri, timestamp, self.author["id"])
         return indicator
 
-    def create_malware_object(
-        self, malware_name: str, malware_subsystem: str
-    ) -> Malware:
+    def create_malware_object(self, malware_name: str, malware_subsystem: str) -> Malware:
         """
         Creates a malware object.
         """
         malware = Malware(malware_name, malware_subsystem)
         return malware
 
-    def create_network_traffic(
-        self, port: int | None, src_ref: str | None
-    ) -> NetworkTraffic:
+    def create_network_traffic(self, port: int | None, src_ref: str | None) -> NetworkTraffic:
         """
         Creates a network traffic object.
         """
