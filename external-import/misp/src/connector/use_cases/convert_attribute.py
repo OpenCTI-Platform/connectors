@@ -412,6 +412,9 @@ class AttributeConverter:
         markings: list[stix2.v21.MarkingDefinition],
         external_references: list[stix2.ExternalReference],
     ):
+        if not observables:
+            return None
+
         # ! Be sure that the first observable is the main one in create_observables method
         octi_main_observable_type = OCTI_MAIN_OBSERVABLE_TYPES[observables[0]["type"]]
 
@@ -573,7 +576,7 @@ class AttributeConverter:
                 )
 
         indicator = None
-        if self.config.convert_attribute_to_indicator:
+        if observables and self.config.convert_attribute_to_indicator:
             indicator = self.create_indicator(
                 attribute,
                 observables=observables,
