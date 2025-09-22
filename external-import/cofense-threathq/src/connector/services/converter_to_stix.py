@@ -129,6 +129,7 @@ class ConverterToStix:
                 "x_opencti_description": data.get("roleDescription"),
                 "x_opencti_external_references": external_references,
                 "x_opencti_main_observable_type": "Url",
+                "x_opencti_create_indicator": self.config.cofense_threathq.promote_observables_as_indicators,
             },
         )
 
@@ -160,6 +161,7 @@ class ConverterToStix:
                 "x_opencti_labels": labels,
                 "x_opencti_external_references": external_references,
                 "x_opencti_main_observable_type": "StixFile",
+                "x_opencti_create_indicator": self.config.cofense_threathq.promote_observables_as_indicators,
             },
         )
 
@@ -178,6 +180,7 @@ class ConverterToStix:
                 "x_opencti_description": data.get("roleDescription"),
                 "x_opencti_external_references": external_references,
                 "x_opencti_main_observable_type": "Email-Addr",
+                "x_opencti_create_indicator": self.config.cofense_threathq.promote_observables_as_indicators,
             },
         )
 
@@ -198,6 +201,7 @@ class ConverterToStix:
                 "x_opencti_description": description,
                 "x_opencti_external_references": external_references,
                 "x_opencti_main_observable_type": "Email-Message",
+                "x_opencti_create_indicator": self.config.cofense_threathq.promote_observables_as_indicators,
             },
         )
 
@@ -216,6 +220,7 @@ class ConverterToStix:
                 "x_opencti_description": data.get("roleDescription"),
                 "x_opencti_external_references": external_references,
                 "x_opencti_main_observable_type": "IPv4-Addr",
+                "x_opencti_create_indicator": self.config.cofense_threathq.promote_observables_as_indicators,
             },
         )
 
@@ -234,6 +239,7 @@ class ConverterToStix:
                 "x_opencti_description": data.get("roleDescription"),
                 "x_opencti_external_references": external_references,
                 "x_opencti_main_observable_type": "Domain-Name",
+                "x_opencti_create_indicator": self.config.cofense_threathq.promote_observables_as_indicators,
             },
         )
 
@@ -249,6 +255,7 @@ class ConverterToStix:
                 "x_opencti_labels": labels,
                 "x_opencti_external_references": external_references,
                 "x_opencti_main_observable_type": "Autonomous-System",
+                "x_opencti_create_indicator": self.config.cofense_threathq.promote_observables_as_indicators,
             },
         )
 
