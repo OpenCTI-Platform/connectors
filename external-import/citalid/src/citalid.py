@@ -55,6 +55,15 @@ class Citalid:
     def get_interval(self):
         return int(self.citalid_interval) * 60 * 60
 
+    @staticmethod
+    def get_not_loaded_version(last_version, versions_list):
+        return [
+            version
+            for version in versions_list
+            if datetime.strptime(last_version[:8], "%Y%m%d")
+            < datetime.strptime(version[:8], "%Y%m%d")
+        ]
+
     def process_data(self):
         try:
             # Get the current state and check
@@ -77,27 +86,38 @@ class Citalid:
             )
             api_client.login(self.citalid_user, self.citalid_password)
 
-            self.helper.log_info("Fetching last bundle version info ...")
-            last_version_metadata = api_client.get_last_version()
-            bundle_id = last_version_metadata["id"]
+            self.helper.log_info("Fetching bundle versions info ...")
+            versions_metadata = api_client.list_versions()
+            bundle_versions = sorted(
+                [record["id"] for record in versions_metadata],
+                key=lambda x: datetime.strptime(x[:8], "%Y%m%d"),
+            )
 
-            if last_loaded_bundle_id is None or bundle_id != last_loaded_bundle_id:
-                self.helper.log_info('Processing file "' + bundle_id + '"')
-                bundle_dict = api_client.get_latest_bundle()
-                bundle = json.dumps(bundle_dict)
-                sent_bundle = self.send_bundle(work_id, bundle)
-                if sent_bundle is None:
-                    self.helper.log_error("Error while sending bundle")
-                else:
-                    last_loaded_bundle_id = bundle_id
-                    # Store the current bundle id as a last loaded bundle id
-                    message = (
-                        "Bundle successfully loaded, storing last_loaded_bundle_id as "
-                        + str(last_loaded_bundle_id)
-                    )
-                    self.helper.log_info(message)
+            # Check not loaded bundles
+            if last_loaded_bundle_id is None:
+                new_versions = bundle_versions
             else:
+                new_versions = self.get_not_loaded_version(
+                    last_loaded_bundle_id, bundle_versions
+                )
+
+            if len(new_versions) == 0:
                 self.helper.log_info("Last version of Citalid dataset already loaded.")
+            else:
+                for version_id in new_versions:
+                    self.helper.log_info('Processing version "' + version_id + '"')
+                    bundle = api_client.download_version(version_id=version_id)
+                    sent_bundle = self.send_bundle(work_id, bundle)
+                    if sent_bundle is None:
+                        self.helper.log_error("Error while sending bundle")
+                    else:
+                        last_loaded_bundle_id = version_id
+                        # Store the current bundle id as a last loaded bundle id
+                        message = (
+                            "Bundle successfully loaded, storing last_loaded_bundle_id as "
+                            + str(last_loaded_bundle_id)
+                        )
+                        self.helper.log_info(message)
 
             message = "Storing last_run as " + str(now)
             self.helper.log_info(message)
