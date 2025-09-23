@@ -144,51 +144,6 @@ class ConnectorConfig(ConfigBaseModel):
         default="error",
     )
 
-    expose_metrics: bool = Field(
-        description="Whether to expose metrics or not.",
-        default=False,
-    )
-    metrics_port: int = Field(
-        description="The port to expose metrics.",
-        default=9095,
-    )
-    only_contextual: bool = Field(
-        description="Whether to expose metrics or not.",
-        default=False,
-    )
-    run_and_terminate: bool = Field(
-        description="Connector run-and-terminate flag.",
-        default=False,
-    )
-    validate_before_import: bool = Field(
-        description="Whether to validate data before import or not.",
-        default=False,
-    )
-    queue_protocol: str = Field(
-        description="The queue protocol to use.",
-        default="amqp",
-    )
-    queue_threshold: int = Field(
-        description="Connector queue max size in Mbytes. Default to pycti value.",
-        default=500,
-    )
-    send_to_queue: bool = Field(
-        description="Connector send-to-queue flag. Default to True.",
-        default=True,
-    )
-    send_to_directory: bool = Field(
-        description="Connector send-to-directory flag.",
-        default=False,
-    )
-    send_to_directory_path: str | None = Field(
-        description="Connector send-to-directory path.",
-        default=None,
-    )
-    send_to_directory_retention: int = Field(
-        description="Connector send-to-directory retention.",
-        default=7,
-    )
-
 
 class FeedList(ConfigBaseModel):
     name: str = Field(description="The name of SOCRadar feed list to fetch.")
