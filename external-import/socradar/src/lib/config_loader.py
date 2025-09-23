@@ -92,7 +92,7 @@ class ConfigBaseModel(BaseModel):
     Base class for frozen config models, i.e. not alter-able after `model_post_init()`.
     """
 
-    model_config = ConfigDict(extra="ignore", frozen=True)
+    model_config = ConfigDict(extra="allow", frozen=True)
 
 
 class OpenCTIConfig(ConfigBaseModel):
@@ -183,7 +183,7 @@ class ConfigLoader(BaseSettings):
 
     # Setup model config and env vars parsing
     model_config = SettingsConfigDict(
-        extra="ignore",
+        extra="allow",
         frozen=True,
         env_nested_delimiter="_",
         env_nested_max_split=1,
