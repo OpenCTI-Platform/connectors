@@ -51,6 +51,12 @@ class Client:
     def get_latest_bundle(self):
         return self.call("GET", "stix-bundles/versions/latest/download/")
 
+    def list_versions(self):
+        return self.call("GET", "stix-bundles/versions/")
+
+    def download_version(self, version_id):
+        return self.call("GET", f"stix-bundles/versions/{version_id}/download/")
+
     @staticmethod
     def check_response(res):
         if not (200 <= res.status_code < 300):
