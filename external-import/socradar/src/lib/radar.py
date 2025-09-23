@@ -109,20 +109,20 @@ class RadarConnector:
 
     def _convert_feed_items(
         self, feed_items: list[RadarFeedItem]
-    ) -> Generator[list[stix2.Identity | stix2.Indicator], None, None]:
+    ) -> Generator[list[stix2.v21._STIXBase21], None, None]:
         """
         Process collection's feed items into STIX Indicator.
         """
         for feed_item in feed_items:
             try:
-                author, indicator = self.converter_to_stix.process_on(feed_item)
+                tlp, author, indicator = self.converter_to_stix.process_on(feed_item)
 
                 self.helper.connector_logger.debug(
                     "Indicator successfully created",
-                    {"author": author, "indicator": indicator},
+                    {"indicator": indicator, "tlp": tlp, "author": author},
                 )
 
-                yield [author, indicator]
+                yield [tlp, author, indicator]
             except ConverterError as err:
                 self.helper.connector_logger.error(
                     f"Skipping item due to STIX2 Identity conversion error: {err}",

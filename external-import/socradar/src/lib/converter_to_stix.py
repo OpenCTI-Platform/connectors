@@ -100,7 +100,7 @@ class ConverterToStix:
 
     def process_on(
         self, feed_item: RadarFeedItem
-    ) -> list[stix2.Identity | stix2.Indicator]:
+    ) -> tuple[stix2.MarkingDefinition, stix2.Identity, stix2.Indicator]:
         """
         Process a feed's item to create STIX2.1 Identity and Indicator.
         :param feed_item: SOCRadar feed's item to process
@@ -137,11 +137,11 @@ class ConverterToStix:
                 valid_from=valid_from,
                 valid_until=valid_until,
                 created_by_ref=creator.id,
-                object_marking_refs=[self.tlp_marking],
+                object_marking_refs=[self.tlp_marking.id],
                 labels=["malicious-activity", feed_type],
             )
 
-            return [creator, indicator]
+            return (self.tlp_marking, creator, indicator)
         except stix2.exceptions.STIXError as err:
             raise ConverterError(
                 "Error converting feed's item: {err}",
