@@ -64,7 +64,11 @@ class RadarConnector:
         :param stix_objects: List of STIX2 objects to send to ingestion
         """
         bundle = self.helper.stix2_create_bundle(stix_objects)
-        sent_bundles = self.helper.send_stix2_bundle(bundle, work_id=self.work_id)
+        sent_bundles = self.helper.send_stix2_bundle(
+            bundle,
+            work_id=self.work_id,
+            cleanup_inconsistent_bundle=True,
+        )
 
         self.helper.connector_logger.info(
             "Sending STIX bundles to OpenCTI",
