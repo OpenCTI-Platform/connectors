@@ -31,12 +31,12 @@ class RadarFeedItem:
         self.feed = feed
         self.feed_type = feed_type
         self.maintainer_name = maintainer_name
-        self.first_seen_date: datetime = (
+        self.first_seen_date: datetime | None = (
             datetime.fromisoformat(first_seen_date).astimezone(tzinfo=timezone.utc)
             if first_seen_date
             else None
         )
-        self.latest_seen_date: datetime = (
+        self.latest_seen_date: datetime | None = (
             datetime.fromisoformat(latest_seen_date).astimezone(tzinfo=timezone.utc)
             if latest_seen_date
             else None
