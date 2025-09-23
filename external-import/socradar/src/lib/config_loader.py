@@ -174,7 +174,7 @@ class ConfigLoader(BaseSettings):
     Define a complete config for a connector with:
         - opencti: the config specific to OpenCTI
         - connector: the config specific to the `external-import` connectors
-        - socradar: the config specific to SOCRadar
+        - radar: the config specific to SOCRadar
     """
 
     opencti: OpenCTIConfig
