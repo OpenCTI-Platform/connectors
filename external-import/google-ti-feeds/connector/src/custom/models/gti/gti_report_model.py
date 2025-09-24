@@ -1,6 +1,6 @@
 """Module containing models for GTI reports response from Google Threat Intelligence API."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -8,18 +8,18 @@ from pydantic import BaseModel, Field
 class AggregationCommonalities(BaseModel):
     """Technical commonalities among all domains, files, IP addresses, and URLs tied to the report."""
 
-    domains: Optional[Dict[str, Any]] = Field(
+    domains: Optional[dict[str, Any]] = Field(
         None,
         description="Technical commonalities among all domains tied to the report.",
     )
-    files: Optional[Dict[str, Any]] = Field(
+    files: Optional[dict[str, Any]] = Field(
         None, description="Technical commonalities among all files tied to the report."
     )
-    ip_addresses: Optional[Dict[str, Any]] = Field(
+    ip_addresses: Optional[dict[str, Any]] = Field(
         None,
         description="Technical commonalities among all IP addresses tied to the report.",
     )
-    urls: Optional[Dict[str, Any]] = Field(
+    urls: Optional[dict[str, Any]] = Field(
         None, description="Technical commonalities among all URLs tied to the report."
     )
 
@@ -291,7 +291,7 @@ class GTIReportData(BaseModel):
     type: str
     links: Links
     attributes: Optional[ReportModel]
-    context_attributes: Dict[str, Any]
+    context_attributes: dict[str, Any]
 
 
 class GTIReportResponse(BaseModel):

@@ -1,7 +1,7 @@
 """Converts a GTI domain to a STIX domain object and indicator."""
 
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from connector.src.custom.models.gti.gti_domain_model import (
     GTIDomainData,
@@ -172,11 +172,11 @@ class GTIDomainToSTIXDomain(BaseMapper):
 
         return [domain_observable, indicator, relationship]
 
-    def _get_timestamps(self) -> Dict[str, datetime]:
+    def _get_timestamps(self) -> dict[str, datetime]:
         """Extract creation and modification timestamps from domain attributes.
 
         Returns:
-            Dict[str, datetime]: Dictionary with 'created' and 'modified' timestamps
+            dict[str, datetime]: dictionary with 'created' and 'modified' timestamps
 
         """
         created = datetime.now(timezone.utc)

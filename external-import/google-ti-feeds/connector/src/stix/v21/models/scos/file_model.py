@@ -1,7 +1,7 @@
 """The module defines a FileModel class that represents a file in STIX 2.1 format."""
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import Field, model_validator
@@ -14,14 +14,14 @@ from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
 class FileModel(BaseSCOModel):
     """FileModel class represents a file in STIX 2.1 format."""
 
-    extensions: Optional[Dict[str, Dict[str, Any]]] = Field(
+    extensions: Optional[dict[str, dict[str, Any]]] = Field(
         default=None,
-        description="Dictionary of file extensions (e.g., ntfs-ext, pdf-ext, archive-ext). Keys MUST be extension names.",
+        description="dictionary of file extensions (e.g., ntfs-ext, pdf-ext, archive-ext). Keys MUST be extension names.",
     )
 
-    hashes: Optional[Dict[str, str]] = Field(
+    hashes: Optional[dict[str, str]] = Field(
         default=None,
-        description="Dictionary of hash algorithm names and hash values. Keys MUST come from hash-algorithm-ov.",
+        description="dictionary of hash algorithm names and hash values. Keys MUST come from hash-algorithm-ov.",
     )
 
     size: Optional[int] = Field(

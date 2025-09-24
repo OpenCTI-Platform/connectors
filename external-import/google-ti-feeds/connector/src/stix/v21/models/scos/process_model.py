@@ -1,7 +1,7 @@
 """The module defines the ProcessModel class, which represents a STIX 2.1 Process object."""
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import Field
@@ -14,9 +14,9 @@ from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
 class ProcessModel(BaseSCOModel):
     """Model representing a Process in STIX 2.1 format."""
 
-    extensions: Optional[Dict[str, Dict[str, Any]]] = Field(
+    extensions: Optional[dict[str, dict[str, Any]]] = Field(
         default=None,
-        description="Dictionary of supported process extensions (e.g., windows-process-ext, windows-service-ext).",
+        description="dictionary of supported process extensions (e.g., windows-process-ext, windows-service-ext).",
     )
 
     is_hidden: Optional[bool] = Field(
@@ -37,9 +37,9 @@ class ProcessModel(BaseSCOModel):
         description="Full command line used to launch the process (including executable and arguments).",
     )
 
-    environment_variables: Optional[Dict[str, str]] = Field(
+    environment_variables: Optional[dict[str, str]] = Field(
         default=None,
-        description="Dictionary of environment variables (case-sensitive). Keys are variable names, values are their string contents.",
+        description="dictionary of environment variables (case-sensitive). Keys are variable names, values are their string contents.",
     )
 
     opened_connection_refs: Optional[list[str]] = Field(

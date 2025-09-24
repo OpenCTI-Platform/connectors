@@ -1,6 +1,6 @@
 """Test module for GenericConverter functionality."""
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Optional, Tuple
 from unittest.mock import MagicMock
 
 import pytest
@@ -478,7 +478,7 @@ def test_convert_multiple_empty_list(basic_converter: GenericConverter) -> None:
 def test_convert_batch_success(basic_converter: GenericConverter) -> None:
     """Test successful batch conversion of different entity types."""
     # Given: A converter and batched input data
-    input_batches: Dict[str, Any] = {
+    input_batches: dict[str, Any] = {
         "type_a": [
             {"id": "a-001", "name": "Type A Entity 1"},
             {"id": "a-002", "name": "Type A Entity 2"},
@@ -499,7 +499,7 @@ def test_convert_batch_success(basic_converter: GenericConverter) -> None:
 def test_convert_batch_empty_batches(basic_converter: GenericConverter) -> None:
     """Test batch conversion with all empty batches."""
     # Given: A converter and empty batches
-    input_batches: Dict[str, list[Any]] = {
+    input_batches: dict[str, list[Any]] = {
         "type_a": [],
         "type_b": [],
     }
@@ -791,7 +791,7 @@ def _when_convert_multiple_called(
 
 
 def _when_convert_batch_called(
-    converter: GenericConverter, input_batches: Dict[str, Any], **kwargs: Any
+    converter: GenericConverter, input_batches: dict[str, Any], **kwargs: Any
 ) -> Tuple[Any, Any]:
     """Call convert_batch and capture result and exception."""
     try:
@@ -806,7 +806,7 @@ def _when_converted_objects_retrieved(converter: GenericConverter) -> list[Any]:
     return converter.get_converted_objects()
 
 
-def _when_object_id_map_retrieved(converter: GenericConverter) -> Dict[str, Any]:
+def _when_object_id_map_retrieved(converter: GenericConverter) -> dict[str, Any]:
     """Retrieve object ID map from converter."""
     return converter.get_object_id_map()
 
@@ -893,7 +893,7 @@ def _then_multiple_conversion_empty(result: list[Any], exception: Any) -> None:
 
 
 def _then_batch_conversion_successful(
-    result: Dict[str, Any], exception: Any, expected_keys: Any
+    result: dict[str, Any], exception: Any, expected_keys: Any
 ) -> None:
     """Assert that batch conversion was successful."""
     assert exception is None  # noqa: S101
@@ -904,7 +904,7 @@ def _then_batch_conversion_successful(
         assert isinstance(result[key], list)  # noqa: S101
 
 
-def _then_batch_conversion_all_empty(result: Dict[str, Any], exception: Any) -> None:
+def _then_batch_conversion_all_empty(result: dict[str, Any], exception: Any) -> None:
     """Assert that batch conversion returned empty results."""
     assert exception is None  # noqa: S101
     assert result is not None  # noqa: S101
@@ -923,7 +923,7 @@ def _then_converted_objects_tracked(
 
 
 def _then_object_id_map_correct(
-    id_map: Dict[str, Any], original_id: str, stix_id: str
+    id_map: dict[str, Any], original_id: str, stix_id: str
 ) -> None:
     """Assert that object ID mapping is correct."""
     assert isinstance(id_map, dict)  # noqa: S101

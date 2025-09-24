@@ -1,7 +1,7 @@
 """Converts a GTI attack technique to a STIX attack pattern object."""
 
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from connector.src.custom.models.gti.gti_attack_technique_model import (
     AttackTechniqueModel,
@@ -160,14 +160,14 @@ class GTIAttackTechniqueToSTIXAttackPattern(BaseMapper):
 
     def _create_external_references(
         self, attributes: AttackTechniqueModel
-    ) -> Optional[list[Dict[str, str]]]:
+    ) -> Optional[list[dict[str, str]]]:
         """Create external references from attack technique attributes.
 
         Args:
             attributes: The attack technique attributes
 
         Returns:
-            Optional[list[Dict[str, str]]]: Created external references or None if no references exist
+            Optional[list[dict[str, str]]]: Created external references or None if no references exist
 
         """
         if not attributes:

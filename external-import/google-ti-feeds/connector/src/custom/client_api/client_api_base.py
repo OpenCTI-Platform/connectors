@@ -2,7 +2,7 @@
 
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Any, AsyncGenerator, Dict, Optional
+from typing import Any, AsyncGenerator, Optional
 from uuid import uuid4
 
 from connector.src.custom.configs.fetcher_config import FETCHER_CONFIGS
@@ -42,7 +42,7 @@ class BaseClientAPI:
     def _parse_start_date(
         self,
         start_date_config: str,
-        initial_state: Optional[Dict[str, Any]] = None,
+        initial_state: Optional[dict[str, Any]] = None,
         state_key: str = "next_cursor_start_date",
     ) -> Any:
         """Parse and calculate start date from configuration.
@@ -104,12 +104,12 @@ class BaseClientAPI:
         self,
         collection_type: str,
         start_date: str,
-        initial_state: Optional[Dict[str, Any]] = None,
+        initial_state: Optional[dict[str, Any]] = None,
         types: Optional[list[str]] = None,
         origins: Optional[list[str]] = None,
         entity_name: str = "items",
         cursor_key: str = "cursor",
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Build filter configurations for a collection type.
 
         Args:
@@ -284,7 +284,7 @@ class BaseClientAPI:
         return cursor, count
 
     def _calculate_pagination_info(
-        self, count: Optional[int], params: Dict[str, Any]
+        self, count: Optional[int], params: dict[str, Any]
     ) -> Optional[Any]:
         """Calculate total pages based on count and limit."""
         if count is None:
@@ -317,7 +317,7 @@ class BaseClientAPI:
     async def _paginate_with_cursor(
         self,
         fetcher: Any,
-        initial_params: Dict[str, Any],
+        initial_params: dict[str, Any],
         entity_description: str = "items",
     ) -> AsyncGenerator[Any, None]:
         """Paginate helper that handles cursor-based pagination.

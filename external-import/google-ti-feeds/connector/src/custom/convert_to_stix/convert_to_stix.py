@@ -1,7 +1,7 @@
 """Convert to STIX - Main entry point that delegates to specialized converters."""
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from connector.src.custom.convert_to_stix.convert_to_stix_shared import (
     ConvertToSTIXShared,
@@ -85,12 +85,12 @@ class ConvertToSTIX:
         )
 
     def convert_subentities_to_stix(
-        self, subentities: Dict[str, list[Any]], main_entity: Optional[str] = None
+        self, subentities: dict[str, list[Any]], main_entity: Optional[str] = None
     ) -> list[Any]:
         """Convert each subentity to STIX format.
 
         Args:
-            subentities: Dictionary mapping entity types to lists of entities
+            subentities: dictionary mapping entity types to lists of entities
             main_entity: Type of the main entity
 
         Returns:
@@ -103,14 +103,14 @@ class ConvertToSTIX:
 
     def convert_subentities_to_stix_with_linking(
         self,
-        subentities: Dict[str, list[Any]],
+        subentities: dict[str, list[Any]],
         main_entity: str,
         main_entities: list[Any],
     ) -> Optional[list[Any]]:
         """Convert each subentity to STIX format with linking.
 
         Args:
-            subentities: Dictionary mapping entity types to lists of entities
+            subentities: dictionary mapping entity types to lists of entities
             main_entity: The main entity type
             main_entities: list containing the main entity STIX object
 

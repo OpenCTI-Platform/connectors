@@ -1,6 +1,6 @@
 """The module defines the ArtifactModel class, which represents a STIX 2.1 Artifact object."""
 
-from typing import Dict, Optional
+from typing import Optional
 
 from connector.src.stix.v21.models.ovs.encryption_algorithm_ov_enums import (
     EncryptionAlgorithmOV,
@@ -28,9 +28,9 @@ class ArtifactModel(BaseSCOModel):
         default=None,
         description="URL to the artifact content. MUST NOT be used if 'payload_bin' is present.",
     )
-    hashes: Optional[Dict[str, str]] = Field(
+    hashes: Optional[dict[str, str]] = Field(
         default=None,
-        description="Dictionary of hashes for the artifact. MUST be present if 'url' is used. Keys MUST come from hash-algorithm-ov.",
+        description="dictionary of hashes for the artifact. MUST be present if 'url' is used. Keys MUST come from hash-algorithm-ov.",
     )
     encryption_algorithm: Optional[EncryptionAlgorithmOV] = Field(
         default=None,

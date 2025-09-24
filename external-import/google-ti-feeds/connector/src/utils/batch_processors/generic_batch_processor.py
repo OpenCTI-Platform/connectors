@@ -6,7 +6,7 @@ handle configurable batch sizes, and provide consistent work management and stat
 
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from connector.src.utils.batch_processors.generic_batch_processor_config import (
     GenericBatchProcessorConfig,
@@ -243,11 +243,11 @@ class GenericBatchProcessor:
                     {"prefix": LOG_PREFIX, "error": str(state_err)},
                 )
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get processing statistics.
 
         Returns:
-            Dictionary containing processing statistics
+            dictionary containing processing statistics
 
         """
         return {

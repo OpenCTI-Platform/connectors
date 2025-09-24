@@ -1,7 +1,7 @@
 """The module defines the base model for STIX Domain Objects (SDOs) in STIX 2.1 format."""
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from connector.src.stix.v21.models.cdts.external_reference_model import (
     ExternalReferenceModel,
@@ -76,7 +76,7 @@ class BaseSDOModel(SDORequiredModel, SDOOptionalModel):
 
     @model_validator(mode="before")
     @classmethod
-    def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+    def generate_id(cls, data: dict[str, Any]) -> dict[str, Any]:
         """Generate ID regardless of whether one is provided.
 
         This base implementation doesn't generate an ID. Subclasses must override

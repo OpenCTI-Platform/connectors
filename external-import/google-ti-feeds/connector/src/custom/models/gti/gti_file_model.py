@@ -1,6 +1,6 @@
 """Module containing models for GTI File response from Google Threat Intelligence API."""
 
-from typing import Dict, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -237,7 +237,7 @@ class SandboxVerdict(BaseModel):
 class SigmaAnalysisResultContext(BaseModel):
     """Context for a matched Sigma rule."""
 
-    values: Optional[Dict[str, str]] = Field(
+    values: Optional[dict[str, str]] = Field(
         None, description="Matched key-value context."
     )
 
@@ -290,7 +290,7 @@ class FileModel(BaseModel):
     last_analysis_date: Optional[int] = Field(
         None, description="Most recent scan timestamp (UTC)."
     )
-    last_analysis_results: Optional[Dict[str, LastAnalysisResult]] = Field(
+    last_analysis_results: Optional[dict[str, LastAnalysisResult]] = Field(
         None, description="Latest scan results by engine."
     )
     last_analysis_stats: Optional[LastAnalysisStats] = Field(
@@ -302,7 +302,7 @@ class FileModel(BaseModel):
     last_submission_date: Optional[int] = Field(
         None, description="Most recent submission timestamp (UTC)."
     )
-    main_icon: Optional[Dict[str, str]] = Field(
+    main_icon: Optional[dict[str, str]] = Field(
         None, description="Main icon hashes: 'raw_md5' and 'dhash'."
     )
     md5: Optional[str] = Field(None, description="MD5 hash of the file.")
@@ -312,7 +312,7 @@ class FileModel(BaseModel):
     names: Optional[list[str]] = Field(None, description="All associated file names.")
     permhash: Optional[str] = Field(None, description="Permhash of the file.")
     reputation: Optional[int] = Field(None, description="Community reputation score.")
-    sandbox_verdicts: Optional[Dict[str, SandboxVerdict]] = Field(
+    sandbox_verdicts: Optional[dict[str, SandboxVerdict]] = Field(
         None, description="Verdicts from various sandboxes."
     )
     sha1: Optional[str] = Field(None, description="SHA1 hash of the file.")
@@ -323,7 +323,7 @@ class FileModel(BaseModel):
     sigma_analysis_stats: Optional[SigmaAnalysisStats] = Field(
         None, description="Stats for Sigma analysis."
     )
-    sigma_analysis_summary: Optional[Dict[str, SigmaAnalysisStats]] = Field(
+    sigma_analysis_summary: Optional[dict[str, SigmaAnalysisStats]] = Field(
         None, description="Sigma stats split by ruleset name."
     )
     size: Optional[int] = Field(None, description="File size in bytes.")
@@ -334,7 +334,7 @@ class FileModel(BaseModel):
     times_submitted: Optional[int] = Field(
         None, description="Number of times submitted to Google TI."
     )
-    total_votes: Optional[Dict[str, Optional[int]]] = Field(
+    total_votes: Optional[dict[str, Optional[int]]] = Field(
         None, description="Total community votes (harmless vs malicious)."
     )
     type_description: Optional[str] = Field(
@@ -362,7 +362,7 @@ class GTIFileData(BaseModel):
 
     id: str = Field(..., description="SHA256 identifier of the file.")
     type: str = Field("file", description="Resource type, set to 'file'.")
-    links: Optional[Dict[str, str]] = Field(
+    links: Optional[dict[str, str]] = Field(
         None, description="Links related to the file resource."
     )
     attributes: Optional[FileModel] = Field(

@@ -1,6 +1,6 @@
 """Test module for GenericFetcherConfig functionality."""
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Optional, Tuple
 
 import pytest
 from connector.src.utils.fetchers.generic_fetcher_config import GenericFetcherConfig
@@ -458,7 +458,7 @@ def _then_headers_are_empty_dict(config: GenericFetcherConfig) -> None:
 
 
 def _then_headers_match(
-    config: GenericFetcherConfig, expected_headers: Dict[str, str]
+    config: GenericFetcherConfig, expected_headers: dict[str, str]
 ) -> None:
     """Assert that headers match expected values."""
     assert config.headers == expected_headers  # noqa: S101

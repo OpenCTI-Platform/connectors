@@ -1,6 +1,6 @@
 """Test module for GenericFetcher functionality."""
 
-from typing import Any, Dict, Generator, Optional, Sequence, Tuple, Union
+from typing import Any, Generator, Optional, Sequence, Tuple, Union
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
@@ -212,7 +212,7 @@ def save_to_file_fetcher(
     save_to_file_config: GenericFetcherConfig,
     mock_api_client: AsyncMock,
     mock_logger: MagicMock,
-    mock_save_to_file: Dict[str, Any],
+    mock_save_to_file: dict[str, Any],
 ) -> GenericFetcher:
     """Fixture for fetcher with save_to_file enabled."""
     return GenericFetcher(
@@ -598,7 +598,7 @@ def test_header_merging_config_overrides_base(
 # --- GIVEN: Setup conditions ---
 
 
-def _given_api_returns_data(mock_client: AsyncMock, data: Dict[str, Any]) -> None:
+def _given_api_returns_data(mock_client: AsyncMock, data: dict[str, Any]) -> None:
     """Set up mock API client to return specific data."""
     mock_client.call_api.return_value = data
 
@@ -621,7 +621,7 @@ def _given_api_returns_list(mock_client: AsyncMock, items: list[Any]) -> None:
 
 
 def _given_api_returns_wrapped_data(
-    mock_client: AsyncMock, wrapped_response: Union[Dict[str, Any], BaseModel]
+    mock_client: AsyncMock, wrapped_response: Union[dict[str, Any], BaseModel]
 ) -> None:
     """Set up mock API client to return wrapped response."""
     mock_client.call_api.return_value = wrapped_response
@@ -681,7 +681,7 @@ async def _when_fetch_list_called(
 # --- THEN: Verify the expected outcomes ---
 
 
-def _then_fetch_successful(result: Any, expected_data: Dict[str, Any]) -> None:
+def _then_fetch_successful(result: Any, expected_data: dict[str, Any]) -> None:
     """Assert that fetch was successful and returned expected data."""
     assert result is not None  # noqa: S101
     assert result == expected_data  # noqa: S101
@@ -783,7 +783,7 @@ def _then_api_called_multiple_times(
 
 
 def _then_headers_merged_correctly(
-    fetcher: GenericFetcher, expected_headers: Dict[str, str]
+    fetcher: GenericFetcher, expected_headers: dict[str, str]
 ) -> None:
     """Assert that headers were merged correctly."""
     assert fetcher.headers == expected_headers  # noqa: S101
@@ -822,7 +822,7 @@ async def test_save_to_file_disabled_by_default(
 async def test_save_to_file_creates_debug_directory(
     save_to_file_fetcher: GenericFetcher,
     mock_api_client: AsyncMock,
-    mock_save_to_file: Dict[str, Any],
+    mock_save_to_file: dict[str, Any],
 ) -> None:
     """Test that debug directory is created when save_to_file is enabled."""
     # Given: A fetcher with save_to_file enabled
@@ -843,7 +843,7 @@ async def test_save_to_file_creates_debug_directory(
 async def test_save_to_file_saves_raw_response(
     save_to_file_fetcher: GenericFetcher,
     mock_api_client: AsyncMock,
-    mock_save_to_file: Dict[str, Any],
+    mock_save_to_file: dict[str, Any],
 ) -> None:
     """Test that raw response is saved to file when save_to_file is enabled."""
     # Given: A fetcher with save_to_file enabled
@@ -864,7 +864,7 @@ async def test_save_to_file_saves_raw_response(
 async def test_save_to_file_generates_correct_filename(
     save_to_file_fetcher: GenericFetcher,
     mock_api_client: AsyncMock,
-    mock_save_to_file: Dict[str, Any],
+    mock_save_to_file: dict[str, Any],
 ) -> None:
     """Test that correct filename is generated when saving to file."""
     # Given: A fetcher with save_to_file enabled
@@ -916,7 +916,7 @@ async def test_save_to_file_avoids_duplicates(
 async def test_save_to_file_handles_pydantic_models(
     mock_api_client: AsyncMock,
     mock_logger: MagicMock,
-    mock_save_to_file: Dict[str, Any],
+    mock_save_to_file: dict[str, Any],
 ) -> None:
     """Test that Pydantic models are properly serialized when saving to file."""
     # Given: A fetcher configured with response model and save_to_file enabled
@@ -946,7 +946,7 @@ async def test_save_to_file_handles_pydantic_models(
 async def test_save_to_file_includes_request_info(
     save_to_file_fetcher: GenericFetcher,
     mock_api_client: AsyncMock,
-    mock_save_to_file: Dict[str, Any],
+    mock_save_to_file: dict[str, Any],
 ) -> None:
     """Test that request info is included in saved file."""
     # Given: A fetcher with save_to_file enabled
@@ -996,7 +996,7 @@ async def test_save_to_file_works_with_all_fetch_methods(
     save_to_file_list_config: GenericFetcherConfig,
     mock_api_client: AsyncMock,
     mock_logger: MagicMock,
-    mock_save_to_file: Dict[str, Any],
+    mock_save_to_file: dict[str, Any],
 ) -> None:
     """Test that save_to_file works with all fetch methods."""
     # Given: Multiple fetchers with save_to_file enabled
@@ -1048,7 +1048,7 @@ async def test_save_to_file_with_query_parameters(
     save_to_file_list_config: GenericFetcherConfig,
     mock_api_client: AsyncMock,
     mock_logger: MagicMock,
-    mock_save_to_file: Dict[str, Any],
+    mock_save_to_file: dict[str, Any],
 ) -> None:
     """Test that query parameters are included in saved request info."""
     # Given: A list fetcher with save_to_file enabled

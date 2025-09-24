@@ -1,7 +1,7 @@
 """The module defines the NetworkTrafficModel class, which represents a STIX 2.1 Network Traffic object."""
 
 from datetime import datetime
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import Field, model_validator
@@ -14,9 +14,9 @@ from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
 class NetworkTrafficModel(BaseSCOModel):
     """Model representing a Network Traffic in STIX 2.1 format."""
 
-    extensions: Optional[Dict[str, Dict[str, Any]]] = Field(
+    extensions: Optional[dict[str, dict[str, Any]]] = Field(
         default=None,
-        description="Dictionary of supported extensions (e.g., http-request-ext, tcp-ext, etc.).",
+        description="dictionary of supported extensions (e.g., http-request-ext, tcp-ext, etc.).",
     )
 
     start: Optional[datetime] = Field(
@@ -79,7 +79,7 @@ class NetworkTrafficModel(BaseSCOModel):
         description="Number of packets sent from destination to source.",
     )
 
-    ipfix: Optional[Dict[str, Union[str, int]]] = Field(
+    ipfix: Optional[dict[str, Union[str, int]]] = Field(
         default=None,
         description="IP Flow Information Export data. Keys are case-sensitive IPFIX element names, values are string/int.",
     )

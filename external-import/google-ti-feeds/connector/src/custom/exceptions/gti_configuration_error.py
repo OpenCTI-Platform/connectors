@@ -1,6 +1,6 @@
 """Exception raised for errors in the configuration."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from connector.src.custom.exceptions.gti_base_error import GTIBaseError
 
@@ -12,7 +12,7 @@ class GTIConfigurationError(GTIBaseError):
         self,
         message: str,
         config_key: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
+        details: Optional[dict[str, Any]] = None,
     ) -> None:
         """Initialize a GTIConfigurationError instance."""
         super().__init__(message, details)

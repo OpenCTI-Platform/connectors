@@ -1,6 +1,6 @@
 """Exception raised for errors in the Converting."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from connector.src.custom.exceptions.gti_base_error import GTIBaseError
 
@@ -14,7 +14,7 @@ class GTIConvertingError(GTIBaseError):
         entity_type: Optional[str] = None,
         entity_id: Optional[str] = None,
         stix_type: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
+        details: Optional[dict[str, Any]] = None,
     ) -> None:
         """Initialize a GTIConvertingError instance."""
         super().__init__(message, details)

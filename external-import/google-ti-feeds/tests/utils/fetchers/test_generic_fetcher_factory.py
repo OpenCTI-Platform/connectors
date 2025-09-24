@@ -1,6 +1,6 @@
 """Test module for GenericFetcherFactory functionality."""
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Optional, Tuple
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -73,7 +73,7 @@ def mock_logger() -> MagicMock:
 
 
 @pytest.fixture
-def base_headers() -> Dict[str, str]:
+def base_headers() -> dict[str, str]:
     """Fixture for base headers."""
     return {"Authorization": "Bearer token", "User-Agent": "TestAgent"}
 
@@ -116,7 +116,7 @@ def basic_factory(
 
 @pytest.fixture
 def full_factory(
-    mock_api_client: AsyncMock, base_headers: Dict[str, str], mock_logger: MagicMock
+    mock_api_client: AsyncMock, base_headers: dict[str, str], mock_logger: MagicMock
 ) -> GenericFetcherFactory:
     """Fixture for factory with all dependencies."""
     return GenericFetcherFactory(
@@ -156,7 +156,7 @@ def test_factory_initialization_basic(mock_api_client: AsyncMock) -> None:
 
 
 def test_factory_initialization_full(
-    mock_api_client: AsyncMock, base_headers: Dict[str, str], mock_logger: MagicMock
+    mock_api_client: AsyncMock, base_headers: dict[str, str], mock_logger: MagicMock
 ) -> None:
     """Test factory initialization with all parameters."""
     # Given: Complete factory initialization parameters
@@ -303,7 +303,7 @@ def test_create_simple_fetcher_minimal(basic_factory: GenericFetcherFactory) -> 
 def test_create_simple_fetcher_full(basic_factory: GenericFetcherFactory) -> None:
     """Test creating a simple fetcher with all parameters."""
     # Given: A factory and complete fetcher parameters
-    params: Dict[str, Any] = {
+    params: dict[str, Any] = {
         "entity_type": "advanced_entities",
         "endpoint": "/api/advanced/{id}",
         "display_name": "advanced entities",
@@ -460,7 +460,7 @@ def _when_config_registered(
 
 def _when_get_registered_configs(
     factory: GenericFetcherFactory,
-) -> Dict[str, GenericFetcherConfig]:
+) -> dict[str, GenericFetcherConfig]:
     """Get all registered configurations."""
     return factory.get_registered_configs()
 
@@ -473,7 +473,7 @@ def _when_get_config_names(factory: GenericFetcherFactory) -> list[str]:
 def _when_fetcher_created_with_config(
     factory: GenericFetcherFactory,
     config: GenericFetcherConfig,
-    additional_headers: Optional[Dict[str, str]] = None,
+    additional_headers: Optional[dict[str, str]] = None,
 ) -> GenericFetcher:
     """Create a fetcher with a configuration."""
     return factory.create_fetcher(config, additional_headers)
@@ -482,7 +482,7 @@ def _when_fetcher_created_with_config(
 def _when_fetcher_created_by_name(
     factory: GenericFetcherFactory,
     name: str,
-    additional_headers: Optional[Dict[str, str]] = None,
+    additional_headers: Optional[dict[str, str]] = None,
 ) -> Tuple[Optional[GenericFetcher], Optional[Exception]]:
     """Create a fetcher by configuration name."""
     try:
@@ -498,7 +498,7 @@ def _when_simple_fetcher_created(
     endpoint: str,
     display_name: str,
     exception_class: type,
-    additional_headers: Optional[Dict[str, str]] = None,
+    additional_headers: Optional[dict[str, str]] = None,
 ) -> GenericFetcher:
     """Create a simple fetcher."""
     return factory.create_simple_fetcher(
@@ -512,8 +512,8 @@ def _when_simple_fetcher_created(
 
 def _when_simple_fetcher_created_full(
     factory: GenericFetcherFactory,
-    params: Dict[str, Any],
-    additional_headers: Optional[Dict[str, str]] = None,
+    params: dict[str, Any],
+    additional_headers: Optional[dict[str, str]] = None,
 ) -> GenericFetcher:
     """Create a simple fetcher with full parameters."""
     return factory.create_simple_fetcher(
@@ -523,7 +523,7 @@ def _when_simple_fetcher_created_full(
 
 def _when_multiple_fetchers_created(
     factory: GenericFetcherFactory, config_names: list[str]
-) -> Tuple[Optional[Dict[str, GenericFetcher]], Optional[Exception]]:
+) -> Tuple[Optional[dict[str, GenericFetcher]], Optional[Exception]]:
     """Create multiple fetchers by configuration names."""
     try:
         fetchers = factory.create_multiple_fetchers(config_names)
@@ -534,7 +534,7 @@ def _when_multiple_fetchers_created(
 
 def _when_all_fetchers_created(
     factory: GenericFetcherFactory,
-) -> Dict[str, GenericFetcher]:
+) -> dict[str, GenericFetcher]:
     """Create fetchers for all registered configurations."""
     return factory.create_all_registered_fetchers()
 
@@ -545,7 +545,7 @@ def _when_all_fetchers_created(
 def _then_factory_initialized_correctly(
     factory: GenericFetcherFactory,
     expected_api_client: AsyncMock,
-    expected_base_headers: Dict[str, str],
+    expected_base_headers: dict[str, str],
     expected_logger: Optional[MagicMock] = None,
 ) -> None:
     """Verify factory is initialized correctly."""
@@ -567,7 +567,7 @@ def _then_config_registered_successfully(
 
 
 def _then_multiple_configs_registered(
-    factory: GenericFetcherFactory, expected_configs: Dict[str, GenericFetcherConfig]
+    factory: GenericFetcherFactory, expected_configs: dict[str, GenericFetcherConfig]
 ) -> None:
     """Verify multiple configurations are registered."""
     registered_configs = factory.get_registered_configs()
@@ -577,8 +577,8 @@ def _then_multiple_configs_registered(
 
 
 def _then_configs_retrieved_correctly(
-    retrieved_configs: Dict[str, GenericFetcherConfig],
-    expected_configs: Dict[str, GenericFetcherConfig],
+    retrieved_configs: dict[str, GenericFetcherConfig],
+    expected_configs: dict[str, GenericFetcherConfig],
 ) -> None:
     """Verify configurations are retrieved correctly."""
     assert retrieved_configs == expected_configs  # noqa: S101
@@ -627,7 +627,7 @@ def _then_simple_fetcher_created_successfully(
 
 
 def _then_simple_fetcher_created_with_options(
-    fetcher: GenericFetcher, expected_params: Dict[str, Any]
+    fetcher: GenericFetcher, expected_params: dict[str, Any]
 ) -> None:
     """Verify simple fetcher is created with all options."""
     assert fetcher is not None  # noqa: S101
@@ -640,7 +640,7 @@ def _then_simple_fetcher_created_with_options(
 
 
 def _then_multiple_fetchers_created_successfully(
-    fetchers: Optional[Dict[str, GenericFetcher]],
+    fetchers: Optional[dict[str, GenericFetcher]],
     exception: Optional[Exception],
     expected_config_names: list[str],
 ) -> None:
@@ -654,7 +654,7 @@ def _then_multiple_fetchers_created_successfully(
 
 
 def _then_multiple_fetchers_creation_failed(
-    fetchers: Optional[Dict[str, GenericFetcher]],
+    fetchers: Optional[dict[str, GenericFetcher]],
     exception: Optional[Exception],
     invalid_name: str,
 ) -> None:
@@ -666,7 +666,7 @@ def _then_multiple_fetchers_creation_failed(
 
 
 def _then_all_fetchers_created_successfully(
-    fetchers: Dict[str, GenericFetcher], expected_config_names: list[str]
+    fetchers: dict[str, GenericFetcher], expected_config_names: list[str]
 ) -> None:
     """Verify all fetchers are created successfully."""
     assert len(fetchers) == len(expected_config_names)  # noqa: S101
@@ -676,7 +676,7 @@ def _then_all_fetchers_created_successfully(
 
 
 def _then_fetcher_headers_merged_correctly(
-    fetcher: GenericFetcher, expected_headers: Dict[str, str]
+    fetcher: GenericFetcher, expected_headers: dict[str, str]
 ) -> None:
     """Verify fetcher headers are merged correctly."""
     assert fetcher.headers == expected_headers  # noqa: S101

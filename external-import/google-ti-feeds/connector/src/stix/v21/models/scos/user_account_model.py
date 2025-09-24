@@ -1,7 +1,7 @@
 """The module provides a model for representing User Account objects in STIX 2.1 format."""
 
 from datetime import datetime
-from typing import Dict, Optional, Union
+from typing import Optional, Union
 
 from connector.src.stix.v21.models.ovs.account_type_ov_enums import AccountTypeOV
 from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
@@ -15,9 +15,9 @@ from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
 class UserAccountModel(BaseSCOModel):
     """Model representing a User Account in STIX 2.1 format."""
 
-    extensions: Optional[Dict[str, Dict[str, Union[str, int, bool]]]] = Field(
+    extensions: Optional[dict[str, dict[str, Union[str, int, bool]]]] = Field(
         default=None,
-        description="Dictionary of extensions. Keys are extension names like 'unix-account-ext', values are the corresponding content.",
+        description="dictionary of extensions. Keys are extension names like 'unix-account-ext', values are the corresponding content.",
     )
 
     user_id: Optional[str] = Field(

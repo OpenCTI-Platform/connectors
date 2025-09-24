@@ -1,6 +1,6 @@
 """The module defines the OpinionModel class, which represents a STIX 2.1 Opinion object."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import pycti  # type: ignore  # Missing library stubs
 from connector.src.stix.v21.models.ovs.opinion_ov_enums import OpinionOV
@@ -34,13 +34,13 @@ class OpinionModel(BaseSDOModel):
 
     @model_validator(mode="before")
     @classmethod
-    def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+    def generate_id(cls, data: dict[str, Any]) -> dict[str, Any]:
         """Generate ID regardless of whether one is provided."""
         data["id"] = OpinionModel._generate_id(data=data)
         return data
 
     @classmethod
-    def _generate_id(cls, data: Dict[str, Any]) -> Any:
+    def _generate_id(cls, data: dict[str, Any]) -> Any:
         """Generate ID regardless of whether one is provided."""
         if isinstance(data, dict) and "created" in data:
             created = data.get("created", None)

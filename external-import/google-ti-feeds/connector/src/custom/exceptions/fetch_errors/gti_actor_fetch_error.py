@@ -1,6 +1,6 @@
 """Exception for errors when fetching threat actors from Google Threat Intelligence API."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from connector.src.custom.exceptions.fetch_errors.gti_api_error import GTIApiError
 
@@ -14,7 +14,7 @@ class GTIActorFetchError(GTIApiError):
         actor_id: Optional[str] = None,
         endpoint: Optional[str] = None,
         status_code: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
+        details: Optional[dict[str, Any]] = None,
     ):
         """Initialize the exception.
 

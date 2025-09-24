@@ -5,7 +5,7 @@ that can work with any API endpoint, response model, and exception handling.
 """
 
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Type
+from typing import Any, Optional, Type
 
 from pydantic import BaseModel
 
@@ -39,7 +39,7 @@ class GenericFetcherConfig:
     method: str = "GET"
     """HTTP method to use (GET, POST, PUT, DELETE, etc.)"""
 
-    headers: Optional[Dict[str, str]] = None
+    headers: Optional[dict[str, str]] = None
     """Additional headers to include in requests"""
 
     timeout: Optional[float] = 60.0

@@ -1,7 +1,7 @@
 """Test module for GenericBatchProcessor functionality."""
 
 from datetime import UTC, datetime
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Optional, Tuple
 from unittest.mock import MagicMock
 
 import pytest
@@ -792,7 +792,7 @@ def test_add_stix_dict_object(stix_conversion_processor: GenericBatchProcessor) 
     stix_dict = {
         "id": "dict-001",
         "type": "test-object",
-        "name": "Dictionary STIX Object",
+        "name": "dictionary STIX Object",
     }
 
     # When: STIX dictionary is added
@@ -835,7 +835,7 @@ def test_add_mixed_stix_and_mapper_objects(
     items = [
         MockSTIXObject("stix-001", "Direct STIX"),
         MockMapper("mapper-001", "Mapper Object"),
-        {"id": "dict-001", "type": "test", "name": "Dict STIX"},
+        {"id": "dict-001", "type": "test", "name": "dict STIX"},
         MockMapper("mapper-002", "Another Mapper"),
     ]
 
@@ -878,7 +878,7 @@ def test_ensure_stix_format_with_base_mapper(
     # Given: A processor and items to test
     stix_obj = MockSTIXObject("test-001", "STIX Object")
     mapper_obj = MockMapper("test-002", "Mapper Object")
-    dict_obj = {"id": "test-003", "type": "test", "name": "Dict Object"}
+    dict_obj = {"id": "test-003", "type": "test", "name": "dict Object"}
     plain_obj = {"data": "plain object"}
 
     # When: Items are processed through _ensure_stix_format
@@ -955,7 +955,7 @@ def _when_latest_date_set(processor: GenericBatchProcessor, date_str: str) -> No
     processor.set_latest_date(date_str)
 
 
-def _when_statistics_retrieved(processor: GenericBatchProcessor) -> Dict[str, Any]:
+def _when_statistics_retrieved(processor: GenericBatchProcessor) -> dict[str, Any]:
     """Retrieve statistics from processor."""
     return processor.get_statistics()
 
@@ -1112,7 +1112,7 @@ def _then_state_updated_with_current_time(mock_work_manager: MockWorkManager) ->
     assert "T" in call_args[1]["date_str"]  # noqa: S101
 
 
-def _then_statistics_are_initial(stats: Dict[str, Any]) -> None:
+def _then_statistics_are_initial(stats: dict[str, Any]) -> None:
     """Assert that statistics show initial state."""
     assert stats["total_items_processed"] == 0  # noqa: S101
     assert stats["total_batches_processed"] == 0  # noqa: S101
@@ -1122,7 +1122,7 @@ def _then_statistics_are_initial(stats: Dict[str, Any]) -> None:
 
 
 def _then_statistics_show_processing(
-    stats: Dict[str, Any],
+    stats: dict[str, Any],
     expected_items: int,
     expected_batches: int,
     expected_sent: int,

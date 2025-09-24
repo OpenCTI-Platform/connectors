@@ -1,6 +1,6 @@
 """Exception for errors when processing work in the connector."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from connector.src.custom.exceptions.gti_base_error import GTIBaseError
 
@@ -13,7 +13,7 @@ class GTIWorkProcessingError(GTIBaseError):
         message: str,
         work_id: Optional[str] = None,
         batch_number: Optional[int] = None,
-        details: Optional[Dict[str, Any]] = None,
+        details: Optional[dict[str, Any]] = None,
     ):
         """Initialize the exception.
 

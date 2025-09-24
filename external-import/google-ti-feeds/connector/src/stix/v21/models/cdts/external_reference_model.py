@@ -1,6 +1,6 @@
 """The module defines the ExternalReferenceModel class, which represents an external reference in STIX 2.1 format."""
 
-from typing import Dict, Optional
+from typing import Optional
 
 from connector.src.stix.v21.models.ovs.hashing_algorithm_ov_enums import HashAlgorithmOV
 from pydantic import BaseModel, Field
@@ -19,7 +19,7 @@ class ExternalReferenceModel(BaseModel):
     url: Optional[str] = Field(
         default=None, description="A URL pointing to an external resource."
     )
-    hashes: Optional[Dict[HashAlgorithmOV, str]] = Field(
+    hashes: Optional[dict[HashAlgorithmOV, str]] = Field(
         default=None,
         description="A dictionary of hashes for the content referenced by the URL. Keys must be valid hash algorithms.",
     )

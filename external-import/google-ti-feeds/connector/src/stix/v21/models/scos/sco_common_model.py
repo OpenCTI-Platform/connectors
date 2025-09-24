@@ -1,6 +1,6 @@
 """The module defines the BaseSCOModel class, which serves as a base model for all STIX Cyber Observable (SCO) objects."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
@@ -28,7 +28,7 @@ class SCOOptionalModel(BaseModel):
         default=None,
         description="list of marking-definition IDs applied to this object.",
     )
-    granular_markings: Optional[list[Dict[str, Any]]] = Field(
+    granular_markings: Optional[list[dict[str, Any]]] = Field(
         default=None,
         description="list of granular markings on specific fields.",
     )
@@ -36,7 +36,7 @@ class SCOOptionalModel(BaseModel):
         default=None,
         description="Whether the object has been defanged to prevent accidental execution.",
     )
-    extensions: Optional[Dict[str, Any]] = Field(
+    extensions: Optional[dict[str, Any]] = Field(
         default=None,
         description="Custom STIX extensions applied to this object.",
     )

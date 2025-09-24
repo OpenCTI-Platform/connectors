@@ -29,7 +29,7 @@ class OctiSoftwareModel:
             marking_ids: list of marking definition IDs to apply to the software
             name: The name of the software
             create_indicator: Whether to create an indicator for the software
-            cpe: CPE v2.3 entry for the software from the official NVD CPE Dictionary
+            cpe: CPE v2.3 entry for the software from the official NVD CPE dictionary
             languages: list of supported languages (ISO 639-2 codes)
             vendor: The name of the software vendor
             version: Version of the software

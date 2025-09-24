@@ -1,7 +1,7 @@
 """Base orchestrator class with common functionality."""
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from connector.src.custom.client_api.client_api import ClientAPI
 from connector.src.custom.configs import GTIConfig
@@ -38,7 +38,7 @@ class BaseOrchestrator:
 
     def _log_relationships_summary(
         self,
-        subentities_ids: Dict[str, Any],
+        subentities_ids: dict[str, Any],
         current_idx: int,
         total: int,
         entity_type: str,
@@ -46,7 +46,7 @@ class BaseOrchestrator:
         """Log summary of relationships found.
 
         Args:
-            subentities_ids: Dictionary of subentity IDs
+            subentities_ids: dictionary of subentity IDs
             current_idx: Current index in processing
             total: Total number of entities
             entity_type: Type of entity being processed
@@ -76,7 +76,7 @@ class BaseOrchestrator:
             entity_type: Type of entity being processed
 
         """
-        entity_types: Dict[str, int] = {}
+        entity_types: dict[str, int] = {}
         for entity in all_entities:
             entity_type_attr = getattr(entity, "type", None)
             if entity_type_attr:

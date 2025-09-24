@@ -2,7 +2,7 @@
 
 import ipaddress
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 from connector.src.custom.models.gti.gti_ip_addresses_model import (
     GTIIPData,
@@ -225,11 +225,11 @@ class GTIIPToSTIXIP(BaseMapper):
 
         return [ip_observable, indicator, relationship]
 
-    def _get_timestamps(self) -> Dict[str, datetime]:
+    def _get_timestamps(self) -> dict[str, datetime]:
         """Extract creation and modification timestamps from IP attributes.
 
         Returns:
-            Dict[str, datetime]: Dictionary with 'created' and 'modified' timestamps
+            dict[str, datetime]: dictionary with 'created' and 'modified' timestamps
 
         """
         created = datetime.now(timezone.utc)

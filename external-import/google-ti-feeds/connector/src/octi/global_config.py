@@ -1,6 +1,6 @@
 """Handles the global configuration for the connector."""
 
-from typing import TYPE_CHECKING, Any, Dict, Type
+from typing import TYPE_CHECKING, Any, Type
 
 from connector.src.octi.configs.connector_config import ConnectorConfig
 from connector.src.octi.configs.octi_config import OctiConfig
@@ -16,7 +16,7 @@ class GlobalConfig:
 
     def __init__(self) -> None:
         """Initialize the global configuration."""
-        self.instanciate_configs: Dict[str, Any] = {}
+        self.instanciate_configs: dict[str, Any] = {}
         try:
             self.octi_config = OctiConfig()
         except ValidationError as e:
@@ -80,9 +80,9 @@ class GlobalConfig:
                 errors={"config_name": config_name},
             )
 
-    def to_dict(self) -> Dict[str, Dict[str, Any]]:
+    def to_dict(self) -> dict[str, dict[str, Any]]:
         """Convert the configuration to a dictionary."""
-        dicc: Dict[str, Dict[str, Any]] = {}
+        dicc: dict[str, dict[str, Any]] = {}
         for config_name, tuples in self.instanciate_configs.items():
             dicc[config_name] = {}
             for key, value in tuples[0].items():
