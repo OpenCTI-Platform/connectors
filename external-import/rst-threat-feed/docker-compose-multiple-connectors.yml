@@ -9,13 +9,16 @@ services:
       - CONNECTOR_NAME=RST Threat Feed - Hourly
       - CONNECTOR_SCOPE=application/json
       - CONNECTOR_LOG_LEVEL=info
-      - RST_THREAT_FEED_BASEURL=https://api.rstcloud.net/v1/
+      - RST_THREAT_FEED_BASEURL=https://api.rstcloud.net/v1
       - RST_THREAT_FEED_APIKEY=${RST_THREAT_FEED_API_KEY}
-      - RST_THREAT_FEED_CONTIMEOUT=30
-      - RST_THREAT_FEED_READTIMEOUT=60
-      - RST_THREAT_FEED_RETRY=5
-      - RST_THREAT_FEED_INTERVAL=3600 # pull every hour
       - RST_THREAT_FEED_SSL_VERIFY=true
+      - RST_THREAT_FEED_CONTIMEOUT=30
+      - RST_THREAT_FEED_READTIMEOUT=120
+      - RST_THREAT_FEED_RETRY=2
+      - RST_THREAT_FEED_INTERVAL=3600 # pull every hour   
+      - RST_THREAT_FEED_MAX_RETRIES=3
+      - RST_THREAT_FEED_RETRY_DELAY=10
+      - RST_THREAT_FEED_RETRY_BACKOFF_MULTIPLIER=2.0
       - RST_THREAT_FEED_IP=true
       - RST_THREAT_FEED_DOMAIN=true
       - RST_THREAT_FEED_URL=true
@@ -27,6 +30,10 @@ services:
       - RST_THREAT_FEED_MIN_SCORE_DETECTION_URL=45
       - RST_THREAT_FEED_MIN_SCORE_DETECTION_HASH=45
       - RST_THREAT_FEED_ONLY_NEW=true
+      - RST_THREAT_FEED_ONLY_ATTRIBUTED=false
+      - RST_THREAT_FEED_KEEP_NAMED_VULNS=true
+      - RST_THREAT_FEED_CREATE_MITRE_TTPS=false
+      - RST_THREAT_FEED_CREATE_CUSTOM_TTPS=true
     restart: always
     depends_on:
       - opencti
@@ -39,13 +46,16 @@ connector-rst-threat-feed-ip:
       - CONNECTOR_NAME=RST Threat Feed - IP
       - CONNECTOR_SCOPE=application/json
       - CONNECTOR_LOG_LEVEL=info
-      - RST_THREAT_FEED_BASEURL=https://api.rstcloud.net/v1/
+      - RST_THREAT_FEED_BASEURL=https://api.rstcloud.net/v1
       - RST_THREAT_FEED_APIKEY=${RST_THREAT_FEED_API_KEY}
-      - RST_THREAT_FEED_CONTIMEOUT=30
-      - RST_THREAT_FEED_READTIMEOUT=60
-      - RST_THREAT_FEED_RETRY=5
-      - RST_THREAT_FEED_INTERVAL=86400 # pull one a day
       - RST_THREAT_FEED_SSL_VERIFY=true
+      - RST_THREAT_FEED_CONTIMEOUT=30
+      - RST_THREAT_FEED_READTIMEOUT=120
+      - RST_THREAT_FEED_RETRY=2
+      - RST_THREAT_FEED_INTERVAL=86400 # pull once a day
+      - RST_THREAT_FEED_MAX_RETRIES=3
+      - RST_THREAT_FEED_RETRY_DELAY=10
+      - RST_THREAT_FEED_RETRY_BACKOFF_MULTIPLIER=2.0
       - RST_THREAT_FEED_IP=true
       - RST_THREAT_FEED_DOMAIN=false
       - RST_THREAT_FEED_URL=false
@@ -57,6 +67,10 @@ connector-rst-threat-feed-ip:
       - RST_THREAT_FEED_MIN_SCORE_DETECTION_URL=45
       - RST_THREAT_FEED_MIN_SCORE_DETECTION_HASH=45
       - RST_THREAT_FEED_ONLY_NEW=true
+      - RST_THREAT_FEED_ONLY_ATTRIBUTED=false
+      - RST_THREAT_FEED_KEEP_NAMED_VULNS=true
+      - RST_THREAT_FEED_CREATE_MITRE_TTPS=false
+      - RST_THREAT_FEED_CREATE_CUSTOM_TTPS=true
     restart: always
     depends_on:
       - opencti
@@ -69,13 +83,16 @@ connector-rst-threat-feed-domain:
       - CONNECTOR_NAME=RST Threat Feed - Domain
       - CONNECTOR_SCOPE=application/json
       - CONNECTOR_LOG_LEVEL=info
-      - RST_THREAT_FEED_BASEURL=https://api.rstcloud.net/v1/
+      - RST_THREAT_FEED_BASEURL=https://api.rstcloud.net/v1
       - RST_THREAT_FEED_APIKEY=${RST_THREAT_FEED_API_KEY}
-      - RST_THREAT_FEED_CONTIMEOUT=30
-      - RST_THREAT_FEED_READTIMEOUT=60
-      - RST_THREAT_FEED_RETRY=5
-      - RST_THREAT_FEED_INTERVAL=86400 # pull one a day
       - RST_THREAT_FEED_SSL_VERIFY=true
+      - RST_THREAT_FEED_CONTIMEOUT=30
+      - RST_THREAT_FEED_READTIMEOUT=120
+      - RST_THREAT_FEED_RETRY=2
+      - RST_THREAT_FEED_INTERVAL=86400 # pull once a day
+      - RST_THREAT_FEED_MAX_RETRIES=3
+      - RST_THREAT_FEED_RETRY_DELAY=10
+      - RST_THREAT_FEED_RETRY_BACKOFF_MULTIPLIER=2.0
       - RST_THREAT_FEED_IP=false
       - RST_THREAT_FEED_DOMAIN=true
       - RST_THREAT_FEED_URL=false
@@ -87,6 +104,10 @@ connector-rst-threat-feed-domain:
       - RST_THREAT_FEED_MIN_SCORE_DETECTION_URL=45
       - RST_THREAT_FEED_MIN_SCORE_DETECTION_HASH=45
       - RST_THREAT_FEED_ONLY_NEW=true
+      - RST_THREAT_FEED_ONLY_ATTRIBUTED=false
+      - RST_THREAT_FEED_KEEP_NAMED_VULNS=true
+      - RST_THREAT_FEED_CREATE_MITRE_TTPS=false
+      - RST_THREAT_FEED_CREATE_CUSTOM_TTPS=true
     restart: always
     depends_on:
       - opencti
@@ -99,13 +120,16 @@ connector-rst-threat-feed-url:
       - CONNECTOR_NAME=RST Threat Feed - URL
       - CONNECTOR_SCOPE=application/json
       - CONNECTOR_LOG_LEVEL=info
-      - RST_THREAT_FEED_BASEURL=https://api.rstcloud.net/v1/
+      - RST_THREAT_FEED_BASEURL=https://api.rstcloud.net/v1
       - RST_THREAT_FEED_APIKEY=${RST_THREAT_FEED_API_KEY}
-      - RST_THREAT_FEED_CONTIMEOUT=30
-      - RST_THREAT_FEED_READTIMEOUT=60
-      - RST_THREAT_FEED_RETRY=5
-      - RST_THREAT_FEED_INTERVAL=86400 # pull one a day
       - RST_THREAT_FEED_SSL_VERIFY=true
+      - RST_THREAT_FEED_CONTIMEOUT=30
+      - RST_THREAT_FEED_READTIMEOUT=120
+      - RST_THREAT_FEED_RETRY=2
+      - RST_THREAT_FEED_INTERVAL=86400 # pull once a day
+      - RST_THREAT_FEED_MAX_RETRIES=3
+      - RST_THREAT_FEED_RETRY_DELAY=10
+      - RST_THREAT_FEED_RETRY_BACKOFF_MULTIPLIER=2.0
       - RST_THREAT_FEED_IP=false
       - RST_THREAT_FEED_DOMAIN=false
       - RST_THREAT_FEED_URL=true
@@ -117,6 +141,10 @@ connector-rst-threat-feed-url:
       - RST_THREAT_FEED_MIN_SCORE_DETECTION_URL=45
       - RST_THREAT_FEED_MIN_SCORE_DETECTION_HASH=45
       - RST_THREAT_FEED_ONLY_NEW=true
+      - RST_THREAT_FEED_ONLY_ATTRIBUTED=false
+      - RST_THREAT_FEED_KEEP_NAMED_VULNS=true
+      - RST_THREAT_FEED_CREATE_MITRE_TTPS=false
+      - RST_THREAT_FEED_CREATE_CUSTOM_TTPS=true
     restart: always
     depends_on:
       - opencti
@@ -129,13 +157,16 @@ connector-rst-threat-feed-hash:
       - CONNECTOR_NAME=RST Threat Feed - Hash
       - CONNECTOR_SCOPE=application/json
       - CONNECTOR_LOG_LEVEL=info
-      - RST_THREAT_FEED_BASEURL=https://api.rstcloud.net/v1/
+      - RST_THREAT_FEED_BASEURL=https://api.rstcloud.net/v1
       - RST_THREAT_FEED_APIKEY=${RST_THREAT_FEED_API_KEY}
-      - RST_THREAT_FEED_CONTIMEOUT=30
-      - RST_THREAT_FEED_READTIMEOUT=60
-      - RST_THREAT_FEED_RETRY=5
-      - RST_THREAT_FEED_INTERVAL=86400 # pull one a day
       - RST_THREAT_FEED_SSL_VERIFY=true
+      - RST_THREAT_FEED_CONTIMEOUT=30
+      - RST_THREAT_FEED_READTIMEOUT=120
+      - RST_THREAT_FEED_RETRY=2
+      - RST_THREAT_FEED_INTERVAL=86400 # pull once a day
+      - RST_THREAT_FEED_MAX_RETRIES=3
+      - RST_THREAT_FEED_RETRY_DELAY=10
+      - RST_THREAT_FEED_RETRY_BACKOFF_MULTIPLIER=2.0
       - RST_THREAT_FEED_IP=false
       - RST_THREAT_FEED_DOMAIN=false
       - RST_THREAT_FEED_URL=false
@@ -147,6 +178,10 @@ connector-rst-threat-feed-hash:
       - RST_THREAT_FEED_MIN_SCORE_DETECTION_URL=45
       - RST_THREAT_FEED_MIN_SCORE_DETECTION_HASH=45
       - RST_THREAT_FEED_ONLY_NEW=true
+      - RST_THREAT_FEED_ONLY_ATTRIBUTED=false
+      - RST_THREAT_FEED_KEEP_NAMED_VULNS=true
+      - RST_THREAT_FEED_CREATE_MITRE_TTPS=false
+      - RST_THREAT_FEED_CREATE_CUSTOM_TTPS=true
     restart: always
     depends_on:
       - opencti

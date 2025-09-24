@@ -13,9 +13,11 @@ from pycti import (
     StixCoreRelationship,
     get_config_variable,
 )
+
 from rstcloud import (
     FeedFetch,
     FeedType,
+    MitreTtpDownloader,
     ThreatTypes,
     feed_converter,
 )
@@ -35,12 +37,12 @@ class RSTThreatFeed:
         self.interval = self.get_config("interval", config, 86400)
         self._downloader_config = {
             "baseurl": self.get_config(
-                "baseurl", config, "https://api.rstcloud.net/v1/"
+                "baseurl", config, "https://api.rstcloud.net/v1"
             ),
             "apikey": self.get_config("apikey", config, None),
             "contimeout": int(self.get_config("contimeout", config, 30)),
-            "readtimeout": int(self.get_config("readtimeout", config, 60)),
-            "retry": int(self.get_config("retry", config, 5)),
+            "readtimeout": int(self.get_config("readtimeout", config, 120)),
+            "retry": int(self.get_config("retry", config, 2)),
             "ssl_verify": bool(self.get_config("ssl_verify", config, True)),
             "latest": str(self.get_config("latest", config, "day")),
             "time_range": ["day", "1h", "4h", "12h"],
@@ -78,7 +80,14 @@ class RSTThreatFeed:
             ),
         }
         self._only_new = bool(self.get_config("only_new", config, True))
-        self._only_attributed = bool(self.get_config("only_attributed", config, True))
+        self._only_attributed = bool(self.get_config("only_attributed", config, False))
+        self._keep_named_vulns = bool(self.get_config("keep_named_vulns", config, True))
+        self._create_custom_ttps = bool(
+            self.get_config("create_custom_ttps", config, True)
+        )
+        self._create_mitre_ttps = bool(
+            self.get_config("create_mitre_ttps", config, False)
+        )
         self.update_existing_data = bool(
             get_config_variable(
                 "CONNECTOR_UPDATE_EXISTING_DATA",
@@ -88,9 +97,13 @@ class RSTThreatFeed:
             )
         )
 
+        # Initialize MITRE TTP downloader
+        self.mitre_downloader = MitreTtpDownloader(config)
+        self.mitre_ttp_mapping = self.mitre_downloader.load_ttp_mapping()
+
         # Retry configuration for connection issues
         self._max_retries = int(self.get_config("max_retries", config, 3))
-        self._retry_delay = int(self.get_config("retry_delay", config, 5))
+        self._retry_delay = int(self.get_config("retry_delay", config, 10))
         self._retry_backoff_multiplier = float(
             self.get_config("retry_backoff_multiplier", config, 2.0)
         )
@@ -147,6 +160,18 @@ class RSTThreatFeed:
                     self.helper.log_info("Connector's first run")
 
                 if last_run is None or ((timestamp - last_run) > self.get_interval()):
+                    # Update MITRE TTP mappings
+                    try:
+                        self.mitre_downloader.download_mitre_ttps()
+                        self.mitre_ttp_mapping = (
+                            self.mitre_downloader.load_ttp_mapping()
+                        )
+                    except Exception as ex:
+                        self.helper.log_error(
+                            f"Failed to update MITRE TTP mappings: {ex}"
+                        )
+                        # Continue with feed processing even if MITRE update fails
+
                     for ioc_feed_type in [
                         FeedType.IP,
                         FeedType.DOMAIN,
@@ -184,12 +209,15 @@ class RSTThreatFeed:
             downloader = FeedFetch.Downloader(self._downloader_config)
             result = downloader.get_feed(feed_type)
             if result["status"] == "ok":
-                stix_bundle = self._create_stix_bundle(result["message"], feed_type)
+                file_path = result["message"]
+                stix_bundle = self._create_stix_bundle(file_path, feed_type)
                 self._batch_send(stix_bundle, feed_type)
+                if os.path.exists(file_path):
+                    os.remove(file_path)
             else:
                 self.helper.log_error(f"Failed to download {feed_type} feed: {result}")
         except Exception as ex:
-            self.helper.log_error(f"Error processing {feed_type} feed: {ex}")
+            self.helper.log_error(f"Error processing {feed_type} feed. Error: {ex}")
             # Don't raise the exception, just log and continue with other feeds
 
     def _create_stix_bundle(self, filepath, feed_type):
@@ -201,6 +229,10 @@ class RSTThreatFeed:
             self._min_score_import,
             self._only_new,
             self._only_attributed,
+            self._keep_named_vulns,
+            self._create_mitre_ttps,
+            self._create_custom_ttps,
+            self.mitre_ttp_mapping,
         )
 
         self.helper.log_info(
@@ -265,97 +297,78 @@ class RSTThreatFeed:
                     stix2.v21.ExternalReference(source_name=source_name, url=source_url)
                 )
 
-            malicious_object = None
+            threat_object = None
             isfamily = True if "/" not in threat["name"] else False
+            shared_parameters = {
+                "id": threat_key,
+                "name": threat["name"],
+                "created_by_ref": organization.id,
+                "external_references": external_references,
+            }
+            if "aliases" in threat:
+                shared_parameters["aliases"] = threat["aliases"]
+            malware_parameters = shared_parameters.copy()
+            malware_parameters["is_family"] = isfamily
             if threat["type"] == ThreatTypes.MALWARE:
-                malicious_object = stix2.v21.Malware(
-                    id=threat_key,
-                    is_family=isfamily,
-                    name=threat["name"],
-                    created_by_ref=organization.id,
-                    external_references=external_references,
-                )
+                threat_object = stix2.v21.Malware(**malware_parameters)
             elif threat["type"] == ThreatTypes.RANSOMWARE:
-                malicious_object = stix2.v21.Malware(
-                    id=threat_key,
-                    is_family=isfamily,
-                    name=threat["name"],
-                    created_by_ref=organization.id,
-                    malware_types=["ransomware"],
-                    external_references=external_references,
+                threat_object = stix2.v21.Malware(
+                    malware_types=["ransomware"], **malware_parameters
                 )
             elif threat["type"] == ThreatTypes.BACKDOOR:
-                malicious_object = stix2.v21.Malware(
-                    id=threat_key,
-                    is_family=isfamily,
-                    name=threat["name"],
-                    created_by_ref=organization.id,
-                    malware_types=["backdoor"],
-                    external_references=external_references,
+                threat_object = stix2.v21.Malware(
+                    malware_types=["backdoor"], **malware_parameters
                 )
             elif threat["type"] == ThreatTypes.RAT:
-                malicious_object = stix2.v21.Malware(
-                    id=threat_key,
-                    is_family=isfamily,
-                    name=threat["name"],
-                    created_by_ref=organization.id,
-                    malware_types=["remote-access-trojan"],
-                    external_references=external_references,
+                threat_object = stix2.v21.Malware(
+                    malware_types=["remote-access-trojan"], **malware_parameters
                 )
             elif threat["type"] == ThreatTypes.EXPLOIT:
-                malicious_object = stix2.v21.Malware(
-                    id=threat_key,
-                    is_family=isfamily,
-                    name=threat["name"],
-                    created_by_ref=organization.id,
-                    malware_types=["exploit-kit"],
-                    external_references=external_references,
+                threat_object = stix2.v21.Malware(
+                    malware_types=["exploit-kit"], **malware_parameters
                 )
             elif threat["type"] == ThreatTypes.CRYPTOMINER:
-                malicious_object = stix2.v21.Malware(
-                    id=threat_key,
-                    is_family=isfamily,
-                    name=threat["name"],
-                    created_by_ref=organization.id,
-                    malware_types=["resource-exploitation"],
-                    external_references=external_references,
+                threat_object = stix2.v21.Malware(
+                    malware_types=["resource-exploitation"], **malware_parameters
                 )
             elif threat["type"] == ThreatTypes.GROUP:
-                malicious_object = stix2.v21.IntrusionSet(
-                    id=threat_key,
-                    name=threat["name"],
-                    created_by_ref=organization.id,
-                    external_references=external_references,
-                )
+                threat_object = stix2.v21.IntrusionSet(**shared_parameters)
             elif threat["type"] == ThreatTypes.CAMPAIGN:
-                malicious_object = stix2.v21.Campaign(
-                    id=threat_key,
-                    name=threat["name"],
-                    created_by_ref=organization.id,
-                    external_references=external_references,
-                )
+                threat_object = stix2.v21.Campaign(**shared_parameters)
             elif threat["type"] == ThreatTypes.TOOL:
-                malicious_object = stix2.v21.Tool(
-                    id=threat_key,
-                    name=threat["name"],
-                    created_by_ref=organization.id,
-                    external_references=external_references,
-                )
+                threat_object = stix2.v21.Tool(**shared_parameters)
+            elif threat["type"] == ThreatTypes.TTP:
+                if "aliases" in threat and self._create_custom_ttps:
+                    threat_object = stix2.v21.AttackPattern(**shared_parameters)
+                elif "mitre_id" in threat and self._create_mitre_ttps:
+                    # mitre_id based lookup. We only map to mitre_id based ttps.
+                    # to get the full information, you need to use the MITRE connector.
+                    threat_object = stix2.v21.AttackPattern(
+                        id=threat_key,
+                        name=threat["name"],
+                        custom_properties={"x_mitre_id": threat["mitre_id"]},
+                        allow_custom=True,
+                    )
+
             elif threat["type"] == ThreatTypes.VULNERABILITY:
-                malicious_object = stix2.v21.Vulnerability(
-                    id=threat_key,
-                    name=threat["name"],
-                    created_by_ref=organization.id,
-                    external_references=[
+                if "aliases" in threat:
+                    shared_parameters["allow_custom"] = True
+                    custom_properties = {"x_opencti_aliases": threat["aliases"]}
+                    shared_parameters["custom_properties"] = custom_properties
+                else:
+                    cve_id = threat["name"].upper()
+                    external_references = [
                         stix2.v21.ExternalReference(
                             source_name="cve.org",
-                            external_id=threat["name"].upper(),
-                            url=f"https://www.cve.org/CVERecord?id={threat['name'].upper()}",
+                            external_id=cve_id,
+                            url=f"https://www.cve.org/CVERecord?id={cve_id}",
                         )
-                    ],
-                )
-            if malicious_object:
-                stix_bundle.append(malicious_object)
+                    ]
+                    shared_parameters["external_references"] = external_references
+                shared_parameters.pop("aliases", None)
+                threat_object = stix2.v21.Vulnerability(**shared_parameters)
+            if threat_object:
+                stix_bundle.append(threat_object)
 
         self.helper.log_info(f"Converting {len(mapping)} Relations to STIX objects")
         for m in mapping:
