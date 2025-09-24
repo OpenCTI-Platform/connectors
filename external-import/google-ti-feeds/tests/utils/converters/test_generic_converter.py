@@ -1,6 +1,6 @@
 """Test module for GenericConverter functionality."""
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 from unittest.mock import MagicMock
 
 import pytest
@@ -89,7 +89,7 @@ class MultiObjectMapper(BaseMapper):
         """Initialize the mapper with input data."""
         self.input_data = input_data
 
-    def to_stix(self) -> List[MockSTIXObject]:
+    def to_stix(self) -> list[MockSTIXObject]:
         """Convert the input data to a list of MockSTIXObjects."""
         return [
             MockSTIXObject(
@@ -463,7 +463,7 @@ def test_convert_multiple_with_multi_object_mapper(
 def test_convert_multiple_empty_list(basic_converter: GenericConverter) -> None:
     """Test multiple entity conversion with empty input list."""
     # Given: A converter and empty input list
-    input_data_list: List[Any] = []
+    input_data_list: list[Any] = []
 
     # When: Multiple entities are converted
     result, exception = _when_convert_multiple_called(basic_converter, input_data_list)
@@ -499,7 +499,7 @@ def test_convert_batch_success(basic_converter: GenericConverter) -> None:
 def test_convert_batch_empty_batches(basic_converter: GenericConverter) -> None:
     """Test batch conversion with all empty batches."""
     # Given: A converter and empty batches
-    input_batches: Dict[str, List[Any]] = {
+    input_batches: Dict[str, list[Any]] = {
         "type_a": [],
         "type_b": [],
     }
@@ -780,7 +780,7 @@ def _when_convert_single_called(
 
 
 def _when_convert_multiple_called(
-    converter: GenericConverter, input_data_list: List[Any], **kwargs: Any
+    converter: GenericConverter, input_data_list: list[Any], **kwargs: Any
 ) -> Tuple[Any, Any]:
     """Call convert_multiple and capture result and exception."""
     try:
@@ -801,7 +801,7 @@ def _when_convert_batch_called(
         return None, e
 
 
-def _when_converted_objects_retrieved(converter: GenericConverter) -> List[Any]:
+def _when_converted_objects_retrieved(converter: GenericConverter) -> list[Any]:
     """Retrieve converted objects from converter."""
     return converter.get_converted_objects()
 
@@ -834,7 +834,7 @@ def _then_stix_object_has_properties(
 
 
 def _then_multiple_stix_objects_returned(
-    result: List[Any], expected_count: int
+    result: list[Any], expected_count: int
 ) -> None:
     """Assert that multiple STIX objects were returned."""
     assert isinstance(result, list)  # noqa: S101
@@ -865,7 +865,7 @@ def _then_conversion_failed_with_validation_error(result: Any, exception: Any) -
 
 
 def _then_multiple_conversion_successful(
-    result: List[Any], exception: Any, expected_count: int
+    result: list[Any], exception: Any, expected_count: int
 ) -> None:
     """Assert that multiple conversion was successful."""
     assert exception is None  # noqa: S101
@@ -875,7 +875,7 @@ def _then_multiple_conversion_successful(
 
 
 def _then_multiple_conversion_partial_success(
-    result: List[Any], exception: Any
+    result: list[Any], exception: Any
 ) -> None:
     """Assert that multiple conversion had partial success."""
     assert exception is None  # noqa: S101
@@ -884,7 +884,7 @@ def _then_multiple_conversion_partial_success(
     assert len(result) >= 0  # Some might succeed  # noqa: S101
 
 
-def _then_multiple_conversion_empty(result: List[Any], exception: Any) -> None:
+def _then_multiple_conversion_empty(result: list[Any], exception: Any) -> None:
     """Assert that multiple conversion returned empty list."""
     assert exception is None  # noqa: S101
     assert result is not None  # noqa: S101
@@ -915,7 +915,7 @@ def _then_batch_conversion_all_empty(result: Dict[str, Any], exception: Any) -> 
 
 
 def _then_converted_objects_tracked(
-    converted_objects: List[Any], expected_count: int
+    converted_objects: list[Any], expected_count: int
 ) -> None:
     """Assert that converted objects are properly tracked."""
     assert isinstance(converted_objects, list)  # noqa: S101

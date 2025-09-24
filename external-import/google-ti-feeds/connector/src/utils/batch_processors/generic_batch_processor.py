@@ -6,7 +6,7 @@ handle configurable batch sizes, and provide consistent work management and stat
 
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from connector.src.utils.batch_processors.generic_batch_processor_config import (
     GenericBatchProcessorConfig,
@@ -47,14 +47,14 @@ class GenericBatchProcessor:
         self._work_manager = work_manager
         self._logger = logger or logging.getLogger(__name__)
 
-        self._current_batch: List[Any] = []
+        self._current_batch: list[Any] = []
         self._latest_date: Optional[str] = None
 
         self._total_items_processed = 0
         self._total_batches_processed = 0
         self._total_items_sent = 0
 
-        self._failed_items: List[Any] = []
+        self._failed_items: list[Any] = []
 
     def add_item(self, item: Any) -> bool:
         """Add an item to the current batch.
@@ -113,11 +113,11 @@ class GenericBatchProcessor:
 
         return True
 
-    def add_items(self, items: List[Any]) -> int:
+    def add_items(self, items: list[Any]) -> int:
         """Add multiple items to batches, processing full batches automatically.
 
         Args:
-            items: List of items to add
+            items: list of items to add
 
         Returns:
             Number of items successfully added
@@ -269,11 +269,11 @@ class GenericBatchProcessor:
         """
         return len(self._current_batch)
 
-    def get_failed_items(self) -> List[Any]:
+    def get_failed_items(self) -> list[Any]:
         """Get list of items that failed processing.
 
         Returns:
-            List of failed items
+            list of failed items
 
         """
         return self._failed_items.copy()
@@ -329,7 +329,7 @@ class GenericBatchProcessor:
         return None
 
     def _process_batch_with_retries(
-        self, batch_items: List[Any], batch_num: int
+        self, batch_items: list[Any], batch_num: int
     ) -> str:
         """Process a batch with retry logic.
 
@@ -389,7 +389,7 @@ class GenericBatchProcessor:
             f"Batch #{batch_num} processing failed after {self.config.max_retries + 1} attempts: {str(last_exception)}"
         ) from last_exception
 
-    def _process_single_batch(self, batch_items: List[Any], batch_num: int) -> str:
+    def _process_single_batch(self, batch_items: list[Any], batch_num: int) -> str:
         """Process a single batch without retries.
 
         Args:
@@ -434,7 +434,7 @@ class GenericBatchProcessor:
 
         return work_id
 
-    def _initiate_work(self, work_name: str, batch_num: int, items: List[Any]) -> str:
+    def _initiate_work(self, work_name: str, batch_num: int, items: list[Any]) -> str:
         """Initiate work in OpenCTI.
 
         Args:
@@ -475,7 +475,7 @@ class GenericBatchProcessor:
                 items_count=len(items),
             ) from work_init_err
 
-    def _send_bundle(self, work_id: str, items: List[Any], batch_num: int) -> None:
+    def _send_bundle(self, work_id: str, items: list[Any], batch_num: int) -> None:
         """Send bundle to OpenCTI.
 
         Args:

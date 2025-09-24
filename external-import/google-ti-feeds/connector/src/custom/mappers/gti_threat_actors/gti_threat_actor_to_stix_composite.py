@@ -1,7 +1,7 @@
 """Composite mapper that handles threat actor to country locations, identity, intrusion set, and relationships conversion in one step."""
 
 from datetime import datetime, timezone
-from typing import Any, List
+from typing import Any
 
 from connector.src.custom.mappers.gti_threat_actors.gti_threat_actor_to_stix_identity import (
     GTIThreatActorToSTIXIdentity,
@@ -44,11 +44,11 @@ class GTIThreatActorToSTIXComposite(BaseMapper):
         self.organization = organization
         self.tlp_marking = tlp_marking
 
-    def to_stix(self) -> List[Any]:
+    def to_stix(self) -> list[Any]:
         """Convert the GTI threat actor to a list of STIX objects (country locations, sectors, intrusion set, relationships).
 
         Returns:
-            List of STIX objects in order: [country_locations..., sectors..., intrusion_set, relationships...]
+            list of STIX objects in order: [country_locations..., sectors..., intrusion_set, relationships...]
 
         """
         all_entities = []
@@ -100,10 +100,10 @@ class GTIThreatActorToSTIXComposite(BaseMapper):
             sectors_with_timing: List of IdentityWithTiming objects containing sector identity and timing data
 
         Returns:
-            List of relationship objects
+            list of relationship objects
 
         """
-        relationships: List[Any] = []
+        relationships: list[Any] = []
 
         if (
             not hasattr(self.threat_actor, "attributes")

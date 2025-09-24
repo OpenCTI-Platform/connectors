@@ -5,7 +5,7 @@ to STIX format using the generic converter system.
 """
 
 import logging
-from typing import Any, List, Optional, Protocol
+from typing import Any, Optional, Protocol
 
 from connector.src.custom.mappers.gti_reports.gti_report_to_stix_report import (
     GTIReportToSTIXReport,
@@ -77,7 +77,7 @@ def clear_all_contexts() -> None:
 def add_to_refs(
     context_key: str,
     linking_method: Any,
-    entity_type_filter: Optional[List[str]] = None,
+    entity_type_filter: Optional[list[str]] = None,
 ) -> Any:
     """Add objects to parent's object_refs.
 
@@ -311,14 +311,14 @@ def manage_context(operation: str, context_key: Optional[str] = None) -> Any:
     return postprocess
 
 
-def link_to_report(entity_type_filter: Optional[List[str]] = None) -> Any:
+def link_to_report(entity_type_filter: Optional[list[str]] = None) -> Any:
     """Add objects to report's object_refs."""
     return add_to_refs(
         "report", GTIReportToSTIXReport.add_object_refs, entity_type_filter
     )
 
 
-def link_main_entity_to_report(entity_types: List[str]) -> Any:
+def link_main_entity_to_report(entity_types: list[str]) -> Any:
     """Add only main entities (by type) to report's object_refs."""
     return add_to_refs("report", GTIReportToSTIXReport.add_object_refs, entity_types)
 

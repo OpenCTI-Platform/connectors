@@ -1,7 +1,7 @@
 """The module defines the IntrusionSetModel class, which represents a STIX 2.1 Intrusion Set object."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import pycti  # type: ignore  # Missing library stubs
 from connector.src.stix.v21.models.ovs.attack_motivation_ov_enums import (
@@ -26,7 +26,7 @@ class IntrusionSetModel(BaseSDOModel):
         default=None,
         description="Details and context about the Intrusion Set, including its purpose and key characteristics.",
     )
-    aliases: Optional[List[str]] = Field(
+    aliases: Optional[list[str]] = Field(
         default=None,
         description="Alternative names used to identify this Intrusion Set.",
     )
@@ -38,7 +38,7 @@ class IntrusionSetModel(BaseSDOModel):
         default=None,
         description="Timestamp when this Intrusion Set was last seen. MUST be >= first_seen if both are set.",
     )
-    goals: Optional[List[str]] = Field(
+    goals: Optional[list[str]] = Field(
         default=None,
         description="High-level goals of this Intrusion Set—what they're trying to achieve.",
     )
@@ -50,7 +50,7 @@ class IntrusionSetModel(BaseSDOModel):
         default=None,
         description="Primary motivation behind this Intrusion Set. SHOULD come from the attack-motivation-ov vocabulary.",
     )
-    secondary_motivations: Optional[List[AttackMotivationOV]] = Field(
+    secondary_motivations: Optional[list[AttackMotivationOV]] = Field(
         default=None,
         description="Secondary motivations behind this Intrusion Set. SHOULD come from the attack-motivation-ov vocabulary.",
     )

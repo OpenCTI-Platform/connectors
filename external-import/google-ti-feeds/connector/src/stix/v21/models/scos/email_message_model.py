@@ -1,7 +1,7 @@
 """The module defines a model for an Email Message in STIX 2.1 format."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import Field
@@ -31,15 +31,15 @@ class EmailMessageModel(BaseSCOModel):
         default=None,
         description="STIX ID of the 'Sender' (transmitter agent).",
     )
-    to_refs: Optional[List[str]] = Field(
+    to_refs: Optional[list[str]] = Field(
         default=None,
         description="STIX IDs of the To: recipients (type: email-address).",
     )
-    cc_refs: Optional[List[str]] = Field(
+    cc_refs: Optional[list[str]] = Field(
         default=None,
         description="STIX IDs of the CC: recipients (type: email-address).",
     )
-    bcc_refs: Optional[List[str]] = Field(
+    bcc_refs: Optional[list[str]] = Field(
         default=None,
         description="STIX IDs of the BCC: recipients (type: email-address).",
     )
@@ -49,8 +49,8 @@ class EmailMessageModel(BaseSCOModel):
     subject: Optional[str] = Field(
         default=None, description="Subject of the email message."
     )
-    received_lines: Optional[List[str]] = Field(
-        default=None, description="List of Received header fields (in order)."
+    received_lines: Optional[list[str]] = Field(
+        default=None, description="list of Received header fields (in order)."
     )
     additional_header_fields: Optional[Dict[str, str]] = Field(
         default=None,
@@ -60,9 +60,9 @@ class EmailMessageModel(BaseSCOModel):
         default=None,
         description="Email body content (must NOT be used if is_multipart is true).",
     )
-    body_multipart: Optional[List[Dict[str, Any]]] = Field(
+    body_multipart: Optional[list[Dict[str, Any]]] = Field(
         default=None,
-        description="List of MIME parts for the body (must NOT be used if is_multipart is false).",
+        description="list of MIME parts for the body (must NOT be used if is_multipart is false).",
     )
     raw_email_ref: Optional[str] = Field(
         default=None,

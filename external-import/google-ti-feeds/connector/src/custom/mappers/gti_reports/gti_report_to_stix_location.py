@@ -1,6 +1,6 @@
 """Converts a GTI report's targeted regions to STIX Location objects."""
 
-from typing import List, Optional
+from typing import Optional
 
 from connector.src.custom.models.gti.gti_report_model import (
     GTIReportData,
@@ -37,14 +37,14 @@ class GTIReportToSTIXLocation(BaseMapper):
         self.organization = organization
         self.tlp_marking = tlp_marking
 
-    def to_stix(self) -> List[Location]:
+    def to_stix(self) -> list[Location]:
         """Convert the GTI report targeted regions to STIX Location objects.
 
         Returns:
-            List[Location]: The list of STIX Location objects.
+            list[Location]: The list of STIX Location objects.
 
         """
-        result: List[Location] = []
+        result: list[Location] = []
 
         if not hasattr(self.report, "attributes") or not self.report.attributes:
             raise ValueError("Invalid report attributes")

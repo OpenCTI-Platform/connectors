@@ -1,7 +1,7 @@
 """The module defines the ProcessModel class, which represents a STIX 2.1 Process object."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import Field
@@ -42,9 +42,9 @@ class ProcessModel(BaseSCOModel):
         description="Dictionary of environment variables (case-sensitive). Keys are variable names, values are their string contents.",
     )
 
-    opened_connection_refs: Optional[List[str]] = Field(
+    opened_connection_refs: Optional[list[str]] = Field(
         default=None,
-        description="List of references to network-traffic objects opened by this process. MUST be of type 'network-traffic'.",
+        description="list of references to network-traffic objects opened by this process. MUST be of type 'network-traffic'.",
     )
 
     creator_user_ref: Optional[str] = Field(
@@ -62,7 +62,7 @@ class ProcessModel(BaseSCOModel):
         description="Reference to the parent process (if any). MUST be of type 'process'.",
     )
 
-    child_refs: Optional[List[str]] = Field(
+    child_refs: Optional[list[str]] = Field(
         default=None,
         description="References to child processes spawned by this one. MUST be of type 'process'.",
     )

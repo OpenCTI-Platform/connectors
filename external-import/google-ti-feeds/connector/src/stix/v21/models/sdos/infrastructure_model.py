@@ -1,7 +1,7 @@
 """The module defines the InfrastructureModel class, which represents a STIX 2.1 Infrastructure object."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import pycti  # type: ignore  # Missing library stubs
 from connector.src.stix.v21.models.cdts.kill_chain_phase_model import (
@@ -29,15 +29,15 @@ class InfrastructureModel(BaseSDOModel):
         default=None,
         description="More details and context about the Infrastructure—purpose, use, relationships, and key characteristics.",
     )
-    infrastructure_types: List[InfrastructureTypeOV] = Field(
+    infrastructure_types: list[InfrastructureTypeOV] = Field(
         ...,
         description="Open vocabulary describing the type(s) of Infrastructure. SHOULD come from the infrastructure-type-ov vocabulary.",
     )
-    aliases: Optional[List[str]] = Field(
+    aliases: Optional[list[str]] = Field(
         default=None,
         description="Alternative names used to identify this Infrastructure.",
     )
-    kill_chain_phases: Optional[List[KillChainPhaseModel]] = Field(
+    kill_chain_phases: Optional[list[KillChainPhaseModel]] = Field(
         default=None,
         description="Kill Chain Phases for which this Infrastructure is used.",
     )

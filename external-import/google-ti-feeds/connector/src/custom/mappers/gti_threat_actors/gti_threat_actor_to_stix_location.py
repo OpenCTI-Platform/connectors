@@ -51,11 +51,11 @@ class GTIThreatActorToSTIXLocation(BaseMapper):
         self.organization = organization
         self.tlp_marking = tlp_marking
 
-    def to_stix(self) -> List[Location]:
+    def to_stix(self) -> list[Location]:
         """Convert the GTI threat actor country regions to STIX Location objects.
 
         Returns:
-            List[Location]: The list of STIX Location objects (countries only).
+            list[Location]: The list of STIX Location objects (countries only).
 
         """
         return [item.location for item in self.to_stix_with_timing()]

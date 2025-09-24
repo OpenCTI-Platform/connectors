@@ -48,11 +48,11 @@ class GTIThreatActorToSTIXIdentity(BaseMapper):
         self.organization = organization
         self.tlp_marking = tlp_marking
 
-    def to_stix(self) -> List[Identity]:
+    def to_stix(self) -> list[Identity]:
         """Convert the GTI threat actor targeted industries to STIX Identity objects.
 
         Returns:
-            List[Identity]: The list of STIX Identity objects representing sectors.
+            list[Identity]: The list of STIX Identity objects representing sectors.
 
         """
         return [item.identity for item in self.to_stix_with_timing()]

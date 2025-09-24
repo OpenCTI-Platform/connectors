@@ -1,6 +1,6 @@
 """The module defines the OpinionModel class, which represents a STIX 2.1 Opinion object."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import pycti  # type: ignore  # Missing library stubs
 from connector.src.stix.v21.models.ovs.opinion_ov_enums import OpinionOV
@@ -19,15 +19,15 @@ class OpinionModel(BaseSDOModel):
         default=None,
         description="Explanation for the Opinion, including reasoning and any supporting evidence.",
     )
-    authors: Optional[List[str]] = Field(
+    authors: Optional[list[str]] = Field(
         default=None,
-        description="List of authors (e.g., analysts) who created this Opinion.",
+        description="list of authors (e.g., analysts) who created this Opinion.",
     )
     opinion: OpinionOV = Field(
         ...,
         description="The producer's opinion about the object(s). MUST be a value from the opinion-enum.",
     )
-    object_refs: List[str] = Field(
+    object_refs: list[str] = Field(
         ...,
         description="STIX Object identifiers that this Opinion applies to.",
     )

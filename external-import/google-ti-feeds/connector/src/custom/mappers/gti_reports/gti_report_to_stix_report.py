@@ -1,7 +1,7 @@
 """Converts a GTI report to a STIX report object."""
 
 from datetime import datetime, timezone
-from typing import List, Tuple
+from typing import Tuple
 
 from connector.src.custom.models.gti.gti_report_model import (
     GTIReportData,
@@ -120,7 +120,7 @@ class GTIReportToSTIXReport(BaseMapper):
         return created, modified
 
     @staticmethod
-    def _extract_labels(attributes: ReportModel) -> List[str]:
+    def _extract_labels(attributes: ReportModel) -> list[str]:
         """Extract labels from report attributes.
 
         Args:
@@ -143,7 +143,7 @@ class GTIReportToSTIXReport(BaseMapper):
 
     def _build_external_references(
         self, attributes: ReportModel
-    ) -> List[ExternalReferenceModel]:
+    ) -> list[ExternalReferenceModel]:
         """Build external references from report attributes.
 
         Args:
@@ -188,7 +188,7 @@ class GTIReportToSTIXReport(BaseMapper):
         return ReportTypeOV(attributes.report_type)
 
     @staticmethod
-    def add_object_refs(objects_to_add: List[str], existing_report: Report) -> Report:
+    def add_object_refs(objects_to_add: list[str], existing_report: Report) -> Report:
         """Add object references to an existing STIX report while preserving all report data.
 
         Args:

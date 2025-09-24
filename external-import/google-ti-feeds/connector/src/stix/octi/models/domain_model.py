@@ -22,7 +22,7 @@ class OctiDomainModel:
         Args:
             value: The domain name value
             organization_id: The ID of the organization that created this domain
-            marking_ids: List of marking definition IDs to apply to the domain
+            marking_ids: list of marking definition IDs to apply to the domain
             create_indicator: Whether to create an indicator for the domain name
             score: The confidence score of the domain name
             **kwargs: Additional arguments to pass to DomainNameModel

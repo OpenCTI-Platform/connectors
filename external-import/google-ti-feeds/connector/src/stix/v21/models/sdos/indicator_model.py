@@ -1,7 +1,7 @@
 """The module contains the IndicatorModel class, which represents a STIX 2.1 Indicator object."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, Literal, Optional
 
 import pycti  # type: ignore  # Missing library stubs
 from connector.src.stix.v21.models.cdts.kill_chain_phase_model import (
@@ -27,7 +27,7 @@ class IndicatorModel(BaseSDOModel):
         default=None,
         description="Details and context about the Indicator's intent, behavior, and usage.",
     )
-    indicator_types: List[IndicatorTypeOV] = Field(
+    indicator_types: list[IndicatorTypeOV] = Field(
         ...,
         description="Open vocabulary categorizing the type of Indicator. SHOULD come from the indicator-type-ov vocabulary.",
     )
@@ -51,7 +51,7 @@ class IndicatorModel(BaseSDOModel):
         default=None,
         description="Timestamp when this Indicator is no longer considered valid. MUST be > valid_from if set.",
     )
-    kill_chain_phases: Optional[List[KillChainPhaseModel]] = Field(
+    kill_chain_phases: Optional[list[KillChainPhaseModel]] = Field(
         default=None,
         description="Kill chain phases to which this Indicator corresponds.",
     )

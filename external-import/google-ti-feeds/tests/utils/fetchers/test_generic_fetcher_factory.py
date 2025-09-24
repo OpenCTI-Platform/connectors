@@ -1,6 +1,6 @@
 """Test module for GenericFetcherFactory functionality."""
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -465,7 +465,7 @@ def _when_get_registered_configs(
     return factory.get_registered_configs()
 
 
-def _when_get_config_names(factory: GenericFetcherFactory) -> List[str]:
+def _when_get_config_names(factory: GenericFetcherFactory) -> list[str]:
     """Get available configuration names."""
     return factory.get_available_config_names()
 
@@ -522,7 +522,7 @@ def _when_simple_fetcher_created_full(
 
 
 def _when_multiple_fetchers_created(
-    factory: GenericFetcherFactory, config_names: List[str]
+    factory: GenericFetcherFactory, config_names: list[str]
 ) -> Tuple[Optional[Dict[str, GenericFetcher]], Optional[Exception]]:
     """Create multiple fetchers by configuration names."""
     try:
@@ -585,7 +585,7 @@ def _then_configs_retrieved_correctly(
 
 
 def _then_config_names_correct(
-    config_names: List[str], expected_names: List[str]
+    config_names: list[str], expected_names: list[str]
 ) -> None:
     """Verify configuration names are correct."""
     assert sorted(config_names) == sorted(expected_names)  # noqa: S101
@@ -642,7 +642,7 @@ def _then_simple_fetcher_created_with_options(
 def _then_multiple_fetchers_created_successfully(
     fetchers: Optional[Dict[str, GenericFetcher]],
     exception: Optional[Exception],
-    expected_config_names: List[str],
+    expected_config_names: list[str],
 ) -> None:
     """Verify multiple fetchers are created successfully."""
     assert fetchers is not None  # noqa: S101
@@ -666,7 +666,7 @@ def _then_multiple_fetchers_creation_failed(
 
 
 def _then_all_fetchers_created_successfully(
-    fetchers: Dict[str, GenericFetcher], expected_config_names: List[str]
+    fetchers: Dict[str, GenericFetcher], expected_config_names: list[str]
 ) -> None:
     """Verify all fetchers are created successfully."""
     assert len(fetchers) == len(expected_config_names)  # noqa: S101

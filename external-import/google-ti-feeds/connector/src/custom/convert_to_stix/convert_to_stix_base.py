@@ -1,7 +1,7 @@
 """Base converter class with common functionality."""
 
 import logging
-from typing import Any, Dict, List, Literal, Optional, cast
+from typing import Any, Dict, Literal, Optional, cast
 
 from connector.src.custom.configs import (
     GTIConfig,
@@ -115,8 +115,8 @@ class BaseConvertToSTIX:
         return tlp_marking
 
     def convert_subentities_to_stix(
-        self, subentities: Dict[str, List[Any]], main_entity: Optional[str] = None
-    ) -> List[Any]:
+        self, subentities: Dict[str, list[Any]], main_entity: Optional[str] = None
+    ) -> list[Any]:
         """Convert each subentity to STIX format.
 
         Args:
@@ -124,7 +124,7 @@ class BaseConvertToSTIX:
             main_entity: Type of the main entity
 
         Returns:
-            List of converted STIX objects
+            list of converted STIX objects
 
         """
         all_stix_entities = []
@@ -161,19 +161,19 @@ class BaseConvertToSTIX:
 
     def convert_subentities_to_stix_with_linking(
         self,
-        subentities: Dict[str, List[Any]],
+        subentities: Dict[str, list[Any]],
         main_entity: str,
-        main_entities: List[Any],
-    ) -> Optional[List[Any]]:
+        main_entities: list[Any],
+    ) -> Optional[list[Any]]:
         """Convert each subentity to STIX format with linking.
 
         Args:
             subentities: Dictionary mapping entity types to lists of entities
             main_entity: The main entity type
-            main_entities: List containing the main entity STIX object
+            main_entities: list containing the main entity STIX object
 
         Returns:
-            List of converted STIX objects
+            list of converted STIX objects
 
         """
         all_stix_entities = self.convert_subentities_to_stix(subentities, main_entity)

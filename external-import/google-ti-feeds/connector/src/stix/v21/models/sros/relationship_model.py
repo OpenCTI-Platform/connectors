@@ -1,7 +1,7 @@
 """The module defines a RelationshipModel class that represents a STIX 2.1 Relationship object."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import pycti  # type: ignore  # Missing library stubs
 from pydantic import BaseModel, Field, model_validator
@@ -66,7 +66,7 @@ class RelationshipModel(BaseModel):
         default=None,
         description="Indicates whether this object has been revoked.",
     )
-    labels: Optional[List[str]] = Field(
+    labels: Optional[list[str]] = Field(
         default=None, description="User-defined labels for this object."
     )
     confidence: Optional[int] = Field(
@@ -76,15 +76,15 @@ class RelationshipModel(BaseModel):
     lang: Optional[str] = Field(
         default=None, description="Language code used for this object."
     )
-    external_references: Optional[List[Dict[str, Any]]] = Field(
+    external_references: Optional[list[Dict[str, Any]]] = Field(
         default=None,
-        description="List of external references relevant to this object.",
+        description="list of external references relevant to this object.",
     )
-    object_marking_refs: Optional[List[str]] = Field(
+    object_marking_refs: Optional[list[str]] = Field(
         default=None,
-        description="List of marking-definition IDs that apply to this object.",
+        description="list of marking-definition IDs that apply to this object.",
     )
-    granular_markings: Optional[List[Dict[str, Any]]] = Field(
+    granular_markings: Optional[list[Dict[str, Any]]] = Field(
         default=None,
         description="Granular markings on specific object fields.",
     )

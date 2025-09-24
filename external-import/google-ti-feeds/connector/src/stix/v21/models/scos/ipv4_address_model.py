@@ -1,6 +1,6 @@
 """The module defines the IPv4AddressModel class, which represents a STIX 2.1 IPv4 Address object."""
 
-from typing import List, Optional
+from typing import Optional
 
 from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import Field
@@ -18,14 +18,14 @@ class IPv4AddressModel(BaseSCOModel):
         description="IPv4 address or CIDR block (e.g., '192.168.1.1' or '10.0.0.0/24'). MUST conform to CIDR notation.",
     )
 
-    resolves_to_refs: Optional[List[str]] = Field(
+    resolves_to_refs: Optional[list[str]] = Field(
         default=None,
-        description="(Deprecated) List of MAC address object references this IP resolves to. MUST be of type 'mac-addr'.",
+        description="(Deprecated) list of MAC address object references this IP resolves to. MUST be of type 'mac-addr'.",
     )
 
-    belongs_to_refs: Optional[List[str]] = Field(
+    belongs_to_refs: Optional[list[str]] = Field(
         default=None,
-        description="(Deprecated) List of autonomous-system object references this IP belongs to. MUST be of type 'autonomous-system'.",
+        description="(Deprecated) list of autonomous-system object references this IP belongs to. MUST be of type 'autonomous-system'.",
     )
 
     def to_stix2_object(self) -> _STIXBase21:

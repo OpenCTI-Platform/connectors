@@ -1,7 +1,7 @@
 """Composite mapper that handles campaign to locations, identity, and campaign conversion in one step."""
 
 from datetime import datetime, timezone
-from typing import Any, List
+from typing import Any
 
 from connector.src.custom.mappers.gti_campaigns.gti_campaign_to_stix_campaign import (
     GTICampaignToSTIXCampaign,
@@ -44,11 +44,11 @@ class GTICampaignToSTIXComposite(BaseMapper):
         self.organization = organization
         self.tlp_marking = tlp_marking
 
-    def to_stix(self) -> List[Any]:
+    def to_stix(self) -> list[Any]:
         """Convert the GTI campaign to a list of STIX objects (locations, identities, campaign, relationships).
 
         Returns:
-            List of STIX objects in order: [locations..., identities..., campaign, relationships...]
+            list of STIX objects in order: [locations..., identities..., campaign, relationships...]
 
         """
         all_entities = []
@@ -104,10 +104,10 @@ class GTICampaignToSTIXComposite(BaseMapper):
             identities_with_timing: List of IdentityWithTiming objects containing identity and timing data
 
         Returns:
-            List of relationship objects
+            list of relationship objects
 
         """
-        relationships: List[Any] = []
+        relationships: list[Any] = []
 
         if not hasattr(self.campaign, "attributes") or not self.campaign.attributes:
             return relationships

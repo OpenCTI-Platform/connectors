@@ -1,6 +1,6 @@
 """The module defines the SoftwareModel class, which represents a STIX 2.1 Software object."""
 
-from typing import List, Optional
+from typing import Optional
 
 from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import Field
@@ -18,9 +18,9 @@ class SoftwareModel(BaseSCOModel):
         default=None,
         description="CPE v2.3 entry for the software from the official NVD CPE Dictionary.",
     )
-    languages: Optional[List[str]] = Field(
+    languages: Optional[list[str]] = Field(
         default=None,
-        description="List of supported languages (ISO 639-2 codes).",
+        description="list of supported languages (ISO 639-2 codes).",
     )
     vendor: Optional[str] = Field(
         default=None, description="The name of the software vendor."

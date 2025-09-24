@@ -1,6 +1,6 @@
 """The module contains the IdentityModel class, which represents a STIX 2.1 Identity object."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import pycti  # type: ignore  # Missing library stubs
 from connector.src.stix.v21.models.ovs.identity_class_ov_enums import IdentityClassOV
@@ -24,7 +24,7 @@ class IdentityModel(BaseSDOModel):
         default=None,
         description="More details and context about the Identity, including its purpose and characteristics.",
     )
-    roles: Optional[List[str]] = Field(
+    roles: Optional[list[str]] = Field(
         default=None,
         description="The roles this Identity performs (e.g., CEO, Domain Admins, Doctors). No open vocabulary yet defined.",
     )
@@ -32,7 +32,7 @@ class IdentityModel(BaseSDOModel):
         ...,
         description="The type of entity described by this Identity. SHOULD come from the identity-class-ov vocabulary.",
     )
-    sectors: Optional[List[IndustrySectorOV]] = Field(
+    sectors: Optional[list[IndustrySectorOV]] = Field(
         default=None,
         description="Industry sectors this Identity belongs to. SHOULD come from the industry-sector-ov vocabulary.",
     )

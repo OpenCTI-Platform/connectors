@@ -3,7 +3,7 @@
 This module defines common constants and utilities used across all GTI configuration modules.
 """
 
-from typing import ClassVar, List, Optional
+from typing import ClassVar, Optional
 
 from connector.src.custom.exceptions.gti_configuration_error import (
     GTIConfigurationError,
@@ -42,17 +42,17 @@ ALLOWED_ORIGINS = [
 
 
 def validate_origins_list(
-    v: List[str], field_name: str, allowed_origins: Optional[List[str]] = None
-) -> List[str]:
-    """Validate a list of origins against allowed values.
+    v: str, field_name: str, allowed_origins: Optional[list[str]] = None
+) -> list[str]:
+    """Split and validate a comma-separated string into a list and validate its contents.
 
     Args:
         v: List of values to validate
         field_name: Name of the field for error messages
-        allowed_origins: List of allowed values (defaults to ALLOWED_ORIGINS)
+        allowed_origins: list of allowed values (defaults to ALLOWED_ORIGINS)
 
     Returns:
-        List of validated origin strings
+        list of validated origin strings
 
     Raises:
         GTIConfigurationError: If validation fails

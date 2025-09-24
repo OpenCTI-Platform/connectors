@@ -51,11 +51,11 @@ class GTICampaignToSTIXLocation(BaseMapper):
         self.organization = organization
         self.tlp_marking = tlp_marking
 
-    def to_stix(self) -> List[Location]:
+    def to_stix(self) -> list[Location]:
         """Convert GTI campaign location data to STIX location objects.
 
         Returns:
-            List[Location]: List of STIX location objects (countries only).
+            list[Location]: list of STIX location objects (countries only).
 
         """
         return [item.location for item in self.to_stix_with_timing()]

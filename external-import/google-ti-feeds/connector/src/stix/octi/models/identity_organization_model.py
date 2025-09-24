@@ -1,7 +1,7 @@
 """The module contains the OctiOrganizationModel class, which represents an OpenCTI Organization Identity."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from connector.src.stix.v21.models.ovs.identity_class_ov_enums import IdentityClassOV
 from connector.src.stix.v21.models.sdos.identity_model import IdentityModel
@@ -17,7 +17,7 @@ class OctiOrganizationModel:
         contact_information: Optional[str] = None,
         organization_type: Optional[str] = None,
         reliability: Optional[str] = None,
-        aliases: Optional[List[str]] = None,
+        aliases: Optional[list[str]] = None,
         **kwargs: Any,
     ) -> IdentityModel:
         """Create an Organization Identity model with OpenCTI custom properties.
@@ -28,7 +28,7 @@ class OctiOrganizationModel:
             contact_information: Contact details for the organization
             organization_type: OpenCTI organization type (e.g., 'vendor')
             reliability: OpenCTI reliability level
-            aliases: List of alternative names for the organization
+            aliases: list of alternative names for the organization
             **kwargs: Additional arguments to pass to IdentityModel
 
         Returns:

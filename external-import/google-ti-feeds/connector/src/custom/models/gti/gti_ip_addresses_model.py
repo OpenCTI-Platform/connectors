@@ -1,6 +1,6 @@
 """Module containing models for GTI IPaddresses response from Google Threat Intelligence API."""
 
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from pydantic import BaseModel, Field
 
@@ -78,10 +78,10 @@ class ContributingFactors(BaseModel):
         None,
         description="Number of detections by Google’s spam and threat filtering engines.",
     )
-    gavs_categories: Optional[List[str]] = Field(
+    gavs_categories: Optional[list[str]] = Field(
         None, description="Known threat categories from GAVS."
     )
-    normalised_categories: Optional[List[str]] = Field(
+    normalised_categories: Optional[list[str]] = Field(
         None, description="Normalized threat categories."
     )
     legitimate_software: Optional[bool] = Field(
@@ -216,8 +216,8 @@ class IPModel(BaseModel):
     reputation: Optional[int] = Field(
         None, description="Community-calculated reputation score."
     )
-    tags: Optional[List[str]] = Field(
-        None, description="List of tags associated with the IP."
+    tags: Optional[list[str]] = Field(
+        None, description="list of tags associated with the IP."
     )
     total_votes: Optional[TotalVotes] = Field(
         None, description="Community vote breakdown for the IP."

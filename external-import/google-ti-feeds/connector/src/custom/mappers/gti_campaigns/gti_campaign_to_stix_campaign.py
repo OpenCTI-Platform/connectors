@@ -1,7 +1,7 @@
 """Converts a GTI campaign to a STIX campaign object."""
 
 from datetime import datetime, timezone
-from typing import Any, List, Optional, Tuple
+from typing import Any, Optional, Tuple
 
 from connector.src.custom.models.gti.gti_campaign_model import (
     CampaignModel,
@@ -125,7 +125,7 @@ class GTICampaignToSTIXCampaign(BaseMapper):
         return first_seen, last_seen
 
     @staticmethod
-    def _extract_labels(attributes: CampaignModel) -> List[str]:
+    def _extract_labels(attributes: CampaignModel) -> list[str]:
         """Extract labels from campaign attributes.
 
         Args:
@@ -144,7 +144,7 @@ class GTICampaignToSTIXCampaign(BaseMapper):
 
     def _build_external_references(
         self, attributes: CampaignModel
-    ) -> List[ExternalReferenceModel]:
+    ) -> list[ExternalReferenceModel]:
         """Build external references from campaign attributes.
 
         Args:

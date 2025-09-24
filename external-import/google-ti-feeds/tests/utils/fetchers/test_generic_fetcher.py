@@ -1,6 +1,6 @@
 """Test module for GenericFetcher functionality."""
 
-from typing import Any, Dict, Generator, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Generator, Optional, Sequence, Tuple, Union
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
@@ -425,7 +425,7 @@ async def test_fetch_multiple_with_errors(
     _then_api_called_multiple_times(mock_api_client, 3)
 
 
-# Scenario: List fetching
+# Scenario: list fetching
 
 
 @pytest.mark.asyncio
@@ -615,7 +615,7 @@ def _given_api_returns_multiple_models(
     mock_client.call_api.side_effect = models
 
 
-def _given_api_returns_list(mock_client: AsyncMock, items: List[Any]) -> None:
+def _given_api_returns_list(mock_client: AsyncMock, items: list[Any]) -> None:
     """Set up mock API client to return a list of items."""
     mock_client.call_api.return_value = items
 
@@ -657,8 +657,8 @@ async def _when_fetch_single_called(
 
 
 async def _when_fetch_multiple_called(
-    fetcher: GenericFetcher, entity_ids: List[str], **kwargs: Any
-) -> Tuple[Optional[List[Any]], Optional[Exception]]:
+    fetcher: GenericFetcher, entity_ids: list[str], **kwargs: Any
+) -> Tuple[Optional[list[Any]], Optional[Exception]]:
     """Call fetch_multiple and capture result and exception."""
     try:
         result = await fetcher.fetch_multiple(entity_ids, **kwargs)
@@ -669,7 +669,7 @@ async def _when_fetch_multiple_called(
 
 async def _when_fetch_list_called(
     fetcher: GenericFetcher, **kwargs: Any
-) -> Tuple[Optional[List[Any]], Optional[Exception]]:
+) -> Tuple[Optional[list[Any]], Optional[Exception]]:
     """Call fetch_list and capture result and exception."""
     try:
         result = await fetcher.fetch_list(**kwargs)
@@ -739,7 +739,7 @@ def _then_fetch_failed_with_param_error(
 
 
 def _then_fetch_multiple_successful(
-    results: Optional[List[Any]], expected_count: int
+    results: Optional[list[Any]], expected_count: int
 ) -> None:
     """Assert that multiple fetch was successful."""
     assert results is not None  # noqa: S101
@@ -747,7 +747,7 @@ def _then_fetch_multiple_successful(
 
 
 def _then_fetch_multiple_partial_success(
-    results: Optional[List[Any]], expected_count: int
+    results: Optional[list[Any]], expected_count: int
 ) -> None:
     """Assert that multiple fetch had partial success."""
     assert results is not None  # noqa: S101
@@ -755,14 +755,14 @@ def _then_fetch_multiple_partial_success(
 
 
 def _then_fetch_list_successful(
-    results: Optional[List[Any]], expected_count: int
+    results: Optional[list[Any]], expected_count: int
 ) -> None:
     """Assert that list fetch was successful."""
     assert results is not None  # noqa: S101
     assert len(results) == expected_count  # noqa: S101
 
 
-def _then_fetch_list_empty(results: Optional[List[Any]]) -> None:
+def _then_fetch_list_empty(results: Optional[list[Any]]) -> None:
     """Assert that list fetch returned empty list."""
     assert results is not None  # noqa: S101
     assert len(results) == 0  # noqa: S101

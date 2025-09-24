@@ -1,6 +1,6 @@
 """Google Threat Intelligence Campaign Models."""
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -53,16 +53,16 @@ class FilesAggregation(BaseModel):
     model_config = {"extra": "allow"}
 
     # Specific crowdsourced result fields
-    crowdsourced_ids_results: Optional[List[CrowdsourcedResult]] = Field(
+    crowdsourced_ids_results: Optional[list[CrowdsourcedResult]] = Field(
         default=None, description="Crowdsourced IDS results"
     )
-    crowdsourced_yara_results: Optional[List[CrowdsourcedResult]] = Field(
+    crowdsourced_yara_results: Optional[list[CrowdsourcedResult]] = Field(
         default=None, description="Crowdsourced YARA results"
     )
-    crowdsourced_sigma_results: Optional[List[CrowdsourcedResult]] = Field(
+    crowdsourced_sigma_results: Optional[list[CrowdsourcedResult]] = Field(
         default=None, description="Crowdsourced Sigma results"
     )
-    suggested_threat_label: Optional[Union[str, List[str]]] = Field(
+    suggested_threat_label: Optional[Union[str, list[str]]] = Field(
         default=None, description="Suggested threat labels"
     )
 
@@ -70,7 +70,7 @@ class FilesAggregation(BaseModel):
 class Aggregations(BaseModel):
     """Dictionary of commonalities between different IoCs associated with the campaign."""
 
-    domains: Optional[Dict[str, List[AggregationValue]]] = Field(
+    domains: Optional[Dict[str, list[AggregationValue]]] = Field(
         default=None,
         description="Technical commonalities among all domains tied to the campaign",
     )
@@ -78,11 +78,11 @@ class Aggregations(BaseModel):
         default=None,
         description="Technical commonalities among all files tied to the campaign",
     )
-    ip_addresses: Optional[Dict[str, List[AggregationValue]]] = Field(
+    ip_addresses: Optional[Dict[str, list[AggregationValue]]] = Field(
         default=None,
         description="Technical commonalities among all IP addresses tied to the campaign",
     )
-    urls: Optional[Dict[str, List[AggregationValue]]] = Field(
+    urls: Optional[Dict[str, list[AggregationValue]]] = Field(
         default=None,
         description="Technical commonalities among all URLs tied to the campaign",
     )
@@ -320,7 +320,7 @@ class CampaignModel(BaseModel):
         default=None,
         description="Dictionary of commonalities between different IoCs associated with the campaign",
     )
-    alt_names_details: Optional[List[AltNameDetail]] = Field(
+    alt_names_details: Optional[list[AltNameDetail]] = Field(
         default=None,
         description="Alternative names / aliases by which the campaign could be known",
     )
@@ -337,7 +337,7 @@ class CampaignModel(BaseModel):
     description: Optional[str] = Field(
         default=None, description="Description / context about the campaign"
     )
-    first_seen_details: Optional[List[ActivityDetail]] = Field(
+    first_seen_details: Optional[list[ActivityDetail]] = Field(
         default=None,
         description="Additional information related to the campaign's first activity",
     )
@@ -345,7 +345,7 @@ class CampaignModel(BaseModel):
         ...,
         description="Last time when the campaign's information was updated (UTC timestamp)",
     )
-    last_seen_details: Optional[List[ActivityDetail]] = Field(
+    last_seen_details: Optional[list[ActivityDetail]] = Field(
         default=None,
         description="Additional information related to the campaign's last activity",
     )
@@ -361,7 +361,7 @@ class CampaignModel(BaseModel):
         default=None,
         description="Ratio of change between the last two recent activity periods (14 days)",
     )
-    recent_activity_summary: Optional[List[int]] = Field(
+    recent_activity_summary: Optional[list[int]] = Field(
         default=None,
         description="Time series representing the activity of IoCs related to the campaign (2 weeks)",
     )
@@ -369,31 +369,31 @@ class CampaignModel(BaseModel):
         default=None,
         description="Indicates if the object has attributes pending to be computed again. Values: PENDING_RECOMPUTE, COMPUTED",
     )
-    source_regions_hierarchy: Optional[List[SourceRegion]] = Field(
+    source_regions_hierarchy: Optional[list[SourceRegion]] = Field(
         default=None,
         description="Country or region from which the campaign is known to originate",
     )
     summary_stats: Optional[SummaryStats] = Field(
         default=None, description="Stats associated with the campaign"
     )
-    tags: Optional[List[str]] = Field(
+    tags: Optional[list[str]] = Field(
         default=None, description="Tags associated with the campaign"
     )
-    tags_details: Optional[List[TagDetail]] = Field(
+    tags_details: Optional[list[TagDetail]] = Field(
         default=None,
         description="Tags associated with the campaign with additional context",
     )
-    targeted_industries_tree: Optional[List[TargetedIndustry]] = Field(
+    targeted_industries_tree: Optional[list[TargetedIndustry]] = Field(
         default=None,
         description="Industries and industry groups known to be targeted by the campaign",
     )
-    targeted_regions_hierarchy: Optional[List[TargetedRegion]] = Field(
+    targeted_regions_hierarchy: Optional[list[TargetedRegion]] = Field(
         default=None,
         description="Regions and countries known to be targeted by the campaign",
     )
-    top_icon_md5: Optional[List[str]] = Field(
+    top_icon_md5: Optional[list[str]] = Field(
         default=None,
-        description="List of the 3 most frequent icons among the campaign's associated IoCs (MD5 hash)",
+        description="list of the 3 most frequent icons among the campaign's associated IoCs (MD5 hash)",
     )
 
 
@@ -424,8 +424,8 @@ class GTICampaignData(BaseModel):
 class GTICampaignResponse(BaseModel):
     """GTI Campaign API response model."""
 
-    data: Optional[List[GTICampaignData]] = Field(
-        default=None, description="List of campaign data"
+    data: Optional[list[GTICampaignData]] = Field(
+        default=None, description="list of campaign data"
     )
     links: Optional[Links] = Field(default=None, description="Response links")
     meta: Optional[GTICampaignMeta] = Field(

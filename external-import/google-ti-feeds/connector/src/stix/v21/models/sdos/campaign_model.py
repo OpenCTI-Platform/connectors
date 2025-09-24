@@ -1,7 +1,7 @@
 """The module contains the CampaignModel class, which represents a STIX 2.1 Campaign object."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import pycti  # type: ignore  # Missing library stubs
 from connector.src.stix.v21.models.sdos.sdo_common_model import BaseSDOModel
@@ -20,7 +20,7 @@ class CampaignModel(BaseSDOModel):
         default=None,
         description="A description that provides more details and context about the Campaign, potentially including its purpose and its key characteristics.",
     )
-    aliases: Optional[List[str]] = Field(
+    aliases: Optional[list[str]] = Field(
         default=None,
         description="Alternative names used to identify this Campaign.",
     )

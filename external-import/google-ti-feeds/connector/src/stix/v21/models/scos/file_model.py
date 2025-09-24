@@ -1,7 +1,7 @@
 """The module defines a FileModel class that represents a file in STIX 2.1 format."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import Field, model_validator
@@ -60,9 +60,9 @@ class FileModel(BaseSCOModel):
         default=None,
         description="Reference to a directory SCO representing this file's parent. MUST be of type 'directory'.",
     )
-    contains_refs: Optional[List[str]] = Field(
+    contains_refs: Optional[list[str]] = Field(
         default=None,
-        description="List of references to other SCOs contained within the file (e.g., embedded IPs, appended files).",
+        description="list of references to other SCOs contained within the file (e.g., embedded IPs, appended files).",
     )
     content_ref: Optional[str] = Field(
         default=None,

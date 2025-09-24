@@ -8,7 +8,7 @@ import hashlib
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from connector.src.utils.api_engine.api_client import ApiClient
 from connector.src.utils.api_engine.exceptions.api_network_error import ApiNetworkError
@@ -92,22 +92,22 @@ class GenericFetcher:
             return None
 
     async def fetch_multiple(
-        self, entity_ids: List[str], **endpoint_params: Any
-    ) -> List[Any]:
+        self, entity_ids: list[str], **endpoint_params: Any
+    ) -> list[Any]:
         """Fetch multiple entities by their IDs.
 
         Args:
-            entity_ids: List of entity IDs to fetch
+            entity_ids: list of entity IDs to fetch
             **endpoint_params: Additional parameters for endpoint formatting and query parameters
 
         Returns:
-            List of entity objects (successful fetches only)
+            list of entity objects (successful fetches only)
 
         Raises:
             Configured exception class: If there's a critical error
 
         """
-        entities: List[Any] = []
+        entities: list[Any] = []
 
         self._log_fetch_start(
             self.config.display_name, "multiple", count=len(entity_ids)
@@ -163,14 +163,14 @@ class GenericFetcher:
         self._log_fetch_result(self.config.display_name, len(entities))
         return entities
 
-    async def fetch_list(self, **endpoint_params: Any) -> List[Any]:
+    async def fetch_list(self, **endpoint_params: Any) -> list[Any]:
         """Fetch a list of entities from the endpoint.
 
         Args:
             **endpoint_params: Parameters to substitute in the endpoint URL and query parameters
 
         Returns:
-            List of entities
+            list of entities
 
         Raises:
             Configured exception class: If there's an error fetching the list

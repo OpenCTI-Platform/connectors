@@ -1,7 +1,7 @@
 """The module defines the DirectoryModel class, which represents a STIX 2.1 Directory object."""
 
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import Field
@@ -33,9 +33,9 @@ class DirectoryModel(BaseSCOModel):
         default=None,
         description="Timestamp when the directory was last accessed.",
     )
-    contains_refs: Optional[List[str]] = Field(
+    contains_refs: Optional[list[str]] = Field(
         default=None,
-        description="List of identifiers referring to SCOs of type 'file' or 'directory' contained within this directory.",
+        description="list of identifiers referring to SCOs of type 'file' or 'directory' contained within this directory.",
     )
 
     def to_stix2_object(self) -> _STIXBase21:

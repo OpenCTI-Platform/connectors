@@ -5,7 +5,7 @@ work with any endpoint, response model, and exception handling configuration.
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Dict, Optional, Type
 
 from connector.src.utils.api_engine.api_client import ApiClient
 from connector.src.utils.fetchers.generic_fetcher import GenericFetcher
@@ -163,22 +163,22 @@ class GenericFetcherFactory:
         """
         return self._fetcher_registry.copy()
 
-    def get_available_config_names(self) -> List[str]:
+    def get_available_config_names(self) -> list[str]:
         """Get list of available configuration names.
 
         Returns:
-            List of registered configuration names
+            list of registered configuration names
 
         """
         return list(self._fetcher_registry.keys())
 
     def create_multiple_fetchers(
-        self, config_names: List[str], base_url: Optional[str] = None
+        self, config_names: list[str], base_url: Optional[str] = None
     ) -> Dict[str, GenericFetcher]:
         """Create multiple fetchers from registered configurations.
 
         Args:
-            config_names: List of configuration names to create fetchers for
+            config_names: list of configuration names to create fetchers for
             base_url: Optional base URL to prepend to all endpoints
 
         Returns:
