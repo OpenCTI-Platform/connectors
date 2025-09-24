@@ -1,5 +1,6 @@
 """Converts a GTI threat actor's targeted industries to STIX Identity objects as sectors."""
 
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from connector.src.custom.models.gti.gti_threat_actor_model import (
@@ -12,7 +13,18 @@ from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
     OrganizationAuthor,
     TLPMarking,
 )
+from pydantic import BaseModel
 from stix2.v21 import Identity  # type: ignore
+
+
+class IdentityWithTiming(BaseModel):
+    """Container for a STIX Identity object with timing metadata."""
+
+    model_config = {"arbitrary_types_allowed": True}
+
+    identity: Identity
+    first_seen: Optional[datetime] = None
+    last_seen: Optional[datetime] = None
 
 
 class GTIThreatActorToSTIXIdentity(BaseMapper):
@@ -43,7 +55,16 @@ class GTIThreatActorToSTIXIdentity(BaseMapper):
             List[Identity]: The list of STIX Identity objects representing sectors.
 
         """
-        result: List[Identity] = []
+        return [item.identity for item in self.to_stix_with_timing()]
+
+    def to_stix_with_timing(self) -> List[IdentityWithTiming]:
+        """Convert the GTI threat actor targeted industries to IdentityWithTiming objects.
+
+        Returns:
+            List[IdentityWithTiming]: The list of IdentityWithTiming objects containing STIX Identity objects and timing metadata.
+
+        """
+        result: List[IdentityWithTiming] = []
 
         if (
             not hasattr(self.threat_actor, "attributes")
@@ -56,11 +77,53 @@ class GTIThreatActorToSTIXIdentity(BaseMapper):
             return result
 
         for industry_data in targeted_industries:
-            sector = self._process_industry(industry_data)
-            if sector:
-                result.append(sector)
+            identity_with_timing = self._process_industry_with_timing(industry_data)
+            if identity_with_timing:
+                result.append(identity_with_timing)
 
         return result
+
+    def _create_sector_with_timing(
+        self, industry_data: TargetedIndustry
+    ) -> IdentityWithTiming:
+        """Create an IdentityWithTiming object from targeted industry data.
+
+        Args:
+            industry_data (TargetedIndustry): The targeted industry data containing industry group information.
+
+        Returns:
+            IdentityWithTiming: The IdentityWithTiming object with timing metadata.
+
+        """
+        sector_name = industry_data.industry_group
+
+        sector = OctiIdentitySectorModel.create(
+            name=sector_name,
+            description=industry_data.description,
+            organization_id=self.organization.id,
+            marking_ids=[self.tlp_marking.id],
+        )
+
+        first_seen = None
+        if industry_data.first_seen:
+            first_seen = datetime.fromtimestamp(
+                industry_data.first_seen, tz=timezone.utc
+            )
+
+        last_seen = None
+        if industry_data.last_seen:
+            last_seen = datetime.fromtimestamp(industry_data.last_seen, tz=timezone.utc)
+
+        # Validate timing: if both are present, stop_time must be later than start_time
+        if first_seen and last_seen and last_seen <= first_seen:
+            # If stop_time is not later than start_time, only keep start_time
+            last_seen = None
+
+        return IdentityWithTiming(
+            identity=sector.to_stix2_object(),
+            first_seen=first_seen,
+            last_seen=last_seen,
+        )
 
     def _process_industry(self, industry_data: TargetedIndustry) -> Optional[Identity]:
         """Process a targeted industry entry and convert to a sector Identity.
@@ -75,7 +138,24 @@ class GTIThreatActorToSTIXIdentity(BaseMapper):
         if not industry_data.industry_group or not industry_data.industry_group.strip():
             return None
 
-        return self._create_sector(industry_data)
+        return self._create_sector_with_timing(industry_data).identity
+
+    def _process_industry_with_timing(
+        self, industry_data: TargetedIndustry
+    ) -> Optional[IdentityWithTiming]:
+        """Process a targeted industry entry and convert to IdentityWithTiming.
+
+        Args:
+            industry_data (TargetedIndustry): The targeted industry data to process.
+
+        Returns:
+            Optional[IdentityWithTiming]: The IdentityWithTiming object, or None if no valid industry group found.
+
+        """
+        if not industry_data.industry_group or not industry_data.industry_group.strip():
+            return None
+
+        return self._create_sector_with_timing(industry_data)
 
     def _create_sector(self, industry_data: TargetedIndustry) -> Identity:
         """Create a Sector Identity object.
@@ -87,13 +167,4 @@ class GTIThreatActorToSTIXIdentity(BaseMapper):
             Identity: The STIX Identity object representing a sector.
 
         """
-        sector_name = industry_data.industry_group
-
-        sector = OctiIdentitySectorModel.create(
-            name=sector_name,
-            description=industry_data.description,
-            organization_id=self.organization.id,
-            marking_ids=[self.tlp_marking.id],
-        )
-
-        return sector
+        return self._create_sector_with_timing(industry_data).identity

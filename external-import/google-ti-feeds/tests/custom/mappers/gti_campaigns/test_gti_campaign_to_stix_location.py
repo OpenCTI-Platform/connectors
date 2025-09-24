@@ -497,7 +497,8 @@ def test_create_country_from_targeted_with_valid_data(
     region_data = campaign_with_country_regions.attributes.targeted_regions_hierarchy[0]
 
     # WHEN: Creating a country location from the targeted region data
-    location = mapper._create_country_from_targeted(region_data)
+    location_with_timing = mapper._create_country_from_targeted_with_timing(region_data)
+    location = location_with_timing.location if location_with_timing else None
 
     # THEN: A valid STIX Location object should be created
     # with proper country name and ISO code properties
@@ -517,7 +518,8 @@ def test_create_country_from_source_with_valid_data(
     region_data = campaign_with_country_regions.attributes.source_regions_hierarchy[0]
 
     # WHEN: Creating a country location from the source region data
-    location = mapper._create_country_from_source(region_data)
+    location_with_timing = mapper._create_country_from_source_with_timing(region_data)
+    location = location_with_timing.location if location_with_timing else None
 
     # THEN: A valid STIX Location object should be created
     # with proper country name and ISO code properties
@@ -546,7 +548,8 @@ def test_create_country_without_country_name(mock_organization, mock_tlp_marking
     region_data = campaign.attributes.targeted_regions_hierarchy[0]
 
     # WHEN: Creating a country location without country name
-    location = mapper._create_country_from_targeted(region_data)
+    location_with_timing = mapper._create_country_from_targeted_with_timing(region_data)
+    location = location_with_timing.location if location_with_timing else None
 
     # THEN: No location should be created
     assert location is None  # noqa: S101
@@ -573,7 +576,8 @@ def test_create_country_without_iso_code(mock_organization, mock_tlp_marking):
     region_data = campaign.attributes.targeted_regions_hierarchy[0]
 
     # WHEN: Creating a country location without ISO code
-    location = mapper._create_country_from_targeted(region_data)
+    location_with_timing = mapper._create_country_from_targeted_with_timing(region_data)
+    location = location_with_timing.location if location_with_timing else None
 
     # THEN: No location should be created
     assert location is None  # noqa: S101
