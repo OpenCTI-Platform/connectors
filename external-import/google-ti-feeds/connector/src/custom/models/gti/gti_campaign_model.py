@@ -1,6 +1,6 @@
 """Google Threat Intelligence Campaign Models."""
 
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -21,7 +21,7 @@ class AggregationValue(BaseModel):
         default=None, description="Last time this aggregation was seen (UTC timestamp)"
     )
     source: Optional[str] = Field(default=None, description="Information supplier")
-    value: Optional[Union[str, dict[str, Any]]] = Field(
+    value: Optional[str | dict[str, Any]] = Field(
         default=None, description="Aggregation value"
     )
 
@@ -62,7 +62,7 @@ class FilesAggregation(BaseModel):
     crowdsourced_sigma_results: Optional[list[CrowdsourcedResult]] = Field(
         default=None, description="Crowdsourced Sigma results"
     )
-    suggested_threat_label: Optional[Union[str, list[str]]] = Field(
+    suggested_threat_label: Optional[str | list[str]] = Field(
         default=None, description="Suggested threat labels"
     )
 
