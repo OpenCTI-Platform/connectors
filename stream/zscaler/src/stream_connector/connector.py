@@ -7,6 +7,7 @@ import urllib3
 import validators
 from pycti import OpenCTIApiClient, OpenCTIConnectorHelper
 from stream_connector.utils import obfuscate_api_key, sanitize_payload
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -74,9 +75,7 @@ class ZscalerConnector:
         )
 
         if response:
-            self.helper.connector_logger.debug(
-                f"Raw response from Zscaler: {response.text}"
-            )
+            self.helper.connector_logger.debug(f"Raw response from Zscaler: {response.text}")
 
         if response and response.status_code == 200:
             # retrieve the JSESSIONID cookie
@@ -271,8 +270,14 @@ class ZscalerConnector:
             msg = f"Failed to send {event_type} event: {response.text if response else 'No response'}"
             self.helper.connector_logger.error(msg)
 
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(multiplier=5, min=5, max=60),
+        retry=retry_if_exception_type(Exception),
+        reraise=True,
+    )
     def activate_zscaler_changes(self, max_retries=5, delay=30):
-        """Activate configuration changes in Zscaler with retry/backoff."""
+        """Activate configuration changes in Zscaler with retry/backoff handled by tenacity."""
 
         session_cookie = self.get_zscaler_session_cookie()
         headers = {
@@ -283,17 +288,13 @@ class ZscalerConnector:
         status_url = "https://zsapi.zscalertwo.net/api/v1/status"
         activate_url = "https://zsapi.zscalertwo.net/api/v1/status/activate"
 
-        time.sleep(5)
-
         for attempt in range(1, max_retries + 1):
             # Check if already ACTIVE/PENDING/INPROGRESS
             status_resp = requests.get(status_url, headers=headers)
             if status_resp and status_resp.status_code == 200:
                 status = status_resp.json().get("status")
                 if status in ("ACTIVE", "PENDING", "INPROGRESS"):
-                    self.helper.connector_logger.info(
-                        f"Zscaler config status = {status}, no activation needed."
-                    )
+                    self.helper.connector_logger.info(f"Zscaler config status = {status}, no activation needed.")
                     return True
 
             # Try activation
@@ -316,7 +317,7 @@ class ZscalerConnector:
                 self.helper.connector_logger.error(
                     f"Activation failed: {resp.text if resp else 'No response'}"
                 )
-                return False
+                raise Exception(f"Activation failed: {resp.text if resp else 'No response'}")
 
         self.helper.connector_logger.error("Activation failed after all retries.")
         return False
@@ -332,6 +333,29 @@ class ZscalerConnector:
                 self.check_and_send_to_zscaler(structured_data, "create")
             elif msg.event == "delete":
                 self.check_and_send_to_zscaler(structured_data, "delete")
+
+            # Always trigger activation after processing an event
+            self.activate_zscaler_changes()
+
+        else:
+            msg = "Ignoring non-STIX indicator."
+            self.helper.connector_logger.info(msg)
+
+    def _process_message(self, msg):
+        """Process messages from the OpenCTI stream."""
+        data = json.loads(msg.data)["data"]
+
+        # Only process indicators with pattern_type 'stix'
+        if data.get("type") == "indicator" and data.get("pattern_type") == "stix":
+            structured_data = {"pattern": data.get("pattern")}
+            if msg.event == "create":
+                self.check_and_send_to_zscaler(structured_data, "create")
+            elif msg.event == "delete":
+                self.check_and_send_to_zscaler(structured_data, "delete")
+
+            # Always trigger activation after processing an event
+            self.activate_zscaler_changes()
+
         else:
             msg = "Ignoring non-STIX indicator."
             self.helper.connector_logger.info(msg)
