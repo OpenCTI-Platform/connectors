@@ -131,3 +131,13 @@ class ConfigDoppel:
             self.load,
             default="clear",
         )
+
+        self.page_size = self._validate_positive_int(
+            get_config_variable(
+                "DOPPEL_PAGE_SIZE",
+                ["doppel", "page_size"],
+                self.load,
+                default=100,
+            ),
+            "DOPPEL_PAGE_SIZE",
+        )

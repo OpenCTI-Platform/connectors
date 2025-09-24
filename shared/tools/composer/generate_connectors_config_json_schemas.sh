@@ -70,7 +70,7 @@ do
     if [ "$CIRCLE_BRANCH" = "master" ]; then
       directory_has_changed=$(git diff HEAD~1 HEAD -- "$connector_directory_path")
     else
-      directory_has_changed=$(git diff origin/master "$connector_directory_path")
+      directory_has_changed=$(git diff $(git merge-base master HEAD) HEAD "$connector_directory_path")
     fi
 
     if [ -z "$directory_has_changed" ] ; then

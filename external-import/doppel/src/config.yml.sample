@@ -19,3 +19,4 @@ doppel:
   historical_polling_days: 30
   max_retries: 3
   retry_delay: 30
+  page_size: 100
