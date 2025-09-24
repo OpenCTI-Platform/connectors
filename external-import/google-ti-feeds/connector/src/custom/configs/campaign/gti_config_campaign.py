@@ -23,7 +23,7 @@ class GTICampaignConfig(GTIBaseConfig):
     )
 
     import_campaigns: bool = Field(
-        default=True,
+        default=False,
         description="Whether to enable importing campaign data from GTI",
     )
 
