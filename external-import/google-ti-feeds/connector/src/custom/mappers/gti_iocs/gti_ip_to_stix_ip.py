@@ -23,6 +23,7 @@ from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
     OrganizationAuthor,
     TLPMarking,
 )
+from stix2 import IPv4Address, IPv6Address  # type: ignore[import-untyped]
 
 
 class GTIIPToSTIXIP(BaseMapper):
@@ -53,8 +54,8 @@ class GTIIPToSTIXIP(BaseMapper):
                 target_ref=src_entity.id,
                 organization_id=src_entity.created_by_ref,
                 marking_ids=src_entity.object_marking_refs,
-                created=datetime.now(),
-                modified=datetime.now(),
+                created=datetime.now(tz=timezone.utc),
+                modified=datetime.now(tz=timezone.utc),
                 description=f"Indicator indicates {src_entity.__class__.__name__}",
             )
         else:
@@ -64,8 +65,8 @@ class GTIIPToSTIXIP(BaseMapper):
                 target_ref=target_entity.id,
                 organization_id=src_entity.created_by_ref,
                 marking_ids=src_entity.object_marking_refs,
-                created=datetime.now(),
-                modified=datetime.now(),
+                created=datetime.now(tz=timezone.utc),
+                modified=datetime.now(tz=timezone.utc),
                 description=f"{src_entity.__class__.__name__} {relation_type} {target_entity.__class__.__name__}",
             )
 
@@ -108,7 +109,7 @@ class GTIIPToSTIXIP(BaseMapper):
         except ValueError as e:
             raise ValueError(f"Invalid IP address format '{self.ip.id}': {e}") from e
 
-    def _create_stix_ip(self) -> Union[IPv4AddressModel, IPv6AddressModel]:
+    def _create_stix_ip(self) -> Union[IPv4Address, IPv6Address]:
         """Create the STIX IP observable object (IPv4 or IPv6).
 
         Returns:
@@ -141,7 +142,7 @@ class GTIIPToSTIXIP(BaseMapper):
                 modified=timestamps["modified"],
             )
 
-        return ip_model
+        return ip_model.to_stix2_object()
 
     def _create_stix_indicator(self) -> IndicatorModel:
         """Create the STIX indicator object.
@@ -183,13 +184,13 @@ class GTIIPToSTIXIP(BaseMapper):
     def _create_relationship_indicator_ip(
         self,
         indicator: IndicatorModel,
-        ip_observable: Union[IPv4AddressModel, IPv6AddressModel],
+        ip_observable: Union[IPv4Address, IPv6Address],
     ) -> RelationshipModel:
         """Create a based-on relationship from indicator to IP observable.
 
         Args:
             indicator (IndicatorModel): The source indicator object.
-            ip_observable (Union[IPv4AddressModel, IPv6AddressModel]): The target IP observable object.
+            ip_observable (Union[IPv4Address, IPv6Address]): The target IP observable object.
 
         Returns:
             RelationshipModel: The relationship model object.

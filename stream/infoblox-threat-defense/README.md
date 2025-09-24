@@ -1,4 +1,4 @@
-# OpenCTI Splunk connector
+# OpenCTI Infoblox Threat Defense connector
 
 This connector allows organizations to stream OpenCTI indicators to Infoblox Threat Defense (BloxOne). This will stream all active indicators to a custom list within Infoblox Threat Defense and remove any revoked indicators.
 

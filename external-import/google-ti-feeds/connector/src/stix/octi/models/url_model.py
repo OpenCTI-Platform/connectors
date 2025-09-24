@@ -1,7 +1,6 @@
 """The module contains the OctiUrlModel class, which represents an OpenCTI URL."""
 
 from typing import Any, Optional
-from uuid import uuid4
 
 from connector.src.stix.v21.models.scos.url_model import URLModel
 
@@ -41,7 +40,6 @@ class OctiUrlModel:
             custom_properties["x_opencti_create_indicator"] = create_indicator
 
         data = {
-            "id": f"url--{uuid4()}",
             "type": "url",
             "spec_version": "2.1",
             "value": value,

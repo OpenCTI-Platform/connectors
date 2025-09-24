@@ -3,12 +3,11 @@ from datetime import datetime, timedelta, timezone
 
 import pycti
 import stix2
+from models.configs.config_loader import ConfigLoader
 from pycti import OpenCTIConnectorHelper
-
-from .api_client import RansomwareAPIClient, RansomwareAPIError
-from .config import ConnectorSettings
-from .converter_to_stix import ConverterToStix
-from .utils import domain_extractor, is_domain, safe_datetime
+from ransomwarelive.api_client import RansomwareAPIClient, RansomwareAPIError
+from ransomwarelive.converter_to_stix import ConverterToStix
+from ransomwarelive.utils import domain_extractor, is_domain, safe_datetime
 
 ONE_DAY_IN_SECONDS = 86400
 
@@ -21,9 +20,7 @@ class RansomwareAPIConnector:
     will be complemented per each connector type.
     """
 
-    def __init__(
-        self, helper: OpenCTIConnectorHelper, config: ConnectorSettings
-    ) -> None:
+    def __init__(self, helper: OpenCTIConnectorHelper, config: ConfigLoader) -> None:
         self.helper = helper
         self.config = config
         self.work_id = None
@@ -401,16 +398,6 @@ class RansomwareAPIConnector:
         bundles = []
         last_run_datetime = self.last_run_datetime_with_ingested_data or self.last_run
 
-        # Previous last_run was in seconds
-        if isinstance(last_run_datetime, int):
-            last_run_datetime = datetime.fromtimestamp(
-                last_run_datetime, tz=timezone.utc
-            )
-        elif isinstance(last_run_datetime, str):
-            last_run_datetime = datetime.strptime(
-                last_run_datetime, "%Y-%m-%dT%H:%M:%S%z"
-            )
-
         for item in response_json:
             created = datetime.strptime(
                 item.get("discovered"), "%Y-%m-%d %H:%M:%S.%f"
@@ -493,17 +480,20 @@ class RansomwareAPIConnector:
             now = datetime.now(tz=timezone.utc)
             current_state = self.helper.get_state()
 
-            if current_state and "last_run" in current_state:
-                if isinstance(current_state["last_run"], int):
-                    self.last_run = datetime.fromtimestamp(current_state["last_run"])
-                else:
-                    self.last_run = datetime.fromisoformat(current_state["last_run"])
-
-            self.last_run_datetime_with_ingested_data = (
-                current_state.get("last_run_datetime_with_ingested_data")
-                if current_state
-                else None
-            )
+            if current_state:
+                if "last_run" in current_state:
+                    if isinstance(current_state["last_run"], int):
+                        self.last_run = datetime.fromtimestamp(
+                            current_state["last_run"]
+                        ).replace(tzinfo=timezone.utc)
+                    else:
+                        self.last_run = datetime.fromisoformat(
+                            current_state["last_run"]
+                        )
+                if current_state.get("last_run_datetime_with_ingested_data", None):
+                    self.last_run_datetime_with_ingested_data = datetime.fromisoformat(
+                        current_state["last_run_datetime_with_ingested_data"]
+                    )
 
             self.helper.connector_logger.info(
                 "[CONNECTOR] Starting connector...",

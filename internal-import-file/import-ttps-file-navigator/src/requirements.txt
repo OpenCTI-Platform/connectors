@@ -1,0 +1,2 @@
+pycti==6.7.19
+typing-extensions==4.15.0

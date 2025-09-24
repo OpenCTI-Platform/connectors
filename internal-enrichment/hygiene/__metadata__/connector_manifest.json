@@ -1,0 +1,19 @@
+{
+  "title": "Hygiene",
+  "slug": "hygiene",
+  "description": "The Hygiene connector prevents false positives from being pushed to detection or blocking by checking observables against trusted allowlists such as MISP Warninglists and other configurable benign-data sources. When an observable matches a known legitimate artifact (for example, common domains like google.com), the connector lowers its score to a very low value and applies the hygiene label to clearly signal qualification and avoid reprocessing. This systematic downgrading and tagging help analysts and automations de-prioritize benign signals and keep downstream controls focused on real threats.\n\nAs an OpenCTI connector, it consumes events or scheduled batches, queries external warning lists, and updates observables in place by adjusting their scores and adding the hygiene label for idempotency and auditability. To ensure it can reliably override scores set by other sources when appropriate, it is recommended to configure this connector’s maximum confidence level to 100 or at least very high, granting it the authority needed to reduce scores for allowlisted observables. Configuration supports selecting list sources, throttling, and scope, enabling precise, repeatable hygiene across the knowledge base.",
+  "short_description": "Proactively reduces false positives in OpenCTI by matching observables against curated allowlists (e.g., MISP Warninglists), lowering scores for benign items, tagging them with a hygiene label to avoid reprocessing and inform analysts, and when configured with high max confidence safely overriding prior scores so only actionable indicators flow to detection and blocking.",
+  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "use_cases" : ["Enrichment & Analysis"],
+  "verified": true,
+  "last_verified_date": "",
+  "playbook_supported": true,
+  "max_confidence_level": 90,
+  "support_version": ">=6.5.1",
+  "subscription_link": "",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/hygiene",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-hygiene",
+  "container_type": "INTERNAL_ENRICHMENT"
+}
