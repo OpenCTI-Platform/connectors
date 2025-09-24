@@ -32,7 +32,7 @@ Configuring the connector is straightforward. The minimal setup requires enterin
 | Connector Scope                    | `CONNECTOR_SCOPE`                    | Yes       | The scope/type of data the connector is handling (e.g., `Domain-Name,Url,indicator`).           |
 | Log Level                          | `CONNECTOR_LOG_LEVEL`                | Yes       | Log verbosity level: `debug`, `info`, `warn`, or `error`.                                       |
 | RST WHOIS API Key                  | `RST_WHOIS_API_API_KEY`              | Yes       | Your API Key for RST Cloud.                                                                     |
-| RST WHOIS API Base URL             | `RST_WHOIS_API_BASE_URL`             | No        | Default: `https://api.rstcloud.net/v1/`. Can be changed if using a different endpoint.          |
+| RST WHOIS API Base URL             | `RST_WHOIS_API_BASE_URL`             | No        | Default: `https://api.rstcloud.net/v1`. Can be changed if using a different endpoint.          |
 | RST WHOIS API Max TLP              | `RST_WHOIS_API_MAX_TLP`              | No        | Default: `TLP:AMBER+STRICT`. Use appropriate TLP values.                                        |
 | RST WHOIS API Timeout              | `RST_WHOIS_API_TIMEOUT`              | No        | Default: `10` seconds. Defines the response timeout.                                            |
 | RST WHOIS API Update Output Action | `RST_WHOIS_API_UPDATE_OUTPUT_ACTION` | No        | Default: `overwrite`. Options: `overwrite`, `append`. Determines how existing data is updated.    |
