@@ -1,6 +1,6 @@
 """Test module for GenericFetcher functionality."""
 
-from typing import Any, Generator, Optional, Sequence, Union
+from typing import Any, Generator, Optional, Sequence
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
@@ -621,7 +621,7 @@ def _given_api_returns_list(mock_client: AsyncMock, items: list[Any]) -> None:
 
 
 def _given_api_returns_wrapped_data(
-    mock_client: AsyncMock, wrapped_response: Union[dict[str, Any], BaseModel]
+    mock_client: AsyncMock, wrapped_response: dict[str, Any] | BaseModel
 ) -> None:
     """Set up mock API client to return wrapped response."""
     mock_client.call_api.return_value = wrapped_response

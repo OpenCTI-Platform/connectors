@@ -1,6 +1,6 @@
 """Model representing a Google Threat Intelligence Threat Actor."""
 
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -341,7 +341,7 @@ class GTIThreatActorData(BaseModel):
 class GTIThreatActorResponse(BaseModel):
     """Model representing a response containing GTI threat actor data."""
 
-    data: Union[GTIThreatActorData, list[GTIThreatActorData]]
+    data: GTIThreatActorData | list[GTIThreatActorData]
     meta: Optional[GTIThreatActorMeta] = Field(
         default=None,
         description="Metadata for the response. May be absent when no data is returned.",

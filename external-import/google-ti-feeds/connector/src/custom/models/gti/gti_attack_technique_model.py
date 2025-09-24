@@ -1,6 +1,6 @@
 """Model representing a Google Threat Intelligence Attack Technique."""
 
-from typing import Optional, Union
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -42,7 +42,7 @@ class Info(BaseModel):
         None,
         description="If true, the technique can be used to execute something on a remote system.",
     )
-    x_mitre_impact_type: Optional[Union[str, list[str]]] = Field(
+    x_mitre_impact_type: Optional[str | list[str]] = Field(
         None,
         description="Denotes if the technique can be used for integrity or availability attacks.",
     )
@@ -50,7 +50,7 @@ class Info(BaseModel):
         None,
         description="Additional information on requirements needed for the technique.",
     )
-    x_mitre_tactic_type: Optional[Union[str, list[str]]] = Field(
+    x_mitre_tactic_type: Optional[str | list[str]] = Field(
         None, description="Tactic type of the technique."
     )
     x_mitre_deprecated: Optional[bool] = Field(

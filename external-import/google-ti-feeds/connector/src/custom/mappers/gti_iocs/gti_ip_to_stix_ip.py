@@ -2,7 +2,7 @@
 
 import ipaddress
 from datetime import datetime, timezone
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 from connector.src.custom.models.gti.gti_ip_addresses_model import (
     GTIIPData,
@@ -109,11 +109,11 @@ class GTIIPToSTIXIP(BaseMapper):
         except ValueError as e:
             raise ValueError(f"Invalid IP address format '{self.ip.id}': {e}") from e
 
-    def _create_stix_ip(self) -> Union[IPv4Address, IPv6Address]:
+    def _create_stix_ip(self) -> IPv4Address | IPv6Address:
         """Create the STIX IP observable object (IPv4 or IPv6).
 
         Returns:
-        Union[IPv4AddressModel, IPv6AddressModel]: The STIX IP observable model object.
+         IPv4Address | IPv6Address: The STIX IP observable model object.
 
         """
         score = self._get_score()
@@ -122,7 +122,7 @@ class GTIIPToSTIXIP(BaseMapper):
 
         timestamps = self._get_timestamps()
 
-        ip_model: Union[IPv4AddressModel, IPv6AddressModel]
+        ip_model: IPv4AddressModel | IPv6AddressModel
         if ip_version == "ipv4":
             ip_model = OctiIPv4AddressModel.create(
                 value=self.ip.id,
@@ -184,13 +184,13 @@ class GTIIPToSTIXIP(BaseMapper):
     def _create_relationship_indicator_ip(
         self,
         indicator: IndicatorModel,
-        ip_observable: Union[IPv4Address, IPv6Address],
+        ip_observable: IPv4Address | IPv6Address,
     ) -> RelationshipModel:
         """Create a based-on relationship from indicator to IP observable.
 
         Args:
             indicator (IndicatorModel): The source indicator object.
-            ip_observable (Union[IPv4Address, IPv6Address]): The target IP observable object.
+            ip_observable (IPv4Address | IPv6Address): The target IP observable object.
 
         Returns:
             RelationshipModel: The relationship model object.
