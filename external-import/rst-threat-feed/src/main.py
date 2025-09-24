@@ -1,3 +1,5 @@
+# pylint: disable=generated-id-stix
+# generate_id warnings are disabled as we generate the IDs in the feed_converter function and pass them as threat_key and ioc_id
 import os
 import sys
 import time
