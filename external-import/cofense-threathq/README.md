@@ -6,7 +6,7 @@ Table of Contents
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
-  - [Configuration variables](#configuration-variables)
+  - [Configuration variables](#configuration-variables-environment)
     - [OpenCTI environment variables](#opencti-environment-variables)
     - [Base connector environment variables](#base-connector-environment-variables)
     - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
@@ -51,15 +51,16 @@ If you are already a customer, detailed documentation on the Intelligence API ca
 
 ### Requirements
 
-- pycti==6.6.12
-- validators==0.33.0
+- pycti==6.7.20
+- validators==0.35.0
 - pydantic>=2.10, <3
 - requests~=2.32.3
 - stix2~=3.0.1
 - PyYAML==6.0.2
-- aiohttp~=3.11.11
-- tenacity~=9.0.0
-- pydantic-settings==2.8.1
+- aiohttp~=3.12.11
+- limiter==0.5.0
+- tenacity~=9.1.2
+- pydantic-settings==2.9.1
 - python-dotenv>=1.0.1, <2
 
 ## Configuration variables environment
