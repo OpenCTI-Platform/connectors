@@ -1,6 +1,6 @@
 """Test module for GenericFetcher functionality."""
 
-from typing import Any, Generator, Optional, Sequence, Tuple, Union
+from typing import Any, Generator, Optional, Sequence, Union
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
@@ -647,7 +647,7 @@ def _given_api_returns_error(mock_client: AsyncMock, error: Exception) -> None:
 
 async def _when_fetch_single_called(
     fetcher: GenericFetcher, **kwargs: Any
-) -> Tuple[Any, Optional[Exception]]:
+) -> tuple[Any, Optional[Exception]]:
     """Call fetch_single and capture result and exception."""
     try:
         result = await fetcher.fetch_single(**kwargs)
@@ -658,7 +658,7 @@ async def _when_fetch_single_called(
 
 async def _when_fetch_multiple_called(
     fetcher: GenericFetcher, entity_ids: list[str], **kwargs: Any
-) -> Tuple[Optional[list[Any]], Optional[Exception]]:
+) -> tuple[Optional[list[Any]], Optional[Exception]]:
     """Call fetch_multiple and capture result and exception."""
     try:
         result = await fetcher.fetch_multiple(entity_ids, **kwargs)
@@ -669,7 +669,7 @@ async def _when_fetch_multiple_called(
 
 async def _when_fetch_list_called(
     fetcher: GenericFetcher, **kwargs: Any
-) -> Tuple[Optional[list[Any]], Optional[Exception]]:
+) -> tuple[Optional[list[Any]], Optional[Exception]]:
     """Call fetch_list and capture result and exception."""
     try:
         result = await fetcher.fetch_list(**kwargs)

@@ -1,6 +1,6 @@
 """Test module for GenericFetcherFactory functionality."""
 
-from typing import Any, Optional, Tuple
+from typing import Any, Optional
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -483,7 +483,7 @@ def _when_fetcher_created_by_name(
     factory: GenericFetcherFactory,
     name: str,
     additional_headers: Optional[dict[str, str]] = None,
-) -> Tuple[Optional[GenericFetcher], Optional[Exception]]:
+) -> tuple[Optional[GenericFetcher], Optional[Exception]]:
     """Create a fetcher by configuration name."""
     try:
         fetcher = factory.create_fetcher_by_name(name, additional_headers)
@@ -523,7 +523,7 @@ def _when_simple_fetcher_created_full(
 
 def _when_multiple_fetchers_created(
     factory: GenericFetcherFactory, config_names: list[str]
-) -> Tuple[Optional[dict[str, GenericFetcher]], Optional[Exception]]:
+) -> tuple[Optional[dict[str, GenericFetcher]], Optional[Exception]]:
     """Create multiple fetchers by configuration names."""
     try:
         fetchers = factory.create_multiple_fetchers(config_names)

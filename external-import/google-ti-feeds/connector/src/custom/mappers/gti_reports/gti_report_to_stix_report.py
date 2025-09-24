@@ -1,7 +1,6 @@
 """Converts a GTI report to a STIX report object."""
 
 from datetime import datetime, timezone
-from typing import Tuple
 
 from connector.src.custom.models.gti.gti_report_model import (
     GTIReportData,
@@ -102,7 +101,7 @@ class GTIReportToSTIXReport(BaseMapper):
         self.author_identity = author_identity
 
     @staticmethod
-    def _get_timestamps(attributes: ReportModel) -> Tuple[datetime, datetime]:
+    def _get_timestamps(attributes: ReportModel) -> tuple[datetime, datetime]:
         """Extract creation and modification timestamps from attributes.
 
         Args:

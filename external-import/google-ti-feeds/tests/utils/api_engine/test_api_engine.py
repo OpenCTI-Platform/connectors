@@ -1,6 +1,6 @@
 """Module to test the API engine components."""
 
-from typing import Any, Optional, Tuple, Type
+from typing import Any, Optional, Type
 from unittest.mock import AsyncMock
 
 import pytest
@@ -343,7 +343,7 @@ def _given_mock_response(
 # --- WHEN: Execute the system under test ---
 async def _when_api_get_called(
     client: ApiClient, url: str, model: Type[BaseModel] | None = None
-) -> Tuple[Any, Exception | None]:
+) -> tuple[Any, Exception | None]:
     """Call the get method of the ApiClient."""
     try:
         return await client.call_api(url, model=model), None
