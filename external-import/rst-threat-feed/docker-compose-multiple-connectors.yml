@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-rst-threat-feed-hourly:
-    image: opencti/connector-rst-threat-feed:6.7.9
+    image: opencti/connector-rst-threat-feed:rolling
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
@@ -38,7 +38,7 @@ services:
     depends_on:
       - opencti
 connector-rst-threat-feed-ip:
-    image: opencti/connector-rst-threat-feed:6.7.9
+    image: opencti/connector-rst-threat-feed:rolling
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
@@ -75,7 +75,7 @@ connector-rst-threat-feed-ip:
     depends_on:
       - opencti
 connector-rst-threat-feed-domain:
-    image: opencti/connector-rst-threat-feed:6.7.9
+    image: opencti/connector-rst-threat-feed:rolling
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
@@ -112,7 +112,7 @@ connector-rst-threat-feed-domain:
     depends_on:
       - opencti
 connector-rst-threat-feed-url:
-    image: opencti/connector-rst-threat-feed:6.7.9
+    image: opencti/connector-rst-threat-feed:rolling
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
@@ -149,7 +149,7 @@ connector-rst-threat-feed-url:
     depends_on:
       - opencti
 connector-rst-threat-feed-hash:
-    image: opencti/connector-rst-threat-feed:6.7.9
+    image: opencti/connector-rst-threat-feed:rolling
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
