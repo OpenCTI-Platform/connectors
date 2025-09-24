@@ -7,7 +7,12 @@ import urllib3
 import validators
 from pycti import OpenCTIApiClient, OpenCTIConnectorHelper
 from stream_connector.utils import obfuscate_api_key, sanitize_payload
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -321,25 +326,6 @@ class ZscalerConnector:
 
         self.helper.connector_logger.error("Activation failed after all retries.")
         return False
-
-    def _process_message(self, msg):
-        """Process messages from the OpenCTI stream."""
-        data = json.loads(msg.data)["data"]
-
-        # Only process indicators with pattern_type 'stix'
-        if data.get("type") == "indicator" and data.get("pattern_type") == "stix":
-            structured_data = {"pattern": data.get("pattern")}
-            if msg.event == "create":
-                self.check_and_send_to_zscaler(structured_data, "create")
-            elif msg.event == "delete":
-                self.check_and_send_to_zscaler(structured_data, "delete")
-
-            # Always trigger activation after processing an event
-            self.activate_zscaler_changes()
-
-        else:
-            msg = "Ignoring non-STIX indicator."
-            self.helper.connector_logger.info(msg)
 
     def _process_message(self, msg):
         """Process messages from the OpenCTI stream."""
