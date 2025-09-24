@@ -8,7 +8,7 @@ import hashlib
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from connector.src.utils.api_engine.api_client import ApiClient
 from connector.src.utils.api_engine.exceptions.api_network_error import ApiNetworkError
@@ -24,7 +24,7 @@ class GenericFetcher:
         self,
         config: GenericFetcherConfig,
         api_client: ApiClient,
-        base_headers: Optional[Dict[str, str]] = None,
+        base_headers: Optional[dict[str, str]] = None,
         base_url: Optional[str] = None,
         logger: Optional[logging.Logger] = None,
     ):
@@ -357,7 +357,7 @@ class GenericFetcher:
 
     async def _make_api_call(
         self,
-        endpoint_params: Dict[str, Any],
+        endpoint_params: dict[str, Any],
         entity_id: Optional[str] = None,
         use_raw_response: bool = False,
     ) -> Optional[Any]:
@@ -432,7 +432,7 @@ class GenericFetcher:
         self,
         response: Any,
         endpoint: str,
-        query_params: Optional[Dict[str, Any]] = None,
+        query_params: Optional[dict[str, Any]] = None,
     ) -> None:
         """Save the raw response to a file for debugging/testing purposes.
 

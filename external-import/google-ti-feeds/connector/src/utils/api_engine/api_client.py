@@ -1,7 +1,7 @@
 """API Client will orchestrate API calls."""
 
 import logging
-from typing import TYPE_CHECKING, Any, Dict, Optional, Type
+from typing import TYPE_CHECKING, Any, Optional, Type
 
 from pydantic import BaseModel
 
@@ -34,10 +34,10 @@ class ApiClient:
         self,
         url: str,
         method: str = "GET",
-        headers: Optional[Dict[str, Any]] = None,
-        params: Optional[Dict[str, Any]] = None,
-        data: Optional[Dict[str, Any]] = None,
-        json_payload: Optional[Dict[str, Any]] = None,
+        headers: Optional[dict[str, Any]] = None,
+        params: Optional[dict[str, Any]] = None,
+        data: Optional[dict[str, Any]] = None,
+        json_payload: Optional[dict[str, Any]] = None,
         response_key: Optional[str] = None,
         model: Optional[Type[BaseModel]] = None,
         timeout: Optional[float] = None,
@@ -47,10 +47,10 @@ class ApiClient:
         Args:
             url (str): The URL to call.
             method (str): The HTTP method to use.
-            headers (Optional[Dict[str, Any]]): The headers to include in the request.
-            params (Optional[Dict[str, Any]]): The query parameters to include in the request.
-            data (Optional[Dict[str, Any]]): The data to include in the request.
-            json_payload (Optional[Dict[str, Any]]): The JSON data to include in the request.
+            headers (Optional[dict[str, Any]]): The headers to include in the request.
+            params (Optional[dict[str, Any]]): The query parameters to include in the request.
+            data (Optional[dict[str, Any]]): The data to include in the request.
+            json_payload (Optional[dict[str, Any]]): The JSON data to include in the request.
             response_key (Optional[str]): The key to extract from the response.
             model (Optional[Type[BaseModel]]): The model to deserialize the response into.
             timeout (Optional[float]): The timeout for the request.

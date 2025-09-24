@@ -1,6 +1,6 @@
 """Module containing models for GTI IPaddresses response from Google Threat Intelligence API."""
 
-from typing import Dict, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -198,7 +198,7 @@ class IPModel(BaseModel):
     last_analysis_date: Optional[int] = Field(
         None, description="Timestamp of last IP scan (UTC)."
     )
-    last_analysis_results: Optional[Dict[str, LastAnalysisResult]] = Field(
+    last_analysis_results: Optional[dict[str, LastAnalysisResult]] = Field(
         None, description="Results from individual IP scanners."
     )
     last_analysis_stats: Optional[LastAnalysisStats] = Field(
@@ -233,7 +233,7 @@ class GTIIPData(BaseModel):
 
     id: str = Field(..., description="IP address identifier.")
     type: str = Field("ip_address", description="Resource type, set to 'ip_address'.")
-    links: Optional[Dict[str, str]] = Field(
+    links: Optional[dict[str, str]] = Field(
         None, description="Links related to the IP resource."
     )
     attributes: Optional[IPModel] = Field(

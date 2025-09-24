@@ -1,6 +1,6 @@
 """Google Threat Intelligence Campaign Models."""
 
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -21,7 +21,7 @@ class AggregationValue(BaseModel):
         default=None, description="Last time this aggregation was seen (UTC timestamp)"
     )
     source: Optional[str] = Field(default=None, description="Information supplier")
-    value: Optional[Union[str, Dict[str, Any]]] = Field(
+    value: Optional[Union[str, dict[str, Any]]] = Field(
         default=None, description="Aggregation value"
     )
 
@@ -42,7 +42,7 @@ class CrowdsourcedResult(BaseModel):
         default=None, description="Last time this result was seen (UTC timestamp)"
     )
     source: Optional[str] = Field(default=None, description="Information supplier")
-    value: Optional[Dict[str, Any]] = Field(
+    value: Optional[dict[str, Any]] = Field(
         default=None, description="Result details as dictionary"
     )
 
@@ -68,9 +68,9 @@ class FilesAggregation(BaseModel):
 
 
 class Aggregations(BaseModel):
-    """Dictionary of commonalities between different IoCs associated with the campaign."""
+    """dictionary of commonalities between different IoCs associated with the campaign."""
 
-    domains: Optional[Dict[str, list[AggregationValue]]] = Field(
+    domains: Optional[dict[str, list[AggregationValue]]] = Field(
         default=None,
         description="Technical commonalities among all domains tied to the campaign",
     )
@@ -78,11 +78,11 @@ class Aggregations(BaseModel):
         default=None,
         description="Technical commonalities among all files tied to the campaign",
     )
-    ip_addresses: Optional[Dict[str, list[AggregationValue]]] = Field(
+    ip_addresses: Optional[dict[str, list[AggregationValue]]] = Field(
         default=None,
         description="Technical commonalities among all IP addresses tied to the campaign",
     )
-    urls: Optional[Dict[str, list[AggregationValue]]] = Field(
+    urls: Optional[dict[str, list[AggregationValue]]] = Field(
         default=None,
         description="Technical commonalities among all URLs tied to the campaign",
     )
@@ -111,7 +111,7 @@ class AltNameDetail(BaseModel):
 
 
 class Counters(BaseModel):
-    """Dictionary of counters of related objects."""
+    """dictionary of counters of related objects."""
 
     attack_techniques: Optional[int] = Field(
         default=None,
@@ -318,7 +318,7 @@ class CampaignModel(BaseModel):
 
     aggregations: Optional[Aggregations] = Field(
         default=None,
-        description="Dictionary of commonalities between different IoCs associated with the campaign",
+        description="dictionary of commonalities between different IoCs associated with the campaign",
     )
     alt_names_details: Optional[list[AltNameDetail]] = Field(
         default=None,
@@ -329,7 +329,7 @@ class CampaignModel(BaseModel):
         description="Type of the object. For campaigns the value is 'campaign'",
     )
     counters: Optional[Counters] = Field(
-        default=None, description="Dictionary of counters of related objects"
+        default=None, description="dictionary of counters of related objects"
     )
     creation_date: int = Field(
         ..., description="Campaign object creation date (UTC timestamp)"

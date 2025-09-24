@@ -1,6 +1,6 @@
 """Model representing a Google Threat Intelligence Attack Technique."""
 
-from typing import Dict, Optional, Union
+from typing import Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -92,7 +92,7 @@ class GTIAttackTechniqueData(BaseModel):
 
     id: str
     type: str = Field("attack_technique")
-    links: Optional[Dict[str, str]] = None
+    links: Optional[dict[str, str]] = None
     attributes: Optional[AttackTechniqueModel] = None
 
 

@@ -2,7 +2,7 @@
 
 import logging
 import re
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from connector.src.custom.configs import (
     REPORT_BATCH_PROCESSOR_CONFIG,
@@ -68,7 +68,7 @@ class OrchestratorReport(BaseOrchestrator):
             logger=self.logger,
         )
 
-    async def run(self, initial_state: Optional[Dict[str, Any]]) -> None:
+    async def run(self, initial_state: Optional[dict[str, Any]]) -> None:
         """Run the report orchestrator.
 
         Args:
@@ -153,7 +153,7 @@ class OrchestratorReport(BaseOrchestrator):
 
                     all_entities = report_entities + (subentity_stix or [])
 
-                    entity_types: Dict[str, int] = {}
+                    entity_types: dict[str, int] = {}
                     for entity in all_entities:
                         entity_type = getattr(entity, "type", None)
                         if entity_type:

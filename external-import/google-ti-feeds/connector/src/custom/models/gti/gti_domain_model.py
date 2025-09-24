@@ -1,6 +1,6 @@
 """Module containing models for GTI domain response from Google Threat Intelligence API."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -237,7 +237,7 @@ class TotalVotes(BaseModel):
 class DomainModel(BaseModel):
     """Model representing attributes of a domain object."""
 
-    categories: Optional[Dict[str, str]] = Field(
+    categories: Optional[dict[str, str]] = Field(
         None, description="Mapping of categorization services to assigned category."
     )
     creation_date: Optional[int] = Field(
@@ -253,7 +253,7 @@ class DomainModel(BaseModel):
     last_analysis_date: Optional[int] = Field(
         None, description="Timestamp of last domain scan (UTC)."
     )
-    last_analysis_results: Optional[Dict[str, LastAnalysisResult]] = Field(
+    last_analysis_results: Optional[dict[str, LastAnalysisResult]] = Field(
         None, description="Results from individual URL scanners."
     )
     last_analysis_stats: Optional[LastAnalysisStats] = Field(
@@ -265,7 +265,7 @@ class DomainModel(BaseModel):
     last_dns_records_date: Optional[int] = Field(
         None, description="Timestamp when DNS records were retrieved (UTC)."
     )
-    last_https_certificate: Optional[Dict[str, Any]] = Field(
+    last_https_certificate: Optional[dict[str, Any]] = Field(
         None, description="SSL Certificate object from last analysis."
     )
     last_https_certificate_date: Optional[int] = Field(
@@ -277,7 +277,7 @@ class DomainModel(BaseModel):
     last_update_date: Optional[int] = Field(
         None, description="Timestamp from WHOIS last update (UTC)."
     )
-    popularity_ranks: Optional[Dict[str, PopularityRank]] = Field(
+    popularity_ranks: Optional[dict[str, PopularityRank]] = Field(
         None, description="Domain's rank positions in popularity services."
     )
     registrar: Optional[str] = Field(
@@ -305,7 +305,7 @@ class GTIDomainData(BaseModel):
 
     id: str = Field(..., description="Domain name or identifier.")
     type: str = Field("domain", description="Resource type, set to 'domain'.")
-    links: Optional[Dict[str, str]] = Field(
+    links: Optional[dict[str, str]] = Field(
         None, description="Links related to the domain resource."
     )
     attributes: Optional[DomainModel] = Field(

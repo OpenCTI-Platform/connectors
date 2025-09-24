@@ -1,7 +1,7 @@
 """The module contains the OctiReportModel class, which represents an OpenCTI Report."""
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from connector.src.stix.v21.models.ovs.report_type_ov_enums import ReportTypeOV
 from connector.src.stix.v21.models.sdos.report_model import ReportModel
@@ -22,7 +22,7 @@ class OctiReportModel:
         published: Optional[datetime] = None,
         object_refs: Optional[list[str]] = None,
         labels: Optional[list[str]] = None,
-        external_references: Optional[list[Dict[str, Any]]] = None,
+        external_references: Optional[list[dict[str, Any]]] = None,
         content: Optional[str] = None,
         **kwargs: Any,
     ) -> ReportModel:

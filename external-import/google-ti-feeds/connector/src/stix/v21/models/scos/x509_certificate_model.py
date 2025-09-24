@@ -1,7 +1,7 @@
 """The module defines the X509CertificateModel class, which represents a STIX 2.1 X.509 Certificate object."""
 
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Optional
 
 from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import BaseModel, Field
@@ -84,7 +84,7 @@ class X509CertificateModel(BaseSCOModel):
     is_self_signed: Optional[bool] = Field(
         default=None, description="True if the certificate is self-signed."
     )
-    hashes: Optional[Dict[str, str]] = Field(
+    hashes: Optional[dict[str, str]] = Field(
         default=None,
         description="Hashes for the full certificate content. Keys MUST follow hash-algorithm-ov.",
     )

@@ -1,6 +1,6 @@
 """Model representing a Google Threat Intelligence Threat Actor."""
 
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -8,19 +8,19 @@ from pydantic import BaseModel, Field
 class AggregationCommonalities(BaseModel):
     """Technical commonalities among all domains, files, IP addresses, and URLs tied to the threat actor."""
 
-    domains: Optional[Dict[str, Any]] = Field(
+    domains: Optional[dict[str, Any]] = Field(
         None,
         description="Technical commonalities among all domains tied to the threat actor.",
     )
-    files: Optional[Dict[str, Any]] = Field(
+    files: Optional[dict[str, Any]] = Field(
         None,
         description="Technical commonalities among all files tied to the threat actor.",
     )
-    ip_addresses: Optional[Dict[str, Any]] = Field(
+    ip_addresses: Optional[dict[str, Any]] = Field(
         None,
         description="Technical commonalities among all IP addresses tied to the threat actor.",
     )
-    urls: Optional[Dict[str, Any]] = Field(
+    urls: Optional[dict[str, Any]] = Field(
         None,
         description="Technical commonalities among all URLs tied to the threat actor.",
     )
@@ -335,7 +335,7 @@ class GTIThreatActorData(BaseModel):
     type: Optional[str] = None
     links: Optional[Links] = None
     attributes: Optional[ThreatActorModel] = None
-    context_attributes: Optional[Dict[str, Any]] = None
+    context_attributes: Optional[dict[str, Any]] = None
 
 
 class GTIThreatActorResponse(BaseModel):

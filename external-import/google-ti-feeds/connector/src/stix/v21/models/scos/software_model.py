@@ -16,7 +16,7 @@ class SoftwareModel(BaseSCOModel):
     name: str = Field(..., description="The name of the software.")
     cpe: Optional[str] = Field(
         default=None,
-        description="CPE v2.3 entry for the software from the official NVD CPE Dictionary.",
+        description="CPE v2.3 entry for the software from the official NVD CPE dictionary.",
     )
     languages: Optional[list[str]] = Field(
         default=None,

@@ -3,7 +3,7 @@
 import asyncio
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Dict, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from .api_request_model import ApiRequestModel
 from .exceptions.api_circuit_open_error import ApiCircuitOpenError
@@ -34,7 +34,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
         self,
         http: BaseHttpClient,
         breaker: BaseCircuitBreaker,
-        limiter: Optional[Union[BaseRateLimiter, Dict[str, Any]]] = None,
+        limiter: Optional[Union[BaseRateLimiter, dict[str, Any]]] = None,
         hooks: Optional[list[BaseRequestHook]] = None,
         max_retries: int = 5,
         backoff: int = 2,

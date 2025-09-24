@@ -1,7 +1,7 @@
 """The module defines a model for an Email Message in STIX 2.1 format."""
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import Field
@@ -52,7 +52,7 @@ class EmailMessageModel(BaseSCOModel):
     received_lines: Optional[list[str]] = Field(
         default=None, description="list of Received header fields (in order)."
     )
-    additional_header_fields: Optional[Dict[str, str]] = Field(
+    additional_header_fields: Optional[dict[str, str]] = Field(
         default=None,
         description="Other header fields (not explicitly modeled); keys preserved as case-sensitive field names.",
     )
@@ -60,7 +60,7 @@ class EmailMessageModel(BaseSCOModel):
         default=None,
         description="Email body content (must NOT be used if is_multipart is true).",
     )
-    body_multipart: Optional[list[Dict[str, Any]]] = Field(
+    body_multipart: Optional[list[dict[str, Any]]] = Field(
         default=None,
         description="list of MIME parts for the body (must NOT be used if is_multipart is false).",
     )

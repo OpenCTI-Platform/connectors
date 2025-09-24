@@ -1,6 +1,6 @@
 """Module containing models for GTI URL response from Google Threat Intelligence API."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -194,7 +194,7 @@ class Tracker(BaseModel):
 class URLModel(BaseModel):
     """Model representing attributes of a URL object."""
 
-    categories: Optional[Dict[str, str]] = Field(
+    categories: Optional[dict[str, str]] = Field(
         None, description="Mapping of categorization services to assigned category."
     )
     favicon: Optional[Favicon] = Field(
@@ -206,14 +206,14 @@ class URLModel(BaseModel):
     gti_assessment: Optional[GTIAssessment] = Field(
         None, description="Google Threat Intelligence assessment for the URL."
     )
-    html_meta: Optional[Dict[str, list[str]]] = Field(
+    html_meta: Optional[dict[str, list[str]]] = Field(
         None,
         description="All meta tags from HTML; keys are tag names and values lists of tag content.",
     )
     last_analysis_date: Optional[int] = Field(
         None, description="Timestamp of last URL scan (UTC)."
     )
-    last_analysis_results: Optional[Dict[str, LastAnalysisResult]] = Field(
+    last_analysis_results: Optional[dict[str, LastAnalysisResult]] = Field(
         None, description="Results from individual URL scanners."
     )
     last_analysis_stats: Optional[LastAnalysisStats] = Field(
@@ -231,10 +231,10 @@ class URLModel(BaseModel):
     last_http_response_content_sha256: Optional[str] = Field(
         None, description="SHA256 hash of the last HTTP response content."
     )
-    last_http_response_cookies: Optional[Dict[str, str]] = Field(
+    last_http_response_cookies: Optional[dict[str, str]] = Field(
         None, description="Cookies from the last HTTP response."
     )
-    last_http_response_headers: Optional[Dict[str, str]] = Field(
+    last_http_response_headers: Optional[dict[str, str]] = Field(
         None, description="Headers from the last HTTP response."
     )
     last_modification_date: Optional[int] = Field(
@@ -255,17 +255,17 @@ class URLModel(BaseModel):
     tags: Optional[list[str]] = Field(
         None, description="list of tags associated with the URL."
     )
-    targeted_brand: Optional[Dict[str, Any]] = Field(
+    targeted_brand: Optional[dict[str, Any]] = Field(
         None, description="Targeted brand information extracted from phishing engines."
     )
     times_submitted: Optional[int] = Field(
         None, description="Number of times the URL has been checked."
     )
     title: Optional[str] = Field(None, description="Webpage title.")
-    total_votes: Optional[Dict[str, int]] = Field(
+    total_votes: Optional[dict[str, int]] = Field(
         None, description="Community vote breakdown ('harmless' and 'malicious')."
     )
-    trackers: Optional[Dict[str, list[Tracker]]] = Field(
+    trackers: Optional[dict[str, list[Tracker]]] = Field(
         None,
         description="Trackers found in the URL; keys are tracker names, values are lists of tracker entries.",
     )
@@ -280,7 +280,7 @@ class GTIURLData(BaseModel):
 
     id: str = Field(..., description="URL identifier or encoded value.")
     type: str = Field("url", description="Resource type, set to 'url'.")
-    links: Optional[Dict[str, str]] = Field(
+    links: Optional[dict[str, str]] = Field(
         None, description="Links related to the URL resource."
     )
     attributes: Optional[URLModel] = Field(

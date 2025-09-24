@@ -1,7 +1,7 @@
 """The module contains the OctiLocationModel class, which represents an OpenCTI Location."""
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from connector.src.stix.v21.models.ovs.region_ov_enums import RegionOV
 from connector.src.stix.v21.models.sdos.location_model import LocationModel
@@ -33,7 +33,7 @@ class OctiLocationModel:
             LocationModel: The created location model
 
         """
-        custom_properties: Dict[str, Any] = kwargs.pop("custom_properties", {})
+        custom_properties: dict[str, Any] = kwargs.pop("custom_properties", {})
         custom_properties["x_opencti_location_type"] = "Country"
 
         data = {
@@ -75,7 +75,7 @@ class OctiLocationModel:
             LocationModel: The created location model
 
         """
-        custom_properties: Dict[str, Any] = kwargs.pop("custom_properties", {})
+        custom_properties: dict[str, Any] = kwargs.pop("custom_properties", {})
         custom_properties["x_opencti_location_type"] = "Region"
 
         data = {

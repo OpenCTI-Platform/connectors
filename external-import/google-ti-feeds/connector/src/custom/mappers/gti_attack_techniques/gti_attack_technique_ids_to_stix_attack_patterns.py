@@ -14,7 +14,7 @@ Example usage:
 """
 
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from connector.src.custom.models.gti.gti_attack_technique_id_model import (
     GTIAttackTechniqueIDData,
@@ -124,14 +124,14 @@ class GTIAttackTechniqueIDsToSTIXAttackPatterns(BaseMapper):
 
     def _create_minimal_external_references(
         self, technique_id: str
-    ) -> Optional[list[Dict[str, str]]]:
+    ) -> Optional[list[dict[str, str]]]:
         """Create minimal external references with only MITRE reference.
 
         Args:
             technique_id: The attack technique ID
 
         Returns:
-            Optional[list[Dict[str, str]]]: Minimal external references with MITRE reference
+            Optional[list[dict[str, str]]]: Minimal external references with MITRE reference
 
         """
         if not technique_id:

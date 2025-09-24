@@ -1,7 +1,7 @@
 """Converts a GTI file to a STIX file object and indicator."""
 
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from connector.src.custom.models.gti.gti_file_model import (
     GTIFileData,
@@ -200,11 +200,11 @@ class GTIFileToSTIXFile(BaseMapper):
 
         return [file_observable, indicator, relationship]
 
-    def _get_timestamps(self) -> Dict[str, datetime]:
+    def _get_timestamps(self) -> dict[str, datetime]:
         """Extract creation and modification timestamps from file attributes.
 
         Returns:
-            Dict[str, datetime]: Dictionary with 'created' and 'modified' timestamps
+            dict[str, datetime]: dictionary with 'created' and 'modified' timestamps
 
         """
         created = datetime.now(timezone.utc)
@@ -257,11 +257,11 @@ class GTIFileToSTIXFile(BaseMapper):
 
         return None
 
-    def _build_hashes(self) -> Optional[Dict[str, str]]:
+    def _build_hashes(self) -> Optional[dict[str, str]]:
         """Build hashes dictionary from file attributes.
 
         Returns:
-            Optional[Dict[str, str]]: Dictionary of hashes if available, None otherwise
+            Optional[dict[str, str]]: dictionary of hashes if available, None otherwise
 
         """
         if not self.file.attributes:

@@ -1,6 +1,6 @@
 """Test module for GenericConverterFactory functionality."""
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Optional, Tuple
 from unittest.mock import MagicMock
 
 import pytest
@@ -163,7 +163,7 @@ def mock_logger() -> MagicMock:
 
 
 @pytest.fixture
-def global_dependencies() -> Dict[str, Any]:
+def global_dependencies() -> dict[str, Any]:
     """Fixture for global dependencies."""
     return {
         "organization": "global-org",
@@ -205,7 +205,7 @@ def basic_factory(mock_logger: MagicMock) -> GenericConverterFactory:
 
 @pytest.fixture
 def full_factory(
-    global_dependencies: Dict[str, Any], mock_logger: MagicMock
+    global_dependencies: dict[str, Any], mock_logger: MagicMock
 ) -> GenericConverterFactory:
     """Fixture for factory with global dependencies."""
     return GenericConverterFactory(
@@ -244,7 +244,7 @@ def test_factory_initialization_basic(mock_logger: MagicMock) -> None:
 
 
 def test_factory_initialization_with_global_dependencies(
-    global_dependencies: Dict[str, Any], mock_logger: MagicMock
+    global_dependencies: dict[str, Any], mock_logger: MagicMock
 ) -> None:
     """Test factory initialization with global dependencies."""
     # Given: Global dependencies and logger
@@ -551,7 +551,7 @@ def test_create_conversion_pipeline_empty_list(
 
 
 def test_dependency_merging_global_and_additional(
-    global_dependencies: Dict[str, Any], mock_logger: MagicMock
+    global_dependencies: dict[str, Any], mock_logger: MagicMock
 ) -> None:
     """Test merging of global and additional dependencies."""
     # Given: A factory with global dependencies
@@ -654,7 +654,7 @@ def _when_config_registered(
 
 
 def _when_batch_configs_registered(
-    factory: GenericConverterFactory, configs: Dict[str, GenericConverterConfig]
+    factory: GenericConverterFactory, configs: dict[str, GenericConverterConfig]
 ) -> None:
     """Register batch configurations with the factory."""
     factory.register_batch_configs(configs)
@@ -662,7 +662,7 @@ def _when_batch_configs_registered(
 
 def _when_get_registered_configs(
     factory: GenericConverterFactory,
-) -> Dict[str, GenericConverterConfig]:
+) -> dict[str, GenericConverterConfig]:
     """Get all registered configurations."""
     return factory.get_registered_configs()
 
@@ -675,7 +675,7 @@ def _when_get_config_names(factory: GenericConverterFactory) -> list[str]:
 def _when_converter_created_with_config(
     factory: GenericConverterFactory,
     config: GenericConverterConfig,
-    additional_deps: Optional[Dict[str, Any]] = None,
+    additional_deps: Optional[dict[str, Any]] = None,
 ) -> GenericConverter:
     """Create a converter with a configuration."""
     return factory.create_converter(config, additional_deps)
@@ -684,7 +684,7 @@ def _when_converter_created_with_config(
 def _when_converter_created_by_name(
     factory: GenericConverterFactory,
     name: str,
-    additional_deps: Optional[Dict[str, Any]] = None,
+    additional_deps: Optional[dict[str, Any]] = None,
 ) -> Tuple[Any, Any]:
     """Create a converter by name and capture result and exception."""
     try:
@@ -714,8 +714,8 @@ def _when_simple_converter_created(
 
 def _when_simple_converter_created_full(
     factory: GenericConverterFactory,
-    params: Dict[str, Any],
-    additional_deps: Optional[Dict[str, Any]] = None,
+    params: dict[str, Any],
+    additional_deps: Optional[dict[str, Any]] = None,
 ) -> GenericConverter:
     """Create a simple converter with full parameters."""
     return factory.create_simple_converter(
@@ -737,7 +737,7 @@ def _when_multiple_converters_created(
 
 def _when_all_converters_created(
     factory: GenericConverterFactory,
-) -> Dict[str, GenericConverter]:
+) -> dict[str, GenericConverter]:
     """Create converters for all registered configurations."""
     return factory.create_all_registered_converters()
 
@@ -745,7 +745,7 @@ def _when_all_converters_created(
 def _when_conversion_pipeline_created(
     factory: GenericConverterFactory,
     converter_names: list[str],
-    shared_deps: Optional[Dict[str, Any]] = None,
+    shared_deps: Optional[dict[str, Any]] = None,
 ) -> Tuple[Any, Any]:
     """Create conversion pipeline and capture result and exception."""
     try:
@@ -760,7 +760,7 @@ def _when_conversion_pipeline_created(
 
 def _then_factory_initialized_correctly(
     factory: GenericConverterFactory,
-    expected_global_deps: Dict[str, Any],
+    expected_global_deps: dict[str, Any],
     expected_logger: Optional[MagicMock] = None,
 ) -> None:
     """Assert that factory was initialized correctly."""
@@ -790,7 +790,7 @@ def _then_config_registered_successfully(
 
 def _then_multiple_configs_registered(
     factory: GenericConverterFactory,
-    expected_configs: Dict[str, GenericConverterConfig],
+    expected_configs: dict[str, GenericConverterConfig],
 ) -> None:
     """Assert that multiple configurations were registered."""
     registered_configs = factory.get_registered_configs()
@@ -800,8 +800,8 @@ def _then_multiple_configs_registered(
 
 
 def _then_configs_retrieved_correctly(
-    retrieved_configs: Dict[str, GenericConverterConfig],
-    expected_configs: Dict[str, GenericConverterConfig],
+    retrieved_configs: dict[str, GenericConverterConfig],
+    expected_configs: dict[str, GenericConverterConfig],
 ) -> None:
     """Assert that configurations were retrieved correctly."""
     assert len(retrieved_configs) == len(expected_configs)  # noqa: S101
@@ -859,7 +859,7 @@ def _then_simple_converter_created_successfully(
 
 
 def _then_simple_converter_created_with_options(
-    converter: GenericConverter, expected_params: Dict[str, Any]
+    converter: GenericConverter, expected_params: dict[str, Any]
 ) -> None:
     """Assert that simple converter was created with specified options."""
     assert converter is not None  # noqa: S101
@@ -872,7 +872,7 @@ def _then_simple_converter_created_with_options(
 
 
 def _then_multiple_converters_created_successfully(
-    converters: Dict[str, GenericConverter],
+    converters: dict[str, GenericConverter],
     exception: Any,
     expected_names: list[str],
 ) -> None:
@@ -898,7 +898,7 @@ def _then_multiple_converters_creation_failed(
 
 
 def _then_all_converters_created_successfully(
-    converters: Dict[str, GenericConverter],
+    converters: dict[str, GenericConverter],
     expected_names: list[str],
 ) -> None:
     """Assert that all registered converters were created successfully."""
@@ -910,7 +910,7 @@ def _then_all_converters_created_successfully(
 
 
 def _then_conversion_pipeline_created_successfully(
-    pipeline: Dict[str, GenericConverter],
+    pipeline: dict[str, GenericConverter],
     exception: Any,
     expected_names: list[str],
 ) -> None:
@@ -936,7 +936,7 @@ def _then_conversion_pipeline_creation_failed(
 
 
 def _then_conversion_pipeline_empty(
-    pipeline: Dict[str, GenericConverter],
+    pipeline: dict[str, GenericConverter],
     exception: Any,
 ) -> None:
     """Assert that conversion pipeline is empty."""
@@ -947,9 +947,9 @@ def _then_conversion_pipeline_empty(
 
 def _then_dependencies_merged_correctly(
     config: GenericConverterConfig,
-    global_deps: Dict[str, Any],
-    config_deps: Dict[str, Any],
-    additional_deps: Dict[str, Any],
+    global_deps: dict[str, Any],
+    config_deps: dict[str, Any],
+    additional_deps: dict[str, Any],
 ) -> None:
     """Assert that dependencies were merged correctly."""
     expected_deps = {**global_deps, **config_deps, **additional_deps}
@@ -958,15 +958,15 @@ def _then_dependencies_merged_correctly(
 
 def _then_dependency_precedence_correct(
     config: GenericConverterConfig,
-    expected_deps: Dict[str, Any],
+    expected_deps: dict[str, Any],
 ) -> None:
     """Assert that dependency precedence is correct."""
     assert config.additional_dependencies == expected_deps  # noqa: S101
 
 
 def _then_pipeline_has_shared_dependencies(
-    pipeline: Dict[str, GenericConverter],
-    shared_deps: Optional[Dict[str, Any]],
+    pipeline: dict[str, GenericConverter],
+    shared_deps: Optional[dict[str, Any]],
 ) -> None:
     """Assert that pipeline converters have shared dependencies."""
     if shared_deps is not None:

@@ -6,7 +6,7 @@ configurable mapper classes.
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from connector.src.utils.converters.generic_converter_config import (
     GenericConverterConfig,
@@ -34,7 +34,7 @@ class GenericConverter:
         self.logger = logger or logging.getLogger(__name__)
 
         self.converted_objects: list[Any] = []
-        self.object_id_map: Dict[str, str] = {}
+        self.object_id_map: dict[str, str] = {}
 
     def convert_single(self, input_data: Any, **mapper_kwargs: Any) -> Optional[Any]:
         """Convert a single entity to STIX format.
@@ -176,16 +176,16 @@ class GenericConverter:
         return converted_objects
 
     def convert_batch(
-        self, input_batches: Dict[str, list[Any]], **mapper_kwargs: Any
-    ) -> Dict[str, list[Any]]:
+        self, input_batches: dict[str, list[Any]], **mapper_kwargs: Any
+    ) -> dict[str, list[Any]]:
         """Convert batches of different entity types to STIX format.
 
         Args:
-            input_batches: Dictionary mapping entity type names to lists of input data
+            input_batches: dictionary mapping entity type names to lists of input data
             **mapper_kwargs: Additional parameters to pass to mappers
 
         Returns:
-            Dictionary mapping entity type names to lists of converted STIX objects
+            dictionary mapping entity type names to lists of converted STIX objects
 
         """
         converted_batches = {}
@@ -221,11 +221,11 @@ class GenericConverter:
         """
         return self.converted_objects.copy()
 
-    def get_object_id_map(self) -> Dict[str, str]:
+    def get_object_id_map(self) -> dict[str, str]:
         """Get mapping of original entity IDs to STIX object IDs.
 
         Returns:
-            Dictionary mapping original IDs to STIX IDs
+            dictionary mapping original IDs to STIX IDs
 
         """
         return self.object_id_map.copy()

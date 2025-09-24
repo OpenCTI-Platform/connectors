@@ -1,7 +1,7 @@
 """The module contains the OctiOrganizationModel class, which represents an OpenCTI Organization Identity."""
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from connector.src.stix.v21.models.ovs.identity_class_ov_enums import IdentityClassOV
 from connector.src.stix.v21.models.sdos.identity_model import IdentityModel
@@ -35,7 +35,7 @@ class OctiOrganizationModel:
             IdentityModel: The created identity model which can be converted to STIX using to_stix2_object()
 
         """
-        custom_properties: Dict[str, Any] = {}
+        custom_properties: dict[str, Any] = {}
         if organization_type:
             custom_properties["x_opencti_organization_type"] = organization_type
 

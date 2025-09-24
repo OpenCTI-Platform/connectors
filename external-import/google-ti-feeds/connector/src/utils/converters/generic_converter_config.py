@@ -6,7 +6,7 @@ that can work with any input data format, mapper class, and output STIX entity t
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Optional, Type
+from typing import Any, Callable, Optional, Type
 
 from pydantic import BaseModel
 
@@ -60,7 +60,7 @@ class GenericConverterConfig:
     validate_output: bool = True
     """Whether to validate STIX output after conversion"""
 
-    additional_dependencies: Optional[Dict[str, Any]] = None
+    additional_dependencies: Optional[dict[str, Any]] = None
     """Additional dependencies to pass to mapper (e.g., organization, tlp_marking)"""
 
     id_field: str = "id"

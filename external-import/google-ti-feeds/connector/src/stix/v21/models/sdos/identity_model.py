@@ -1,6 +1,6 @@
 """The module contains the IdentityModel class, which represents a STIX 2.1 Identity object."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import pycti  # type: ignore  # Missing library stubs
 from connector.src.stix.v21.models.ovs.identity_class_ov_enums import IdentityClassOV
@@ -43,13 +43,13 @@ class IdentityModel(BaseSDOModel):
 
     @model_validator(mode="before")
     @classmethod
-    def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+    def generate_id(cls, data: dict[str, Any]) -> dict[str, Any]:
         """Generate ID regardless of whether one is provided."""
         data["id"] = IdentityModel._generate_id(data=data)
         return data
 
     @classmethod
-    def _generate_id(cls, data: Dict[str, Any]) -> Any:
+    def _generate_id(cls, data: dict[str, Any]) -> Any:
         """Generate ID regardless of whether one is provided."""
         if isinstance(data, dict) and "name" in data:
             name = data.get("name", None)

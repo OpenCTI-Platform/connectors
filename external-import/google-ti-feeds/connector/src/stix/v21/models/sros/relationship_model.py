@@ -1,7 +1,7 @@
 """The module defines a RelationshipModel class that represents a STIX 2.1 Relationship object."""
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import pycti  # type: ignore  # Missing library stubs
 from pydantic import BaseModel, Field, model_validator
@@ -76,7 +76,7 @@ class RelationshipModel(BaseModel):
     lang: Optional[str] = Field(
         default=None, description="Language code used for this object."
     )
-    external_references: Optional[list[Dict[str, Any]]] = Field(
+    external_references: Optional[list[dict[str, Any]]] = Field(
         default=None,
         description="list of external references relevant to this object.",
     )
@@ -84,15 +84,15 @@ class RelationshipModel(BaseModel):
         default=None,
         description="list of marking-definition IDs that apply to this object.",
     )
-    granular_markings: Optional[list[Dict[str, Any]]] = Field(
+    granular_markings: Optional[list[dict[str, Any]]] = Field(
         default=None,
         description="Granular markings on specific object fields.",
     )
-    extensions: Optional[Dict[str, Dict[str, Any]]] = Field(
+    extensions: Optional[dict[str, dict[str, Any]]] = Field(
         default=None,
         description="Custom STIX extensions applied to this object.",
     )
-    custom_properties: Optional[Dict[str, Any]] = Field(
+    custom_properties: Optional[dict[str, Any]] = Field(
         default=None,
         description="Custom properties that are not part of the STIX specification.",
     )
@@ -101,13 +101,13 @@ class RelationshipModel(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+    def generate_id(cls, data: dict[str, Any]) -> dict[str, Any]:
         """Generate ID regardless of whether one is provided."""
         data["id"] = RelationshipModel._generate_id(data=data)
         return data
 
     @classmethod
-    def _generate_id(cls, data: Dict[str, Any]) -> Any:
+    def _generate_id(cls, data: dict[str, Any]) -> Any:
         """Generate ID regardless of whether one is provided."""
         if isinstance(data, dict) and "relationship_type" in data:
             relationship_type = data.get("relationship_type", None)

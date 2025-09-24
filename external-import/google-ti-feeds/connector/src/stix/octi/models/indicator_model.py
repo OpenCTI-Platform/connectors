@@ -1,7 +1,7 @@
 """The module contains the OctiIndicatorModel class, which represents an OpenCTI Indicator."""
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from connector.src.stix.octi.observable_type_ov_enum import ObservableTypeOV
 from connector.src.stix.octi.pattern_type_ov_enum import PatternTypeOV
@@ -31,7 +31,7 @@ class OctiIndicatorModel:
         valid_until: Optional[datetime] = None,
         kill_chain_phases: Optional[list[KillChainPhaseModel]] = None,
         score: Optional[int] = None,
-        external_references: Optional[list[Dict[str, Any]]] = None,
+        external_references: Optional[list[dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> IndicatorModel:
         """Create an Indicator model.

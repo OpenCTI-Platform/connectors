@@ -1,6 +1,6 @@
 """Exception for asynchronous processing errors in the connector."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from connector.src.custom.exceptions.gti_base_error import GTIBaseError
 
@@ -12,7 +12,7 @@ class GTIAsyncError(GTIBaseError):
         self,
         message: str,
         operation: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
+        details: Optional[dict[str, Any]] = None,
     ):
         """Initialize the exception.
 

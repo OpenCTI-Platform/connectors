@@ -2,7 +2,7 @@
 
 import logging
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
     from logging import Logger
@@ -35,7 +35,7 @@ class WorkManager:
         self._logger = logger or logging.getLogger(__name__)
         self._current_work_id: Optional[str] = None
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """Get the current state dict of the Connector.
 
         Returns:
