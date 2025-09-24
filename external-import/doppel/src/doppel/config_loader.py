@@ -85,7 +85,7 @@ class ConfigDoppel:
         )
 
         self.user_api_key = get_config_variable(
-            "DOPPEL_USER_API_KEY", ["doppel", "user_api_key"], self.load, default=None
+            "DOPPEL_USER_API_KEY", ["doppel", "user_api_key"], self.load
         )
 
         self.alerts_endpoint = get_config_variable(
