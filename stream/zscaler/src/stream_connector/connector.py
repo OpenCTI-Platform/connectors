@@ -80,7 +80,9 @@ class ZscalerConnector:
         )
 
         if response:
-            self.helper.connector_logger.debug(f"Raw response from Zscaler: {response.text}")
+            self.helper.connector_logger.debug(
+                f"Raw response from Zscaler: {response.text}"
+            )
 
         if response and response.status_code == 200:
             # retrieve the JSESSIONID cookie
@@ -299,7 +301,9 @@ class ZscalerConnector:
             if status_resp and status_resp.status_code == 200:
                 status = status_resp.json().get("status")
                 if status in ("ACTIVE", "PENDING", "INPROGRESS"):
-                    self.helper.connector_logger.info(f"Zscaler config status = {status}, no activation needed.")
+                    self.helper.connector_logger.info(
+                        f"Zscaler config status = {status}, no activation needed."
+                    )
                     return True
 
             # Try activation
@@ -322,7 +326,9 @@ class ZscalerConnector:
                 self.helper.connector_logger.error(
                     f"Activation failed: {resp.text if resp else 'No response'}"
                 )
-                raise Exception(f"Activation failed: {resp.text if resp else 'No response'}")
+                raise Exception(
+                    f"Activation failed: {resp.text if resp else 'No response'}"
+                )
 
         self.helper.connector_logger.error("Activation failed after all retries.")
         return False
