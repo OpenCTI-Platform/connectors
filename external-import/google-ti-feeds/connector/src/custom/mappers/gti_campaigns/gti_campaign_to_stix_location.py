@@ -1,6 +1,6 @@
 """Converts GTI campaign location data to STIX location objects."""
 
-from typing import List, Optional
+from typing import Optional
 
 from connector.src.custom.models.gti.gti_campaign_model import (
     GTICampaignData,
@@ -37,14 +37,14 @@ class GTICampaignToSTIXLocation(BaseMapper):
         self.organization = organization
         self.tlp_marking = tlp_marking
 
-    def to_stix(self) -> List[Location]:
+    def to_stix(self) -> list[Location]:
         """Convert GTI campaign location data to STIX location objects.
 
         Returns:
-            List[Location]: List of STIX location objects (countries only).
+            list[Location]: list of STIX location objects (countries only).
 
         """
-        result: List[Location] = []
+        result: list[Location] = []
 
         if not hasattr(self.campaign, "attributes") or not self.campaign.attributes:
             return result

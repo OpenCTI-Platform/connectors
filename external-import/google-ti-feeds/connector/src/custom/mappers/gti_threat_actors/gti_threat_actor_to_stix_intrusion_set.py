@@ -1,7 +1,7 @@
 """Converts a GTI threat actor to a STIX intrusion set object."""
 
 from datetime import datetime, timezone
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from connector.src.custom.models.gti.gti_threat_actor_model import (
     GTIThreatActorData,
@@ -132,14 +132,14 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
         return intrusion_set_model
 
     @staticmethod
-    def _extract_aliases(attributes: ThreatActorModel) -> Optional[List[str]]:
+    def _extract_aliases(attributes: ThreatActorModel) -> Optional[list[str]]:
         """Extract aliases from threat actor attributes.
 
         Args:
             attributes: The threat actor attributes
 
         Returns:
-            Optional[List[str]]: Extracted aliases or None if no aliases exist
+            Optional[list[str]]: Extracted aliases or None if no aliases exist
 
         """
         if (
@@ -204,7 +204,7 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
 
     def _extract_motivations(
         self, attributes: ThreatActorModel
-    ) -> tuple[Optional[str], Optional[List[str]]]:
+    ) -> tuple[Optional[str], Optional[list[str]]]:
         """Extract primary and secondary motivations from threat actor attributes.
 
         Args:
@@ -250,14 +250,14 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
         return AttackMotivationOV(motivation)
 
     @staticmethod
-    def _extract_labels(attributes: ThreatActorModel) -> Optional[List[str]]:
+    def _extract_labels(attributes: ThreatActorModel) -> Optional[list[str]]:
         """Extract labels from threat actor tag details.
 
         Args:
             attributes: The threat actor attributes
 
         Returns:
-            Optional[List[str]]: Extracted labels from tag details or None if no tags exist
+            Optional[list[str]]: Extracted labels from tag details or None if no tags exist
 
         """
         if not hasattr(attributes, "tags_details") or not attributes.tags_details:
@@ -270,7 +270,7 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
 
         return labels if labels else None
 
-    def _build_external_references(self) -> List[ExternalReferenceModel]:
+    def _build_external_references(self) -> list[ExternalReferenceModel]:
         """Build external references from Threat Actor attributes.
 
         Returns:

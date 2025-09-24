@@ -1,7 +1,7 @@
 """The module defines the base model for STIX Domain Objects (SDOs) in STIX 2.1 format."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from connector.src.stix.v21.models.cdts.external_reference_model import (
     ExternalReferenceModel,
@@ -39,7 +39,7 @@ class SDOOptionalModel(BaseModel):
         default=None,
         description="Indicates whether this object has been revoked.",
     )
-    labels: Optional[List[str]] = Field(
+    labels: Optional[list[str]] = Field(
         default=None, description="User-defined labels for this object."
     )
     confidence: Optional[int] = Field(
@@ -49,15 +49,15 @@ class SDOOptionalModel(BaseModel):
     lang: Optional[str] = Field(
         default=None, description="Language code used for this object."
     )
-    external_references: Optional[List[ExternalReferenceModel]] = Field(
+    external_references: Optional[list[ExternalReferenceModel]] = Field(
         default=None,
-        description="List of external references relevant to this object.",
+        description="list of external references relevant to this object.",
     )
-    object_marking_refs: Optional[List[str]] = Field(
+    object_marking_refs: Optional[list[str]] = Field(
         default=None,
-        description="List of marking-definition IDs that apply to this object.",
+        description="list of marking-definition IDs that apply to this object.",
     )
-    granular_markings: Optional[List[Any]] = Field(
+    granular_markings: Optional[list[Any]] = Field(
         default=None,
         description="Granular markings on specific object fields.",
     )

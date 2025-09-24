@@ -1,6 +1,6 @@
 """The module contains the OctiFileModel class, which represents an OpenCTI File."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from connector.src.stix.v21.models.scos.file_model import FileModel
 
@@ -15,7 +15,7 @@ class OctiFileModel:
         create_indicator: bool = False,
         hashes: Optional[Dict[str, str]] = None,
         name: Optional[str] = None,
-        additional_names: Optional[List[str]] = None,
+        additional_names: Optional[list[str]] = None,
         size: Optional[int] = None,
         score: Optional[int] = None,
         **kwargs: Any,
@@ -24,7 +24,7 @@ class OctiFileModel:
 
         Args:
             organization_id: The ID of the organization that created this file
-            marking_ids: List of marking definition IDs to apply to the file
+            marking_ids: list of marking definition IDs to apply to the file
             create_indicator: Whether to create an indicator for the file
             hashes: Dictionary of hash algorithm names and hash values
             name: The name of the file

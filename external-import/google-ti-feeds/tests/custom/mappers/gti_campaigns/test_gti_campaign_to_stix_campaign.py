@@ -1,7 +1,7 @@
 """Tests for the GTICampaignToSTIXCampaign mapper."""
 
 from datetime import datetime, timezone
-from typing import Any, List, Optional
+from typing import Any, Optional
 from uuid import uuid4
 
 import pytest
@@ -630,7 +630,7 @@ def _when_extract_seen_dates(
 
 
 # When extract labels
-def _when_extract_labels(attributes: CampaignModel) -> List[str]:
+def _when_extract_labels(attributes: CampaignModel) -> list[str]:
     """Extract labels from campaign attributes."""
     return GTICampaignToSTIXCampaign._extract_labels(attributes)
 
@@ -718,7 +718,7 @@ def _then_seen_dates_extracted_correctly(
 
 
 # Then labels extracted correctly
-def _then_labels_extracted_correctly(labels: List[str], expected: List[str]) -> None:
+def _then_labels_extracted_correctly(labels: list[str], expected: list[str]) -> None:
     """Check if labels were extracted correctly."""
     assert labels is not None  # noqa: S101
     assert len(labels) == len(expected)  # noqa: S101

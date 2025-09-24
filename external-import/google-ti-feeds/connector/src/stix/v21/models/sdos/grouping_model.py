@@ -1,6 +1,6 @@
 """The module contains the GroupingModel class, which represents a STIX 2.1 Grouping object."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import pycti  # type: ignore  # Missing library stubs
 from connector.src.stix.v21.models.ovs.grouping_context_ov_enums import (
@@ -28,9 +28,9 @@ class GroupingModel(BaseSDOModel):
         ...,
         description="Short descriptor of the context shared by the content in this Grouping. SHOULD come from the grouping-context-ov vocabulary.",
     )
-    object_refs: List[str] = Field(
+    object_refs: list[str] = Field(
         ...,
-        description="List of STIX Object identifiers referred to by this Grouping.",
+        description="list of STIX Object identifiers referred to by this Grouping.",
     )
 
     @model_validator(mode="before")

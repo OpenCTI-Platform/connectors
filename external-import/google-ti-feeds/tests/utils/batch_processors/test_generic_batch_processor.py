@@ -1,7 +1,7 @@
 """Test module for GenericBatchProcessor functionality."""
 
 from datetime import UTC, datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 from unittest.mock import MagicMock
 
 import pytest
@@ -151,12 +151,12 @@ def date_extraction_config() -> GenericBatchProcessorConfig:
 def preprocessing_config() -> GenericBatchProcessorConfig:
     """Fixture for configuration with preprocessing function."""
 
-    def preprocess_batch(items: List[Any]) -> List[Any]:
+    def preprocess_batch(items: list[Any]) -> list[Any]:
         for item in items:
             item.preprocessed = True
         return items
 
-    def postprocess_batch(items: List[Any], work_id: str) -> None:
+    def postprocess_batch(items: list[Any], work_id: str) -> None:
         for item in items:
             item.postprocessed = work_id
 
@@ -913,7 +913,7 @@ def _when_item_added(
 
 
 def _when_multiple_items_added(
-    processor: GenericBatchProcessor, items: List[Any]
+    processor: GenericBatchProcessor, items: list[Any]
 ) -> Tuple[Optional[Any], Optional[Exception]]:
     """Add multiple items and capture result and exception."""
     try:
@@ -965,7 +965,7 @@ def _when_current_batch_size_retrieved(processor: GenericBatchProcessor) -> int:
     return processor.get_current_batch_size()
 
 
-def _when_failed_items_retrieved(processor: GenericBatchProcessor) -> List[Any]:
+def _when_failed_items_retrieved(processor: GenericBatchProcessor) -> list[Any]:
     """Retrieve failed items."""
     return processor.get_failed_items()
 
@@ -1146,7 +1146,7 @@ def _then_failed_items_tracked(
     assert len(failed_items) == expected_count  # noqa: S101
 
 
-def _then_failed_items_correct(failed_items: List[Any], expected_count: int) -> None:
+def _then_failed_items_correct(failed_items: list[Any], expected_count: int) -> None:
     """Assert that failed items list is correct."""
     assert len(failed_items) == expected_count  # noqa: S101
 
@@ -1157,7 +1157,7 @@ def _then_failed_items_empty(processor: GenericBatchProcessor) -> None:
     assert len(failed_items) == 0  # noqa: S101
 
 
-def _then_items_were_preprocessed(items: List[Any]) -> None:
+def _then_items_were_preprocessed(items: list[Any]) -> None:
     """Assert that items were preprocessed."""
     for item in items:
         assert hasattr(item, "preprocessed")  # noqa: S101

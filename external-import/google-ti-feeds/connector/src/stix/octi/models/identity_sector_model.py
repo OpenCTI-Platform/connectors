@@ -23,7 +23,7 @@ class OctiIdentitySectorModel:
         Args:
             name: The name of the sector
             organization_id: The ID of the organization that created this sector
-            marking_ids: List of marking definition IDs to apply to the sector
+            marking_ids: list of marking definition IDs to apply to the sector
             description: Description of the sector
             **kwargs: Additional arguments to pass to IdentityModel
 

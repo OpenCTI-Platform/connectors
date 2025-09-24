@@ -1,6 +1,6 @@
 """Module containing models for GTI domain response from Google Threat Intelligence API."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field
 
@@ -91,10 +91,10 @@ class ContributingFactors(BaseModel):
         None,
         description="Number of detections by Google’s spam and threat filtering engines.",
     )
-    gavs_categories: Optional[List[str]] = Field(
+    gavs_categories: Optional[list[str]] = Field(
         None, description="Known threat categories from GAVS."
     )
-    normalised_categories: Optional[List[str]] = Field(
+    normalised_categories: Optional[list[str]] = Field(
         None, description="Normalized threat categories."
     )
     legitimate_software: Optional[bool] = Field(
@@ -259,8 +259,8 @@ class DomainModel(BaseModel):
     last_analysis_stats: Optional[LastAnalysisStats] = Field(
         None, description="Aggregated analysis statistics."
     )
-    last_dns_records: Optional[List[LastDnsRecord]] = Field(
-        None, description="List of DNS records from last scan."
+    last_dns_records: Optional[list[LastDnsRecord]] = Field(
+        None, description="list of DNS records from last scan."
     )
     last_dns_records_date: Optional[int] = Field(
         None, description="Timestamp when DNS records were retrieved (UTC)."
@@ -286,8 +286,8 @@ class DomainModel(BaseModel):
     reputation: Optional[int] = Field(
         None, description="Community-calculated reputation score."
     )
-    tags: Optional[List[str]] = Field(
-        None, description="List of representative tags for the domain."
+    tags: Optional[list[str]] = Field(
+        None, description="list of representative tags for the domain."
     )
     total_votes: Optional[TotalVotes] = Field(
         None, description="Community vote breakdown for the domain."

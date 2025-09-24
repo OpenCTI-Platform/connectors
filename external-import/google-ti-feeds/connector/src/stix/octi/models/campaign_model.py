@@ -1,7 +1,7 @@
 """The module contains the OctiCampaignModel class, which represents an OpenCTI Campaign."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from connector.src.stix.v21.models.sdos.campaign_model import CampaignModel
 
@@ -20,9 +20,9 @@ class OctiCampaignModel:
         first_seen: Optional[datetime] = None,
         last_seen: Optional[datetime] = None,
         objective: Optional[str] = None,
-        aliases: Optional[List[str]] = None,
-        labels: Optional[List[str]] = None,
-        external_references: Optional[List[Dict[str, Any]]] = None,
+        aliases: Optional[list[str]] = None,
+        labels: Optional[list[str]] = None,
+        external_references: Optional[list[Dict[str, Any]]] = None,
         custom_properties: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> CampaignModel:
@@ -31,7 +31,7 @@ class OctiCampaignModel:
         Args:
             name: The name of the campaign
             organization_id: The ID of the organization that created this campaign
-            marking_ids: List of marking definition IDs to apply to the campaign
+            marking_ids: list of marking definition IDs to apply to the campaign
             description: Description of the campaign
             created: Time the campaign was created
             modified: Time the campaign was last modified

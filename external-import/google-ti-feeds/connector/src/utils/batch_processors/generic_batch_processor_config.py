@@ -6,7 +6,7 @@ that can work with any data type, batch size, and work management requirements.
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, Optional
 
 
 @dataclass
@@ -44,10 +44,10 @@ class GenericBatchProcessorConfig:
     date_extraction_function: Optional[Callable[[Any], Optional[str]]] = None
     """Function to extract date from an item for state updates"""
 
-    preprocessing_function: Optional[Callable[[List[Any]], List[Any]]] = None
+    preprocessing_function: Optional[Callable[[list[Any]], list[Any]]] = None
     """Function to preprocess batch before sending to work manager"""
 
-    postprocessing_function: Optional[Callable[[List[Any], str], None]] = None
+    postprocessing_function: Optional[Callable[[list[Any], str], None]] = None
     """Function to run after successful batch processing (items, work_id)"""
 
     validation_function: Optional[Callable[[Any], bool]] = None
@@ -134,11 +134,11 @@ class GenericBatchProcessorConfig:
                 return False
         return True
 
-    def preprocess_batch(self, items: List[Any]) -> List[Any]:
+    def preprocess_batch(self, items: list[Any]) -> list[Any]:
         """Preprocess a batch using the configured function.
 
         Args:
-            items: List of items to preprocess
+            items: list of items to preprocess
 
         Returns:
             Preprocessed items
@@ -153,11 +153,11 @@ class GenericBatchProcessorConfig:
                 ) from e
         return items
 
-    def postprocess_batch(self, items: List[Any], work_id: str) -> None:
+    def postprocess_batch(self, items: list[Any], work_id: str) -> None:
         """Run postprocessing after successful batch processing.
 
         Args:
-            items: List of items that were processed
+            items: list of items that were processed
             work_id: ID of the work that was created
 
         """

@@ -1,7 +1,7 @@
 """The module defines a Threat Actor model for STIX 2.1, including validation and serialization methods."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import pycti  # type: ignore  # Missing library stubs
 from connector.src.stix.v21.models.ovs.attack_motivation_ov_enums import (
@@ -38,11 +38,11 @@ class ThreatActorModel(BaseSDOModel):
         description="Context and characteristics of the Threat Actor—who they are, how they operate, and why.",
     )
 
-    threat_actor_types: List[ThreatActorTypeOV] = Field(
+    threat_actor_types: list[ThreatActorTypeOV] = Field(
         ...,
         description="Open vocab describing the type(s) of this Threat Actor. SHOULD come from threat-actor-type-ov.",
     )
-    aliases: Optional[List[str]] = Field(
+    aliases: Optional[list[str]] = Field(
         default=None,
         description="Other names believed to refer to the same Threat Actor.",
     )
@@ -56,11 +56,11 @@ class ThreatActorModel(BaseSDOModel):
         description="Time this Threat Actor was last seen. MUST be >= first_seen if both are set.",
     )
 
-    roles: Optional[List[ThreatActorRoleOV]] = Field(
+    roles: Optional[list[ThreatActorRoleOV]] = Field(
         default=None,
         description="Roles this Threat Actor plays. SHOULD come from threat-actor-role-ov.",
     )
-    goals: Optional[List[str]] = Field(
+    goals: Optional[list[str]] = Field(
         default=None,
         description="High-level goals of the Threat Actor (e.g., steal credit card numbers, exfiltrate data).",
     )
@@ -78,11 +78,11 @@ class ThreatActorModel(BaseSDOModel):
         default=None,
         description="Primary reason driving this Threat Actor. SHOULD come from attack-motivation-ov.",
     )
-    secondary_motivations: Optional[List[AttackMotivationOV]] = Field(
+    secondary_motivations: Optional[list[AttackMotivationOV]] = Field(
         default=None,
         description="Additional motivations influencing this Threat Actor. SHOULD come from attack-motivation-ov.",
     )
-    personal_motivations: Optional[List[AttackMotivationOV]] = Field(
+    personal_motivations: Optional[list[AttackMotivationOV]] = Field(
         default=None,
         description="Personal (non-organizational) motivations behind actions. SHOULD come from attack-motivation-ov.",
     )

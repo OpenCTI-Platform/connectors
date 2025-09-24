@@ -1,6 +1,6 @@
 """The module defines the NoteModel class, which represents a STIX 2.1 Note object."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import pycti  # type: ignore  # Missing library stubs
 from connector.src.stix.v21.models.sdos.sdo_common_model import BaseSDOModel
@@ -18,11 +18,11 @@ class NoteModel(BaseSDOModel):
         default=None, description="A brief summary of the note content."
     )
     content: str = Field(..., description="The main content of the note.")
-    authors: Optional[List[str]] = Field(
+    authors: Optional[list[str]] = Field(
         default=None,
         description="Names of the author(s) of this note (e.g., the analyst(s) who wrote it).",
     )
-    object_refs: List[str] = Field(
+    object_refs: list[str] = Field(
         ..., description="STIX Object identifiers this note applies to."
     )
 

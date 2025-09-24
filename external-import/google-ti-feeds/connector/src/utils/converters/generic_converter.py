@@ -6,7 +6,7 @@ configurable mapper classes.
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from connector.src.utils.converters.generic_converter_config import (
     GenericConverterConfig,
@@ -33,7 +33,7 @@ class GenericConverter:
         self.config = config
         self.logger = logger or logging.getLogger(__name__)
 
-        self.converted_objects: List[Any] = []
+        self.converted_objects: list[Any] = []
         self.object_id_map: Dict[str, str] = {}
 
     def convert_single(self, input_data: Any, **mapper_kwargs: Any) -> Optional[Any]:
@@ -95,19 +95,19 @@ class GenericConverter:
             return None
 
     def convert_multiple(
-        self, input_data_list: List[Any], **mapper_kwargs: Any
-    ) -> List[Any]:
+        self, input_data_list: list[Any], **mapper_kwargs: Any
+    ) -> list[Any]:
         """Convert multiple entities to STIX format.
 
         Args:
-            input_data_list: List of input data to convert
+            input_data_list: list of input data to convert
             **mapper_kwargs: Additional parameters to pass to mappers
 
         Returns:
-            List of STIX objects (successful conversions only)
+            list of STIX objects (successful conversions only)
 
         """
-        converted_objects: List[Any] = []
+        converted_objects: list[Any] = []
 
         self._log_conversion_start(self.config.display_name, count=len(input_data_list))
 
@@ -176,8 +176,8 @@ class GenericConverter:
         return converted_objects
 
     def convert_batch(
-        self, input_batches: Dict[str, List[Any]], **mapper_kwargs: Any
-    ) -> Dict[str, List[Any]]:
+        self, input_batches: Dict[str, list[Any]], **mapper_kwargs: Any
+    ) -> Dict[str, list[Any]]:
         """Convert batches of different entity types to STIX format.
 
         Args:
@@ -212,11 +212,11 @@ class GenericConverter:
 
         return converted_batches
 
-    def get_converted_objects(self) -> List[Any]:
+    def get_converted_objects(self) -> list[Any]:
         """Get all converted STIX objects.
 
         Returns:
-            List of all converted STIX objects
+            list of all converted STIX objects
 
         """
         return self.converted_objects.copy()

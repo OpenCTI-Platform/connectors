@@ -22,7 +22,7 @@ class OctiIPv4AddressModel:
         Args:
             value: The IPv4 address value
             organization_id: The ID of the organization that created this IPv4 address
-            marking_ids: List of marking definition IDs to apply to the IPv4 address
+            marking_ids: list of marking definition IDs to apply to the IPv4 address
             create_indicator: Whether to create an indicator for the IPv4 address
             score: The confidence score of the IPv4 address
             **kwargs: Additional arguments to pass to IPv4AddressModel

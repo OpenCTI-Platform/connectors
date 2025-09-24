@@ -1,7 +1,7 @@
 """Core connector as defined in the OpenCTI connector template."""
 
 import asyncio
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, List, Optional
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional
 
 from connector.src.custom.configs.gti_config import GTIConfig
 from connector.src.custom.exceptions.connector_errors.gti_work_processing_error import (
@@ -211,7 +211,7 @@ class Connector:
             )
             return error_msg
 
-    def _get_enabled_imports(self, gti_config: GTIConfig) -> List[str]:
+    def _get_enabled_imports(self, gti_config: GTIConfig) -> list[str]:
         """Get list of enabled import types."""
         enabled_imports = []
         if gti_config.import_reports:
@@ -226,7 +226,7 @@ class Connector:
             enabled_imports.append("vulnerabilities")
         return enabled_imports
 
-    def _create_processing_tasks(self, gti_config: GTIConfig) -> List[Any]:
+    def _create_processing_tasks(self, gti_config: GTIConfig) -> list[Any]:
         """Create asyncio tasks for enabled import types."""
         tasks = []
 
@@ -263,7 +263,7 @@ class Connector:
         return tasks
 
     def _process_completed_tasks(
-        self, done_tasks: List[asyncio.Task[Any]]
+        self, done_tasks: list[asyncio.Task[Any]]
     ) -> tuple[bool, Optional[str]]:
         """Process completed tasks and return error status."""
         any_error = False
@@ -294,7 +294,7 @@ class Connector:
 
         return any_error, first_error
 
-    async def _cancel_remaining_tasks(self, tasks: List[asyncio.Task[Any]]) -> None:
+    async def _cancel_remaining_tasks(self, tasks: list[asyncio.Task[Any]]) -> None:
         """Cancel any remaining tasks and wait for cleanup."""
         for task in tasks:
             if not task.done():

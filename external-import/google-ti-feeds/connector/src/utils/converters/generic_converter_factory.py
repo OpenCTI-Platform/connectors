@@ -5,7 +5,7 @@ work with any input data format, mapper class, and output STIX entity type.
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Dict, Optional, Type
 
 from connector.src.utils.converters.generic_converter import GenericConverter
 from connector.src.utils.converters.generic_converter_config import (
@@ -152,22 +152,22 @@ class GenericConverterFactory:
         """
         return self._converter_registry.copy()
 
-    def get_available_config_names(self) -> List[str]:
+    def get_available_config_names(self) -> list[str]:
         """Get list of available configuration names.
 
         Returns:
-            List of registered configuration names
+            list of registered configuration names
 
         """
         return list(self._converter_registry.keys())
 
     def create_multiple_converters(
-        self, config_names: List[str]
+        self, config_names: list[str]
     ) -> Dict[str, GenericConverter]:
         """Create multiple converters from registered configurations.
 
         Args:
-            config_names: List of configuration names to create converters for
+            config_names: list of configuration names to create converters for
 
         Returns:
             Dictionary mapping configuration names to converters
@@ -195,13 +195,13 @@ class GenericConverterFactory:
 
     def create_conversion_pipeline(
         self,
-        converter_names: List[str],
+        converter_names: list[str],
         shared_dependencies: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, GenericConverter]:
         """Create a pipeline of converters for batch processing.
 
         Args:
-            converter_names: List of converter configuration names
+            converter_names: list of converter configuration names
             shared_dependencies: Dependencies shared across all converters in the pipeline
 
         Returns:

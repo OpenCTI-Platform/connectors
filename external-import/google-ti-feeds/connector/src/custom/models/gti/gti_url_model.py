@@ -1,6 +1,6 @@
 """Module containing models for GTI URL response from Google Threat Intelligence API."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field
 
@@ -85,10 +85,10 @@ class ContributingFactors(BaseModel):
         None,
         description="Number of detections by Google’s spam and threat filtering engines.",
     )
-    gavs_categories: Optional[List[str]] = Field(
+    gavs_categories: Optional[list[str]] = Field(
         None, description="Known threat categories from GAVS."
     )
-    normalised_categories: Optional[List[str]] = Field(
+    normalised_categories: Optional[list[str]] = Field(
         None, description="Normalized threat categories."
     )
     legitimate_software: Optional[bool] = Field(
@@ -206,7 +206,7 @@ class URLModel(BaseModel):
     gti_assessment: Optional[GTIAssessment] = Field(
         None, description="Google Threat Intelligence assessment for the URL."
     )
-    html_meta: Optional[Dict[str, List[str]]] = Field(
+    html_meta: Optional[Dict[str, list[str]]] = Field(
         None,
         description="All meta tags from HTML; keys are tag names and values lists of tag content.",
     )
@@ -243,17 +243,17 @@ class URLModel(BaseModel):
     last_submission_date: Optional[int] = Field(
         None, description="Timestamp of last submission for analysis (UTC)."
     )
-    outgoing_links: Optional[List[str]] = Field(
+    outgoing_links: Optional[list[str]] = Field(
         None, description="Links to different domains extracted from the URL."
     )
-    redirection_chain: Optional[List[str]] = Field(
+    redirection_chain: Optional[list[str]] = Field(
         None, description="Redirection history (excluding final URL)."
     )
     reputation: Optional[int] = Field(
         None, description="Community-calculated reputation score."
     )
-    tags: Optional[List[str]] = Field(
-        None, description="List of tags associated with the URL."
+    tags: Optional[list[str]] = Field(
+        None, description="list of tags associated with the URL."
     )
     targeted_brand: Optional[Dict[str, Any]] = Field(
         None, description="Targeted brand information extracted from phishing engines."
@@ -265,7 +265,7 @@ class URLModel(BaseModel):
     total_votes: Optional[Dict[str, int]] = Field(
         None, description="Community vote breakdown ('harmless' and 'malicious')."
     )
-    trackers: Optional[Dict[str, List[Tracker]]] = Field(
+    trackers: Optional[Dict[str, list[Tracker]]] = Field(
         None,
         description="Trackers found in the URL; keys are tracker names, values are lists of tracker entries.",
     )

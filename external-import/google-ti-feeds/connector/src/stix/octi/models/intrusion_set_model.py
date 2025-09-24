@@ -1,7 +1,7 @@
 """The module contains the OctiIntrusionSetModel class, which represents an OpenCTI Intrusion Set."""
 
 from datetime import datetime
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from connector.src.stix.v21.models.sdos.intrusion_set_model import IntrusionSetModel
 
@@ -15,14 +15,14 @@ class OctiIntrusionSetModel:
         organization_id: str,
         marking_ids: list[str],
         description: Optional[str] = None,
-        aliases: Optional[List[str]] = None,
+        aliases: Optional[list[str]] = None,
         first_seen: Optional[datetime] = None,
         last_seen: Optional[datetime] = None,
-        goals: Optional[List[str]] = None,
+        goals: Optional[list[str]] = None,
         resource_level: Optional[str] = None,
         primary_motivation: Optional[str] = None,
-        secondary_motivations: Optional[List[str]] = None,
-        labels: Optional[List[str]] = None,
+        secondary_motivations: Optional[list[str]] = None,
+        labels: Optional[list[str]] = None,
         **kwargs: Any,
     ) -> IntrusionSetModel:
         """Create an Intrusion Set model.
@@ -30,7 +30,7 @@ class OctiIntrusionSetModel:
         Args:
             name: The name of the intrusion set
             organization_id: The ID of the organization that created this intrusion set
-            marking_ids: List of marking definition IDs to apply to the intrusion set
+            marking_ids: list of marking definition IDs to apply to the intrusion set
             description: Description of the intrusion set
             aliases: Alternative names for the intrusion set
             first_seen: First time the intrusion set was observed

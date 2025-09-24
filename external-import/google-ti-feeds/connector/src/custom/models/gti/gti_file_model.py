@@ -1,6 +1,6 @@
 """Module containing models for GTI File response from Google Threat Intelligence API."""
 
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from pydantic import BaseModel, Field
 
@@ -20,8 +20,8 @@ class CrowdsourcedAlertContext(BaseModel):
 class CrowdsourcedIDsResult(BaseModel):
     """Model representing a crowdsourced IDS detection."""
 
-    alert_context: Optional[List[CrowdsourcedAlertContext]] = Field(
-        None, description="List of contexts where the IDS triggered."
+    alert_context: Optional[list[CrowdsourcedAlertContext]] = Field(
+        None, description="list of contexts where the IDS triggered."
     )
     alert_severity: Optional[str] = Field(
         None, description="Severity of the IDS alert."
@@ -128,10 +128,10 @@ class ContributingFactors(BaseModel):
     gavs_detections: Optional[int] = Field(
         None, description="Number of GAVS detections."
     )
-    gavs_categories: Optional[List[str]] = Field(
+    gavs_categories: Optional[list[str]] = Field(
         None, description="Threat categories from GAVS."
     )
-    normalised_categories: Optional[List[str]] = Field(
+    normalised_categories: Optional[list[str]] = Field(
         None, description="Normalized threat categories."
     )
     legitimate_software: Optional[bool] = Field(
@@ -225,10 +225,10 @@ class SandboxVerdict(BaseModel):
 
     category: Optional[str] = Field(None, description="Normalized verdict category.")
     confidence: Optional[int] = Field(None, description="Verdict confidence (0-100).")
-    malware_classification: Optional[List[str]] = Field(
+    malware_classification: Optional[list[str]] = Field(
         None, description="Raw sandbox classifications."
     )
-    malware_names: Optional[List[str]] = Field(
+    malware_names: Optional[list[str]] = Field(
         None, description="Detected malware family names."
     )
     sandbox_name: Optional[str] = Field(None, description="Name of the sandbox.")
@@ -247,7 +247,7 @@ class SigmaAnalysisResult(BaseModel):
 
     rule_title: Optional[str] = Field(None, description="Title of the Sigma rule.")
     rule_source: Optional[str] = Field(None, description="Source of the Sigma rule.")
-    match_context: Optional[List[SigmaAnalysisResultContext]] = Field(
+    match_context: Optional[list[SigmaAnalysisResultContext]] = Field(
         None, description="Context values for the match."
     )
     rule_level: Optional[str] = Field(
@@ -272,8 +272,8 @@ class SigmaAnalysisStats(BaseModel):
 class FileModel(BaseModel):
     """Model representing attributes of a file object."""
 
-    capabilities_tags: Optional[List[str]] = Field(
-        None, description="List of capability tags (premium only)."
+    capabilities_tags: Optional[list[str]] = Field(
+        None, description="list of capability tags (premium only)."
     )
     creation_date: Optional[int] = Field(
         None, description="File build/compile timestamp (UTC)."
@@ -309,7 +309,7 @@ class FileModel(BaseModel):
     meaningful_name: Optional[str] = Field(
         None, description="Most representative file name."
     )
-    names: Optional[List[str]] = Field(None, description="All associated file names.")
+    names: Optional[list[str]] = Field(None, description="All associated file names.")
     permhash: Optional[str] = Field(None, description="Permhash of the file.")
     reputation: Optional[int] = Field(None, description="Community reputation score.")
     sandbox_verdicts: Optional[Dict[str, SandboxVerdict]] = Field(
@@ -317,8 +317,8 @@ class FileModel(BaseModel):
     )
     sha1: Optional[str] = Field(None, description="SHA1 hash of the file.")
     sha256: Optional[str] = Field(None, description="SHA256 hash of the file.")
-    sigma_analysis_results: Optional[List[SigmaAnalysisResult]] = Field(
-        None, description="List of Sigma rule matches."
+    sigma_analysis_results: Optional[list[SigmaAnalysisResult]] = Field(
+        None, description="list of Sigma rule matches."
     )
     sigma_analysis_stats: Optional[SigmaAnalysisStats] = Field(
         None, description="Stats for Sigma analysis."
@@ -327,7 +327,7 @@ class FileModel(BaseModel):
         None, description="Sigma stats split by ruleset name."
     )
     size: Optional[int] = Field(None, description="File size in bytes.")
-    tags: Optional[List[str]] = Field(
+    tags: Optional[list[str]] = Field(
         None, description="Representative tags for the file."
     )
     tlsh: Optional[str] = Field(None, description="TLSH hash of the file.")
@@ -346,14 +346,14 @@ class FileModel(BaseModel):
         None, description="Number of unique submission sources."
     )
     vhash: Optional[str] = Field(None, description="VHash similarity clustering value.")
-    crowdsourced_ids_results: Optional[List[CrowdsourcedIDsResult]] = Field(
-        None, description="List of crowdsourced IDS results."
+    crowdsourced_ids_results: Optional[list[CrowdsourcedIDsResult]] = Field(
+        None, description="list of crowdsourced IDS results."
     )
     crowdsourced_ids_stats: Optional[CrowdsourcedIDsStats] = Field(
         None, description="Stats for crowdsourced IDS results."
     )
-    crowdsourced_yara_results: Optional[List[CrowdsourcedYaraResult]] = Field(
-        None, description="List of crowdsourced YARA matches."
+    crowdsourced_yara_results: Optional[list[CrowdsourcedYaraResult]] = Field(
+        None, description="list of crowdsourced YARA matches."
     )
 
 

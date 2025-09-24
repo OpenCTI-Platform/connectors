@@ -6,7 +6,7 @@ using the generic batch processor system.
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 LOG_PREFIX = "[GenericBatchProcessor]"
 
@@ -102,11 +102,11 @@ def validate_stix_object(stix_obj: Any) -> bool:
     )
 
 
-def log_batch_completion(stix_objects: List[Any], work_id: str) -> None:
+def log_batch_completion(stix_objects: list[Any], work_id: str) -> None:
     """Log successful batch completion with object type breakdown.
 
     Args:
-        stix_objects: List of processed STIX objects
+        stix_objects: list of processed STIX objects
         work_id: Work ID that was created
 
     """

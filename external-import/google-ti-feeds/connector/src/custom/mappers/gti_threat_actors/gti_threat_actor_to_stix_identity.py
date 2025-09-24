@@ -1,6 +1,6 @@
 """Converts a GTI threat actor's targeted industries to STIX Identity objects as sectors."""
 
-from typing import List, Optional
+from typing import Optional
 
 from connector.src.custom.models.gti.gti_threat_actor_model import (
     GTIThreatActorData,
@@ -36,14 +36,14 @@ class GTIThreatActorToSTIXIdentity(BaseMapper):
         self.organization = organization
         self.tlp_marking = tlp_marking
 
-    def to_stix(self) -> List[Identity]:
+    def to_stix(self) -> list[Identity]:
         """Convert the GTI threat actor targeted industries to STIX Identity objects.
 
         Returns:
-            List[Identity]: The list of STIX Identity objects representing sectors.
+            list[Identity]: The list of STIX Identity objects representing sectors.
 
         """
-        result: List[Identity] = []
+        result: list[Identity] = []
 
         if (
             not hasattr(self.threat_actor, "attributes")

@@ -2,7 +2,7 @@
 
 from collections import OrderedDict
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import pycti  # type: ignore  # Missing library stubs
 from connector.src.stix.v21.models.ovs.report_type_ov_enums import ReportTypeOV
@@ -26,16 +26,16 @@ class ReportModel(BaseSDOModel):
         default=None,
         description="More details and context about the Report—its purpose and key characteristics.",
     )
-    report_types: List[ReportTypeOV] = Field(
+    report_types: list[ReportTypeOV] = Field(
         ...,
         description="Open vocabulary defining the primary subject(s) of this report. SHOULD use report-type-ov.",
     )
     published: datetime = Field(
         ..., description="The official publication date of this Report."
     )
-    object_refs: List[str] = Field(
+    object_refs: list[str] = Field(
         ...,
-        description="List of STIX Object identifiers referenced in this Report.",
+        description="list of STIX Object identifiers referenced in this Report.",
     )
 
     @model_validator(mode="before")

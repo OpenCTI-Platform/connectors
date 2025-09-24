@@ -1,7 +1,7 @@
 """The module defines the NetworkTrafficModel class, which represents a STIX 2.1 Network Traffic object."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional, Union
 
 from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import Field, model_validator
@@ -53,9 +53,9 @@ class NetworkTrafficModel(BaseSCOModel):
         description="Destination port number (0–65535).",
     )
 
-    protocols: List[str] = Field(
+    protocols: list[str] = Field(
         ...,
-        description="List of protocols used in the traffic, from outer to inner layers. SHOULD align with IANA service names.",
+        description="list of protocols used in the traffic, from outer to inner layers. SHOULD align with IANA service names.",
     )
 
     src_byte_count: Optional[int] = Field(
@@ -93,7 +93,7 @@ class NetworkTrafficModel(BaseSCOModel):
         description="Reference to an Artifact object containing destination payload bytes.",
     )
 
-    encapsulates_refs: Optional[List[str]] = Field(
+    encapsulates_refs: Optional[list[str]] = Field(
         default=None,
         description="References to other network-traffic objects encapsulated by this one.",
     )

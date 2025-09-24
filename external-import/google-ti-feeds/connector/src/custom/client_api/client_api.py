@@ -1,7 +1,7 @@
 """Client API - Main entry point that delegates to specialized client APIs."""
 
 import logging
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, Optional
 from uuid import uuid4
 
 from connector.src.custom.client_api.campaign.client_api_campaign import (
@@ -176,7 +176,7 @@ class ClientAPI:
 
     async def fetch_subentities_ids(
         self, entity_name: str, entity_id: str, subentity_types: list[str]
-    ) -> Dict[str, List[str]]:
+    ) -> Dict[str, list[str]]:
         """Fetch subentities IDs from the API.
 
         Args:
@@ -185,7 +185,7 @@ class ClientAPI:
             subentity_types (list[str]): The type of subentities to fetch.
 
         Returns:
-            Dict[str, List[str]]: The fetched subentities IDs.
+            Dict[str, list[str]]: The fetched subentities IDs.
 
         """
         return await self.shared_client.fetch_subentities_ids(
@@ -193,8 +193,8 @@ class ClientAPI:
         )
 
     async def fetch_subentity_details(
-        self, subentity_ids: Dict[str, List[str]]
-    ) -> Dict[str, List[Any]]:
+        self, subentity_ids: Dict[str, list[str]]
+    ) -> Dict[str, list[Any]]:
         """Fetch subentity details in parallel for multiple IDs.
 
         Args:

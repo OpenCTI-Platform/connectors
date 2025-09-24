@@ -1,6 +1,6 @@
 """The module defines the ToolModel class, which represents a STIX 2.1 Tool object."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import pycti  # type: ignore  # Missing library stubs
 from connector.src.stix.v21.models.cdts.kill_chain_phase_model import (
@@ -23,15 +23,15 @@ class ToolModel(BaseSDOModel):
         default=None,
         description="Details about the Tool's purpose, use, and characteristics.",
     )
-    tool_types: List[ToolTypeOV] = Field(
+    tool_types: list[ToolTypeOV] = Field(
         ...,
         description="Open vocabulary of tool types. SHOULD come from tool-type-ov.",
     )
-    aliases: Optional[List[str]] = Field(
+    aliases: Optional[list[str]] = Field(
         default=None,
         description="Alternative names used to identify this Tool.",
     )
-    kill_chain_phases: Optional[List[KillChainPhaseModel]] = Field(
+    kill_chain_phases: Optional[list[KillChainPhaseModel]] = Field(
         default=None,
         description="Kill Chain Phases where this Tool can be used.",
     )

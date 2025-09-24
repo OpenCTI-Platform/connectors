@@ -4,8 +4,6 @@ This module defines a simple model for handling attack technique IDs
 without requiring detailed API data, used for quota optimization.
 """
 
-from typing import List
-
 from pydantic import BaseModel, Field
 
 
@@ -16,16 +14,16 @@ class GTIAttackTechniqueIDData(BaseModel):
     and want to avoid fetching detailed data for quota optimization.
     """
 
-    ids: List[str] = Field(
-        description="List of attack technique IDs (e.g., ['T1055', 'T1078'])"
+    ids: list[str] = Field(
+        description="list of attack technique IDs (e.g., ['T1055', 'T1078'])"
     )
 
     @classmethod
-    def from_id_list(cls, ids: List[str]) -> "GTIAttackTechniqueIDData":
+    def from_id_list(cls, ids: list[str]) -> "GTIAttackTechniqueIDData":
         """Create instance from a list of IDs.
 
         Args:
-            ids: List of attack technique IDs
+            ids: list of attack technique IDs
 
         Returns:
             GTIAttackTechniqueIDData instance

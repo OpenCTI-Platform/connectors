@@ -1,6 +1,6 @@
 """Model representing a Google Threat Intelligence Threat Actor."""
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -271,11 +271,11 @@ class ThreatActorModel(BaseModel):
     recent_activity_relative_change: Optional[float] = Field(
         None, description="Ratio of recent activity change (14-day interval)."
     )
-    recent_activity_summary: Optional[List[int]] = Field(
+    recent_activity_summary: Optional[list[int]] = Field(
         None, description="Time series of IoC activity (14-day)."
     )
-    top_icon_md5: Optional[List[str]] = Field(
-        None, description="List of the 3 most frequent icons' MD5 hashes."
+    top_icon_md5: Optional[list[str]] = Field(
+        None, description="list of the 3 most frequent icons' MD5 hashes."
     )
 
     counters: Optional[Counters] = Field(
@@ -284,32 +284,32 @@ class ThreatActorModel(BaseModel):
     aggregations: Optional[AggregationCommonalities] = Field(
         None, description="Grouped common traits across related IoCs."
     )
-    alt_names_details: Optional[List[AltNameDetail]] = Field(
+    alt_names_details: Optional[list[AltNameDetail]] = Field(
         None, description="Alternative names/aliases for the threat actor."
     )
-    first_seen_details: Optional[List[SeenDetail]] = Field(
+    first_seen_details: Optional[list[SeenDetail]] = Field(
         None, description="Information about when the threat actor was first seen."
     )
-    last_seen_details: Optional[List[SeenDetail]] = Field(
+    last_seen_details: Optional[list[SeenDetail]] = Field(
         None, description="Information about when the threat actor was last seen."
     )
-    merged_actors: Optional[List[MergedActor]] = Field(
+    merged_actors: Optional[list[MergedActor]] = Field(
         None, description="Actors confirmed to be part of this threat actor group."
     )
-    motivations: Optional[List[Motivation]] = Field(
+    motivations: Optional[list[Motivation]] = Field(
         None,
         description="Threat actor's motivations such as espionage, financial gain, etc.",
     )
-    source_regions_hierarchy: Optional[List[SourceRegion]] = Field(
+    source_regions_hierarchy: Optional[list[SourceRegion]] = Field(
         None, description="Regions/countries of threat actor origin."
     )
-    tags_details: Optional[List[TagDetail]] = Field(
+    tags_details: Optional[list[TagDetail]] = Field(
         None, description="Tags applied to the threat actor, with context."
     )
-    targeted_industries_tree: Optional[List[TargetedIndustry]] = Field(
+    targeted_industries_tree: Optional[list[TargetedIndustry]] = Field(
         None, description="Industries targeted by the threat actor."
     )
-    targeted_regions_hierarchy: Optional[List[TargetedRegion]] = Field(
+    targeted_regions_hierarchy: Optional[list[TargetedRegion]] = Field(
         None, description="Regions/countries targeted by the threat actor."
     )
 
@@ -341,7 +341,7 @@ class GTIThreatActorData(BaseModel):
 class GTIThreatActorResponse(BaseModel):
     """Model representing a response containing GTI threat actor data."""
 
-    data: Union[GTIThreatActorData, List[GTIThreatActorData]]
+    data: Union[GTIThreatActorData, list[GTIThreatActorData]]
     meta: Optional[GTIThreatActorMeta] = Field(
         default=None,
         description="Metadata for the response. May be absent when no data is returned.",

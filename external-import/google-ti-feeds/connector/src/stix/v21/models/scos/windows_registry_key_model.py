@@ -1,7 +1,7 @@
 """The module defines the WindowsRegistryKeyModel class, which represents a STIX 2.1 Windows Registry Key object."""
 
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 from connector.src.stix.v21.models.ovs.windows_registry_datatype_ov_enums import (
     WindowsRegistryDatatypeOV,
@@ -48,9 +48,9 @@ class WindowsRegistryKeyModel(BaseSCOModel):
         default=None,
         description="Full registry key path including hive (e.g., HKEY_LOCAL_MACHINE\\System\\Foo).",
     )
-    values: Optional[List[WindowsRegistryValueModel]] = Field(
+    values: Optional[list[WindowsRegistryValueModel]] = Field(
         default=None,
-        description="List of values found under the registry key. Each must include name, data, and data_type.",
+        description="list of values found under the registry key. Each must include name, data, and data_type.",
     )
 
     modified_time: Optional[datetime] = Field(

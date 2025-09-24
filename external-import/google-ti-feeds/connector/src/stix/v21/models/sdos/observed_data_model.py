@@ -1,7 +1,7 @@
 """The module defines the ObservedDataModel class, which represents a STIX 2.1 Observed Data object."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import pycti  # type: ignore  # Missing library stubs
 from connector.src.stix.v21.models.sdos.sdo_common_model import BaseSDOModel
@@ -32,9 +32,9 @@ class ObservedDataModel(BaseSDOModel):
         default=None,
         description="(Deprecated) Dictionary of SCOs observed. MUST NOT be present if object_refs is set. Will be removed in future STIX versions.",
     )
-    object_refs: Optional[List[str]] = Field(
+    object_refs: Optional[list[str]] = Field(
         default=None,
-        description="List of references to SCOs/SROs observed. MUST NOT be set if 'objects' is present.",
+        description="list of references to SCOs/SROs observed. MUST NOT be set if 'objects' is present.",
     )
 
     @model_validator(mode="after")

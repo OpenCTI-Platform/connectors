@@ -1,6 +1,6 @@
 """Test module for GenericConverterFactory functionality."""
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 from unittest.mock import MagicMock
 
 import pytest
@@ -536,7 +536,7 @@ def test_create_conversion_pipeline_empty_list(
 ) -> None:
     """Test creating a conversion pipeline with empty converter list."""
     # Given: A factory with registered configurations
-    converter_names: List[str] = []
+    converter_names: list[str] = []
 
     # When: A conversion pipeline is created with empty list
     pipeline, exception = _when_conversion_pipeline_created(
@@ -667,7 +667,7 @@ def _when_get_registered_configs(
     return factory.get_registered_configs()
 
 
-def _when_get_config_names(factory: GenericConverterFactory) -> List[str]:
+def _when_get_config_names(factory: GenericConverterFactory) -> list[str]:
     """Get available configuration names."""
     return factory.get_available_config_names()
 
@@ -725,7 +725,7 @@ def _when_simple_converter_created_full(
 
 
 def _when_multiple_converters_created(
-    factory: GenericConverterFactory, config_names: List[str]
+    factory: GenericConverterFactory, config_names: list[str]
 ) -> Tuple[Any, Any]:
     """Create multiple converters and capture result and exception."""
     try:
@@ -744,7 +744,7 @@ def _when_all_converters_created(
 
 def _when_conversion_pipeline_created(
     factory: GenericConverterFactory,
-    converter_names: List[str],
+    converter_names: list[str],
     shared_deps: Optional[Dict[str, Any]] = None,
 ) -> Tuple[Any, Any]:
     """Create conversion pipeline and capture result and exception."""
@@ -811,7 +811,7 @@ def _then_configs_retrieved_correctly(
 
 
 def _then_config_names_correct(
-    config_names: List[str], expected_names: List[str]
+    config_names: list[str], expected_names: list[str]
 ) -> None:
     """Assert that configuration names are correct."""
     assert sorted(config_names) == sorted(expected_names)  # noqa: S101
@@ -874,7 +874,7 @@ def _then_simple_converter_created_with_options(
 def _then_multiple_converters_created_successfully(
     converters: Dict[str, GenericConverter],
     exception: Any,
-    expected_names: List[str],
+    expected_names: list[str],
 ) -> None:
     """Assert that multiple converters were created successfully."""
     assert exception is None  # noqa: S101
@@ -899,7 +899,7 @@ def _then_multiple_converters_creation_failed(
 
 def _then_all_converters_created_successfully(
     converters: Dict[str, GenericConverter],
-    expected_names: List[str],
+    expected_names: list[str],
 ) -> None:
     """Assert that all registered converters were created successfully."""
     assert converters is not None  # noqa: S101
@@ -912,7 +912,7 @@ def _then_all_converters_created_successfully(
 def _then_conversion_pipeline_created_successfully(
     pipeline: Dict[str, GenericConverter],
     exception: Any,
-    expected_names: List[str],
+    expected_names: list[str],
 ) -> None:
     """Assert that conversion pipeline was created successfully."""
     assert exception is None  # noqa: S101

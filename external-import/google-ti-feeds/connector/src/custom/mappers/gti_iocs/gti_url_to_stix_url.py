@@ -1,7 +1,7 @@
 """Converts a GTI URL to a STIX URL object and indicator."""
 
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from connector.src.custom.models.gti.gti_url_model import (
     GTIURLData,
@@ -164,11 +164,11 @@ class GTIUrlToSTIXUrl(BaseMapper):
 
         return relationship
 
-    def to_stix(self) -> List[Any]:
+    def to_stix(self) -> list[Any]:
         """Convert the GTI URL to STIX URL and indicator objects.
 
         Returns:
-        List[Any]: List containing the STIX URL observable, indicator model objects, and their relationship.
+        list[Any]: list containing the STIX URL observable, indicator model objects, and their relationship.
 
         """
         url_observable = self._create_stix_url()
@@ -265,11 +265,11 @@ class GTIUrlToSTIXUrl(BaseMapper):
         url_value = self._get_url_value()
         return f"[url:value = '{url_value}']"
 
-    def _determine_indicator_types(self) -> List[IndicatorTypeOV]:
+    def _determine_indicator_types(self) -> list[IndicatorTypeOV]:
         """Determine indicator types based on URL attributes.
 
         Returns:
-            List[IndicatorTypeOV]: List of indicator types
+            list[IndicatorTypeOV]: list of indicator types
 
         """
         indicator_types = []
@@ -283,11 +283,11 @@ class GTIUrlToSTIXUrl(BaseMapper):
 
         return indicator_types
 
-    def _get_types_from_gti_assessment(self) -> List[IndicatorTypeOV]:
+    def _get_types_from_gti_assessment(self) -> list[IndicatorTypeOV]:
         """Extract indicator types from GTI assessment verdict.
 
         Returns:
-            List[IndicatorTypeOV]: List of indicator types from GTI assessment
+            list[IndicatorTypeOV]: list of indicator types from GTI assessment
 
         """
         if not (self.url.attributes and self.url.attributes.gti_assessment):

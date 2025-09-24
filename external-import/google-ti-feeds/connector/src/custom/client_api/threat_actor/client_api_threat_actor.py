@@ -1,7 +1,7 @@
 """Threat actor-specific client API for fetching and processing threat actor data."""
 
 import logging
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, Optional
 
 from connector.src.custom.client_api.client_api_base import BaseClientAPI
 
@@ -27,11 +27,11 @@ class ClientAPIThreatActor(BaseClientAPI):
         collection_type: str,
         start_date: str,
         initial_state: Optional[Dict[str, Any]] = None,
-        types: Optional[List[str]] = None,
-        origins: Optional[List[str]] = None,
+        types: Optional[list[str]] = None,
+        origins: Optional[list[str]] = None,
         entity_name: str = "threat_actors",
         cursor_key: str = "cursor",
-    ) -> List[Dict[str, Any]]:
+    ) -> list[Dict[str, Any]]:
         """Build threat actor filter configurations based on config settings.
 
         Args:
@@ -44,7 +44,7 @@ class ClientAPIThreatActor(BaseClientAPI):
             cursor_key: Key to use for cursor in initial_state
 
         Returns:
-            List of filter configurations with params and cursors
+            list of filter configurations with params and cursors
 
         """
         try:

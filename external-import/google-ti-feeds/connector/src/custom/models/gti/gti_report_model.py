@@ -1,6 +1,6 @@
 """Module containing models for GTI reports response from Google Threat Intelligence API."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field
 
@@ -219,28 +219,28 @@ class ReportModel(BaseModel):
         description="Source of the information: Partner, Google TI, or Crowdsourced.",
     )
 
-    affected_systems: Optional[List[str]] = Field(
+    affected_systems: Optional[list[str]] = Field(
         None, description="Systems affected by the threat."
     )
-    intended_effects: Optional[List[str]] = Field(
+    intended_effects: Optional[list[str]] = Field(
         None, description="Intended effects of the threat."
     )
-    targeted_informations: Optional[List[str]] = Field(
+    targeted_informations: Optional[list[str]] = Field(
         None, description="Types of info targeted by the threat."
     )
-    threat_categories: Optional[List[str]] = Field(
+    threat_categories: Optional[list[str]] = Field(
         None, description="Threat categories based on IoCs."
     )
-    threat_scape: Optional[List[str]] = Field(
+    threat_scape: Optional[list[str]] = Field(
         None, description="Topic areas covered by the report."
     )
-    top_icon_md5: Optional[List[str]] = Field(
+    top_icon_md5: Optional[list[str]] = Field(
         None, description="MD5 hashes of the most frequent favicons/icons."
     )
     recent_activity_relative_change: Optional[float] = Field(
         None, description="Ratio of recent activity change (14-day interval)."
     )
-    recent_activity_summary: Optional[List[int]] = Field(
+    recent_activity_summary: Optional[list[int]] = Field(
         None, description="Time series of IoC activity (14-day)."
     )
 
@@ -250,22 +250,22 @@ class ReportModel(BaseModel):
     aggregations: Optional[AggregationCommonalities] = Field(
         None, description="Grouped common traits across related IoCs."
     )
-    motivations: Optional[List[Motivation]] = Field(
+    motivations: Optional[list[Motivation]] = Field(
         None, description="Motivations behind the threat actor’s behavior."
     )
-    source_regions_hierarchy: Optional[List[SourceRegion]] = Field(
+    source_regions_hierarchy: Optional[list[SourceRegion]] = Field(
         None, description="Regions/countries of threat origin."
     )
-    tags_details: Optional[List[TagDetail]] = Field(
+    tags_details: Optional[list[TagDetail]] = Field(
         None, description="Tags applied to the report, with context."
     )
-    targeted_industries_tree: Optional[List[TargetedIndustry]] = Field(
+    targeted_industries_tree: Optional[list[TargetedIndustry]] = Field(
         None, description="Industries targeted by the threat."
     )
-    targeted_regions_hierarchy: Optional[List[TargetedRegion]] = Field(
+    targeted_regions_hierarchy: Optional[list[TargetedRegion]] = Field(
         None, description="Regions/countries targeted by the threat."
     )
-    technologies: Optional[List[Technology]] = Field(
+    technologies: Optional[list[Technology]] = Field(
         None, description="Technologies and vendors affected by vulnerabilities."
     )
 
@@ -297,7 +297,7 @@ class GTIReportData(BaseModel):
 class GTIReportResponse(BaseModel):
     """Model representing a response containing GTI report data."""
 
-    data: List[GTIReportData] = []
+    data: list[GTIReportData] = []
     meta: Optional[GTIReportMeta] = Field(
         default=None,
         description="Metadata for the response. May be absent when no data is returned.",

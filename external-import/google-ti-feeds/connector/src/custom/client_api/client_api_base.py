@@ -2,7 +2,7 @@
 
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, Optional
 from uuid import uuid4
 
 from connector.src.custom.configs.fetcher_config import FETCHER_CONFIGS
@@ -105,11 +105,11 @@ class BaseClientAPI:
         collection_type: str,
         start_date: str,
         initial_state: Optional[Dict[str, Any]] = None,
-        types: Optional[List[str]] = None,
-        origins: Optional[List[str]] = None,
+        types: Optional[list[str]] = None,
+        origins: Optional[list[str]] = None,
         entity_name: str = "items",
         cursor_key: str = "cursor",
-    ) -> List[Dict[str, Any]]:
+    ) -> list[Dict[str, Any]]:
         """Build filter configurations for a collection type.
 
         Args:
@@ -122,7 +122,7 @@ class BaseClientAPI:
             cursor_key: Key to use for cursor in initial_state
 
         Returns:
-            List of filter configurations with params and cursors
+            list of filter configurations with params and cursors
 
         """
         base_filters = (

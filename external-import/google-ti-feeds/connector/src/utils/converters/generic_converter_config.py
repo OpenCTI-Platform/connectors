@@ -6,7 +6,7 @@ that can work with any input data format, mapper class, and output STIX entity t
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Type
+from typing import Any, Callable, Dict, Optional, Type
 
 from pydantic import BaseModel
 
@@ -69,8 +69,8 @@ class GenericConverterConfig:
     name_field: Optional[str] = None
     """Optional field name that contains the entity name for logging"""
 
-    required_attributes: Optional[List[str]] = None
-    """List of required attributes that input data must have"""
+    required_attributes: Optional[list[str]] = None
+    """list of required attributes that input data must have"""
 
     preprocessing_function: Optional[Callable[[Any], Any]] = None
     """Optional function to preprocess input data before conversion"""

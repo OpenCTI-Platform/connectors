@@ -1,6 +1,6 @@
 """Converts GTI campaign data to STIX identity objects."""
 
-from typing import List, Optional
+from typing import Optional
 
 from connector.src.custom.models.gti.gti_campaign_model import (
     GTICampaignData,
@@ -36,11 +36,11 @@ class GTICampaignToSTIXIdentity(BaseMapper):
         self.organization = organization
         self.tlp_marking = tlp_marking
 
-    def to_stix(self) -> List[Identity]:
+    def to_stix(self) -> list[Identity]:
         """Convert the GTI campaign targeted industries to STIX Identity objects.
 
         Returns:
-            List[Identity]: The list of STIX Identity objects representing sectors.
+            list[Identity]: The list of STIX Identity objects representing sectors.
 
         """
         if not hasattr(self.campaign, "attributes") or not self.campaign.attributes:
@@ -50,7 +50,7 @@ class GTICampaignToSTIXIdentity(BaseMapper):
         if not targeted_industries:
             return []
 
-        result: List[Identity] = []
+        result: list[Identity] = []
         processed_industries = set()  # Track to avoid duplicates
 
         for industry_data in targeted_industries:

@@ -1,6 +1,6 @@
 """Converts a GTI threat actor's country regions to STIX Location objects."""
 
-from typing import List, Optional
+from typing import Optional
 
 from connector.src.custom.models.gti.gti_threat_actor_model import (
     GTIThreatActorData,
@@ -37,14 +37,14 @@ class GTIThreatActorToSTIXLocation(BaseMapper):
         self.organization = organization
         self.tlp_marking = tlp_marking
 
-    def to_stix(self) -> List[Location]:
+    def to_stix(self) -> list[Location]:
         """Convert the GTI threat actor country regions to STIX Location objects.
 
         Returns:
-            List[Location]: The list of STIX Location objects (countries only).
+            list[Location]: The list of STIX Location objects (countries only).
 
         """
-        result: List[Location] = []
+        result: list[Location] = []
 
         if (
             not hasattr(self.threat_actor, "attributes")

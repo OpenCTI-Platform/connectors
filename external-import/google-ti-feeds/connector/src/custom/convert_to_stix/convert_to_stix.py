@@ -1,7 +1,7 @@
 """Convert to STIX - Main entry point that delegates to specialized converters."""
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from connector.src.custom.convert_to_stix.convert_to_stix_shared import (
     ConvertToSTIXShared,
@@ -41,27 +41,27 @@ class ConvertToSTIX:
         self.organization = self.shared_converter.organization
         self.tlp_marking = self.shared_converter.tlp_marking
 
-    def convert_report_to_stix(self, report_data: Any) -> List[Any]:
+    def convert_report_to_stix(self, report_data: Any) -> list[Any]:
         """Convert report to location, identity, and report STIX objects.
 
         Args:
             report_data: GTIReportData object from fetcher
 
         Returns:
-            List of STIX entities (location, identity, report)
+            list of STIX entities (location, identity, report)
 
         """
         self.logger.debug("Starting report conversion", {"prefix": LOG_PREFIX})
         return self.report_converter.convert_report_to_stix(report_data)
 
-    def convert_threat_actor_to_stix(self, threat_actor_data: Any) -> List[Any]:
+    def convert_threat_actor_to_stix(self, threat_actor_data: Any) -> list[Any]:
         """Convert threat actor to location, identity, and threat actor STIX objects.
 
         Args:
             threat_actor_data: GTIThreatActorData object from fetcher
 
         Returns:
-            List of STIX entities (location, identity, threat_actor)
+            list of STIX entities (location, identity, threat_actor)
 
         """
         self.logger.debug("Starting threat actor conversion", {"prefix": LOG_PREFIX})
@@ -69,14 +69,14 @@ class ConvertToSTIX:
             threat_actor_data
         )
 
-    def convert_malware_family_to_stix(self, malware_family_data: Any) -> List[Any]:
+    def convert_malware_family_to_stix(self, malware_family_data: Any) -> list[Any]:
         """Convert malware family to location, identity, and malware STIX objects.
 
         Args:
             malware_family_data: GTIMalwareFamilyData object from fetcher
 
         Returns:
-            List of STIX entities (location, identity, malware)
+            list of STIX entities (location, identity, malware)
 
         """
         self.logger.debug("Starting malware family conversion", {"prefix": LOG_PREFIX})
@@ -85,8 +85,8 @@ class ConvertToSTIX:
         )
 
     def convert_subentities_to_stix(
-        self, subentities: Dict[str, List[Any]], main_entity: Optional[str] = None
-    ) -> List[Any]:
+        self, subentities: Dict[str, list[Any]], main_entity: Optional[str] = None
+    ) -> list[Any]:
         """Convert each subentity to STIX format.
 
         Args:
@@ -94,7 +94,7 @@ class ConvertToSTIX:
             main_entity: Type of the main entity
 
         Returns:
-            List of converted STIX objects
+            list of converted STIX objects
 
         """
         return self.shared_converter.convert_subentities_to_stix(
@@ -103,19 +103,19 @@ class ConvertToSTIX:
 
     def convert_subentities_to_stix_with_linking(
         self,
-        subentities: Dict[str, List[Any]],
+        subentities: Dict[str, list[Any]],
         main_entity: str,
-        main_entities: List[Any],
-    ) -> Optional[List[Any]]:
+        main_entities: list[Any],
+    ) -> Optional[list[Any]]:
         """Convert each subentity to STIX format with linking.
 
         Args:
             subentities: Dictionary mapping entity types to lists of entities
             main_entity: The main entity type
-            main_entities: List containing the main entity STIX object
+            main_entities: list containing the main entity STIX object
 
         Returns:
-            List of converted STIX objects
+            list of converted STIX objects
 
         """
         return self.shared_converter.convert_subentities_to_stix_with_linking(

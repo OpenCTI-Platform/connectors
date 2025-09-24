@@ -1,6 +1,6 @@
 """Test module for GenericBatchProcessorConfig functionality."""
 
-from typing import Any, List, Optional, Tuple
+from typing import Any, Optional, Tuple
 
 import pytest
 from connector.src.utils.batch_processors.generic_batch_processor_config import (
@@ -55,20 +55,20 @@ def sample_validator(item: Any) -> bool:
     return hasattr(item, "id") and hasattr(item, "name")
 
 
-def sample_preprocessor(items: List[Any]) -> List[Any]:
+def sample_preprocessor(items: list[Any]) -> list[Any]:
     """Test preprocessing function."""
     for item in items:
         item.preprocessed = True
     return items
 
 
-def sample_postprocessor(items: List[Any], work_id: str) -> None:
+def sample_postprocessor(items: list[Any], work_id: str) -> None:
     """Test postprocessing function."""
     for item in items:
         item.postprocessed = work_id
 
 
-def failing_preprocessor(items: List[Any]) -> List[Any]:
+def failing_preprocessor(items: list[Any]) -> list[Any]:
     """Preprocessing function that fails."""
     raise ValueError("Preprocessing failed")
 
@@ -600,7 +600,7 @@ def test_postprocess_batch_with_failing_function() -> None:
     """Test batch postprocessing when function fails."""
 
     # Given: A configuration with failing postprocessing function
-    def failing_postprocessor(items: List[Any], work_id: str) -> None:
+    def failing_postprocessor(items: list[Any], work_id: str) -> None:
         raise ValueError("Postprocessing failed")
 
     config = GenericBatchProcessorConfig(
@@ -719,8 +719,8 @@ def _when_item_validated(config: GenericBatchProcessorConfig, item: Any) -> bool
 
 
 def _when_batch_preprocessed(
-    config: GenericBatchProcessorConfig, items: List[Any]
-) -> Tuple[Optional[List[Any]], Optional[Exception]]:
+    config: GenericBatchProcessorConfig, items: list[Any]
+) -> Tuple[Optional[list[Any]], Optional[Exception]]:
     """Preprocess batch and capture result and exception."""
     try:
         return config.preprocess_batch(items), None
@@ -729,8 +729,8 @@ def _when_batch_preprocessed(
 
 
 def _when_batch_postprocessed(
-    config: GenericBatchProcessorConfig, items: List[Any], work_id: str
-) -> Tuple[Optional[List[Any]], Optional[Exception]]:
+    config: GenericBatchProcessorConfig, items: list[Any], work_id: str
+) -> Tuple[Optional[list[Any]], Optional[Exception]]:
     """Postprocess batch."""
     try:
         config.postprocess_batch(items, work_id)
@@ -859,7 +859,7 @@ def _then_item_validation_failed(result: bool) -> None:
 
 
 def _then_batch_preprocessing_successful(
-    processed_items: List[Any], exception: Optional[Exception]
+    processed_items: list[Any], exception: Optional[Exception]
 ) -> None:
     """Assert that batch preprocessing was successful."""
     assert exception is None  # noqa: S101
@@ -867,7 +867,7 @@ def _then_batch_preprocessing_successful(
 
 
 def _then_batch_preprocessing_failed(
-    processed_items: Optional[List[Any]],
+    processed_items: Optional[list[Any]],
     exception: Exception,
     expected_exception_type: type,
 ) -> None:
@@ -877,7 +877,7 @@ def _then_batch_preprocessing_failed(
     assert isinstance(exception, expected_exception_type)  # noqa: S101
 
 
-def _then_items_were_preprocessed(items: List[Any]) -> None:
+def _then_items_were_preprocessed(items: list[Any]) -> None:
     """Assert that items were preprocessed."""
     for item in items:
         assert hasattr(item, "preprocessed")  # noqa: S101
@@ -885,13 +885,13 @@ def _then_items_were_preprocessed(items: List[Any]) -> None:
 
 
 def _then_items_unchanged(
-    processed_items: List[Any], original_items: List[Any]
+    processed_items: list[Any], original_items: list[Any]
 ) -> None:
     """Assert that items remained unchanged."""
     assert processed_items == original_items  # noqa: S101
 
 
-def _then_items_were_postprocessed(items: List[Any], work_id: str) -> None:
+def _then_items_were_postprocessed(items: list[Any], work_id: str) -> None:
     """Assert that items were postprocessed."""
     for item in items:
         assert hasattr(item, "postprocessed")  # noqa: S101
@@ -904,7 +904,7 @@ def _then_postprocessing_completed_successfully() -> None:
 
 
 def _then_batch_postprocessing_failed(
-    processed_items: Optional[List[Any]],
+    processed_items: Optional[list[Any]],
     exception: Exception,
     expected_exception_type: type,
 ) -> None:

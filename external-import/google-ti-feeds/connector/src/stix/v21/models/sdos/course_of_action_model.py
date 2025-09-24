@@ -1,6 +1,6 @@
 """The module defines the CourseOfActionModel class, which represents a course of action in STIX 2.1 format."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import pycti  # type: ignore  # Missing library stubs
 from connector.src.stix.v21.models.cdts.external_reference_model import (
@@ -29,7 +29,7 @@ class CourseOfActionModel(BaseSDOModel):
         default=None,
         description="Open vocabulary describing the action type (e.g., textual:text/plain). Should use course-of-action-type-ov.",
     )
-    os_execution_envs: Optional[List[str]] = Field(
+    os_execution_envs: Optional[list[str]] = Field(
         default=None,
         description="Recommended OS environments for execution. Preferably CPE v2.3 from NVD. Can include custom values.",
     )
