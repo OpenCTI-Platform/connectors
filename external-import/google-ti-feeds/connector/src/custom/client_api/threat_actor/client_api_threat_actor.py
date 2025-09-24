@@ -1,7 +1,8 @@
 """Threat actor-specific client API for fetching and processing threat actor data."""
 
 import logging
-from typing import Any, AsyncGenerator, Optional
+from collections.abc import AsyncGenerator
+from typing import Any, Optional
 
 from connector.src.custom.client_api.client_api_base import BaseClientAPI
 
