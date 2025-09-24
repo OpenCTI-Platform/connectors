@@ -107,7 +107,7 @@ class BaseOrchestrator:
         """
         if (
             batch_processor.get_current_batch_size() + len(all_entities)
-        ) >= batch_processor.config.batch_size:
+        ) >= batch_processor.config.batch_size * 2:
             self.logger.info(
                 "Need to Flush before adding next items to preserve consistency of the bundle",
                 {"prefix": LOG_PREFIX},

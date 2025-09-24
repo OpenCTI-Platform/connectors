@@ -95,6 +95,7 @@ class OrchestratorThreatActor(BaseOrchestrator):
             ):
                 total_threat_actors = len(gti_threat_actors)
                 for threat_actor_idx, threat_actor in enumerate(gti_threat_actors):
+                    self._update_index_inplace()
                     threat_actor_entities = self.converter.convert_threat_actor_to_stix(
                         threat_actor
                     )
@@ -181,7 +182,6 @@ class OrchestratorThreatActor(BaseOrchestrator):
                     )
 
                     self._check_batch_size_and_flush(self.batch_processor, all_entities)
-                    self._update_index_inplace()
                     self._add_entities_to_batch(
                         self.batch_processor, all_entities, self.converter
                     )
