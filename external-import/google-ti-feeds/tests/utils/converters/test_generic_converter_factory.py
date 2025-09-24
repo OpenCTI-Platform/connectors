@@ -1,6 +1,6 @@
 """Test module for GenericConverterFactory functionality."""
 
-from typing import Any, Optional, Tuple
+from typing import Any, Optional
 from unittest.mock import MagicMock
 
 import pytest
@@ -685,7 +685,7 @@ def _when_converter_created_by_name(
     factory: GenericConverterFactory,
     name: str,
     additional_deps: Optional[dict[str, Any]] = None,
-) -> Tuple[Any, Any]:
+) -> tuple[Any, Any]:
     """Create a converter by name and capture result and exception."""
     try:
         converter = factory.create_converter_by_name(name, additional_deps)
@@ -726,7 +726,7 @@ def _when_simple_converter_created_full(
 
 def _when_multiple_converters_created(
     factory: GenericConverterFactory, config_names: list[str]
-) -> Tuple[Any, Any]:
+) -> tuple[Any, Any]:
     """Create multiple converters and capture result and exception."""
     try:
         converters = factory.create_multiple_converters(config_names)
@@ -746,7 +746,7 @@ def _when_conversion_pipeline_created(
     factory: GenericConverterFactory,
     converter_names: list[str],
     shared_deps: Optional[dict[str, Any]] = None,
-) -> Tuple[Any, Any]:
+) -> tuple[Any, Any]:
     """Create conversion pipeline and capture result and exception."""
     try:
         pipeline = factory.create_conversion_pipeline(converter_names, shared_deps)

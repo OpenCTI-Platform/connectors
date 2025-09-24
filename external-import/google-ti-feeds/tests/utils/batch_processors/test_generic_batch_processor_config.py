@@ -1,6 +1,6 @@
 """Test module for GenericBatchProcessorConfig functionality."""
 
-from typing import Any, Optional, Tuple
+from typing import Any, Optional
 
 import pytest
 from connector.src.utils.batch_processors.generic_batch_processor_config import (
@@ -698,7 +698,7 @@ def test_get_current_timestamp() -> None:
 
 def _when_work_name_formatted(
     config: GenericBatchProcessorConfig, **kwargs: Any
-) -> Tuple[Optional[str], Optional[Exception]]:
+) -> tuple[Optional[str], Optional[Exception]]:
     """Format work name and capture result and exception."""
     try:
         return config.format_work_name(**kwargs), None
@@ -720,7 +720,7 @@ def _when_item_validated(config: GenericBatchProcessorConfig, item: Any) -> bool
 
 def _when_batch_preprocessed(
     config: GenericBatchProcessorConfig, items: list[Any]
-) -> Tuple[Optional[list[Any]], Optional[Exception]]:
+) -> tuple[Optional[list[Any]], Optional[Exception]]:
     """Preprocess batch and capture result and exception."""
     try:
         return config.preprocess_batch(items), None
@@ -730,7 +730,7 @@ def _when_batch_preprocessed(
 
 def _when_batch_postprocessed(
     config: GenericBatchProcessorConfig, items: list[Any], work_id: str
-) -> Tuple[Optional[list[Any]], Optional[Exception]]:
+) -> tuple[Optional[list[Any]], Optional[Exception]]:
     """Postprocess batch."""
     try:
         config.postprocess_batch(items, work_id)

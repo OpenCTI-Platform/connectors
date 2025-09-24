@@ -1,7 +1,7 @@
 """Converts a GTI campaign to a STIX campaign object."""
 
 from datetime import datetime, timezone
-from typing import Any, Optional, Tuple
+from typing import Any, Optional
 
 from connector.src.custom.models.gti.gti_campaign_model import (
     CampaignModel,
@@ -85,7 +85,7 @@ class GTICampaignToSTIXCampaign(BaseMapper):
     @staticmethod
     def _get_activity_timestamps(
         attributes: CampaignModel,
-    ) -> Tuple[Optional[datetime], Optional[datetime]]:
+    ) -> tuple[Optional[datetime], Optional[datetime]]:
         """Extract first and last seen timestamps from attributes.
 
         Args:

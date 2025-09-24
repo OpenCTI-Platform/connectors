@@ -1,6 +1,6 @@
 """Test module for GenericFetcherConfig functionality."""
 
-from typing import Any, Optional, Tuple
+from typing import Any, Optional
 
 import pytest
 from connector.src.utils.fetchers.generic_fetcher_config import GenericFetcherConfig
@@ -354,7 +354,7 @@ def test_headers_initialization_with_values() -> None:
 
 def _when_endpoint_formatted(
     config: GenericFetcherConfig, **kwargs: Any
-) -> Tuple[Optional[str], Optional[Exception]]:
+) -> tuple[Optional[str], Optional[Exception]]:
     """Format the endpoint with provided parameters."""
     try:
         return config.format_endpoint(**kwargs), None

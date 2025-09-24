@@ -1,7 +1,7 @@
 """Test module for GenericBatchProcessor functionality."""
 
 from datetime import UTC, datetime
-from typing import Any, Optional, Tuple
+from typing import Any, Optional
 from unittest.mock import MagicMock
 
 import pytest
@@ -903,7 +903,7 @@ def test_ensure_stix_format_with_base_mapper(
 
 def _when_item_added(
     processor: GenericBatchProcessor, item: Any
-) -> Tuple[Optional[Any], Optional[Exception]]:
+) -> tuple[Optional[Any], Optional[Exception]]:
     """Add an item and capture result and exception."""
     try:
         result = processor.add_item(item)
@@ -914,7 +914,7 @@ def _when_item_added(
 
 def _when_multiple_items_added(
     processor: GenericBatchProcessor, items: list[Any]
-) -> Tuple[Optional[Any], Optional[Exception]]:
+) -> tuple[Optional[Any], Optional[Exception]]:
     """Add multiple items and capture result and exception."""
     try:
         result = processor.add_items(items)
@@ -925,7 +925,7 @@ def _when_multiple_items_added(
 
 def _when_current_batch_processed(
     processor: GenericBatchProcessor,
-) -> Tuple[Optional[Any], Optional[Exception]]:
+) -> tuple[Optional[Any], Optional[Exception]]:
     """Process current batch and capture result and exception."""
     try:
         result = processor.process_current_batch()
@@ -936,7 +936,7 @@ def _when_current_batch_processed(
 
 def _when_flush_called(
     processor: GenericBatchProcessor,
-) -> Tuple[Optional[Any], Optional[Exception]]:
+) -> tuple[Optional[Any], Optional[Exception]]:
     """Call flush and capture result and exception."""
     try:
         result = processor.flush()

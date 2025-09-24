@@ -1,6 +1,6 @@
 """Test module for GenericConverterConfig functionality."""
 
-from typing import Any, Optional, Tuple
+from typing import Any, Optional
 from unittest.mock import MagicMock
 
 import pytest
@@ -735,7 +735,7 @@ def test_validate_output_data_skip_when_disabled() -> None:
 
 def _when_mapper_created(
     config: GenericConverterConfig, input_data: Any, **kwargs: Any
-) -> Tuple[Any, Any]:
+) -> tuple[Any, Any]:
     """Create mapper and capture result and exception."""
     try:
         mapper = config.create_mapper(input_data, **kwargs)

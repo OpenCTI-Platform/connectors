@@ -1,6 +1,6 @@
 """Test module for GenericConverter functionality."""
 
-from typing import Any, Optional, Tuple
+from typing import Any, Optional
 from unittest.mock import MagicMock
 
 import pytest
@@ -770,7 +770,7 @@ def test_convert_config_convert_method_validates_stix_even_when_false(
 
 def _when_convert_single_called(
     converter: GenericConverter, input_data: Any, **kwargs: Any
-) -> Tuple[Any, Any]:
+) -> tuple[Any, Any]:
     """Call convert_single and capture result and exception."""
     try:
         result = converter.convert_single(input_data, **kwargs)
@@ -781,7 +781,7 @@ def _when_convert_single_called(
 
 def _when_convert_multiple_called(
     converter: GenericConverter, input_data_list: list[Any], **kwargs: Any
-) -> Tuple[Any, Any]:
+) -> tuple[Any, Any]:
     """Call convert_multiple and capture result and exception."""
     try:
         result = converter.convert_multiple(input_data_list, **kwargs)
@@ -792,7 +792,7 @@ def _when_convert_multiple_called(
 
 def _when_convert_batch_called(
     converter: GenericConverter, input_batches: dict[str, Any], **kwargs: Any
-) -> Tuple[Any, Any]:
+) -> tuple[Any, Any]:
     """Call convert_batch and capture result and exception."""
     try:
         result = converter.convert_batch(input_batches, **kwargs)
