@@ -1,7 +1,8 @@
 """Client API - Main entry point that delegates to specialized client APIs."""
 
 import logging
-from typing import Any, AsyncGenerator, Optional
+from collections.abc import AsyncGenerator
+from typing import Any, Optional
 from uuid import uuid4
 
 from connector.src.custom.client_api.campaign.client_api_campaign import (

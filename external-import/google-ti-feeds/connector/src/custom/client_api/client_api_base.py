@@ -1,8 +1,9 @@
 """Base client API class with common functionality."""
 
 import logging
+from collections.abc import AsyncGenerator
 from datetime import datetime, timedelta, timezone
-from typing import Any, AsyncGenerator, Optional
+from typing import Any, Optional
 from uuid import uuid4
 
 from connector.src.custom.configs.fetcher_config import FETCHER_CONFIGS
