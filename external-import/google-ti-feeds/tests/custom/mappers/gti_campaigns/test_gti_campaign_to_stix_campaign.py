@@ -1,7 +1,7 @@
 """Tests for the GTICampaignToSTIXCampaign mapper."""
 
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -624,7 +624,7 @@ def _when_convert_to_stix_raises_error(
 # When extract seen dates
 def _when_extract_seen_dates(
     attributes: CampaignModel,
-) -> tuple[Optional[datetime], Optional[datetime]]:
+) -> tuple[datetime | None, datetime | None]:
     """Extract seen dates from campaign attributes."""
     return GTICampaignToSTIXCampaign._get_activity_timestamps(attributes)
 
@@ -706,7 +706,7 @@ def _then_stix_campaign_handles_empty_collections(stix_campaign: Any) -> None:
 
 # Then seen dates extracted correctly
 def _then_seen_dates_extracted_correctly(
-    first_seen: Optional[datetime], last_seen: Optional[datetime]
+    first_seen: datetime | None, last_seen: datetime | None
 ) -> None:
     """Check if seen dates were extracted correctly."""
     assert first_seen is not None  # noqa: S101

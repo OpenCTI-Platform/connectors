@@ -1,7 +1,7 @@
 """Test module for GenericBatchProcessor functionality."""
 
 from datetime import UTC, datetime
-from typing import Any, Optional
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -20,7 +20,7 @@ from connector.src.utils.batch_processors.generic_batch_processor_config import 
 class MockSTIXObject:
     """Mock STIX object for testing."""
 
-    def __init__(self, id: str, name: str, modified: Optional[str] = None) -> None:
+    def __init__(self, id: str, name: str, modified: str | None = None) -> None:
         """Initialize a MockSTIXObject."""
         self.id = id
         self.name = name
@@ -33,7 +33,7 @@ class MockSTIXObject:
 class MockMapper:
     """Mock mapper that can convert to STIX."""
 
-    def __init__(self, id: str, name: str, modified: Optional[str] = None) -> None:
+    def __init__(self, id: str, name: str, modified: str | None = None) -> None:
         """Initialize a MockMapper."""
         self.id = id
         self.name = name
@@ -66,8 +66,8 @@ class BatchProcessingError(Exception):
     def __init__(
         self,
         message: str,
-        batch_number: Optional[int] = None,
-        work_id: Optional[str] = None,
+        batch_number: int | None = None,
+        work_id: str | None = None,
     ) -> None:
         """Initialize a BatchProcessingError."""
         super().__init__(message)
@@ -132,7 +132,7 @@ def validation_config() -> GenericBatchProcessorConfig:
 def date_extraction_config() -> GenericBatchProcessorConfig:
     """Fixture for configuration with date extraction function."""
 
-    def extract_date(item: Any) -> Optional[str]:
+    def extract_date(item: Any) -> str | None:
         if hasattr(item, "modified"):
             return str(item.modified)
         return None
@@ -903,7 +903,7 @@ def test_ensure_stix_format_with_base_mapper(
 
 def _when_item_added(
     processor: GenericBatchProcessor, item: Any
-) -> tuple[Optional[Any], Optional[Exception]]:
+) -> tuple[Any | None, Exception | None]:
     """Add an item and capture result and exception."""
     try:
         result = processor.add_item(item)
@@ -914,7 +914,7 @@ def _when_item_added(
 
 def _when_multiple_items_added(
     processor: GenericBatchProcessor, items: list[Any]
-) -> tuple[Optional[Any], Optional[Exception]]:
+) -> tuple[Any | None, Exception | None]:
     """Add multiple items and capture result and exception."""
     try:
         result = processor.add_items(items)
@@ -925,7 +925,7 @@ def _when_multiple_items_added(
 
 def _when_current_batch_processed(
     processor: GenericBatchProcessor,
-) -> tuple[Optional[Any], Optional[Exception]]:
+) -> tuple[Any | None, Exception | None]:
     """Process current batch and capture result and exception."""
     try:
         result = processor.process_current_batch()
@@ -936,7 +936,7 @@ def _when_current_batch_processed(
 
 def _when_flush_called(
     processor: GenericBatchProcessor,
-) -> tuple[Optional[Any], Optional[Exception]]:
+) -> tuple[Any | None, Exception | None]:
     """Call flush and capture result and exception."""
     try:
         result = processor.flush()
@@ -979,7 +979,7 @@ def _when_failed_items_cleared(processor: GenericBatchProcessor) -> None:
 
 
 def _then_item_added_successfully(
-    result: Optional[bool], exception: Optional[Exception]
+    result: bool | None, exception: Exception | None
 ) -> None:
     """Assert that item was added successfully."""
     assert exception is None  # noqa: S101
@@ -987,7 +987,7 @@ def _then_item_added_successfully(
 
 
 def _then_item_validation_failed(
-    result: Optional[bool], exception: Optional[Exception]
+    result: bool | None, exception: Exception | None
 ) -> None:
     """Assert that item validation failed."""
     assert exception is None  # noqa: S101
@@ -995,7 +995,7 @@ def _then_item_validation_failed(
 
 
 def _then_multiple_items_added_successfully(
-    added_count: Optional[int], exception: Optional[Exception], expected_count: int
+    added_count: int | None, exception: Exception | None, expected_count: int
 ) -> None:
     """Assert that multiple items were added successfully."""
     assert exception is None  # noqa: S101
@@ -1003,7 +1003,7 @@ def _then_multiple_items_added_successfully(
 
 
 def _then_multiple_items_partial_success(
-    added_count: Optional[int], exception: Optional[Exception], expected_count: int
+    added_count: int | None, exception: Exception | None, expected_count: int
 ) -> None:
     """Assert that multiple items had partial success."""
     assert exception is None  # noqa: S101
@@ -1031,7 +1031,7 @@ def _then_latest_date_tracked(
 
 
 def _then_batch_processed_successfully(
-    work_id: Optional[str], exception: Optional[Exception]
+    work_id: str | None, exception: Exception | None
 ) -> None:
     """Assert that batch was processed successfully."""
     assert exception is None  # noqa: S101
@@ -1040,7 +1040,7 @@ def _then_batch_processed_successfully(
 
 
 def _then_empty_batch_processed(
-    work_id: Optional[str], exception: Optional[Exception]
+    work_id: str | None, exception: Exception | None
 ) -> None:
     """Assert that empty batch was processed (returns None)."""
     assert exception is None  # noqa: S101
@@ -1048,7 +1048,7 @@ def _then_empty_batch_processed(
 
 
 def _then_batch_processing_failed_after_retries(
-    work_id: Optional[str], exception: Optional[Exception]
+    work_id: str | None, exception: Exception | None
 ) -> None:
     """Assert that batch processing failed after retries."""
     assert work_id is None  # noqa: S101
@@ -1056,9 +1056,7 @@ def _then_batch_processing_failed_after_retries(
     assert isinstance(exception, BatchProcessingError)  # noqa: S101
 
 
-def _then_flush_empty_batch(
-    work_id: Optional[str], exception: Optional[Exception]
-) -> None:
+def _then_flush_empty_batch(work_id: str | None, exception: Exception | None) -> None:
     """Assert that flush handled empty batch correctly."""
     assert exception is None  # noqa: S101
     assert work_id is None  # noqa: S101

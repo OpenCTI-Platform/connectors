@@ -1,6 +1,6 @@
 """The module contains the OctiSoftwareModel class, which represents an OpenCTI Software."""
 
-from typing import Any, Optional
+from typing import Any
 
 from connector.src.stix.v21.models.scos.software_model import SoftwareModel
 
@@ -14,12 +14,12 @@ class OctiSoftwareModel:
         marking_ids: list[str],
         name: str,
         create_indicator: bool = False,
-        cpe: Optional[str] = None,
-        languages: Optional[list[str]] = None,
-        vendor: Optional[str] = None,
-        version: Optional[str] = None,
-        score: Optional[int] = None,
-        product: Optional[str] = None,
+        cpe: str | None = None,
+        languages: list[str] | None = None,
+        vendor: str | None = None,
+        version: str | None = None,
+        score: int | None = None,
+        product: str | None = None,
         **kwargs: Any,
     ) -> SoftwareModel:
         """Create a Software model.

@@ -1,7 +1,7 @@
 """The module defines a RelationshipModel class that represents a STIX 2.1 Relationship object."""
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 import pycti  # type: ignore  # Missing library stubs
 from pydantic import BaseModel, Field, model_validator
@@ -22,9 +22,7 @@ class RelationshipModel(BaseModel):
         "2.1",
         description="The version of the STIX specification used to represent this object.",
     )
-    id: Optional[str] = Field(
-        default=None, description="The identifier of this object."
-    )
+    id: str | None = Field(default=None, description="The identifier of this object.")
     created: datetime = Field(
         ..., description="The time at which this object was created."
     )
@@ -45,54 +43,54 @@ class RelationshipModel(BaseModel):
         description="The ID of the target (to) object in the relationship.",
     )
 
-    description: Optional[str] = Field(
+    description: str | None = Field(
         default=None,
         description="A description that provides more details and context about the Relationship.",
     )
-    start_time: Optional[datetime] = Field(
+    start_time: datetime | None = Field(
         default=None,
         description="When the relationship began or was in effect.",
     )
-    stop_time: Optional[datetime] = Field(
+    stop_time: datetime | None = Field(
         default=None,
         description="When the relationship ended or was no longer in effect.",
     )
 
-    created_by_ref: Optional[str] = Field(
+    created_by_ref: str | None = Field(
         default=None,
         description="Reference to the identity that created the object.",
     )
-    revoked: Optional[bool] = Field(
+    revoked: bool | None = Field(
         default=None,
         description="Indicates whether this object has been revoked.",
     )
-    labels: Optional[list[str]] = Field(
+    labels: list[str] | None = Field(
         default=None, description="User-defined labels for this object."
     )
-    confidence: Optional[int] = Field(
+    confidence: int | None = Field(
         default=None,
         description="Level of confidence in the accuracy of this object (0–100).",
     )
-    lang: Optional[str] = Field(
+    lang: str | None = Field(
         default=None, description="Language code used for this object."
     )
-    external_references: Optional[list[dict[str, Any]]] = Field(
+    external_references: list[dict[str, Any]] | None = Field(
         default=None,
         description="list of external references relevant to this object.",
     )
-    object_marking_refs: Optional[list[str]] = Field(
+    object_marking_refs: list[str] | None = Field(
         default=None,
         description="list of marking-definition IDs that apply to this object.",
     )
-    granular_markings: Optional[list[dict[str, Any]]] = Field(
+    granular_markings: list[dict[str, Any]] | None = Field(
         default=None,
         description="Granular markings on specific object fields.",
     )
-    extensions: Optional[dict[str, dict[str, Any]]] = Field(
+    extensions: dict[str, dict[str, Any]] | None = Field(
         default=None,
         description="Custom STIX extensions applied to this object.",
     )
-    custom_properties: Optional[dict[str, Any]] = Field(
+    custom_properties: dict[str, Any] | None = Field(
         default=None,
         description="Custom properties that are not part of the STIX specification.",
     )

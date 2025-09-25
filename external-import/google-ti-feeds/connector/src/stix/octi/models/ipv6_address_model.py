@@ -1,6 +1,6 @@
 """The module contains the OctiIPv6AddressModel class, which represents an OpenCTI IPv6 Address."""
 
-from typing import Any, Optional
+from typing import Any
 
 from connector.src.stix.v21.models.scos.ipv6_address_model import IPv6AddressModel
 
@@ -14,7 +14,7 @@ class OctiIPv6AddressModel:
         organization_id: str,
         marking_ids: list[str],
         create_indicator: bool = False,
-        score: Optional[int] = None,
+        score: int | None = None,
         **kwargs: Any,
     ) -> IPv6AddressModel:
         """Create an IPv6 Address model.

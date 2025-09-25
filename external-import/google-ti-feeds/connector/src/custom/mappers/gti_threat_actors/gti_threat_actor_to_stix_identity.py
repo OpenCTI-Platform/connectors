@@ -132,7 +132,7 @@ class GTIThreatActorToSTIXIdentity(BaseMapper):
             industry_data (TargetedIndustry): The targeted industry data to process.
 
         Returns:
-            Optional[Identity]: The STIX Identity object, or None if no valid industry group found.
+                Identity | None: The STIX Identity object, or None if no valid industry group found.
 
         """
         if not industry_data.industry_group or not industry_data.industry_group.strip():

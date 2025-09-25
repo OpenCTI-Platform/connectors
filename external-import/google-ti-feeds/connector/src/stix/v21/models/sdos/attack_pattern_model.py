@@ -1,6 +1,6 @@
 """The module contains the AttackPatternModel class, which represents an attack pattern in STIX 2.1 format."""
 
-from typing import Any, Optional
+from typing import Any
 
 import pycti  # type: ignore  # Missing library stubs
 from connector.src.stix.v21.models.cdts.kill_chain_phase_model import (
@@ -18,15 +18,15 @@ class AttackPatternModel(BaseSDOModel):
     """Model representing an Attack Pattern in STIX 2.1 format."""
 
     name: str = Field(..., description="A name used to identify the Attack Pattern.")
-    description: Optional[str] = Field(
+    description: str | None = Field(
         default=None,
         description="A description that provides more details and context about the Attack Pattern, potentially including its purpose and its key characteristics.",
     )
-    aliases: Optional[list[str]] = Field(
+    aliases: list[str] | None = Field(
         default=None,
         description="Alternative names used to identify this Attack Pattern.",
     )
-    kill_chain_phases: Optional[list[KillChainPhaseModel]] = Field(
+    kill_chain_phases: list[KillChainPhaseModel] | None = Field(
         default=None,
         description="The list of Kill Chain Phases for which this Attack Pattern is used.",
     )

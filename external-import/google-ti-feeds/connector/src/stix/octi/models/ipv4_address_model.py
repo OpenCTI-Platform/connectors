@@ -1,6 +1,6 @@
 """The module contains the OctiIPv4AddressModel class, which represents an OpenCTI IPv4 Address."""
 
-from typing import Any, Optional
+from typing import Any
 
 from connector.src.stix.v21.models.scos.ipv4_address_model import IPv4AddressModel
 
@@ -14,7 +14,7 @@ class OctiIPv4AddressModel:
         organization_id: str,
         marking_ids: list[str],
         create_indicator: bool = False,
-        score: Optional[int] = None,
+        score: int | None = None,
         **kwargs: Any,
     ) -> IPv4AddressModel:
         """Create an IPv4 Address model.

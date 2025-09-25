@@ -1,7 +1,5 @@
 """The module defines the DomainNameModel class, which represents a STIX 2.1 Domain Name object."""
 
-from typing import Optional
-
 from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import Field
 from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
@@ -17,7 +15,7 @@ class DomainNameModel(BaseSCOModel):
         ...,
         description="The domain name, which MUST conform to RFC1034 and RFC5890.",
     )
-    resolves_to_refs: Optional[list[str]] = Field(
+    resolves_to_refs: list[str] | None = Field(
         default=None,
         description="(Deprecated) list of references to SCOs of type 'ipv4-addr', 'ipv6-addr', or 'domain-name' that this domain resolves to.",
     )

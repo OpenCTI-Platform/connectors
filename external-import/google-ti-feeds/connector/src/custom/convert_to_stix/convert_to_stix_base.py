@@ -1,7 +1,7 @@
 """Base converter class with common functionality."""
 
 import logging
-from typing import Any, Literal, Optional, cast
+from typing import Any, Literal, cast
 
 from connector.src.custom.configs import (
     GTIConfig,
@@ -115,7 +115,7 @@ class BaseConvertToSTIX:
         return tlp_marking
 
     def convert_subentities_to_stix(
-        self, subentities: dict[str, list[Any]], main_entity: Optional[str] = None
+        self, subentities: dict[str, list[Any]], main_entity: str | None = None
     ) -> list[Any]:
         """Convert each subentity to STIX format.
 
@@ -164,7 +164,7 @@ class BaseConvertToSTIX:
         subentities: dict[str, list[Any]],
         main_entity: str,
         main_entities: list[Any],
-    ) -> Optional[list[Any]]:
+    ) -> list[Any] | None:
         """Convert each subentity to STIX format with linking.
 
         Args:

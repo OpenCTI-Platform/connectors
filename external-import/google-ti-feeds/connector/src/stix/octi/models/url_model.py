@@ -1,6 +1,6 @@
 """The module contains the OctiUrlModel class, which represents an OpenCTI URL."""
 
-from typing import Any, Optional
+from typing import Any
 
 from connector.src.stix.v21.models.scos.url_model import URLModel
 
@@ -14,7 +14,7 @@ class OctiUrlModel:
         organization_id: str,
         marking_ids: list[str],
         create_indicator: bool = False,
-        score: Optional[int] = None,
+        score: int | None = None,
         **kwargs: Any,
     ) -> URLModel:
         """Create a URL model.

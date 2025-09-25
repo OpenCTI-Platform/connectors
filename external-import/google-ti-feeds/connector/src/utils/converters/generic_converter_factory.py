@@ -5,7 +5,7 @@ work with any input data format, mapper class, and output STIX entity type.
 """
 
 import logging
-from typing import Any, Optional, Type
+from typing import Any, Type
 
 from connector.src.utils.converters.generic_converter import GenericConverter
 from connector.src.utils.converters.generic_converter_config import (
@@ -22,8 +22,8 @@ class GenericConverterFactory:
 
     def __init__(
         self,
-        global_dependencies: Optional[dict[str, Any]] = None,
-        logger: Optional[logging.Logger] = None,
+        global_dependencies: dict[str, Any] | None = None,
+        logger: logging.Logger | None = None,
     ):
         """Initialize the factory with common dependencies.
 
@@ -57,7 +57,7 @@ class GenericConverterFactory:
     def create_converter(
         self,
         config: GenericConverterConfig,
-        additional_dependencies: Optional[dict[str, Any]] = None,
+        additional_dependencies: dict[str, Any] | None = None,
     ) -> GenericConverter:
         """Create a converter with the provided configuration.
 
@@ -79,7 +79,7 @@ class GenericConverterFactory:
     def create_converter_by_name(
         self,
         name: str,
-        additional_dependencies: Optional[dict[str, Any]] = None,
+        additional_dependencies: dict[str, Any] | None = None,
     ) -> GenericConverter:
         """Create a converter using a registered configuration.
 
@@ -111,8 +111,8 @@ class GenericConverterFactory:
         output_stix_type: str,
         exception_class: Type[Exception],
         display_name: str,
-        input_model: Optional[Type[BaseModel]] = None,
-        additional_dependencies: Optional[dict[str, Any]] = None,
+        input_model: Type[BaseModel] | None = None,
+        additional_dependencies: dict[str, Any] | None = None,
         **config_kwargs: Any,
     ) -> GenericConverter:
         """Create a converter with a simple inline configuration.
@@ -123,7 +123,7 @@ class GenericConverterFactory:
             output_stix_type: The STIX object type being produced
             exception_class: Exception class to raise on errors
             display_name: Human-readable name for logging
-            input_model: Optional input model type for validation
+            input_model: Type[BaseModel] | None for validation
             additional_dependencies: Additional dependencies for this converter
             **config_kwargs: Additional configuration parameters
 
@@ -196,7 +196,7 @@ class GenericConverterFactory:
     def create_conversion_pipeline(
         self,
         converter_names: list[str],
-        shared_dependencies: Optional[dict[str, Any]] = None,
+        shared_dependencies: dict[str, Any] | None = None,
     ) -> dict[str, GenericConverter]:
         """Create a pipeline of converters for batch processing.
 
@@ -264,7 +264,7 @@ class GenericConverterFactory:
             },
         )
 
-    def get_config(self, name: str) -> Optional[GenericConverterConfig]:
+    def get_config(self, name: str) -> GenericConverterConfig | None:
         """Get a registered converter configuration by name.
 
         Args:
@@ -279,7 +279,7 @@ class GenericConverterFactory:
     def _merge_dependencies(
         self,
         config: GenericConverterConfig,
-        additional_dependencies: Optional[dict[str, Any]] = None,
+        additional_dependencies: dict[str, Any] | None = None,
     ) -> GenericConverterConfig:
         """Merge global and additional dependencies into the configuration.
 

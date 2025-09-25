@@ -1,7 +1,7 @@
 """Core connector as defined in the OpenCTI connector template."""
 
 import asyncio
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional
+from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
 from connector.src.custom.configs.gti_config import GTIConfig
 from connector.src.custom.exceptions.connector_errors.gti_work_processing_error import (
@@ -158,7 +158,7 @@ class Connector:
                     meta={"prefix": LOG_PREFIX, "error": str(cleanup_err)},
                 )
 
-    async def _process_gti_imports(self, gti_config: GTIConfig) -> Optional[str]:
+    async def _process_gti_imports(self, gti_config: GTIConfig) -> str | None:
         """Process GTI imports either in parallel or sequentially based on configuration."""
         enable_parallelism = True
 
@@ -264,7 +264,7 @@ class Connector:
 
     def _process_completed_tasks(
         self, done_tasks: list[asyncio.Task[Any]]
-    ) -> tuple[bool, Optional[str]]:
+    ) -> tuple[bool, str | None]:
         """Process completed tasks and return error status."""
         any_error = False
         first_error = None
@@ -301,7 +301,7 @@ class Connector:
                 task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
 
-    async def _process_gti_parallel(self, gti_config: GTIConfig) -> Optional[Any]:
+    async def _process_gti_parallel(self, gti_config: GTIConfig) -> Any | None:
         """Process GTI imports in parallel."""
         enabled_imports = self._get_enabled_imports(gti_config)
         self._logger.info(
@@ -330,7 +330,7 @@ class Connector:
         enabled: bool,
         gti_config: GTIConfig,
         processor_func: Callable[[GTIConfig], Awaitable[Any]],
-    ) -> Optional[Any]:
+    ) -> Any | None:
         """Process a specific import type if enabled."""
         if enabled:
             self._logger.info(
@@ -352,7 +352,7 @@ class Connector:
         campaigns_enabled: bool,
         malware_families_enabled: bool,
         vulnerabilities_enabled: bool,
-    ) -> Optional[Any]:
+    ) -> Any | None:
         """Process GTI imports sequentially."""
         self._logger.info("Starting sequential processing...", {"prefix": LOG_PREFIX})
 
@@ -414,7 +414,7 @@ class Connector:
             )
             return error_msg
 
-    async def _process_gti_reports(self, gti_config: GTIConfig) -> Optional[str]:
+    async def _process_gti_reports(self, gti_config: GTIConfig) -> str | None:
         """Process GTI reports using the orchestrator."""
         try:
             orchestrator = Orchestrator(
@@ -441,7 +441,7 @@ class Connector:
             )
             return error_msg
 
-    async def _process_gti_threat_actors(self, gti_config: GTIConfig) -> Optional[str]:
+    async def _process_gti_threat_actors(self, gti_config: GTIConfig) -> str | None:
         """Process GTI threat actors using the orchestrator."""
         try:
             orchestrator = Orchestrator(
@@ -471,7 +471,7 @@ class Connector:
             )
             return error_msg
 
-    async def _process_gti_campaigns(self, gti_config: GTIConfig) -> Optional[str]:
+    async def _process_gti_campaigns(self, gti_config: GTIConfig) -> str | None:
         """Process GTI campaigns using the orchestrator."""
         try:
             orchestrator = Orchestrator(
@@ -501,9 +501,7 @@ class Connector:
             )
             return error_msg
 
-    async def _process_gti_malware_families(
-        self, gti_config: GTIConfig
-    ) -> Optional[str]:
+    async def _process_gti_malware_families(self, gti_config: GTIConfig) -> str | None:
         """Process GTI malware families using the orchestrator."""
         try:
             orchestrator = Orchestrator(
@@ -533,9 +531,7 @@ class Connector:
             )
             return error_msg
 
-    async def _process_gti_vulnerabilities(
-        self, gti_config: GTIConfig
-    ) -> Optional[str]:
+    async def _process_gti_vulnerabilities(self, gti_config: GTIConfig) -> str | None:
         """Process GTI vulnerabilities using the orchestrator."""
         try:
             orchestrator = Orchestrator(

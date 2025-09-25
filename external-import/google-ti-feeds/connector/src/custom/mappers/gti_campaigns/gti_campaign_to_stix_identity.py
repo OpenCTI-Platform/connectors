@@ -134,7 +134,7 @@ class GTICampaignToSTIXIdentity(BaseMapper):
             industry_data (TargetedIndustry): The targeted industry data to process.
 
         Returns:
-            Optional[Identity]: The STIX Identity object, or None if no valid industry found.
+                Identity | None: The STIX Identity object, or None if no valid industry found.
 
         """
         # Skip industries without valid names - both industry_group and industry must be empty/whitespace

@@ -1,6 +1,6 @@
 """Module to test the API engine components."""
 
-from typing import Any, Optional, Type
+from typing import Any, Type
 from unittest.mock import AsyncMock
 
 import pytest
@@ -31,12 +31,12 @@ def mock_aiohttp_client() -> AsyncMock:
     async def _request(
         method: str,
         url: str,
-        headers: Optional[dict[str, str]] = None,
-        params: Optional[dict[str, str]] = None,
-        data: Optional[dict[str, str]] = None,
-        json_payload: Optional[dict[str, str]] = None,
-        ssl: Optional[bool] = None,
-        timeout: Optional[float] = None,
+        headers: dict[str, str] | None = None,
+        params: dict[str, str] | None = None,
+        data: dict[str, str] | None = None,
+        json_payload: dict[str, str] | None = None,
+        ssl: bool | None = None,
+        timeout: float | None = None,
     ) -> Any:
         m = method.upper()
         if m == "GET":

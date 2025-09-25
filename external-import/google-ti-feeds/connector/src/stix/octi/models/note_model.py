@@ -1,7 +1,7 @@
 """The module contains the OctiNoteModel class, which represents an OpenCTI Note."""
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from connector.src.stix.v21.models.sdos.note_model import NoteModel
 
@@ -17,10 +17,10 @@ class OctiNoteModel:
         organization_id: str,
         marking_ids: list[str],
         object_refs: list[str],
-        abstract: Optional[str] = None,
-        authors: Optional[list[str]] = None,
-        labels: Optional[list[str]] = None,
-        external_references: Optional[list[dict[str, Any]]] = None,
+        abstract: str | None = None,
+        authors: list[str] | None = None,
+        labels: list[str] | None = None,
+        external_references: list[dict[str, Any]] | None = None,
         **kwargs: Any,
     ) -> NoteModel:
         """Create a Note model with OpenCTI custom properties.

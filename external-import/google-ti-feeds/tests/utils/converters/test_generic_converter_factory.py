@@ -1,6 +1,6 @@
 """Test module for GenericConverterFactory functionality."""
 
-from typing import Any, Optional
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -43,8 +43,8 @@ class MockMapper(BaseMapper):
     def __init__(
         self,
         input_data: Any,
-        organization: Optional[str] = None,
-        tlp_marking: Optional[str] = None,
+        organization: str | None = None,
+        tlp_marking: str | None = None,
     ):
         """Initialize the mock mapper."""
         self.input_data = input_data
@@ -79,8 +79,8 @@ class ThreatMapper(BaseMapper):
     def __init__(
         self,
         input_data: Any,
-        organization: Optional[str] = None,
-        tlp_marking: Optional[str] = None,
+        organization: str | None = None,
+        tlp_marking: str | None = None,
     ):
         """Initialize the threat mapper."""
         self.input_data = input_data
@@ -102,8 +102,8 @@ class MalwareMapper(BaseMapper):
     def __init__(
         self,
         input_data: Any,
-        organization: Optional[str] = None,
-        tlp_marking: Optional[str] = None,
+        organization: str | None = None,
+        tlp_marking: str | None = None,
     ):
         """Initialize the malware mapper."""
         self.input_data = input_data
@@ -130,8 +130,8 @@ class CustomError(Exception):
     def __init__(
         self,
         message: str,
-        entity_id: Optional[str] = None,
-        entity_name: Optional[str] = None,
+        entity_id: str | None = None,
+        entity_name: str | None = None,
     ):
         """Initialize the custom exception."""
         super().__init__(message)
@@ -675,7 +675,7 @@ def _when_get_config_names(factory: GenericConverterFactory) -> list[str]:
 def _when_converter_created_with_config(
     factory: GenericConverterFactory,
     config: GenericConverterConfig,
-    additional_deps: Optional[dict[str, Any]] = None,
+    additional_deps: dict[str, Any] | None = None,
 ) -> GenericConverter:
     """Create a converter with a configuration."""
     return factory.create_converter(config, additional_deps)
@@ -684,7 +684,7 @@ def _when_converter_created_with_config(
 def _when_converter_created_by_name(
     factory: GenericConverterFactory,
     name: str,
-    additional_deps: Optional[dict[str, Any]] = None,
+    additional_deps: dict[str, Any] | None = None,
 ) -> tuple[Any, Any]:
     """Create a converter by name and capture result and exception."""
     try:
@@ -715,7 +715,7 @@ def _when_simple_converter_created(
 def _when_simple_converter_created_full(
     factory: GenericConverterFactory,
     params: dict[str, Any],
-    additional_deps: Optional[dict[str, Any]] = None,
+    additional_deps: dict[str, Any] | None = None,
 ) -> GenericConverter:
     """Create a simple converter with full parameters."""
     return factory.create_simple_converter(
@@ -745,7 +745,7 @@ def _when_all_converters_created(
 def _when_conversion_pipeline_created(
     factory: GenericConverterFactory,
     converter_names: list[str],
-    shared_deps: Optional[dict[str, Any]] = None,
+    shared_deps: dict[str, Any] | None = None,
 ) -> tuple[Any, Any]:
     """Create conversion pipeline and capture result and exception."""
     try:
@@ -761,7 +761,7 @@ def _when_conversion_pipeline_created(
 def _then_factory_initialized_correctly(
     factory: GenericConverterFactory,
     expected_global_deps: dict[str, Any],
-    expected_logger: Optional[MagicMock] = None,
+    expected_logger: MagicMock | None = None,
 ) -> None:
     """Assert that factory was initialized correctly."""
     assert factory.global_dependencies == expected_global_deps  # noqa: S101
@@ -966,7 +966,7 @@ def _then_dependency_precedence_correct(
 
 def _then_pipeline_has_shared_dependencies(
     pipeline: dict[str, GenericConverter],
-    shared_deps: Optional[dict[str, Any]],
+    shared_deps: dict[str, Any] | None,
 ) -> None:
     """Assert that pipeline converters have shared dependencies."""
     if shared_deps is not None:

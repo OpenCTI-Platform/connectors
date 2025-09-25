@@ -1,7 +1,5 @@
 """Converts a GTI report to a STIX identity object."""
 
-from typing import Optional
-
 from connector.src.custom.models.gti.gti_report_model import GTIReportData
 from connector.src.stix.octi.models.identity_author_model import OctiIdentityAuthorModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
@@ -19,7 +17,7 @@ class GTIReportToSTIXIdentity(BaseMapper):
         self,
         report: GTIReportData,
         organization: OrganizationAuthor,
-        tlp_marking: Optional[TLPMarking] = None,
+        tlp_marking: TLPMarking | None = None,
     ):
         """Initialize the GTIReportToSTIXIdentity object.
 

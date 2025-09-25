@@ -1,7 +1,7 @@
 """Converts a GTI URL to a STIX URL object and indicator."""
 
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 from connector.src.custom.models.gti.gti_url_model import (
     GTIURLData,
@@ -201,7 +201,7 @@ class GTIUrlToSTIXUrl(BaseMapper):
 
         return {"created": created, "modified": modified}
 
-    def _get_score(self) -> Optional[int]:
+    def _get_score(self) -> int | None:
         """Get score from URL attributes.
 
         Priority order:
@@ -209,7 +209,7 @@ class GTIUrlToSTIXUrl(BaseMapper):
         2. threat_score.value
 
         Returns:
-            Optional[int]: The score if available, None otherwise
+            int | None: The score if available, None otherwise
 
         """
         if (

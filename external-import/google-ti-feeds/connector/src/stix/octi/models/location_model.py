@@ -1,7 +1,7 @@
 """The module contains the OctiLocationModel class, which represents an OpenCTI Location."""
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from connector.src.stix.v21.models.ovs.region_ov_enums import RegionOV
 from connector.src.stix.v21.models.sdos.location_model import LocationModel
@@ -16,7 +16,7 @@ class OctiLocationModel:
         country_code: str,
         organization_id: str,
         marking_ids: list[str],
-        description: Optional[str] = None,
+        description: str | None = None,
         **kwargs: Any,
     ) -> LocationModel:
         """Create a Country Location model with OpenCTI custom properties.
@@ -58,7 +58,7 @@ class OctiLocationModel:
         region_value: RegionOV,
         organization_id: str,
         marking_ids: list[str],
-        description: Optional[str] = None,
+        description: str | None = None,
         **kwargs: Any,
     ) -> LocationModel:
         """Create a Region Location model with OpenCTI custom properties.

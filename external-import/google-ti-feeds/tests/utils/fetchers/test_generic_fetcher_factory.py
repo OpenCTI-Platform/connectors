@@ -1,6 +1,6 @@
 """Test module for GenericFetcherFactory functionality."""
 
-from typing import Any, Optional
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -37,12 +37,12 @@ class ProductModel(BaseModel):
 class UserFetchError(Exception):
     """Custom exception for user fetching."""
 
-    def __init__(self, message: str, endpoint: Optional[str] = None):
+    def __init__(self, message: str, endpoint: str | None = None):
         """Initialize the UserFetchError.
 
         Args:
             message (str): The error message.
-            endpoint (Optional[str]): The endpoint that caused the error.
+            endpoint (str | None): The endpoint that caused the error.
 
         """
         super().__init__(message)
@@ -473,7 +473,7 @@ def _when_get_config_names(factory: GenericFetcherFactory) -> list[str]:
 def _when_fetcher_created_with_config(
     factory: GenericFetcherFactory,
     config: GenericFetcherConfig,
-    additional_headers: Optional[dict[str, str]] = None,
+    additional_headers: dict[str, str] | None = None,
 ) -> GenericFetcher:
     """Create a fetcher with a configuration."""
     return factory.create_fetcher(config, additional_headers)
@@ -482,8 +482,8 @@ def _when_fetcher_created_with_config(
 def _when_fetcher_created_by_name(
     factory: GenericFetcherFactory,
     name: str,
-    additional_headers: Optional[dict[str, str]] = None,
-) -> tuple[Optional[GenericFetcher], Optional[Exception]]:
+    additional_headers: dict[str, str] | None = None,
+) -> tuple[GenericFetcher | None, Exception | None]:
     """Create a fetcher by configuration name."""
     try:
         fetcher = factory.create_fetcher_by_name(name, additional_headers)
@@ -498,7 +498,7 @@ def _when_simple_fetcher_created(
     endpoint: str,
     display_name: str,
     exception_class: type,
-    additional_headers: Optional[dict[str, str]] = None,
+    additional_headers: dict[str, str] | None = None,
 ) -> GenericFetcher:
     """Create a simple fetcher."""
     return factory.create_simple_fetcher(
@@ -513,7 +513,7 @@ def _when_simple_fetcher_created(
 def _when_simple_fetcher_created_full(
     factory: GenericFetcherFactory,
     params: dict[str, Any],
-    additional_headers: Optional[dict[str, str]] = None,
+    additional_headers: dict[str, str] | None = None,
 ) -> GenericFetcher:
     """Create a simple fetcher with full parameters."""
     return factory.create_simple_fetcher(
@@ -523,7 +523,7 @@ def _when_simple_fetcher_created_full(
 
 def _when_multiple_fetchers_created(
     factory: GenericFetcherFactory, config_names: list[str]
-) -> tuple[Optional[dict[str, GenericFetcher]], Optional[Exception]]:
+) -> tuple[dict[str, GenericFetcher] | None, Exception | None]:
     """Create multiple fetchers by configuration names."""
     try:
         fetchers = factory.create_multiple_fetchers(config_names)
@@ -546,7 +546,7 @@ def _then_factory_initialized_correctly(
     factory: GenericFetcherFactory,
     expected_api_client: AsyncMock,
     expected_base_headers: dict[str, str],
-    expected_logger: Optional[MagicMock] = None,
+    expected_logger: MagicMock | None = None,
 ) -> None:
     """Verify factory is initialized correctly."""
     assert factory.api_client == expected_api_client  # noqa: S101
@@ -600,7 +600,7 @@ def _then_fetcher_created_successfully(
 
 
 def _then_fetcher_created_by_name_successfully(
-    fetcher: Optional[GenericFetcher], exception: Optional[Exception]
+    fetcher: GenericFetcher | None, exception: Exception | None
 ) -> None:
     """Verify fetcher is created by name successfully."""
     assert fetcher is not None  # noqa: S101
@@ -608,7 +608,7 @@ def _then_fetcher_created_by_name_successfully(
 
 
 def _then_fetcher_creation_failed_not_found(
-    fetcher: Optional[GenericFetcher], exception: Optional[Exception], config_name: str
+    fetcher: GenericFetcher | None, exception: Exception | None, config_name: str
 ) -> None:
     """Verify fetcher creation failed with not found error."""
     assert fetcher is None  # noqa: S101
@@ -640,8 +640,8 @@ def _then_simple_fetcher_created_with_options(
 
 
 def _then_multiple_fetchers_created_successfully(
-    fetchers: Optional[dict[str, GenericFetcher]],
-    exception: Optional[Exception],
+    fetchers: dict[str, GenericFetcher] | None,
+    exception: Exception | None,
     expected_config_names: list[str],
 ) -> None:
     """Verify multiple fetchers are created successfully."""
@@ -654,8 +654,8 @@ def _then_multiple_fetchers_created_successfully(
 
 
 def _then_multiple_fetchers_creation_failed(
-    fetchers: Optional[dict[str, GenericFetcher]],
-    exception: Optional[Exception],
+    fetchers: dict[str, GenericFetcher] | None,
+    exception: Exception | None,
     invalid_name: str,
 ) -> None:
     """Verify multiple fetchers creation failed."""

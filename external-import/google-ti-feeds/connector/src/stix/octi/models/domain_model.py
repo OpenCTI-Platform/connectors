@@ -1,6 +1,6 @@
 """The module contains the OctiDomainModel class, which represents an OpenCTI Domain Name."""
 
-from typing import Any, Optional
+from typing import Any
 
 from connector.src.stix.v21.models.scos.domain_name_model import DomainNameModel
 
@@ -14,7 +14,7 @@ class OctiDomainModel:
         organization_id: str,
         marking_ids: list[str],
         create_indicator: bool = False,
-        score: Optional[int] = None,
+        score: int | None = None,
         **kwargs: Any,
     ) -> DomainNameModel:
         """Create a Domain Name model.

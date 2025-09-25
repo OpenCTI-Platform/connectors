@@ -6,7 +6,7 @@ that can work with any input data format, mapper class, and output STIX entity t
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Callable, Optional, Type
+from typing import Any, Callable, Type
 
 from pydantic import BaseModel
 
@@ -48,10 +48,10 @@ class GenericConverterConfig:
     display_name: str
     """Human-readable name for logging and error messages (e.g., 'malware families', 'threat actors')"""
 
-    input_model: Optional[Type[BaseModel]] = None
+    input_model: Type[BaseModel] | None = None
     """Optional input model type for validation. If None, accepts raw data"""
 
-    display_name_singular: Optional[str] = None
+    display_name_singular: str | None = None
     """Singular form of display name. Auto-generated if not provided"""
 
     validate_input: bool = True
@@ -60,22 +60,22 @@ class GenericConverterConfig:
     validate_output: bool = True
     """Whether to validate STIX output after conversion"""
 
-    additional_dependencies: Optional[dict[str, Any]] = None
+    additional_dependencies: dict[str, Any] | None = None
     """Additional dependencies to pass to mapper (e.g., organization, tlp_marking)"""
 
     id_field: str = "id"
     """Field name that contains the entity ID for tracking and logging"""
 
-    name_field: Optional[str] = None
+    name_field: str | None = None
     """Optional field name that contains the entity name for logging"""
 
-    required_attributes: Optional[list[str]] = None
+    required_attributes: list[str] | None = None
     """list of required attributes that input data must have"""
 
-    preprocessing_function: Optional[Callable[[Any], Any]] = None
+    preprocessing_function: Callable[[Any], Any] | None = None
     """Optional function to preprocess input data before conversion"""
 
-    postprocessing_function: Optional[Callable[[Any], Any]] = None
+    postprocessing_function: Callable[[Any], Any] | None = None
     """Optional function to postprocess STIX output after conversion"""
 
     to_stix: bool = True
@@ -131,8 +131,8 @@ class GenericConverterConfig:
     def create_exception(
         self,
         message: str,
-        entity_id: Optional[str] = None,
-        entity_name: Optional[str] = None,
+        entity_id: str | None = None,
+        entity_name: str | None = None,
         **kwargs: Any,
     ) -> Exception:
         """Create an exception instance with the configured exception class.
@@ -178,7 +178,7 @@ class GenericConverterConfig:
         except (AttributeError, KeyError, TypeError):
             return "unknown"
 
-    def get_entity_name(self, input_data: Any) -> Optional[str]:
+    def get_entity_name(self, input_data: Any) -> str | None:
         """Extract entity name from input data if name_field is configured.
 
         Args:
