@@ -79,7 +79,7 @@ class ConverterToStix:
             ExternalReference: An external reference in STIX 2.1 format.
         """
         return stix2.ExternalReference(
-            source_name=f"{data.get("entity_name")}-{data.get("threat_id")}",
+            source_name=f"{data.get('entity_name')}-{data.get('threat_id')}",
             url=data.get("threat_detail_url"),
             description=data.get("description"),
             external_id=data.get("threat_id"),
