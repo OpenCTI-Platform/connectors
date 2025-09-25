@@ -1,7 +1,7 @@
 version: '3'
 services:
   sumologic-intel:
-    image: opencti/connector-sumologic-intel:rolling
+    image: opencti/connector-sumologic-intel:6.8.0
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost
