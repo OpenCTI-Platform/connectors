@@ -1,6 +1,6 @@
 """API Request Model."""
 
-from typing import Any, Type
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -17,5 +17,5 @@ class ApiRequestModel(BaseRequestModel):
     data: dict[str, Any] | None = None
     json_payload: dict[str, Any] | None = None
     response_key: str | None = None
-    model: Type[BaseModel] | None = None
+    model: type[BaseModel] | None = None
     timeout: int | None = None

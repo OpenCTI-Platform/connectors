@@ -5,7 +5,7 @@ that can work with any API endpoint, response model, and exception handling.
 """
 
 from dataclasses import dataclass
-from typing import Any, Type
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -27,10 +27,10 @@ class GenericFetcherConfig:
     display_name: str
     """Human-readable name for logging and error messages (e.g., 'users', 'products')"""
 
-    exception_class: Type[Exception]
+    exception_class: type[Exception]
     """Exception class to raise on errors"""
 
-    response_model: Type[BaseModel] | None = None
+    response_model: type[BaseModel] | None = None
     """Optional Pydantic model for response parsing. If None, returns raw data"""
 
     display_name_singular: str | None = None

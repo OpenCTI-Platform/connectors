@@ -1,6 +1,6 @@
 """Handles the global configuration for the connector."""
 
-from typing import TYPE_CHECKING, Any, Type
+from typing import TYPE_CHECKING, Any
 
 from connector.src.octi.configs.connector_config import ConnectorConfig
 from connector.src.octi.configs.octi_config import OctiConfig
@@ -49,7 +49,7 @@ class GlobalConfig:
 
         self.to_dict()
 
-    def add_config_class(self, config_class: Type["BaseConfig"]) -> None:
+    def add_config_class(self, config_class: type["BaseConfig"]) -> None:
         """Add a configuration class to the global configuration."""
         try:
             config_instance = config_class()
@@ -69,7 +69,7 @@ class GlobalConfig:
 
         self.to_dict()
 
-    def get_config_class(self, config_class: Type["BaseConfig"]) -> Any:
+    def get_config_class(self, config_class: type["BaseConfig"]) -> Any:
         """Get a configuration class from the global configuration."""
         config_name = config_class.yaml_section.lower()
         if config_name in self.instanciate_configs:

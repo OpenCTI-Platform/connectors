@@ -1,7 +1,7 @@
 """API Client will orchestrate API calls."""
 
 import logging
-from typing import TYPE_CHECKING, Any, Optional, Type
+from typing import TYPE_CHECKING, Any, Optional
 
 from pydantic import BaseModel
 
@@ -39,7 +39,7 @@ class ApiClient:
         data: dict[str, Any] | None = None,
         json_payload: dict[str, Any] | None = None,
         response_key: str | None = None,
-        model: Type[BaseModel] | None = None,
+        model: type[BaseModel] | None = None,
         timeout: float | None = None,
     ) -> Any:
         """Call the API using the provided strategy.
@@ -52,7 +52,7 @@ class ApiClient:
             data (dict[str, Any] | None): The data to include in the request.
             json_payload (dict[str, Any] | None): The JSON data to include in the request.
             response_key (str | None): The key to extract from the response.
-            model (Type[BaseModel] | None): The model to deserialize the response into.
+            model (type[BaseModel] | None): The model to deserialize the response into.
             timeout (float | None): The timeout for the request.
 
         Returns:
