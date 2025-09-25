@@ -14,7 +14,7 @@ packages = [{include = "connectors_sdk"}]
 
 
 [tool.poetry.dependencies]
-pycti = "6.7.20"
+pycti = "6.8.0"
 
 # Optional dependencies
 # octi-connectors = {path = "../.", extras = ["dev"], optional=true}
