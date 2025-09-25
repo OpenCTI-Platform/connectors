@@ -5,7 +5,7 @@ work with any input data format, mapper class, and output STIX entity type.
 """
 
 import logging
-from typing import Any, Type
+from typing import Any
 
 from connector.src.utils.converters.generic_converter import GenericConverter
 from connector.src.utils.converters.generic_converter_config import (
@@ -107,11 +107,11 @@ class GenericConverterFactory:
     def create_simple_converter(
         self,
         entity_type: str,
-        mapper_class: Type[BaseMapper],
+        mapper_class: type[BaseMapper],
         output_stix_type: str,
-        exception_class: Type[Exception],
+        exception_class: type[Exception],
         display_name: str,
-        input_model: Type[BaseModel] | None = None,
+        input_model: type[BaseModel] | None = None,
         additional_dependencies: dict[str, Any] | None = None,
         **config_kwargs: Any,
     ) -> GenericConverter:
@@ -123,7 +123,7 @@ class GenericConverterFactory:
             output_stix_type: The STIX object type being produced
             exception_class: Exception class to raise on errors
             display_name: Human-readable name for logging
-            input_model: Type[BaseModel] | None for validation
+            input_model: type[BaseModel] | None for validation
             additional_dependencies: Additional dependencies for this converter
             **config_kwargs: Additional configuration parameters
 

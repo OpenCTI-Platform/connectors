@@ -1,6 +1,6 @@
 """Module to test the API engine components."""
 
-from typing import Any, Type
+from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
@@ -342,7 +342,7 @@ def _given_mock_response(
 
 # --- WHEN: Execute the system under test ---
 async def _when_api_get_called(
-    client: ApiClient, url: str, model: Type[BaseModel] | None = None
+    client: ApiClient, url: str, model: type[BaseModel] | None = None
 ) -> tuple[Any, Exception | None]:
     """Call the get method of the ApiClient."""
     try:
@@ -357,7 +357,7 @@ async def _when_api_get_called(
 def _then_response_is_successful(
     response: Any,
     expected_data: dict[str, Any],
-    model_type: Type[BaseModel] | None = None,
+    model_type: type[BaseModel] | None = None,
 ) -> None:
     """Assert that the API response is successful and matches expected data."""
     assert response is not None  # noqa: S101

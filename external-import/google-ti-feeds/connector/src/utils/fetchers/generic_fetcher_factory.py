@@ -5,7 +5,7 @@ work with any endpoint, response model, and exception handling configuration.
 """
 
 import logging
-from typing import Any, Type
+from typing import Any
 
 from connector.src.utils.api_engine.api_client import ApiClient
 from connector.src.utils.fetchers.generic_fetcher import GenericFetcher
@@ -118,8 +118,8 @@ class GenericFetcherFactory:
         entity_type: str,
         endpoint: str,
         display_name: str,
-        exception_class: Type[Exception],
-        response_model: Type[Any] | None = None,
+        exception_class: type[Exception],
+        response_model: type[Any] | None = None,
         method: str = "GET",
         additional_headers: dict[str, str] | None = None,
         base_url: str | None = None,

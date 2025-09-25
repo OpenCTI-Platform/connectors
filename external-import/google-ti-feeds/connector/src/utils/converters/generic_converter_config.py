@@ -6,7 +6,7 @@ that can work with any input data format, mapper class, and output STIX entity t
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Callable, Type
+from typing import Any, Callable
 
 from pydantic import BaseModel
 
@@ -36,19 +36,19 @@ class GenericConverterConfig:
     entity_type: str
     """The type of entity being converted (e.g., 'malware', 'threat_actors', 'reports')"""
 
-    mapper_class: Type[BaseMapper]
+    mapper_class: type[BaseMapper]
     """The mapper class responsible for the actual conversion"""
 
     output_stix_type: str
     """The STIX object type being produced (e.g., 'malware', 'intrusion-set', 'report')"""
 
-    exception_class: Type[Exception]
+    exception_class: type[Exception]
     """Exception class to raise on conversion errors"""
 
     display_name: str
     """Human-readable name for logging and error messages (e.g., 'malware families', 'threat actors')"""
 
-    input_model: Type[BaseModel] | None = None
+    input_model: type[BaseModel] | None = None
     """Optional input model type for validation. If None, accepts raw data"""
 
     display_name_singular: str | None = None
