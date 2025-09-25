@@ -1,0 +1,16 @@
+version: '3'
+services:
+  connector-criminalip-c2-daily-feed:
+    image: opencti/connector-criminalip-c2-daily-feed:6.7.4
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe # Valid UUIDv4
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - "CONNECTOR_NAME=Criminal IP C2 Daily Feed"
+      - CONNECTOR_SCOPE=ipv4-addr
+      - CONNECTOR_LOG_LEVEL=error
+      - CRIMINALIP_INTERVAL=1 #Day
+      - CRIMINALIP_CONFIDENCE_SCORE=100
+      - CRIMINALIP_CSV_URL=https://raw.githubusercontent.com/criminalip/C2-Daily-Feed/refs/heads/main
+    restart: always
