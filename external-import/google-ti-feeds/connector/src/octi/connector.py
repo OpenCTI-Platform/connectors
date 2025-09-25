@@ -1,7 +1,8 @@
 """Core connector as defined in the OpenCTI connector template."""
 
 import asyncio
-from typing import TYPE_CHECKING, Any, Awaitable, Callable
+from collections.abc import Awaitable
+from typing import TYPE_CHECKING, Any, Callable
 
 from connector.src.custom.configs.gti_config import GTIConfig
 from connector.src.custom.exceptions.connector_errors.gti_work_processing_error import (
