@@ -16,7 +16,7 @@ if __name__ == "__main__":
     """
     try:
         config = ConfigConnector()
-        helper = OpenCTIConnectorHelper(config=config.load)
+        helper = OpenCTIConnectorHelper(config=config.model_dump_pycti())
 
         connector = ConnectorTemplate(config=config, helper=helper)
         connector.run()

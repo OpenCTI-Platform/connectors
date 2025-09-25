@@ -1,63 +1,55 @@
-import os
-from pathlib import Path
+from datetime import timedelta
+from typing import Literal
 
-import yaml
-from pycti import get_config_variable
+from connectors_sdk.models.base import BaseConnectorSettings
+from connectors_sdk.models.base.connector_config import ExternalImportConnectorConfig
+from pydantic import BaseModel, Field
+from pydantic_settings import SettingsConfigDict
 
 
-class ConfigConnector:
-    def __init__(self):
-        """
-        Initialize the connector with necessary configurations
-        """
+class _ConnectorConfig(ExternalImportConnectorConfig):
+    id: str = Field(
+        default="template-12345678-1234-1234-12ab-12ab1234abcd",
+        description="A UUID v4 to identify the connector in OpenCTI.",
+    )
+    name: str = Field(
+        default="Connector Template",
+        description="The name of the connector.",
+    )
+    scope: list[str] = Field(
+        default=["template"],
+        description="The scope of the connector",
+    )
+    duration_period: timedelta = Field(
+        default=timedelta(days=1),
+        description="The period of time to await between two runs of the connector.",
+    )
+    log_level: Literal["debug", "info", "warn", "warning", "error"] = Field(
+        default="error",
+        description="The minimum level of logs to display.",
+    )
 
-        # Load configuration file
-        self.load = self._load_config()
-        self._initialize_configurations()
 
-    @staticmethod
-    def _load_config() -> dict:
-        """
-        Load the configuration from the YAML file
-        :return: Configuration dictionary
-        """
-        config_file_path = Path(__file__).parents[1].joinpath("config.yml")
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-
-        return config
-
-    def _initialize_configurations(self) -> None:
-        """
-        Connector configuration variables
-        :return: None
-        """
-        # OpenCTI configurations
-        self.duration_period = get_config_variable(
-            "CONNECTOR_DURATION_PERIOD",
-            ["connector", "duration_period"],
-            self.load,
-        )
-
-        # Connector extra parameters
-        self.api_base_url = get_config_variable(
-            "CONNECTOR_TEMPLATE_API_BASE_URL",
-            ["connector_template", "api_base_url"],
-            self.load,
-        )
-
-        self.api_key = get_config_variable(
-            "CONNECTOR_TEMPLATE_API_KEY",
-            ["connector_template", "api_key"],
-            self.load,
-        )
-
-        self.tlp_level = get_config_variable(
-            "CONNECTOR_TEMPLATE_TLP_LEVEL",
-            ["connector_template", "tlp_level"],
-            self.load,
+class _ConnectorTemplateConfig(BaseModel):
+    api_base_url: str = Field(
+        default="https://api.example.com/v1/",
+        description="API base URL",
+    )
+    api_key: str = Field(
+        description="API key for authentication",
+    )
+    tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"] = (
+        Field(
             default="clear",
+            description="TLP level for imported data",
         )
+    )
+
+
+class ConfigConnector(BaseConnectorSettings):
+    model_config = SettingsConfigDict(yaml_file="config.yml")
+
+    connector: _ConnectorConfig = Field(default_factory=_ConnectorConfig)
+    connector_template: _ConnectorTemplateConfig = Field(
+        default_factory=_ConnectorTemplateConfig
+    )
