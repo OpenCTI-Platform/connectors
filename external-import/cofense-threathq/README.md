@@ -4,9 +4,7 @@ Table of Contents
 
 - [OpenCTI External Ingestion Connector Cofense ThreatHQ](#opencti-external-ingestion-connector-cofense-threathq)
   - [Introduction](#introduction)
-  - [Installation](#installation)
-    - [Requirements](#requirements)
-  - [Configuration variables](#configuration-variables)
+  - [Configuration variables](#configuration-variables-environment)
     - [OpenCTI environment variables](#opencti-environment-variables)
     - [Base connector environment variables](#base-connector-environment-variables)
     - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
@@ -47,20 +45,6 @@ indicator_type availables :
 
 If you are already a customer, detailed documentation on the Intelligence API can be found at https://www.threathq.com/docs/
 
-## Installation
-
-### Requirements
-
-- pycti==6.6.12
-- validators==0.33.0
-- pydantic>=2.10, <3
-- requests~=2.32.3
-- stix2~=3.0.1
-- PyYAML==6.0.2
-- aiohttp~=3.11.11
-- tenacity~=9.0.0
-- pydantic-settings==2.8.1
-- python-dotenv>=1.0.1, <2
 
 ## Configuration variables environment
 
