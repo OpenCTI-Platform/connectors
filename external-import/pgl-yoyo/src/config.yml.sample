@@ -1,0 +1,41 @@
+connector:
+  name: "PGL Yoyo Ad Server Blocklist"
+  scope: "observable"
+  confidence_level: 50
+  update_existing_data: true
+  run_and_terminate: false
+  interval: 43200  # 12h
+
+opencti:
+  url: "http://opencti:8080"
+  token: "__OPENCTI_API_KEY__"
+
+connector_type: EXTERNAL_IMPORT
+
+pgl:
+  bundle_mode: true          # Build one STIX bundle per run (recommended)
+  report_per_run: true       # Create a Report linking all objects in this run
+  identity_name: "Peter Lowe (PGL Blocklist)"
+  identity_class: "organization"
+  identity_description: "Curated ad server & tracking blocklist maintained by Peter G. Lowe (yoyo.org)."
+  identity_id: ""           # Optional: fixed STIX identity ID (UUID). If empty, a stable UUIDv5 is derived from the name.
+  feeds:
+    - name: "PGL - Trackers (Hostnames)"
+      url: "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=plain&showintro=0&onlytrackers=1&mimetype=plaintext"
+      type: "Domain-Name"
+      labels: ["OSINT", "Blocklist", "AdTech", "Tracker"]
+
+    - name: "PGL - Trackers (IPs)"
+      url: "https://pgl.yoyo.org/adservers/iplist.php?ipformat=plain&showintro=0&onlytrackers=1&mimetype=plaintext"
+      type: "IPv4-Addr"
+      labels: ["OSINT", "Blocklist", "AdTech", "Tracker"]
+
+    - name: "PGL - Non-Trackers (Hostnames)"
+      url: "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=plain&showintro=0&notrackers=1&mimetype=plaintext"
+      type: "Domain-Name"
+      labels: ["OSINT", "Blocklist", "AdTech", "Non-Tracker"]
+
+    - name: "PGL - Non-Trackers (IPs)"
+      url: "https://pgl.yoyo.org/adservers/iplist.php?ipformat=plain&showintro=0&notrackers=1&mimetype=plaintext"
+      type: "IPv4-Addr"
+      labels: ["OSINT", "Blocklist", "AdTech", "Non-Tracker"]
