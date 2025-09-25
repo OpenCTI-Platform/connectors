@@ -2,7 +2,7 @@
 
 import ipaddress
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 from connector.src.custom.models.gti.gti_ip_addresses_model import (
     GTIIPData,
@@ -247,7 +247,7 @@ class GTIIPToSTIXIP(BaseMapper):
 
         return {"created": created, "modified": modified}
 
-    def _get_score(self) -> Optional[int]:
+    def _get_score(self) -> int | None:
         """Get score from IP attributes.
 
         Priority order:
@@ -255,7 +255,7 @@ class GTIIPToSTIXIP(BaseMapper):
         2. threat_score.value
 
         Returns:
-            Optional[int]: The score if available, None otherwise
+            int | None: The score if available, None otherwise
 
         """
         if (

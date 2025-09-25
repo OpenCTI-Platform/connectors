@@ -2,7 +2,7 @@
 
 import logging
 import re
-from typing import Any, Optional
+from typing import Any
 
 from connector.src.custom.configs import (
     REPORT_BATCH_PROCESSOR_CONFIG,
@@ -68,7 +68,7 @@ class OrchestratorReport(BaseOrchestrator):
             logger=self.logger,
         )
 
-    async def run(self, initial_state: Optional[dict[str, Any]]) -> None:
+    async def run(self, initial_state: dict[str, Any] | None) -> None:
         """Run the report orchestrator.
 
         Args:

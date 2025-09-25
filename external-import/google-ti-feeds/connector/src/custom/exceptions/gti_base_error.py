@@ -1,12 +1,12 @@
 """Base class for GTI exceptions."""
 
-from typing import Any, Optional
+from typing import Any
 
 
 class GTIBaseError(Exception):
     """Base exception for all GTI-related errors."""
 
-    def __init__(self, message: str, details: Optional[dict[str, Any]] = None) -> None:
+    def __init__(self, message: str, details: dict[str, Any] | None = None) -> None:
         """Initialize a GTIBaseError instance."""
         super().__init__(message)
         self.message = message
@@ -39,7 +39,7 @@ class GTIBaseError(Exception):
         self,
         logger: Any,
         log_message: str,
-        additional_context: Optional[dict[str, Any]] = None,
+        additional_context: dict[str, Any] | None = None,
     ) -> None:
         """Log this exception with structured data.
 

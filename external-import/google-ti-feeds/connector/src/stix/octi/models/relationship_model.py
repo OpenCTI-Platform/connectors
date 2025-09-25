@@ -1,7 +1,7 @@
 """The module contains the OctiRelationshipModel class, which represents an OpenCTI Relationship."""
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from connector.src.stix.v21.models.sros.relationship_model import RelationshipModel
 
@@ -18,7 +18,7 @@ class OctiRelationshipModel:
         marking_ids: list[str],
         created: datetime,
         modified: datetime,
-        description: Optional[str] = None,
+        description: str | None = None,
         **kwargs: Any,
     ) -> RelationshipModel:
         """Create a Relationship model with OpenCTI custom properties.
@@ -63,8 +63,8 @@ class OctiRelationshipModel:
         marking_ids: list[str],
         created: datetime,
         modified: datetime,
-        report_name: Optional[str] = None,
-        target_name: Optional[str] = None,
+        report_name: str | None = None,
+        target_name: str | None = None,
         **kwargs: Any,
     ) -> RelationshipModel:
         """Create a Relationship from a report to another entity.

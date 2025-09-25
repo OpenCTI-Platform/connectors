@@ -48,7 +48,7 @@ class GenericBatchProcessor:
         self._logger = logger or logging.getLogger(__name__)
 
         self._current_batch: list[Any] = []
-        self._latest_date: Optional[str] = None
+        self._latest_date: str | None = None
 
         self._total_items_processed = 0
         self._total_batches_processed = 0
@@ -151,7 +151,7 @@ class GenericBatchProcessor:
         )
         return added_count
 
-    def process_current_batch(self) -> Optional[str]:
+    def process_current_batch(self) -> str | None:
         """Process the current batch and reset for next batch.
 
         Returns:
@@ -183,7 +183,7 @@ class GenericBatchProcessor:
 
         return self._process_batch_with_retries(batch_items, batch_num)
 
-    def flush(self) -> Optional[str]:
+    def flush(self) -> str | None:
         """Process any remaining items in the current batch.
 
         Returns:
@@ -292,7 +292,7 @@ class GenericBatchProcessor:
         if date_str and (not self._latest_date or date_str > self._latest_date):
             self._latest_date = date_str
 
-    def _handle_empty_batch(self) -> Optional[str]:
+    def _handle_empty_batch(self) -> str | None:
         """Handle processing of empty batches based on configuration.
 
         Returns:
@@ -551,7 +551,7 @@ class GenericBatchProcessor:
                 work_id=work_id,
             ) from process_err
 
-    def _ensure_stix_format(self, item: Any) -> Optional[Any]:
+    def _ensure_stix_format(self, item: Any) -> Any | None:
         """Ensure item is in STIX format by checking type and converting if needed.
 
         Args:

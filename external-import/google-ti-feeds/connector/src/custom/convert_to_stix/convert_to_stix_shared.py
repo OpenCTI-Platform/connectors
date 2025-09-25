@@ -1,7 +1,7 @@
 """Shared converter class for common subentity conversion methods."""
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from connector.src.custom.convert_to_stix.convert_to_stix_base import BaseConvertToSTIX
 
@@ -16,7 +16,7 @@ class ConvertToSTIXShared(BaseConvertToSTIX):
         super().__init__(config, logger, tlp_level)
 
     def convert_subentities_to_stix(
-        self, subentities: dict[str, list[Any]], main_entity: Optional[str] = None
+        self, subentities: dict[str, list[Any]], main_entity: str | None = None
     ) -> list[Any]:
         """Convert each subentity to STIX format.
 
@@ -36,7 +36,7 @@ class ConvertToSTIXShared(BaseConvertToSTIX):
         subentities: dict[str, list[Any]],
         main_entity: str,
         main_entities: list[Any],
-    ) -> Optional[list[Any]]:
+    ) -> list[Any] | None:
         """Convert each subentity to STIX format with linking.
 
         Args:

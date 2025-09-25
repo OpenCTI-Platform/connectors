@@ -6,7 +6,7 @@ configurable mapper classes.
 """
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from connector.src.utils.converters.generic_converter_config import (
     GenericConverterConfig,
@@ -21,7 +21,7 @@ class GenericConverter:
     def __init__(
         self,
         config: GenericConverterConfig,
-        logger: Optional[logging.Logger] = None,
+        logger: logging.Logger | None = None,
     ):
         """Initialize the generic converter.
 
@@ -36,7 +36,7 @@ class GenericConverter:
         self.converted_objects: list[Any] = []
         self.object_id_map: dict[str, str] = {}
 
-    def convert_single(self, input_data: Any, **mapper_kwargs: Any) -> Optional[Any]:
+    def convert_single(self, input_data: Any, **mapper_kwargs: Any) -> Any | None:
         """Convert a single entity to STIX format.
 
         Args:
@@ -319,14 +319,14 @@ class GenericConverter:
                 self.object_id_map[entity_id] = stix_output.id
 
     def _handle_conversion_error(
-        self, error: Exception, entity_id: str, entity_name: Optional[str]
+        self, error: Exception, entity_id: str, entity_name: str | None
     ) -> None:
         """Handle conversion errors with proper exception wrapping.
 
         Args:
             error: The original error
             entity_id: Entity ID for context
-            entity_name: Optional entity name for context
+            entity_name: Entity name for context | None
 
         Raises:
             Configured exception class: Wrapped error with additional context
@@ -353,9 +353,9 @@ class GenericConverter:
     def _log_conversion_start(
         self,
         entity_type: str,
-        entity_id: Optional[str] = None,
-        entity_name: Optional[str] = None,
-        count: Optional[int] = None,
+        entity_id: str | None = None,
+        entity_name: str | None = None,
+        count: int | None = None,
     ) -> None:
         """Log the start of a conversion operation.
 
@@ -401,7 +401,7 @@ class GenericConverter:
             )
 
     def _log_conversion_result(
-        self, entity_type: str, result_count: Optional[int] = None
+        self, entity_type: str, result_count: int | None = None
     ) -> None:
         """Log the result of a conversion operation.
 

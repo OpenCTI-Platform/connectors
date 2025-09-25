@@ -1,7 +1,5 @@
 """Converts GTI campaign location data to STIX location objects."""
 
-from typing import Optional
-
 from connector.src.custom.models.gti.gti_campaign_model import (
     GTICampaignData,
     SourceRegion,
@@ -69,14 +67,14 @@ class GTICampaignToSTIXLocation(BaseMapper):
 
     def _create_country_from_targeted(
         self, region_data: TargetedRegion
-    ) -> Optional[Location]:
+    ) -> Location | None:
         """Create a LocationCountry object from targeted region data (countries only).
 
         Args:
             region_data (TargetedRegion): The targeted region data containing country information.
 
         Returns:
-            Optional[Location]: The STIX LocationCountry object, or None if invalid.
+                Location | None: The STIX LocationCountry object, or None if invalid.
 
         """
         if not region_data.country or not region_data.country_iso2:
@@ -92,16 +90,14 @@ class GTICampaignToSTIXLocation(BaseMapper):
 
         return country.to_stix2_object()
 
-    def _create_country_from_source(
-        self, region_data: SourceRegion
-    ) -> Optional[Location]:
+    def _create_country_from_source(self, region_data: SourceRegion) -> Location | None:
         """Create a LocationCountry object from source region data (countries only).
 
         Args:
             region_data (SourceRegion): The source region data containing country information.
 
         Returns:
-            Optional[Location]: The STIX LocationCountry object, or None if invalid.
+                Location | None: The STIX LocationCountry object, or None if invalid.
 
         """
         if not region_data.country or not region_data.country_iso2:

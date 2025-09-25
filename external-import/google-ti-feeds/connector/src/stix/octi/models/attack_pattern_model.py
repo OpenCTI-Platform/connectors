@@ -1,7 +1,7 @@
 """The module contains the OctiAttackPatternModel class, which represents an OpenCTI Attack Pattern."""
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from connector.src.stix.v21.models.cdts.kill_chain_phase_model import (
     KillChainPhaseModel,
@@ -18,13 +18,13 @@ class OctiAttackPatternModel:
         mitre_id: str,
         organization_id: str,
         marking_ids: list[str],
-        description: Optional[str] = None,
-        aliases: Optional[list[str]] = None,
-        first_seen: Optional[datetime] = None,
-        last_seen: Optional[datetime] = None,
-        kill_chain_phases: Optional[list[KillChainPhaseModel]] = None,
-        labels: Optional[list[str]] = None,
-        external_references: Optional[list[dict[str, Any]]] = None,
+        description: str | None = None,
+        aliases: list[str] | None = None,
+        first_seen: datetime | None = None,
+        last_seen: datetime | None = None,
+        kill_chain_phases: list[KillChainPhaseModel] | None = None,
+        labels: list[str] | None = None,
+        external_references: list[dict[str, Any]] | None = None,
         **kwargs: Any,
     ) -> AttackPatternModel:
         """Create an Attack Pattern model.

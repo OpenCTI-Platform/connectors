@@ -6,7 +6,7 @@ that can work with any data type, batch size, and work management requirements.
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 
 @dataclass
@@ -35,24 +35,22 @@ class GenericBatchProcessorConfig:
     exception_class: type = Exception
     """Exception class to raise on processing errors"""
 
-    display_name_singular: Optional[str] = None
+    display_name_singular: str | None = None
     """Singular form of display name. Auto-generated if not provided"""
-
     auto_process: bool = True
     """Whether to automatically process batches when they reach batch_size"""
 
-    date_extraction_function: Optional[Callable[[Any], Optional[str]]] = None
+    date_extraction_function: Callable[[Any], str | None] | None = None
     """Function to extract date from an item for state updates"""
 
-    preprocessing_function: Optional[Callable[[list[Any]], list[Any]]] = None
+    preprocessing_function: Callable[[list[Any]], list[Any]] | None = None
     """Function to preprocess batch before sending to work manager"""
 
-    postprocessing_function: Optional[Callable[[list[Any], str], None]] = None
+    postprocessing_function: Callable[[list[Any], str], None] | None = None
     """Function to run after successful batch processing (items, work_id)"""
 
-    validation_function: Optional[Callable[[Any], bool]] = None
+    validation_function: Callable[[Any], bool] | None = None
     """Function to validate individual items before adding to batch"""
-
     empty_batch_behavior: str = "update_state"
     """Behavior when processing empty batches: 'skip', 'update_state', or 'error'"""
 
@@ -62,7 +60,7 @@ class GenericBatchProcessorConfig:
     retry_delay: float = 1.0
     """Delay in seconds between retries"""
 
-    work_timeout: Optional[float] = None
+    work_timeout: float | None = None
     """Timeout for work operations in seconds"""
 
     def __post_init__(self) -> None:
@@ -100,7 +98,7 @@ class GenericBatchProcessorConfig:
                 f"Missing required parameter '{missing_param}' for work name template '{self.work_name_template}'"
             ) from e
 
-    def extract_date(self, item: Any) -> Optional[str]:
+    def extract_date(self, item: Any) -> str | None:
         """Extract date from an item using the configured function.
 
         Args:

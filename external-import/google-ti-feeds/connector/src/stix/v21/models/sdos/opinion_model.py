@@ -1,6 +1,6 @@
 """The module defines the OpinionModel class, which represents a STIX 2.1 Opinion object."""
 
-from typing import Any, Optional
+from typing import Any
 
 import pycti  # type: ignore  # Missing library stubs
 from connector.src.stix.v21.models.ovs.opinion_ov_enums import OpinionOV
@@ -15,11 +15,11 @@ from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
 class OpinionModel(BaseSDOModel):
     """Model representing an Opinion in STIX 2.1 format."""
 
-    explanation: Optional[str] = Field(
+    explanation: str | None = Field(
         default=None,
         description="Explanation for the Opinion, including reasoning and any supporting evidence.",
     )
-    authors: Optional[list[str]] = Field(
+    authors: list[str] | None = Field(
         default=None,
         description="list of authors (e.g., analysts) who created this Opinion.",
     )

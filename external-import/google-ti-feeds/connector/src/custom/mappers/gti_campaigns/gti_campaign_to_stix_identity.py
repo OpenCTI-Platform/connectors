@@ -1,7 +1,5 @@
 """Converts GTI campaign data to STIX identity objects."""
 
-from typing import Optional
-
 from connector.src.custom.models.gti.gti_campaign_model import (
     GTICampaignData,
     TargetedIndustry,
@@ -61,14 +59,14 @@ class GTICampaignToSTIXIdentity(BaseMapper):
 
         return result
 
-    def _process_industry(self, industry_data: TargetedIndustry) -> Optional[Identity]:
+    def _process_industry(self, industry_data: TargetedIndustry) -> Identity | None:
         """Process a targeted industry entry and convert to a sector Identity.
 
         Args:
             industry_data (TargetedIndustry): The targeted industry data to process.
 
         Returns:
-            Optional[Identity]: The STIX Identity object, or None if no valid industry found.
+                Identity | None: The STIX Identity object, or None if no valid industry found.
 
         """
         # Skip industries without valid names - both industry_group and industry must be empty/whitespace

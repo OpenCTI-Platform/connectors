@@ -1,7 +1,5 @@
 """Exception for errors when parsing responses from Google Threat Intelligence API."""
 
-from typing import Optional
-
 from connector.src.custom.exceptions.gti_fetching_error import GTIFetchingError
 
 
@@ -11,9 +9,9 @@ class GTIParsingError(GTIFetchingError):
     def __init__(
         self,
         message: str,
-        endpoint: Optional[str] = None,
-        entity_type: Optional[str] = None,
-        data_sample: Optional[str] = None,
+        endpoint: str | None = None,
+        entity_type: str | None = None,
+        data_sample: str | None = None,
     ):
         """Initialize the exception.
 

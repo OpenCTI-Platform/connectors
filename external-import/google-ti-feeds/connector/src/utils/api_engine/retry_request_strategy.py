@@ -34,8 +34,8 @@ class RetryRequestStrategy(BaseRequestStrategy):
         self,
         http: BaseHttpClient,
         breaker: BaseCircuitBreaker,
-        limiter: Optional[BaseRateLimiter | dict[str, Any]] = None,
-        hooks: Optional[list[BaseRequestHook]] = None,
+        limiter: BaseRateLimiter | dict[str, Any] | None = None,
+        hooks: list[BaseRequestHook] | None = None,
         max_retries: int = 5,
         backoff: int = 2,
         logger: Optional["Logger"] = None,
@@ -228,7 +228,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
         await self._validate_request(request)
 
         current_backoff_delay = self.backoff
-        last_exception: Optional[Exception] = None
+        last_exception: Exception | None = None
         network_error_count = 0
         max_network_errors = min(self.max_retries, 3)
 
@@ -454,7 +454,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
         )
 
     async def _handle_max_retries_exceeded(
-        self, last_exception: Optional[Exception]
+        self, last_exception: Exception | None
     ) -> None:
         """Handle the case when maximum retries are exceeded.
 

@@ -1,7 +1,7 @@
 """Converts a GTI file to a STIX file object and indicator."""
 
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 from connector.src.custom.models.gti.gti_file_model import (
     GTIFileData,
@@ -222,7 +222,7 @@ class GTIFileToSTIXFile(BaseMapper):
 
         return {"created": created, "modified": modified}
 
-    def _get_score(self) -> Optional[int]:
+    def _get_score(self) -> int | None:
         """Get score from file attributes.
 
         Priority order:
@@ -230,7 +230,7 @@ class GTIFileToSTIXFile(BaseMapper):
         2. threat_score.value
 
         Returns:
-            Optional[int]: The score if available, None otherwise
+            int | None: The score if available, None otherwise
 
         """
         if (
@@ -257,11 +257,11 @@ class GTIFileToSTIXFile(BaseMapper):
 
         return None
 
-    def _build_hashes(self) -> Optional[dict[str, str]]:
+    def _build_hashes(self) -> dict[str, str] | None:
         """Build hashes dictionary from file attributes.
 
         Returns:
-            Optional[dict[str, str]]: dictionary of hashes if available, None otherwise
+            dict[str, str] | None: dictionary of hashes if available, None otherwise
 
         """
         if not self.file.attributes:

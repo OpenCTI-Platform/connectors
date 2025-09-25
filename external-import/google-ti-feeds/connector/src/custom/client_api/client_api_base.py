@@ -3,7 +3,7 @@
 import logging
 from collections.abc import AsyncGenerator
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from typing import Any
 from uuid import uuid4
 
 from connector.src.custom.configs.fetcher_config import FETCHER_CONFIGS
@@ -23,8 +23,8 @@ class BaseClientAPI:
         self,
         config: Any,
         logger: logging.Logger,
-        api_client: Optional[ApiClient] = None,
-        fetcher_factory: Optional[GenericFetcherFactory] = None,
+        api_client: ApiClient | None = None,
+        fetcher_factory: GenericFetcherFactory | None = None,
     ):
         """Initialize Base Client API."""
         self.config = config
@@ -43,7 +43,7 @@ class BaseClientAPI:
     def _parse_start_date(
         self,
         start_date_config: str,
-        initial_state: Optional[dict[str, Any]] = None,
+        initial_state: dict[str, Any] | None = None,
         state_key: str = "next_cursor_start_date",
     ) -> Any:
         """Parse and calculate start date from configuration.
@@ -105,9 +105,9 @@ class BaseClientAPI:
         self,
         collection_type: str,
         start_date: str,
-        initial_state: Optional[dict[str, Any]] = None,
-        types: Optional[list[str]] = None,
-        origins: Optional[list[str]] = None,
+        initial_state: dict[str, Any] | None = None,
+        types: list[str] | None = None,
+        origins: list[str] | None = None,
         entity_name: str = "items",
         cursor_key: str = "cursor",
     ) -> list[dict[str, Any]]:
@@ -264,7 +264,7 @@ class BaseClientAPI:
         else:
             return response, None
 
-    def _extract_meta_info(self, meta: Any) -> tuple[Optional[str], Optional[int]]:
+    def _extract_meta_info(self, meta: Any) -> tuple[str | None, int | None]:
         """Extract cursor and count from meta object."""
         cursor = None
         count = None
@@ -285,8 +285,8 @@ class BaseClientAPI:
         return cursor, count
 
     def _calculate_pagination_info(
-        self, count: Optional[int], params: dict[str, Any]
-    ) -> Optional[Any]:
+        self, count: int | None, params: dict[str, Any]
+    ) -> Any | None:
         """Calculate total pages based on count and limit."""
         if count is None:
             return None
@@ -298,9 +298,9 @@ class BaseClientAPI:
         data_count: int,
         entity_description: str,
         page_nb: int,
-        total_pages: Optional[int],
-        total_items: Optional[int],
-        cursor: Optional[str],
+        total_pages: int | None,
+        total_items: int | None,
+        cursor: str | None,
     ) -> str:
         """Build pagination log message."""
         cursor_info = f" (cursor: {cursor[:6]}...)" if cursor else ""

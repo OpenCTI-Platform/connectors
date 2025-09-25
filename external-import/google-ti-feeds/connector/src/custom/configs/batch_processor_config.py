@@ -6,7 +6,7 @@ using the generic batch processor system.
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 LOG_PREFIX = "[GenericBatchProcessor]"
 
@@ -22,7 +22,7 @@ def extract_stix_date_for_type(target_object_type: str) -> Any:
 
     """
 
-    def extract_stix_date(stix_object: Any) -> Optional[Any]:
+    def extract_stix_date(stix_object: Any) -> Any | None:
         """Extract the latest date from a STIX object for state updates.
 
         Only extracts dates from the specified object type to track the latest processed.

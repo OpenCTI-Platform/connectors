@@ -1,6 +1,6 @@
 """Test module for GenericFetcher functionality."""
 
-from typing import Any, Generator, Optional, Sequence
+from typing import Any, Generator, Sequence
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
@@ -64,7 +64,7 @@ class WrappedResponse(BaseModel):
 class UserFetchError(Exception):
     """Custom exception for user fetching."""
 
-    def __init__(self, message: str, endpoint: Optional[str] = None):
+    def __init__(self, message: str, endpoint: str | None = None):
         """Initialize UserFetchError."""
         super().__init__(message)
         self.endpoint = endpoint
@@ -388,7 +388,7 @@ async def test_fetch_multiple_partial_success(
         UserModel(id="789", name="Bob", email="bob@example.com"),
     ]
 
-    def side_effect(*args: Any, **kwargs: Any) -> Optional[UserModel]:
+    def side_effect(*args: Any, **kwargs: Any) -> UserModel | None:
         url = args[0] if len(args) > 0 else kwargs.get("url", "")
         if "123" in url:
             return responses[0]
@@ -647,7 +647,7 @@ def _given_api_returns_error(mock_client: AsyncMock, error: Exception) -> None:
 
 async def _when_fetch_single_called(
     fetcher: GenericFetcher, **kwargs: Any
-) -> tuple[Any, Optional[Exception]]:
+) -> tuple[Any, Exception | None]:
     """Call fetch_single and capture result and exception."""
     try:
         result = await fetcher.fetch_single(**kwargs)
@@ -658,7 +658,7 @@ async def _when_fetch_single_called(
 
 async def _when_fetch_multiple_called(
     fetcher: GenericFetcher, entity_ids: list[str], **kwargs: Any
-) -> tuple[Optional[list[Any]], Optional[Exception]]:
+) -> tuple[list[Any] | None, Exception | None]:
     """Call fetch_multiple and capture result and exception."""
     try:
         result = await fetcher.fetch_multiple(entity_ids, **kwargs)
@@ -669,7 +669,7 @@ async def _when_fetch_multiple_called(
 
 async def _when_fetch_list_called(
     fetcher: GenericFetcher, **kwargs: Any
-) -> tuple[Optional[list[Any]], Optional[Exception]]:
+) -> tuple[list[Any] | None, Exception | None]:
     """Call fetch_list and capture result and exception."""
     try:
         result = await fetcher.fetch_list(**kwargs)
@@ -711,7 +711,7 @@ def _then_fetch_returns_none(result: Any) -> None:
 
 
 def _then_fetch_failed_with_network_error(
-    exception: Optional[Exception], expected_message: str
+    exception: Exception | None, expected_message: str
 ) -> None:
     """Assert that fetch failed with network error."""
     assert exception is not None  # noqa: S101
@@ -721,7 +721,7 @@ def _then_fetch_failed_with_network_error(
 
 
 def _then_fetch_failed_with_general_error(
-    exception: Optional[Exception], expected_message: str
+    exception: Exception | None, expected_message: str
 ) -> None:
     """Assert that fetch failed with general error."""
     assert exception is not None  # noqa: S101
@@ -730,7 +730,7 @@ def _then_fetch_failed_with_general_error(
 
 
 def _then_fetch_failed_with_param_error(
-    exception: Optional[Exception], expected_param: str
+    exception: Exception | None, expected_param: str
 ) -> None:
     """Assert that fetch failed with parameter error."""
     assert exception is not None  # noqa: S101
@@ -739,7 +739,7 @@ def _then_fetch_failed_with_param_error(
 
 
 def _then_fetch_multiple_successful(
-    results: Optional[list[Any]], expected_count: int
+    results: list[Any] | None, expected_count: int
 ) -> None:
     """Assert that multiple fetch was successful."""
     assert results is not None  # noqa: S101
@@ -747,22 +747,20 @@ def _then_fetch_multiple_successful(
 
 
 def _then_fetch_multiple_partial_success(
-    results: Optional[list[Any]], expected_count: int
+    results: list[Any] | None, expected_count: int
 ) -> None:
     """Assert that multiple fetch had partial success."""
     assert results is not None  # noqa: S101
     assert len(results) == expected_count  # noqa: S101
 
 
-def _then_fetch_list_successful(
-    results: Optional[list[Any]], expected_count: int
-) -> None:
+def _then_fetch_list_successful(results: list[Any] | None, expected_count: int) -> None:
     """Assert that list fetch was successful."""
     assert results is not None  # noqa: S101
     assert len(results) == expected_count  # noqa: S101
 
 
-def _then_fetch_list_empty(results: Optional[list[Any]]) -> None:
+def _then_fetch_list_empty(results: list[Any] | None) -> None:
     """Assert that list fetch returned empty list."""
     assert results is not None  # noqa: S101
     assert len(results) == 0  # noqa: S101

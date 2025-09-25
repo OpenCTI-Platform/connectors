@@ -1,7 +1,7 @@
 """Converts a GTI domain to a STIX domain object and indicator."""
 
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 from connector.src.custom.models.gti.gti_domain_model import (
     GTIDomainData,
@@ -194,7 +194,7 @@ class GTIDomainToSTIXDomain(BaseMapper):
 
         return {"created": created, "modified": modified}
 
-    def _get_score(self) -> Optional[int]:
+    def _get_score(self) -> int | None:
         """Get score from domain attributes.
 
         Priority order:
@@ -202,7 +202,7 @@ class GTIDomainToSTIXDomain(BaseMapper):
         2. threat_score.value
 
         Returns:
-            Optional[int]: The score if available, None otherwise
+            int | None: The score if available, None otherwise
 
         """
         if (

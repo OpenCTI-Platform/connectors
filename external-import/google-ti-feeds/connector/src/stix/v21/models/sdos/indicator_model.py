@@ -1,7 +1,7 @@
 """The module contains the IndicatorModel class, which represents a STIX 2.1 Indicator object."""
 
 from datetime import datetime
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 import pycti  # type: ignore  # Missing library stubs
 from connector.src.stix.v21.models.cdts.kill_chain_phase_model import (
@@ -19,11 +19,11 @@ from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
 class IndicatorModel(BaseSDOModel):
     """Model representing an Indicator in STIX 2.1 format."""
 
-    name: Optional[str] = Field(
+    name: str | None = Field(
         default=None,
         description="A name used to identify the Indicator. Helps analysts and tools understand its purpose.",
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
         default=None,
         description="Details and context about the Indicator's intent, behavior, and usage.",
     )
@@ -35,11 +35,11 @@ class IndicatorModel(BaseSDOModel):
         ...,
         description="The detection pattern expressed using the STIX Pattern specification (section 9).",
     )
-    pattern_type: Optional[Literal["stix", "snort", "yara"]] = Field(
+    pattern_type: Literal["stix", "snort", "yara"] | None = Field(
         ...,
         description="The type of pattern used (e.g., stix, snort, yara). Open vocabulary.",
     )
-    pattern_version: Optional[str] = Field(
+    pattern_version: str | None = Field(
         default=None,
         description="Version of the pattern used. If no spec version exists, use the build or code version.",
     )
@@ -47,11 +47,11 @@ class IndicatorModel(BaseSDOModel):
         ...,
         description="Timestamp when the Indicator becomes valid for detecting behavior.",
     )
-    valid_until: Optional[datetime] = Field(
+    valid_until: datetime | None = Field(
         default=None,
         description="Timestamp when this Indicator is no longer considered valid. MUST be > valid_from if set.",
     )
-    kill_chain_phases: Optional[list[KillChainPhaseModel]] = Field(
+    kill_chain_phases: list[KillChainPhaseModel] | None = Field(
         default=None,
         description="Kill chain phases to which this Indicator corresponds.",
     )

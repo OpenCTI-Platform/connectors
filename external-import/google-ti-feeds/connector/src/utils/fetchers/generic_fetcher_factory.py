@@ -5,7 +5,7 @@ work with any endpoint, response model, and exception handling configuration.
 """
 
 import logging
-from typing import Any, Optional, Type
+from typing import Any, Type
 
 from connector.src.utils.api_engine.api_client import ApiClient
 from connector.src.utils.fetchers.generic_fetcher import GenericFetcher
@@ -20,8 +20,8 @@ class GenericFetcherFactory:
     def __init__(
         self,
         api_client: ApiClient,
-        base_headers: Optional[dict[str, str]] = None,
-        logger: Optional[logging.Logger] = None,
+        base_headers: dict[str, str] | None = None,
+        logger: logging.Logger | None = None,
     ):
         """Initialize the factory with common dependencies.
 
@@ -56,8 +56,8 @@ class GenericFetcherFactory:
     def create_fetcher(
         self,
         config: GenericFetcherConfig,
-        additional_headers: Optional[dict[str, str]] = None,
-        base_url: Optional[str] = None,
+        additional_headers: dict[str, str] | None = None,
+        base_url: str | None = None,
     ) -> GenericFetcher:
         """Create a fetcher with the provided configuration.
 
@@ -86,8 +86,8 @@ class GenericFetcherFactory:
     def create_fetcher_by_name(
         self,
         name: str,
-        additional_headers: Optional[dict[str, str]] = None,
-        base_url: Optional[str] = None,
+        additional_headers: dict[str, str] | None = None,
+        base_url: str | None = None,
     ) -> GenericFetcher:
         """Create a fetcher using a registered configuration.
 
@@ -119,10 +119,10 @@ class GenericFetcherFactory:
         endpoint: str,
         display_name: str,
         exception_class: Type[Exception],
-        response_model: Optional[Type[Any]] = None,
+        response_model: Type[Any] | None = None,
         method: str = "GET",
-        additional_headers: Optional[dict[str, str]] = None,
-        base_url: Optional[str] = None,
+        additional_headers: dict[str, str] | None = None,
+        base_url: str | None = None,
         **config_kwargs: Any,
     ) -> GenericFetcher:
         """Create a fetcher with a simple inline configuration.
@@ -173,7 +173,7 @@ class GenericFetcherFactory:
         return list(self._fetcher_registry.keys())
 
     def create_multiple_fetchers(
-        self, config_names: list[str], base_url: Optional[str] = None
+        self, config_names: list[str], base_url: str | None = None
     ) -> dict[str, GenericFetcher]:
         """Create multiple fetchers from registered configurations.
 
@@ -194,7 +194,7 @@ class GenericFetcherFactory:
         return fetchers
 
     def create_all_registered_fetchers(
-        self, base_url: Optional[str] = None
+        self, base_url: str | None = None
     ) -> dict[str, GenericFetcher]:
         """Create fetchers for all registered configurations.
 

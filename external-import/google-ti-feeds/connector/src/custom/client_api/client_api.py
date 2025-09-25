@@ -2,7 +2,7 @@
 
 import logging
 from collections.abc import AsyncGenerator
-from typing import Any, Optional
+from typing import Any
 from uuid import uuid4
 
 from connector.src.custom.client_api.campaign.client_api_campaign import (
@@ -90,12 +90,12 @@ class ClientAPI:
         return self.campaign_client.real_total_campaigns
 
     async def fetch_reports(
-        self, initial_state: Optional[dict[str, Any]]
+        self, initial_state: dict[str, Any] | None
     ) -> AsyncGenerator[dict[Any, Any], None]:
         """Fetch reports from the API.
 
         Args:
-            initial_state (Optional[dict[str, Any]]): The initial state of the fetcher.
+            initial_state (dict[str, Any] | None): The initial state of the fetcher.
 
         Yields:
             AsyncGenerator[dict[str, Any], None]: The fetched reports.
@@ -106,12 +106,12 @@ class ClientAPI:
             yield report_data
 
     async def fetch_threat_actors(
-        self, initial_state: Optional[dict[str, Any]]
+        self, initial_state: dict[str, Any] | None
     ) -> AsyncGenerator[dict[Any, Any], None]:
         """Fetch threat actors from the API.
 
         Args:
-            initial_state (Optional[dict[str, Any]]): The initial state of the fetcher.
+            initial_state (dict[str, Any] | None): The initial state of the fetcher.
 
         Yields:
             AsyncGenerator[dict[str, Any], None]: The fetched threat actors.
@@ -124,12 +124,12 @@ class ClientAPI:
             yield threat_actor_data
 
     async def fetch_malware_families(
-        self, initial_state: Optional[dict[str, Any]]
+        self, initial_state: dict[str, Any] | None
     ) -> AsyncGenerator[dict[Any, Any], None]:
         """Fetch malware families from the API.
 
         Args:
-            initial_state (Optional[dict[str, Any]]): The initial state of the fetcher.
+            initial_state (dict[str, Any] | None): The initial state of the fetcher.
 
         Yields:
             AsyncGenerator[dict[str, Any], None]: The fetched malware families.
@@ -142,12 +142,12 @@ class ClientAPI:
             yield malware_family_data
 
     async def fetch_vulnerabilities(
-        self, initial_state: Optional[dict[str, Any]] = None
+        self, initial_state: dict[str, Any] | None = None
     ) -> AsyncGenerator[dict[Any, Any], None]:
         """Fetch vulnerabilities from the API.
 
         Args:
-            initial_state (Optional[dict[str, Any]]): The initial state of the fetcher.
+            initial_state (dict[str, Any] | None): The initial state of the fetcher.
 
         Yields:
             dict[str, Any]: The fetched vulnerabilities.
@@ -160,12 +160,12 @@ class ClientAPI:
             yield vulnerability_data
 
     async def fetch_campaigns(
-        self, initial_state: Optional[dict[str, Any]] = None
+        self, initial_state: dict[str, Any] | None = None
     ) -> AsyncGenerator[dict[Any, Any], None]:
         """Fetch campaigns from the API.
 
         Args:
-            initial_state (Optional[dict[str, Any]]): The initial state of the fetcher.
+            initial_state (dict[str, Any] | None): The initial state of the fetcher.
 
         Yields:
             dict[str, Any]: The fetched campaigns.

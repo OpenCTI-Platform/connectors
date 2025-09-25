@@ -1,6 +1,6 @@
 """Test module for GenericConverter functionality."""
 
-from typing import Any, Optional
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -40,8 +40,8 @@ class MockMapper(BaseMapper):
     def __init__(
         self,
         input_data: Any,
-        organization: Optional[str] = None,
-        tlp_marking: Optional[str] = None,
+        organization: str | None = None,
+        tlp_marking: str | None = None,
     ):
         """Initialize the mock mapper."""
         self.input_data = input_data
@@ -107,8 +107,8 @@ class CustomError(Exception):
     def __init__(
         self,
         message: str,
-        entity_id: Optional[str] = None,
-        entity_name: Optional[str] = None,
+        entity_id: str | None = None,
+        entity_name: str | None = None,
     ):
         """Initialize the custom exception."""
         super().__init__(message)

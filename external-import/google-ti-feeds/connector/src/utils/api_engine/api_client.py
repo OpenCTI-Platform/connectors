@@ -34,26 +34,26 @@ class ApiClient:
         self,
         url: str,
         method: str = "GET",
-        headers: Optional[dict[str, Any]] = None,
-        params: Optional[dict[str, Any]] = None,
-        data: Optional[dict[str, Any]] = None,
-        json_payload: Optional[dict[str, Any]] = None,
-        response_key: Optional[str] = None,
-        model: Optional[Type[BaseModel]] = None,
-        timeout: Optional[float] = None,
+        headers: dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
+        data: dict[str, Any] | None = None,
+        json_payload: dict[str, Any] | None = None,
+        response_key: str | None = None,
+        model: Type[BaseModel] | None = None,
+        timeout: float | None = None,
     ) -> Any:
         """Call the API using the provided strategy.
 
         Args:
             url (str): The URL to call.
             method (str): The HTTP method to use.
-            headers (Optional[dict[str, Any]]): The headers to include in the request.
-            params (Optional[dict[str, Any]]): The query parameters to include in the request.
-            data (Optional[dict[str, Any]]): The data to include in the request.
-            json_payload (Optional[dict[str, Any]]): The JSON data to include in the request.
-            response_key (Optional[str]): The key to extract from the response.
-            model (Optional[Type[BaseModel]]): The model to deserialize the response into.
-            timeout (Optional[float]): The timeout for the request.
+            headers (dict[str, Any] | None): The headers to include in the request.
+            params (dict[str, Any] | None): The query parameters to include in the request.
+            data (dict[str, Any] | None): The data to include in the request.
+            json_payload (dict[str, Any] | None): The JSON data to include in the request.
+            response_key (str | None): The key to extract from the response.
+            model (Type[BaseModel] | None): The model to deserialize the response into.
+            timeout (float | None): The timeout for the request.
 
         Returns:
             Any: The response from the API.
