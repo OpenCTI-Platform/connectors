@@ -1,8 +1,8 @@
 from typing import Literal, Optional
 
 from connectors_sdk.core.pydantic import ListFromString
-from pydantic import Field, PositiveInt
 from models.configs.base_settings import ConfigBaseSettings
+from pydantic import Field, PositiveInt
 
 
 class _ConfigLoaderRecordedFuture(ConfigBaseSettings):

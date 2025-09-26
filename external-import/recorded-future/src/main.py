@@ -11,6 +11,7 @@
 
 import traceback
 
+from models.configs.config_loader import ConfigLoader
 from pycti import OpenCTIConnectorHelper
 from rflib import (
     APP_VERSION,
@@ -22,7 +23,6 @@ from rflib import (
     RiskList,
     ThreatMap,
 )
-from models.configs.config_loader import ConfigLoader
 
 
 class BaseRFConnector:
