@@ -100,7 +100,7 @@ class CPEConnector:
         session = requests.Session()
 
         headers = {
-            "api_key": self.api_key,
+            "apiKey": self.api_key,
             "User-Agent": f"OpenCTI-cpe-connector/{APP_VERSION}",
         }
 
@@ -155,7 +155,7 @@ class CPEConnector:
         session = requests.Session()
 
         headers = {
-            "api_key": self.api_key,
+            "apiKey": self.api_key,
             "User-Agent": f"OpenCTI-cpe-connector/{APP_VERSION}",
         }
 
