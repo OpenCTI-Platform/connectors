@@ -1,10 +1,7 @@
-import ipaddress
 from datetime import datetime
 
-import requests
 import tldextract
 import validators
-import whois
 from pydantic import TypeAdapter
 
 
@@ -35,32 +32,6 @@ def threat_description_generator(group_name: str, group_data) -> str:
     return description
 
 
-def fetch_country_domain(domain: str):
-    """
-    Fetches the whois information of a domain
-
-    Param:
-        domain: domain in string
-    Return:
-        string description of the domain with country, registrar, creation and expiration dates
-    """
-    try:
-        w = whois.whois(domain)
-
-        description = f"Domain:{domain}  \n"
-        if w.get("country") is not None:
-            description += f" is registered in {w.get('country')}  \n"
-        if w.get("registrar") is not None:
-            description += f"registered with {w.get('registrar')}  \n"
-        if w.get("creation_date") is not None:
-            description += f" creation_date {w.get('creation_date')}  \n"
-        if w.get("expiration_date") is not None:
-            description += f" expiration_date {w.get('expiration_date')}  \n"
-    except whois.parser.PywhoisError:
-        description = None
-    return description
-
-
 def safe_datetime(value: str | None) -> datetime | None:
     """Safely parses a string into a naive datetime object (without timezone).
     Returns None if the input is None or not a valid ISO 8601 datetime string.
@@ -81,74 +52,6 @@ def safe_datetime(value: str | None) -> datetime | None:
         > None
     """
     return TypeAdapter(datetime).validate_python(value)
-
-
-def ip_fetcher(domain: str):
-    """
-    Fetches the IP address of a domain
-    (Maybe possibility to improve with ipaddress.ip_address(item.get("data")).version)
-
-    Param:
-        domain: domain in string
-    Return:
-        IP of the given domain or None
-    """
-    params = {"name": domain, "type": "A"}
-
-    headers = {"accept": "application/json", "User-Agent": "OpenCTI"}
-
-    response = requests.get(
-        "https://dns.google/resolve",
-        headers=headers,
-        params=params,
-        timeout=(20000, 20000),
-    )
-    # response.raise_for_status()
-    # Google DNS does not take into account characters with accents.
-    # In this case, a status_code = 400 is raise and stop all the process.
-    # In a first step, we disable raise_for_status
-    # Then we will search to another management instead of dns google
-
-    if response.status_code == 200:
-        response_json = response.json()
-        if response_json.get("Answer") is not None:
-            for item in response_json.get("Answer"):
-                if item.get("type") == 1 and is_ipv4(item.get("data")):
-                    ip_address = item.get("data")
-                    return ip_address
-    return None
-
-
-def is_ipv4(value: str) -> bool:
-    """
-    Determine whether the provided IP string is IPv4
-
-    Param:
-        value: ip value in string
-    Return:
-        A boolean
-    """
-    try:
-        ipaddress.IPv4Address(value)
-        return True
-    except ipaddress.AddressValueError:
-        return False
-
-
-def is_ipv6(value: str) -> bool:
-    """
-    Determine whether the provided IP string is IPv6
-
-    Param:
-        value: ip value in string
-    Return:
-        A boolean
-    """
-    try:
-        ipaddress.IPv6Address(value)
-        return True
-    except ipaddress.AddressValueError:
-        return False
 
 
 def is_domain(value: str) -> bool:
