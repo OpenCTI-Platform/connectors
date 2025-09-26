@@ -65,87 +65,93 @@ class ConverterToStix:
         created_by_ref = self.author.id
 
         for alert in alerts:
-            alert_id = alert.get("id", "unknown")
-            self.helper.connector_logger.info(
-                "Processing alert", {"alert_id": alert_id}
-            )
-
-            entity = alert.get("entity", "unknown")
-            pattern = f"[entity:value ='{entity}']"
-            indicator_id = PyCTIIndicator.generate_id(pattern=pattern)
-
-            created_at = (
-                parse_iso_datetime(alert["created_at"])
-                if alert.get("created_at", None)
-                else None
-            )
-
-            modified = (
-                parse_iso_datetime(alert["last_activity_timestamp"])
-                if alert.get("last_activity_timestamp", None)
-                else None
-            )
-
-            audit_logs = alert.get("audit_logs", [])
-            audit_log_text = "\n".join(
-                [
-                    f"{log['timestamp']}: {log['type']} - {log['value']}"
-                    for log in audit_logs
-                ]
-            )
-
-            entity_content = alert.get("entity_content", {})
-            formatted_entity_content = json.dumps(entity_content, indent=2)
-            platform = alert.get("platform", "unknown")
-            platform_value = alert.get("product", "unknown")
-
-            entity_state = alert.get("entity_state", "unknown")
-            queue_state = alert.get("queue_state", "unknown")
-            raw_severity = alert.get("severity", "unknown")
-            severity = f"{raw_severity} severity"
-
-            description = (
-                f"**Platform**: {platform}  \n"
-                f"**Entity State**: {entity_state}  \n"
-                f"**Queue State**: {queue_state}  \n"
-                f"**Severity**: {severity}  \n"
-                f"**Entity Content**:  \n"
-                f"{formatted_entity_content}"
-            )
-
-            raw_score = alert.get("score")
             try:
-                score = int(float(raw_score) * 100) if raw_score is not None else 0
-            except (ValueError, TypeError):
-                score = 0
+                alert_id = alert.get("id", "unknown")
+                self.helper.connector_logger.info(
+                    "Processing alert", {"alert_id": alert_id}
+                )
 
-            indicator = Indicator(
-                id=indicator_id,
-                name=entity,
-                pattern=pattern,
-                pattern_type="stix",
-                description=description,
-                created=created_at,
-                modified=modified,
-                created_by_ref=created_by_ref,
-                object_marking_refs=[self.tlp_marking["id"]],
-                external_references=[
-                    {
-                        "source_name": self.author.name,
-                        "url": alert.get("doppel_link"),
-                        "external_id": alert.get("id"),
-                    }
-                ],
-                custom_properties={
-                    "x_opencti_score": score,
-                    "x_opencti_brand": alert.get("brand", "unknown"),
-                    "x_mitre_platforms": platform_value,
-                    "x_opencti_source": alert.get("source", "unknown"),
-                    "x_opencti_notes": alert.get("notes", ""),
-                    "x_opencti_audit_logs": audit_log_text,
-                },
-                allow_custom=True,
-            )
-            stix_objects.append(indicator)
+                entity = alert.get("entity", "unknown")
+                pattern = f"[entity:value ='{entity}']"
+                indicator_id = PyCTIIndicator.generate_id(pattern=pattern)
+
+                created_at = (
+                    parse_iso_datetime(alert["created_at"])
+                    if alert.get("created_at", None)
+                    else None
+                )
+
+                modified = (
+                    parse_iso_datetime(alert["last_activity_timestamp"])
+                    if alert.get("last_activity_timestamp", None)
+                    else None
+                )
+
+                audit_logs = alert.get("audit_logs", [])
+                audit_log_text = "\n".join(
+                    [
+                        f"{log['timestamp']}: {log['type']} - {log['value']}"
+                        for log in audit_logs
+                    ]
+                )
+
+                entity_content = alert.get("entity_content", {})
+                formatted_entity_content = json.dumps(entity_content, indent=2)
+                platform = alert.get("platform", "unknown")
+                platform_value = alert.get("product", "unknown")
+
+                entity_state = alert.get("entity_state", "unknown")
+                queue_state = alert.get("queue_state", "unknown")
+                raw_severity = alert.get("severity", "unknown")
+                severity = f"{raw_severity} severity"
+
+                description = (
+                    f"**Platform**: {platform}  \n"
+                    f"**Entity State**: {entity_state}  \n"
+                    f"**Queue State**: {queue_state}  \n"
+                    f"**Severity**: {severity}  \n"
+                    f"**Entity Content**:  \n"
+                    f"{formatted_entity_content}"
+                )
+
+                raw_score = alert.get("score")
+                try:
+                    score = int(float(raw_score) * 100) if raw_score is not None else 0
+                except (ValueError, TypeError):
+                    score = 0
+
+                indicator = Indicator(
+                    id=indicator_id,
+                    name=entity,
+                    pattern=pattern,
+                    pattern_type="stix",
+                    description=description,
+                    created=created_at,
+                    modified=modified,
+                    created_by_ref=created_by_ref,
+                    object_marking_refs=[self.tlp_marking["id"]],
+                    external_references=[
+                        {
+                            "source_name": self.author.name,
+                            "url": alert.get("doppel_link"),
+                            "external_id": alert.get("id"),
+                        }
+                    ],
+                    custom_properties={
+                        "x_opencti_score": score,
+                        "x_opencti_brand": alert.get("brand", "unknown"),
+                        "x_mitre_platforms": platform_value,
+                        "x_opencti_source": alert.get("source", "unknown"),
+                        "x_opencti_notes": alert.get("notes", ""),
+                        "x_opencti_audit_logs": audit_log_text,
+                    },
+                    allow_custom=True,
+                )
+                stix_objects.append(indicator)
+            except Exception as e:
+                self.helper.connector_logger.warning(
+                    "Failed to process alert",
+                    {"alert": alert, "error": str(e)},
+                )
 
         return self.helper.stix2_create_bundle(stix_objects)

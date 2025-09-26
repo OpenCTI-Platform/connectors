@@ -7,7 +7,7 @@ services:
       - dev-opencti
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:9.1.3
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.19.3
     volumes:
       - esdata4:/usr/share/elasticsearch/data
       - essnapshots:/usr/share/elasticsearch/snapshots
@@ -64,7 +64,7 @@ services:
       - dev-opencti
 
   opencti:
-    image: opencti/platform:6.7.19
+    image: opencti/platform:6.8.0
     environment:
       - NODE_OPTIONS=--max-old-space-size=8096
       - APP__PORT=8080
@@ -102,7 +102,7 @@ services:
     restart: unless-stopped
 
   worker:
-    image: opencti/worker:6.7.19
+    image: opencti/worker:6.8.0
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
@@ -142,6 +142,7 @@ services:
       - CONNECTOR_WEB_SERVICE_URL=http://webservice:80
       - CONNECTOR_LOG_LEVEL=debug
       - CONNECTOR_LICENCE_KEY_PEM=${CONNECTOR_LICENCE_KEY_PEM}
+      - IMPORT_DOCUMENT_INCLUDE_RELATIONSHIPS=true
     depends_on:
       - opencti
       - webservice
@@ -151,7 +152,7 @@ services:
 
   # is it really needed ?
   connector-import-file-stix:
-    image: opencti/connector-import-file-stix:6.7.19
+    image: opencti/connector-import-file-stix:6.8.0
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
