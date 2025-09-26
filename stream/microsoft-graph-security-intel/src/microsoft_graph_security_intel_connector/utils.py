@@ -153,11 +153,18 @@ def get_expiration_datetime(data: dict, expiration_time: int) -> str:
     :param expiration_time: Duration after which observable is considered as expired
     :return: Datetime of observable expiration
     """
-    updated_at = OpenCTIConnectorHelper.get_attribute_in_extension("updated_at", data)
-    datetime_object = datetime.fromisoformat(updated_at)
-    age = timedelta(expiration_time)
-    expire_datetime = datetime_object + age
-    expiration_datetime = expire_datetime.isoformat()
+    valid_until = OpenCTIConnectorHelper.get_attribute_in_extension("valid_until", data)
+    expiration_datetime = valid_until
+
+    # if valid_until is not supplied, calculate using configured expiration time
+    if valid_until is None:
+        updated_at = OpenCTIConnectorHelper.get_attribute_in_extension(
+            "updated_at", data
+        )
+        datetime_object = datetime.fromisoformat(updated_at)
+        age = timedelta(expiration_time)
+        expire_datetime = datetime_object + age
+        expiration_datetime = expire_datetime.isoformat()
     return expiration_datetime
 
 
