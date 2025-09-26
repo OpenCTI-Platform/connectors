@@ -334,6 +334,14 @@ class Misp:
             default=False,
         )
 
+        self.misp_query_limit = get_config_variable(
+            "MISP_QUERY_LIMIT",
+            ["misp", "query_limit"],
+            config,
+            isNumber=True,
+            default=10,
+        )
+
         # Initialize MISP
         self.misp = PyMISP(
             url=self.misp_url,
@@ -438,7 +446,7 @@ class Misp:
                     current_page = 1
                 number_events = 0
                 while True:
-                    kwargs["limit"] = 10
+                    kwargs["limit"] = self.misp_query_limit 
                     kwargs["page"] = current_page
                     if self.misp_import_keyword is not None:
                         kwargs["value"] = self.misp_import_keyword
