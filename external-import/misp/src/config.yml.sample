@@ -7,7 +7,6 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'MISP' # Required
   scope: 'misp'
-  update_existing_data: false
   log_level: 'info'
   expose_metrics: False
 
