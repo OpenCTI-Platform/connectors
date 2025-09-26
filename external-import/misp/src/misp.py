@@ -1126,14 +1126,17 @@ class Misp:
             # Markings & Tags
             attribute_tags = event_labels
             if "Tag" in attribute:
+
+                attr_only = self.resolve_tags(attribute["Tag"])
+                if self.misp_propagate_labels:
+                    # copy event_labels before merging
+                    attribute_tags = list(event_labels) + attr_only
+                else:
+                    attribute_tags = attr_only
+
                 attribute_markings = self.resolve_markings(
                     attribute["Tag"], with_default=False
                 )
-
-                if not self.misp_propagate_labels:
-                    attribute_tags = self.resolve_tags(attribute["Tag"])
-                else:
-                    attribute_tags.extend(self.resolve_tags(attribute["Tag"]))
 
                 if len(attribute_markings) == 0:
                     attribute_markings = event_markings
