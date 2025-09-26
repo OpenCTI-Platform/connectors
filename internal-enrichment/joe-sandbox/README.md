@@ -1,7 +1,7 @@
 # OpenCTI Joe Sandbox Connector
 
 This connector supports enrichment of observables via Joe Sandbox.
-* [Joe Sandbox](https://www.joesecurity.com/)
+* [Joe Sandbox](https://www.joesecurity.org/)
 
 The connector works for the following observable types:
 
