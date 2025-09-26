@@ -7,6 +7,12 @@ import urllib3
 import validators
 from pycti import OpenCTIApiClient, OpenCTIConnectorHelper
 from stream_connector.utils import obfuscate_api_key, sanitize_payload
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -68,7 +74,6 @@ class ZscalerConnector:
             requests.post, url, json=payload, headers=headers
         )
 
-        # Secure logging with automatic masking of sensitive fields
         safe_payload = sanitize_payload(payload)
         self.helper.connector_logger.debug(
             f"Payload sent (sanitized): {json.dumps(safe_payload, indent=4)}"
@@ -80,13 +85,31 @@ class ZscalerConnector:
             )
 
         if response and response.status_code == 200:
-            msg = f"Authenticated successfully with Zscaler. JSESSIONID: {self.session_cookie}"
-            self.helper.connector_logger.info(msg)
+            # retrieve the JSESSIONID cookie
+            self.session_cookie = response.cookies.get("JSESSIONID")
+
+            # if not found → try an authToken in the JSON (depending on the Zscaler tenant)
+            if not self.session_cookie:
+                try:
+                    data = response.json()
+                    self.session_cookie = data.get("authToken")
+                except Exception:
+                    self.session_cookie = None
+
+            if self.session_cookie:
+                self.helper.connector_logger.info(
+                    f"Authenticated successfully with Zscaler. Token: {self.session_cookie[:10]}..."
+                )
+            else:
+                self.helper.connector_logger.error(
+                    "Authentication succeeded but no session token found in the response."
+                )
         else:
             status_code = response.status_code if response else "No response"
             text = response.text if response else "No text"
-            msg = f"Failed to authenticate with Zscaler: {status_code} - {text}"
-            self.helper.connector_logger.error(msg)
+            self.helper.connector_logger.error(
+                f"Failed to authenticate with Zscaler: {status_code} - {text}"
+            )
             self.session_cookie = None
 
     def handle_rate_limit(self, request_func, *args, **kwargs):
@@ -254,25 +277,61 @@ class ZscalerConnector:
             msg = f"Failed to send {event_type} event: {response.text if response else 'No response'}"
             self.helper.connector_logger.error(msg)
 
-    def activate_zscaler_changes(self):
-        """Activate configuration changes in Zscaler."""
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(multiplier=5, min=5, max=60),
+        retry=retry_if_exception_type(Exception),
+        reraise=True,
+    )
+    def activate_zscaler_changes(self, max_retries=5, delay=30):
+        """Activate configuration changes in Zscaler with retry/backoff handled by tenacity."""
+
         session_cookie = self.get_zscaler_session_cookie()
         headers = {
             "Content-Type": "application/json",
             "Cookie": f"JSESSIONID={session_cookie}",
         }
 
-        activation_url = "https://zsapi.zscalertwo.net/api/v1/status/activate"
-        response = self.handle_rate_limit(
-            requests.post, activation_url, headers=headers
-        )
+        status_url = "https://zsapi.zscalertwo.net/api/v1/status"
+        activate_url = "https://zsapi.zscalertwo.net/api/v1/status/activate"
 
-        if response and response.status_code == 200:
-            msg = "Zscaler configuration activated."
-            self.helper.connector_logger.info(msg)
-        else:
-            msg = "Failed to activate Zscaler config: {response.text if response else 'No response'}"
-            self.helper.connector_logger.error(msg)
+        for attempt in range(1, max_retries + 1):
+            # Check if already ACTIVE/PENDING/INPROGRESS
+            status_resp = requests.get(status_url, headers=headers)
+            if status_resp and status_resp.status_code == 200:
+                status = status_resp.json().get("status")
+                if status in ("ACTIVE", "PENDING", "INPROGRESS"):
+                    self.helper.connector_logger.info(
+                        f"Zscaler config status = {status}, no activation needed."
+                    )
+                    return True
+
+            # Try activation
+            resp = requests.post(activate_url, headers=headers)
+            if resp and resp.status_code == 200:
+                self.helper.connector_logger.info("Zscaler configuration activated.")
+                return True
+            elif resp and resp.status_code == 503:
+                try:
+                    msg = resp.json().get("message", resp.text)
+                except Exception:
+                    msg = resp.text
+                self.helper.connector_logger.warning(
+                    f"Activation attempt {attempt}/{max_retries} failed (503: {msg}). Retrying in {delay}s..."
+                )
+                time.sleep(delay)
+                delay *= 2
+                continue
+            else:
+                self.helper.connector_logger.error(
+                    f"Activation failed: {resp.text if resp else 'No response'}"
+                )
+                raise Exception(
+                    f"Activation failed: {resp.text if resp else 'No response'}"
+                )
+
+        self.helper.connector_logger.error("Activation failed after all retries.")
+        return False
 
     def _process_message(self, msg):
         """Process messages from the OpenCTI stream."""
@@ -285,6 +344,10 @@ class ZscalerConnector:
                 self.check_and_send_to_zscaler(structured_data, "create")
             elif msg.event == "delete":
                 self.check_and_send_to_zscaler(structured_data, "delete")
+
+            # Always trigger activation after processing an event
+            self.activate_zscaler_changes()
+
         else:
             msg = "Ignoring non-STIX indicator."
             self.helper.connector_logger.info(msg)
