@@ -286,8 +286,6 @@ class ConverterToStix:
         Returns:
             domain: stix2 Domain object
             relation_victim_domain: stix2 Relationship between victim and domain
-            ip_object: stix2 IPv4 or IPv6 linked to the domain name
-            relation_domain_ip: stix2 Relationship between domain and ip
         """
         domain = self.create_domain(domain_name=domain_name)
 
