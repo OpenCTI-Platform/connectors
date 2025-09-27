@@ -21,7 +21,7 @@ class _ConfigLoaderRecordedFuture(ConfigBaseSettings):
         description="Default Traffic Light Protocol (TLP) marking for imported data.",
     )
     interval: PositiveInt = Field(
-        default=24,
+        default=1,
         description="Polling interval in hours for fetching Recorded Future data.",
     )
 

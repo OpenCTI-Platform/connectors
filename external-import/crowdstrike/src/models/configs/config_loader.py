@@ -2,12 +2,12 @@ from pathlib import Path
 from typing import Any
 
 from connectors_sdk.core.pydantic import ListFromString
-from models.configs import (
-    ConfigBaseSettings,
-    _ConfigLoaderCISAKEV,
+from models.configs.base_settings import ConfigBaseSettings
+from models.configs.connector_configs import (
     _ConfigLoaderConnector,
     _ConfigLoaderOCTI,
 )
+from models.configs.crowdstrike_configs import _ConfigLoaderCrowdstrike
 from pydantic import Field
 from pydantic_settings import (
     BaseSettings,
@@ -22,16 +22,19 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
     """A concrete implementation of _ConfigLoaderConnector defining default connector configuration values."""
 
     id: str = Field(
-        default="cisakev--ba292941-3d20-4bfa-adea-08c0a08406df",
+        default="crowdstrike--1234abcd-1234-1234-1234-abcd12345678",
         description="A unique UUIDv4 identifier for this connector instance.",
     )
     name: str = Field(
-        default="CISA Known Exploited Vulnerabilities",
+        default="CrowdStrike",
         description="Name of the connector.",
     )
     scope: ListFromString = Field(
-        default=["cisa"],
-        description="The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+        default=["crowdstrike"],
+        description=(
+            "The scope or type of data the connector is importing, "
+            "either a MIME type or Stix Object (for information only)."
+        ),
     )
 
 
@@ -46,9 +49,9 @@ class ConfigLoader(ConfigBaseSettings):
         default_factory=ConfigLoaderConnector,
         description="Connector configurations.",
     )
-    cisa: _ConfigLoaderCISAKEV = Field(
-        default_factory=_ConfigLoaderCISAKEV,
-        description="CISA KEV configurations.",
+    crowdstrike: _ConfigLoaderCrowdstrike = Field(
+        default_factory=_ConfigLoaderCrowdstrike,
+        description="CrowdStrike configurations.",
     )
 
     @classmethod
@@ -60,8 +63,8 @@ class ConfigLoader(ConfigBaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource]:
-        env_path = Path(__file__).parents[3] / ".env"
-        yaml_path = Path(__file__).parents[3] / "config.yml"
+        env_path = Path(__file__).parents[2] / ".env"
+        yaml_path = Path(__file__).parents[2] / "config.yml"
 
         if env_path.exists():
             return (
