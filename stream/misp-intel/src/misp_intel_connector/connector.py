@@ -7,18 +7,20 @@ creating, updating, and deleting MISP events from OpenCTI containers
 """
 
 import json
+import queue
+import threading
+import time
 import traceback
 from json import JSONDecodeError
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from pycti import OpenCTIConnectorHelper
 
 from .api_handler import MispApiHandler, MispApiHandlerError
-from .config_variables import ConfigConnector
 from .utils import (
     convert_stix_bundle_to_misp_event,
-    is_supported_container_type,
     get_container_type,
+    is_supported_container_type,
 )
 
 
@@ -28,15 +30,31 @@ class MispIntelConnector:
 
     This connector listens to the OpenCTI live stream and synchronizes container objects
     (reports, groupings, cases) with MISP by creating/updating/deleting MISP events.
+
+    Uses a queue-based architecture to handle long-running operations without timing out.
     """
 
-    def __init__(self):
+    def __init__(self, config):
         """Initialize the connector with necessary configurations"""
 
-        # Load configuration and create helper
-        self.config = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
+        # Store configuration and create helper
+        self.config = config
+        self.helper = OpenCTIConnectorHelper(self.config.model_dump_pycti())
         self.api = MispApiHandler(self.helper, self.config)
+
+        # Initialize queue for processing create/update events
+        # We use a queue to avoid stream timeouts (30 seconds) when processing large containers
+        self.work_queue = queue.Queue(
+            maxsize=100
+        )  # Limit queue size to prevent memory issues
+        self.worker_thread = None
+        self.stop_worker = threading.Event()
+
+        # Store mapping of container IDs to MISP event info for deletion
+        # Since containers are deleted before we get the delete event, we need to remember the mapping
+        self.container_misp_mapping = (
+            {}
+        )  # {container_id: {"misp_uuid": str, "external_ref_id": str}}
 
         # Test connection on startup
         if not self.api.test_connection():
@@ -47,7 +65,7 @@ class MispIntelConnector:
         self.helper.connector_logger.info(
             "MISP Intel connector initialized",
             {
-                "misp_url": self.config.misp_url,
+                "misp_url": self.config.misp.url,
                 "opencti_url": self.helper.api.api_url,
             },
         )
@@ -77,44 +95,54 @@ class MispIntelConnector:
                 f"Resolving {container_type} with ID {container_id}"
             )
 
-            # Get the full container with all references using OpenCTI API
-            # We need to fetch the complete bundle for this container
-            if container_type == "report":
-                full_container = self.helper.api.report.read(id=container_id)
-            elif container_type == "grouping":
-                full_container = self.helper.api.grouping.read(id=container_id)
-            elif container_type == "case-incident":
-                full_container = self.helper.api.case_incident.read(id=container_id)
-            elif container_type == "case-rfi":
-                full_container = self.helper.api.case_rfi.read(id=container_id)
-            elif container_type == "case-rft":
-                full_container = self.helper.api.case_rft.read(id=container_id)
-            else:
+            # Map container types to entity types for the API
+            entity_type_mapping = {
+                "report": "Report",
+                "grouping": "Grouping",
+                "case-incident": "Case-Incident",
+                "case-rfi": "Case-Rfi",
+                "case-rft": "Case-Rft",
+            }
+
+            entity_type = entity_type_mapping.get(container_type)
+            if not entity_type:
                 self.helper.connector_logger.error(
                     f"Unsupported container type: {container_type}"
                 )
                 return None
 
-            if not full_container:
+            # Use the same method as export-file-stix to get the FULL bundle with all content
+            # This will include the container, all its content (indicators, observables, etc.),
+            # and all relationships
+            self.helper.connector_logger.info(
+                f"Fetching full STIX bundle for {entity_type} {container_id}"
+            )
+
+            stix_bundle = (
+                self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
+                    entity_type=entity_type,
+                    entity_id=container_id,
+                    mode="full",  # Get FULL bundle with all content
+                    access_filter=None,  # No access filter for now
+                )
+            )
+
+            if not stix_bundle:
                 self.helper.connector_logger.warning(
-                    f"Could not fetch full container for {container_id}"
+                    f"Could not fetch full bundle for {container_id}"
                 )
                 return None
 
-            # For now, create bundle with container data from stream
-            # The stream event already contains the STIX object
-            stix_bundle = {
-                "type": "bundle",
-                "id": f"bundle--{container_id}",
-                "spec_version": "2.1",
-                "objects": [container_data]  # Start with the container itself
-            }
-            
-            # TODO: In production, you would fetch all referenced objects
-            # For now, we'll just work with the container data from the stream
+            # Log bundle content for debugging
+            objects = stix_bundle.get("objects", [])
+            object_types = {}
+            for obj in objects:
+                obj_type = obj.get("type", "unknown")
+                object_types[obj_type] = object_types.get(obj_type, 0) + 1
 
             self.helper.connector_logger.info(
-                f"Generated STIX bundle with {len(stix_bundle.get('objects', []))} objects"
+                f"Generated STIX bundle with {len(objects)} objects",
+                {"object_types": object_types},
             )
 
             return stix_bundle
@@ -165,7 +193,7 @@ class MispIntelConnector:
                 # Add external reference back to OpenCTI
                 if result.get("id") and result.get("uuid"):
                     misp_event_url = (
-                        f"{self.config.misp_url}/events/view/{result['id']}"
+                        f"{self.config.misp.url}/events/view/{result['id']}"
                     )
                     external_reference = self.helper.api.external_reference.create(
                         source_name="MISP",
@@ -184,6 +212,12 @@ class MispIntelConnector:
                         f"Added external reference to container {container_id}",
                         {"misp_url": misp_event_url},
                     )
+
+                    # Store the mapping for potential deletion later
+                    self.container_misp_mapping[container_id] = {
+                        "misp_uuid": result["uuid"],
+                        "external_ref_id": external_reference["id"],
+                    }
 
                 return result
 
@@ -237,19 +271,50 @@ class MispIntelConnector:
             )
             return False
 
-    def _delete_misp_event(self, misp_event_uuid: str) -> bool:
+    def _delete_misp_event(
+        self,
+        misp_event_uuid: str,
+        container_id: str = None,
+        external_ref_id: str = None,
+    ) -> bool:
         """
-        Delete a MISP event
+        Delete a MISP event and remove its external reference from OpenCTI
         :param misp_event_uuid: UUID of the MISP event to delete
+        :param container_id: OpenCTI container ID (optional)
+        :param external_ref_id: External reference ID to remove (optional)
         :return: True if successful, False otherwise
         """
         try:
+            # Delete the MISP event
             result = self.api.delete_event(misp_event_uuid)
             if result:
                 self.helper.connector_logger.info(
                     "[DELETE] MISP event deleted",
                     {"misp_event_uuid": misp_event_uuid},
                 )
+
+                # Remove external reference from OpenCTI if we have the IDs
+                if container_id and external_ref_id:
+                    try:
+                        self.helper.api.stix_domain_object.remove_external_reference(
+                            id=container_id, external_reference_id=external_ref_id
+                        )
+                        self.helper.connector_logger.info(
+                            "[DELETE] Removed external reference from OpenCTI",
+                            {
+                                "container_id": container_id,
+                                "external_ref_id": external_ref_id,
+                            },
+                        )
+                    except Exception as e:
+                        self.helper.connector_logger.warning(
+                            f"Could not remove external reference: {str(e)}",
+                            {
+                                "container_id": container_id,
+                                "external_ref_id": external_ref_id,
+                            },
+                        )
+
                 return True
             return False
 
@@ -260,11 +325,13 @@ class MispIntelConnector:
             )
             return False
 
-    def _get_misp_event_uuid_from_container(self, container_id: str) -> Optional[str]:
+    def _get_misp_event_info_from_container(
+        self, container_id: str
+    ) -> Tuple[Optional[str], Optional[str]]:
         """
-        Get MISP event UUID from container's external references
+        Get MISP event UUID and external reference ID from container's external references
         :param container_id: OpenCTI container ID
-        :return: MISP event UUID or None
+        :return: Tuple of (MISP event UUID, external reference ID) or (None, None)
         """
         try:
             # Read the container to get external references
@@ -288,36 +355,107 @@ class MispIntelConnector:
                     continue
 
             if not container:
-                return None
+                return None, None
 
             # Look for MISP external reference
             external_refs = container.get("externalReferences", [])
             for ref in external_refs:
                 if ref.get("source_name") == "MISP" and ref.get("external_id"):
-                    return ref["external_id"]
+                    return ref["external_id"], ref.get("id")
 
-            return None
+            return None, None
 
         except Exception as e:
             self.helper.connector_logger.error(
-                f"Error getting MISP event UUID: {str(e)}",
+                f"Error getting MISP event info: {str(e)}",
                 {"trace": traceback.format_exc()},
             )
-            return None
+            return None, None
+
+    def _get_misp_event_uuid_from_container(self, container_id: str) -> Optional[str]:
+        """
+        Get MISP event UUID from container's external references
+        :param container_id: OpenCTI container ID
+        :return: MISP event UUID or None
+        """
+        misp_uuid, _ = self._get_misp_event_info_from_container(container_id)
+        return misp_uuid
+
+    def _worker_process_queue(self) -> None:
+        """
+        Worker thread that processes items from the queue.
+        This runs in a separate thread to avoid stream timeouts.
+        """
+        self.helper.connector_logger.info("Worker thread started")
+
+        while not self.stop_worker.is_set():
+            try:
+                # Get item from queue with timeout to check stop signal
+                try:
+                    event_type, container_data, container_id = self.work_queue.get(
+                        timeout=1
+                    )
+                except queue.Empty:
+                    continue
+
+                self.helper.connector_logger.info(
+                    f"Worker processing {event_type} for container {container_id}"
+                )
+
+                # Process the event based on type
+                if event_type == "create":
+                    self._create_misp_event(container_data)
+
+                elif event_type == "update":
+                    # Get existing MISP event UUID
+                    misp_event_uuid = self._get_misp_event_uuid_from_container(
+                        container_id
+                    )
+                    if misp_event_uuid:
+                        self._update_misp_event(container_data, misp_event_uuid)
+                    else:
+                        # If no existing event, create a new one
+                        self.helper.connector_logger.info(
+                            f"No existing MISP event found for {container_id}, creating new event"
+                        )
+                        self._create_misp_event(container_data)
+
+                # Mark task as done
+                self.work_queue.task_done()
+
+            except Exception as e:
+                self.helper.connector_logger.error(
+                    f"Worker thread error: {str(e)}",
+                    {"trace": traceback.format_exc()},
+                )
+                # Continue processing even if one item fails
+                try:
+                    self.work_queue.task_done()
+                except:
+                    pass
+
+        self.helper.connector_logger.info("Worker thread stopped")
 
     def _process_message(self, msg) -> None:
         """
-        Process a stream message and handle create/update/delete events
+        Process a stream message and handle create/update/delete events.
+        This method quickly processes messages to avoid stream timeouts.
+        Create/update operations are queued for processing by worker thread.
+        Delete operations are handled immediately as they are fast.
+
         :param msg: SSE Event object from pycti stream
         :return: None
         """
+        # Log that we received a message
+        self.helper.connector_logger.info("Stream message received")
+
         try:
             # Parse SSE Event object
             # msg has attributes: data (JSON string), id, event (create/update/delete)
             import json
-            
+
             # Parse the JSON data from the SSE event
-            if hasattr(msg, 'data'):
+            if hasattr(msg, "data"):
                 try:
                     payload = json.loads(msg.data)
                 except json.JSONDecodeError as e:
@@ -326,29 +464,33 @@ class MispIntelConnector:
             else:
                 self.helper.connector_logger.error("No data in stream message")
                 return
-            
+
             # Get the event type from SSE event
-            event_type = msg.event if hasattr(msg, 'event') else 'create'
-            
+            event_type = msg.event if hasattr(msg, "event") else "create"
+
             # In case of initial messages, event type may not be defined
-            if not event_type or event_type == 'message':
-                event_type = 'create'
-            
+            if not event_type or event_type == "message":
+                event_type = "create"
+
             # Extract the STIX data from the payload
-            data = payload.get('data', {})
-            
+            data = payload.get("data", {})
+
             # Log what we received
-            data_type = data.get('type', 'unknown') if data else 'unknown'
+            data_type = data.get("type", "unknown") if data else "unknown"
             self.helper.connector_logger.debug(
                 f"Processing stream event",
-                {"event_type": event_type, "data_type": data_type, "msg_id": msg.id if hasattr(msg, 'id') else 'unknown'}
+                {
+                    "event_type": event_type,
+                    "data_type": data_type,
+                    "msg_id": msg.id if hasattr(msg, "id") else "unknown",
+                },
             )
-            
+
             # Check if we have data and if it's a supported container type
             if not data:
                 self.helper.connector_logger.debug("No data in stream message")
                 return
-                
+
             if not is_supported_container_type(data):
                 self.helper.connector_logger.debug(
                     f"Skipping unsupported type: {data.get('type', 'unknown')}"
@@ -359,34 +501,62 @@ class MispIntelConnector:
             container_type = get_container_type(data)
 
             self.helper.connector_logger.info(
-                f"Processing {event_type} event for {container_type}",
+                f"Received {event_type} event for {container_type}",
                 {"container_id": container_id, "stix_type": data.get("type")},
             )
 
-            if event_type == "create":
-                # Create new MISP event
-                self._create_misp_event(data)
+            # Handle delete events immediately (they are fast)
+            if event_type == "delete":
+                # First try to get from our stored mapping (most reliable for deletes)
+                mapping = self.container_misp_mapping.get(container_id)
 
-            elif event_type == "update":
-                # Get existing MISP event UUID
-                misp_event_uuid = self._get_misp_event_uuid_from_container(container_id)
-                if misp_event_uuid:
-                    self._update_misp_event(data, misp_event_uuid)
-                else:
-                    # If no existing event, create a new one
+                if mapping:
+                    misp_event_uuid = mapping["misp_uuid"]
+                    external_ref_id = mapping["external_ref_id"]
+
                     self.helper.connector_logger.info(
-                        f"No existing MISP event found for {container_id}, creating new event"
+                        f"Found MISP mapping for deleted container",
+                        {"container_id": container_id, "misp_uuid": misp_event_uuid},
                     )
-                    self._create_misp_event(data)
 
-            elif event_type == "delete":
-                # Get existing MISP event UUID and delete
-                misp_event_uuid = self._get_misp_event_uuid_from_container(container_id)
-                if misp_event_uuid:
-                    self._delete_misp_event(misp_event_uuid)
+                    # Delete the MISP event
+                    self._delete_misp_event(
+                        misp_event_uuid, container_id, external_ref_id
+                    )
+
+                    # Remove from our mapping
+                    del self.container_misp_mapping[container_id]
                 else:
-                    self.helper.connector_logger.warning(
-                        f"No MISP event found to delete for {container_id}"
+                    # If not in mapping, container might have been created before connector started
+                    # Try to get from OpenCTI (won't work if container already deleted)
+                    misp_event_uuid, external_ref_id = (
+                        self._get_misp_event_info_from_container(container_id)
+                    )
+                    if misp_event_uuid:
+                        self._delete_misp_event(
+                            misp_event_uuid, container_id, external_ref_id
+                        )
+                    else:
+                        self.helper.connector_logger.warning(
+                            f"No MISP event found to delete for {container_id}"
+                        )
+            else:
+                # Queue create/update events for processing by worker thread
+                # This avoids stream timeouts for large containers
+                try:
+                    # Try to add to queue without blocking
+                    self.work_queue.put_nowait((event_type, data, container_id))
+                    self.helper.connector_logger.info(
+                        f"Queued {event_type} event for {container_type}",
+                        {
+                            "container_id": container_id,
+                            "queue_size": self.work_queue.qsize(),
+                        },
+                    )
+                except queue.Full:
+                    self.helper.connector_logger.error(
+                        f"Work queue is full! Cannot queue {event_type} for {container_id}",
+                        {"queue_size": self.work_queue.qsize()},
                     )
 
         except Exception as e:
@@ -401,8 +571,47 @@ class MispIntelConnector:
         """
         self._check_stream_id()
 
-        self.helper.connector_logger.info("Starting MISP Intel connector...")
+        # Start the worker thread
+        self.stop_worker.clear()
+        self.worker_thread = threading.Thread(
+            target=self._worker_process_queue,
+            name="MispIntelWorker",
+            daemon=False,  # Not daemon so it keeps running
+        )
+        self.worker_thread.start()
+
+        self.helper.connector_logger.info(
+            "Starting MISP Intel connector with worker thread..."
+        )
+
+        # Start listening to the stream - this should block
+        # The listen_stream method handles its own exceptions
         self.helper.listen_stream(self._process_message)
+
+    def stop(self) -> None:
+        """
+        Stop the connector and worker thread
+        """
+        self.helper.connector_logger.info("Stopping MISP Intel connector...")
+
+        # Signal worker to stop
+        self.stop_worker.set()
+
+        # Wait for queue to be processed (max 10 seconds)
+        try:
+            self.work_queue.join()
+        except:
+            pass
+
+        # Wait for worker thread to stop
+        if self.worker_thread and self.worker_thread.is_alive():
+            self.worker_thread.join(timeout=5)
+            if self.worker_thread.is_alive():
+                self.helper.connector_logger.warning(
+                    "Worker thread did not stop cleanly"
+                )
+
+        self.helper.connector_logger.info("MISP Intel connector stopped")
 
 
 def main():

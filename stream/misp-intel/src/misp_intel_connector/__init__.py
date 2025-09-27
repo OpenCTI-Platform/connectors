@@ -2,19 +2,17 @@
 MISP Intel Stream Connector Package
 """
 
-from .connector import MispIntelConnector
-from .config_variables import ConfigConnector
 from .api_handler import MispApiHandler, MispApiHandlerError
+from .connector import MispIntelConnector
 from .utils import (
-    is_supported_container_type,
+    convert_stix_bundle_to_misp_event,
     get_container_type,
     get_creator_org_from_bundle,
-    convert_stix_bundle_to_misp_event,
+    is_supported_container_type,
 )
 
 __all__ = [
     "MispIntelConnector",
-    "ConfigConnector",
     "MispApiHandler",
     "MispApiHandlerError",
     "is_supported_container_type",

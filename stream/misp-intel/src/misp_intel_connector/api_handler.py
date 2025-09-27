@@ -11,7 +11,7 @@ from typing import Dict, List, Optional
 from urllib.parse import urljoin
 
 import requests
-from pymisp import PyMISP, MISPEvent, MISPAttribute, MISPObject
+from pymisp import MISPAttribute, MISPEvent, MISPObject, PyMISP
 
 
 class MispApiHandlerError(Exception):
@@ -41,13 +41,13 @@ class MispApiHandler:
         # Initialize PyMISP client
         try:
             self.misp = PyMISP(
-                url=config.misp_url,
-                key=config.misp_api_key,
-                ssl=config.misp_ssl_verify,
+                url=config.misp.url,
+                key=config.misp.api_key,
+                ssl=config.misp.ssl_verify,
                 debug=False,
                 timeout=30,
             )
-            
+
             # Configure retry strategy if PyMISP has requests session
             # PyMISP uses requests internally, but may not expose session directly
             # We'll handle retries at the request level instead
@@ -70,7 +70,13 @@ class MispApiHandler:
             if version:
                 self.helper.connector_logger.info(
                     f"Successfully connected to MISP",
-                    {"misp_version": version.get("version", "Unknown") if isinstance(version, dict) else str(version)},
+                    {
+                        "misp_version": (
+                            version.get("version", "Unknown")
+                            if isinstance(version, dict)
+                            else str(version)
+                        )
+                    },
                 )
                 return True
             return False
@@ -93,23 +99,23 @@ class MispApiHandler:
             # Set basic event properties
             misp_event.info = event_data.get("info", "OpenCTI Import")
             misp_event.distribution = event_data.get(
-                "distribution", self.config.misp_distribution_level
+                "distribution", self.config.misp.distribution_level
             )
             misp_event.threat_level_id = event_data.get(
-                "threat_level_id", self.config.misp_threat_level
+                "threat_level_id", self.config.misp.threat_level
             )
             misp_event.analysis = event_data.get("analysis", 2)  # 2 = Completed
-            
+
             # Set organization fields
             # Creator org (orgc) - the organization that created the content
             if "orgc" in event_data:
                 # orgc is the creator organization from OpenCTI (created_by_ref)
                 misp_event.Orgc = {"name": event_data["orgc"]}
-                
+
             # Owner org (org) - the organization that owns the event in MISP
-            if self.config.misp_owner_org:
+            if self.config.misp.owner_org:
                 # org is configured in the connector settings
-                misp_event.Org = {"name": self.config.misp_owner_org}
+                misp_event.Org = {"name": self.config.misp.owner_org}
 
             # Set optional properties
             if "date" in event_data:
@@ -129,7 +135,7 @@ class MispApiHandler:
                     attr.to_ids = attr_data.get("to_ids", False)
                     attr.comment = attr_data.get("comment", "")
                     attr.distribution = attr_data.get(
-                        "distribution", self.config.misp_distribution_level
+                        "distribution", self.config.misp.distribution_level
                     )
 
                     misp_event.add_attribute(**attr.to_dict())
@@ -140,7 +146,7 @@ class MispApiHandler:
                     misp_obj = MISPObject(name=obj_data.get("name"))
                     misp_obj.comment = obj_data.get("comment", "")
                     misp_obj.distribution = obj_data.get(
-                        "distribution", self.config.misp_distribution_level
+                        "distribution", self.config.misp.distribution_level
                     )
 
                     # Add object attributes
@@ -210,15 +216,15 @@ class MispApiHandler:
             existing_event.analysis = event_data.get(
                 "analysis", existing_event.analysis
             )
-            
+
             # Update organization fields
             # Creator org (orgc) - the organization that created the content
             if "orgc" in event_data:
                 existing_event.Orgc = {"name": event_data["orgc"]}
-                
+
             # Owner org (org) - the organization that owns the event in MISP
-            if self.config.misp_owner_org:
-                existing_event.Org = {"name": self.config.misp_owner_org}
+            if self.config.misp.owner_org:
+                existing_event.Org = {"name": self.config.misp.owner_org}
 
             if "date" in event_data:
                 existing_event.date = event_data["date"]
@@ -244,7 +250,7 @@ class MispApiHandler:
                         to_ids=attr_data.get("to_ids", False),
                         comment=attr_data.get("comment", ""),
                         distribution=attr_data.get(
-                            "distribution", self.config.misp_distribution_level
+                            "distribution", self.config.misp.distribution_level
                         ),
                     )
 
@@ -254,7 +260,7 @@ class MispApiHandler:
                     misp_obj = MISPObject(name=obj_data.get("name"))
                     misp_obj.comment = obj_data.get("comment", "")
                     misp_obj.distribution = obj_data.get(
-                        "distribution", self.config.misp_distribution_level
+                        "distribution", self.config.misp.distribution_level
                     )
 
                     # Add object attributes

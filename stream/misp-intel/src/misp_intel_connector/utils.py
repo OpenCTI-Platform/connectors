@@ -9,13 +9,10 @@ import hashlib
 import json
 import traceback
 from datetime import datetime
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
-from misp_stix_converter import (
-    stix_2_to_misp,
-    MISPtoSTIX21Parser,
-    ExternalSTIX2toMISPParser,
-)
+# misp_stix_converter is available but not currently used
+# We convert STIX bundles directly for better control
 
 
 # Supported container types for this connector
@@ -65,7 +62,7 @@ def is_supported_container_type(data: Dict) -> bool:
             "x-opencti-case-rfi",
             "x-opencti-case-rft",
         ]
-        
+
         return obj_type in supported_types
 
     except Exception:
@@ -100,10 +97,12 @@ def get_container_type(data: Dict) -> Optional[str]:
         return None
 
 
-def get_creator_org_from_bundle(stix_bundle: Dict, container: Dict, helper: Any) -> Optional[str]:
+def get_creator_org_from_bundle(
+    stix_bundle: Dict, container: Dict, helper: Any
+) -> Optional[str]:
     """
     Extract the creator organization name from the STIX bundle
-    
+
     :param stix_bundle: STIX 2.1 bundle
     :param container: The container object
     :param helper: OpenCTI connector helper instance
@@ -114,7 +113,7 @@ def get_creator_org_from_bundle(stix_bundle: Dict, container: Dict, helper: Any)
         created_by_ref = container.get("created_by_ref")
         if not created_by_ref:
             return None
-            
+
         # Find the identity object in the bundle
         for obj in stix_bundle.get("objects", []):
             if obj.get("id") == created_by_ref:
@@ -127,18 +126,16 @@ def get_creator_org_from_bundle(stix_bundle: Dict, container: Dict, helper: Any)
                         )
                         return creator_name
                 break
-                
+
         return None
     except Exception as e:
-        helper.connector_logger.warning(
-            f"Could not extract creator org: {str(e)}"
-        )
+        helper.connector_logger.warning(f"Could not extract creator org: {str(e)}")
         return None
 
 
 def convert_stix_bundle_to_misp_event(stix_bundle: Dict, helper: Any) -> Optional[Dict]:
     """
-    Convert a STIX 2.1 bundle to MISP event format using misp-stix library
+    Convert a STIX 2.1 bundle to MISP event format
 
     :param stix_bundle: STIX 2.1 bundle containing the container and its references
     :param helper: OpenCTI connector helper instance
@@ -169,186 +166,88 @@ def convert_stix_bundle_to_misp_event(stix_bundle: Dict, helper: Any) -> Optiona
             {"container_id": container.get("id")},
         )
 
-        # For now, skip the misp-stix parser which seems to hang
-        # and create a simple event from the container data
-        try:
-            # Create a simple MISP event structure
-            misp_event = None  # We'll build event_data directly
-
-            # Build MISP event data structure
-            event_data = {
-                "info": container.get("name", "OpenCTI Import"),
-                "date": datetime.now().strftime("%Y-%m-%d"),
-                "threat_level_id": 2,  # Medium by default
-                "analysis": 2,  # Completed
-                "distribution": 1,  # Community only by default
-                "attributes": [],
-                "objects": [],
-                "tags": [],
-            }
-            
-            # Extract creator org from bundle
-            creator_org = get_creator_org_from_bundle(stix_bundle, container, helper)
-            if creator_org:
-                event_data["orgc"] = creator_org
-
-            # Set event info from container
-            if "name" in container:
-                event_data["info"] = container["name"]
-            elif "description" in container:
-                event_data["info"] = container["description"][:100]  # Limit length
-
-            # Set date from container
-            if "created" in container:
-                try:
-                    created_date = datetime.fromisoformat(
-                        container["created"].replace("Z", "+00:00")
-                    )
-                    event_data["date"] = created_date.strftime("%Y-%m-%d")
-                except:
-                    pass
-
-            # Extract confidence as threat level
-            if "confidence" in container:
-                confidence = container["confidence"]
-                if confidence >= 75:
-                    event_data["threat_level_id"] = 1  # High
-                elif confidence >= 50:
-                    event_data["threat_level_id"] = 2  # Medium
-                else:
-                    event_data["threat_level_id"] = 3  # Low
-
-            # Process attributes from the parsed MISP event
-            if hasattr(misp_event, "attributes") and misp_event.attributes:
-                for attr in misp_event.attributes:
-                    attr_dict = {
-                        "type": attr.type,
-                        "value": attr.value,
-                        "category": attr.category,
-                        "to_ids": attr.to_ids,
-                        "comment": attr.comment if hasattr(attr, "comment") else "",
-                        "distribution": 1,  # Community only
-                    }
-                    event_data["attributes"].append(attr_dict)
-
-            # Process objects from the parsed MISP event
-            if hasattr(misp_event, "objects") and misp_event.objects:
-                for obj in misp_event.objects:
-                    obj_dict = {
-                        "name": obj.name,
-                        "comment": obj.comment if hasattr(obj, "comment") else "",
-                        "distribution": 1,
-                        "attributes": [],
-                    }
-
-                    if hasattr(obj, "attributes"):
-                        for obj_attr in obj.attributes:
-                            obj_attr_dict = {
-                                "object_relation": obj_attr.object_relation,
-                                "type": obj_attr.type,
-                                "value": obj_attr.value,
-                                "to_ids": obj_attr.to_ids,
-                                "comment": (
-                                    obj_attr.comment
-                                    if hasattr(obj_attr, "comment")
-                                    else ""
-                                ),
-                            }
-                            obj_dict["attributes"].append(obj_attr_dict)
-
-                    event_data["objects"].append(obj_dict)
-
-            # Process tags from the parsed MISP event
-            if hasattr(misp_event, "tags") and misp_event.tags:
-                for tag in misp_event.tags:
-                    if hasattr(tag, "name"):
-                        event_data["tags"].append(tag.name)
-                    else:
-                        event_data["tags"].append(str(tag))
-
-            # Add OpenCTI-specific tags
-            if container_type:
-                event_data["tags"].append(f"opencti:type={container_type}")
-
-            # Add labels as tags
-            if "labels" in container:
-                for label in container.get("labels", []):
-                    event_data["tags"].append(f"opencti:label={label}")
-
-            helper.connector_logger.info(
-                f"Successfully converted STIX bundle to MISP event",
-                {
-                    "attributes_count": len(event_data["attributes"]),
-                    "objects_count": len(event_data["objects"]),
-                    "tags_count": len(event_data["tags"]),
-                },
-            )
-
-            return event_data
-
-        except Exception as e:
-            # If misp-stix converter fails, fall back to manual conversion
-            helper.connector_logger.warning(
-                f"misp-stix converter failed, using fallback conversion: {str(e)}"
-            )
-            return convert_stix_bundle_fallback(stix_bundle, container, helper)
-
-    except Exception as e:
-        helper.connector_logger.error(
-            f"Error converting STIX bundle to MISP event: {str(e)}",
-            {"trace": traceback.format_exc()},
-        )
-        return None
-
-
-def convert_stix_bundle_fallback(
-    stix_bundle: Dict, container: Dict, helper: Any
-) -> Optional[Dict]:
-    """
-    Fallback conversion method when misp-stix library fails
-
-    :param stix_bundle: STIX 2.1 bundle
-    :param container: The main container object
-    :param helper: OpenCTI connector helper instance
-    :return: MISP event data dictionary or None
-    """
-    try:
+        # Build MISP event data structure directly from STIX bundle
         event_data = {
             "info": container.get("name", "OpenCTI Import"),
             "date": datetime.now().strftime("%Y-%m-%d"),
             "threat_level_id": 2,  # Medium by default
             "analysis": 2,  # Completed
-            "distribution": 1,  # Community only
+            "distribution": 1,  # Community only by default
             "attributes": [],
             "objects": [],
             "tags": [],
         }
-        
-        # Extract creator org from bundle for fallback conversion too
+
+        # Extract creator org from bundle
         creator_org = get_creator_org_from_bundle(stix_bundle, container, helper)
         if creator_org:
             event_data["orgc"] = creator_org
 
-        # Process each object in the bundle
+        # Set event info from container
+        if "name" in container:
+            event_data["info"] = container["name"]
+        elif "description" in container:
+            event_data["info"] = container["description"][:100]  # Limit length
+
+        # Set date from container
+        if "created" in container:
+            try:
+                created_date = datetime.fromisoformat(
+                    container["created"].replace("Z", "+00:00")
+                )
+                event_data["date"] = created_date.strftime("%Y-%m-%d")
+            except:
+                pass
+
+        # Extract confidence as threat level
+        if "confidence" in container:
+            confidence = container["confidence"]
+            if confidence >= 75:
+                event_data["threat_level_id"] = 1  # High
+            elif confidence >= 50:
+                event_data["threat_level_id"] = 2  # Medium
+            else:
+                event_data["threat_level_id"] = 3  # Low
+
+        # Process all objects in the bundle
         for obj in stix_bundle.get("objects", []):
             obj_type = obj.get("type", "")
 
-            # Skip the container itself
-            if obj.get("id") == container.get("id"):
+            # Skip the container itself and relationships (we'll process them separately)
+            if obj.get("id") == container.get("id") or obj_type == "relationship":
                 continue
 
-            # Process indicators
+            # Process indicators - the most important for threat intelligence
             if obj_type == "indicator":
                 pattern = obj.get("pattern", "")
-                attr_dict = {
-                    "type": "text",
-                    "value": pattern,
-                    "category": "External analysis",
-                    "to_ids": True,
-                    "comment": obj.get("description", ""),
-                    "distribution": 1,
-                }
-                event_data["attributes"].append(attr_dict)
+                # Extract IOCs from pattern
+                iocs = extract_iocs_from_pattern(pattern)
+                if iocs:
+                    for ioc in iocs:
+                        attr_dict = {
+                            "type": ioc["type"],
+                            "value": ioc["value"],
+                            "category": (
+                                "Network activity"
+                                if ioc["type"] in ["ip-dst", "domain", "url"]
+                                else "Payload delivery"
+                            ),
+                            "to_ids": True,
+                            "comment": obj.get("description", ""),
+                            "distribution": 1,
+                        }
+                        event_data["attributes"].append(attr_dict)
+                else:
+                    # If we can't extract IOCs, store the pattern as text
+                    attr_dict = {
+                        "type": "text",
+                        "value": pattern,
+                        "category": "External analysis",
+                        "to_ids": False,
+                        "comment": obj.get("description", "STIX Pattern"),
+                        "distribution": 1,
+                    }
+                    event_data["attributes"].append(attr_dict)
 
             # Process observables
             elif obj_type == "ipv4-addr":
@@ -422,14 +321,63 @@ def convert_stix_bundle_fallback(
                 }
                 event_data["attributes"].append(attr_dict)
 
+            elif obj_type == "email-message":
+                # Handle email subjects and from addresses
+                if "subject" in obj:
+                    attr_dict = {
+                        "type": "email-subject",
+                        "value": obj["subject"],
+                        "category": "Network activity",
+                        "to_ids": False,
+                        "comment": "",
+                        "distribution": 1,
+                    }
+                    event_data["attributes"].append(attr_dict)
+
             # Process threat actors, malware, etc. as tags
-            elif obj_type in ["threat-actor", "malware", "tool", "attack-pattern"]:
+            elif obj_type in [
+                "threat-actor",
+                "malware",
+                "tool",
+                "attack-pattern",
+                "campaign",
+                "intrusion-set",
+            ]:
                 name = obj.get("name", "")
                 if name:
+                    # Also add as a tag
                     event_data["tags"].append(f"{obj_type}:{name}")
+                    # Add as text attribute for visibility
+                    attr_dict = {
+                        "type": "text",
+                        "value": name,
+                        "category": (
+                            "Attribution"
+                            if obj_type in ["threat-actor", "intrusion-set", "campaign"]
+                            else "External analysis"
+                        ),
+                        "to_ids": False,
+                        "comment": f"{obj_type.replace('-', ' ').title()}: {obj.get('description', '')[:100]}",
+                        "distribution": 1,
+                    }
+                    event_data["attributes"].append(attr_dict)
 
-        # Add basic tags
-        container_type = get_container_type(container)
+            # Process vulnerabilities
+            elif obj_type == "vulnerability":
+                name = obj.get("name", "")
+                if name:
+                    attr_dict = {
+                        "type": "vulnerability",
+                        "value": name,
+                        "category": "External analysis",
+                        "to_ids": False,
+                        "comment": obj.get("description", "")[:100],
+                        "distribution": 1,
+                    }
+                    event_data["attributes"].append(attr_dict)
+                    event_data["tags"].append(f"vulnerability:{name}")
+
+        # Add OpenCTI-specific tags
         if container_type:
             event_data["tags"].append(f"opencti:type={container_type}")
 
@@ -439,9 +387,10 @@ def convert_stix_bundle_fallback(
                 event_data["tags"].append(f"opencti:label={label}")
 
         helper.connector_logger.info(
-            f"Fallback conversion completed",
+            f"Successfully converted STIX bundle to MISP event",
             {
                 "attributes_count": len(event_data["attributes"]),
+                "objects_count": len(event_data["objects"]),
                 "tags_count": len(event_data["tags"]),
             },
         )
@@ -450,7 +399,7 @@ def convert_stix_bundle_fallback(
 
     except Exception as e:
         helper.connector_logger.error(
-            f"Fallback conversion failed: {str(e)}",
+            f"Error converting STIX bundle to MISP event: {str(e)}",
             {"trace": traceback.format_exc()},
         )
         return None
