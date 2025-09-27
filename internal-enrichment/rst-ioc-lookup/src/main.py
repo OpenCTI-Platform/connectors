@@ -28,7 +28,7 @@ class RSTIocLookupConnector:
                 "RST_IOC_LOOKUP_BASE_URL",
                 ["rst-ioc-lookup", "base_url"],
                 config,
-                default="https://api.rstcloud.net/v1/",
+                default="https://api.rstcloud.net/v1",
             )
         )
         self.api_key = str(
@@ -171,6 +171,10 @@ class RSTIocLookupConnector:
             # the score is set based on the last value
             # calculated by RST Cloud on a last seen day
             new_score = int(resp["score"]["last"])
+        elif self.score_type == "first":
+            # use the score for the IoC on the day it was first seen
+            # within the last period of activity
+            new_score = int(resp["score"]["first"])
         elif self.score_type == "total":
             # use the RST Cloud's decay algorithm
             # the score is set to the currect score value
@@ -397,6 +401,7 @@ class RSTIocLookupConnector:
         for value in values:
             url = self.base_url + "/ioc"
             headers = {
+                "User-Agent": "opencti_rst_ioc_lookup",
                 "Content-Type": "application/json",
                 "x-api-key": self.api_key,
             }
