@@ -37,7 +37,7 @@
       "type": "array"
     },
     "CONNECTOR_DURATION_PERIOD": {
-      "default": null,
+      "default": "PT1H",
       "description": "ISO8601 Duration format starting with 'P' for Period (e.g., 'PT24H' for 24 hours).",
       "type": "string"
     },
@@ -80,7 +80,7 @@
       "type": "string"
     },
     "RF_INTERVAL": {
-      "default": 24,
+      "default": 1,
       "description": "Polling interval in hours for fetching Recorded Future data.",
       "exclusiveMinimum": 0,
       "type": "integer"
