@@ -123,11 +123,12 @@ def custom_mapping_threat_name(input_name):
             break
     # replace _ with space
     input_name = input_name.replace("_", " ")
-    # capitalize first letter of each word
-    input_name = input_name.title()
     # if name looks like apt59, uac-0200, apt-q-15, or stac1248, uppercase the whole line
     if re.match(r"^[a-z]+-?[a-z]+?-?[0-9]+$", input_name):
         input_name = input_name.upper()
+    else:
+        # capitalize first letter of each word
+        input_name = input_name.title()
     if keep_suffix:
         if not input_name.lower().endswith(keep_suffix.lower()):
             input_name = f"{input_name} {keep_suffix}"
