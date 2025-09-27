@@ -36,7 +36,7 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     id: str
     name: str
     scope: str  # MISP uses a single scope value, not a list
-    
+
     type: str = Field(
         default="STREAM",
         description="Should always be set to STREAM for this connector.",
@@ -51,7 +51,7 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
         le=100,
         description="The default confidence level for created entities (0-100).",
     )
-    
+
     # Stream-specific configuration
     live_stream_id: str = Field(
         alias="CONNECTOR_LIVE_STREAM_ID",
@@ -67,7 +67,7 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
         alias="CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES",
         description="Do not auto-resolve dependencies.",
     )
-    
+
     # Container types configuration
     container_types: ListFromString = Field(
         default=["report", "grouping", "case-incident", "case-rfi", "case-rft"],

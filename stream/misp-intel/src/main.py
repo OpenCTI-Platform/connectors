@@ -15,8 +15,8 @@ import traceback
 # Add the connector module to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from models import ConfigLoader
 from misp_intel_connector import MispIntelConnector
+from models import ConfigLoader
 
 
 def main():
@@ -26,10 +26,10 @@ def main():
     try:
         # Load configuration using the new pydantic-based config loader
         config = ConfigLoader()
-        
+
         # Setup proxy environment variables if configured
         config.setup_proxy_env()
-        
+
         # Create connector instance with the loaded config
         connector = MispIntelConnector(config)
 

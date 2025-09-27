@@ -6,7 +6,7 @@ from .misp_configs import _ConfigLoaderMisp
 
 __all__ = [
     "ConfigBaseSettings",
-    "_ConfigLoaderConnector", 
+    "_ConfigLoaderConnector",
     "_ConfigLoaderOCTI",
     "_ConfigLoaderMisp",
 ]

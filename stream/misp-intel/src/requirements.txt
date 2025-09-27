@@ -1,6 +1,13 @@
 # OpenCTI Python client
 pycti==6.8.0
 
+# Pydantic for configuration management
+pydantic>=2.10, <3
+pydantic-settings==2.9.1
+
+# OpenCTI Connectors SDK
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
+
 # MISP Python library
 pymisp==2.5.17.2
 
