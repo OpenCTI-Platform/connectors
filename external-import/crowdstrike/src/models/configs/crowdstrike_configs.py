@@ -1,8 +1,15 @@
+from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
 
 from connectors_sdk.core.pydantic import ListFromString
 from models.configs.base_settings import ConfigBaseSettings
 from pydantic import Field, HttpUrl, PositiveInt, field_validator
+
+
+def _get_default_timestamp_30_days_ago() -> int:
+    """Get Unix timestamp for 30 days ago."""
+    thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+    return int(thirty_days_ago.timestamp())
 
 
 class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
@@ -53,8 +60,8 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
 
     # Report configuration
     report_start_timestamp: int = Field(
-        default=0,
-        description="Unix timestamp from which to start importing reports. BEWARE: 0 means ALL reports!",
+        default_factory=_get_default_timestamp_30_days_ago,
+        description="Unix timestamp from which to start importing reports. Default is 30 days ago. BEWARE: 0 means ALL reports!",
     )
     report_status: Literal[
         "New",
@@ -88,8 +95,8 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
 
     # Indicator configuration
     indicator_start_timestamp: int = Field(
-        default=0,
-        description="Unix timestamp from which to start importing indicators. BEWARE: 0 means ALL indicators!",
+        default_factory=_get_default_timestamp_30_days_ago,
+        description="Unix timestamp from which to start importing indicators. Default is 30 days ago. BEWARE: 0 means ALL indicators!",
     )
     indicator_exclude_types: Optional[ListFromString] = Field(
         default=["hash_ion", "hash_md5", "hash_sha1"],

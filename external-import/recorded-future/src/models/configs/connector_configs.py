@@ -39,7 +39,7 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     name: str
     scope: ListFromString
     duration_period: Optional[str] = Field(
-        default=None,
+        default="PT1H",
         description="ISO8601 Duration format starting with 'P' for Period (e.g., 'PT24H' for 24 hours).",
     )
 
