@@ -11,12 +11,12 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | RF_TOKEN | `string` | ✅ | string |  | Recorded Future API token for authentication. |
 | CONNECTOR_NAME | `string` |  | string | `"Recorded Future"` | Name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["ipv4-addr", "ipv6-addr", "vulnerability", "domain", "url", "file-sha256", "file-md5", "file-sha1"]` | The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only). |
-| CONNECTOR_DURATION_PERIOD | `string` |  | string | `null` | ISO8601 Duration format starting with 'P' for Period (e.g., 'PT24H' for 24 hours). |
+| CONNECTOR_DURATION_PERIOD | `string` |  | string | `"PT1H"` | ISO8601 Duration format starting with 'P' for Period (e.g., 'PT24H' for 24 hours). |
 | CONNECTOR_TYPE | `string` |  | string | `"EXTERNAL_IMPORT"` | Should always be set to EXTERNAL_IMPORT for this connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | Determines the verbosity of the logs. |
 | RF_INITIAL_LOOKBACK | `integer` |  | `0 < x ` | `240` | Initial lookback period in hours when first running the connector. |
 | RF_TLP | `string` |  | `white` `green` `amber` `red` | `"red"` | Default Traffic Light Protocol (TLP) marking for imported data. |
-| RF_INTERVAL | `integer` |  | `0 < x ` | `24` | Polling interval in hours for fetching Recorded Future data. |
+| RF_INTERVAL | `integer` |  | `0 < x ` | `1` | Polling interval in hours for fetching Recorded Future data. |
 | RF_PULL_ANALYST_NOTES | `boolean` |  | boolean | `true` | Whether to import Recorded Future analyst notes. |
 | RF_LAST_PUBLISHED_NOTES | `integer` |  | `0 < x ` | `24` | Time window in hours for fetching recently published analyst notes. |
 | RF_TOPIC | `array` |  | string | `null` | Comma-separated list of topic IDs to filter analyst notes. Examples: VTrvnW (Yara Rule), g1KBGl (Sigma Rule), ZjnoP0 (Snort Rule), aDKkpk (TTP Instance), TXSFt5 (Validated Intelligence Event), UrMRnT (Informational), TXSFt3 (Threat Lead). |
