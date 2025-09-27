@@ -115,7 +115,8 @@ read -p "Which connector do you want to generate schemas for? (give connector fo
 IFS=$'\n' read -r -d '' -a matching_directories < <(find_connector_directories "$CONNECTOR_NAME" && printf '\0')
 
 if [ ${#matching_directories[@]} -eq 0 ]; then
-    echo -e "\033[31mCould not find any directory matching: $CONNECTOR_NAME\033[0m"
+    echo -e "\033[31mNo connector found matching: '$CONNECTOR_NAME'\033[0m"
+    echo -e "\033[33mPlease check the connector name and try again.\033[0m"
     exit 1
 fi
 
@@ -125,7 +126,9 @@ CONNECTOR_DIRECTORY=""
 if [ ${#matching_directories[@]} -eq 1 ]; then
     # Only one match found
     CONNECTOR_DIRECTORY="${matching_directories[0]}"
-    echo -e "\033[33mFound this directory: $CONNECTOR_DIRECTORY\033[0m"
+    # Remove leading ./ from path for cleaner display
+    clean_path=$(echo "$CONNECTOR_DIRECTORY" | sed 's:^\./::' )
+    echo -e "\033[33mFound this directory: $clean_path\033[0m"
     
     # Ask for confirmation
     read -p "Is this the correct connector? (y/n) " ANSWER
@@ -159,8 +162,9 @@ else
         index=$((selection - 1))
         if [ $index -ge 0 ] && [ $index -lt ${#matching_directories[@]} ]; then
             CONNECTOR_DIRECTORY="${matching_directories[$index]}"
+            clean_path=$(echo "$CONNECTOR_DIRECTORY" | sed 's:^\./::' )
             echo ""
-            echo -e "\033[32mSelected: $CONNECTOR_DIRECTORY\033[0m"
+            echo -e "\033[32mSelected: $clean_path\033[0m"
         else
             echo -e "\033[31mInvalid selection.\033[0m"
             exit 1

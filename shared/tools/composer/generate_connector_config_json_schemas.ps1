@@ -68,9 +68,7 @@ function Find-ConnectorDirectories {
     }
     
     # Sort by path depth (prefer shallower directories)
-    $sortedDirs = $directories |
-        Select-Object @{Name='Depth';Expression={($_.FullName -split '\\').Count}}, FullName |
-        Sort-Object Depth
+    $sortedDirs = $directories | Sort-Object { ($_.FullName -split '\\').Count }
     
     return $sortedDirs
 }
@@ -159,10 +157,11 @@ Write-Host ""
 $CONNECTOR_NAME = Read-Host "Which connector do you want to generate schemas for? (give connector folder name)"
 
 # Find matching connector directories
-$matchingDirectories = Find-ConnectorDirectories -ConnectorName $CONNECTOR_NAME
+$matchingDirectories = @(Find-ConnectorDirectories -ConnectorName $CONNECTOR_NAME)
 
 if ($matchingDirectories.Count -eq 0) {
-    Write-Host "Could not find any directory matching: $CONNECTOR_NAME" -ForegroundColor Red
+    Write-Host "No connector found matching: '$CONNECTOR_NAME'" -ForegroundColor Red
+    Write-Host "Please check the connector name and try again." -ForegroundColor Yellow
     exit 1
 }
 
@@ -172,7 +171,8 @@ $CONNECTOR_DIRECTORY = $null
 if ($matchingDirectories.Count -eq 1) {
     # Only one match found
     $CONNECTOR_DIRECTORY = $matchingDirectories[0].FullName
-    Write-Host "Found this directory: $CONNECTOR_DIRECTORY" -ForegroundColor Yellow
+    $relPath = $CONNECTOR_DIRECTORY.Replace("$PWD\", "").Replace("$PWD/", "")
+    Write-Host "Found this directory: $relPath" -ForegroundColor Yellow
     
     # Ask for confirmation
     $ANSWER = Read-Host "Is this the correct connector? (y/n)"
@@ -187,7 +187,8 @@ if ($matchingDirectories.Count -eq 1) {
     Write-Host ""
     
     for ($i = 0; $i -lt $matchingDirectories.Count; $i++) {
-        $relPath = $matchingDirectories[$i].FullName.Replace("$PWD\", "").Replace("$PWD/", "")
+        $fullPath = $matchingDirectories[$i].FullName
+        $relPath = $fullPath.Replace("$PWD\", "").Replace("$PWD/", "")
         Write-Host "  [$($i+1)] $relPath"
     }
     Write-Host "  [0] Cancel"
@@ -204,8 +205,9 @@ if ($matchingDirectories.Count -eq 1) {
         $index = [int]$selection - 1
         if ($index -ge 0 -and $index -lt $matchingDirectories.Count) {
             $CONNECTOR_DIRECTORY = $matchingDirectories[$index].FullName
+            $relPath = $CONNECTOR_DIRECTORY.Replace("$PWD\", "").Replace("$PWD/", "")
             Write-Host ""
-            Write-Host "Selected: $CONNECTOR_DIRECTORY" -ForegroundColor Green
+            Write-Host "Selected: $relPath" -ForegroundColor Green
         } else {
             Write-Host "Invalid selection." -ForegroundColor Red
             exit 1
