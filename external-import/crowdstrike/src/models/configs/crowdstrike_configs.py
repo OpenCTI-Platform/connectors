@@ -1,8 +1,8 @@
 from typing import Literal, Optional
 
 from connectors_sdk.core.pydantic import ListFromString
-from pydantic import Field, HttpUrl, PositiveInt, field_validator
 from models.configs.base_settings import ConfigBaseSettings
+from pydantic import Field, HttpUrl, PositiveInt, field_validator
 
 
 class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
@@ -32,25 +32,40 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
         description="Whether to create indicators in OpenCTI.",
     )
     scopes: ListFromString = Field(
-        default=["actor", "report", "indicator", "yara_master", "snort_suricata_master"],
+        default=[
+            "actor",
+            "report",
+            "indicator",
+            "yara_master",
+            "snort_suricata_master",
+        ],
         description=(
             "Comma-separated list of scopes to enable. "
             "Available: actor, report, indicator, yara_master, snort_suricata_master."
         ),
     )
-    
+
     # Actor configuration
     actor_start_timestamp: int = Field(
         default=0,
         description="Unix timestamp from which to start importing actors. BEWARE: 0 means ALL actors!",
     )
-    
+
     # Report configuration
     report_start_timestamp: int = Field(
         default=0,
         description="Unix timestamp from which to start importing reports. BEWARE: 0 means ALL reports!",
     )
-    report_status: Literal["New", "In Progress", "Analyzed", "Closed", "new", "in progress", "analyzed", "closed"] = Field(
+    report_status: Literal[
+        "New",
+        "In Progress",
+        "Analyzed",
+        "Closed",
+        "new",
+        "in progress",
+        "analyzed",
+        "closed",
+    ] = Field(
         default="New",
         description="Report status filter.",
     )
@@ -70,7 +85,7 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
         default=False,
         description="Whether to use report tags to guess related malware.",
     )
-    
+
     # Indicator configuration
     indicator_start_timestamp: int = Field(
         default=0,
@@ -115,19 +130,19 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
             "Can be used to filter low confidence indicators: 'MaliciousConfidence/Low,MaliciousConfidence/Medium'."
         ),
     )
-    
+
     # Trigger import configuration
     no_file_trigger_import: bool = Field(
         default=True,
         description="Whether to trigger import without file dependencies.",
     )
-    
+
     # Interval configuration
     interval_sec: PositiveInt = Field(
         default=1800,
         description="Polling interval in seconds for fetching data (used when duration_period is not set).",
     )
-    
+
     @field_validator("report_status")
     def lowercase_report_status(cls, value):
         return value.lower()

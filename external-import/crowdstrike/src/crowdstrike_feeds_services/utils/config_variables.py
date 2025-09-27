@@ -8,7 +8,7 @@ class ConfigCrowdstrike:
         """
         # Load configuration using the new config loader
         self.config = ConfigLoader()
-        
+
         # Initialize OpenCTI helper configuration for backward compatibility
         self.load = self.config.model_dump_pycti()
         self._initialize_configurations()
@@ -28,47 +28,73 @@ class ConfigCrowdstrike:
         self.tlp = self.config.crowdstrike.tlp
         self.create_observables = self.config.crowdstrike.create_observables
         self.create_indicators = self.config.crowdstrike.create_indicators
-        
+
         # Convert list to comma-separated string for backward compatibility
         scopes_list = self.config.crowdstrike.scopes
         self.scopes = ",".join(scopes_list) if scopes_list else None
-        
+
         self.actor_start_timestamp = self.config.crowdstrike.actor_start_timestamp
         self.report_start_timestamp = self.config.crowdstrike.report_start_timestamp
         self.report_status = self.config.crowdstrike.report_status
-        
+
         # Convert lists to comma-separated strings for backward compatibility
         report_include_types = self.config.crowdstrike.report_include_types
-        self.report_include_types = ",".join(report_include_types) if report_include_types else None
-        
+        self.report_include_types = (
+            ",".join(report_include_types) if report_include_types else None
+        )
+
         report_target_industries = self.config.crowdstrike.report_target_industries
-        self.report_target_industries = ",".join(report_target_industries) if report_target_industries else None
-        
+        self.report_target_industries = (
+            ",".join(report_target_industries) if report_target_industries else None
+        )
+
         self.report_type = self.config.crowdstrike.report_type
         self.report_guess_malware = self.config.crowdstrike.report_guess_malware
-        self.indicator_start_timestamp = self.config.crowdstrike.indicator_start_timestamp
-        
+        self.indicator_start_timestamp = (
+            self.config.crowdstrike.indicator_start_timestamp
+        )
+
         indicator_exclude_types = self.config.crowdstrike.indicator_exclude_types
-        self.indicator_exclude_types = ",".join(indicator_exclude_types) if indicator_exclude_types else None
-        
+        self.indicator_exclude_types = (
+            ",".join(indicator_exclude_types) if indicator_exclude_types else None
+        )
+
         self.default_x_opencti_score = self.config.crowdstrike.default_x_opencti_score
         self.indicator_low_score = self.config.crowdstrike.indicator_low_score
-        
+
         indicator_low_score_labels = self.config.crowdstrike.indicator_low_score_labels
-        self.indicator_low_score_labels = ",".join(indicator_low_score_labels) if indicator_low_score_labels else None
-        
+        self.indicator_low_score_labels = (
+            ",".join(indicator_low_score_labels) if indicator_low_score_labels else None
+        )
+
         self.indicator_medium_score = self.config.crowdstrike.indicator_medium_score
-        
-        indicator_medium_score_labels = self.config.crowdstrike.indicator_medium_score_labels
-        self.indicator_medium_score_labels = ",".join(indicator_medium_score_labels) if indicator_medium_score_labels else None
-        
+
+        indicator_medium_score_labels = (
+            self.config.crowdstrike.indicator_medium_score_labels
+        )
+        self.indicator_medium_score_labels = (
+            ",".join(indicator_medium_score_labels)
+            if indicator_medium_score_labels
+            else None
+        )
+
         self.indicator_high_score = self.config.crowdstrike.indicator_high_score
-        
-        indicator_high_score_labels = self.config.crowdstrike.indicator_high_score_labels
-        self.indicator_high_score_labels = ",".join(indicator_high_score_labels) if indicator_high_score_labels else None
-        
+
+        indicator_high_score_labels = (
+            self.config.crowdstrike.indicator_high_score_labels
+        )
+        self.indicator_high_score_labels = (
+            ",".join(indicator_high_score_labels)
+            if indicator_high_score_labels
+            else None
+        )
+
         indicator_unwanted_labels = self.config.crowdstrike.indicator_unwanted_labels
-        self.indicator_unwanted_labels = ",".join(indicator_unwanted_labels).lower() if indicator_unwanted_labels else None
-        
+        self.indicator_unwanted_labels = (
+            ",".join(indicator_unwanted_labels).lower()
+            if indicator_unwanted_labels
+            else None
+        )
+
         self.interval_sec = self.config.crowdstrike.interval_sec
         self.no_file_trigger_import = self.config.crowdstrike.no_file_trigger_import

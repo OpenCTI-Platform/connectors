@@ -2,6 +2,12 @@ from pathlib import Path
 from typing import Any
 
 from connectors_sdk.core.pydantic import ListFromString
+from models.configs.base_settings import ConfigBaseSettings
+from models.configs.connector_configs import (
+    _ConfigLoaderConnector,
+    _ConfigLoaderOCTI,
+)
+from models.configs.crowdstrike_configs import _ConfigLoaderCrowdstrike
 from pydantic import Field
 from pydantic_settings import (
     BaseSettings,
@@ -10,12 +16,6 @@ from pydantic_settings import (
     PydanticBaseSettingsSource,
     YamlConfigSettingsSource,
 )
-from models.configs.base_settings import ConfigBaseSettings
-from models.configs.connector_configs import (
-    _ConfigLoaderConnector,
-    _ConfigLoaderOCTI,
-)
-from models.configs.crowdstrike_configs import _ConfigLoaderCrowdstrike
 
 
 class ConfigLoaderConnector(_ConfigLoaderConnector):
