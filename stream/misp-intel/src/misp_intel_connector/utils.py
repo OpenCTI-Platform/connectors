@@ -69,65 +69,68 @@ def get_container_type(data: Dict) -> Optional[str]:
 def normalize_tlp_markings(stix_bundle: Dict, helper) -> Dict:
     """
     Normalize TLP markings to conform to STIX 2.1 specification
-    
+
     This handles:
     - Converting TLP:CLEAR to TLP:WHITE (STIX 2.1 uses WHITE)
     - Ensuring standard TLP markings use official IDs
     - Converting non-standard TLP markings to custom-tlp type
-    
+
     :param stix_bundle: STIX bundle to normalize
     :param helper: OpenCTI connector helper
     :return: Normalized STIX bundle
     """
     import copy
-    
+
     # Official STIX 2.1 TLP marking definition IDs and structures
     OFFICIAL_TLP_MARKINGS = {
         "white": {
             "id": "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9",
             "name": "TLP:WHITE",
-            "definition": {"tlp": "white"}
+            "definition": {"tlp": "white"},
         },
         "green": {
-            "id": "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da", 
+            "id": "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da",
             "name": "TLP:GREEN",
-            "definition": {"tlp": "green"}
+            "definition": {"tlp": "green"},
         },
         "amber": {
             "id": "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82",
-            "name": "TLP:AMBER", 
-            "definition": {"tlp": "amber"}
+            "name": "TLP:AMBER",
+            "definition": {"tlp": "amber"},
         },
         "red": {
             "id": "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed",
             "name": "TLP:RED",
-            "definition": {"tlp": "red"}
-        }
+            "definition": {"tlp": "red"},
+        },
     }
-    
+
     # Map TLP:CLEAR to TLP:WHITE
     TLP_MAPPING = {
         "clear": "white",
         "white": "white",
         "green": "green",
         "amber": "amber",
-        "red": "red"
+        "red": "red",
     }
-    
+
     # Make a deep copy to avoid modifying the original
     normalized_bundle = copy.deepcopy(stix_bundle)
-    
+
     # Track ID mappings for updating references
     id_mappings = {}
-    
+
     # Process marking definitions
     for obj in normalized_bundle.get("objects", []):
-        if obj.get("type") == "marking-definition" and obj.get("definition_type") == "tlp":
+        if (
+            obj.get("type") == "marking-definition"
+            and obj.get("definition_type") == "tlp"
+        ):
             original_id = obj.get("id", "")
-            
+
             # Extract TLP color from various possible locations
             tlp_color = None
-            
+
             # Check in definition.tlp
             if "definition" in obj and "tlp" in obj.get("definition", {}):
                 tlp_color = obj["definition"]["tlp"].lower()
@@ -136,27 +139,33 @@ def normalize_tlp_markings(stix_bundle: Dict, helper) -> Dict:
                 name = obj["name"].upper()
                 if name.startswith("TLP:"):
                     tlp_color = name.split(":", 1)[1].lower()
-            
+
             if tlp_color:
                 # Map CLEAR to WHITE
                 mapped_color = TLP_MAPPING.get(tlp_color)
-                
+
                 if mapped_color:
                     # This is a standard TLP color
                     official = OFFICIAL_TLP_MARKINGS[mapped_color]
                     new_id = official["id"]
-                    
+
                     # Update the marking definition to match official structure
                     obj["id"] = new_id
                     obj["name"] = official["name"]
                     obj["definition"] = official["definition"]
-                    obj["created"] = "2017-01-20T00:00:00.000Z"  # Standard date for TLP markings
-                    
+                    obj["created"] = (
+                        "2017-01-20T00:00:00.000Z"  # Standard date for TLP markings
+                    )
+
                     if original_id != new_id:
                         id_mappings[original_id] = new_id
                         helper.connector_logger.debug(
                             f"Normalized TLP marking",
-                            {"original_id": original_id, "new_id": new_id, "tlp": mapped_color}
+                            {
+                                "original_id": original_id,
+                                "new_id": new_id,
+                                "tlp": mapped_color,
+                            },
                         )
                 else:
                     # Non-standard TLP marking - convert to statement marking
@@ -170,16 +179,16 @@ def normalize_tlp_markings(stix_bundle: Dict, helper) -> Dict:
                         del obj["definition"]["tlp"]
                     helper.connector_logger.debug(
                         f"Converted non-standard TLP to statement marking",
-                        {"marking_id": original_id, "tlp_color": tlp_color}
+                        {"marking_id": original_id, "tlp_color": tlp_color},
                     )
-    
+
     # Update all references throughout the bundle
     if id_mappings:
         bundle_str = json.dumps(normalized_bundle)
         for old_id, new_id in id_mappings.items():
             bundle_str = bundle_str.replace(f'"{old_id}"', f'"{new_id}"')
         normalized_bundle = json.loads(bundle_str)
-    
+
     return normalized_bundle
 
 
@@ -290,7 +299,7 @@ def convert_stix_bundle_to_misp_event(
 
         # Normalize TLP markings to STIX 2.1 standard
         stix_bundle = normalize_tlp_markings(stix_bundle, helper)
-        
+
         # Normalize OpenCTI custom containers to standard reports
         stix_bundle = normalize_container_to_report(stix_bundle, helper)
 

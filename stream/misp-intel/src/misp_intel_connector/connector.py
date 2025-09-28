@@ -505,15 +505,16 @@ def main():
     """Main entry point for direct testing"""
     try:
         # Import the config loader
-        import sys
         import os
+        import sys
+
         sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         from models import ConfigLoader
-        
+
         # Load configuration
         config = ConfigLoader()
         config.setup_proxy_env()
-        
+
         # Create and start connector
         connector = MispIntelConnector(config)
         connector.start()
