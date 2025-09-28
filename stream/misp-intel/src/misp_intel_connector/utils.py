@@ -160,7 +160,7 @@ def normalize_tlp_markings(stix_bundle: Dict, helper) -> Dict:
                     if original_id != new_id:
                         id_mappings[original_id] = new_id
                         helper.connector_logger.debug(
-                            f"Normalized TLP marking",
+                            "Normalized TLP marking",
                             {
                                 "original_id": original_id,
                                 "new_id": new_id,
@@ -178,7 +178,7 @@ def normalize_tlp_markings(stix_bundle: Dict, helper) -> Dict:
                     if "tlp" in obj.get("definition", {}):
                         del obj["definition"]["tlp"]
                     helper.connector_logger.debug(
-                        f"Converted non-standard TLP to statement marking",
+                        "Converted non-standard TLP to statement marking",
                         {"marking_id": original_id, "tlp_color": tlp_color},
                     )
 
