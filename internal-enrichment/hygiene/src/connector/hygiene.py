@@ -1,6 +1,6 @@
 import threading
 import time
-from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional, Tuple
 
 import tldextract
@@ -432,7 +432,7 @@ class HygieneConnector:
     def run(self):
         """Start the connector with multi-threaded processing using ThreadPoolExecutor."""
         self.helper.log_info(
-            f"Starting multi-threaded hygiene connector with ThreadPoolExecutor"
+            "Starting multi-threaded hygiene connector with ThreadPoolExecutor"
         )
         self.helper.log_info(f"Max workers: {self.max_workers}")
 

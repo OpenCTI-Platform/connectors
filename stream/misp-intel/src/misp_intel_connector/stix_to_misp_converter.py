@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 from uuid import uuid4
 
-from pymisp import MISPEvent, MISPGalaxy, MISPGalaxyCluster, MISPObject, MISPSighting
+from pymisp import MISPEvent, MISPObject, MISPSighting
 
 
 class STIXtoMISPConverter:
@@ -22,8 +22,10 @@ class STIXtoMISPConverter:
     # Based on actual MISP galaxies from https://github.com/MISP/misp-galaxy
     ENTITY_TO_GALAXY_MAPPING = {
         # Threat actors and adversaries
+        # Note: In MISP, intrusion sets (APT groups) are part of the threat-actor galaxy
+        # MISP also has mitre-enterprise-attack-intrusion-set but threat-actor is more commonly used
         "threat-actor": "threat-actor",
-        "intrusion-set": "intrusion-set",
+        "intrusion-set": "threat-actor",  # Maps to threat-actor in MISP (could also be mitre-enterprise-attack-intrusion-set)
         # Malware and tools
         "malware": "malware",
         "tool": "tool",
@@ -658,6 +660,36 @@ class STIXtoMISPConverter:
                     cluster_value = f"{entity_name} - {mitre_id}"
                 else:
                     cluster_value = entity_name
+            elif entity_type == "intrusion-set":
+                # For intrusion sets, check if it's a MITRE group with an ID
+                mitre_id = None
+                is_mitre_group = False
+
+                if "external_references" in entity:
+                    for ext_ref in entity["external_references"]:
+                        if ext_ref.get("source_name") == "mitre-attack":
+                            is_mitre_group = True
+                            if "external_id" in ext_ref:
+                                mitre_id = ext_ref["external_id"]
+                                break
+
+                # If it's a MITRE group, we could optionally use the MITRE-specific galaxy
+                # but threat-actor is more commonly used and better supported
+                if is_mitre_group and mitre_id:
+                    # Format as "APT29 - G0016" for MITRE groups
+                    cluster_value = f"{entity_name} - {mitre_id}"
+                    # Optionally, also add as MITRE enterprise attack intrusion set
+                    # Uncomment if you want both galaxies:
+                    # self._add_galaxy_cluster(event, "mitre-enterprise-attack-intrusion-set", cluster_value, entity_description[:200] if entity_description else None)
+                else:
+                    cluster_value = entity_name
+
+                # Also check for aliases which are common for intrusion sets
+                if "aliases" in entity:
+                    for alias in entity.get("aliases", []):
+                        if alias != entity_name:
+                            # Add alias as a separate tag
+                            event.add_tag(f"threat-actor-alias:{alias}")
             else:
                 cluster_value = entity_name
 
@@ -893,7 +925,6 @@ class STIXtoMISPConverter:
         """
         identity_class = identity.get("identity_class", "").lower()
         opencti_type = identity.get("x_opencti_type", "").lower()
-        name = identity.get("name", "")
 
         # Map identity_class to MISP galaxies
         if identity_class == "organization":
