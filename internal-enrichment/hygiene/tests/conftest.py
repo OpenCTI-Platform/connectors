@@ -29,6 +29,7 @@ def mock_config():
     config.hygiene.label_color = DEFAULT_LABEL_COLOR
     config.hygiene.label_parent_name = DEFAULT_LABEL_PARENT_NAME
     config.hygiene.label_parent_color = DEFAULT_LABEL_COLOR
+    config.hygiene.max_workers = 100  # Add default max_workers for ThreadPoolExecutor
     return config
 
 

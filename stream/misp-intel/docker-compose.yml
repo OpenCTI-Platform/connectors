@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  misp-intel:
+    image: opencti/connector-misp-intel:rolling
+    environment:
+      # OpenCTI Configuration
+      - OPENCTI_URL=${OPENCTI_URL}
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+      
+      # Connector Configuration
+      - CONNECTOR_ID=${CONNECTOR_ID}
+      - CONNECTOR_TYPE=STREAM
+      - CONNECTOR_NAME=MISP Intel
+      - CONNECTOR_SCOPE=misp
+      - CONNECTOR_CONFIDENCE_LEVEL=80
+      - CONNECTOR_LOG_LEVEL=${CONNECTOR_LOG_LEVEL:-info}
+      - CONNECTOR_LIVE_STREAM_ID=${CONNECTOR_LIVE_STREAM_ID:-live}
+      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=${CONNECTOR_LIVE_STREAM_LISTEN_DELETE:-true}
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=${CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES:-false}
+      - CONNECTOR_CONTAINER_TYPES=${CONNECTOR_CONTAINER_TYPES:-report,grouping,case-incident,case-rfi,case-rft}
+      
+      # MISP Configuration
+      - MISP_URL=${MISP_URL}
+      - MISP_API_KEY=${MISP_API_KEY}
+      - MISP_SSL_VERIFY=${MISP_SSL_VERIFY:-true}
+      - MISP_OWNER_ORG=${MISP_OWNER_ORG:-}  # Optional: Organization that owns events in MISP
+      - MISP_DISTRIBUTION_LEVEL=${MISP_DISTRIBUTION_LEVEL:-1}
+      - MISP_THREAT_LEVEL=${MISP_THREAT_LEVEL:-2}
+      - MISP_PUBLISH_ON_CREATE=${MISP_PUBLISH_ON_CREATE:-false}
+      - MISP_PUBLISH_ON_UPDATE=${MISP_PUBLISH_ON_UPDATE:-false}
+      - MISP_TAG_OPENCTI=${MISP_TAG_OPENCTI:-true}
+      - MISP_TAG_PREFIX=${MISP_TAG_PREFIX:-opencti:}
+      
+      # Optional Proxy Configuration
+      - PROXY_HTTP=${PROXY_HTTP:-}
+      - PROXY_HTTPS=${PROXY_HTTPS:-}
+      - PROXY_NO_PROXY=${PROXY_NO_PROXY:-localhost,127.0.0.1}
+    restart: unless-stopped
