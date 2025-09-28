@@ -15,7 +15,7 @@
       "type": "string"
     },
     "CONNECTOR_NAME": {
-      "default": "Mitre Att&ck",
+      "default": "MITRE ATT&CK",
       "description": "Name of the connector.",
       "type": "string"
     },

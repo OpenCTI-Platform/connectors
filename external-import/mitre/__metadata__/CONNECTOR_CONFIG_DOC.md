@@ -8,7 +8,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The OpenCTI platform URL. |
 | OPENCTI_TOKEN | `string` | ✅ | string |  | The token of the user who represents the connector in the OpenCTI platform. |
-| CONNECTOR_NAME | `string` |  | string | `"Mitre Att&ck"` | Name of the connector. |
+| CONNECTOR_NAME | `string` |  | string | `"MITRE ATT&CK"` | Name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["tool", "report", "malware", "identity", "campaign", "intrusion-set", "attack-pattern", "course-of-action", "x-mitre-data-source", "x-mitre-data-component", "x-mitre-matrix", "x-mitre-tactic", "x-mitre-collection"]` | The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only). |
 | CONNECTOR_TYPE | `string` |  | string | `"EXTERNAL_IMPORT"` | Should always be set to EXTERNAL_IMPORT for this connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | Determines the verbosity of the logs. |
