@@ -23,16 +23,16 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
     """A concrete implementation of _ConfigLoaderConnector defining default connector configuration values."""
 
     id: str = Field(
-        default="misp-intel--8ecef14f-1234-5678-9abc-def012345678",
+        default="1c33c216-b24c-4839-b8bb-fdac2d769626",
         description="A unique UUIDv4 identifier for this connector instance.",
     )
     name: str = Field(
         default="MISP Intel",
         description="Name of the connector.",
     )
-    scope: str = Field(
-        default="misp",
-        description="The scope identifier for this connector.",
+    scope: ListFromString = Field(
+        default=["misp"],
+        description="The scope or type of data the connector is processing.",
     )
     live_stream_id: str = Field(
         default="live",
@@ -116,18 +116,18 @@ class ConfigLoader(ConfigBaseSettings):
         """
         proxies = {}
 
-        if self.proxy.http:
+        if self.proxy.http and self.proxy.http.strip():
             proxies["http"] = self.proxy.http
-        if self.proxy.https:
+        if self.proxy.https and self.proxy.https.strip():
             proxies["https"] = self.proxy.https
 
         return proxies if proxies else None
 
     def setup_proxy_env(self) -> None:
         """Set up proxy environment variables if configured."""
-        if self.proxy.http:
+        if self.proxy.http and self.proxy.http.strip():
             os.environ["http_proxy"] = self.proxy.http
-        if self.proxy.https:
+        if self.proxy.https and self.proxy.https.strip():
             os.environ["https_proxy"] = self.proxy.https
-        if self.proxy.no_proxy:
+        if self.proxy.no_proxy and self.proxy.no_proxy.strip():
             os.environ["no_proxy"] = self.proxy.no_proxy

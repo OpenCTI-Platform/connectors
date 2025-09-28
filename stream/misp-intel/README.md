@@ -208,15 +208,24 @@ The connector logs its status during startup:
 ```
 misp-intel/
 ├── src/
+│   ├── models/                  # Pydantic configuration models
+│   │   ├── __init__.py
+│   │   └── configs/
+│   │       ├── __init__.py
+│   │       ├── base_settings.py      # Base configuration class
+│   │       ├── config_loader.py      # Main configuration loader
+│   │       ├── connector_configs.py  # OpenCTI & connector settings
+│   │       └── misp_configs.py       # MISP-specific settings
 │   ├── misp_intel_connector/
 │   │   ├── __init__.py
 │   │   ├── connector.py         # Main connector logic
 │   │   ├── api_handler.py       # MISP API interactions
-│   │   ├── config_variables.py  # Configuration handling
-│   │   └── utils.py             # Conversion utilities
+│   │   └── utils.py             # STIX to MISP conversion
 │   ├── config.yml.sample        # Configuration template
 │   ├── main.py                  # Entry point
 │   └── requirements.txt         # Python dependencies
+├── __metadata__/
+│   └── connector_manifest.json  # Connector metadata
 ├── Dockerfile                   # Container definition
 ├── docker-compose.yml          # Docker composition
 └── entrypoint.sh               # Container entry point

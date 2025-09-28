@@ -13,17 +13,9 @@ RUN apk update && \
 WORKDIR /opt/opencti-connector-misp-intel
 RUN pip3 install --no-cache-dir -r requirements.txt
 
-# Create non-root user
-RUN addgroup -S connector && \
-    adduser -S connector -G connector && \
-    chown -R connector:connector /opt/opencti-connector-misp-intel
-
 # Copy entrypoint script
 COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh
-
-# Switch to non-root user
-USER connector
 
 # Set the entrypoint
 ENTRYPOINT ["/entrypoint.sh"]

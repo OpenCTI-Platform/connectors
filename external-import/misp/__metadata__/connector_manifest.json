@@ -1,0 +1,21 @@
+{
+  "title": "MISP",
+  "slug": "misp",
+  "description": "Import knowledge and threat intelligence from ",
+  "short_description": "",
+  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "use_cases": [
+    "Open Source Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": "",
+  "playbook_supported": false,
+  "max_confidence_level": 55,
+  "support_version": ">= 6.5.1",
+  "subscription_link": "https://www.misp-project.org",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/misp",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-misp",
+  "container_type": "EXTERNAL_IMPORT"
+}

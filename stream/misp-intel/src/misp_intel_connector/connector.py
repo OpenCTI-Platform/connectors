@@ -6,17 +6,14 @@ creating, updating, and deleting MISP events from OpenCTI containers
 (reports, groupings, case-incidents, case-rfi, case-rft).
 """
 
-import json
 import queue
 import threading
-import time
 import traceback
-from json import JSONDecodeError
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional
 
 from pycti import OpenCTIConnectorHelper
 
-from .api_handler import MispApiHandler, MispApiHandlerError
+from .api_handler import MispApiHandler
 from .utils import (
     convert_stix_bundle_to_misp_event,
     get_container_type,
@@ -31,7 +28,9 @@ class MispIntelConnector:
     This connector listens to the OpenCTI live stream and synchronizes container objects
     (reports, groupings, cases) with MISP by creating/updating/deleting MISP events.
 
-    Uses a queue-based architecture to handle long-running operations without timing out.
+    The OpenCTI container ID is used directly as the MISP event UUID for seamless mapping
+    between the two platforms. Uses a queue-based architecture to handle long-running
+    operations without timing out.
     """
 
     def __init__(self, config):
@@ -49,12 +48,6 @@ class MispIntelConnector:
         )  # Limit queue size to prevent memory issues
         self.worker_thread = None
         self.stop_worker = threading.Event()
-
-        # Store mapping of container IDs to MISP event info for deletion
-        # Since containers are deleted before we get the delete event, we need to remember the mapping
-        self.container_misp_mapping = (
-            {}
-        )  # {container_id: {"misp_uuid": str, "external_ref_id": str}}
 
         # Test connection on startup
         if not self.api.test_connection():
@@ -169,8 +162,9 @@ class MispIntelConnector:
                 return None
 
             # Convert STIX bundle to MISP event format
+            # Pass the container_id as the custom UUID for direct mapping
             misp_event_data = convert_stix_bundle_to_misp_event(
-                stix_bundle, self.helper
+                stix_bundle, self.helper, custom_uuid=container_id
             )
             if not misp_event_data:
                 self.helper.connector_logger.error(
@@ -213,12 +207,6 @@ class MispIntelConnector:
                         {"misp_url": misp_event_url},
                     )
 
-                    # Store the mapping for potential deletion later
-                    self.container_misp_mapping[container_id] = {
-                        "misp_uuid": result["uuid"],
-                        "external_ref_id": external_reference["id"],
-                    }
-
                 return result
 
         except Exception as e:
@@ -245,7 +233,7 @@ class MispIntelConnector:
 
             # Convert STIX bundle to MISP event format
             misp_event_data = convert_stix_bundle_to_misp_event(
-                stix_bundle, self.helper
+                stix_bundle, self.helper, custom_uuid=container_id
             )
             if not misp_event_data:
                 self.helper.connector_logger.error(
@@ -271,115 +259,38 @@ class MispIntelConnector:
             )
             return False
 
-    def _delete_misp_event(
-        self,
-        misp_event_uuid: str,
-        container_id: str = None,
-        external_ref_id: str = None,
-    ) -> bool:
+    def _delete_misp_event(self, container_id: str) -> bool:
         """
-        Delete a MISP event and remove its external reference from OpenCTI
-        :param misp_event_uuid: UUID of the MISP event to delete
-        :param container_id: OpenCTI container ID (optional)
-        :param external_ref_id: External reference ID to remove (optional)
+        Delete a MISP event using the container ID as UUID.
+
+        Since we use the OpenCTI container ID as the MISP event UUID,
+        we can delete directly without lookups.
+
+        :param container_id: OpenCTI container ID (which is also the MISP event UUID)
         :return: True if successful, False otherwise
         """
         try:
-            # Delete the MISP event
-            result = self.api.delete_event(misp_event_uuid)
+            # Delete the MISP event using container_id as the UUID
+            result = self.api.delete_event(container_id)
             if result:
                 self.helper.connector_logger.info(
                     "[DELETE] MISP event deleted",
-                    {"misp_event_uuid": misp_event_uuid},
+                    {"container_id": container_id, "misp_event_uuid": container_id},
                 )
-
-                # Remove external reference from OpenCTI if we have the IDs
-                if container_id and external_ref_id:
-                    try:
-                        self.helper.api.stix_domain_object.remove_external_reference(
-                            id=container_id, external_reference_id=external_ref_id
-                        )
-                        self.helper.connector_logger.info(
-                            "[DELETE] Removed external reference from OpenCTI",
-                            {
-                                "container_id": container_id,
-                                "external_ref_id": external_ref_id,
-                            },
-                        )
-                    except Exception as e:
-                        self.helper.connector_logger.warning(
-                            f"Could not remove external reference: {str(e)}",
-                            {
-                                "container_id": container_id,
-                                "external_ref_id": external_ref_id,
-                            },
-                        )
-
                 return True
-            return False
+            else:
+                self.helper.connector_logger.warning(
+                    "[DELETE] MISP event not found or already deleted",
+                    {"container_id": container_id},
+                )
+                return False
 
         except Exception as e:
             self.helper.connector_logger.error(
                 f"Error deleting MISP event: {str(e)}",
-                {"trace": traceback.format_exc()},
+                {"container_id": container_id, "trace": traceback.format_exc()},
             )
             return False
-
-    def _get_misp_event_info_from_container(
-        self, container_id: str
-    ) -> Tuple[Optional[str], Optional[str]]:
-        """
-        Get MISP event UUID and external reference ID from container's external references
-        :param container_id: OpenCTI container ID
-        :return: Tuple of (MISP event UUID, external reference ID) or (None, None)
-        """
-        try:
-            # Read the container to get external references
-            container_type = None
-            container = None
-
-            # Try different container types
-            for ctype, api_method in [
-                ("report", self.helper.api.report),
-                ("grouping", self.helper.api.grouping),
-                ("case-incident", self.helper.api.case_incident),
-                ("case-rfi", self.helper.api.case_rfi),
-                ("case-rft", self.helper.api.case_rft),
-            ]:
-                try:
-                    container = api_method.read(id=container_id)
-                    if container:
-                        container_type = ctype
-                        break
-                except:
-                    continue
-
-            if not container:
-                return None, None
-
-            # Look for MISP external reference
-            external_refs = container.get("externalReferences", [])
-            for ref in external_refs:
-                if ref.get("source_name") == "MISP" and ref.get("external_id"):
-                    return ref["external_id"], ref.get("id")
-
-            return None, None
-
-        except Exception as e:
-            self.helper.connector_logger.error(
-                f"Error getting MISP event info: {str(e)}",
-                {"trace": traceback.format_exc()},
-            )
-            return None, None
-
-    def _get_misp_event_uuid_from_container(self, container_id: str) -> Optional[str]:
-        """
-        Get MISP event UUID from container's external references
-        :param container_id: OpenCTI container ID
-        :return: MISP event UUID or None
-        """
-        misp_uuid, _ = self._get_misp_event_info_from_container(container_id)
-        return misp_uuid
 
     def _worker_process_queue(self) -> None:
         """
@@ -407,11 +318,12 @@ class MispIntelConnector:
                     self._create_misp_event(container_data)
 
                 elif event_type == "update":
-                    # Get existing MISP event UUID
-                    misp_event_uuid = self._get_misp_event_uuid_from_container(
-                        container_id
-                    )
-                    if misp_event_uuid:
+                    # Use container_id directly as MISP UUID (since we set it during creation)
+                    misp_event_uuid = container_id
+
+                    # Check if the event exists in MISP
+                    existing_event = self.api.get_event_by_uuid(misp_event_uuid)
+                    if existing_event:
                         self._update_misp_event(container_data, misp_event_uuid)
                     else:
                         # If no existing event, create a new one
@@ -507,39 +419,14 @@ class MispIntelConnector:
 
             # Handle delete events immediately (they are fast)
             if event_type == "delete":
-                # First try to get from our stored mapping (most reliable for deletes)
-                mapping = self.container_misp_mapping.get(container_id)
+                # Since we use container_id as MISP UUID, we can delete directly
+                self.helper.connector_logger.info(
+                    f"Deleting MISP event for container",
+                    {"container_id": container_id},
+                )
 
-                if mapping:
-                    misp_event_uuid = mapping["misp_uuid"]
-                    external_ref_id = mapping["external_ref_id"]
-
-                    self.helper.connector_logger.info(
-                        f"Found MISP mapping for deleted container",
-                        {"container_id": container_id, "misp_uuid": misp_event_uuid},
-                    )
-
-                    # Delete the MISP event
-                    self._delete_misp_event(
-                        misp_event_uuid, container_id, external_ref_id
-                    )
-
-                    # Remove from our mapping
-                    del self.container_misp_mapping[container_id]
-                else:
-                    # If not in mapping, container might have been created before connector started
-                    # Try to get from OpenCTI (won't work if container already deleted)
-                    misp_event_uuid, external_ref_id = (
-                        self._get_misp_event_info_from_container(container_id)
-                    )
-                    if misp_event_uuid:
-                        self._delete_misp_event(
-                            misp_event_uuid, container_id, external_ref_id
-                        )
-                    else:
-                        self.helper.connector_logger.warning(
-                            f"No MISP event found to delete for {container_id}"
-                        )
+                # Delete the MISP event using container_id as UUID
+                self._delete_misp_event(container_id)
             else:
                 # Queue create/update events for processing by worker thread
                 # This avoids stream timeouts for large containers

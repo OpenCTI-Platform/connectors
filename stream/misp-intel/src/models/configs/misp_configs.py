@@ -1,8 +1,8 @@
 """MISP-specific configuration models."""
 
-from typing import Optional
+from typing import Any, Optional
 
-from pydantic import Field, HttpUrl, field_validator
+from pydantic import Field, field_validator
 
 from .base_settings import ConfigBaseSettings
 
@@ -89,14 +89,25 @@ class _ConfigLoaderProxy(ConfigBaseSettings):
         default=None,
         alias="PROXY_HTTP",
         description="HTTP proxy URL (e.g., http://proxy:8080).",
+        min_length=0,  # Allow empty strings
     )
     https: Optional[str] = Field(
         default=None,
         alias="PROXY_HTTPS",
         description="HTTPS proxy URL (e.g., http://proxy:8080).",
+        min_length=0,  # Allow empty strings
     )
     no_proxy: Optional[str] = Field(
         default="localhost,127.0.0.1",
         alias="PROXY_NO_PROXY",
         description="Comma-separated list of hosts to bypass proxy.",
+        min_length=0,  # Allow empty strings
     )
+
+    @field_validator("http", "https", "no_proxy", mode="before")
+    @classmethod
+    def empty_str_to_none(cls, v: Any) -> Optional[str]:
+        """Convert empty strings to None for proper optional handling."""
+        if v == "":
+            return None
+        return v

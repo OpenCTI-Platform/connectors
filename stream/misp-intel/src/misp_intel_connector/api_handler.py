@@ -96,6 +96,10 @@ class MispApiHandler:
             # Create MISPEvent object
             misp_event = MISPEvent()
 
+            # Set custom UUID if provided (using OpenCTI container ID)
+            if "uuid" in event_data:
+                misp_event.uuid = event_data["uuid"]
+
             # Set basic event properties
             misp_event.info = event_data.get("info", "OpenCTI Import")
             misp_event.distribution = event_data.get(

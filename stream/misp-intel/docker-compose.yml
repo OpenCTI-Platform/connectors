@@ -2,10 +2,7 @@ version: '3.8'
 
 services:
   misp-intel:
-    image: opencti/connector-misp-intel:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: opencti/connector-misp-intel:rolling
     environment:
       # OpenCTI Configuration
       - OPENCTI_URL=${OPENCTI_URL}
@@ -39,17 +36,4 @@ services:
       - PROXY_HTTP=${PROXY_HTTP:-}
       - PROXY_HTTPS=${PROXY_HTTPS:-}
       - PROXY_NO_PROXY=${PROXY_NO_PROXY:-localhost,127.0.0.1}
-      
     restart: unless-stopped
-    networks:
-      - opencti
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-        reservations:
-          memory: 128M
-
-networks:
-  opencti:
-    external: true

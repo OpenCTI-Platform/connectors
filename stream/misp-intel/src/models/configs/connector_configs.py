@@ -35,14 +35,14 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     # Config Loader Connector
     id: str
     name: str
-    scope: str  # MISP uses a single scope value, not a list
+    scope: ListFromString  # Scope can be a list or single value
 
     type: str = Field(
         default="STREAM",
         description="Should always be set to STREAM for this connector.",
     )
     log_level: LogLevelToLower = Field(
-        default="error",
+        default="info",
         description="Determines the verbosity of the logs.",
     )
     confidence_level: int = Field(

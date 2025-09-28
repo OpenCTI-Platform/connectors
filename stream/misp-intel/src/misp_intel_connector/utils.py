@@ -2,18 +2,14 @@
 Utility functions for MISP Intel connector
 
 This module contains helper functions for STIX to MISP conversion
-and other utility operations.
+using the misp-stix library with direct parsing (no temp files).
 """
 
-import hashlib
 import json
 import traceback
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Dict, Optional
 
-# misp_stix_converter is available but not currently used
-# We convert STIX bundles directly for better control
-
+from misp_stix_converter import ExternalSTIX2toMISPParser
 
 # Supported container types for this connector
 SUPPORTED_CONTAINER_TYPES = [
@@ -22,23 +18,10 @@ SUPPORTED_CONTAINER_TYPES = [
     "case-incident",
     "case-rfi",
     "case-rft",
+    "x-opencti-case-incident",
+    "x-opencti-case-rfi",
+    "x-opencti-case-rft",
 ]
-
-# STIX to MISP threat level mapping
-THREAT_LEVEL_MAPPING = {
-    "low": 3,  # Low
-    "medium": 2,  # Medium
-    "high": 1,  # High
-    "critical": 1,  # Map critical to high
-}
-
-# STIX to MISP distribution mapping
-DISTRIBUTION_MAPPING = {
-    "internal": 0,  # Your organisation only
-    "community": 1,  # This community only
-    "connected": 2,  # Connected communities
-    "all": 3,  # All communities
-}
 
 
 def is_supported_container_type(data: Dict) -> bool:
@@ -50,21 +33,7 @@ def is_supported_container_type(data: Dict) -> bool:
     """
     try:
         obj_type = data.get("type", "").lower()
-
-        # Handle both standard and OpenCTI-specific case types
-        supported_types = [
-            "report",
-            "grouping",
-            "case-incident",
-            "case-rfi",
-            "case-rft",
-            "x-opencti-case-incident",
-            "x-opencti-case-rfi",
-            "x-opencti-case-rft",
-        ]
-
-        return obj_type in supported_types
-
+        return obj_type in SUPPORTED_CONTAINER_TYPES
     except Exception:
         return False
 
@@ -97,49 +66,89 @@ def get_container_type(data: Dict) -> Optional[str]:
         return None
 
 
-def get_creator_org_from_bundle(
-    stix_bundle: Dict, container: Dict, helper: Any
-) -> Optional[str]:
+def normalize_container_to_report(stix_bundle: Dict, helper) -> Dict:
     """
-    Extract the creator organization name from the STIX bundle
+    Normalize OpenCTI custom containers to standard STIX 2.1 reports
 
-    :param stix_bundle: STIX 2.1 bundle
-    :param container: The container object
-    :param helper: OpenCTI connector helper instance
-    :return: Creator organization name or None
+    This converts case-incident, case-rfi, case-rft, grouping to report type
+    and updates all references throughout the bundle.
+
+    :param stix_bundle: STIX bundle to normalize
+    :param helper: OpenCTI connector helper
+    :return: Normalized STIX bundle
     """
-    try:
-        # Get created_by_ref from container
-        created_by_ref = container.get("created_by_ref")
-        if not created_by_ref:
-            return None
+    import copy
 
-        # Find the identity object in the bundle
-        for obj in stix_bundle.get("objects", []):
-            if obj.get("id") == created_by_ref:
-                # Found the creator identity
-                if obj.get("type") == "identity":
-                    creator_name = obj.get("name")
-                    if creator_name:
-                        helper.connector_logger.info(
-                            f"Found creator organization: {creator_name}"
-                        )
-                        return creator_name
-                break
+    # Make a deep copy to avoid modifying the original
+    normalized_bundle = copy.deepcopy(stix_bundle)
 
-        return None
-    except Exception as e:
-        helper.connector_logger.warning(f"Could not extract creator org: {str(e)}")
-        return None
+    # Track ID mappings for updating references
+    id_mappings = {}
+
+    # Find and convert containers to reports
+    for obj in normalized_bundle.get("objects", []):
+        obj_type = obj.get("type", "").lower()
+        obj_id = obj.get("id", "")
+
+        if obj_type in [
+            "case-incident",
+            "case-rfi",
+            "case-rft",
+            "x-opencti-case-incident",
+            "x-opencti-case-rfi",
+            "x-opencti-case-rft",
+            "grouping",
+        ]:
+            # Generate new report ID preserving the UUID part
+            if "--" in obj_id:
+                uuid_part = obj_id.split("--")[1]
+                new_id = f"report--{uuid_part}"
+            else:
+                # Shouldn't happen but handle it
+                new_id = obj_id
+
+            # Store the mapping
+            id_mappings[obj_id] = new_id
+
+            # Convert to report
+            obj["type"] = "report"
+            obj["id"] = new_id
+
+            # Ensure it has required report fields
+            if "published" not in obj:
+                obj["published"] = obj.get("created", "2024-01-01T00:00:00.000Z")
+
+            if "object_refs" not in obj:
+                # Initialize with empty list - the converter will handle it
+                obj["object_refs"] = []
+
+            helper.connector_logger.debug(
+                f"Normalized {obj_type} to report",
+                {"original_id": obj_id, "new_id": new_id},
+            )
+
+    # Update all references throughout the bundle
+    if id_mappings:
+        bundle_str = json.dumps(normalized_bundle)
+        for old_id, new_id in id_mappings.items():
+            bundle_str = bundle_str.replace(f'"{old_id}"', f'"{new_id}"')
+        normalized_bundle = json.loads(bundle_str)
+
+    return normalized_bundle
 
 
-def convert_stix_bundle_to_misp_event(stix_bundle: Dict, helper: Any) -> Optional[Dict]:
+def convert_stix_bundle_to_misp_event(
+    stix_bundle: Dict, helper, custom_uuid: Optional[str] = None
+) -> Optional[Dict]:
     """
-    Convert a STIX 2.1 bundle to MISP event format
+    Convert a STIX 2.1 bundle to MISP event format using misp-stix library
+
+    This uses the ExternalSTIX2toMISPParser directly without temp files.
 
     :param stix_bundle: STIX 2.1 bundle containing the container and its references
     :param helper: OpenCTI connector helper instance
-    :return: MISP event data dictionary or None
+    :param custom_uuid: Optional custom UUID to use for the MISP event
+    :return: MISP event data dictionary ready for PyMISP or None
     """
     try:
         # Validate bundle
@@ -147,251 +156,109 @@ def convert_stix_bundle_to_misp_event(stix_bundle: Dict, helper: Any) -> Optiona
             helper.connector_logger.error("Invalid STIX bundle: missing objects")
             return None
 
-        # Find the main container object
-        container = None
-        container_type = None
-
+        # Find the main container object for logging (before normalization)
+        original_container = None
+        original_container_type = None
         for obj in stix_bundle.get("objects", []):
             if is_supported_container_type(obj):
-                container = obj
-                container_type = get_container_type(obj)
+                original_container = obj
+                original_container_type = get_container_type(obj)
                 break
 
-        if not container:
-            helper.connector_logger.error("No supported container found in STIX bundle")
+        if original_container:
+            helper.connector_logger.info(
+                f"Converting {original_container_type} to MISP event",
+                {"container_name": original_container.get("name", "Unknown")},
+            )
+
+        # Normalize OpenCTI custom containers to standard reports
+        stix_bundle = normalize_container_to_report(stix_bundle, helper)
+
+        # Ensure the bundle has spec_version for STIX 2.1
+        if "spec_version" not in stix_bundle:
+            stix_bundle["spec_version"] = "2.1"
+
+        # Parse the dictionary bundle into a STIX 2.1 Bundle object
+        # Use stix2.v21 explicitly to ensure STIX 2.1 parsing
+        from stix2.v21 import Bundle
+
+        bundle_json = json.dumps(stix_bundle)
+        bundle_dict = json.loads(bundle_json)
+        bundle_obj = Bundle(**bundle_dict, allow_custom=True)
+
+        # Initialize the parser
+        parser = ExternalSTIX2toMISPParser()
+
+        # Load and parse the bundle
+        parser.load_stix_bundle(bundle_obj)
+        parser.parse_stix_bundle()
+
+        # Get the MISP event from the parser
+        if not hasattr(parser, "misp_event"):
+            helper.connector_logger.error("Parser did not produce a MISP event")
             return None
 
-        helper.connector_logger.info(
-            f"Converting {container_type} to MISP event",
-            {"container_id": container.get("id")},
-        )
+        misp_event = parser.misp_event
 
-        # Build MISP event data structure directly from STIX bundle
-        event_data = {
-            "info": container.get("name", "OpenCTI Import"),
-            "date": datetime.now().strftime("%Y-%m-%d"),
-            "threat_level_id": 2,  # Medium by default
-            "analysis": 2,  # Completed
-            "distribution": 1,  # Community only by default
-            "attributes": [],
-            "objects": [],
-            "tags": [],
-        }
+        # Convert to dictionary format for PyMISP
+        event_data = misp_event.to_dict()
 
-        # Extract creator org from bundle
-        creator_org = get_creator_org_from_bundle(stix_bundle, container, helper)
-        if creator_org:
-            event_data["orgc"] = creator_org
+        # Set custom UUID if provided
+        if custom_uuid:
+            event_data["uuid"] = custom_uuid
 
-        # Set event info from container
-        if "name" in container:
-            event_data["info"] = container["name"]
-        elif "description" in container:
-            event_data["info"] = container["description"][:100]  # Limit length
+        # Ensure required fields have defaults
+        if "info" not in event_data and original_container:
+            event_data["info"] = original_container.get("name", "OpenCTI Import")
+        elif "info" not in event_data:
+            event_data["info"] = "OpenCTI Import"
 
-        # Set date from container
-        if "created" in container:
-            try:
-                created_date = datetime.fromisoformat(
-                    container["created"].replace("Z", "+00:00")
-                )
-                event_data["date"] = created_date.strftime("%Y-%m-%d")
-            except:
-                pass
+        if "threat_level_id" not in event_data:
+            event_data["threat_level_id"] = 2  # Medium by default
 
-        # Extract confidence as threat level
-        if "confidence" in container:
-            confidence = container["confidence"]
-            if confidence >= 75:
-                event_data["threat_level_id"] = 1  # High
-            elif confidence >= 50:
-                event_data["threat_level_id"] = 2  # Medium
-            else:
-                event_data["threat_level_id"] = 3  # Low
+        if "analysis" not in event_data:
+            event_data["analysis"] = 2  # Completed
 
-        # Process all objects in the bundle
-        for obj in stix_bundle.get("objects", []):
-            obj_type = obj.get("type", "")
+        if "distribution" not in event_data:
+            event_data["distribution"] = 1  # Community only
 
-            # Skip the container itself and relationships (we'll process them separately)
-            if obj.get("id") == container.get("id") or obj_type == "relationship":
-                continue
+        # Map MISP event dict keys to PyMISP expected format
+        # PyMISP expects lowercase keys for creating events
+        if "Attribute" in event_data:
+            event_data["attributes"] = event_data.pop("Attribute", [])
 
-            # Process indicators - the most important for threat intelligence
-            if obj_type == "indicator":
-                pattern = obj.get("pattern", "")
-                # Extract IOCs from pattern
-                iocs = extract_iocs_from_pattern(pattern)
-                if iocs:
-                    for ioc in iocs:
-                        attr_dict = {
-                            "type": ioc["type"],
-                            "value": ioc["value"],
-                            "category": (
-                                "Network activity"
-                                if ioc["type"] in ["ip-dst", "domain", "url"]
-                                else "Payload delivery"
-                            ),
-                            "to_ids": True,
-                            "comment": obj.get("description", ""),
-                            "distribution": 1,
-                        }
-                        event_data["attributes"].append(attr_dict)
+        if "Object" in event_data:
+            event_data["objects"] = event_data.pop("Object", [])
+
+        if "Tag" in event_data:
+            tags = event_data.pop("Tag", [])
+            event_data["tags"] = []
+            for tag in tags:
+                if isinstance(tag, dict):
+                    event_data["tags"].append(tag.get("name", str(tag)))
                 else:
-                    # If we can't extract IOCs, store the pattern as text
-                    attr_dict = {
-                        "type": "text",
-                        "value": pattern,
-                        "category": "External analysis",
-                        "to_ids": False,
-                        "comment": obj.get("description", "STIX Pattern"),
-                        "distribution": 1,
-                    }
-                    event_data["attributes"].append(attr_dict)
-
-            # Process observables
-            elif obj_type == "ipv4-addr":
-                attr_dict = {
-                    "type": "ip-dst",
-                    "value": obj.get("value", ""),
-                    "category": "Network activity",
-                    "to_ids": True,
-                    "comment": "",
-                    "distribution": 1,
-                }
-                event_data["attributes"].append(attr_dict)
-
-            elif obj_type == "ipv6-addr":
-                attr_dict = {
-                    "type": "ip-dst",
-                    "value": obj.get("value", ""),
-                    "category": "Network activity",
-                    "to_ids": True,
-                    "comment": "",
-                    "distribution": 1,
-                }
-                event_data["attributes"].append(attr_dict)
-
-            elif obj_type == "domain-name":
-                attr_dict = {
-                    "type": "domain",
-                    "value": obj.get("value", ""),
-                    "category": "Network activity",
-                    "to_ids": True,
-                    "comment": "",
-                    "distribution": 1,
-                }
-                event_data["attributes"].append(attr_dict)
-
-            elif obj_type == "url":
-                attr_dict = {
-                    "type": "url",
-                    "value": obj.get("value", ""),
-                    "category": "Network activity",
-                    "to_ids": True,
-                    "comment": "",
-                    "distribution": 1,
-                }
-                event_data["attributes"].append(attr_dict)
-
-            elif obj_type == "file":
-                # Handle file hashes
-                hashes = obj.get("hashes", {})
-                for hash_type, hash_value in hashes.items():
-                    misp_hash_type = hash_type.lower().replace("-", "")
-                    if misp_hash_type in ["md5", "sha1", "sha256", "sha512"]:
-                        attr_dict = {
-                            "type": misp_hash_type,
-                            "value": hash_value,
-                            "category": "Payload delivery",
-                            "to_ids": True,
-                            "comment": obj.get("name", ""),
-                            "distribution": 1,
-                        }
-                        event_data["attributes"].append(attr_dict)
-
-            elif obj_type == "email-addr":
-                attr_dict = {
-                    "type": "email-src",
-                    "value": obj.get("value", ""),
-                    "category": "Network activity",
-                    "to_ids": False,
-                    "comment": "",
-                    "distribution": 1,
-                }
-                event_data["attributes"].append(attr_dict)
-
-            elif obj_type == "email-message":
-                # Handle email subjects and from addresses
-                if "subject" in obj:
-                    attr_dict = {
-                        "type": "email-subject",
-                        "value": obj["subject"],
-                        "category": "Network activity",
-                        "to_ids": False,
-                        "comment": "",
-                        "distribution": 1,
-                    }
-                    event_data["attributes"].append(attr_dict)
-
-            # Process threat actors, malware, etc. as tags
-            elif obj_type in [
-                "threat-actor",
-                "malware",
-                "tool",
-                "attack-pattern",
-                "campaign",
-                "intrusion-set",
-            ]:
-                name = obj.get("name", "")
-                if name:
-                    # Also add as a tag
-                    event_data["tags"].append(f"{obj_type}:{name}")
-                    # Add as text attribute for visibility
-                    attr_dict = {
-                        "type": "text",
-                        "value": name,
-                        "category": (
-                            "Attribution"
-                            if obj_type in ["threat-actor", "intrusion-set", "campaign"]
-                            else "External analysis"
-                        ),
-                        "to_ids": False,
-                        "comment": f"{obj_type.replace('-', ' ').title()}: {obj.get('description', '')[:100]}",
-                        "distribution": 1,
-                    }
-                    event_data["attributes"].append(attr_dict)
-
-            # Process vulnerabilities
-            elif obj_type == "vulnerability":
-                name = obj.get("name", "")
-                if name:
-                    attr_dict = {
-                        "type": "vulnerability",
-                        "value": name,
-                        "category": "External analysis",
-                        "to_ids": False,
-                        "comment": obj.get("description", "")[:100],
-                        "distribution": 1,
-                    }
-                    event_data["attributes"].append(attr_dict)
-                    event_data["tags"].append(f"vulnerability:{name}")
+                    event_data["tags"].append(str(tag))
 
         # Add OpenCTI-specific tags
-        if container_type:
-            event_data["tags"].append(f"opencti:type={container_type}")
+        if "tags" not in event_data:
+            event_data["tags"] = []
 
-        # Add labels as tags
-        if "labels" in container:
-            for label in container.get("labels", []):
-                event_data["tags"].append(f"opencti:label={label}")
+        event_data["tags"].append("source:opencti")
+        # Use the original container type for the tag (before normalization)
+        if original_container_type:
+            event_data["tags"].append(f"opencti:type:{original_container_type}")
+
+        # Clean up fields not needed for PyMISP
+        for field in ["EventReport", "Galaxy", "GalaxyCluster"]:
+            event_data.pop(field, None)
 
         helper.connector_logger.info(
-            f"Successfully converted STIX bundle to MISP event",
+            "Successfully converted STIX bundle to MISP event",
             {
-                "attributes_count": len(event_data["attributes"]),
-                "objects_count": len(event_data["objects"]),
-                "tags_count": len(event_data["tags"]),
+                "event_uuid": event_data.get("uuid", "N/A"),
+                "attributes_count": len(event_data.get("attributes", [])),
+                "objects_count": len(event_data.get("objects", [])),
+                "tags_count": len(event_data.get("tags", [])),
             },
         )
 
@@ -399,104 +266,50 @@ def convert_stix_bundle_to_misp_event(stix_bundle: Dict, helper: Any) -> Optiona
 
     except Exception as e:
         helper.connector_logger.error(
-            f"Error converting STIX bundle to MISP event: {str(e)}",
+            f"Error converting STIX bundle to MISP: {str(e)}",
             {"trace": traceback.format_exc()},
         )
         return None
 
 
-def sanitize_misp_value(value: Any) -> str:
+def get_creator_org_from_bundle(
+    stix_bundle: Dict, container: Dict, helper
+) -> Optional[str]:
     """
-    Sanitize a value for MISP compatibility
+    Extract creator organization from STIX bundle
 
-    :param value: Value to sanitize
-    :return: Sanitized string value
+    This is kept for backward compatibility.
+
+    :param stix_bundle: STIX bundle
+    :param container: Container object
+    :param helper: Connector helper
+    :return: Organization name or None
     """
-    if value is None:
-        return ""
+    try:
+        # Check if container has created_by_ref
+        created_by_ref = container.get("created_by_ref")
+        if created_by_ref:
+            # Find the identity object
+            for obj in stix_bundle.get("objects", []):
+                if obj.get("id") == created_by_ref and obj.get("type") == "identity":
+                    return obj.get("name")
 
-    # Convert to string and strip
-    str_value = str(value).strip()
+        # Check OpenCTI extension for creator organization
+        extensions = container.get("extensions", {})
+        for ext_key, ext_value in extensions.items():
+            if "opencti" in ext_key.lower() and isinstance(ext_value, dict):
+                if "created_by_ref" in ext_value:
+                    created_by = ext_value["created_by_ref"]
+                    # Find the identity
+                    for obj in stix_bundle.get("objects", []):
+                        if (
+                            obj.get("id") == created_by
+                            and obj.get("type") == "identity"
+                        ):
+                            return obj.get("name")
 
-    # Remove control characters
-    str_value = "".join(ch for ch in str_value if ord(ch) >= 32 or ch == "\n")
-
-    return str_value
-
-
-def get_hash_type(hash_value: str) -> Optional[str]:
-    """
-    Determine the hash type based on the hash value length
-
-    :param hash_value: Hash string
-    :return: Hash type (md5, sha1, sha256, etc.) or None
-    """
-    hash_lengths = {
-        32: "md5",
-        40: "sha1",
-        64: "sha256",
-        128: "sha512",
-    }
-
-    if not hash_value:
         return None
 
-    # Remove any non-hex characters and convert to lowercase
-    clean_hash = "".join(c for c in hash_value.lower() if c in "0123456789abcdef")
-
-    return hash_lengths.get(len(clean_hash))
-
-
-def extract_iocs_from_pattern(pattern: str) -> List[Dict]:
-    """
-    Extract IOCs from a STIX pattern string
-
-    :param pattern: STIX pattern string
-    :return: List of IOC dictionaries with type and value
-    """
-    iocs = []
-
-    try:
-        # Simple pattern extraction (can be enhanced)
-        if "ipv4-addr:value" in pattern:
-            # Extract IPv4 addresses
-            parts = pattern.split("'")
-            for i in range(1, len(parts), 2):
-                iocs.append({"type": "ip-dst", "value": parts[i]})
-
-        elif "ipv6-addr:value" in pattern:
-            # Extract IPv6 addresses
-            parts = pattern.split("'")
-            for i in range(1, len(parts), 2):
-                iocs.append({"type": "ip-dst", "value": parts[i]})
-
-        elif "domain-name:value" in pattern:
-            # Extract domains
-            parts = pattern.split("'")
-            for i in range(1, len(parts), 2):
-                iocs.append({"type": "domain", "value": parts[i]})
-
-        elif "url:value" in pattern:
-            # Extract URLs
-            parts = pattern.split("'")
-            for i in range(1, len(parts), 2):
-                iocs.append({"type": "url", "value": parts[i]})
-
-        elif "file:hashes" in pattern:
-            # Extract file hashes
-            parts = pattern.split("'")
-            for i in range(1, len(parts), 2):
-                hash_type = get_hash_type(parts[i])
-                if hash_type:
-                    iocs.append({"type": hash_type, "value": parts[i].lower()})
-
-        elif "email-addr:value" in pattern:
-            # Extract email addresses
-            parts = pattern.split("'")
-            for i in range(1, len(parts), 2):
-                iocs.append({"type": "email-src", "value": parts[i]})
-
-    except Exception:
-        pass
-
-    return iocs
+    except Exception as e:
+        helper.connector_logger.debug(f"Could not extract creator org: {str(e)}")
+        return None
