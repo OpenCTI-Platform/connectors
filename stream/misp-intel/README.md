@@ -14,8 +14,11 @@ The MISP Intel connector listens to the OpenCTI live stream and synchronizes con
 ## Features
 
 - Real-time streaming of OpenCTI containers to MISP
-- Automatic STIX 2.1 to MISP format conversion using `misp-stix` library
-- Support for all standard STIX observable types
+- Comprehensive STIX 2.1 to MISP format conversion with custom logic
+- Support for all OpenCTI entity types and observables
+- Advanced mapping of OpenCTI entities to MISP galaxies
+- Full conversion of STIX patterns to MISP attributes
+- STIX 2.1 sightings support
 - Preservation of threat intelligence context (tags, labels, confidence levels)
 - Automatic mapping of OpenCTI authors to MISP creator organizations
 - Configurable owner organization for MISP events
@@ -111,6 +114,7 @@ python main.py
 | Distribution Level | `MISP_DISTRIBUTION_LEVEL` | `1` | MISP distribution level (0-3) |
 | Threat Level | `MISP_THREAT_LEVEL` | `2` | MISP threat level (1-4) |
 | Container Types | `CONNECTOR_CONTAINER_TYPES` | All supported | Comma-separated list of container types to process |
+| Hard Delete | `MISP_HARD_DELETE` | `false` | Permanently delete events without blocklisting |
 
 ### Distribution Levels
 
@@ -177,6 +181,10 @@ When a container is deleted in OpenCTI:
 1. Retrieves the MISP event UUID from external references
 2. Deletes the corresponding MISP event
 
+The deletion behavior is controlled by the `MISP_HARD_DELETE` configuration:
+- **Soft Delete (default, `MISP_HARD_DELETE=false`)**: The event UUID is added to MISP's blocklist, preventing re-importation of the same event
+- **Hard Delete (`MISP_HARD_DELETE=true`)**: The event is permanently deleted without blocklisting, allowing the same event to be re-imported later if needed
+
 ## Troubleshooting
 
 ### Common Issues
@@ -184,7 +192,7 @@ When a container is deleted in OpenCTI:
 1. **Connection Failed**: Verify URLs and API keys are correct
 2. **SSL Errors**: Set `MISP_SSL_VERIFY=false` for self-signed certificates
 3. **Missing Events**: Check container type filter configuration
-4. **Conversion Errors**: Ensure `misp-stix` library is properly installed
+4. **Conversion Errors**: Check logs for specific entity or observable conversion issues
 
 ### Debug Mode
 
@@ -220,7 +228,8 @@ misp-intel/
 │   │   ├── __init__.py
 │   │   ├── connector.py         # Main connector logic
 │   │   ├── api_handler.py       # MISP API interactions
-│   │   └── utils.py             # STIX to MISP conversion
+│   │   ├── stix_to_misp_converter.py  # Comprehensive STIX to MISP conversion
+│   │   └── utils.py             # Helper utilities
 │   ├── config.yml.sample        # Configuration template
 │   ├── main.py                  # Entry point
 │   └── requirements.txt         # Python dependencies

@@ -76,6 +76,17 @@ class _ConfigLoaderMisp(ConfigBaseSettings):
         description="Prefix for OpenCTI tags in MISP.",
     )
 
+    # Deletion configuration
+    hard_delete: bool = Field(
+        default=True,
+        alias="MISP_HARD_DELETE",
+        description=(
+            "Perform hard deletion of MISP events (permanent deletion without blocklisting). "
+            "If False, deleted events are added to the blocklist to prevent re-importation. "
+            "If True, events are permanently deleted and can be re-imported later."
+        ),
+    )
+
     @field_validator("url")
     def clean_url(cls, value: str) -> str:
         """Remove trailing slashes from the URL."""

@@ -164,7 +164,7 @@ class MispIntelConnector:
             # Convert STIX bundle to MISP event format
             # Pass the container_id as the custom UUID for direct mapping
             misp_event_data = convert_stix_bundle_to_misp_event(
-                stix_bundle, self.helper, custom_uuid=container_id
+                stix_bundle, self.helper, self.config, custom_uuid=container_id
             )
             if not misp_event_data:
                 self.helper.connector_logger.error(
@@ -233,7 +233,7 @@ class MispIntelConnector:
 
             # Convert STIX bundle to MISP event format
             misp_event_data = convert_stix_bundle_to_misp_event(
-                stix_bundle, self.helper, custom_uuid=container_id
+                stix_bundle, self.helper, self.config, custom_uuid=container_id
             )
             if not misp_event_data:
                 self.helper.connector_logger.error(
@@ -261,21 +261,86 @@ class MispIntelConnector:
 
     def _delete_misp_event(self, container_id: str) -> bool:
         """
-        Delete a MISP event using the container ID as UUID.
+        Delete a MISP event using the container ID as UUID and remove external reference if container still exists.
 
-        Since we use the OpenCTI container ID as the MISP event UUID,
-        we can delete directly without lookups.
+        A "delete" event in the stream can mean:
+        1. The container was actually deleted from OpenCTI
+        2. The container no longer matches the stream filter (e.g., label removed)
+
+        In case 2, we need to remove the external reference since the container still exists.
 
         :param container_id: OpenCTI container ID (which is also the MISP event UUID)
         :return: True if successful, False otherwise
         """
         try:
-            # Delete the MISP event using container_id as the UUID
-            result = self.api.delete_event(container_id)
-            if result:
+            # Check if the container still exists in OpenCTI
+            # If it does, it means the "delete" is due to filter change, not actual deletion
+            try:
+                container = self.helper.api.stix_domain_object.read(id=container_id)
+                if container:
+                    # Container still exists - remove the external reference
+                    self.helper.connector_logger.info(
+                        "[DELETE] Container still exists in OpenCTI, removing external reference",
+                        {"container_id": container_id},
+                    )
+
+                    if "externalReferences" in container:
+                        # Look for the MISP external reference
+                        for ext_ref_edge in container["externalReferences"]["edges"]:
+                            ext_ref = ext_ref_edge["node"]
+                            # Check if this is a MISP reference
+                            if (
+                                ext_ref.get("source_name") == "MISP"
+                                or (
+                                    ext_ref.get("url")
+                                    and f"{self.config.misp.url}/events/view/"
+                                    in ext_ref.get("url", "")
+                                )
+                                or ext_ref.get("external_id") == container_id
+                            ):
+                                # Remove this external reference from the container
+                                self.helper.api.stix_domain_object.remove_external_reference(
+                                    id=container_id, external_reference_id=ext_ref["id"]
+                                )
+                                self.helper.connector_logger.info(
+                                    "[DELETE] Removed external reference from OpenCTI container",
+                                    {
+                                        "container_id": container_id,
+                                        "external_ref_id": ext_ref["id"],
+                                    },
+                                )
+                                break
+                else:
+                    # Container doesn't exist - it was actually deleted
+                    self.helper.connector_logger.info(
+                        "[DELETE] Container was deleted from OpenCTI",
+                        {"container_id": container_id},
+                    )
+            except Exception as e:
+                # If we can't read the container, assume it was deleted
                 self.helper.connector_logger.info(
-                    "[DELETE] MISP event deleted",
-                    {"container_id": container_id, "misp_event_uuid": container_id},
+                    f"[DELETE] Could not read container (likely deleted): {str(e)}",
+                    {"container_id": container_id},
+                )
+
+            # Delete the MISP event using container_id as the UUID
+            # Use hard_delete setting from configuration
+            result = self.api.delete_event(
+                container_id, hard=self.config.misp.hard_delete
+            )
+            if result:
+                delete_type = (
+                    "hard deleted"
+                    if self.config.misp.hard_delete
+                    else "soft deleted (blocklisted)"
+                )
+                self.helper.connector_logger.info(
+                    f"[DELETE] MISP event {delete_type}",
+                    {
+                        "container_id": container_id,
+                        "misp_event_uuid": container_id,
+                        "hard_delete": self.config.misp.hard_delete,
+                    },
                 )
                 return True
             else:

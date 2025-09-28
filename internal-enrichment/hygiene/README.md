@@ -53,3 +53,38 @@ Find all the configuration variables available (default/required) here: [Connect
 1. Adds a `hygiene` or `hygiene_parent` label by default on items that correspond to a warning list entry. These are configurable(both color and label name)
 2. Sets the score of all related indicators to a value based on the number of
    reported entries (1:15, >=3:10, >=5:5, default:20).
+
+## Performance and Multi-threading
+
+The connector now supports multi-threaded processing for significant performance improvements:
+
+- **Parallel Processing**: Process up to 100 indicators/observables simultaneously using ThreadPoolExecutor
+- **Direct Thread Pool Submission**: Messages are immediately submitted to the thread pool for processing
+- **Thread-safe Operations**: All warning list searches are protected with thread locks
+- **Automatic Resource Management**: ThreadPoolExecutor handles queueing and worker management internally
+- **Statistics Tracking**: Monitor processing rates, hits, errors, active tasks, and average processing time
+- **Graceful Shutdown**: Properly handles shutdown signals and waits for all active tasks to complete
+
+### Configuration
+
+Set the number of parallel workers using the `HYGIENE_MAX_WORKERS` environment variable:
+- Default: 100 workers
+- Range: 1-500 workers
+- Set to 1 for sequential processing (old behavior)
+
+### Performance Metrics
+
+The connector logs statistics every 100 processed messages, including:
+- Total messages processed
+- Total warning list hits
+- Processing errors
+- Average processing time per message
+- Number of active tasks vs max workers
+
+### Architecture
+
+The multi-threaded architecture is extremely simple:
+1. The main thread receives messages from RabbitMQ via the standard OpenCTI helper
+2. Each message is immediately submitted to a ThreadPoolExecutor
+3. The thread pool handles all queuing and worker management automatically
+4. Workers process messages in parallel, limited only by the max_workers setting

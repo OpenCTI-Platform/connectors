@@ -1,34 +1,9 @@
-# OpenCTI Python client
 pycti==6.8.0
-
-# Pydantic for configuration management
-pydantic>=2.10, <3
-pydantic-settings==2.9.1
-
-# OpenCTI Connectors SDK
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
-
-# MISP Python library
-pymisp==2.5.17.2
-
-# STIX to MISP converter
-misp-stix==2025.8.28
-
-# HTTP client
-requests==2.32.5
 urllib3==2.5.0
-
-# YAML configuration
-pyyaml==6.0.2
-
-# JSON processing
+pydantic-settings==2.9.1
 jsonschema==4.25.1
-
-# Date/time handling
 python-dateutil==2.9.0.post0
-
-# Retry logic
 tenacity==9.1.2
-
-# SSL/TLS support
 certifi==2025.8.3
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
+pymisp

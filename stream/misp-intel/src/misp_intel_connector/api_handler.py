@@ -303,16 +303,19 @@ class MispApiHandler:
             )
             raise MispApiHandlerError(f"Event update failed: {str(e)}")
 
-    def delete_event(self, event_uuid: str) -> bool:
+    def delete_event(self, event_uuid: str, hard: bool = False) -> bool:
         """
         Delete a MISP event
 
         :param event_uuid: UUID of the event to delete
+        :param hard: If True, performs a hard delete (permanent deletion without blocklisting)
+                     If False, performs a soft delete (adds UUID to blocklist)
         :return: True if successful, False otherwise
         """
         try:
             # Delete the event
-            response = self.misp.delete_event(event_uuid)
+            # The 'hard' parameter prevents the UUID from being added to the blocklist
+            response = self.misp.delete_event(event_uuid, hard=hard)
 
             if isinstance(response, dict):
                 if response.get("saved", False) or response.get("success", False):
