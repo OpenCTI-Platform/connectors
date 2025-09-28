@@ -5,12 +5,9 @@ This module handles all interactions with the MISP API,
 including creating, updating, and deleting events.
 """
 
-import json
 import traceback
 from typing import Dict, List, Optional
-from urllib.parse import urljoin
 
-import requests
 from pymisp import MISPAttribute, MISPEvent, MISPObject, PyMISP
 
 
@@ -69,7 +66,7 @@ class MispApiHandler:
             version = self.misp.version
             if version:
                 self.helper.connector_logger.info(
-                    f"Successfully connected to MISP",
+                    "Successfully connected to MISP",
                     {
                         "misp_version": (
                             version.get("version", "Unknown")
@@ -171,7 +168,7 @@ class MispApiHandler:
             if isinstance(response, dict) and "Event" in response:
                 event = response["Event"]
                 self.helper.connector_logger.info(
-                    f"Successfully created MISP event",
+                    "Successfully created MISP event",
                     {
                         "event_id": event.get("id"),
                         "event_uuid": event.get("uuid"),
@@ -285,7 +282,7 @@ class MispApiHandler:
             if isinstance(response, dict) and "Event" in response:
                 event = response["Event"]
                 self.helper.connector_logger.info(
-                    f"Successfully updated MISP event",
+                    "Successfully updated MISP event",
                     {
                         "event_id": event.get("id"),
                         "event_uuid": event.get("uuid"),
@@ -320,7 +317,7 @@ class MispApiHandler:
             if isinstance(response, dict):
                 if response.get("saved", False) or response.get("success", False):
                     self.helper.connector_logger.info(
-                        f"Successfully deleted MISP event",
+                        "Successfully deleted MISP event",
                         {"event_uuid": event_uuid},
                     )
                     return True

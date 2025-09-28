@@ -9,7 +9,6 @@ It initializes and starts the connector to stream data from OpenCTI to MISP.
 
 import os
 import sys
-import time
 import traceback
 
 # Add the connector module to path
@@ -39,7 +38,7 @@ def main():
     except KeyboardInterrupt:
         sys.exit(0)
 
-    except Exception as e:
+    except Exception:
         traceback.print_exc()
         sys.exit(1)
 

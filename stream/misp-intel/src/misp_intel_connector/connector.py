@@ -390,7 +390,7 @@ class MispIntelConnector:
             # Log what we received
             data_type = data.get("type", "unknown") if data else "unknown"
             self.helper.connector_logger.debug(
-                f"Processing stream event",
+                "Processing stream event",
                 {
                     "event_type": event_type,
                     "data_type": data_type,
@@ -421,7 +421,7 @@ class MispIntelConnector:
             if event_type == "delete":
                 # Since we use container_id as MISP UUID, we can delete directly
                 self.helper.connector_logger.info(
-                    f"Deleting MISP event for container",
+                    "Deleting MISP event for container",
                     {"container_id": container_id},
                 )
 

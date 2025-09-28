@@ -1,6 +1,6 @@
 """Connector configuration models for OpenCTI and base connector settings."""
 
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal
 
 from connectors_sdk.core.pydantic import ListFromString
 from pydantic import Field, HttpUrl, PlainSerializer, field_validator
