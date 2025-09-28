@@ -1,5 +1,8 @@
+"""Configuration loader for MISP Intel connector."""
+
+import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, Optional
 
 from connectors_sdk.core.pydantic import ListFromString
 from pydantic import Field
@@ -10,42 +13,36 @@ from pydantic_settings import (
     PydanticBaseSettingsSource,
     YamlConfigSettingsSource,
 )
-from src.models.configs import (
-    ConfigBaseSettings,
-    _ConfigLoaderConnector,
-    _ConfigLoaderMitre,
-    _ConfigLoaderOCTI,
-)
+
+from .base_settings import ConfigBaseSettings
+from .connector_configs import _ConfigLoaderConnector, _ConfigLoaderOCTI
+from .misp_configs import _ConfigLoaderMisp, _ConfigLoaderProxy
 
 
 class ConfigLoaderConnector(_ConfigLoaderConnector):
     """A concrete implementation of _ConfigLoaderConnector defining default connector configuration values."""
 
     id: str = Field(
-        default="mitre--c9dacf68-b0e6-476d-a24f-4269b1b9cd25",
+        default="1c33c216-b24c-4839-b8bb-fdac2d769626",
         description="A unique UUIDv4 identifier for this connector instance.",
     )
     name: str = Field(
-        default="MITRE ATT&CK",
+        default="MISP Intel",
         description="Name of the connector.",
     )
     scope: ListFromString = Field(
-        default=[
-            "tool",
-            "report",
-            "malware",
-            "identity",
-            "campaign",
-            "intrusion-set",
-            "attack-pattern",
-            "course-of-action",
-            "x-mitre-data-source",
-            "x-mitre-data-component",
-            "x-mitre-matrix",
-            "x-mitre-tactic",
-            "x-mitre-collection",
-        ],
-        description="The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+        default=["misp"],
+        description="The scope or type of data the connector is processing.",
+    )
+    live_stream_id: str = Field(
+        default="live",
+        alias="CONNECTOR_LIVE_STREAM_ID",
+        description="The ID of the live stream to listen to.",
+    )
+    container_types: ListFromString = Field(
+        default=["report", "grouping", "case-incident", "case-rfi", "case-rft"],
+        alias="CONNECTOR_CONTAINER_TYPES",
+        description="List of container types to process.",
     )
 
 
@@ -60,9 +57,13 @@ class ConfigLoader(ConfigBaseSettings):
         default_factory=ConfigLoaderConnector,
         description="Connector configurations.",
     )
-    mitre: _ConfigLoaderMitre = Field(
-        default_factory=_ConfigLoaderMitre,
-        description="Mitre configurations.",
+    misp: _ConfigLoaderMisp = Field(
+        default_factory=_ConfigLoaderMisp,
+        description="MISP configurations.",
+    )
+    proxy: _ConfigLoaderProxy = Field(
+        default_factory=_ConfigLoaderProxy,
+        description="Proxy configurations.",
     )
 
     @classmethod
@@ -74,6 +75,7 @@ class ConfigLoader(ConfigBaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource]:
+        """Customize configuration sources to prioritize .env, then config.yml, then environment variables."""
         env_path = Path(__file__).parents[2] / ".env"
         yaml_path = Path(__file__).parents[2] / "config.yml"
 
@@ -103,4 +105,29 @@ class ConfigLoader(ConfigBaseSettings):
             )
 
     def model_dump_pycti(self) -> dict[str, Any]:
+        """Export configuration in pycti-compatible format."""
         return self.model_dump(mode="json", context={"mode": "pycti"})
+
+    def get_proxy_settings(self) -> Optional[Dict[str, Any]]:
+        """
+        Get proxy settings for requests.
+
+        :return: Dictionary with proxy settings or None if no proxies configured
+        """
+        proxies = {}
+
+        if self.proxy.http and self.proxy.http.strip():
+            proxies["http"] = self.proxy.http
+        if self.proxy.https and self.proxy.https.strip():
+            proxies["https"] = self.proxy.https
+
+        return proxies if proxies else None
+
+    def setup_proxy_env(self) -> None:
+        """Set up proxy environment variables if configured."""
+        if self.proxy.http and self.proxy.http.strip():
+            os.environ["http_proxy"] = self.proxy.http
+        if self.proxy.https and self.proxy.https.strip():
+            os.environ["https_proxy"] = self.proxy.https
+        if self.proxy.no_proxy and self.proxy.no_proxy.strip():
+            os.environ["no_proxy"] = self.proxy.no_proxy
