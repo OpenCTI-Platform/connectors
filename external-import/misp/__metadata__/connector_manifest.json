@@ -14,7 +14,7 @@
   "support_version": ">= 6.5.1",
   "subscription_link": "https://www.misp-project.org",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/misp",
-  "manager_supported": true,
+  "manager_supported": false,
   "container_version": "rolling",
   "container_image": "opencti/connector-misp",
   "container_type": "EXTERNAL_IMPORT"
