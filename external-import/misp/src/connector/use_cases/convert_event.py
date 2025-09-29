@@ -165,40 +165,42 @@ class EventConverter:
             },
         )
 
-    def process(self, event: EventRestSearchListItem) -> list[stix2.v21._STIXBase21]:
+    def process(
+        self, event: EventRestSearchListItem, include_relationships: bool = True
+    ) -> list[stix2.v21._STIXBase21]:
         """
         Process an event and convert it to a list of STIX objects.
         :param event: EventRestSearchListItem object
         :return: List of STIX objects
         """
-        author = None
-        labels = []
-        markings = []
-        external_references = []
-        associated_files = []
+        event_author = None
+        event_labels = []
+        event_markings = []
+        event_external_references = []
+        event_associated_files = []
 
         # Search report's author, labels and markings in tags
         for tag in event.Event.Tag or []:
             if self.config.convert_tag_to_author:
                 author_from_tag = self.tag_converter.create_author(tag)
                 if author_from_tag:
-                    author = author_from_tag
+                    event_author = author_from_tag
                     continue
 
             if self.config.convert_tag_to_label:
                 label = self.tag_converter.create_label(tag)
                 if label:
-                    labels.append(label)
+                    event_labels.append(label)
                     continue
 
             if self.config.convert_tag_to_marking:
                 custom_marking = self.tag_converter.create_custom_marking(tag)
                 if custom_marking:
-                    markings.append(custom_marking)
+                    event_markings.append(custom_marking)
 
             marking = self.tag_converter.create_marking(tag)
             if marking:
-                markings.append(marking)
+                event_markings.append(marking)
 
         # Detect attributes of type "link" for report's external references
         for attribute in event.Event.Attribute or []:
@@ -206,7 +208,7 @@ class EventConverter:
                 attribute
             )
             if external_reference:
-                external_references.append(external_reference)
+                event_external_references.append(external_reference)
 
         # Detect attributes of type "attachments" for report's associated files
         if self.config.convert_attribute_to_associated_file:
@@ -215,20 +217,20 @@ class EventConverter:
                     attribute
                 )
                 if associated_file:
-                    associated_files.append(associated_file)
+                    event_associated_files.append(associated_file)
             for object in event.Event.Object or []:
                 for attribute in object.Attribute or []:
                     associated_file = self.attribute_converter.create_associated_file(
                         attribute
                     )
                     if associated_file:
-                        associated_files.append(associated_file)
+                        event_associated_files.append(associated_file)
 
         try:
-            if not author:
-                author = self.create_author(event)
-            if not markings:
-                markings = [TLP_CLEAR]
+            if not event_author:
+                event_author = self.create_author(event)
+            if not event_markings:
+                event_markings = [TLP_CLEAR]
 
             external_reference = stix2.ExternalReference(
                 source_name="MISP",  # self.helper.connect_name
@@ -236,17 +238,19 @@ class EventConverter:
                 external_id=event.Event.uuid,
                 url=f"{self.config.external_reference_base_url}/events/view/{event.Event.uuid}",
             )
-            external_references.append(external_reference)
+            event_external_references.append(external_reference)
         except stix2.exceptions.STIXError as err:
             raise EventConverterError("Error while converting event") from err
 
-        # Extract report's object refs from Event's galaxies, tags, attributes and objects
+        # Extract report's object refs from Event's galaxies and tags
         stix_objects = []
+        event_stix_objects = []
 
         for galaxy in event.Event.Galaxy or []:
             galaxy_stix_objects = self.galaxy_converter.process(
-                galaxy, author=author, markings=markings
+                galaxy, author=event_author, markings=event_markings
             )
+            event_stix_objects.extend(galaxy_stix_objects)
             stix_objects.extend(galaxy_stix_objects)
 
         for tag in event.Event.Tag or []:
@@ -255,10 +259,12 @@ class EventConverter:
                 continue
 
             tag_stix_objects = self.tag_converter.process(
-                tag, author=author, markings=markings
+                tag, author=event_author, markings=event_markings
             )
+            event_stix_objects.extend(tag_stix_objects)
             stix_objects.extend(tag_stix_objects)
 
+        # Extract report's object refs from Event's attributes and objects
         score = (
             event_threat_level_to_opencti_score(event.Event.threat_level_id)
             if event.Event.threat_level_id
@@ -268,12 +274,15 @@ class EventConverter:
             attribute_stix_objects = self.attribute_converter.process(
                 attribute,
                 labels=(
-                    deepcopy(labels) if self.config.propagate_report_labels else []
+                    deepcopy(event_labels)
+                    if self.config.propagate_report_labels
+                    else []
                 ),
                 score=score,
-                author=author,
-                markings=markings,
-                external_references=external_references,
+                author=event_author,
+                markings=event_markings,
+                external_references=event_external_references,
+                include_relationships=include_relationships,
             )
             stix_objects.extend(attribute_stix_objects)
 
@@ -281,152 +290,164 @@ class EventConverter:
             # Process any other type of objects
             object_stix_objects = self.object_converter.process(
                 object,
-                labels=labels,
+                labels=event_labels,
                 score=score,
-                author=author,
-                markings=markings,
-                external_references=external_references,
+                author=event_author,
+                markings=event_markings,
+                external_references=event_external_references,
+                include_relationships=include_relationships,
             )
             stix_objects.extend(object_stix_objects)
 
-        # Create relationships between objects
-        threats = [
-            stix_object
-            for stix_object in stix_objects
-            if stix_object["type"] in ["intrusion-set", "malware", "tool"]
-        ]
-        countries = [
-            stix_object
-            for stix_object in stix_objects
-            if stix_object["type"] == "location" and stix_object["country"]
-        ]
-        sectors = [
-            stix_object
-            for stix_object in stix_objects
-            if stix_object["type"] == "identity"
-            and stix_object["identity_class"] == "class"
-        ]
+        if include_relationships:
+            # Create relationships between objects converted from galaxies and tags
+            event_intrusion_sets: list[stix2.IntrusionSet] = []
+            event_malwares: list[stix2.Malware] = []
+            event_tools: list[stix2.Tool] = []
+            event_countries: list[stix2.Location] = []
+            event_sectors: list[stix2.Identity] = []
+            event_attack_patterns: list[stix2.AttackPattern] = []
 
-        observables = [
-            stix_object
-            for stix_object in stix_objects
-            if isinstance(stix_object, stix2.v21._Observable)
-        ]
-        for observable in observables:
-            for entity in threats + countries + sectors:
-                stix_objects.append(
-                    stix2.Relationship(
-                        id=pycti.StixCoreRelationship.generate_id(
-                            relationship_type="related-to",
-                            source_ref=observable.id,
-                            target_ref=entity.id,
-                        ),
-                        relationship_type="related-to",
-                        created_by_ref=author.id,
-                        source_ref=observable.id,
-                        target_ref=entity.id,
-                        description=attribute.comment,
-                        # object_marking_refs=indicator_markings,
-                        allow_custom=True,
-                    )
-                )
+            for event_stix_object in event_stix_objects:
+                match event_stix_object:
+                    case stix2.IntrusionSet():
+                        event_intrusion_sets.append(event_stix_object)
+                    case stix2.Malware():
+                        event_malwares.append(event_stix_object)
+                    case stix2.Tool():
+                        event_tools.append(event_stix_object)
+                    case stix2.Location():
+                        if event_stix_object["country"]:
+                            event_countries.append(event_stix_object)
+                    case stix2.Identity():
+                        if event_stix_object["identity_class"] == "class":
+                            event_sectors.append(event_stix_object)
+                    case stix2.AttackPattern():
+                        event_attack_patterns.append(event_stix_object)
+                    case _:
+                        continue
 
-        indicators = [
-            stix_object
-            for stix_object in stix_objects
-            if stix_object["type"] == "indicator"
-        ]
-        for indicator in indicators:
-            for threat in threats:
-                stix_objects.append(
-                    stix2.Relationship(
+            for event_attack_pattern in event_attack_patterns:
+                for event_entity in event_malwares or event_intrusion_sets or []:
+                    relationship_uses = stix2.Relationship(
                         id=pycti.StixCoreRelationship.generate_id(
-                            relationship_type="indicates",
-                            source_ref=indicator.id,
-                            target_ref=threat.id,
+                            relationship_type="uses",
+                            source_ref=event_entity.id,
+                            target_ref=event_attack_pattern.id,
                         ),
-                        relationship_type="indicates",
-                        created_by_ref=author.id,
-                        source_ref=indicator.id,
-                        target_ref=threat.id,
-                        description=attribute.comment,
-                        # object_marking_refs=indicator_markings,
-                        allow_custom=True,
-                    )
-                )
-            for entity in countries + sectors:
-                stix_objects.append(
-                    stix2.Relationship(
-                        id=pycti.StixCoreRelationship.generate_id(
-                            relationship_type="related-to",
-                            source_ref=indicator.id,
-                            target_ref=entity.id,
-                        ),
-                        relationship_type="related-to",
-                        created_by_ref=author["id"],
-                        source_ref=indicator.id,
-                        target_ref=entity.id,
-                        description=attribute.comment,
-                        # object_marking_refs=indicator_markings,
-                        allow_custom=True,
-                    )
-                )
-
-        attack_patterns = [
-            stix_object
-            for stix_object in stix_objects
-            if stix_object["type"] == "attack-pattern"
-        ]
-        for attack_pattern in attack_patterns:
-            for threat in threats:  # TODO: check if threats should contain tools here
-                relationship_uses = stix2.Relationship(
-                    id=pycti.StixCoreRelationship.generate_id(
                         relationship_type="uses",
-                        source_ref=threat["id"],
-                        target_ref=attack_pattern["id"],
-                    ),
-                    relationship_type="uses",
-                    created_by_ref=author["id"],
-                    source_ref=threat["id"],
-                    target_ref=attack_pattern["id"],
-                    # object_marking_refs=markings,
-                    allow_custom=True,
-                )
-                stix_objects.append(relationship_uses)
+                        created_by_ref=event_author.id,
+                        source_ref=event_entity.id,
+                        target_ref=event_attack_pattern.id,
+                        object_marking_refs=event_entity.object_marking_refs,
+                        allow_custom=True,
+                    )
+                    stix_objects.append(relationship_uses)
 
-        # Extract relationships from event's objects references
-        for object in event.Event.Object or []:
-            for object_reference in object.ObjectReference or []:
-                ref_src = object_reference.source_uuid
-                ref_target = object_reference.referenced_uuid
-                if ref_src and ref_target:
-                    # ! Seems to always return None as MISP uuids are different from generated STIX ids
-                    src_result = find_type_by_uuid(ref_src, stix_objects)
-                    target_result = find_type_by_uuid(ref_target, stix_objects)
-                    if src_result and target_result:
-                        stix_objects.append(
-                            stix2.Relationship(
-                                id=pycti.StixCoreRelationship.generate_id(
+            # Create relationships between objects converted from galaxies/tags and attributes/objects
+            indicators: list[stix2.Indicator] = []
+            observables: list[stix2.v21._Observable] = []
+
+            for stix_object in stix_objects:
+                if isinstance(stix_object, stix2.Indicator):
+                    indicators.append(stix_object)
+                elif isinstance(stix_object, stix2.v21._Observable):
+                    observables.append(stix_object)
+
+            for observable in observables:
+                for event_entity in (
+                    event_intrusion_sets
+                    + event_malwares
+                    + event_tools
+                    + event_countries
+                    + event_sectors
+                ):
+                    stix_objects.append(
+                        stix2.Relationship(
+                            id=pycti.StixCoreRelationship.generate_id(
+                                relationship_type="related-to",
+                                source_ref=observable.id,
+                                target_ref=event_entity.id,
+                            ),
+                            relationship_type="related-to",
+                            created_by_ref=event_author.id,
+                            source_ref=observable.id,
+                            target_ref=event_entity.id,
+                            description=observable.get("x_opencti_description"),
+                            object_marking_refs=observable.object_marking_refs,
+                            allow_custom=True,
+                        )
+                    )
+
+            for indicator in indicators:
+                for event_entity in event_intrusion_sets + event_malwares + event_tools:
+                    stix_objects.append(
+                        stix2.Relationship(
+                            id=pycti.StixCoreRelationship.generate_id(
+                                relationship_type="indicates",
+                                source_ref=indicator.id,
+                                target_ref=event_entity.id,
+                            ),
+                            relationship_type="indicates",
+                            created_by_ref=event_author.id,
+                            source_ref=indicator.id,
+                            target_ref=event_entity.id,
+                            description=indicator.description,
+                            object_marking_refs=indicator.object_marking_refs,
+                            allow_custom=True,
+                        )
+                    )
+                for event_entity in event_countries + event_sectors:
+                    stix_objects.append(
+                        stix2.Relationship(
+                            id=pycti.StixCoreRelationship.generate_id(
+                                relationship_type="related-to",
+                                source_ref=indicator.id,
+                                target_ref=event_entity.id,
+                            ),
+                            relationship_type="related-to",
+                            created_by_ref=event_author.id,
+                            source_ref=indicator.id,
+                            target_ref=event_entity.id,
+                            description=indicator.description,
+                            object_marking_refs=indicator.object_marking_refs,
+                            allow_custom=True,
+                        )
+                    )
+
+            # Extract relationships from event's objects references
+            for object in event.Event.Object or []:
+                for object_reference in object.ObjectReference or []:
+                    ref_src = object_reference.source_uuid
+                    ref_target = object_reference.referenced_uuid
+                    if ref_src and ref_target:
+                        # ! Seems to always return None as MISP uuids are different from generated STIX ids
+                        src_result = find_type_by_uuid(ref_src, stix_objects)
+                        target_result = find_type_by_uuid(ref_target, stix_objects)
+                        if src_result and target_result:
+                            stix_objects.append(
+                                stix2.Relationship(
+                                    id=pycti.StixCoreRelationship.generate_id(
+                                        relationship_type="related-to",
+                                        source_ref=src_result["entity"]["id"],
+                                        target_ref=target_result["entity"]["id"],
+                                    ),
                                     relationship_type="related-to",
+                                    created_by_ref=event_author["id"],
+                                    description="Original Relationship: "
+                                    + object_reference["relationship_type"]
+                                    + "  \nComment: "
+                                    + object_reference["comment"],
                                     source_ref=src_result["entity"]["id"],
                                     target_ref=target_result["entity"]["id"],
-                                ),
-                                relationship_type="related-to",
-                                created_by_ref=author["id"],
-                                description="Original Relationship: "
-                                + object_reference["relationship_type"]
-                                + "  \nComment: "
-                                + object_reference["comment"],
-                                source_ref=src_result["entity"]["id"],
-                                target_ref=target_result["entity"]["id"],
-                                allow_custom=True,
+                                    allow_custom=True,
+                                )
                             )
-                        )
 
         # Prepare the bundle
-        bundle_objects = [author]
+        bundle_objects = [event_author]
         # Keep track of objects in bundle to remove duplicates
-        bundled_refs = [author["id"]]
+        bundled_refs = [event_author["id"]]
 
         # Prepare STIX report's object_refs (subset of bundle_objects)
         object_refs = []
@@ -434,10 +455,10 @@ class EventConverter:
         added_object_refs = []
 
         # Add event markings
-        for report_marking in markings:
-            if report_marking["id"] not in bundled_refs:
-                bundle_objects.append(report_marking)
-                bundled_refs.append(report_marking["id"])
+        for event_marking in event_markings:
+            if event_marking["id"] not in bundled_refs:
+                bundle_objects.append(event_marking)
+                bundled_refs.append(event_marking["id"])
 
         for stix_object in stix_objects:
             if stix_object["id"] not in bundled_refs:
@@ -458,12 +479,12 @@ class EventConverter:
 
                 report = self.create_report(
                     event=event,
-                    labels=labels,
+                    labels=event_labels,
                     object_refs=object_refs,
-                    author=author,
-                    markings=markings,
-                    external_references=external_references,
-                    associated_files=associated_files,
+                    author=event_author,
+                    markings=event_markings,
+                    external_references=event_external_references,
+                    associated_files=event_associated_files,
                 )
                 bundle_objects.append(report)
 
@@ -473,8 +494,8 @@ class EventConverter:
             for event_report in event.Event.EventReport or []:
                 note_stix_objects = self.event_report_converter.process(
                     event_report,
-                    author=author,
-                    markings=markings,
+                    author=event_author,
+                    markings=event_markings,
                     object_refs=[report.id],
                     bundle_objects=bundle_objects,
                 )

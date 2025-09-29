@@ -117,7 +117,10 @@ class Misp:
             {"event_id": event.Event.id, "event_uuid": event.Event.uuid},
         )
 
-        bundle_objects = self.converter.process(event)
+        bundle_objects = self.converter.process(
+            event=event,
+            include_relationships=len(event.Event.Attribute) < 10_000,
+        )
         if bundle_objects:
             now = datetime.now(tz=timezone.utc)
 

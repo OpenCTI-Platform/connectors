@@ -74,8 +74,6 @@ class EventReportConverter:
         object_refs: list[stix2.v21.Report],
         bundle_objects: list[stix2.v21._STIXBase21],
     ) -> list[stix2.v21._STIXBase21]:
-        """This method helps to keep consistency between converters APIs."""
-
         stix_objects = []
 
         try:

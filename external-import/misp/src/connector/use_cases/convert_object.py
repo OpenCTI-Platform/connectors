@@ -63,9 +63,8 @@ class ObjectConverter:
         author: stix2.Identity,
         markings: list[stix2.MarkingDefinition],
         external_references: list[stix2.ExternalReference],
+        include_relationships: bool = True,
     ) -> list[stix2.v21._STIXBase21 | stix2.v21._RelationshipObject]:
-        """This method helps to keep consistency between converters APIs."""
-
         stix_objects = []
 
         observable = None
@@ -106,10 +105,11 @@ class ObjectConverter:
                 author=author,
                 markings=markings,
                 external_references=external_references,
+                include_relationships=include_relationships,
             )
             stix_objects.extend(attribute_stix_objects)
 
-            if observable:
+            if observable and include_relationships:
                 attribute_observables = [
                     attribute_stix_object
                     for attribute_stix_object in attribute_stix_objects
