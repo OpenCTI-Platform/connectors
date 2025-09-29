@@ -1,9 +1,6 @@
 from connectors_sdk.core.pydantic import ListFromString
 from models.configs import ConfigBaseSettings
-from pydantic import (
-    Field,
-    PositiveInt,
-)
+from pydantic import Field, PositiveInt, SecretStr
 
 
 class _ConfigLoaderFeedly(ConfigBaseSettings):
@@ -18,6 +15,7 @@ class _ConfigLoaderFeedly(ConfigBaseSettings):
         ),
     )
     stream_ids: ListFromString = Field(
+        default=None,
         description=(
             "Comma separated list of Feedly stream IDs to monitor. "
             "Each stream ID represents a specific feed or collection to import from Feedly."
@@ -30,7 +28,7 @@ class _ConfigLoaderFeedly(ConfigBaseSettings):
             "When a new stream is added, the connector will fetch articles from this many days in the past."
         ),
     )
-    api_key: str = Field(
+    api_key: SecretStr = Field(
         description=(
             "Feedly API key for authentication. "
             "Generate your API key at https://feedly.com/i/team/api"
