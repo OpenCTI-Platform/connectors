@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/sekoia_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The OpenCTI platform URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "SEKOIA.IO",
+      "description": "Name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "identity",
+        "attack-pattern",
+        "course-of-action",
+        "intrusion-set",
+        "malware",
+        "tool",
+        "report",
+        "location",
+        "vulnerability",
+        "indicator",
+        "campaign",
+        "infrastructure",
+        "relationship"
+      ],
+      "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_TYPE": {
+      "default": "EXTERNAL_IMPORT",
+      "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "Determines the verbosity of the logs.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT60S",
+      "description": "Duration between two scheduled runs of the connector (ISO 8601 format).",
+      "format": "duration",
+      "type": "string"
+    },
+    "SEKOIA_API_KEY": {
+      "description": "API key used to authenticate requests to the Sekoia service.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "SEKOIA_BASE_URL": {
+      "default": "https://api.sekoia.io",
+      "description": "Base URL for accessing the Sekoia API.",
+      "type": "string"
+    },
+    "SEKOIA_COLLECTION": {
+      "default": "d6092c37-d8d7-45c3-8aff-c4dc26030608",
+      "description": "Allows you to specify the collection to query in order to retrieve or manage indicators of compromise.",
+      "type": "string"
+    },
+    "SEKOIA_START_DATE": {
+      "default": null,
+      "description": "The date to start consuming data from. May be in the formats YYYY-MM-DD or YYYY-MM-DDT00:00:00.",
+      "type": "string"
+    },
+    "SEKOIA_LIMIT": {
+      "default": 200,
+      "description": "The number of elements to fetch in each request. Defaults to 200, maximum 2000.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "SEKOIA_CREATE_OBSERVABLES": {
+      "default": true,
+      "description": "Create observables from indicators.",
+      "type": "boolean"
+    },
+    "SEKOIA_IMPORT_SOURCE_LIST": {
+      "default": false,
+      "description": "Create the list of sources observed by Sekoia as label.",
+      "type": "boolean"
+    },
+    "SEKOIA_IMPORT_IOC_RELATIONSHIPS": {
+      "default": true,
+      "description": "Import IOCs relationships and related objects.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "SEKOIA_API_KEY"
+  ],
+  "additionalProperties": true
+}

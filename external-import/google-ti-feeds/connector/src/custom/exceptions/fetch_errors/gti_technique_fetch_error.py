@@ -13,7 +13,7 @@ class GTITechniqueFetchError(GTIApiError):
         message: str,
         technique_id: Optional[str] = None,
         endpoint: Optional[str] = None,
-        status_code: Optional[int] = None,
+        status_code: Optional[str] = None,
         details: Optional[Dict[str, Any]] = None,
     ):
         """Initialize the exception.
@@ -27,9 +27,18 @@ class GTITechniqueFetchError(GTIApiError):
 
         """
         if technique_id:
-            error_msg = f"Error fetching attack technique {technique_id}: {message}"
+            error_msg = "Error fetching attack technique: {message}"
         else:
-            error_msg = f"Error fetching attack techniques: {message}"
+            error_msg = "Error fetching attack techniques: {message}"
 
         super().__init__(error_msg, status_code, endpoint, details)
         self.technique_id = technique_id
+
+        # Add structured data for logging
+        if hasattr(self, "structured_data"):
+            if technique_id:
+                self.structured_data["technique_id"] = technique_id
+        else:
+            self.structured_data = {}
+            if technique_id:
+                self.structured_data["technique_id"] = technique_id

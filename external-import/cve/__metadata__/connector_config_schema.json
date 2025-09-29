@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/cve_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The OpenCTI platform URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "NIST NVD CVE",
+      "description": "Name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "cve"
+      ],
+      "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_TYPE": {
+      "default": "EXTERNAL_IMPORT",
+      "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "Determines the verbosity of the logs.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CVE_BASE_URL": {
+      "default": "https://services.nvd.nist.gov/rest/json/cves",
+      "description": "URL for the CVE API.",
+      "type": "string"
+    },
+    "CVE_API_KEY": {
+      "description": "API Key for the CVE API.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CVE_INTERVAL": {
+      "default": 6,
+      "description": "Interval in hours to check and import new CVEs. Must be strictly greater than 1, advice from NIST minimum 2 hours.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "CVE_MAX_DATE_RANGE": {
+      "default": 120,
+      "description": "Determines how many days to collect CVE. Maximum of 120 days.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "CVE_MAINTAIN_DATA": {
+      "default": true,
+      "description": "If set to `True`, import CVEs from the last run of the connector to the current time. Takes 2 values: `True` or `False`.",
+      "type": "boolean"
+    },
+    "CVE_PULL_HISTORY": {
+      "default": false,
+      "description": "If set to `True`, import all CVEs from start year define in history start year configuration and history start year is required. Takes 2 values: `True` or `False`.",
+      "type": "boolean"
+    },
+    "CVE_HISTORY_START_YEAR": {
+      "default": 2019,
+      "description": "Year in number. Required when pull_history is set to `True`.  Minimum 2019 as CVSS V3.1 was released in June 2019, thus most CVE published before 2019 do not include the cvssMetricV31 object.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CVE_API_KEY"
+  ],
+  "additionalProperties": true
+}

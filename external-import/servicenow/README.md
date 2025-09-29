@@ -61,55 +61,9 @@ A variety of configuration options are available, and the connector will load th
 
 A `docker-compose.yml` file is also available to simplify Docker-based deployments and supports passing environment variables through directly via the system environment.
 
-### OpenCTI environment variables
+## Configuration variables
 
-Below are the parameters you'll need to set for OpenCTI:
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | `url`      | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | `token`    | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-Below are the parameters you'll need to set for running the connector properly:
-
-| Parameter `Connector`       | config.yml                    | Docker environment variable             | Default           | Mandatory | Description                                                                                      |
-|-----------------------------|-------------------------------|-----------------------------------------|-------------------|-----------|--------------------------------------------------------------------------------------------------|
-| ID                          | `id`                          | `CONNECTOR_ID`                          | /                 | Yes       | A unique `UUIDv4` identifier for this connector instance.                                        |
-| Type                        | `type`                        | `CONNECTOR_TYPE`                        | `EXTERNAL_IMPORT` | No        | Should always be set to `EXTERNAL_IMPORT` for this connector.                                    |
-| Name                        | `name`                        | `CONNECTOR_NAME`                        | `ServiceNow`      | No        | Name of the connector.                                                                           |
-| Scope                       | `scope`                       | `CONNECTOR_SCOPE`                       | `ServiceNow`      | No        | The scope or type of data the connector is importing, either a MIME type or Stix Object.         |
-| Log level                   | `log_level`                   | `CONNECTOR_LOG_LEVEL`                   | `error`           | No        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.           |
-| Duration period             | `duration_period`             | `CONNECTOR_DURATION_PERIOD`             | `PT24H`           | No        | Determines the time interval between each launch of the connector in ISO 8601, ex: `PT24H`.      |
-| Queue threshold             | `queue_threshold`             | `CONNECTOR_QUEUE_THRESHOLD`             | `500`             | No        | Used to determine the limit (RabbitMQ) in MB at which the connector must go into buffering mode. |
-| Run and terminate           | `run_and_terminate`           | `CONNECTOR_RUN_AND_TERMINATE`           | `False`           | No        | Launch the connector once if set to `True`.                                                      |
-| Send to queue               | `send_to_queue`               | `CONNECTOR_SEND_TO_QUEUE`               | `True`            | No        | If set to `True`, the connector will send data to the queue.                                     |
-| Send to directory           | `send_to_directory`           | `CONNECTOR_SEND_TO_DIRECTORY`           | `False`           | No        | If set to `True`, the connector will send data to a directory.                                   |
-| Send to directory path      | `send_to_directory_path`      | `CONNECTOR_SEND_TO_DIRECTORY_PATH`      | `None`            | No        | The path to the directory where data will be sent if `CONNECTOR_SEND_TO_DIRECTORY` is `True`.    |
-| Send to directory retention | `send_to_directory_retention` | `CONNECTOR_SEND_TO_DIRECTORY_RETENTION` | `7`               | No        | The number of days to retain data in the directory.                                              |
-
-### Connector extra parameters environment variables
-
-Below are the parameters you'll need to set for the connector:
-
-| Parameter `ServiceNow`            | config.yml                          | Docker environment variable                    | Default        | Mandatory | Description                                                                                                                                                                                    |
-|-----------------------------------|-------------------------------------|------------------------------------------------|----------------|-----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Instance name                     | `instance_name`                     | `SERVICENOW_INSTANCE_NAME`                     | /              | Yes       | Representing the ServiceNow server name.                                                                                                                                                       |
-| Api key                           | `api_key`                           | `SERVICENOW_API_KEY`                           | /              | Yes       | Secure identifier used to validate access to ServiceNow APIs.                                                                                                                                  |
-| Api version                       | `api_version`                       | `SERVICENOW_API_VERSION`                       | `v2`           | No        | ServiceNow API version used for REST requests.                                                                                                                                                 |
-| Api leaky bucket rate             | `api_leaky_bucket_rate`             | `SERVICENOW_API_LEAKY_BUCKET_RATE`             | `10`           | No        | Bucket refill rate (in tokens per second). Controls the rate at which API calls are allowed. For example, a rate of 10 means that 10 calls can be made per second, if the bucket is not empty. |
-| Api leaky bucket capacity         | `api_leaky_bucket_capacity`         | `SERVICENOW_API_LEAKY_BUCKET_CAPACITY`         | `10`           | No        | Maximum bucket capacity (in tokens). Defines the number of calls that can be made immediately in a burst. Once the bucket is empty, it refills at the rate defined by 'api_leaky_bucket_rate'. |
-| Api retry                         | `api_retry`                         | `SERVICENOW_API_RETRY`                         | `5`            | No        | Maximum number of retry attempts in case of API failure.                                                                                                                                       |
-| Api backoff                       | `api_backoff`                       | `SERVICENOW_API_BACKOFF`                       | `PT30S`        | No        | Exponential backoff duration between API retries (ISO 8601 duration format).                                                                                                                   |
-| Import start date                 | `import_start_date`                 | `SERVICENOW_IMPORT_START_DATE`                 | `P30D`         | No        | The date from which data import should start, accepts several date formats (`YYYY-MM-DD`, `YYYY-MM-DD HH:MM:SS+HH:MM`, `P30D` - 30 days before connector start-up).                            |
-| State to exclude                  | `state_to_exclude`                  | `SERVICENOW_STATE_TO_EXCLUDE`                  | `No exclusion` | No        | List of security incident states to exclude from import. Example: "eradicate,analysis,closed,cancelled,draft,contain,review,recover"                                                           |
-| Severity to exclude               | `severity_to_exclude`               | `SERVICENOW_SEVERITY_TO_EXCLUDE`               | `No exclusion` | No        | List of security incident severities to exclude from import. Example: "high,medium,low"                                                                                                        |
-| Priority to exclude               | `priority_to_exclude`               | `SERVICENOW_PRIORITY_TO_EXCLUDE`               | `No exclusion` | No        | List of security incident priorities to exclude from import. Example: "critical,high,moderate,low,planning"                                                                                    |
-| Comment to exclude                | `comment_to_exclude`                | `SERVICENOW_COMMENT_TO_EXCLUDE`                | `No exclusion` | No        | List of comment to exclude from import. Example: "private,public,auto" (Respectively: "Work notes, Additional comments, Automation activity")                                                  |
-| TLP level                         | `tlp_level`                         | `SERVICENOW_TLP_LEVEL`                         | `red`          | No        | TLP markings for exported data (Available: clear, green, amber, amber+strict, red)                                                                                                             |
-| Observables default score         | `observables_default_score`         | `SERVICENOW_OBSERVABLES_DEFAULT_SCORE`         | `50`           | No        | Allows you to define a default score for observables (and indicators when the ‘promote_observables_as_indicators’ variable is set to True).                                                    |
-| Promote observables as indicators | `promote_observables_as_indicators` | `SERVICENOW_PROMOTE_OBSERVABLES_AS_INDICATORS` | `True`         | No        | This variable is used to create indicators based on observables from ServiceNow.                                                                                                               |
+Find all the configuration variables available here: [Connector Configurations](./__metadata__)
 
 ## Deployment
 

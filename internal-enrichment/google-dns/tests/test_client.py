@@ -1,7 +1,7 @@
 import unittest
 
 import responses
-from src.client import GoogleDNSClient
+from src.google_client.client import GoogleDNSClient
 
 
 class GoogleDNSClientTest(unittest.TestCase):

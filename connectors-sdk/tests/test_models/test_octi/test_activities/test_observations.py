@@ -4,14 +4,25 @@
 from datetime import datetime
 
 import pytest
-import stix2
 from connectors_sdk.models.octi._common import BaseIdentifiedEntity
 from connectors_sdk.models.octi.activities.observations import (
+    URL,
+    DomainName,
+    File,
     Indicator,
     IPV4Address,
+    IPV6Address,
     Observable,
+    Software,
 )
 from pydantic import ValidationError
+from stix2.v21 import URL as Stix2URL
+from stix2.v21 import DomainName as Stix2DomainName
+from stix2.v21 import File as Stix2File
+from stix2.v21 import Indicator as Stix2Indicator
+from stix2.v21 import IPv4Address as Stix2IPv4Address
+from stix2.v21 import IPv6Address as Stix2IPv6Address
+from stix2.v21 import Software as Stix2Software
 
 ### OBSERVABLE BASE TYPE
 
@@ -33,7 +44,7 @@ def test_observable_has_required_fields():
 
         def to_stix2_object(self):
             """Dummy method to satisfy the interface."""
-            return stix2.v21.IPv4Address(value="127.0.0.1")
+            return Stix2IPv4Address(value="127.0.0.1")
 
     # When creating an instance of DummyObservable
     observable = DummyObservable()
@@ -102,7 +113,7 @@ def test_indicator_should_not_accept_incoherent_dates():
 
 def test_indicator_to_stix2_object_returns_valid_stix_object(
     fake_valid_organization_author,
-    fake_valid_external_referencess,
+    fake_valid_external_references,
     fake_valid_tlp_markings,
 ):
     """Test that Indicator.to_stix2_object returns a valid STIX Indicator."""
@@ -125,7 +136,7 @@ def test_indicator_to_stix2_object_returns_valid_stix_object(
         "platforms": ["linux", "windows"],
         "main_observable_type": "Url",
         "author": fake_valid_organization_author,
-        "external_references": fake_valid_external_referencess,
+        "external_references": fake_valid_external_references,
         "markings": fake_valid_tlp_markings,
     }
     indicator = Indicator.model_validate(input_data)
@@ -134,7 +145,7 @@ def test_indicator_to_stix2_object_returns_valid_stix_object(
     stix2_obj = indicator.to_stix2_object()
 
     # Then: A valid STIX Indicator is returned
-    assert isinstance(stix2_obj, stix2.Indicator)
+    assert isinstance(stix2_obj, Stix2Indicator)
 
 
 ### OBSERVABLES
@@ -153,6 +164,71 @@ def test_is_observable_subtype(observable_type):
     # When checking its type
     # Then it should be a subclass of Observable
     assert issubclass(observable_type, Observable)
+
+
+### DomainName
+
+
+def test_domain_name_class_should_not_accept_invalid_input():
+    """Test that DomainName class should not accept invalid input."""
+    # Given: An invalid input data for DomainName
+    input_data = {
+        "value": "invalid_ip",
+        "invalid_key": "invalid_value",
+    }
+    # When validating the domain name
+    # Then: It should raise a ValidationError with the expected error field
+    with pytest.raises(ValidationError) as error:
+        DomainName.model_validate(input_data)
+        assert error.value.errors()[0]["loc"] == ("invalid_key",)
+
+
+def test_domain_name_to_stix2_object_returns_valid_stix_object():
+    """Test that DomainName to_stix2_object method returns a valid STIX2.1 DomainName."""
+    # Given: A valid DomainName instance
+    domain_name = DomainName(value="test.com")
+    # When: calling to_stix2_object method
+    stix2_obj = domain_name.to_stix2_object()
+    # Then: A valid STIX2.1 DomainName is returned
+    assert isinstance(stix2_obj, Stix2DomainName)
+
+
+### File
+
+
+def test_file_class_should_not_accept_invalid_input():
+    """Test that File class should not accept invalid input."""
+    # Given: An invalid input data for File
+    input_data = {
+        "value": "invalid_ip",
+        "invalid_key": "invalid_value",
+    }
+    # When validating the file
+    # Then: It should raise a ValidationError with the expected error field
+    with pytest.raises(ValidationError) as error:
+        File.model_validate(input_data)
+        assert error.value.errors()[0]["loc"] == ("invalid_key",)
+
+
+def test_file_should_not_accept_missing_name_and_missing_hashes():
+    """Test that File should not accept both missing name and missing hashes."""
+    # Given an invalid input data for File with no name nor hashes
+    input_data = {"mime_type": "text/plain"}
+    # When validating the file
+    # Then it should raise a ValidationError with the expected error field
+    with pytest.raises(ValidationError) as error:
+        _ = File.model_validate(input_data)
+        assert all(w in str(error.value.errors()[0]) for w in ("'name'", "'hashes'"))
+
+
+def test_file_to_stix2_object_returns_valid_stix_object():
+    """Test that File to_stix2_object method returns a valid STIX2.1 File."""
+    # Given: A valid File instance
+    file = File(name="test.txt")
+    # When: calling to_stix2_object method
+    stix2_obj = file.to_stix2_object()
+    # Then: A valid STIX2.1 File is returned
+    assert isinstance(stix2_obj, Stix2File)
 
 
 ### IPV4Address
@@ -179,4 +255,101 @@ def test_ip_v4_address_to_stix2_object_returns_valid_stix_object():
     # When: calling to_stix2_object method
     stix2_obj = ipv4_address.to_stix2_object()
     # Then: A valid STIX2.1 IPV4Address is returned
-    assert isinstance(stix2_obj, stix2.v21.IPv4Address)
+    assert isinstance(stix2_obj, Stix2IPv4Address)
+
+
+### IPV6Address
+
+
+def test_ip_v6_class_should_not_accept_invalid_input():
+    """Test that IPV6Address class should not accept invalid input."""
+    # Given: An invalid input data for IPV6Address
+    input_data = {
+        "value": "invalid_ip",
+        "invalid_key": "invalid_value",
+    }
+    # When validating the ipv6 address
+    # Then: It should raise a ValidationError with the expected error field
+    with pytest.raises(ValidationError) as error:
+        IPV6Address.model_validate(input_data)
+        assert error.value.errors()[0]["loc"] == ("invalid_key",)
+
+
+def test_ip_v6_address_to_stix2_object_returns_valid_stix_object():
+    """Test that IPV6Address to_stix2_object method returns a valid STIX2.1 IPV6Address."""
+    # Given: A valid IPV6Address instance
+    ipv6_address = IPV6Address(value="b357:5b10:0f48:d182:0140:494c:8fe9:6eda")
+    # When: calling to_stix2_object method
+    stix2_obj = ipv6_address.to_stix2_object()
+    # Then: A valid STIX2.1 IPV6Address is returned
+    assert isinstance(stix2_obj, Stix2IPv6Address)
+
+
+### Software
+
+
+def test_software_class_should_not_accept_invalid_input():
+    """Test that Software class should not accept invalid input."""
+    # Given: An invalid input data for Software
+    input_data = {
+        "name": "Test software",
+        "invalid_key": "invalid_value",
+    }
+    # When validating the software
+    # Then: It should raise a ValidationError with the expected error field
+    with pytest.raises(ValidationError) as error:
+        Software.model_validate(input_data)
+        assert error.value.errors()[0]["loc"] == ("invalid_key",)
+
+
+def test_software_address_to_stix2_object_returns_valid_stix_object(
+    fake_valid_organization_author,
+    fake_valid_tlp_markings,
+    fake_valid_external_references,
+):
+    """Test that Software to_stix2_object method returns a valid STIX2.1 Software."""
+    # Given: A valid Software instance
+    ipv4_address = Software(
+        name="Test Software",
+        description="Test software description",
+        labels=["label_1", "label_2"],
+        version="1.0.0",
+        vendor="Test vendor",
+        swid="Test SWID",
+        cpe="cpe:/a:test:software:1.0.0",
+        languages=["python"],
+        author=fake_valid_organization_author,
+        markings=fake_valid_tlp_markings,
+        external_references=fake_valid_external_references,
+    )
+    # When: calling to_stix2_object method
+    stix2_obj = ipv4_address.to_stix2_object()
+    # Then: A valid STIX2.1 Software is returned
+    assert isinstance(stix2_obj, Stix2Software)
+
+
+### URL
+
+
+def test_url_class_should_not_accept_invalid_input():
+    """Test that URL class should not accept invalid input."""
+    # Given: An invalid input data for URL
+    input_data = {
+        "value": "invalid_ip",
+        "invalid_key": "invalid_value",
+    }
+    # When validating the url
+    # Then: It should raise a ValidationError with the expected error field
+    with pytest.raises(ValidationError) as error:
+        URL.model_validate(input_data)
+        assert error.value.errors()[0]["loc"] == ("invalid_key",)
+
+
+def test_url_to_stix2_object_returns_valid_stix_object():
+    """Test that URL to_stix2_object method returns a valid STIX2.1 URL."""
+    # Given: A valid URL instance
+    domain_name = URL(value="test.com")
+    # When: calling to_stix2_object method
+    stix2_obj = domain_name.to_stix2_object()
+    # Then: A valid STIX2.1 URL is returned
+    assert isinstance(stix2_obj, Stix2URL)

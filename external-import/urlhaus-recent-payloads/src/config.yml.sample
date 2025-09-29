@@ -14,6 +14,7 @@ connector:
 
 urlhaus_recent_payloads:
   api_url: 'https://urlhaus-api.abuse.ch/v1/'
+  api_key: 'ChangeMe' # Required, issued for free by URLHaus - https://urlhaus-api.abuse.ch/#auth_key
   cooldown_seconds: 300 # Time to wait in seconds between subsequent requests
   include_filetypes: 'exe,zip,dll,docm,docx,doc,xls,xlsx,xlsm,js,xll' # (Optional) Only download files if file type matches. (Comma separated)
   include_signatures: '' # (Optional) Only download files if match these Yara rules. (Comma separated)

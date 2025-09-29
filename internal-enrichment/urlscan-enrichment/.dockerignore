@@ -1,4 +1,10 @@
-src/config.yml
-src/__pycache__
-src/logs
-src/*.gql
+**/logs
+**/*.gql
+**/venv
+**/.venv
+**/__pycache__/
+**/*.egg-info/
+**/config.yml
+**/__pycache__
+**/__metadata__
+**/__docs__

@@ -7,17 +7,16 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'ThreatMatch'
   scope: 'threatmatch'
-  confidence_level: 75 # From 0 (Unknown) to 100 (Fully trusted)
-  update_existing_data: false
   log_level: 'info'
+  duration_period: "P1D"
 
 threatmatch:
   url: 'https://eu.threatmatch.com'
   client_id: 'ChangeMe'
   client_secret: 'ChangeMe'
-  interval: 5 # In Minutes
-  import_from_date: '2010-01-01 00:00'
+  import_from_date: 'P30D'
   import_profiles: true # Import profiles
   import_alerts: true # Import alerts
   import_iocs: true # Import iocs
-
+  tlp_level: 'amber' # TLP level to set on imported entities (allowed values are ['white', 'green', 'amber', 'amber+strict', 'red'])
+  threat_actor_as_intrusion_set: true

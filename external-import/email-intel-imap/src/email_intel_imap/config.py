@@ -1,16 +1,17 @@
 import datetime
 import os
-from typing import Literal, Optional
+from typing import Literal
 
 from base_connector.config import BaseConnectorSettings, ConnectorConfig, ListFromString
 from base_connector.enums import LogLevelType
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, SecretStr, model_validator
 from pydantic_settings import SettingsConfigDict
 
 _FILE_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
 class _ConnectorConfig(ConnectorConfig):
+    id: str = Field(default="email-intel-imap--ee2beb6c-4e99-47e6-ab5b-f3eea350f601")
     name: str = Field(default="Email Intel IMAP")
     scope: ListFromString = Field(default=["email-intel-imap"])
     duration_period: datetime.timedelta = Field(default=datetime.timedelta(hours=1))
@@ -28,8 +29,8 @@ class _EmailIntelConfig(BaseModel):
     host: str
     port: int = Field(default=993)
     username: str
-    password: Optional[str] = Field(default=None)
-    google_token_json: Optional[str] = Field(
+    password: SecretStr | None = Field(default=None)
+    google_token_json: SecretStr | None = Field(
         default=None, description="Content of the token.json file from Google API"
     )
     mailbox: str = Field(default="INBOX")

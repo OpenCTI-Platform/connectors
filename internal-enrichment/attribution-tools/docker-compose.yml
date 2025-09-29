@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-attribution-tools:
-    image: opencti/connector-attribution-tools:6.7.3
+    image: opencti/connector-attribution-tools:rolling
     environment:
       - OPENCTI_URL=ChangeMe
       - OPENCTI_TOKEN=ChangeMe
@@ -9,8 +9,6 @@ services:
       - CONNECTOR_NAME=attribution-tools
       - CONNECTOR_SCOPE=Incident
       - CONNECTOR_AUTO=false
-      - CONNECTOR_CONFIDENCE_LEVEL=3
-      - CONNECTOR_LOG_LEVEL=error
       - ATTRIBUTIONTOOLS_MODEL_TRAINING_CRON_UTC=0 0 * * *
       - ATTRIBUTIONTOOLS_N_TRAINING_QUERY_THREADS=1
       - ATTRIBUTIONTOOLS_DEFAULT_RELATION_CONFIDENCE=50

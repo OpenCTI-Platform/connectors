@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike observable utilities module."""
-
+import ipaddress
 from typing import Any, List, Mapping, NamedTuple, Optional
 
 from pycti import (
@@ -62,18 +62,26 @@ def _get_custom_properties(properties: ObservableProperties) -> Mapping[str, Any
     )
 
 
-def create_observable_ipv4_address(properties: ObservableProperties) -> IPv4Address:
-    """Create an observable representing an IPv4 address."""
-    return IPv4Address(
+def create_observable_ip_address(
+    properties: ObservableProperties,
+) -> IPv4Address | IPv6Address:
+    """Create an observable representing an IPv4 or IPv6 address."""
+    ip_address = ipaddress.ip_address(properties.value)
+    ip_address_cls = IPv6Address if ip_address.version == 6 else IPv4Address
+    return ip_address_cls(
         value=properties.value,
         object_marking_refs=properties.object_markings,
         custom_properties=_get_custom_properties(properties),
     )
 
 
-def create_observable_ipv6_address(properties: ObservableProperties) -> IPv6Address:
-    """Create an observable representing an IPv6 address."""
-    return IPv6Address(
+def create_observable_ip_address_block(
+    properties: ObservableProperties,
+) -> IPv4Address | IPv6Address:
+    """Create an observable representing an IPv4 or IPv6 address block."""
+    ip_network = ipaddress.ip_network(properties.value)
+    ip_network_cls = IPv6Address if ip_network.version == 6 else IPv4Address
+    return ip_network_cls(
         value=properties.value,
         object_marking_refs=properties.object_markings,
         custom_properties=_get_custom_properties(properties),

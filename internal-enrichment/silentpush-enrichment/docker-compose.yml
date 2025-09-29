@@ -1,6 +1,6 @@
 services:
   connector-silentpush:
-    image: opencti/connector-silentpush-enrichment:6.6.15
+    image: opencti/connector-silentpush-enrichment:rolling
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://opencti:8080

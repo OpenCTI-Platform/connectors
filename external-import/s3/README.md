@@ -16,10 +16,10 @@ Below are the parameters you'll need to set for running the connector properly:
 | Parameter `connector`       | config.yml                    | Docker environment variable             | Default | Mandatory | Example                                | Description                                                                            |
 |-----------------------------|-------------------------------|-----------------------------------------|---------|-----------|----------------------------------------|----------------------------------------------------------------------------------------|
 | ID                          | `id`                          | `CONNECTOR_ID`                          | /       | Yes       | `fe418972-1b42-42c9-a665-91544c1a9939` | A unique `UUIDv4` identifier for this connector instance.                              |
-| Name                        | `name`                        | `CONNECTOR_NAME`                        | /       | Yes       | `S3 Bucket`                            | Full name of the connector : `Microsoft Sentinel`.                                     |
+| Name                        | `name`                        | `CONNECTOR_NAME`                        | /       | Yes       | `S3 Bucket`                            | Full name of the connector : `S3`.                                     |
 | Log Level                   | `log_level`                   | `CONNECTOR_LOG_LEVEL`                   | `error` | No        | `error`                                | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`. |
 
-Below are the parameters you'll need to set for Sentinel Connector:
+Below are the parameters you'll need to set for s3 Connector:
 
 | Parameter `s3`    | config.yml          | Docker environment variable | Default        | Mandatory | Example        | Description                                      |
 |-------------------|---------------------|-----------------------------|----------------|-----------|----------------|--------------------------------------------------|
