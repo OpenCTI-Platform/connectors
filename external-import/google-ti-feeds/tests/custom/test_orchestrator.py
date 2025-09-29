@@ -8,6 +8,7 @@ from typing import Any, Dict
 
 import pytest
 from pydantic import HttpUrl
+from pydantic.types import SecretStr
 
 # =====================
 # Test Fakes
@@ -58,7 +59,7 @@ class DummyConfig:
 
     def __init__(
         self,
-        api_key: str,
+        api_key: SecretStr,
         report_import_start_date: timedelta,
         api_url: HttpUrl,
         import_reports: bool,
@@ -81,9 +82,9 @@ class DummyConfig:
         self.import_campaigns = True
         self.report_types = report_types
         self.report_origins = report_origins
-        self.threat_actor_origins = ["All"]
-        self.malware_family_origins = ["All"]
-        self.vulnerability_origins = ["All"]
+        self.threat_actor_origins = '["All"]'
+        self.malware_family_origins = '["All"]'
+        self.vulnerability_origins = '["All"]'
         self.tlp_level = tlp_level
         self.vulnerability_get_related_softwares = True
 
@@ -176,7 +177,7 @@ def patch_perform_single_attempt(monkeypatch: Any) -> Any:
 def gti_config() -> DummyConfig:
     """Fixture for GTI configuration."""
     return DummyConfig(
-        api_key="fake-key",
+        api_key=SecretStr("fake-key"),
         report_import_start_date=timedelta(days=1),
         api_url=HttpUrl("https://fake-gti.api"),
         import_reports=True,
