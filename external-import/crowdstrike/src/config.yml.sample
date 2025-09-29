@@ -26,7 +26,7 @@ crowdstrike:
   report_target_industries: ''
   report_guess_malware: false                                       # Use report tags to guess malware
   indicator_start_timestamp:                                        # Unix timestamp. Leave empty for default (30 days ago). 0 means ALL indicators!
-  indicator_exclude_types: 'hash_ion,hash_md5,hash_sha1'
+  indicator_exclude_types: 'hash_ion,hash_md5,hash_sha1,password,username'
   default_x_opencti_score: 50
   indicator_low_score: 40
   indicator_low_score_labels: 'MaliciousConfidence/Low'
