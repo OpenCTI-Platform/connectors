@@ -177,9 +177,9 @@ class ConfigLoader(BaseSettings):
         - radar: the config specific to SOCRadar
     """
 
-    opencti: OpenCTIConfig
-    connector: ConnectorConfig
-    radar: RadarConfig
+    opencti: OpenCTIConfig = Field(default_factory=OpenCTIConfig)
+    connector: ConnectorConfig = Field(default_factory=ConnectorConfig)
+    radar: RadarConfig = Field(default_factory=RadarConfig)
 
     # Setup model config and env vars parsing
     model_config = SettingsConfigDict(
