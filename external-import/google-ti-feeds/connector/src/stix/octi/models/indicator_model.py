@@ -1,7 +1,7 @@
 """The module contains the OctiIndicatorModel class, which represents an OpenCTI Indicator."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from connector.src.stix.octi.observable_type_ov_enum import ObservableTypeOV
 from connector.src.stix.octi.pattern_type_ov_enum import PatternTypeOV
@@ -24,14 +24,14 @@ class OctiIndicatorModel:
         observable_type: ObservableTypeOV,
         organization_id: str,
         marking_ids: list[str],
-        description: Optional[str] = None,
-        indicator_types: Optional[List[IndicatorTypeOV]] = None,
-        platforms: Optional[List[PlatformOV]] = None,
-        valid_from: Optional[datetime] = None,
-        valid_until: Optional[datetime] = None,
-        kill_chain_phases: Optional[List[KillChainPhaseModel]] = None,
-        score: Optional[int] = None,
-        external_references: Optional[List[Dict[str, Any]]] = None,
+        description: str | None = None,
+        indicator_types: list[IndicatorTypeOV] | None = None,
+        platforms: list[PlatformOV] | None = None,
+        valid_from: datetime | None = None,
+        valid_until: datetime | None = None,
+        kill_chain_phases: list[KillChainPhaseModel] | None = None,
+        score: int | None = None,
+        external_references: list[dict[str, Any]] | None = None,
         **kwargs: Any,
     ) -> IndicatorModel:
         """Create an Indicator model.
@@ -42,7 +42,7 @@ class OctiIndicatorModel:
             pattern_type: The type of pattern from PatternTypeOV enum
             observable_type: The type of observable this indicator detects from ObservableTypeOV enum
             organization_id: The ID of the organization that created this indicator
-            marking_ids: List of marking definition IDs to apply to the indicator
+            marking_ids: list of marking definition IDs to apply to the indicator
             description: Description of the indicator
             indicator_types: Types of the indicator from IndicatorTypeOV enum
             platforms: Platforms where this indicator is applicable from PlatformOV enum

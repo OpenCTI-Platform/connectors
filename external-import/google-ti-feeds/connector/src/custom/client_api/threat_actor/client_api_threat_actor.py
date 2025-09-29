@@ -1,7 +1,8 @@
 """Threat actor-specific client API for fetching and processing threat actor data."""
 
 import logging
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from collections.abc import AsyncGenerator
+from typing import Any
 
 from connector.src.custom.client_api.client_api_base import BaseClientAPI
 
@@ -26,12 +27,12 @@ class ClientAPIThreatActor(BaseClientAPI):
         self,
         collection_type: str,
         start_date: str,
-        initial_state: Optional[Dict[str, Any]] = None,
-        types: Optional[List[str]] = None,
-        origins: Optional[List[str]] = None,
+        initial_state: dict[str, Any] | None = None,
+        types: list[str] | None = None,
+        origins: list[str] | None = None,
         entity_name: str = "threat_actors",
         cursor_key: str = "cursor",
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Build threat actor filter configurations based on config settings.
 
         Args:
@@ -44,7 +45,7 @@ class ClientAPIThreatActor(BaseClientAPI):
             cursor_key: Key to use for cursor in initial_state
 
         Returns:
-            List of filter configurations with params and cursors
+            list of filter configurations with params and cursors
 
         """
         try:
@@ -83,9 +84,9 @@ class ClientAPIThreatActor(BaseClientAPI):
         data_count: int,
         entity_description: str,
         page_nb: int,
-        total_pages: Optional[int],
-        total_items: Optional[int],
-        cursor: Optional[str],
+        total_pages: int | None,
+        total_items: int | None,
+        cursor: str | None,
     ) -> str:
         """Build pagination log message and update total count."""
         if entity_description == "threat_actors" and total_items:
@@ -104,15 +105,15 @@ class ClientAPIThreatActor(BaseClientAPI):
         return f"Fetched {data_count} {entity_description} from API{page_info}{cursor_info}"
 
     async def fetch_threat_actors(
-        self, initial_state: Optional[Dict[str, Any]]
-    ) -> AsyncGenerator[Dict[Any, Any], None]:
+        self, initial_state: dict[str, Any] | None
+    ) -> AsyncGenerator[dict[Any, Any], None]:
         """Fetch threat actors from the API.
 
         Args:
-            initial_state (Optional[Dict[str, Any]]): The initial state of the fetcher.
+            initial_state (dict[str, Any] | None): The initial state of the fetcher.
 
         Yields:
-            AsyncGenerator[Dict[str, Any], None]: The fetched threat actors.
+            AsyncGenerator[dict[str, Any], None]: The fetched threat actors.
 
         """
         start_date = self._parse_start_date(

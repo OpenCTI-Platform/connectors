@@ -1,7 +1,7 @@
 """The module defines a Threat Actor model for STIX 2.1, including validation and serialization methods."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pycti  # type: ignore  # Missing library stubs
 from connector.src.stix.v21.models.ovs.attack_motivation_ov_enums import (
@@ -33,56 +33,56 @@ class ThreatActorModel(BaseSDOModel):
     name: str = Field(
         ..., description="A name used to identify this Threat Actor or group."
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
         default=None,
         description="Context and characteristics of the Threat Actor—who they are, how they operate, and why.",
     )
 
-    threat_actor_types: List[ThreatActorTypeOV] = Field(
+    threat_actor_types: list[ThreatActorTypeOV] = Field(
         ...,
         description="Open vocab describing the type(s) of this Threat Actor. SHOULD come from threat-actor-type-ov.",
     )
-    aliases: Optional[List[str]] = Field(
+    aliases: list[str] | None = Field(
         default=None,
         description="Other names believed to refer to the same Threat Actor.",
     )
 
-    first_seen: Optional[datetime] = Field(
+    first_seen: datetime | None = Field(
         default=None,
         description="Time this Threat Actor was first seen. May be updated with earlier sightings.",
     )
-    last_seen: Optional[datetime] = Field(
+    last_seen: datetime | None = Field(
         default=None,
         description="Time this Threat Actor was last seen. MUST be >= first_seen if both are set.",
     )
 
-    roles: Optional[List[ThreatActorRoleOV]] = Field(
+    roles: list[ThreatActorRoleOV] | None = Field(
         default=None,
         description="Roles this Threat Actor plays. SHOULD come from threat-actor-role-ov.",
     )
-    goals: Optional[List[str]] = Field(
+    goals: list[str] | None = Field(
         default=None,
         description="High-level goals of the Threat Actor (e.g., steal credit card numbers, exfiltrate data).",
     )
 
-    sophistication: Optional[ThreatActorSophisticationOV] = Field(
+    sophistication: ThreatActorSophisticationOV | None = Field(
         default=None,
         description="Level of knowledge, training, or expertise. SHOULD come from threat-actor-sophistication-ov.",
     )
-    resource_level: Optional[AttackResourceLevelOV] = Field(
+    resource_level: AttackResourceLevelOV | None = Field(
         default=None,
         description="Organizational level this Threat Actor operates at. SHOULD come from attack-resource-level-ov.",
     )
 
-    primary_motivation: Optional[AttackMotivationOV] = Field(
+    primary_motivation: AttackMotivationOV | None = Field(
         default=None,
         description="Primary reason driving this Threat Actor. SHOULD come from attack-motivation-ov.",
     )
-    secondary_motivations: Optional[List[AttackMotivationOV]] = Field(
+    secondary_motivations: list[AttackMotivationOV] | None = Field(
         default=None,
         description="Additional motivations influencing this Threat Actor. SHOULD come from attack-motivation-ov.",
     )
-    personal_motivations: Optional[List[AttackMotivationOV]] = Field(
+    personal_motivations: list[AttackMotivationOV] | None = Field(
         default=None,
         description="Personal (non-organizational) motivations behind actions. SHOULD come from attack-motivation-ov.",
     )
@@ -98,13 +98,13 @@ class ThreatActorModel(BaseSDOModel):
 
     @model_validator(mode="before")
     @classmethod
-    def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+    def generate_id(cls, data: dict[str, Any]) -> dict[str, Any]:
         """Generate ID regardless of whether one is provided."""
         data["id"] = ThreatActorModel._generate_id(data=data)
         return data
 
     @classmethod
-    def _generate_id(cls, data: Dict[str, Any]) -> Any:
+    def _generate_id(cls, data: dict[str, Any]) -> Any:
         """Generate ID regardless of whether one is provided."""
         if isinstance(data, dict) and "name" in data:
             name = data.get("name", None)

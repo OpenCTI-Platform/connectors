@@ -6,7 +6,7 @@ configurable mapper classes.
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from connector.src.utils.converters.generic_converter_config import (
     GenericConverterConfig,
@@ -21,7 +21,7 @@ class GenericConverter:
     def __init__(
         self,
         config: GenericConverterConfig,
-        logger: Optional[logging.Logger] = None,
+        logger: logging.Logger | None = None,
     ):
         """Initialize the generic converter.
 
@@ -33,10 +33,10 @@ class GenericConverter:
         self.config = config
         self.logger = logger or logging.getLogger(__name__)
 
-        self.converted_objects: List[Any] = []
-        self.object_id_map: Dict[str, str] = {}
+        self.converted_objects: list[Any] = []
+        self.object_id_map: dict[str, str] = {}
 
-    def convert_single(self, input_data: Any, **mapper_kwargs: Any) -> Optional[Any]:
+    def convert_single(self, input_data: Any, **mapper_kwargs: Any) -> Any | None:
         """Convert a single entity to STIX format.
 
         Args:
@@ -95,19 +95,19 @@ class GenericConverter:
             return None
 
     def convert_multiple(
-        self, input_data_list: List[Any], **mapper_kwargs: Any
-    ) -> List[Any]:
+        self, input_data_list: list[Any], **mapper_kwargs: Any
+    ) -> list[Any]:
         """Convert multiple entities to STIX format.
 
         Args:
-            input_data_list: List of input data to convert
+            input_data_list: list of input data to convert
             **mapper_kwargs: Additional parameters to pass to mappers
 
         Returns:
-            List of STIX objects (successful conversions only)
+            list of STIX objects (successful conversions only)
 
         """
-        converted_objects: List[Any] = []
+        converted_objects: list[Any] = []
 
         self._log_conversion_start(self.config.display_name, count=len(input_data_list))
 
@@ -176,16 +176,16 @@ class GenericConverter:
         return converted_objects
 
     def convert_batch(
-        self, input_batches: Dict[str, List[Any]], **mapper_kwargs: Any
-    ) -> Dict[str, List[Any]]:
+        self, input_batches: dict[str, list[Any]], **mapper_kwargs: Any
+    ) -> dict[str, list[Any]]:
         """Convert batches of different entity types to STIX format.
 
         Args:
-            input_batches: Dictionary mapping entity type names to lists of input data
+            input_batches: dictionary mapping entity type names to lists of input data
             **mapper_kwargs: Additional parameters to pass to mappers
 
         Returns:
-            Dictionary mapping entity type names to lists of converted STIX objects
+            dictionary mapping entity type names to lists of converted STIX objects
 
         """
         converted_batches = {}
@@ -212,20 +212,20 @@ class GenericConverter:
 
         return converted_batches
 
-    def get_converted_objects(self) -> List[Any]:
+    def get_converted_objects(self) -> list[Any]:
         """Get all converted STIX objects.
 
         Returns:
-            List of all converted STIX objects
+            list of all converted STIX objects
 
         """
         return self.converted_objects.copy()
 
-    def get_object_id_map(self) -> Dict[str, str]:
+    def get_object_id_map(self) -> dict[str, str]:
         """Get mapping of original entity IDs to STIX object IDs.
 
         Returns:
-            Dictionary mapping original IDs to STIX IDs
+            dictionary mapping original IDs to STIX IDs
 
         """
         return self.object_id_map.copy()
@@ -319,14 +319,14 @@ class GenericConverter:
                 self.object_id_map[entity_id] = stix_output.id
 
     def _handle_conversion_error(
-        self, error: Exception, entity_id: str, entity_name: Optional[str]
+        self, error: Exception, entity_id: str, entity_name: str | None
     ) -> None:
         """Handle conversion errors with proper exception wrapping.
 
         Args:
             error: The original error
             entity_id: Entity ID for context
-            entity_name: Optional entity name for context
+            entity_name: Entity name for context | None
 
         Raises:
             Configured exception class: Wrapped error with additional context
@@ -353,9 +353,9 @@ class GenericConverter:
     def _log_conversion_start(
         self,
         entity_type: str,
-        entity_id: Optional[str] = None,
-        entity_name: Optional[str] = None,
-        count: Optional[int] = None,
+        entity_id: str | None = None,
+        entity_name: str | None = None,
+        count: int | None = None,
     ) -> None:
         """Log the start of a conversion operation.
 
@@ -401,7 +401,7 @@ class GenericConverter:
             )
 
     def _log_conversion_result(
-        self, entity_type: str, result_count: Optional[int] = None
+        self, entity_type: str, result_count: int | None = None
     ) -> None:
         """Log the result of a conversion operation.
 

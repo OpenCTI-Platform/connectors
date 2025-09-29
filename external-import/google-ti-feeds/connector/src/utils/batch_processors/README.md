@@ -233,7 +233,7 @@ if processor.get_current_batch_size() > 0:
 # The processor automatically handles different item types:
 # 1. STIX objects directly
 # 2. Mapper objects with to_stix() method 
-# 3. Dict objects with stix-like structure
+# 3. dict objects with stix-like structure
 
 config = GenericBatchProcessorConfig(
     batch_size=10,
@@ -248,7 +248,7 @@ processor = GenericBatchProcessor(config, work_manager, logger)
 # Add different types of objects
 processor.add_item(stix_object)  # Direct STIX object
 processor.add_item(mapper_object)  # Object with to_stix() method
-processor.add_item(stix_dict)  # Dict with id and type fields
+processor.add_item(stix_dict)  # dict with id and type fields
 ```
 
 ## Configuration Options

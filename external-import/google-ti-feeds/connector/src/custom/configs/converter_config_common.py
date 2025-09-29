@@ -5,7 +5,7 @@ to STIX format using the generic converter system.
 """
 
 import logging
-from typing import Any, List, Optional, Protocol
+from typing import Any, Protocol
 
 from connector.src.custom.mappers.gti_reports.gti_report_to_stix_report import (
     GTIReportToSTIXReport,
@@ -26,7 +26,7 @@ class RelationshipMapper(Protocol):
         ...
 
 
-def _find_report_in_output(stix_output: Any) -> Optional[Any]:
+def _find_report_in_output(stix_output: Any) -> Any | None:
     """Find a report object in the stix_output."""
     entities = stix_output if isinstance(stix_output, list) else [stix_output]
     for obj in entities:
@@ -77,7 +77,7 @@ def clear_all_contexts() -> None:
 def add_to_refs(
     context_key: str,
     linking_method: Any,
-    entity_type_filter: Optional[List[str]] = None,
+    entity_type_filter: list[str] | None = None,
 ) -> Any:
     """Add objects to parent's object_refs.
 
@@ -195,7 +195,7 @@ def _create_single_relationship(
     relationship_type: str,
     mapper_class: RelationshipMapper,
     reverse: bool,
-) -> Optional[Any]:
+) -> Any | None:
     """Create a single relationship between two entities."""
     if not (hasattr(entity, "id") and not hasattr(entity, "relationship_type")):
         return None
@@ -282,7 +282,7 @@ def _handle_clear_all_operation() -> None:
     _logger.debug("Cleared all contexts", {"log_prefix": LOG_PREFIX})
 
 
-def manage_context(operation: str, context_key: Optional[str] = None) -> Any:
+def manage_context(operation: str, context_key: str | None = None) -> Any:
     """Manage context storage.
 
     Args:
@@ -311,14 +311,14 @@ def manage_context(operation: str, context_key: Optional[str] = None) -> Any:
     return postprocess
 
 
-def link_to_report(entity_type_filter: Optional[List[str]] = None) -> Any:
+def link_to_report(entity_type_filter: list[str] | None = None) -> Any:
     """Add objects to report's object_refs."""
     return add_to_refs(
         "report", GTIReportToSTIXReport.add_object_refs, entity_type_filter
     )
 
 
-def link_main_entity_to_report(entity_types: List[str]) -> Any:
+def link_main_entity_to_report(entity_types: list[str]) -> Any:
     """Add only main entities (by type) to report's object_refs."""
     return add_to_refs("report", GTIReportToSTIXReport.add_object_refs, entity_types)
 

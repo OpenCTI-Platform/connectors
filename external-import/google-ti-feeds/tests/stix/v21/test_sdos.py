@@ -1,7 +1,7 @@
 """Module to test the STIX 2.1 SDO (STIX Domain Objects) models."""
 
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 from connector.src.stix.v21.models.cdts.kill_chain_phase_model import (
@@ -46,7 +46,7 @@ def now() -> datetime:
 
 
 @pytest.fixture
-def common_sdo_fields(now: datetime) -> Dict[str, Any]:
+def common_sdo_fields(now: datetime) -> dict[str, Any]:
     """Create Common fields for all SDO objects."""
     return {
         "spec_version": "2.1",
@@ -64,7 +64,7 @@ def common_sdo_fields(now: datetime) -> Dict[str, Any]:
 
 
 @pytest.fixture
-def kill_chain_phase_data() -> Dict[str, str]:
+def kill_chain_phase_data() -> dict[str, str]:
     """Create Data for a kill chain phase."""
     return {
         "kill_chain_name": "mitre-attack",
@@ -79,7 +79,7 @@ def kill_chain_phase_data() -> Dict[str, str]:
 # Scenario: Testing AttackPattern model
 
 
-def test_attack_pattern_basic_creation(common_sdo_fields: Dict[str, Any]):
+def test_attack_pattern_basic_creation(common_sdo_fields: dict[str, Any]):
     """Test that an AttackPattern model can be created with basic fields."""
     # Given: Minimal required data for an Attack Pattern
     data = {
@@ -98,7 +98,7 @@ def test_attack_pattern_basic_creation(common_sdo_fields: Dict[str, Any]):
 
 
 def test_attack_pattern_full_creation(
-    common_sdo_fields: Dict[str, Any], kill_chain_phase_data: Dict[str, str]
+    common_sdo_fields: dict[str, Any], kill_chain_phase_data: dict[str, str]
 ):
     """Test that an AttackPattern model can be created with all fields."""
     # Given: Complete data for an Attack Pattern
@@ -130,7 +130,7 @@ def test_attack_pattern_full_creation(
     assert attack_pattern.id.startswith("attack-pattern--")  # noqa: S101
 
 
-def test_attack_pattern_to_stix_object(common_sdo_fields: Dict[str, Any]):
+def test_attack_pattern_to_stix_object(common_sdo_fields: dict[str, Any]):
     """Test conversion of AttackPatternModel to a STIX object."""
     # Given: An AttackPatternModel
     attack_pattern = AttackPatternModel(
@@ -155,7 +155,7 @@ def test_attack_pattern_to_stix_object(common_sdo_fields: Dict[str, Any]):
 # Scenario: Testing Identity model
 
 
-def test_identity_basic_creation(common_sdo_fields: Dict[str, Any]):
+def test_identity_basic_creation(common_sdo_fields: dict[str, Any]):
     """Test that an Identity model can be created with basic fields."""
     # Given: Minimal required data for an Identity
     data = {
@@ -175,7 +175,7 @@ def test_identity_basic_creation(common_sdo_fields: Dict[str, Any]):
     assert identity.id.startswith("identity--")  # noqa: S101
 
 
-def test_identity_full_creation(common_sdo_fields: Dict[str, Any]):
+def test_identity_full_creation(common_sdo_fields: dict[str, Any]):
     """Test that an Identity model can be created with all fields."""
     # Given: Complete data for an Identity
     data = {
@@ -200,7 +200,7 @@ def test_identity_full_creation(common_sdo_fields: Dict[str, Any]):
     assert identity.contact_information == "contact@acme-cyber.com"  # noqa: S101
 
 
-def test_identity_to_stix_object(common_sdo_fields: Dict[str, Any]):
+def test_identity_to_stix_object(common_sdo_fields: dict[str, Any]):
     """Test conversion of IdentityModel to a STIX object."""
     # Given: An IdentityModel
     identity = IdentityModel(
@@ -224,7 +224,7 @@ def test_identity_to_stix_object(common_sdo_fields: Dict[str, Any]):
 # Scenario: Testing Indicator model
 
 
-def test_indicator_basic_creation(common_sdo_fields: Dict[str, Any], now: datetime):
+def test_indicator_basic_creation(common_sdo_fields: dict[str, Any], now: datetime):
     """Test that an Indicator model can be created with basic fields."""
     # Given: Minimal required data for an Indicator
     data = {
@@ -247,9 +247,9 @@ def test_indicator_basic_creation(common_sdo_fields: Dict[str, Any], now: dateti
 
 
 def test_indicator_full_creation(
-    common_sdo_fields: Dict[str, Any],
+    common_sdo_fields: dict[str, Any],
     now: datetime,
-    kill_chain_phase_data: Dict[str, str],
+    kill_chain_phase_data: dict[str, str],
 ):
     """Test that an Indicator model can be created with all fields."""
     # Given: Complete data for an Indicator
@@ -279,7 +279,7 @@ def test_indicator_full_creation(
     assert indicator.kill_chain_phases[0].phase_name == "initial-access"  # noqa: S101
 
 
-def test_indicator_to_stix_object(common_sdo_fields: Dict[str, Any], now: datetime):
+def test_indicator_to_stix_object(common_sdo_fields: dict[str, Any], now: datetime):
     """Test conversion of IndicatorModel to a STIX object."""
     # Given: An IndicatorModel
     indicator = IndicatorModel(
@@ -307,7 +307,7 @@ def test_indicator_to_stix_object(common_sdo_fields: Dict[str, Any], now: dateti
 # Scenario: Testing Malware model
 
 
-def test_malware_basic_creation(common_sdo_fields: Dict[str, Any]):
+def test_malware_basic_creation(common_sdo_fields: dict[str, Any]):
     """Test that a Malware model can be created with basic fields."""
     # Given: Minimal required data for a Malware
     data = {
@@ -329,9 +329,9 @@ def test_malware_basic_creation(common_sdo_fields: Dict[str, Any]):
 
 
 def test_malware_full_creation(
-    common_sdo_fields: Dict[str, Any],
+    common_sdo_fields: dict[str, Any],
     now: datetime,
-    kill_chain_phase_data: Dict[str, str],
+    kill_chain_phase_data: dict[str, str],
 ):
     """Test that a Malware model can be created with all fields."""
     # Given: Complete data for a Malware
@@ -365,7 +365,7 @@ def test_malware_full_creation(
 # Scenario: Testing InfrastructureModel
 
 
-def test_infrastructure_basic_creation(common_sdo_fields: Dict[str, Any]):
+def test_infrastructure_basic_creation(common_sdo_fields: dict[str, Any]):
     """Test that an Infrastructure model can be created with basic fields."""
     # Given: Minimal required data for Infrastructure
     data = {
@@ -388,9 +388,9 @@ def test_infrastructure_basic_creation(common_sdo_fields: Dict[str, Any]):
 
 
 def test_infrastructure_full_creation(
-    common_sdo_fields: Dict[str, Any],
+    common_sdo_fields: dict[str, Any],
     now: datetime,
-    kill_chain_phase_data: Dict[str, str],
+    kill_chain_phase_data: dict[str, str],
 ):
     """Test that an Infrastructure model can be created with all fields."""
     # Given: Complete data for Infrastructure
@@ -426,7 +426,7 @@ def test_infrastructure_full_creation(
 # Scenario: Testing IntrusionSetModel
 
 
-def test_intrusion_set_basic_creation(common_sdo_fields: Dict[str, Any]):
+def test_intrusion_set_basic_creation(common_sdo_fields: dict[str, Any]):
     """Test that an IntrusionSet model can be created with basic fields."""
     # Given: Minimal required data for an IntrusionSet
     data = {
@@ -444,7 +444,7 @@ def test_intrusion_set_basic_creation(common_sdo_fields: Dict[str, Any]):
     assert intrusion_set.id.startswith("intrusion-set--")  # noqa: S101
 
 
-def test_intrusion_set_full_creation(common_sdo_fields: Dict[str, Any], now: datetime):
+def test_intrusion_set_full_creation(common_sdo_fields: dict[str, Any], now: datetime):
     """Test that an IntrusionSet model can be created with all fields."""
     # Given: Complete data for an IntrusionSet
     data = {
@@ -480,7 +480,7 @@ def test_intrusion_set_full_creation(common_sdo_fields: Dict[str, Any], now: dat
 # Scenario: Testing ReportModel
 
 
-def test_report_basic_creation(common_sdo_fields: Dict[str, Any], now: datetime):
+def test_report_basic_creation(common_sdo_fields: dict[str, Any], now: datetime):
     """Test that a Report model can be created with basic fields."""
     # Given: Minimal required data for a Report
     data = {
@@ -504,7 +504,7 @@ def test_report_basic_creation(common_sdo_fields: Dict[str, Any], now: datetime)
     assert len(report.object_refs) == 1  # noqa: S101
 
 
-def test_report_full_creation(common_sdo_fields: Dict[str, Any], now: datetime):
+def test_report_full_creation(common_sdo_fields: dict[str, Any], now: datetime):
     """Test that a Report model can be created with all fields."""
     # Given: Complete data for a Report
     data = {
@@ -534,7 +534,7 @@ def test_report_full_creation(common_sdo_fields: Dict[str, Any], now: datetime):
 # Scenario: Testing GroupingModel
 
 
-def test_grouping_basic_creation(common_sdo_fields: Dict[str, Any]):
+def test_grouping_basic_creation(common_sdo_fields: dict[str, Any]):
     """Test that a Grouping model can be created with basic fields."""
     # Given: Minimal required data for a Grouping
     data = {
@@ -555,7 +555,7 @@ def test_grouping_basic_creation(common_sdo_fields: Dict[str, Any]):
     assert len(grouping.object_refs) == 1  # noqa: S101
 
 
-def test_grouping_full_creation(common_sdo_fields: Dict[str, Any]):
+def test_grouping_full_creation(common_sdo_fields: dict[str, Any]):
     """Test that a Grouping model can be created with all fields."""
     # Given: Complete data for a Grouping
     data = {

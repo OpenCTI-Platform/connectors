@@ -1,6 +1,6 @@
 """The module contains the AttackPatternModel class, which represents an attack pattern in STIX 2.1 format."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pycti  # type: ignore  # Missing library stubs
 from connector.src.stix.v21.models.cdts.kill_chain_phase_model import (
@@ -18,28 +18,28 @@ class AttackPatternModel(BaseSDOModel):
     """Model representing an Attack Pattern in STIX 2.1 format."""
 
     name: str = Field(..., description="A name used to identify the Attack Pattern.")
-    description: Optional[str] = Field(
+    description: str | None = Field(
         default=None,
         description="A description that provides more details and context about the Attack Pattern, potentially including its purpose and its key characteristics.",
     )
-    aliases: Optional[List[str]] = Field(
+    aliases: list[str] | None = Field(
         default=None,
         description="Alternative names used to identify this Attack Pattern.",
     )
-    kill_chain_phases: Optional[List[KillChainPhaseModel]] = Field(
+    kill_chain_phases: list[KillChainPhaseModel] | None = Field(
         default=None,
         description="The list of Kill Chain Phases for which this Attack Pattern is used.",
     )
 
     @model_validator(mode="before")
     @classmethod
-    def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+    def generate_id(cls, data: dict[str, Any]) -> dict[str, Any]:
         """Generate ID regardless of whether one is provided."""
         data["id"] = AttackPatternModel._generate_id(data=data)
         return data
 
     @classmethod
-    def _generate_id(cls, data: Dict[str, Any]) -> Any:
+    def _generate_id(cls, data: dict[str, Any]) -> Any:
         """Generate ID regardless of whether one is provided."""
         if isinstance(data, dict) and "name" in data:
             x_mitre_id = data.get("custom_properties", {}).get("x_mitre_id", None)

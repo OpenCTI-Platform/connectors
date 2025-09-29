@@ -1,6 +1,6 @@
 """Model representing a Google Threat Intelligence Threat Actor."""
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -8,19 +8,19 @@ from pydantic import BaseModel, Field
 class AggregationCommonalities(BaseModel):
     """Technical commonalities among all domains, files, IP addresses, and URLs tied to the threat actor."""
 
-    domains: Optional[Dict[str, Any]] = Field(
+    domains: dict[str, Any] | None = Field(
         None,
         description="Technical commonalities among all domains tied to the threat actor.",
     )
-    files: Optional[Dict[str, Any]] = Field(
+    files: dict[str, Any] | None = Field(
         None,
         description="Technical commonalities among all files tied to the threat actor.",
     )
-    ip_addresses: Optional[Dict[str, Any]] = Field(
+    ip_addresses: dict[str, Any] | None = Field(
         None,
         description="Technical commonalities among all IP addresses tied to the threat actor.",
     )
-    urls: Optional[Dict[str, Any]] = Field(
+    urls: dict[str, Any] | None = Field(
         None,
         description="Technical commonalities among all URLs tied to the threat actor.",
     )
@@ -57,14 +57,14 @@ class AltNameDetail(BaseModel):
         ...,
         description="Confidence on the information or the attribution of the alternative name.",
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
         None, description="Additional information related to the alternative name."
     )
-    first_seen: Optional[int] = Field(
+    first_seen: int | None = Field(
         None,
         description="The first time the alternative name was attributed (UTC timestamp).",
     )
-    last_seen: Optional[int] = Field(
+    last_seen: int | None = Field(
         None,
         description="The last time the alternative name was attributed (UTC timestamp).",
     )
@@ -77,13 +77,13 @@ class SeenDetail(BaseModel):
     confidence: str = Field(
         ..., description="Confidence on the information or the attribution."
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
         None, description="Additional information about the activity."
     )
-    first_seen: Optional[int] = Field(
+    first_seen: int | None = Field(
         None, description="First time this date was attributed (UTC timestamp)."
     )
-    last_seen: Optional[int] = Field(
+    last_seen: int | None = Field(
         None, description="Last time this date was attributed (UTC timestamp)."
     )
     value: str = Field(
@@ -99,14 +99,14 @@ class MergedActor(BaseModel):
         ...,
         description="Confidence on the information or the attribution of the merged threat actor.",
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
         None, description="Additional information about the merged actor."
     )
-    first_seen: Optional[int] = Field(
+    first_seen: int | None = Field(
         None,
         description="First time this merged threat actor was attributed (UTC timestamp).",
     )
-    last_seen: Optional[int] = Field(
+    last_seen: int | None = Field(
         None,
         description="Last time this merged threat actor was attributed (UTC timestamp).",
     )
@@ -120,14 +120,14 @@ class Motivation(BaseModel):
         ...,
         description="Confidence on the information or the attribution of the motivation.",
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
         None, description="Additional information about the motivation."
     )
-    first_seen: Optional[int] = Field(
+    first_seen: int | None = Field(
         None,
         description="First time this motivation was attributed (UTC timestamp).",
     )
-    last_seen: Optional[int] = Field(
+    last_seen: int | None = Field(
         None,
         description="Last time this motivation was attributed (UTC timestamp).",
     )
@@ -141,23 +141,23 @@ class SourceRegion(BaseModel):
         ...,
         description="Confidence on the information related to the source region.",
     )
-    country: Optional[str] = Field(None, description="Country of threat actor origin.")
-    country_iso2: Optional[str] = Field(
+    country: str | None = Field(None, description="Country of threat actor origin.")
+    country_iso2: str | None = Field(
         None, description="Source country in ISO 3166 Alpha2 code format."
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
         None, description="Additional information about the source region."
     )
-    first_seen: Optional[int] = Field(
+    first_seen: int | None = Field(
         None,
         description="First time this source region was attributed (UTC timestamp).",
     )
-    last_seen: Optional[int] = Field(
+    last_seen: int | None = Field(
         None, description="Last time this source region was attributed (UTC timestamp)."
     )
-    region: Optional[str] = Field(None, description="Region of threat actor origin.")
-    source: Optional[str] = Field(None, description="Information's supplier.")
-    sub_region: Optional[str] = Field(
+    region: str | None = Field(None, description="Region of threat actor origin.")
+    source: str | None = Field(None, description="Information's supplier.")
+    sub_region: str | None = Field(
         None, description="Subregion of threat actor origin."
     )
 
@@ -168,13 +168,13 @@ class TagDetail(BaseModel):
     confidence: str = Field(
         ..., description="Confidence on the tag association to the threat actor."
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
         None, description="Additional information related to the tag."
     )
-    first_seen: Optional[int] = Field(
+    first_seen: int | None = Field(
         None, description="First time this tag was attributed (UTC timestamp)."
     )
-    last_seen: Optional[int] = Field(
+    last_seen: int | None = Field(
         None, description="Last time this tag was attributed (UTC timestamp)."
     )
     value: str = Field(..., description="Value of the tag.")
@@ -186,24 +186,24 @@ class TargetedIndustry(BaseModel):
     confidence: str = Field(
         ..., description="Confidence on the industry targeted by the threat actor."
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
         None, description="Additional information related to the targeted industry."
     )
-    first_seen: Optional[int] = Field(
+    first_seen: int | None = Field(
         None,
         description="First time this targeted industry was associated (UTC timestamp).",
     )
-    industry: Optional[str] = Field(
+    industry: str | None = Field(
         None, description="Sub-industry targeted by the threat actor."
     )
     industry_group: str = Field(
         ..., description="Industry group targeted by the threat actor."
     )
-    last_seen: Optional[int] = Field(
+    last_seen: int | None = Field(
         None,
         description="Last time this targeted industry was associated (UTC timestamp).",
     )
-    source: Optional[str] = Field(None, description="Information's supplier.")
+    source: str | None = Field(None, description="Information's supplier.")
 
 
 class TargetedRegion(BaseModel):
@@ -213,28 +213,26 @@ class TargetedRegion(BaseModel):
         ...,
         description="Confidence on the threat actor's targeted region association.",
     )
-    country: Optional[str] = Field(
+    country: str | None = Field(
         None, description="Country targeted by the threat actor."
     )
-    country_iso2: Optional[str] = Field(
+    country_iso2: str | None = Field(
         None, description="Targeted country in ISO 3166 Alpha2 code format."
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
         None, description="Additional information related to the targeted region."
     )
-    first_seen: Optional[int] = Field(
+    first_seen: int | None = Field(
         None,
         description="First time this targeted region was associated (UTC timestamp).",
     )
-    last_seen: Optional[int] = Field(
+    last_seen: int | None = Field(
         None,
         description="Last time this targeted region was associated (UTC timestamp).",
     )
-    region: Optional[str] = Field(
-        None, description="Region targeted by the threat actor."
-    )
-    source: Optional[str] = Field(None, description="Information's supplier.")
-    sub_region: Optional[str] = Field(
+    region: str | None = Field(None, description="Region targeted by the threat actor.")
+    source: str | None = Field(None, description="Information's supplier.")
+    sub_region: str | None = Field(
         None, description="Sub-region targeted by the threat actor."
     )
 
@@ -243,7 +241,7 @@ class ThreatActorModel(BaseModel):
     """Model representing a GTI threat actor."""
 
     name: str = Field(..., description="Threat actor's name.")
-    collection_type: Optional[str] = Field(
+    collection_type: str | None = Field(
         None,
         description="Type of object; typically 'threat_actor'.",
     )
@@ -253,63 +251,63 @@ class ThreatActorModel(BaseModel):
     last_modification_date: int = Field(
         ..., description="UTC timestamp of last threat actor update."
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
         None, description="Description/context about the threat actor."
     )
-    status: Optional[str] = Field(
+    status: str | None = Field(
         None,
         description="Status of attribute computation: PENDING_RECOMPUTE or COMPUTED.",
     )
     private: bool = Field(
         ..., description="Whether the threat actor object is private."
     )
-    origin: Optional[str] = Field(
+    origin: str | None = Field(
         None,
         description="Source of the information: Partner or Google Threat Intelligence.",
     )
 
-    recent_activity_relative_change: Optional[float] = Field(
+    recent_activity_relative_change: float | None = Field(
         None, description="Ratio of recent activity change (14-day interval)."
     )
-    recent_activity_summary: Optional[List[int]] = Field(
+    recent_activity_summary: list[int] | None = Field(
         None, description="Time series of IoC activity (14-day)."
     )
-    top_icon_md5: Optional[List[str]] = Field(
-        None, description="List of the 3 most frequent icons' MD5 hashes."
+    top_icon_md5: list[str] | None = Field(
+        None, description="list of the 3 most frequent icons' MD5 hashes."
     )
 
-    counters: Optional[Counters] = Field(
+    counters: Counters | None = Field(
         None, description="Counters for related indicators and metadata."
     )
-    aggregations: Optional[AggregationCommonalities] = Field(
+    aggregations: AggregationCommonalities | None = Field(
         None, description="Grouped common traits across related IoCs."
     )
-    alt_names_details: Optional[List[AltNameDetail]] = Field(
+    alt_names_details: list[AltNameDetail] | None = Field(
         None, description="Alternative names/aliases for the threat actor."
     )
-    first_seen_details: Optional[List[SeenDetail]] = Field(
+    first_seen_details: list[SeenDetail] | None = Field(
         None, description="Information about when the threat actor was first seen."
     )
-    last_seen_details: Optional[List[SeenDetail]] = Field(
+    last_seen_details: list[SeenDetail] | None = Field(
         None, description="Information about when the threat actor was last seen."
     )
-    merged_actors: Optional[List[MergedActor]] = Field(
+    merged_actors: list[MergedActor] | None = Field(
         None, description="Actors confirmed to be part of this threat actor group."
     )
-    motivations: Optional[List[Motivation]] = Field(
+    motivations: list[Motivation] | None = Field(
         None,
         description="Threat actor's motivations such as espionage, financial gain, etc.",
     )
-    source_regions_hierarchy: Optional[List[SourceRegion]] = Field(
+    source_regions_hierarchy: list[SourceRegion] | None = Field(
         None, description="Regions/countries of threat actor origin."
     )
-    tags_details: Optional[List[TagDetail]] = Field(
+    tags_details: list[TagDetail] | None = Field(
         None, description="Tags applied to the threat actor, with context."
     )
-    targeted_industries_tree: Optional[List[TargetedIndustry]] = Field(
+    targeted_industries_tree: list[TargetedIndustry] | None = Field(
         None, description="Industries targeted by the threat actor."
     )
-    targeted_regions_hierarchy: Optional[List[TargetedRegion]] = Field(
+    targeted_regions_hierarchy: list[TargetedRegion] | None = Field(
         None, description="Regions/countries targeted by the threat actor."
     )
 
@@ -318,31 +316,31 @@ class Links(BaseModel):
     """Model representing links to related resources."""
 
     self: str
-    next: Optional[str] = Field(None, description="Link to the next page of results.")
+    next: str | None = Field(None, description="Link to the next page of results.")
 
 
 class GTIThreatActorMeta(BaseModel):
     """Model representing metadata for a GTI threat actor."""
 
     count: int
-    cursor: Optional[str] = Field(None, description="Cursor for pagination.")
+    cursor: str | None = Field(None, description="Cursor for pagination.")
 
 
 class GTIThreatActorData(BaseModel):
     """Model representing data for a GTI threat actor."""
 
     id: str
-    type: Optional[str] = None
-    links: Optional[Links] = None
-    attributes: Optional[ThreatActorModel] = None
-    context_attributes: Optional[Dict[str, Any]] = None
+    type: str | None = None
+    links: Links | None = None
+    attributes: ThreatActorModel | None = None
+    context_attributes: dict[str, Any] | None = None
 
 
 class GTIThreatActorResponse(BaseModel):
     """Model representing a response containing GTI threat actor data."""
 
-    data: Union[GTIThreatActorData, List[GTIThreatActorData]]
-    meta: Optional[GTIThreatActorMeta] = Field(
+    data: GTIThreatActorData | list[GTIThreatActorData]
+    meta: GTIThreatActorMeta | None = Field(
         default=None,
         description="Metadata for the response. May be absent when no data is returned.",
     )

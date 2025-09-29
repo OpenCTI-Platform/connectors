@@ -1,6 +1,6 @@
 """Exception raised for errors in the Fetching."""
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 from connector.src.custom.exceptions.gti_base_error import GTIBaseError
 
@@ -11,9 +11,9 @@ class GTIFetchingError(GTIBaseError):
     def __init__(
         self,
         message: str,
-        entity_type: Optional[str] = None,
-        entity_id: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
+        entity_type: str | None = None,
+        entity_id: str | None = None,
+        details: dict[str, Any] | None = None,
     ) -> None:
         """Initialize a GTIFetchingError instance."""
         super().__init__(message, details)

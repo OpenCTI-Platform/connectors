@@ -132,7 +132,6 @@ async def get_data():
 
 ```python
 from pydantic import BaseModel
-from typing import List
 
 class DataItem(BaseModel):
     id: int
@@ -140,7 +139,7 @@ class DataItem(BaseModel):
     active: bool
 
 class DataResponse(BaseModel):
-    items: List[DataItem]
+    items: list[DataItem]
     total: int
 
 async def get_validated_data():

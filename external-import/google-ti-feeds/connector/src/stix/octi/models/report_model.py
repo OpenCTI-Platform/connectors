@@ -1,7 +1,7 @@
 """The module contains the OctiReportModel class, which represents an OpenCTI Report."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from connector.src.stix.v21.models.ovs.report_type_ov_enums import ReportTypeOV
 from connector.src.stix.v21.models.sdos.report_model import ReportModel
@@ -16,14 +16,14 @@ class OctiReportModel:
         created: datetime,
         modified: datetime,
         organization_id: str,
-        marking_ids: List[str],
-        description: Optional[str] = None,
-        report_types: Optional[List[ReportTypeOV]] = None,
-        published: Optional[datetime] = None,
-        object_refs: Optional[List[str]] = None,
-        labels: Optional[List[str]] = None,
-        external_references: Optional[List[Dict[str, Any]]] = None,
-        content: Optional[str] = None,
+        marking_ids: list[str],
+        description: str | None = None,
+        report_types: list[ReportTypeOV] | None = None,
+        published: datetime | None = None,
+        object_refs: list[str] | None = None,
+        labels: list[str] | None = None,
+        external_references: list[dict[str, Any]] | None = None,
+        content: str | None = None,
         **kwargs: Any,
     ) -> ReportModel:
         """Create a Report model with OpenCTI custom properties.
@@ -33,13 +33,13 @@ class OctiReportModel:
             created: When the report was created
             modified: When the report was last modified
             organization_id: The ID of the organization that created this report
-            marking_ids: List of marking definition IDs to apply to the report
+            marking_ids: list of marking definition IDs to apply to the report
             description: Description of the report
-            report_types: List of report types
+            report_types: list of report types
             published: When the report was published (defaults to created if not provided)
-            object_refs: List of referenced object IDs
-            labels: List of labels for this report
-            external_references: List of external references
+            object_refs: list of referenced object IDs
+            labels: list of labels for this report
+            external_references: list of external references
             content: The full content of the report
             **kwargs: Additional arguments to pass to ReportModel
 

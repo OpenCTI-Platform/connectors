@@ -4,7 +4,6 @@ This module defines configuration settings specific to GTI campaign imports.
 """
 
 from datetime import timedelta
-from typing import List
 
 from connector.src.custom.configs.gti_config_common import (
     ALLOWED_ORIGINS,
@@ -27,7 +26,7 @@ class GTICampaignConfig(GTIBaseConfig):
         description="Whether to enable importing campaign data from GTI",
     )
 
-    campaign_origins: List[str] | str = Field(
+    campaign_origins: list[str] | str = Field(
         default="All",
         description="Comma-separated list of campaign origins to import, or 'All' for all origins. "
         f"Allowed values: {', '.join(ALLOWED_ORIGINS)}",
@@ -36,6 +35,6 @@ class GTICampaignConfig(GTIBaseConfig):
 
     @field_validator("campaign_origins", mode="before")
     @classmethod
-    def split_and_validate_campaign_origins(cls, v: str) -> List[str]:
+    def split_and_validate_campaign_origins(cls, v: str) -> list[str]:
         """Split and validate a comma-separated string into a list and validate its contents."""
         return validate_origins_list(v, "campaign origin", ALLOWED_ORIGINS)

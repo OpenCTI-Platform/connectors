@@ -1,7 +1,7 @@
 """The module defines the base class for v."""
 
 from enum import Enum
-from typing import Optional, Type, TypeVar
+from typing import TypeVar
 
 T = TypeVar("T", bound="BaseOV")
 
@@ -10,7 +10,7 @@ class BaseOV(str, Enum):
     """Account Type OV Enum."""
 
     @classmethod
-    def _missing_(cls: Type[T], value: object) -> Optional[T]:
+    def _missing_(cls: type[T], value: object) -> T | None:
         """Return any string, it's a way to make OpenVocab really open."""
         if isinstance(value, str):
             new_member = str.__new__(cls, value)

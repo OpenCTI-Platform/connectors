@@ -1,6 +1,6 @@
 """Test module for GenericFetcherConfig functionality."""
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 import pytest
 from connector.src.utils.fetchers.generic_fetcher_config import GenericFetcherConfig
@@ -22,7 +22,7 @@ class UserTestModel(BaseModel):
 class CustomError(Exception):
     """Custom exception for testing."""
 
-    def __init__(self, message: str, endpoint: Optional[str] = None):
+    def __init__(self, message: str, endpoint: str | None = None):
         """Initialize CustomError."""
         super().__init__(message)
         self.endpoint = endpoint
@@ -354,7 +354,7 @@ def test_headers_initialization_with_values() -> None:
 
 def _when_endpoint_formatted(
     config: GenericFetcherConfig, **kwargs: Any
-) -> Tuple[Optional[str], Optional[Exception]]:
+) -> tuple[str | None, Exception | None]:
     """Format the endpoint with provided parameters."""
     try:
         return config.format_endpoint(**kwargs), None
@@ -458,7 +458,7 @@ def _then_headers_are_empty_dict(config: GenericFetcherConfig) -> None:
 
 
 def _then_headers_match(
-    config: GenericFetcherConfig, expected_headers: Dict[str, str]
+    config: GenericFetcherConfig, expected_headers: dict[str, str]
 ) -> None:
     """Assert that headers match expected values."""
     assert config.headers == expected_headers  # noqa: S101

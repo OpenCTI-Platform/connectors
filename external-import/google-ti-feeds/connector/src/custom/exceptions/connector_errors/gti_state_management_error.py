@@ -1,6 +1,6 @@
 """Exception for errors related to state management in the connector."""
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 from connector.src.custom.exceptions.gti_base_error import GTIBaseError
 
@@ -11,8 +11,8 @@ class GTIStateManagementError(GTIBaseError):
     def __init__(
         self,
         message: str,
-        state_key: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
+        state_key: str | None = None,
+        details: dict[str, Any] | None = None,
     ):
         """Initialize the exception.
 

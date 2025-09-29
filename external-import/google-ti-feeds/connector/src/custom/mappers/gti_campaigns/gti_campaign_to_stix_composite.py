@@ -1,7 +1,7 @@
 """Composite mapper that handles campaign to locations, identity, and campaign conversion in one step."""
 
 from datetime import datetime, timezone
-from typing import Any, List
+from typing import Any
 
 from connector.src.custom.mappers.gti_campaigns.gti_campaign_to_stix_campaign import (
     GTICampaignToSTIXCampaign,
@@ -42,11 +42,11 @@ class GTICampaignToSTIXComposite(BaseMapper):
         self.organization = organization
         self.tlp_marking = tlp_marking
 
-    def to_stix(self) -> List[Any]:
+    def to_stix(self) -> list[Any]:
         """Convert the GTI campaign to a list of STIX objects (locations, identities, campaign, relationships).
 
         Returns:
-            List of STIX objects in order: [locations..., identities..., campaign, relationships...]
+            list of STIX objects in order: [locations..., identities..., campaign, relationships...]
 
         """
         all_entities = []
@@ -85,20 +85,20 @@ class GTICampaignToSTIXComposite(BaseMapper):
         return all_entities
 
     def _create_relationships(
-        self, campaign: Any, locations: List[Any], identities: List[Any]
-    ) -> List[Any]:
+        self, campaign: Any, locations: list[Any], identities: list[Any]
+    ) -> list[Any]:
         """Create relationships between the campaign and other entities.
 
         Args:
             campaign: The campaign object
-            locations: List of location objects
-            identities: List of identity objects
+            locations: list of location objects
+            identities: list of identity objects
 
         Returns:
-            List of relationship objects
+            list of relationship objects
 
         """
-        relationships: List[Any] = []
+        relationships: list[Any] = []
 
         if not hasattr(self.campaign, "attributes") or not self.campaign.attributes:
             return relationships
@@ -156,17 +156,17 @@ class GTICampaignToSTIXComposite(BaseMapper):
 
         return relationships
 
-    def _get_targeted_locations(self, locations: List[Any]) -> List[Any]:
+    def _get_targeted_locations(self, locations: list[Any]) -> list[Any]:
         """Get locations that correspond to targeted regions.
 
         Args:
-            locations: List of all location objects
+            locations: list of all location objects
 
         Returns:
-            List of location objects that correspond to targeted regions
+            list of location objects that correspond to targeted regions
 
         """
-        targeted_locations: List[Any] = []
+        targeted_locations: list[Any] = []
 
         if (
             not self.campaign.attributes
@@ -186,17 +186,17 @@ class GTICampaignToSTIXComposite(BaseMapper):
 
         return targeted_locations
 
-    def _get_source_locations(self, locations: List[Any]) -> List[Any]:
+    def _get_source_locations(self, locations: list[Any]) -> list[Any]:
         """Get locations that correspond to source regions.
 
         Args:
-            locations: List of all location objects
+            locations: list of all location objects
 
         Returns:
-            List of location objects that correspond to source regions
+            list of location objects that correspond to source regions
 
         """
-        source_locations: List[Any] = []
+        source_locations: list[Any] = []
 
         if (
             not self.campaign.attributes

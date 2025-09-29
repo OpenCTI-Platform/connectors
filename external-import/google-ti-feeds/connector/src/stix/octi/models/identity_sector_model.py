@@ -1,7 +1,7 @@
 """The module contains the OctiIdentitySectorModel class, which represents an OpenCTI Identity Sector."""
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from connector.src.stix.v21.models.ovs.identity_class_ov_enums import IdentityClassOV
 from connector.src.stix.v21.models.sdos.identity_model import IdentityModel
@@ -15,7 +15,7 @@ class OctiIdentitySectorModel:
         name: str,
         organization_id: str,
         marking_ids: list[str],
-        description: Optional[str] = None,
+        description: str | None = None,
         **kwargs: Any,
     ) -> IdentityModel:
         """Create an Identity Sector model.
@@ -23,7 +23,7 @@ class OctiIdentitySectorModel:
         Args:
             name: The name of the sector
             organization_id: The ID of the organization that created this sector
-            marking_ids: List of marking definition IDs to apply to the sector
+            marking_ids: list of marking definition IDs to apply to the sector
             description: Description of the sector
             **kwargs: Additional arguments to pass to IdentityModel
 

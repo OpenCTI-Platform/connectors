@@ -4,7 +4,6 @@ This module defines configuration settings specific to GTI report imports.
 """
 
 from datetime import timedelta
-from typing import List
 
 from connector.src.custom.configs.gti_config_common import (
     ALLOWED_ORIGINS,
@@ -31,14 +30,14 @@ class GTIReportConfig(GTIBaseConfig):
         description="Whether to enable importing report data from GTI",
     )
 
-    report_types: List[str] | str = Field(
+    report_types: list[str] | str = Field(
         default="All",
         description="Comma-separated list of report types to import, or 'All' for all types. "
         f"Allowed values: {', '.join(ALLOWED_REPORT_TYPES)}",
         examples=["All", "Actor Profile,Malware Profile", "Threat Activity Alert"],
     )
 
-    report_origins: List[str] | str = Field(
+    report_origins: list[str] | str = Field(
         default="All",
         description="Comma-separated list of report origins to import, or 'All' for all origins. "
         f"Allowed values: {', '.join(ALLOWED_ORIGINS)}",
@@ -47,7 +46,7 @@ class GTIReportConfig(GTIBaseConfig):
 
     @field_validator("report_types", mode="before")
     @classmethod
-    def split_and_validate(cls, v: str) -> List[str]:
+    def split_and_validate(cls, v: str) -> list[str]:
         """Split and validate a comma-separated string into a list and validate its contents."""
         try:
             parts = None
@@ -76,6 +75,6 @@ class GTIReportConfig(GTIBaseConfig):
 
     @field_validator("report_origins", mode="before")
     @classmethod
-    def split_and_validate_report_origins(cls, v: str) -> List[str]:
+    def split_and_validate_report_origins(cls, v: str) -> list[str]:
         """Split and validate a comma-separated string into a list and validate its contents."""
         return validate_origins_list(v, "report origin", ALLOWED_ORIGINS)
