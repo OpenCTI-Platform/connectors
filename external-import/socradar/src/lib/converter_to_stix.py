@@ -118,7 +118,7 @@ class ConverterToStix:
 
         valid_from = feed_item.first_seen_date
         valid_until = feed_item.latest_seen_date
-        if valid_until <= valid_from:
+        if (valid_from and valid_until) and valid_until <= valid_from:
             valid_until = valid_from + timedelta(hours=1)
 
         try:
@@ -136,9 +136,11 @@ class ConverterToStix:
                 pattern_type="stix",
                 valid_from=valid_from,
                 valid_until=valid_until,
-                created_by_ref=creator.id,
-                object_marking_refs=[self.tlp_marking.id],
                 labels=["malicious-activity", feed_type],
+                object_marking_refs=[self.tlp_marking.id],
+                created_by_ref=creator.id,
+                created=valid_from,
+                modified=valid_from,
             )
 
             return (self.tlp_marking, creator, indicator)
