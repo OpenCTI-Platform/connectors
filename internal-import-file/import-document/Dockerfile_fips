@@ -11,7 +11,7 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-RUN apk add --no-cache libmagic && pip install --no-cache-dir pycti==6.7.8
+RUN apk add --no-cache libmagic git && pip install --no-cache-dir pycti==6.7.8
 
 # Install dependencies
 # Avoid an image layer for those files.
