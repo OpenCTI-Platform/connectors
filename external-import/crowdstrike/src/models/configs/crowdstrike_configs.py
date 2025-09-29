@@ -3,7 +3,7 @@ from typing import Literal, Optional
 
 from connectors_sdk.core.pydantic import ListFromString
 from models.configs.base_settings import ConfigBaseSettings
-from pydantic import Field, HttpUrl, PositiveInt, field_validator
+from pydantic import Field, HttpUrl, PositiveInt, SecretStr, field_validator
 
 
 def _get_default_timestamp_30_days_ago() -> int:
@@ -20,13 +20,13 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
         default="https://api.crowdstrike.com",
         description="CrowdStrike API base URL.",
     )
-    client_id: str = Field(
+    client_id: SecretStr = Field(
         description="CrowdStrike API client ID for authentication.",
     )
-    client_secret: str = Field(
+    client_secret: SecretStr = Field(
         description="CrowdStrike API client secret for authentication.",
     )
-    tlp: str = Field(
+    tlp: Literal["red", "amber+strict", "amber", "green", "clear"] = Field(
         default="amber+strict",
         description="Default Traffic Light Protocol (TLP) marking for imported data.",
     )
@@ -68,10 +68,6 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
         "In Progress",
         "Analyzed",
         "Closed",
-        "new",
-        "in progress",
-        "analyzed",
-        "closed",
     ] = Field(
         default="New",
         description="Report status filter.",

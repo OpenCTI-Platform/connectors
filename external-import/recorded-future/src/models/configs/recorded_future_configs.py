@@ -2,14 +2,14 @@ from typing import Literal, Optional
 
 from connectors_sdk.core.pydantic import ListFromString
 from models.configs.base_settings import ConfigBaseSettings
-from pydantic import Field, PositiveInt
+from pydantic import Field, PositiveInt, SecretStr
 
 
 class _ConfigLoaderRecordedFuture(ConfigBaseSettings):
     """Interface for loading Recorded Future dedicated configuration."""
 
     # Core RF configuration
-    token: str = Field(
+    token: SecretStr = Field(
         description="Recorded Future API token for authentication.",
     )
     initial_lookback: PositiveInt = Field(

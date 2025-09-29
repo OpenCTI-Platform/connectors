@@ -2,7 +2,7 @@
 
 from typing import Any, Optional
 
-from pydantic import Field, field_validator
+from pydantic import Field, SecretStr, field_validator
 
 from .base_settings import ConfigBaseSettings
 
@@ -15,7 +15,7 @@ class _ConfigLoaderMisp(ConfigBaseSettings):
         alias="MISP_URL",
         description="MISP instance URL (e.g., https://misp.example.com).",
     )
-    api_key: str = Field(
+    api_key: SecretStr = Field(
         alias="MISP_API_KEY",
         description="MISP API key for authentication.",
     )
