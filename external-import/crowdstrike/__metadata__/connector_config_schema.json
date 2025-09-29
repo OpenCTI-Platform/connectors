@@ -159,7 +159,9 @@
       "default": [
         "hash_ion",
         "hash_md5",
-        "hash_sha1"
+        "hash_sha1",
+        "password",
+        "username"
       ],
       "description": "Comma-separated list of indicator types to exclude from import.",
       "items": {
