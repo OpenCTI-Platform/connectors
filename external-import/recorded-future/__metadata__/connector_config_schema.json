@@ -60,7 +60,9 @@
     },
     "RF_TOKEN": {
       "description": "Recorded Future API token for authentication.",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "RF_INITIAL_LOOKBACK": {
       "default": 240,

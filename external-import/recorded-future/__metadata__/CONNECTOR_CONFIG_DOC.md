@@ -8,7 +8,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The OpenCTI platform URL. |
 | OPENCTI_TOKEN | `string` | ✅ | string |  | The token of the user who represents the connector in the OpenCTI platform. |
-| RF_TOKEN | `string` | ✅ | string |  | Recorded Future API token for authentication. |
+| RF_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Recorded Future API token for authentication. |
 | CONNECTOR_NAME | `string` |  | string | `"Recorded Future"` | Name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["ipv4-addr", "ipv6-addr", "vulnerability", "domain", "url", "file-sha256", "file-md5", "file-sha1"]` | The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only). |
 | CONNECTOR_DURATION_PERIOD | `string` |  | string | `"PT1H"` | ISO8601 Duration format starting with 'P' for Period (e.g., 'PT24H' for 24 hours). |

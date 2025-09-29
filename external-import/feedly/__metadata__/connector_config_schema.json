@@ -53,6 +53,7 @@
       "type": "integer"
     },
     "FEEDLY_STREAM_IDS": {
+      "default": null,
       "description": "Comma separated list of Feedly stream IDs to monitor. Each stream ID represents a specific feed or collection to import from Feedly.",
       "items": {
         "type": "string"
@@ -67,13 +68,14 @@
     },
     "FEEDLY_API_KEY": {
       "description": "Feedly API key for authentication. Generate your API key at https://feedly.com/i/team/api",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     }
   },
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "FEEDLY_STREAM_IDS",
     "FEEDLY_API_KEY"
   ],
   "additionalProperties": true

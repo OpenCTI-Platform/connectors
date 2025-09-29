@@ -61,15 +61,26 @@
     },
     "CROWDSTRIKE_CLIENT_ID": {
       "description": "CrowdStrike API client ID for authentication.",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "CROWDSTRIKE_CLIENT_SECRET": {
       "description": "CrowdStrike API client secret for authentication.",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "CROWDSTRIKE_TLP": {
       "default": "amber+strict",
       "description": "Default Traffic Light Protocol (TLP) marking for imported data.",
+      "enum": [
+        "red",
+        "amber+strict",
+        "amber",
+        "green",
+        "clear"
+      ],
       "type": "string"
     },
     "CROWDSTRIKE_CREATE_OBSERVABLES": {
@@ -112,11 +123,7 @@
         "New",
         "In Progress",
         "Analyzed",
-        "Closed",
-        "new",
-        "in progress",
-        "analyzed",
-        "closed"
+        "Closed"
       ],
       "type": "string"
     },
