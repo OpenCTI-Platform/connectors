@@ -58,11 +58,15 @@ class RadarConnector:
 
         self.work_id = None
 
-    def _send_bundle(self, stix_objects: list[stix2.Identity | stix2.Indicator]):
+    def _send_batch(self, stix_objects: list[stix2.v21._STIXBase21]):
         """
-        Create and send bundle to work queue.
-        :param stix_objects: List of STIX2 objects to send to ingestion
+        Handle a batch of STIX objects (create a bundle, then init a work if needed and send bundle to it).
+        :param stix_objects: STIX objects batch to handle
         """
+        # Init a work on demand (to avoid empty work)
+        if not self.work_id:
+            self._initiate_work()
+
         bundle = self.helper.stix2_create_bundle(stix_objects)
         sent_bundles = self.helper.send_stix2_bundle(
             bundle,
@@ -74,15 +78,6 @@ class RadarConnector:
             "Sending STIX bundles to OpenCTI",
             {"work_id": self.work_id, "bundles_count": len(sent_bundles)},
         )
-
-    def _handle_batch(self, stix_objects: list[stix2.Identity | stix2.Indicator]):
-        """
-        Handle a batch of STIX objects (create work, create and send bundle, then close work).
-        :param stix_objects: STIX objects batch to handle (length must be lower than BATCH_MAX_SIZE)
-        """
-        self._initiate_work()
-        self._send_bundle(stix_objects)
-        self._finalize_work()
 
     def _collect_feed_items(self, feed_list: FeedList) -> list[RadarFeedItem]:
         """
@@ -150,27 +145,31 @@ class RadarConnector:
                     )
                     continue
 
+                # Start a new batch for each feed list
                 stix_batch = []
                 stix_objects_count = 0
-
                 for stix_objects in self._convert_feed_items(feed_items):
                     stix_batch.extend(stix_objects)
 
                     # If we reached a batch boundary
                     if len(stix_batch) >= BATCH_MAX_SIZE:
-                        self._handle_batch(stix_batch)
+                        self._send_batch(stix_batch)  # Init a work if needed
                         stix_objects_count += len(stix_batch)
                         stix_batch = []  # Reset to create a new batch
 
                 # Final leftover
                 if stix_batch:
-                    self._handle_batch(stix_batch)
+                    self._send_batch(stix_batch)  # Init a work if needed
                     stix_objects_count += len(stix_batch)
 
                 self.helper.connector_logger.info(
                     f"Bundles for '{feed_list.name}' feed list successfully sent",
                     {"work_id": self.work_id, "stix_objects_count": stix_objects_count},
                 )
+
+                # Close work if we opened one for this feed list
+                if self.work_id:
+                    self._finalize_work()
 
             self.helper.connector_logger.info(
                 "Connector successfully run",
