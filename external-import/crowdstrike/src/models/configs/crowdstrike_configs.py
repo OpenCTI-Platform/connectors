@@ -99,7 +99,7 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
         description="Unix timestamp from which to start importing indicators. Default is 30 days ago. BEWARE: 0 means ALL indicators!",
     )
     indicator_exclude_types: Optional[ListFromString] = Field(
-        default=["hash_ion", "hash_md5", "hash_sha1"],
+        default=["hash_ion", "hash_md5", "hash_sha1", "password", "username"],
         description="Comma-separated list of indicator types to exclude from import.",
     )
     default_x_opencti_score: PositiveInt = Field(
