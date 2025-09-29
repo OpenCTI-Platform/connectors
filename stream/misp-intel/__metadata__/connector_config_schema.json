@@ -88,7 +88,9 @@
     },
     "MISP_API_KEY": {
       "description": "MISP API key for authentication.",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "MISP_SSL_VERIFY": {
       "default": true,

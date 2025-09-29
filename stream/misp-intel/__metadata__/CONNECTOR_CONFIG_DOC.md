@@ -9,7 +9,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The OpenCTI platform URL. |
 | OPENCTI_TOKEN | `string` | ✅ | string |  | The token of the user who represents the connector in the OpenCTI platform. |
 | MISP_URL | `string` | ✅ | string |  | MISP instance URL (e.g., https://misp.example.com). |
-| MISP_API_KEY | `string` | ✅ | string |  | MISP API key for authentication. |
+| MISP_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | MISP API key for authentication. |
 | CONNECTOR_NAME | `string` |  | string | `"MISP Intel"` | Name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["misp"]` | The scope or type of data the connector is processing. |
 | CONNECTOR_TYPE | `string` |  | string | `"STREAM"` | Should always be set to STREAM for this connector. |
