@@ -28,7 +28,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CROWDSTRIKE_REPORT_TARGET_INDUSTRIES | `array` |  | string | `null` | Comma-separated list of target industries to filter reports. |
 | CROWDSTRIKE_REPORT_GUESS_MALWARE | `boolean` |  | boolean | `false` | Whether to use report tags to guess related malware. |
 | CROWDSTRIKE_INDICATOR_START_TIMESTAMP | `integer` |  | integer |  | Unix timestamp from which to start importing indicators. Default is 30 days ago. BEWARE: 0 means ALL indicators! |
-| CROWDSTRIKE_INDICATOR_EXCLUDE_TYPES | `array` |  | string | `["hash_ion", "hash_md5", "hash_sha1"]` | Comma-separated list of indicator types to exclude from import. |
+| CROWDSTRIKE_INDICATOR_EXCLUDE_TYPES | `array` |  | string | `["hash_ion", "hash_md5", "hash_sha1", "password", "username"]` | Comma-separated list of indicator types to exclude from import. |
 | CROWDSTRIKE_DEFAULT_X_OPENCTI_SCORE | `integer` |  | `0 < x ` | `50` | Default confidence score for entities without explicit score. |
 | CROWDSTRIKE_INDICATOR_LOW_SCORE | `integer` |  | `0 < x ` | `40` | Score assigned to indicators with low confidence labels. |
 | CROWDSTRIKE_INDICATOR_LOW_SCORE_LABELS | `array` |  | string | `["MaliciousConfidence/Low"]` | Comma-separated list of labels indicating low confidence. |
