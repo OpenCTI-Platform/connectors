@@ -1713,12 +1713,12 @@
       }
     ],
     "meta": {
-      "count": 237,
-      "cursor": "eJwVjctugzAQAH-JR6nSYyJsUCKb4iy74BsJbQNep26UKhT140sPc5jDaH5ty4eBw52uoScpAyRhd474u77yqOLwIDfQW8Nfp4SPxu2bI3Hak_qpWnZ15BJMg1RR1gCgRuEi8AHX_g7-MpLYf3Y4uKGZQeX7HgU-ExrUIs5WfzVCzCAN9XEQ1BqLIruRd4_1WzY-VFiYG7E59BhKIO4o3768l3Oi0nmj4ByrxUU6d4lu502VS7bgnix8pHYyF01y6pbtrKmOO4-jnoZReTPaaedXuALrVKESS_80D11YV0Gd6oV57RaV7y5V_QdP7mF9"
+      "count": 1,
+      "cursor": null
     },
     "links": {
       "self": "https://www.virustotal.com/api/v3/collections?limit=1&filter=collection_type:campaign",
-      "next": "https://www.virustotal.com/api/v3/collections?limit=1&filter=collection_type%3Acampaign&cursor=eJwVjctugzAQAH-JR6nSYyJsUCKb4iy74BsJbQNep26UKhT140sPc5jDaH5ty4eBw52uoScpAyRhd474u77yqOLwIDfQW8Nfp4SPxu2bI3Hak_qpWnZ15BJMg1RR1gCgRuEi8AHX_g7-MpLYf3Y4uKGZQeX7HgU-ExrUIs5WfzVCzCAN9XEQ1BqLIruRd4_1WzY-VFiYG7E59BhKIO4o3768l3Oi0nmj4ByrxUU6d4lu502VS7bgnix8pHYyF01y6pbtrKmOO4-jnoZReTPaaedXuALrVKESS_80D11YV0Gd6oV57RaV7y5V_QdP7mF9"
+      "next": null
     }
   }
 }
