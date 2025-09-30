@@ -78,7 +78,7 @@ def all_optional_config(request) -> dict[str, str]:
         {"gti_api_url": "https://www.virustotal.com/api/v3"},
         {"gti_import_reports": "True"},
         {"gti_report_types": "All"},
-        {"gti_report_origins": "All"},
+        {"gti_report_origins": "google threat intelligence"},
     ]
 )
 def all_defaulted_config(request) -> dict[str, str]:

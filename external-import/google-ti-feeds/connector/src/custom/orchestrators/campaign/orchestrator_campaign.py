@@ -93,6 +93,7 @@ class OrchestratorCampaign(BaseOrchestrator):
             async for gti_campaigns in self.client_api.fetch_campaigns(initial_state):
                 total_campaigns = len(gti_campaigns)
                 for campaign_idx, campaign in enumerate(gti_campaigns):
+                    self._update_index_inplace()
                     campaign_entities = self.converter.convert_campaign_to_stix(
                         campaign
                     )
@@ -179,7 +180,6 @@ class OrchestratorCampaign(BaseOrchestrator):
                     )
 
                     self._check_batch_size_and_flush(self.batch_processor, all_entities)
-                    self._update_index_inplace()
                     self._add_entities_to_batch(
                         self.batch_processor, all_entities, self.converter
                     )

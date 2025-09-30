@@ -360,7 +360,7 @@ class BaseClientAPI:
                 data_count = len(data) if isinstance(data, list) else 1
                 cursor, count = self._extract_meta_info(meta)
 
-                if total_items is None and count is not None:
+                if count is not None:
                     total_items = count
                     total_pages = self._calculate_pagination_info(count, params)
 
