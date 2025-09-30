@@ -52,7 +52,7 @@ class BaseRFConnector:
         self.risk_list_threshold = self.config.rf.risk_list_threshold
 
         self.rfapi = RFClient(
-            self.rf_token,
+            self.rf_token.get_secret_value(),
             self.helper,
             header=f"OpenCTI/{APP_VERSION}",
         )
@@ -79,7 +79,7 @@ class BaseRFConnector:
         self.priority_alerts_only = self.config.alert.priority_alerts_only
 
         self.rf_alerts_api = RecordedFutureApiClient(
-            x_rf_token=self.rf_token,
+            x_rf_token=self.rf_token.get_secret_value(),
             helper=self.helper,
             base_url="https://api.recordedfuture.com/",
             priority_alerts_only=self.priority_alerts_only,
