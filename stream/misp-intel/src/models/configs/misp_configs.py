@@ -1,6 +1,6 @@
 """MISP-specific configuration models."""
 
-from typing import Any, Optional
+from typing import Optional
 
 from pydantic import Field, SecretStr, field_validator
 
@@ -29,7 +29,7 @@ class _ConfigLoaderMisp(ConfigBaseSettings):
     owner_org: Optional[str] = Field(
         default=None,
         alias="MISP_OWNER_ORG",
-        description="Organization that will own the events in MISP (leave empty to use MISP default).",
+        description="Organization that will own the events in MISP",
     )
 
     # Event configuration
@@ -114,11 +114,3 @@ class _ConfigLoaderProxy(ConfigBaseSettings):
         description="Comma-separated list of hosts to bypass proxy.",
         min_length=0,  # Allow empty strings
     )
-
-    @field_validator("http", "https", "no_proxy", mode="before")
-    @classmethod
-    def empty_str_to_none(cls, v: Any) -> Optional[str]:
-        """Convert empty strings to None for proper optional handling."""
-        if v == "":
-            return None
-        return v
