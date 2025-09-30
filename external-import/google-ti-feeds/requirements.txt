@@ -1,1 +1,4 @@
--e .[all]
+# small hack for composer tools scripts
+-e external-import/google-ti-feeds/.[all]
+pydantic-settings
+pydantic

@@ -9,7 +9,7 @@ from connector.src.custom.exceptions.gti_configuration_error import (
     GTIConfigurationError,
 )
 from connector.src.octi.interfaces.base_config import BaseConfig
-from pydantic import Field, HttpUrl
+from pydantic import Field, HttpUrl, SecretStr
 from pydantic_settings import SettingsConfigDict
 
 ALLOWED_REPORT_TYPES = [
@@ -42,12 +42,12 @@ ALLOWED_ORIGINS = [
 
 
 def validate_origins_list(
-    v: str, field_name: str, allowed_origins: Optional[List[str]] = None
+    v: List[str], field_name: str, allowed_origins: Optional[List[str]] = None
 ) -> List[str]:
-    """Split and validate a comma-separated string into a list and validate its contents.
+    """Validate a list of origins against allowed values.
 
     Args:
-        v: Input value to validate
+        v: List of values to validate
         field_name: Name of the field for error messages
         allowed_origins: List of allowed values (defaults to ALLOWED_ORIGINS)
 
@@ -62,21 +62,49 @@ def validate_origins_list(
         allowed_origins = ALLOWED_ORIGINS
 
     try:
-        parts = None
-
-        if isinstance(v, str):
-            parts = [item.strip() for item in v.split(",") if item.strip()]
-
-        if not parts:
+        if not v:
             raise GTIConfigurationError(f"At least one {field_name} must be specified.")
 
-        invalid = set(parts) - set(allowed_origins)
+        invalid = set(v) - set(allowed_origins)
         if invalid:
             raise GTIConfigurationError(
                 f"Invalid {field_name}: {', '.join(invalid)}. "
                 f"Allowed values: {', '.join(allowed_origins)}."
             )
-        return parts
+        return v
+    except GTIConfigurationError:
+        raise
+    except Exception as e:
+        raise GTIConfigurationError(f"Failed to validate {field_name}: {str(e)}") from e
+
+
+def validate_report_types_list(
+    v: List[str], field_name: str = "report type"
+) -> List[str]:
+    """Validate a list of report types against allowed values.
+
+    Args:
+        v: List of values to validate
+        field_name: Name of the field for error messages
+
+    Returns:
+        List of validated report type strings
+
+    Raises:
+        GTIConfigurationError: If validation fails
+
+    """
+    try:
+        if not v:
+            raise GTIConfigurationError(f"At least one {field_name} must be specified.")
+
+        invalid = set(v) - set(ALLOWED_REPORT_TYPES)
+        if invalid:
+            raise GTIConfigurationError(
+                f"Invalid {field_name}: {', '.join(invalid)}. "
+                f"Allowed values: {', '.join(ALLOWED_REPORT_TYPES)}."
+            )
+        return v
     except GTIConfigurationError:
         raise
     except Exception as e:
@@ -89,8 +117,7 @@ class GTIBaseConfig(BaseConfig):
     yaml_section: ClassVar[str] = "gti"
     model_config = SettingsConfigDict(env_prefix="gti_")
 
-    api_key: str = Field(
-        ...,
+    api_key: SecretStr = Field(
         description="API key for authenticating with the Google Threat Intelligence service",
         min_length=1,
     )
