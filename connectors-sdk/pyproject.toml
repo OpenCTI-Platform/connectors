@@ -14,7 +14,7 @@ packages = [{include = "connectors_sdk"}]
 
 
 [tool.poetry.dependencies]
-pycti = "6.7.20"
+pycti = {version = ">= 6.7.19"}
 
 # Optional dependencies
 # octi-connectors = {path = "../.", extras = ["dev"], optional=true}
@@ -24,7 +24,7 @@ isort = {version = "6.0.1", optional=true}  # Aligned with ci-requirements
 mypy = {version = "^1.15.0", optional=true}
 ruff = {version = "^0.12.0", optional=true}
 pytest = {version = ">=8.3.5, <9", optional=true}
-pytest-cov = {version = ">=6.2.1, <7", optional=true}
+pytest-cov = {version = ">=7, <8", optional=true}
 pydocstyle = {version = ">=6.3.0, <7", optional=true}
 pip-audit = {version = "2.9.0", optional=true}
 sphinx = {version = ">=7.0", optional=true}

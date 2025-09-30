@@ -208,7 +208,10 @@ class ClientAPI:
 
     def _create_fetcher_factory(self) -> GenericFetcherFactory:
         """Create and configure the fetcher factory with all configurations."""
-        base_headers = {"X-Apikey": self.config.api_key, "accept": "application/json"}
+        base_headers = {
+            "X-Apikey": self.config.api_key.get_secret_value(),
+            "accept": "application/json",
+        }
 
         if hasattr(self.config, "api_url") and self.config.api_url:
             self.logger.info(

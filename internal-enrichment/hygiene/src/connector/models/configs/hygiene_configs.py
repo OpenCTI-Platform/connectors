@@ -30,3 +30,9 @@ class _ConfigLoaderHygiene(ConfigBaseSettings):
         default=False,
         description="Enable enrichment of sub-domains, This option will add 'hygiene_parent' label and ext refs of the parent domain to the subdomain, if sub-domain is not found but parent is.",
     )
+    max_workers: int = Field(
+        default=100,
+        description="Maximum number of worker threads for parallel processing. Set to 1 for sequential processing (old behavior).",
+        ge=1,
+        le=500,
+    )

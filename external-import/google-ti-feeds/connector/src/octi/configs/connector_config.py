@@ -1,7 +1,7 @@
 """Connector-specific configuration definitions for OpenCTI external imports."""
 
 from datetime import timedelta
-from typing import ClassVar, Literal, Optional
+from typing import ClassVar, Literal
 
 from connector.src.octi.interfaces.base_config import BaseConfig
 from pydantic import Field
@@ -57,25 +57,4 @@ class ConnectorConfig(BaseConfig):
     ] = Field(
         default="AMBER+STRICT",
         description="Traffic Light Protocol (TLP) marking for imported data",
-    )
-    run_and_terminate: Optional[bool] = Field(
-        default=None,
-        description="If True, connector runs once and exits; if False/None, runs continuously",
-    )
-    send_to_queue: Optional[bool] = Field(
-        default=None,
-        description="Whether to send imported data to the OpenCTI processing queue",
-    )
-    send_to_directory: Optional[bool] = Field(
-        default=None,
-        description="Whether to save imported data to a local directory",
-    )
-    send_to_directory_path: Optional[str] = Field(
-        default=None,
-        description="Local directory path for saving imported data (if send_to_directory is True)",
-    )
-    send_to_directory_retention: Optional[int] = Field(
-        default=None,
-        description="Number of days to retain files in the directory before cleanup",
-        ge=1,
     )

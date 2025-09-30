@@ -4,13 +4,13 @@ This module defines configuration settings specific to GTI campaign imports.
 """
 
 from datetime import timedelta
-from typing import List
 
 from connector.src.custom.configs.gti_config_common import (
     ALLOWED_ORIGINS,
     GTIBaseConfig,
     validate_origins_list,
 )
+from connectors_sdk.core.pydantic import ListFromString
 from pydantic import Field, field_validator
 
 
@@ -23,19 +23,19 @@ class GTICampaignConfig(GTIBaseConfig):
     )
 
     import_campaigns: bool = Field(
-        default=True,
+        default=False,
         description="Whether to enable importing campaign data from GTI",
     )
 
-    campaign_origins: List[str] | str = Field(
-        default="All",
+    campaign_origins: ListFromString = Field(
+        default=["google threat intelligence"],
         description="Comma-separated list of campaign origins to import, or 'All' for all origins. "
         f"Allowed values: {', '.join(ALLOWED_ORIGINS)}",
         examples=["All", "partner,google threat intelligence", "crowdsourced"],
     )
 
-    @field_validator("campaign_origins", mode="before")
+    @field_validator("campaign_origins", mode="after")
     @classmethod
-    def split_and_validate_campaign_origins(cls, v: str) -> List[str]:
-        """Split and validate a comma-separated string into a list and validate its contents."""
+    def validate_campaign_origins(cls, v: list[str]) -> list[str]:
+        """Validate campaign origins against allowed values."""
         return validate_origins_list(v, "campaign origin", ALLOWED_ORIGINS)
