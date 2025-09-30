@@ -170,8 +170,8 @@ class ReportImporter:
         if self.helper.get_only_contextual() and entity is None:
             return "Connector is only contextual and entity is not defined. Nothing was imported"
 
-        # If the file ID starts with "import/global", attach it as x_opencti_files in the bundle
-        if data["file_id"].startswith("import/global"):
+        # If the file ID contains "import/global", attach it as x_opencti_files in the bundle
+        if "import/global" in data["file_id"]:
             file_data_encoded = base64.b64encode(file_content_buffered.read())
             self.file = {
                 "name": data["file_id"].replace("import/global/", ""),
@@ -414,11 +414,6 @@ class ReportImporter:
             category: str = match["label"]
             txt: str | None = self._sanitise_name(match["text"])
             if not txt:
-                # text must be at least 2 characters in length
-                # Skip objects like "." or empty strings: they would break GraphQL
-                self.helper.connector_logger.debug(
-                    f"Skip object with invalid name: {match["text"]!r}"
-                )
                 continue
 
             if match["type"] == "entity":
