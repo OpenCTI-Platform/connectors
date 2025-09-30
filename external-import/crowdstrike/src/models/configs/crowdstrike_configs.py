@@ -26,7 +26,7 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
     client_secret: SecretStr = Field(
         description="CrowdStrike API client secret for authentication.",
     )
-    tlp: Literal["red", "amber+strict", "amber", "green", "clear"] = Field(
+    tlp: Literal["red", "amber+strict", "amber", "green", "clear", "white"] = Field(
         default="amber+strict",
         description="Default Traffic Light Protocol (TLP) marking for imported data.",
     )

@@ -15,7 +15,7 @@ class _ConfigLoaderFeedly(ConfigBaseSettings):
         ),
     )
     stream_ids: ListFromString = Field(
-        default=None,
+        default=[],
         description=(
             "Comma separated list of Feedly stream IDs to monitor. "
             "Each stream ID represents a specific feed or collection to import from Feedly."
