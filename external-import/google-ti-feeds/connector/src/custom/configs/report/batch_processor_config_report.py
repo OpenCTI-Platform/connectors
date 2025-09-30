@@ -34,7 +34,7 @@ def report_extract_stix_date(stix_object: Any) -> Optional[Any]:
 
 
 REPORT_BATCH_PROCESSOR_CONFIG = GenericBatchProcessorConfig(
-    batch_size=500,
+    batch_size=9999,
     work_name_template="Google Threat Intel - Batch #{batch_num} (~ 0/0 reports)",
     state_key="report_next_cursor_start_date",
     entity_type="stix_objects",
