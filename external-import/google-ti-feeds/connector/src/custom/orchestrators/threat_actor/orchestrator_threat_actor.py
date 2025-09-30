@@ -82,7 +82,7 @@ class OrchestratorThreatActor(BaseOrchestrator):
             "malware_families",
             "attack_techniques",
             "vulnerabilities",
-            "campaigns",
+            # "campaigns",
             # "reports",
             # "domains",
             # "files",
