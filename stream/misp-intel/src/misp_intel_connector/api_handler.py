@@ -39,7 +39,7 @@ class MispApiHandler:
         try:
             self.misp = PyMISP(
                 url=config.misp.url,
-                key=config.misp.api_key,
+                key=config.misp.api_key.get_secret_value(),
                 ssl=config.misp.ssl_verify,
                 debug=False,
                 timeout=30,
