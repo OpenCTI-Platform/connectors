@@ -115,7 +115,7 @@ class GTIBaseConfig(BaseConfig):
     """Base configuration class for GTI configurations."""
 
     yaml_section: ClassVar[str] = "gti"
-    model_config = SettingsConfigDict(env_prefix="gti_")
+    model_config = SettingsConfigDict(env_prefix="gti_", enable_decoding=False)
 
     api_key: SecretStr = Field(
         description="API key for authenticating with the Google Threat Intelligence service",

@@ -82,9 +82,9 @@ class DummyConfig:
         self.import_campaigns = True
         self.report_types = report_types
         self.report_origins = report_origins
-        self.threat_actor_origins = '["All"]'
-        self.malware_family_origins = '["All"]'
-        self.vulnerability_origins = '["All"]'
+        self.threat_actor_origins = "All"
+        self.malware_family_origins = "All"
+        self.vulnerability_origins = "All"
         self.tlp_level = tlp_level
         self.vulnerability_get_related_softwares = True
 
