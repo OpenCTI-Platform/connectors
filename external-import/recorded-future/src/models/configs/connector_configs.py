@@ -22,11 +22,9 @@ class _ConfigLoaderOCTI(ConfigBaseSettings):
 
     # Config Loader OpenCTI
     url: HttpUrlToString = Field(
-        alias="OPENCTI_URL",
         description="The OpenCTI platform URL.",
     )
     token: str = Field(
-        alias="OPENCTI_TOKEN",
         description="The token of the user who represents the connector in the OpenCTI platform.",
     )
 
