@@ -99,7 +99,7 @@
     },
     "MISP_OWNER_ORG": {
       "default": null,
-      "description": "Organization that will own the events in MISP (leave empty to use MISP default).",
+      "description": "Organization that will own the events in MISP",
       "type": "string"
     },
     "MISP_DISTRIBUTION_LEVEL": {

@@ -20,7 +20,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES | `boolean` |  | boolean | `false` | Do not auto-resolve dependencies. |
 | CONNECTOR_CONTAINER_TYPES | `array` |  | string | `["report", "grouping", "case-incident", "case-rfi", "case-rft"]` | List of container types to process. |
 | MISP_SSL_VERIFY | `boolean` |  | boolean | `true` | Verify SSL certificates when connecting to MISP. |
-| MISP_OWNER_ORG | `string` |  | string | `null` | Organization that will own the events in MISP (leave empty to use MISP default). |
+| MISP_OWNER_ORG | `string` |  | string | `null` | Organization that will own the events in MISP |
 | MISP_DISTRIBUTION_LEVEL | `integer` |  | `0 <= x <= 3` | `1` | Distribution level for MISP events: 0: Your organisation only, 1: This community only, 2: Connected communities, 3: All communities |
 | MISP_THREAT_LEVEL | `integer` |  | `1 <= x <= 4` | `2` | Threat level for MISP events: 1: High, 2: Medium, 3: Low, 4: Undefined |
 | MISP_PUBLISH_ON_CREATE | `boolean` |  | boolean | `false` | Automatically publish events when created. |
