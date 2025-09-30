@@ -16,7 +16,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_TYPE | `string` |  | string | `"EXTERNAL_IMPORT"` | Should always be set to EXTERNAL_IMPORT for this connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | Determines the verbosity of the logs. |
 | CROWDSTRIKE_BASE_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"https://api.crowdstrike.com"` | CrowdStrike API base URL. |
-| CROWDSTRIKE_TLP | `string` |  | `red` `amber+strict` `amber` `green` `clear` | `"amber+strict"` | Default Traffic Light Protocol (TLP) marking for imported data. |
+| CROWDSTRIKE_TLP | `string` |  | `red` `amber+strict` `amber` `green` `clear` `white` | `"amber+strict"` | Default Traffic Light Protocol (TLP) marking for imported data. |
 | CROWDSTRIKE_CREATE_OBSERVABLES | `boolean` |  | boolean | `true` | Whether to create observables in OpenCTI. |
 | CROWDSTRIKE_CREATE_INDICATORS | `boolean` |  | boolean | `true` | Whether to create indicators in OpenCTI. |
 | CROWDSTRIKE_SCOPES | `array` |  | string | `["actor", "report", "indicator", "yara_master", "snort_suricata_master"]` | Comma-separated list of scopes to enable. Available: actor, report, indicator, yara_master, snort_suricata_master. |

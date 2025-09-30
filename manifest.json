@@ -343,7 +343,8 @@
               "amber+strict",
               "amber",
               "green",
-              "clear"
+              "clear",
+              "white"
             ],
             "type": "string"
           },
@@ -1060,7 +1061,7 @@
             "type": "integer"
           },
           "FEEDLY_STREAM_IDS": {
-            "default": null,
+            "default": [],
             "description": "Comma separated list of Feedly stream IDs to monitor. Each stream ID represents a specific feed or collection to import from Feedly.",
             "items": {
               "type": "string"

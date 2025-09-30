@@ -79,7 +79,8 @@
         "amber+strict",
         "amber",
         "green",
-        "clear"
+        "clear",
+        "white"
       ],
       "type": "string"
     },
