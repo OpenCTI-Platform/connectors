@@ -11,7 +11,6 @@ from connector.src.custom.models.gti.gti_campaign_model import (
     GTICampaignData,
     TargetedIndustry,
 )
-from connector.src.stix.v21.models.sdos.identity_model import IdentityModel
 from polyfactory.factories.pydantic_factory import ModelFactory
 from polyfactory.fields import Use
 from stix2.v21 import Identity, MarkingDefinition  # type: ignore
@@ -628,7 +627,7 @@ def _then_stix_identities_created_successfully(identities: list):
     assert isinstance(identities, list)  # noqa: S101
     assert len(identities) > 0  # noqa: S101
     for identity in identities:
-        assert isinstance(identity, IdentityModel)  # noqa: S101
+        assert isinstance(identity, Identity)  # noqa: S101
         assert hasattr(identity, "name")  # noqa: S101
         assert hasattr(identity, "identity_class")  # noqa: S101
         assert hasattr(identity, "spec_version")  # noqa: S101
@@ -637,29 +636,29 @@ def _then_stix_identities_created_successfully(identities: list):
 
 
 def _then_stix_identity_has_correct_properties(
-    identity: IdentityModel, organization: Identity
+    identity: Identity, organization: Identity
 ):
     """Assert that STIX identity has correct properties."""
     assert identity.created_by_ref == organization.id  # noqa: S101
-    assert identity.identity_class == "class"  # noqa: S101
+    assert identity.identity_class.value == "class"  # noqa: S101
     assert identity.spec_version == "2.1"  # noqa: S101
     assert identity.type == "identity"  # noqa: S101
 
 
 def _then_stix_identity_has_correct_sector_properties(
-    identity: IdentityModel, expected_sector: str
+    identity: Identity, expected_sector: str
 ):
     """Assert that STIX identity has correct sector properties."""
     assert identity.name == expected_sector  # noqa: S101
 
 
-def _then_stix_identity_preserves_long_industry_name(identity: IdentityModel):
+def _then_stix_identity_preserves_long_industry_name(identity: Identity):
     """Assert that STIX identity preserves long industry names."""
     assert len(identity.name) == 500  # noqa: S101
     assert identity.name == "A" * 500  # noqa: S101
 
 
-def _then_stix_identity_preserves_special_characters(identity: IdentityModel):
+def _then_stix_identity_preserves_special_characters(identity: Identity):
     """Assert that STIX identity preserves special characters in industry names."""
     assert "&" in identity.name  # noqa: S101
     assert identity.name == "Financial Services & Banking"  # noqa: S101

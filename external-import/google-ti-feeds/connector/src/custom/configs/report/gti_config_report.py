@@ -39,7 +39,7 @@ class GTIReportConfig(GTIBaseConfig):
     )
 
     report_origins: List[str] | str = Field(
-        default="All",
+        default="google threat intelligence",
         description="Comma-separated list of report origins to import, or 'All' for all origins. "
         f"Allowed values: {', '.join(ALLOWED_ORIGINS)}",
         examples=["All", "partner,google threat intelligence", "crowdsourced"],

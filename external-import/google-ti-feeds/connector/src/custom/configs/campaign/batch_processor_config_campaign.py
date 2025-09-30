@@ -34,7 +34,7 @@ def campaign_extract_stix_date(stix_object: Any) -> Optional[Any]:
 
 
 CAMPAIGN_BATCH_PROCESSOR_CONFIG = GenericBatchProcessorConfig(
-    batch_size=5000,
+    batch_size=9999,
     work_name_template="Google Threat Intel - Batch #{batch_num} (~ 0/0 campaigns)",
     state_key="campaign_next_cursor_start_date",
     entity_type="stix_objects",

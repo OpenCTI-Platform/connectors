@@ -28,7 +28,7 @@ class GTIThreatActorConfig(GTIBaseConfig):
     )
 
     threat_actor_origins: List[str] | str = Field(
-        default="All",
+        default="google threat intelligence",
         description="Comma-separated list of threat actor origins to import, or 'All' for all origins. "
         f"Allowed values: {', '.join(ALLOWED_ORIGINS)}",
         examples=["All", "partner,google threat intelligence", "crowdsourced"],

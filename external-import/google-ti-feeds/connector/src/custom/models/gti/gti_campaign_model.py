@@ -407,6 +407,7 @@ class GTICampaignMeta(BaseModel):
     """GTI Campaign metadata."""
 
     count: Optional[int] = Field(default=None, description="Count of campaigns")
+    cursor: Optional[str] = Field(None, description="Cursor for pagination.")
 
 
 class GTICampaignData(BaseModel):

@@ -90,6 +90,7 @@ class OrchestratorReport(BaseOrchestrator):
             async for gti_reports in self.client_api.fetch_reports(initial_state):
                 total_reports = len(gti_reports)
                 for report_idx, report in enumerate(gti_reports):
+                    self._update_index_inplace()
                     report_entities = self.converter.convert_report_to_stix(report)
                     subentities_ids = await self.client_api.fetch_subentities_ids(
                         entity_name="entity_id",
@@ -174,7 +175,6 @@ class OrchestratorReport(BaseOrchestrator):
                     )
 
                     self._check_batch_size_and_flush(self.batch_processor, all_entities)
-                    self._update_index_inplace()
                     self._add_entities_to_batch(
                         self.batch_processor, all_entities, self.converter
                     )
