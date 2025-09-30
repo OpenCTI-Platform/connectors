@@ -46,18 +46,24 @@ class ConfigConnector:
                 "CONNECTOR_DURATION_PERIOD",
                 ["connector", "duration_period"],
                 self.load,
-                default="P1D"
+                default="P1D",
             )
             self.nti_base_url = get_config_variable(
-                "NTI_BASE_URL", ["nti", "base_url"], self.load, default="https://nti.nsfocusglobal.com/api/v2/"
+                "NTI_BASE_URL",
+                ["nti", "base_url"],
+                self.load,
+                default="https://nti.nsfocusglobal.com/api/v2/",
             )
             self.package_type = get_config_variable(
-                "NTI_PACKAGE_TYPE", ["nti", "package_type"], self.load, default="updated"
+                "NTI_PACKAGE_TYPE",
+                ["nti", "package_type"],
+                self.load,
+                default="updated",
             )
-            if self.package_type == 'updated':
-                match_filename = '-updated'
+            if self.package_type == "updated":
+                match_filename = "-updated"
             else:
-                match_filename = ''
+                match_filename = ""
             if get_config_variable("NTI_CREATE_IOC", ["nti", "create_ioc"], self.load):
                 self.create_tasks.append(f"data.NTI.API.V2.0.ioc{match_filename}")
             if get_config_variable("NTI_CREATE_IP", ["nti", "create_ip"], self.load):
@@ -65,7 +71,9 @@ class ConfigConnector:
             if get_config_variable(
                 "NTI_CREATE_DOMAIN", ["nti", "create_domain"], self.load
             ):
-                self.create_tasks.append(f"data.NTI.API.V2.0.domain-basic{match_filename}")
+                self.create_tasks.append(
+                    f"data.NTI.API.V2.0.domain-basic{match_filename}"
+                )
             if get_config_variable("NTI_CREATE_URL", ["nti", "create_url"], self.load):
                 self.create_tasks.append(f"data.NTI.API.V2.0.url-basic{match_filename}")
             if get_config_variable(
@@ -74,7 +82,7 @@ class ConfigConnector:
                 self.create_tasks.append(f"data.NTI.API.V2.0.sample{match_filename}")
 
             self.ns_nti_key = get_config_variable(
-                "NTI_API_KEY", ["nti", "api_key"], self.load, default='', required=True
+                "NTI_API_KEY", ["nti", "api_key"], self.load, default="", required=True
             )
             self.tlp_level = get_config_variable(
                 "NTI_TLP", ["nti", "tlp"], self.load, default="white"
