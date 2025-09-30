@@ -17,6 +17,13 @@ More information can be found in the [Google Threat Intel API documentation](htt
 > This connector requires a Google Threat Intel API key to function. You can obtain one by signing up for the Google Threat Intel service.5
 > Reports Analysis are only available to users with the Google Threat Intelligence (Google TI) Enterprise or Enterprise Plus licenses.5
 
+## **IMPORTANT DATA LIMITATIONS**
+
+> **BIG WARNING:** This connector does **NOT** model "threat actor" and "malware" aliases due to duplicate entries present in Google Threat Intelligence data.  
+This means that the connector will not create relationships between threat actors and malware based on aliases, but instead will create new entries for each alias.  
+This limitation affects the completeness of threat actor and malware entity relationships and may impact threat correlation capabilities.  
+Please be aware of this constraint when using the imported data for analysis and reporting.  
+
 ---
 
 ## Quick start
