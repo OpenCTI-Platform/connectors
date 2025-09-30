@@ -16,8 +16,8 @@ class BaseCrowdstrikeClient:
         self.config = ConfigCrowdstrike()
         self.helper = helper
         self.cs_intel = CrowdstrikeIntel(
-            client_id=self.config.client_id.get_secret_value(),
-            client_secret=self.config.client_secret.get_secret_value(),
+            client_id=self.config.client_id,
+            client_secret=self.config.client_secret,
             base_url=self.config.base_url,
         )
 

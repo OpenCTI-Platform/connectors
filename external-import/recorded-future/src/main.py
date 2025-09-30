@@ -34,7 +34,7 @@ class BaseRFConnector:
         self.helper = OpenCTIConnectorHelper(self.config.model_dump_pycti())
 
         # Extract configuration values from the loaded config
-        self.rf_token = self.config.rf.token
+        self.rf_token = self.config.rf.token.get_secret_value()
         self.rf_initial_lookback = self.config.rf.initial_lookback
         self.tlp = self.config.rf.tlp.lower()
         self.rf_pull_signatures = self.config.rf.pull_signatures
@@ -52,7 +52,7 @@ class BaseRFConnector:
         self.risk_list_threshold = self.config.rf.risk_list_threshold
 
         self.rfapi = RFClient(
-            self.rf_token.get_secret_value(),
+            self.rf_token,
             self.helper,
             header=f"OpenCTI/{APP_VERSION}",
         )
@@ -79,7 +79,7 @@ class BaseRFConnector:
         self.priority_alerts_only = self.config.alert.priority_alerts_only
 
         self.rf_alerts_api = RecordedFutureApiClient(
-            x_rf_token=self.rf_token.get_secret_value(),
+            x_rf_token=self.rf_token,
             helper=self.helper,
             base_url="https://api.recordedfuture.com/",
             priority_alerts_only=self.priority_alerts_only,
