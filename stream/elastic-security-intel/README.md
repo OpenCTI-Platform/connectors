@@ -24,6 +24,8 @@ This connector streams threat intelligence from OpenCTI to Elastic Security, cre
 | Stream ID | `CONNECTOR_LIVE_STREAM_ID` | The stream ID configured in OpenCTI | - |
 | Elastic URL | `ELASTIC_SECURITY_URL` | Elasticsearch cluster URL | - |
 | Elastic API Key | `ELASTIC_SECURITY_API_KEY` | API key for Elasticsearch | - |
+| Elastic client certificate | `ELASTIC_SECURITY_CLIENT_CERT` | Path to client certificate file (PEM format) | - |
+| Elastic client key | `ELASTIC_SECURITY_CLIENT_KEY` | Path to client key file (PEM format) | - |
 | Verify SSL | `ELASTIC_SECURITY_VERIFY_SSL` | Verify SSL certificates | true |
 | CA Certificate | `ELASTIC_SECURITY_CA_CERT` | Path to CA certificate file | - |
 | Index Name | `ELASTIC_SECURITY_INDEX_NAME` | Threat intel index name | `logs-ti_custom_opencti.indicator` |
