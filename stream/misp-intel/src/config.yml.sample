@@ -21,7 +21,7 @@ misp:
   ssl_verify: true  # Verify SSL certificates
   
   # Organization configuration
-  owner_org: ''  # Optional: Organization that will own the events in MISP (leave empty to use MISP default)
+  # owner_org: 'ChangeMe'  # Optional: Organization that will own the events in MISP
   
   # Event configuration
   distribution_level: 1  # 0: Your organisation only, 1: This community only, 2: Connected communities, 3: All communities

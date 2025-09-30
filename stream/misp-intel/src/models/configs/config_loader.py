@@ -84,7 +84,6 @@ class ConfigLoader(ConfigBaseSettings):
                 DotEnvSettingsSource(
                     settings_cls,
                     env_file=env_path,
-                    env_ignore_empty=True,
                     env_file_encoding="utf-8",
                 ),
             )
@@ -100,7 +99,6 @@ class ConfigLoader(ConfigBaseSettings):
             return (
                 EnvSettingsSource(
                     settings_cls,
-                    env_ignore_empty=True,
                 ),
             )
 
