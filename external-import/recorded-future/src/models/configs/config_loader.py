@@ -65,6 +65,7 @@ class ConfigLoader(ConfigBaseSettings):
     recorded_future: _ConfigLoaderRecordedFuture = Field(
         default_factory=_ConfigLoaderRecordedFuture,
         description="Recorded Future configurations.",
+        alias="rf",
     )
     alert: _ConfigLoaderAlert = Field(
         default_factory=_ConfigLoaderAlert,

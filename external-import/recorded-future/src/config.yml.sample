@@ -10,7 +10,7 @@ connector:
   log_level: 'info'
   duration_period: 'PT1H' # ISO8601 Format starting with "P" for Period ex: "PT24H" // Period time of 5 minutes
 
-recorded_future:
+rf:
   token: 'ChangeMe' # Required
   initial_lookback: 240 # Required, in hours
   pull_analyst_notes: True
