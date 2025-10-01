@@ -2145,19 +2145,19 @@
             ],
             "type": "string"
           },
-          "RF_TOKEN": {
+          "RECORDED_FUTURE_TOKEN": {
             "description": "Recorded Future API token for authentication.",
             "format": "password",
             "type": "string",
             "writeOnly": true
           },
-          "RF_INITIAL_LOOKBACK": {
+          "RECORDED_FUTURE_INITIAL_LOOKBACK": {
             "default": 240,
             "description": "Initial lookback period in hours when first running the connector.",
             "exclusiveMinimum": 0,
             "type": "integer"
           },
-          "RF_TLP": {
+          "RECORDED_FUTURE_TLP": {
             "default": "red",
             "description": "Default Traffic Light Protocol (TLP) marking for imported data.",
             "enum": [
@@ -2168,24 +2168,24 @@
             ],
             "type": "string"
           },
-          "RF_INTERVAL": {
+          "RECORDED_FUTURE_INTERVAL": {
             "default": 1,
             "description": "Polling interval in hours for fetching Recorded Future data.",
             "exclusiveMinimum": 0,
             "type": "integer"
           },
-          "RF_PULL_ANALYST_NOTES": {
+          "RECORDED_FUTURE_PULL_ANALYST_NOTES": {
             "default": true,
             "description": "Whether to import Recorded Future analyst notes.",
             "type": "boolean"
           },
-          "RF_LAST_PUBLISHED_NOTES": {
+          "RECORDED_FUTURE_LAST_PUBLISHED_NOTES": {
             "default": 24,
             "description": "Time window in hours for fetching recently published analyst notes.",
             "exclusiveMinimum": 0,
             "type": "integer"
           },
-          "RF_TOPIC": {
+          "RECORDED_FUTURE_TOPIC": {
             "default": null,
             "description": "Comma-separated list of topic IDs to filter analyst notes. Examples: VTrvnW (Yara Rule), g1KBGl (Sigma Rule), ZjnoP0 (Snort Rule), aDKkpk (TTP Instance), TXSFt5 (Validated Intelligence Event), UrMRnT (Informational), TXSFt3 (Threat Lead).",
             "items": {
@@ -2193,54 +2193,54 @@
             },
             "type": "array"
           },
-          "RF_INSIKT_ONLY": {
+          "RECORDED_FUTURE_INSIKT_ONLY": {
             "default": true,
             "description": "Whether to import only Insikt notes (Recorded Future's analyst reports).",
             "type": "boolean"
           },
-          "RF_PULL_SIGNATURES": {
+          "RECORDED_FUTURE_PULL_SIGNATURES": {
             "default": false,
             "description": "Whether to import detection signatures (Yara/Snort/Sigma rules) from analyst notes.",
             "type": "boolean"
           },
-          "RF_PERSON_TO_TA": {
+          "RECORDED_FUTURE_PERSON_TO_TA": {
             "default": false,
             "description": "Whether to convert Person entities to Threat Actor entities.",
             "type": "boolean"
           },
-          "RF_TA_TO_INTRUSION_SET": {
+          "RECORDED_FUTURE_TA_TO_INTRUSION_SET": {
             "default": false,
             "description": "Whether to convert Threat Actor entities to Intrusion Set entities.",
             "type": "boolean"
           },
-          "RF_RISK_AS_SCORE": {
+          "RECORDED_FUTURE_RISK_AS_SCORE": {
             "default": true,
             "description": "Whether to import risk scores as confidence scores in OpenCTI.",
             "type": "boolean"
           },
-          "RF_RISK_THRESHOLD": {
+          "RECORDED_FUTURE_RISK_THRESHOLD": {
             "default": 60,
             "description": "Minimum risk score threshold (0-100) for importing entities.",
             "exclusiveMinimum": 0,
             "type": "integer"
           },
-          "RF_PULL_RISK_LIST": {
+          "RECORDED_FUTURE_PULL_RISK_LIST": {
             "default": false,
             "description": "Whether to import Recorded Future risk lists.",
             "type": "boolean"
           },
-          "RF_RISKRULES_AS_LABEL": {
+          "RECORDED_FUTURE_RISKRULES_AS_LABEL": {
             "default": false,
             "description": "Whether to import risk rules as labels in OpenCTI.",
             "type": "boolean"
           },
-          "RF_RISK_LIST_THRESHOLD": {
+          "RECORDED_FUTURE_RISK_LIST_THRESHOLD": {
             "default": 70,
             "description": "Minimum risk score threshold (0-100) for importing risk list entities.",
             "exclusiveMinimum": 0,
             "type": "integer"
           },
-          "RF_RISKLIST_RELATED_ENTITIES": {
+          "RECORDED_FUTURE_RISKLIST_RELATED_ENTITIES": {
             "default": null,
             "description": "Comma-separated list of entity types to import from risk lists. Available choices: Malware, Hash, URL, Threat Actor, MitreAttackIdentifier.",
             "items": {
@@ -2248,7 +2248,7 @@
             },
             "type": "array"
           },
-          "RF_PULL_THREAT_MAPS": {
+          "RECORDED_FUTURE_PULL_THREAT_MAPS": {
             "default": false,
             "description": "Whether to import Threat Actors and Malware from Recorded Future threat maps.",
             "type": "boolean"
@@ -2324,7 +2324,7 @@
         "required": [
           "OPENCTI_URL",
           "OPENCTI_TOKEN",
-          "RF_TOKEN"
+          "RECORDED_FUTURE_TOKEN"
         ],
         "additionalProperties": true
       }
