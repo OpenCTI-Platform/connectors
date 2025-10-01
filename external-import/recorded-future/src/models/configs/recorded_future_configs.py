@@ -2,7 +2,7 @@ from typing import Literal, Optional
 
 from connectors_sdk.core.pydantic import ListFromString
 from models.configs.base_settings import ConfigBaseSettings
-from pydantic import Field, PositiveInt, SecretStr
+from pydantic import Field, PositiveInt, SecretStr, field_validator
 
 
 class _ConfigLoaderRecordedFuture(ConfigBaseSettings):
@@ -20,6 +20,13 @@ class _ConfigLoaderRecordedFuture(ConfigBaseSettings):
         default="red",
         description="Default Traffic Light Protocol (TLP) marking for imported data.",
     )
+
+    @field_validator("tlp", mode="before")
+    @classmethod
+    def validate_tlp_lowercase(cls, v: str) -> str:
+        """Convert TLP value to lowercase."""
+        return v.lower()
+
     interval: PositiveInt = Field(
         default=1,
         description="Polling interval in hours for fetching Recorded Future data.",
