@@ -62,7 +62,7 @@ class ConfigLoader(ConfigBaseSettings):
         default_factory=ConfigLoaderConnector,
         description="Connector configurations.",
     )
-    rf: _ConfigLoaderRecordedFuture = Field(
+    recorded_future: _ConfigLoaderRecordedFuture = Field(
         default_factory=_ConfigLoaderRecordedFuture,
         description="Recorded Future configurations.",
     )
