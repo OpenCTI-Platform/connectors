@@ -30,6 +30,13 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
         default="amber+strict",
         description="Default Traffic Light Protocol (TLP) marking for imported data.",
     )
+
+    @field_validator("tlp", mode="before")
+    @classmethod
+    def validate_tlp_lowercase(cls, v: str) -> str:
+        """Convert TLP value to lowercase."""
+        return v.lower()
+
     create_observables: bool = Field(
         default=True,
         description="Whether to create observables in OpenCTI.",
