@@ -70,16 +70,18 @@ Below are the parameters you'll need to set for running the connector properly:
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter         | config.yml        | Docker environment variable | Default                                 | Mandatory | Description                                                                                                |
-|-------------------|-------------------|-----------------------------|-----------------------------------------|-----------|------------------------------------------------------------------------------------------------------------|
-| NTI base URL      | nti_base_url      | `NTI_BASE_URL`              | `https://nti.nsfocusglobal.com/api/v2/` | Yes       | The base URL for NTI Connector to pull data.                                                               |
-| NTI API key       | nti_api_key       | `NTI_API_KEY`               | /                                       | Yes       | The NTI API key.                                                                                           |
-| NTI TLP           | nti_tlp           | `NTI_TLP`                   | /                                       | Yes       | TLP Marking for all data imported from NTI, possible values: white, green, amber, amber+strict, red.       |
-| NTI Create IOC    | nti_create_ioc    | `NTI_CREATE_IOC`            | /                                       | Yes       | A boolean (`True` or `False`), if true then indicators will be created for each import.                    |
-| NTI Create IP     | nti_create_ip     | `NTI_CREATE_IP`             | /                                       | Yes       | A boolean (`True` or `False`), if true then IP observables will be created for each import.                |
-| NTI Create Domain | nti_create_domain | `NTI_CREATE_DOMAIN`         | /                                       | Yes       | A boolean (`True` or `False`), if true then Domain observables will be created for each import.            |
-| NTI Create File   | nti_create_file   | `NTI_CREATE_FILE`           | /                                       | Yes       | A boolean (`True` or `False`), if true then File observables will be created for each import.              |
-| NTI Create URL    | nti_create_url    | `NTI_CREATE_URL`            | /                                       | Yes       | A boolean (`True` or `False`), if true then URL observables will be created for each import.               |
+| Parameter `NTI` | config.yml    | Docker environment variable | Default                                 | Mandatory | Description                                                                                          |
+|-----------------|---------------|-----------------------------|-----------------------------------------|-----------|------------------------------------------------------------------------------------------------------|
+| Base URL        | base_url      | `NTI_BASE_URL`              | `https://nti.nsfocusglobal.com/api/v2/` | Yes       | The base URL for NTI Connector to pull data.                                                         |
+| API key         | api_key       | `NTI_API_KEY`               | /                                       | Yes       | The NTI API key.                                                                                     |
+| NTI TLP         | tlp           | `NTI_TLP`                   | `white`                                 | Yes       | TLP Marking for all data imported from NTI, possible values: white, green, amber, amber+strict, red. |
+| Create IOC      | create_ioc    | `NTI_CREATE_IOC`            | `False`                                 | Yes       | A boolean (`True` or `False`), if true then indicators will be created for each import.              |
+| Create IP       | create_ip     | `NTI_CREATE_IP`             | `False`                                 | Yes       | A boolean (`True` or `False`), if true then IP observables will be created for each import.          |
+| Create Domain   | create_domain | `NTI_CREATE_DOMAIN`         | `False`                                 | Yes       | A boolean (`True` or `False`), if true then Domain observables will be created for each import.      |
+| Create File     | create_file   | `NTI_CREATE_FILE`           | `False`                                 | Yes       | A boolean (`True` or `False`), if true then File observables will be created for each import.        |
+| Create URL      | create_url    | `NTI_CREATE_URL`            | `False`                                 | Yes       | A boolean (`True` or `False`), if true then URL observables will be created for each import.         |
+| PACKAGE TYPE    | package_type  | `NTI_PACKAGE_TYPE`          | `updated`                               | Yes       | NTI data package control. Only support `updated` for now.                                            |
+
 
 ## Deployment
 
