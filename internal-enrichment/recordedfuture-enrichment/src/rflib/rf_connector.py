@@ -23,9 +23,7 @@ class RFEnrichmentConnector:
 
         self.rf_client = RFClient(self.config.recorded_future.token, APP_VERSION)
 
-        self.vulnerability_enricher = VulnerabilityEnricher(
-            helper=self.helper, tlp_level="red"
-        )
+        self.vulnerability_enricher = VulnerabilityEnricher(helper=self.helper)
         self.observable_enricher = ObservableEnricher(
             helper=self.helper,
             tlp_level="amber+strict",
