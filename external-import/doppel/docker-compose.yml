@@ -17,6 +17,7 @@ services:
       # Doppel-specific config
       - DOPPEL_API_BASE_URL=https://api.doppel.com/v1
       - DOPPEL_API_KEY=changeMe
+      - DOPPEL_USER_API_KEY=changeMe
       - DOPPEL_TLP_LEVEL=clear
       - DOPPEL_ALERTS_ENDPOINT=/alerts
       - DOPPEL_HISTORICAL_POLLING_DAYS=30
