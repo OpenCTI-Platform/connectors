@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-disinfox:
-    image: opencti/connector-disinfox:rolling
+    image: opencti/connector-disinfox:6.8.2
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=${OPENCTI_URL}
