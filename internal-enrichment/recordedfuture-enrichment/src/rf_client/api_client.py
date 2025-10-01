@@ -23,12 +23,14 @@ API_BASE_V2 = urllib.parse.urljoin(API_BASE, "/v2")
 
 VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS = [
     "aiInsights",
+    "cpe",
     "risk",
 ]
 
 VulnerabilityEnrichmentOptionalFields = list[
     Literal[
         "aiInsights",
+        "cpe",
         "risk",
     ]
 ]
@@ -123,7 +125,6 @@ class RFClient:
     ) -> VulnerabilityEnrichment:
         enrichment_fields = [
             "commonNames",
-            "cpe",
             "cvss",
             "cvssv3",
             "cvssv4",
