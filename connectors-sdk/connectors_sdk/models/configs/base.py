@@ -6,7 +6,7 @@ from typing import Literal
 
 import __main__
 from connectors_sdk.core.pydantic import ListFromString
-from connectors_sdk.exceptions import (  # ConfigNotFoundError,
+from connectors_sdk.exceptions import (
     ConfigError,
     ConfigValidationError,
 )
@@ -98,7 +98,6 @@ class BaseConnectorConfig(BaseConfigModel, ABC):
     log_level: Literal["debug", "info", "warn", "warning", "error", "critical"] = Field(
         description="The minimum level of logs to display."
     )
-    # todo : type external import or internal enrichment
 
 
 class BaseConnectorSettings(BaseConfigModel, ABC):
@@ -131,3 +130,15 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
         Convert model into a valid dict for `pycti.OpenCTIConnectorHelper`.
         """
         return self.model_dump(mode="json", context={"mode": "pycti"})
+
+
+class BaseExternalImportConnectorConfig(BaseConnectorConfig):
+    type: str = "EXTERNAL_IMPORT"
+
+
+class BaseInternalEnrichmentsConnectorConfig(BaseConnectorConfig):
+    type: str = "INTERNAL_ENRICHMENT"
+
+
+class BaseStreamConnectorConfig(BaseConnectorConfig):
+    type: str = "STREAM"
