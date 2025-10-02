@@ -1,364 +1,212 @@
-# ===============================================================================
-# Imports: System and Third-Party Libraries
-# ===============================================================================
-import json
-import os
-import re
 import sys
-from datetime import datetime, timedelta
-from typing import Dict
+from datetime import datetime, timezone
+from typing import Generator
 
-import requests
-import yaml
+import pycti
+import stix2
+from lib.api_client import RadarAPIClient, RadarAPIError, RadarFeedItem
+from lib.config_loader import ConfigLoader, FeedList
+from lib.converter_to_stix import ConverterError, ConverterToStix
 
-# ===============================================================================
-# Imports: OpenCTI Libraries
-# ===============================================================================
-# PyCTI
-from pycti import Identity as PyctiIdentity
-from pycti import Indicator as PyctiIndicator
-from pycti import OpenCTIConnectorHelper, get_config_variable
-
-# STIX2
-from stix2 import TLP_WHITE, Bundle
-from stix2 import Identity as Stix2Identity
-from stix2 import Indicator as Stix2Indicator
-
-# ===============================================================================
-# Constants
-# ===============================================================================
-BATCH_SIZE = 1000
-DEFAULT_INTERVAL = 600
-DEFAULT_CONFIDENCE = 75
-TLP_MARKING = TLP_WHITE.id
+BATCH_MAX_SIZE = 1_000
 
 
-# ===============================================================================
-# Main Operator: RadarConnector
-# ===============================================================================
 class RadarConnector:
     """
     OpenCTI connector for SOCRadar threat intelligence feeds.
     Processes indicators in batches and creates STIX2 objects.
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self, config: ConfigLoader, helper: pycti.OpenCTIConnectorHelper
+    ) -> None:
         """Initialize RadarConnector with configuration and helpers"""
-        # Step 1.0: Set up configuration paths
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        config_path = os.path.join(base_dir, "..", "config.yml")
+        self.config = config
+        self.helper = helper
 
-        # Step 1.1: Load configuration file
-        if os.path.isfile(config_path):
-            with open(config_path, "r") as f:
-                config = yaml.safe_load(f)
-        else:
-            config = {}
-
-        # Step 2.0: Initialize OpenCTI helper
-        self.helper = OpenCTIConnectorHelper(config)
-
-        # Step 3.0: Configure feed parameters
-        # Step 3.1: Set base URL and API key
-        self.base_url = get_config_variable(
-            "RADAR_BASE_FEED_URL", ["radar", "radar_base_feed_url"], config
+        self.api_client = RadarAPIClient(
+            api_base_url=self.config.radar.base_feed_url,
+            api_key=self.config.radar.socradar_key,
         )
-        self.socradar_key = get_config_variable(
-            "RADAR_SOCRADAR_KEY", ["radar", "radar_socradar_key"], config
+        self.converter_to_stix = ConverterToStix()
+
+        self.work_id: str | None = None
+
+    def _initiate_work(self):
+        """
+        Initiate a work on OpenCTI.
+        """
+        now = datetime.now(tz=timezone.utc)
+        friendly_name = f"SOCRadar Connector run @ {now.isoformat(timespec='seconds')}"
+        self.work_id = self.helper.api.work.initiate_work(
+            connector_id=self.helper.connector_id,
+            friendly_name=friendly_name,
         )
 
-        # Step 3.2: Set run interval
-        self.interval = get_config_variable(
-            "RADAR_RUN_INTERVAL",
-            ["radar", "radar_run_interval"],
-            config,
-            default=DEFAULT_INTERVAL,
-        )
-        if isinstance(self.interval, str):
-            self.interval = int(self.interval)
+    def _finalize_work(self):
+        """
+        Finalize connector's run work on OpenCTI.
+        """
+        if self.work_id is None:
+            raise ValueError(
+                "No work_id to finalize work, call self._initiate_work first"
+            )
 
-        # Step 3.3: Configure collections
-        raw_collections = get_config_variable(
-            "RADAR_COLLECTIONS_UUID", ["radar", "radar_collections_uuid"], config
+        self.helper.api.work.to_processed(
+            work_id=self.work_id, message="Work gracefully closed."
         )
-        if isinstance(raw_collections, str):
+
+        self.work_id = None
+
+    def _send_batch(self, stix_objects: list[stix2.v21._STIXBase21]):
+        """
+        Handle a batch of STIX objects (create a bundle, then init a work if needed and send bundle to it).
+        :param stix_objects: STIX objects batch to handle
+        """
+        # Init a work on demand (to avoid empty work)
+        if not self.work_id:
+            self._initiate_work()
+
+        bundle = self.helper.stix2_create_bundle(stix_objects)
+        sent_bundles = self.helper.send_stix2_bundle(
+            bundle,
+            work_id=self.work_id,
+            cleanup_inconsistent_bundle=True,
+        )
+
+        self.helper.connector_logger.info(
+            "Sending STIX bundles to OpenCTI",
+            {"work_id": self.work_id, "bundles_count": len(sent_bundles)},
+        )
+
+    def _collect_feed_items(self, feed_list: FeedList) -> list[RadarFeedItem]:
+        """
+        Collection feed items on SOCRadar API.
+        :param feed_list: Collection to get items from.
+        """
+        self.helper.connector_logger.info(
+            f"Collecting items for '{feed_list.name}' feed list",
+            {"feed_list_id": feed_list.id, "feed_list_name": feed_list.name},
+        )
+
+        feed_items = self.api_client.get_feed(feed_list.id)
+
+        self.helper.connector_logger.info(
+            f"{len(feed_items)} items found for '{feed_list.name}' feed list:",
+            {
+                "feed_list_id": feed_list.id,
+                "feed_list_name": feed_list.name,
+                "items_count": len(feed_items),
+            },
+        )
+
+        return feed_items
+
+    def _convert_feed_items(
+        self, feed_items: list[RadarFeedItem]
+    ) -> Generator[list[stix2.v21._STIXBase21], None, None]:
+        """
+        Process collection's feed items into STIX Indicator.
+        """
+        for feed_item in feed_items:
             try:
-                self.collections = json.loads(raw_collections)
-            except Exception:
-                self.collections = {}
-        else:
-            self.collections = raw_collections or {}
+                tlp, author, indicator = self.converter_to_stix.process_on(feed_item)
 
-        # Step 3.4: Set format type for API requests
-        self.format_type = ".json?key="
-
-        # Step 4.0: Initialize caches and patterns
-        self.identity_cache: Dict[str, Stix2Identity] = {}
-        self.regex_patterns = {
-            "md5": r"^[a-fA-F\d]{32}$",
-            "sha1": r"^[a-fA-F\d]{40}$",
-            "sha256": r"^[a-fA-F\d]{64}$",
-            "ipv4": r"^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$",
-            "ipv6": r"^(?:[a-fA-F\d]{1,4}:){7}[a-fA-F\d]{1,4}$",
-            "domain": r"^(?=.{1,255}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,6}$",
-            "url": r"^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$",
-        }
-
-    # ===============================================================================
-    # Utility Methods
-    # ===============================================================================
-    def _matches_pattern(self, value: str, pattern_name: str) -> bool:
-        """Match value against regex pattern"""
-        return bool(re.match(self.regex_patterns[pattern_name], value))
-
-    def _validate_dates(self, first_seen: str, last_seen: str):
-        """Validate and convert date strings to datetime objects"""
-        # Step 1.0: Set datetime format
-        dt_format = "%Y-%m-%d %H:%M:%S"
-
-        # Step 1.1: Convert strings to datetime objects
-        valid_from = datetime.strptime(first_seen, dt_format)
-        valid_until = datetime.strptime(last_seen, dt_format)
-
-        # Step 1.2: Ensure valid time range
-        if valid_until <= valid_from:
-            valid_until = valid_from + timedelta(hours=1)
-
-        return valid_from, valid_until
-
-    def _create_stix_pattern(self, value: str, feed_type: str) -> str:
-        """
-        Build a STIX pattern from feed_type or fallback detection
-        (handles ip, domain, url, hash, etc.)
-        """
-        # If feed_type is "ip", check IPv4 or IPv6
-        if feed_type == "ip":
-            if self._matches_pattern(value, "ipv4"):
-                return f"[ipv4-addr:value = '{value}']"
-            elif self._matches_pattern(value, "ipv6"):
-                return f"[ipv6-addr:value = '{value}']"
-
-        known_patterns = {
-            "url": lambda v: f"[url:value = '{v}']",
-            "domain": lambda v: f"[domain-name:value = '{v}']",
-            "ipv4": lambda v: f"[ipv4-addr:value = '{v}']",
-            "ipv6": lambda v: f"[ipv6-addr:value = '{v}']",
-            "md5": lambda v: f"[file:hashes.'MD5' = '{v}']",
-            "sha1": lambda v: f"[file:hashes.'SHA-1' = '{v}']",
-            "sha256": lambda v: f"[file:hashes.'SHA-256' = '{v}']",
-        }
-
-        if feed_type in known_patterns:
-            return known_patterns[feed_type](value)
-
-        # Fallback detection
-        for ptype, regex in self.regex_patterns.items():
-            if re.match(regex, value):
-                # e.g. ptype=md5 => "[file:hashes.'MD5' = '...']"
-                if ptype in known_patterns:
-                    return known_patterns[ptype](value)
-
-        # Otherwise, custom
-        return f"[x-custom:value = '{value}']"
-
-    def _get_or_create_identity(self, maintainer_name: str):
-        """
-        Use pycti.Identity.generate_id(...) for stable dedup
-        Return a stix2.Identity w/ that ID
-        """
-        if maintainer_name in self.identity_cache:
-            return self.identity_cache[maintainer_name]
-
-        try:
-            identity_id = PyctiIdentity.generate_id(
-                name=maintainer_name,
-                identity_class="organization",
-            )
-            now = datetime.utcnow()
-            identity = Stix2Identity(
-                id=identity_id,
-                name=maintainer_name,
-                identity_class="organization",
-                description=f"Feed Provider: {maintainer_name}",
-                created=now,
-                modified=now,
-            )
-            self.identity_cache[maintainer_name] = identity
-            return identity
-        except Exception as e:
-            self.helper.log_error(
-                f"Error creating Identity for {maintainer_name}: {str(e)}"
-            )
-            return None
-
-    ########################################################################
-    # Feed Processing
-    ########################################################################
-
-    def _process_feed_item(self, item: dict):
-        """Process single feed item into STIX objects"""
-        # Step 1.0: Initialize empty list for STIX objects
-        stix_objects = []
-
-        # Step 2.0: Extract core fields from feed item
-        # Step 2.1: Get primary indicator value
-        value = item.get("feed")
-        # Step 2.2: Get indicator type (default to IP if not specified)
-        feed_type = item.get("feed_type", "ip").lower()
-        # Step 2.3: Get source/maintainer information
-        maintainer = item.get("maintainer_name", "Unknown")
-
-        # Step 3.0: Extract and validate timestamp fields
-        # Step 3.1: Get first seen date
-        first_seen_str = item.get("first_seen_date")
-        # Step 3.2: Get last seen date
-        last_seen_str = item.get("latest_seen_date")
-        # Step 3.3: Validate required fields exist
-        if not (value and first_seen_str and last_seen_str):
-            self.helper.log_error(f"Item missing fields: {item}")
-            return stix_objects
-
-        # Step 4.0: Convert and validate dates
-        valid_from, valid_until = self._validate_dates(first_seen_str, last_seen_str)
-
-        # Step 5.0: Create or get cached identity object
-        identity_obj = self._get_or_create_identity(maintainer)
-        if not identity_obj:
-            return stix_objects
-
-        # Step 6.0: Generate STIX pattern for indicator
-        pattern = self._create_stix_pattern(value, feed_type)
-        if not pattern:
-            self.helper.log_error(
-                f"Could not determine pattern for: {value} / {feed_type}"
-            )
-            return stix_objects
-
-        # Step 7.0: Generate stable indicator ID
-        try:
-            indicator_id = PyctiIndicator.generate_id(pattern)
-        except Exception as e:
-            self.helper.log_error(f"Indicator ID generation error: {str(e)}")
-            return stix_objects
-
-        # Step 8.0: Create STIX2 Indicator object
-        indicator = Stix2Indicator(
-            id=indicator_id,
-            name=f"{feed_type.upper()}: {value}",
-            description=f"Source: {maintainer}\nValue: {value}",
-            pattern=pattern,
-            pattern_type="stix",
-            valid_from=valid_from,
-            valid_until=valid_until,
-            created_by_ref=identity_obj.id,
-            object_marking_refs=[TLP_WHITE.id],
-            labels=["malicious-activity", feed_type],
-            confidence=75,
-            created=valid_from,
-            modified=valid_from,
-        )
-
-        # Step 9.0: Combine all STIX objects
-        stix_objects.extend([identity_obj, indicator])
-        # Step 9.1: Log success
-        self.helper.log_info(
-            f"Created {feed_type} indicator => {value} from {maintainer}"
-        )
-        # Step 9.2: Return combined objects
-        return stix_objects
-
-    def _process_feed(self, work_id: str):
-        """
-        Batched feed ingestion in chunks of 1000 items
-        """
-        self.helper.log_info("RadarConnector: Starting feed collection...")
-
-        for collection_name, collection_data in self.collections.items():
-            try:
-                # Build feed URL
-                coll_id = collection_data["id"][0]
-                feed_url = (
-                    f"{self.base_url}{coll_id}{self.format_type}{self.socradar_key}&v=2"
+                self.helper.connector_logger.debug(
+                    "Indicator successfully created",
+                    {"indicator": indicator, "tlp": tlp, "author": author},
                 )
 
-                self.helper.log_info(
-                    f"Fetching data from {collection_name} => {feed_url}"
+                yield [tlp, author, indicator]
+            except ConverterError as err:
+                self.helper.connector_logger.error(
+                    f"Skipping item due to STIX2 Identity conversion error: {err}",
+                    {"error": err},
                 )
-                resp = requests.get(feed_url, timeout=30)
-                resp.raise_for_status()
-                items = resp.json()
-                self.helper.log_info(f"Got {len(items)} items from {collection_name}")
+                continue
 
+    def process(self):
+        """
+        Run main process to collect, process and send intelligence to OpenCTI.
+        """
+        try:
+            self.helper.connector_logger.info(
+                "Starting connector",
+                {"connector_name": self.helper.connect_name},
+            )
+
+            for feed_list in self.config.radar.feed_lists:
+                try:
+                    feed_items = self._collect_feed_items(feed_list)
+                except RadarAPIError as err:
+                    self.helper.connector_logger.error(
+                        f"Skipping '{feed_list.name}' feed list due to API client error",
+                        {"error": err},
+                    )
+                    continue
+
+                # Start a new batch for each feed list
                 stix_batch = []
-                total_sent = 0
-
-                for idx, item in enumerate(items, start=1):
-                    new_objs = self._process_feed_item(item)
-                    if new_objs:
-                        stix_batch.extend(new_objs)
+                stix_objects_count = 0
+                for stix_objects in self._convert_feed_items(feed_items):
+                    stix_batch.extend(stix_objects)
 
                     # If we reached a batch boundary
-                    if idx % BATCH_SIZE == 0:
-                        bundle = Bundle(objects=stix_batch, allow_custom=True)
-                        self.helper.send_stix2_bundle(
-                            bundle.serialize(), work_id=work_id
-                        )
-                        total_sent += len(stix_batch)
-                        self.helper.log_info(
-                            f"Sent batch of {len(stix_batch)} objects (total: {total_sent})"
-                        )
-                        stix_batch = []
+                    if len(stix_batch) >= BATCH_MAX_SIZE:
+                        self._send_batch(stix_batch)  # Init a work if needed
+                        stix_objects_count += len(stix_batch)
+                        stix_batch = []  # Reset to create a new batch
 
                 # Final leftover
                 if stix_batch:
-                    bundle = Bundle(objects=stix_batch, allow_custom=True)
-                    self.helper.send_stix2_bundle(bundle.serialize(), work_id=work_id)
-                    total_sent += len(stix_batch)
-                    self.helper.log_info(
-                        f"Sent final batch of {len(stix_batch)} objects (total: {total_sent})"
-                    )
+                    self._send_batch(stix_batch)  # Init a work if needed
+                    stix_objects_count += len(stix_batch)
 
-            except Exception as e:
-                self.helper.log_error(f"Failed to process {collection_name}: {str(e)}")
+                self.helper.connector_logger.info(
+                    f"Bundles for '{feed_list.name}' feed list successfully sent",
+                    {"work_id": self.work_id, "stix_objects_count": stix_objects_count},
+                )
 
-    ########################################################################
-    # Connector Workflow
-    ########################################################################
-    def process_message(self):
-        """
-        Called each run. Create "Work", process feed, finalize.
-        """
-        self.helper.log_info("RadarConnector: process_message started.")
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        friendly_name = f"SOCRadar Connector run @ {now_str}"
-        work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id, friendly_name
-        )
+                # Close work if we opened one for this feed list
+                if self.work_id:
+                    self._finalize_work()
 
-        try:
-            self._process_feed(work_id)
-            message = "Radar feed import complete"
-            self.helper.api.work.to_processed(work_id, message)
-            self.helper.log_info(message)
+            self.helper.connector_logger.info(
+                "Connector successfully run",
+                {"connector_name": self.helper.connect_name},
+            )
+
         except (KeyboardInterrupt, SystemExit):
-            self.helper.log_info("RadarConnector interrupted. Stopping.")
+            self.helper.connector_logger.info(
+                "Connector stopped by user or system",
+                {"connector_name": self.helper.connect_name},
+            )
             sys.exit(0)
-        except Exception as e:
-            self.helper.log_error(f"process_message error: {str(e)}")
+        except Exception as err:
+            self.helper.connector_logger.error(
+                f"Unexpected error: {err}",
+                {"error": err},
+            )
+
+        finally:
+            # If an error occured while iterating on feed lists,
+            # close potential opened work gracefully.
+            if self.work_id:
+                self._finalize_work()
 
     def run(self):
         """
-        Run in start-up.
-        Mainly runs with OpenCTI's schedule_iso.
+        Run the main process encapsulated in a scheduler
+        It allows you to schedule the process to run at a certain intervals
+        This specific scheduler from the pycti connector helper will also check the queue size of a connector
+        If `CONNECTOR_QUEUE_THRESHOLD` is set, if the connector's queue size exceeds the queue threshold,
+        the connector's main process will not run until the queue is ingested and reduced sufficiently,
+        allowing it to restart during the next scheduler check. (default is 500MB)
+        It requires the `duration_period` connector variable in ISO-8601 standard format
+
+        Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
         """
-        # Step 1.0: Run immediately on startup
-        self.helper.log_info("Running initial collection...")
-        self.process_message()
-
-        # Step 2.0: Schedule recurring runs
-        duration_period = f"PT{self.interval}S"  # e.g., PT600S for 10 minutes
-        self.helper.log_info(f"Scheduling recurring runs every {self.interval} seconds")
-
-        self.helper.schedule_iso(
-            message_callback=self.process_message, duration_period=duration_period
+        self.helper.schedule_process(
+            message_callback=self.process,
+            duration_period=self.config.connector.duration_period.total_seconds(),
         )
