@@ -12,7 +12,7 @@ from models.configs.recorded_future_configs import (
     _ConfigLoaderPlaybookAlert,
     _ConfigLoaderRecordedFuture,
 )
-from pydantic import Field, AliasChoices
+from pydantic import AliasChoices, Field
 from pydantic_settings import (
     BaseSettings,
     DotEnvSettingsSource,
