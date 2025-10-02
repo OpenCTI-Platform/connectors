@@ -39,6 +39,13 @@ class TagConverter:
             )
 
     def create_label(self, tag: TagItem) -> str | None:
+        # If no tags are configured to be kept as labels, keep all tags as labels
+        # This is a bug that existed on master before the ConfigLoader was added
+        # For the sake of backward compatibility, we keep this behavior for now (no breaking change)
+        # An issue has been opened: https://github.com/OpenCTI-Platform/connectors/issues/4886
+        if not self.config.original_tags_to_keep_as_labels:
+            self.config.original_tags_to_keep_as_labels = [""]
+
         if tag.name.startswith(tuple(self.config.original_tags_to_keep_as_labels)):
             return tag.name
 
