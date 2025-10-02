@@ -10,7 +10,7 @@ services:
       - CONNECTOR_SCOPE=IPv4-Addr,Domain-Name,Url,StixFile,indicator
       - CONNECTOR_AUTO=false
       - CONNECTOR_LOG_LEVEL=info
-      - RST_IOC_LOOKUP_BASE_URL=https://api.rstcloud.net/v1/
+      - RST_IOC_LOOKUP_BASE_URL=https://api.rstcloud.net/v1
       - RST_IOC_LOOKUP_API_KEY=${RST_IOC_LOOKUP_API_KEY}
       - RST_IOC_LOOKUP_MAX_TLP=TLP:AMBER+STRICT
       - RST_IOC_LOOKUP_UPDATE_CONFIDENCE=true
