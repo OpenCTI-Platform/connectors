@@ -106,7 +106,7 @@ class BaseIdentifiedEntity(BaseEntity):
 
     _stix2_id: str | None = PrivateAttr(default=None)
 
-    author: "Author" | None = Field(
+    author: "Author | None" = Field(
         default=None,
         description="The Author reporting this Observable.",
     )
