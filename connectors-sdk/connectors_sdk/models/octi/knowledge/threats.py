@@ -1,7 +1,5 @@
 """Offer threats OpenCTI entities."""
 
-from typing import Optional
-
 from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
 from connectors_sdk.models.octi.enums import (
     AttackMotivation,
@@ -25,37 +23,37 @@ class IntrusionSet(BaseIdentifiedEntity):
         description="A name used to identify this Intrusion Set.",
         min_length=1,
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
+        default=None,
         description="A description that provides more details and context about the Intrusion Set.",
-        default=None,
     )
-    aliases: Optional[list[str]] = Field(
+    aliases: list[str] | None = Field(
+        default=None,
         description="Alternative names used to identify this Intrusion Set.",
-        default=None,
     )
-    first_seen: Optional[AwareDatetime] = Field(
+    first_seen: AwareDatetime | None = Field(
+        default=None,
         description="The time that this Intrusion Set was first seen.",
-        default=None,
     )
-    last_seen: Optional[AwareDatetime] = Field(
+    last_seen: AwareDatetime | None = Field(
+        default=None,
         description="The time that this Intrusion Set was last seen.",
-        default=None,
     )
-    goals: Optional[list[str]] = Field(
+    goals: list[str] | None = Field(
+        default=None,
         description="The high-level goals of this Intrusion Set, namely, what are they trying to do.",
-        default=None,
     )
-    resource_level: Optional[AttackResourceLevel] = Field(
+    resource_level: AttackResourceLevel | None = Field(
+        default=None,
         description="The organizational level at which this Intrusion Set typically works.",
-        default=None,
     )
-    primary_motivation: Optional[AttackMotivation] = Field(
+    primary_motivation: AttackMotivation | None = Field(
+        default=None,
         description="The primary reason, motivation, or purpose behind this Intrusion Set.",
-        default=None,
     )
-    secondary_motivations: Optional[list[AttackMotivation]] = Field(
-        description="The secondary reasons, motivations, or purposes behind this Intrusion Set.",
+    secondary_motivations: list[AttackMotivation] | None = Field(
         default=None,
+        description="The secondary reasons, motivations, or purposes behind this Intrusion Set.",
     )
 
     def to_stix2_object(self) -> Stix2IntrusionSet:
@@ -88,53 +86,53 @@ class ThreatActorGroup(BaseIdentifiedEntity):
         description="A name used to identify this Threat Actor.",
         min_length=1,
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
+        default=None,
         description="A description that provides more details and context about the Threat Actor.",
-        default=None,
     )
-    threat_actor_types: Optional[list[ThreatActorTypes]] = Field(
+    threat_actor_types: list[ThreatActorTypes] | None = Field(
+        default=None,
         description="The type(s) of this threat actor.",
-        default=None,
     )
-    aliases: Optional[list[str]] = Field(
+    aliases: list[str] | None = Field(
+        default=None,
         description="Alternative names used to identify this Threat Actor.",
-        default=None,
     )
-    first_seen: Optional[AwareDatetime] = Field(
+    first_seen: AwareDatetime | None = Field(
+        default=None,
         description="The time that this Threat Actor was first seen.",
-        default=None,
     )
-    last_seen: Optional[AwareDatetime] = Field(
+    last_seen: AwareDatetime | None = Field(
+        default=None,
         description="The time that this Threat Actor was last seen.",
-        default=None,
     )
-    roles: Optional[list[ThreatActorRole]] = Field(
+    roles: list[ThreatActorRole] | None = Field(
+        default=None,
         description="A list of roles the Threat Actor plays.",
-        default=None,
     )
-    goals: Optional[list[str]] = Field(
+    goals: list[str] | None = Field(
+        default=None,
         description="The high-level goals of this Threat Actor, namely, what are they trying to do.",
-        default=None,
     )
-    sophistication: Optional[ThreatActorSophistication] = Field(
+    sophistication: ThreatActorSophistication | None = Field(
+        default=None,
         description="The skill, specific knowledge, special training, or expertise a Threat Actor must have to perform the attack.",
-        default=None,
     )
-    resource_level: Optional[AttackResourceLevel] = Field(
+    resource_level: AttackResourceLevel | None = Field(
+        default=None,
         description="The organizational level at which this Threat Actor typically works.",
-        default=None,
     )
-    primary_motivation: Optional[AttackMotivation] = Field(
+    primary_motivation: AttackMotivation | None = Field(
+        default=None,
         description="The primary reason, motivation, or purpose behind this Threat Actor.",
-        default=None,
     )
-    secondary_motivations: Optional[list[AttackMotivation]] = Field(
+    secondary_motivations: list[AttackMotivation] | None = Field(
+        default=None,
         description="The secondary reasons, motivations, or purposes behind this Threat Actor.",
-        default=None,
     )
-    personal_motivations: Optional[list[AttackMotivation]] = Field(
-        description="The personal reasons, motivations, or purposes of the Threat Actor regardless of organizational goals.",
+    personal_motivations: list[AttackMotivation] | None = Field(
         default=None,
+        description="The personal reasons, motivations, or purposes of the Threat Actor regardless of organizational goals.",
     )
 
     def to_stix2_object(self) -> Stix2ThreatActor:

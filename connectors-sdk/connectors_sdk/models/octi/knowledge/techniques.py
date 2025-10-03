@@ -1,7 +1,5 @@
 """Offer techniques OpenCTI entities."""
 
-from typing import Optional
-
 from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
 from connectors_sdk.models.octi.enums import Permission, Platform
 from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
@@ -18,37 +16,37 @@ class AttackPattern(BaseIdentifiedEntity):
         description="Name of the attack pattern.",
         min_length=1,
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
+        default=None,
         description="Description of the attack pattern.",
-        default=None,
     )
-    labels: Optional[list[str]] = Field(
+    labels: list[str] | None = Field(
+        default=None,
         description="Labels of the attack pattern.",
-        default=None,
     )
-    aliases: Optional[list[str]] = Field(
+    aliases: list[str] | None = Field(
+        default=None,
         description="Vulnerability aliases",
-        default=None,
     )
-    kill_chain_phases: Optional[list[KillChainPhase]] = Field(
+    kill_chain_phases: list[KillChainPhase] | None = Field(
+        default=None,
         description="Kill chain phases associated with the attack pattern.",
-        default=None,
     )
-    mitre_id: Optional[str] = Field(
+    mitre_id: str | None = Field(
+        default=None,
         description="MITRE ATT&CK ID of the attack pattern.",
-        default=None,
     )
-    mitre_detection: Optional[str] = Field(
+    mitre_detection: str | None = Field(
+        default=None,
         description="MITRE ATT&CK detection of the attack pattern.",
-        default=None,
     )
-    mitre_platforms: Optional[list[Platform]] = Field(
+    mitre_platforms: list[Platform] | None = Field(
+        default=None,
         description="MITRE ATT&CK platforms of the attack pattern.",
-        default=None,
     )
-    mitre_required_permissions: Optional[list[Permission]] = Field(
-        description="MITRE ATT&CK required permissions of the attack pattern.",
+    mitre_required_permissions: list[Permission] | None = Field(
         default=None,
+        description="MITRE ATT&CK required permissions of the attack pattern.",
     )
 
     def to_stix2_object(self) -> Stix2AttackPattern:

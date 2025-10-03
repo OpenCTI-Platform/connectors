@@ -1,7 +1,5 @@
 """Offer OpenCTI entities."""
 
-from typing import Optional
-
 from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
 from connectors_sdk.models.octi.enums import (
     IndustrySector,
@@ -26,21 +24,21 @@ class Individual(BaseIdentifiedEntity):
         description="Name of the organization.",
         min_length=1,
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
+        default=None,
         description="Description of the organization.",
-        default=None,
     )
-    contact_information: Optional[str] = Field(
+    contact_information: str | None = Field(
+        default=None,
         description="Contact information for the organization.",
-        default=None,
     )
-    reliability: Optional[Reliability] = Field(
+    reliability: Reliability | None = Field(
+        default=None,
         description="OpenCTI Reliability of the organization.",
-        default=None,
     )
-    aliases: Optional[list[str]] = Field(
-        description="Aliases of the organization.",
+    aliases: list[str] | None = Field(
         default=None,
+        description="Aliases of the organization.",
     )
 
     def to_stix2_object(self) -> Stix2Identity:
@@ -86,25 +84,25 @@ class Organization(BaseIdentifiedEntity):
         description="Name of the organization.",
         min_length=1,
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
+        default=None,
         description="Description of the organization.",
-        default=None,
     )
-    contact_information: Optional[str] = Field(
+    contact_information: str | None = Field(
+        default=None,
         description="Contact information for the organization.",
-        default=None,
     )
-    organization_type: Optional[OrganizationType] = Field(
+    organization_type: OrganizationType | None = Field(
+        default=None,
         description="OpenCTI Type of the organization.",
-        default=None,
     )
-    reliability: Optional[Reliability] = Field(
+    reliability: Reliability | None = Field(
+        default=None,
         description="OpenCTI Reliability of the organization.",
-        default=None,
     )
-    aliases: Optional[list[str]] = Field(
-        description="Aliases of the organization.",
+    aliases: list[str] | None = Field(
         default=None,
+        description="Aliases of the organization.",
     )
 
     def to_stix2_object(self) -> Stix2Identity:
@@ -146,21 +144,21 @@ class Sector(BaseIdentifiedEntity):
         description="Name of the sector.",
         min_length=1,
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
+        default=None,
         description="Description of the sector.",
-        default=None,
     )
-    sectors: Optional[list[IndustrySector]] = Field(
+    sectors: list[IndustrySector] | None = Field(
+        default=None,
         description="The list of industry sectors that this Identity belongs to.",
-        default=None,
     )
-    reliability: Optional[Reliability] = Field(
+    reliability: Reliability | None = Field(
+        default=None,
         description="OpenCTI Reliability of the sector.",
-        default=None,
     )
-    aliases: Optional[list[str]] = Field(
-        description="Aliases of the sector.",
+    aliases: list[str] | None = Field(
         default=None,
+        description="Aliases of the sector.",
     )
 
     def to_stix2_object(self) -> Stix2Identity:

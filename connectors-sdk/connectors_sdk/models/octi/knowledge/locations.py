@@ -1,7 +1,5 @@
 """Offer locations OpenCTI entities."""
 
-from typing import Optional
-
 from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
 from connectors_sdk.models.octi.enums import LocationType
 from pycti import Location as PyctiLocation
@@ -34,17 +32,17 @@ class City(BaseIdentifiedEntity):
     name: str = Field(
         description="A name used to identify the City.",
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
+        default=None,
         description="A textual description of the City.",
-        default=None,
     )
-    latitude: Optional[float] = Field(
+    latitude: float | None = Field(
+        default=None,
         description="The latitude of the City in decimal degrees.",
-        default=None,
     )
-    longitude: Optional[float] = Field(
-        description="The longitude of the City in decimal degrees.",
+    longitude: float | None = Field(
         default=None,
+        description="The longitude of the City in decimal degrees.",
     )
 
     def to_stix2_object(self) -> Stix2Location:
@@ -80,9 +78,9 @@ class Country(BaseIdentifiedEntity):
     name: str = Field(
         description="A name used to identify the Country.",
     )
-    description: Optional[str] = Field(
-        description="A textual description of the Country.",
+    description: str | None = Field(
         default=None,
+        description="A textual description of the Country.",
     )
 
     def to_stix2_object(self) -> Stix2Location:

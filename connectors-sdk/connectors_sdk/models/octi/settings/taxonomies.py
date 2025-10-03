@@ -14,8 +14,8 @@ class KillChainPhase(BaseEntity):
         >>> entity = phase.to_stix2_object()
     """
 
-    chain_name: str = Field(..., description="Name of the kill chain.")
-    phase_name: str = Field(..., description="Name of the kill chain phase.")
+    chain_name: str = Field(description="Name of the kill chain.")
+    phase_name: str = Field(description="Name of the kill chain phase.")
 
     def to_stix2_object(self) -> stix2.v21.KillChainPhase:
         """Make stix object."""
