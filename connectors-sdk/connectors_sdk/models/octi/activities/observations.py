@@ -114,7 +114,8 @@ class Indicator(BaseIdentifiedEntity):
         "See : See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_9lfdvxnyofxw",
         min_length=1,
     )
-    main_observable_type: Literal[
+    main_observable_type: (
+        Literal[
             "Stix-Cyber-Observable",
             "Artifact",
             "Autonomous-System",
@@ -147,7 +148,9 @@ class Indicator(BaseIdentifiedEntity):
             "User-Agent",
             "Windows-Registry-Key",
             "X509-Certificate",
-        ] | None = Field(
+        ]
+        | None
+    ) = Field(
         default=None,
         description="Observable type. "
         "See: https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/schema/stixCyberObservable.ts#L4",
