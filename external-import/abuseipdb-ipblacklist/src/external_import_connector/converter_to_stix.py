@@ -1,7 +1,7 @@
 import ipaddress
 
 import stix2
-from pycti import Identity, Indicator, MarkingDefinition, StixCoreRelationship
+from pycti import Identity, MarkingDefinition, StixCoreRelationship
 
 
 class ConverterToStix:
@@ -140,6 +140,7 @@ class ConverterToStix:
                 f"- abuseConfidenceScore: {confidence_score} - lastReportedAt: {last_reported}"
             ),
             "x_opencti_score": int(confidence_score),
+            "x_opencti_create_indicator": self.config.create_indicator,
         }
         if self._is_ipv6(value):
             return stix2.IPv6Address(
@@ -151,34 +152,4 @@ class ConverterToStix:
             value=value,
             object_marking_refs=[self.tlp_marking],
             custom_properties=custom_properties,
-        )
-
-    def create_indicator(self, observable: dict) -> stix2.Indicator | None:
-        pattern = None
-        observable_type = None
-        value = observable.value
-        if observable.type == "ipv4-addr":
-            pattern = f"[ipv4-addr:value = '{value}']"
-            observable_type = "IPv4-Addr"
-        if observable.type == "ipv6-addr":
-            pattern = f"[ipv6-addr:value = '{value}']"
-            observable_type = "IPv6-Addr"
-
-        if not pattern and not observable_type:
-            self.helper.log_error(
-                "Unsupported observable type", {"type": observable.type}
-            )
-            return None
-
-        return stix2.Indicator(
-            id=Indicator.generate_id(pattern),
-            name=value,
-            description="Agressive IP known malicious on AbuseIPDB",
-            pattern_type="stix",
-            pattern=pattern,
-            object_marking_refs=[self.tlp_marking],
-            created_by_ref=self.author["id"],
-            custom_properties={
-                "x_opencti_main_observable_type": observable_type,
-            },
         )
