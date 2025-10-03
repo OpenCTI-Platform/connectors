@@ -2,7 +2,7 @@
 
 import ipaddress
 from abc import ABC, abstractmethod
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 from connectors_sdk.models.octi._common import (
     MODEL_REGISTRY,
@@ -30,28 +30,28 @@ class Observable(ABC, BaseIdentifiedEntity):
     This class must be subclassed to create specific observable types.
     """
 
-    score: Optional[int] = Field(
+    score: int | None = Field(
+        default=None,
         description="Score of the observable.",
         ge=0,
         le=100,
-        default=None,
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
+        default=None,
         description="Description of the observable.",
-        default=None,
     )
-    labels: Optional[list[str]] = Field(
-        description="Labels of the observable.",
+    labels: list[str] | None = Field(
         default=None,
+        description="Labels of the observable.",
     )
 
-    associated_files: Optional[list["AssociatedFile"]] = Field(
+    associated_files: list["AssociatedFile"] | None = Field(
+        default=None,
         description="Associated files for the observable.",
-        default=None,
     )
-    create_indicator: Optional[bool] = Field(
-        description="If True, an indicator and a `based-on` relationship will be created for this observable. (Delegated to OpenCTI Platform).",
+    create_indicator: bool | None = Field(
         default=None,
+        description="If True, an indicator and a `based-on` relationship will be created for this observable. (Delegated to OpenCTI Platform).",
     )
 
     def _custom_properties_to_stix(self) -> dict[str, Any]:
@@ -114,8 +114,7 @@ class Indicator(BaseIdentifiedEntity):
         "See : See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_9lfdvxnyofxw",
         min_length=1,
     )
-    main_observable_type: Optional[
-        Literal[
+    main_observable_type: Literal[
             "Stix-Cyber-Observable",
             "Artifact",
             "Autonomous-System",
@@ -148,55 +147,54 @@ class Indicator(BaseIdentifiedEntity):
             "User-Agent",
             "Windows-Registry-Key",
             "X509-Certificate",
-        ]
-    ] = Field(
+        ] | None = Field(
+        default=None,
         description="Observable type. "
         "See: https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/schema/stixCyberObservable.ts#L4",
-        default=None,
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
+        default=None,
         description="Description of the indicator.",
-        default=None,
     )
-    indicator_types: Optional[list[str]] = Field(
+    indicator_types: list[str] | None = Field(
+        default=None,
         description="Indicator types. The default OpenCTI types are: "
         "'anomalous-activity', 'anonymization', 'attribution', 'benign', 'compromised', 'malicious-activity', 'unknown'. "
         "See: https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_cvhfwe3t9vuo",
-        default=None,
     )
-    platforms: Optional[list[str]] = Field(
+    platforms: list[str] | None = Field(
+        default=None,
         description="Platforms. The default OpenCTI platforms are: 'windows', 'macos', 'linux', 'android'. "
         "See: https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L797",
-        default=None,
     )
-    valid_from: Optional[AwareDatetime] = Field(
+    valid_from: AwareDatetime | None = Field(
+        default=None,
         description="Valid from.",
-        default=None,
     )
-    valid_until: Optional[AwareDatetime] = Field(
+    valid_until: AwareDatetime | None = Field(
+        default=None,
         description="Valid until.",
-        default=None,
     )
-    kill_chain_phases: Optional[list[KillChainPhase]] = Field(
+    kill_chain_phases: list[KillChainPhase] | None = Field(
+        default=None,
         description="Kill chain phases.",
-        default=None,
     )
-    score: Optional[int] = Field(
+    score: int | None = Field(
+        default=None,
         description="Score of the indicator.",
         ge=0,
         le=100,
-        default=None,
     )
-    associated_files: Optional[list[AssociatedFile]] = Field(
-        description="Associated files for the indicator.",
+    associated_files: list[AssociatedFile] | None = Field(
         default=None,
+        description="Associated files for the indicator.",
     )
 
-    create_observables: Optional[bool] = Field(
+    create_observables: bool | None = Field(
+        default=None,
         description="If True, observables and `based-on` relationships will be created for this "
         "indicator (Delegated to OpenCTI Platform). You can also manually define the Observable objects "
         "and use BasedOnRelationship for more granularity.",
-        default=None,
     )
 
     def to_stix2_object(self) -> Stix2Indicator:
@@ -269,46 +267,46 @@ class File(Observable):
           It must be replaced by explicit `____________________` relationships.
     """
 
-    hashes: Optional[dict[HashAlgorithm, str]] = Field(
-        description="A dictionary of hashes for the file.",
+    hashes: dict[HashAlgorithm, str] | None = Field(
         default=None,
+        description="A dictionary of hashes for the file.",
         min_length=1,
     )
-    size: Optional[PositiveInt] = Field(
+    size: PositiveInt | None = Field(
+        default=None,
         description="The size of the file in bytes.",
-        default=None,
     )
-    name: Optional[str] = Field(
+    name: str | None = Field(
+        default=None,
         description="The name of the file.",
-        default=None,
     )
-    name_enc: Optional[str] = Field(
+    name_enc: str | None = Field(
+        default=None,
         description="The observed encoding for the name of the file.",
-        default=None,
     )
-    magic_number_hex: Optional[str] = Field(
+    magic_number_hex: str | None = Field(
+        default=None,
         description="The hexadecimal constant ('magic number') associated with the file format.",
-        default=None,
     )
-    mime_type: Optional[str] = Field(
+    mime_type: str | None = Field(
+        default=None,
         description="The MIME type name specified for the file, e.g., application/msword.",
-        default=None,
     )
-    ctime: Optional[AwareDatetime] = Field(
+    ctime: AwareDatetime | None = Field(
+        default=None,
         description="Date/time the directory was created.",
-        default=None,
     )
-    mtime: Optional[AwareDatetime] = Field(
+    mtime: AwareDatetime | None = Field(
+        default=None,
         description="Date/time the directory was last writtend to or modified.",
-        default=None,
     )
-    atime: Optional[AwareDatetime] = Field(
+    atime: AwareDatetime | None = Field(
+        default=None,
         description="Date/time the directory was last accessed.",
-        default=None,
     )
-    additional_names: Optional[list[str]] = Field(
-        description="Additional names of the file.",
+    additional_names: list[str] | None = Field(
         default=None,
+        description="Additional names of the file.",
     )
 
     @model_validator(mode="before")
@@ -450,25 +448,25 @@ class Software(Observable):
         description="Name of the software.",
         min_length=1,
     )
-    version: Optional[str] = Field(
+    version: str | None = Field(
+        default=None,
         description="Version of the software.",
-        default=None,
     )
-    vendor: Optional[str] = Field(
+    vendor: str | None = Field(
+        default=None,
         description="Vendor of the software.",
-        default=None,
     )
-    swid: Optional[str] = Field(
+    swid: str | None = Field(
+        default=None,
         description="SWID of the software.",
-        default=None,
     )
-    cpe: Optional[str] = Field(
+    cpe: str | None = Field(
+        default=None,
         description="CPE of the software.",
-        default=None,
     )
-    languages: Optional[list[str]] = Field(
-        description="Languages of the software.",
+    languages: list[str] | None = Field(
         default=None,
+        description="Languages of the software.",
     )
 
     def to_stix2_object(self) -> Stix2Software:

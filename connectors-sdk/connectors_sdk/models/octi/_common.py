@@ -104,20 +104,20 @@ class BaseEntity(BaseModel):
 class BaseIdentifiedEntity(BaseEntity):
     """Base class that can be identified thanks to a stix-like id."""
 
-    _stix2_id: Optional[str] = PrivateAttr(None)
+    _stix2_id: str | None = PrivateAttr(default=None)
 
-    author: Optional["Author"] = Field(
-        None,
+    author: "Author" | None = Field(
+        default=None,
         description="The Author reporting this Observable.",
     )
 
-    markings: Optional[list["TLPMarking"]] = Field(
-        None,
+    markings: list["TLPMarking"] | None = Field(
+        default=None,
         description="References for object marking.",
     )
 
-    external_references: Optional[list["ExternalReference"]] = Field(
-        None,
+    external_references: list["ExternalReference"] | None = Field(
+        default=None,
         description="External references of the observable.",
     )
 
@@ -255,25 +255,25 @@ class AssociatedFile(BaseEntity):
     name: str = Field(
         description="The name of the file.",
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
+        default=None,
         description="Description of the file.",
-        default=None,
     )
-    content: Optional[bytes] = Field(
+    content: bytes | None = Field(
+        default=None,
         description="The file content.",
-        default=None,
     )
-    mime_type: Optional[str] = Field(
+    mime_type: str | None = Field(
+        default=None,
         description="File mime type.",
-        default=None,
     )
-    markings: Optional[list["TLPMarking"]] = Field(
+    markings: list["TLPMarking"] | None = Field(
+        default=None,
         description="References for object marking.",
-        default=None,
     )
-    version: Optional[str] = Field(
-        description="Version of the file.",
+    version: str | None = Field(
         default=None,
+        description="Version of the file.",
     )
 
     def to_stix2_object(self) -> AssociatedFileStix:
@@ -363,17 +363,17 @@ class ExternalReference(BaseEntity):
     source_name: str = Field(
         description="The name of the source of the external reference.",
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
+        default=None,
         description="Description of the external reference.",
-        default=None,
     )
-    url: Optional[str] = Field(
+    url: str | None = Field(
+        default=None,
         description="URL of the external reference.",
-        default=None,
     )
-    external_id: Optional[str] = Field(
-        description="An identifier for the external reference content.",
+    external_id: str | None = Field(
         default=None,
+        description="An identifier for the external reference content.",
     )
 
     def to_stix2_object(self) -> stix2.v21.ExternalReference:
