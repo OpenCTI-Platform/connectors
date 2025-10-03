@@ -8,7 +8,6 @@ Notes:
 """
 
 from collections import OrderedDict
-from typing import Optional
 
 import stix2.properties
 from connectors_sdk.models.octi._common import (
@@ -49,25 +48,25 @@ class Note(BaseIdentifiedEntity):
     publication_date: AwareDatetime = Field(
         description="Publication date of the note.",
     )
-    abstract: Optional[str] = Field(
+    abstract: str | None = Field(
+        default=None,
         description="A brief summary of the note content.",
-        default=None,
     )
-    note_types: Optional[list[NoteType]] = Field(
+    note_types: list[NoteType] | None = Field(
+        default=None,
         description="Types of the note.",
-        default=None,
     )
-    labels: Optional[list[str]] = Field(
+    labels: list[str] | None = Field(
+        default=None,
         description="Labels of the note.",
-        default=None,
     )
-    authors: Optional[list[str]] = Field(
+    authors: list[str] | None = Field(
+        default=None,
         description="The name of the author(s) of this note (e.g., the analyst(s) that created it).",
-        default=None,
     )
-    objects: Optional[list[BaseIdentifiedEntity]] = Field(
-        description="OCTI objects this note applies to.",
+    objects: list[BaseIdentifiedEntity] | None = Field(
         default=None,
+        description="OCTI objects this note applies to.",
     )
 
     def to_stix2_object(self) -> Stix2Note:
@@ -124,29 +123,29 @@ class Report(BaseIdentifiedEntity):
     publication_date: AwareDatetime = Field(
         description="Publication date of the report.",
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
+        default=None,
         description="Description of the report.",
-        default=None,
     )
-    report_types: Optional[list[ReportType]] = Field(
+    report_types: list[ReportType] | None = Field(
+        default=None,
         description="Report types.",
-        default=None,
     )
-    labels: Optional[list[str]] = Field(
+    labels: list[str] | None = Field(
+        default=None,
         description="Labels of the report",
-        default=None,
     )
-    reliability: Optional[Reliability] = Field(
+    reliability: Reliability | None = Field(
+        default=None,
         description="Reliability of the report.",
-        default=None,
     )
-    objects: Optional[list[BaseIdentifiedEntity]] = Field(
+    objects: list[BaseIdentifiedEntity] | None = Field(
+        default=None,
         description="Objects of the report.",
-        default=None,
     )
-    files: Optional[list[AssociatedFile]] = Field(
-        description="Files to upload with the report, e.g. report as a PDF.",
+    files: list[AssociatedFile] | None = Field(
         default=None,
+        description="Files to upload with the report, e.g. report as a PDF.",
     )
 
     def to_stix2_object(self) -> Stix2Report:

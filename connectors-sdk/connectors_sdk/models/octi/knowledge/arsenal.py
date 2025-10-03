@@ -1,7 +1,5 @@
 """Offer arsenal OpenCTI entities."""
 
-from typing import Optional
-
 from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
 from connectors_sdk.models.octi.enums import (
     CvssSeverity,
@@ -29,41 +27,41 @@ class Malware(BaseIdentifiedEntity):
     is_family: bool = Field(
         description="Is the malware a family?",
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
+        default=None,
         description="Description of the malware.",
-        default=None,
     )
-    aliases: Optional[list[str]] = Field(
+    aliases: list[str] | None = Field(
+        default=None,
         description="Alternative names used to identify this malware or malware family.",
-        default=None,
     )
-    types: Optional[list[MalwareType]] = Field(
+    types: list[MalwareType] | None = Field(
+        default=None,
         description="Types of the malware.",
-        default=None,
     )
-    first_seen: Optional[AwareDatetime] = Field(
+    first_seen: AwareDatetime | None = Field(
+        default=None,
         description="The time that this Malware was first seen.",
-        default=None,
     )
-    last_seen: Optional[AwareDatetime] = Field(
+    last_seen: AwareDatetime | None = Field(
+        default=None,
         description="The time that this Malware was last seen.",
-        default=None,
     )
-    architecture_execution_envs: Optional[list[ProcessorArchitecture]] = Field(
+    architecture_execution_envs: list[ProcessorArchitecture] | None = Field(
+        default=None,
         description="Architecture execution environment of the malware.",
-        default=None,
     )
-    implementation_languages: Optional[list[ImplementationLanguage]] = Field(
+    implementation_languages: list[ImplementationLanguage] | None = Field(
+        default=None,
         description="Implementation languages of the malware.",
-        default=None,
     )
-    kill_chain_phases: Optional[list[KillChainPhase]] = Field(
+    kill_chain_phases: list[KillChainPhase] | None = Field(
+        default=None,
         description="Kill chain phases of the malware.",
-        default=None,
     )
-    capabilities: Optional[list[MalwareCapability]] = Field(
-        description="Any of the capabilities identified for the malware instance or family.",
+    capabilities: list[MalwareCapability] | None = Field(
         default=None,
+        description="Any of the capabilities identified for the malware instance or family.",
     )
 
     def to_stix2_object(self) -> Stix2Malware:
@@ -103,201 +101,201 @@ class Vulnerability(BaseIdentifiedEntity):
         description="Name of the vulnerability.",
         min_length=1,
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
+        default=None,
         description="Description of the vulnerability.",
-        default=None,
     )
-    labels: Optional[list[str]] = Field(
+    labels: list[str] | None = Field(
+        default=None,
         description="Labels of the vulnerability.",
-        default=None,
     )
-    aliases: Optional[list[str]] = Field(
+    aliases: list[str] | None = Field(
+        default=None,
         description="Vulnerability aliases",
-        default=None,
     )
-    score: Optional[int] = Field(
-        description="Score of the vulnerability.",
+    score: int | None = Field(
         default=None,
+        description="Score of the vulnerability.",
         ge=0,
         le=100,
     )
-    epss_score: Optional[float] = Field(
+    epss_score: float | None = Field(
+        default=None,
         description="EPSS score.",
-        default=None,
         ge=0,
         le=1,
     )
-    epss_percentile: Optional[float] = Field(
+    epss_percentile: float | None = Field(
+        default=None,
         description="EPSS percentile.",
-        default=None,
         ge=0,
         le=1,
     )
-    is_cisa_kev: Optional[bool] = Field(
+    is_cisa_kev: bool | None = Field(
+        default=None,
         description="Whether vulnerability is a CISA Known Exploited Vulnerability.",
-        default=None,
     )
-    cvss_v2_vector_string: Optional[str] = Field(
+    cvss_v2_vector_string: str | None = Field(
+        default=None,
         description="CVSS v2 vector string.",
-        default=None,
     )
-    cvss_v2_base_score: Optional[float] = Field(
+    cvss_v2_base_score: float | None = Field(
+        default=None,
         description="Reflects the severity score of a vulnerability according to its intrinsic characteristics.",
-        default=None,
     )
-    cvss_v2_access_vector: Optional[str] = Field(
+    cvss_v2_access_vector: str | None = Field(
+        default=None,
         description="Reflects how the vulnerability is exploited. Abbreviation: AV",
-        default=None,
     )
-    cvss_v2_access_complexity: Optional[str] = Field(
+    cvss_v2_access_complexity: str | None = Field(
+        default=None,
         description="Measures the complexity of the attack required to exploit the vulnerability "
         "once an attacker has gained access to the target system. Abbreviation: AC",
-        default=None,
     )
-    cvss_v2_authentication: Optional[str] = Field(
+    cvss_v2_authentication: str | None = Field(
+        default=None,
         description="Measures the number of times an attacker must authenticate "
         "to a target in order to exploit a vulnerability. Abbreviation: Au",
-        default=None,
     )
-    cvss_v2_confidentiality_impact: Optional[str] = Field(
+    cvss_v2_confidentiality_impact: str | None = Field(
+        default=None,
         description="Measures the impact on confidentiality of a successfully exploited vulnerability. Abbreviation: C",
-        default=None,
     )
-    cvss_v2_integrity_impact: Optional[str] = Field(
+    cvss_v2_integrity_impact: str | None = Field(
+        default=None,
         description="Measures the impact to integrity of a successfully exploited vulnerability. Abbreviation: I",
-        default=None,
     )
-    cvss_v2_availability_impact: Optional[str] = Field(
+    cvss_v2_availability_impact: str | None = Field(
+        default=None,
         description="Measures the impact to availability of a successfully exploited vulnerability. Abbreviation: A",
-        default=None,
     )
-    cvss_v2_exploitability: Optional[str] = Field(
+    cvss_v2_exploitability: str | None = Field(
+        default=None,
         description="Measures the current state of exploit techniques or code availability. Abbreviation: E",
-        default=None,
     )
-    cvss_v3_vector_string: Optional[str] = Field(
+    cvss_v3_vector_string: str | None = Field(
+        default=None,
         description="CVSS v3 vector string.",
-        default=None,
     )
-    cvss_v3_base_score: Optional[float] = Field(
+    cvss_v3_base_score: float | None = Field(
+        default=None,
         description="Reflects the severity score of a vulnerability according to its intrinsic characteristics.",
-        default=None,
     )
-    cvss_v3_base_severity: Optional[CvssSeverity] = Field(
+    cvss_v3_base_severity: CvssSeverity | None = Field(
+        default=None,
         description="Reflects the severity level of a vulnerability according to its intrinsic characteristics.",
-        default=None,
     )
-    cvss_v3_attack_vector: Optional[str] = Field(
+    cvss_v3_attack_vector: str | None = Field(
+        default=None,
         description="Reflects the context by which vulnerability exploitation is possible. Abbreviation: AV",
-        default=None,
     )
-    cvss_v3_attack_complexity: Optional[str] = Field(
+    cvss_v3_attack_complexity: str | None = Field(
+        default=None,
         description="Describes the conditions beyond the attacker's control that must "
         "exist in order to exploit the vulnerability. Abbreviation: AC",
-        default=None,
     )
-    cvss_v3_privileges_required: Optional[str] = Field(
+    cvss_v3_privileges_required: str | None = Field(
+        default=None,
         description="Describes the level of privileges an attacker must possess before "
         "successfully exploiting the vulnerability. Abbreviation: PR",
-        default=None,
     )
-    cvss_v3_user_interaction: Optional[str] = Field(
+    cvss_v3_user_interaction: str | None = Field(
+        default=None,
         description="Captures the requirement for a user, other than the attacker, "
         "to participate in the successful compromise of the vulnerable component. Abbreviation: UI",
-        default=None,
     )
-    cvss_v3_integrity_impact: Optional[str] = Field(
+    cvss_v3_integrity_impact: str | None = Field(
+        default=None,
         description="Measures the impact to integrity of a successfully exploited vulnerability. Abbreviation: I",
-        default=None,
     )
-    cvss_v3_availability_impact: Optional[str] = Field(
+    cvss_v3_availability_impact: str | None = Field(
+        default=None,
         description="Measures the impact to the availability of the impacted component "
         "resulting from a successfully exploited vulnerability. Abbreviation: A",
-        default=None,
     )
-    cvss_v3_confidentiality_impact: Optional[str] = Field(
+    cvss_v3_confidentiality_impact: str | None = Field(
+        default=None,
         description="Measures the impact to the confidentiality of the information "
         "resources managed by a software component due to a successfully exploited vulnerability. Abbreviation: C",
-        default=None,
     )
-    cvss_v3_scope: Optional[str] = Field(
+    cvss_v3_scope: str | None = Field(
+        default=None,
         description="The ability for a vulnerability in one software component "
         "to impact resources beyond its means, or privileges. Abbreviation: S",
-        default=None,
     )
-    cvss_v3_exploit_code_maturity: Optional[str] = Field(
+    cvss_v3_exploit_code_maturity: str | None = Field(
+        default=None,
         description="Measures the likelihood of the vulnerability being attacked, and is typically "
         "based on the current state of exploit techniques, exploit code availability, or active, 'in-the-wild' exploitation. Abbreviation: E",
-        default=None,
     )
-    cvss_v4_vector_string: Optional[str] = Field(
+    cvss_v4_vector_string: str | None = Field(
+        default=None,
         description="CVSS v4 vector string.",
-        default=None,
     )
-    cvss_v4_base_score: Optional[float] = Field(
+    cvss_v4_base_score: float | None = Field(
+        default=None,
         description="Reflects the severity score of a vulnerability according to its intrinsic characteristics.",
-        default=None,
     )
-    cvss_v4_base_severity: Optional[CvssSeverity] = Field(
+    cvss_v4_base_severity: CvssSeverity | None = Field(
+        default=None,
         description="Reflects the severity level of a vulnerability according to its intrinsic characteristics.",
-        default=None,
     )
-    cvss_v4_attack_vector: Optional[str] = Field(
+    cvss_v4_attack_vector: str | None = Field(
+        default=None,
         description="Reflects the context by which vulnerability exploitation is possible. Abbreviation: AV",
-        default=None,
     )
-    cvss_v4_attack_complexity: Optional[str] = Field(
+    cvss_v4_attack_complexity: str | None = Field(
+        default=None,
         description="Captures measurable actions that must be taken by the attacker to actively evade or circumvent "
         "existing built-in security-enhancing conditions in order to obtain a working exploit. Abbreviation: AC",
-        default=None,
     )
-    cvss_v4_attack_requirements: Optional[str] = Field(
+    cvss_v4_attack_requirements: str | None = Field(
+        default=None,
         description="Captures the prerequisite deployment and execution conditions or variables "
         "of the vulnerable system that enable the attack. Abbreviation: AT",
-        default=None,
     )
-    cvss_v4_privileges_required: Optional[str] = Field(
+    cvss_v4_privileges_required: str | None = Field(
+        default=None,
         description="Describes the level of privileges an attacker must possess prior to "
         "successfully exploiting the vulnerability. Abbreviation: PR",
-        default=None,
     )
-    cvss_v4_user_interaction: Optional[str] = Field(
+    cvss_v4_user_interaction: str | None = Field(
+        default=None,
         description="Captures the requirement for a human user, other than the attacker, to participate "
         "in the successful compromise of the vulnerable system. Abbreviation: UI",
-        default=None,
     )
-    cvss_v4_vs_confidentiality_impact: Optional[str] = Field(
+    cvss_v4_vs_confidentiality_impact: str | None = Field(
+        default=None,
         description="Measures the impact to the confidentiality of the information managed by "
         "the system due to a successfully exploited vulnerability. Abbreviation: VC",
-        default=None,
     )
-    cvss_v4_ss_confidentiality_impact: Optional[str] = Field(
+    cvss_v4_ss_confidentiality_impact: str | None = Field(
+        default=None,
         description="Measures the impact to the confidentiality of the information managed by "
         "the system due to a successfully exploited vulnerability. Abbreviation: SC",
-        default=None,
     )
-    cvss_v4_vs_integrity_impact: Optional[str] = Field(
+    cvss_v4_vs_integrity_impact: str | None = Field(
+        default=None,
         description="Measures the impact to integrity of a successfully exploited vulnerability. Abbreviation: VI",
-        default=None,
     )
-    cvss_v4_ss_integrity_impact: Optional[str] = Field(
+    cvss_v4_ss_integrity_impact: str | None = Field(
+        default=None,
         description="Measures the impact to integrity of a successfully exploited vulnerability. Abbreviation: SI",
-        default=None,
     )
-    cvss_v4_vs_availability_impact: Optional[str] = Field(
+    cvss_v4_vs_availability_impact: str | None = Field(
+        default=None,
         description="Measures the impact to the availability of the impacted system resulting "
         "from a successfully exploited vulnerability. Abbreviation: VA",
-        default=None,
     )
-    cvss_v4_ss_availability_impact: Optional[str] = Field(
+    cvss_v4_ss_availability_impact: str | None = Field(
+        default=None,
         description="Measures the impact to the availability of the impacted system resulting "
         "from a successfully exploited vulnerability. Abbreviation: SA",
-        default=None,
     )
-    cvss_v4_exploit_maturity: Optional[str] = Field(
+    cvss_v4_exploit_maturity: str | None = Field(
+        default=None,
         description="Measures the likelihood of the vulnerability being attacked, and is based on the current state of "
         "exploit techniques, exploit code availability, or active, “in-the-wild” exploitation. Abbreviation: E",
-        default=None,
     )
 
     def to_stix2_object(self) -> Stix2Vulnerability:

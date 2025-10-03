@@ -1,6 +1,6 @@
 """Define Relationships handled by OpenCTI platform."""
 
-from typing import Literal, Optional
+from typing import Literal
 
 from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
 from pycti import StixCoreRelationship as PyctiStixCoreRelationship
@@ -27,17 +27,17 @@ class Relationship(BaseIdentifiedEntity):
     target: BaseIdentifiedEntity = Field(
         description="The target entity of the relationship.",
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
+        default=None,
         description="Description of the relationship.",
-        default=None,
     )
-    start_time: Optional[AwareDatetime] = Field(
+    start_time: AwareDatetime | None = Field(
+        default=None,
         description="Start time of the relationship in ISO 8601 format.",
-        default=None,
     )
-    stop_time: Optional[AwareDatetime] = Field(
-        description="End time of the relationship in ISO 8601 format.",
+    stop_time: AwareDatetime | None = Field(
         default=None,
+        description="End time of the relationship in ISO 8601 format.",
     )
 
     def to_stix2_object(self) -> Stix2Relationship:
