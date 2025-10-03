@@ -76,9 +76,7 @@ class ConverterToStix:
     def create_incident(self, alert: dict) -> stix2.Incident | None:
         def _get_remediation(remediation_steps: str | None) -> str:
             try:
-                return "  \n" + "  \n".join(
-                    json.loads(remediation_steps) if remediation_steps else []
-                )
+                return f"  \n{'  \n'.join(json.loads(remediation_steps) if remediation_steps else [])}"
             except json.JSONDecodeError:
                 self.helper.connector_logger.warning(
                     "Error while decoding remediation steps, RemediationSteps must be a valid JSON list:"
@@ -91,29 +89,17 @@ class ConverterToStix:
         incident_modified_at = format_datetime(alert.get("EndTime"))
         incident_labels = [alert.get("AlertType")] if alert.get("AlertType") else None
         incident_description = (
-            "**Display Name**: {DisplayName}  \n"
-            "**Alert ID**: {SystemAlertId}  \n"
-            "**Status**: {Status}  \n"
-            "**Severity**: {AlertSeverity}  \n"
-            "**Alert Type**: {AlertType}  \n"
-            "**Start Time (UTC)**: {StartTime}  \n"
-            "**End Time (UTC)**: {EndTime}  \n"
-            "**Time Generated (UTC)**: {TimeGenerated}  \n"
-            "**Tactics**: {Tactics}  \n"
-            "**Description**: {Description}  \n"
-            "**Remediation**:{Remediation}"
-        ).format(
-            DisplayName=alert.get("DisplayName"),
-            SystemAlertId=alert.get("SystemAlertId"),
-            Status=alert.get("Status"),
-            AlertSeverity=alert.get("AlertSeverity"),
-            AlertType=alert.get("AlertType"),
-            StartTime=alert.get("StartTime"),
-            EndTime=alert.get("EndTime"),
-            TimeGenerated=alert.get("TimeGenerated"),
-            Tactics=alert.get("Tactics"),
-            Description=alert.get("Description"),
-            Remediation=_get_remediation(alert.get("RemediationSteps")),
+            f"**Display Name**: {alert.get('DisplayName')}  \n"
+            f"**Alert ID**: {alert.get('SystemAlertId')}  \n"
+            f"**Status**: {alert.get('Status')}  \n"
+            f"**Severity**: {alert.get('AlertSeverity')}  \n"
+            f"**Alert Type**: {alert.get('AlertType')}  \n"
+            f"**Start Time (UTC)**: {alert.get('StartTime')}  \n"
+            f"**End Time (UTC)**: {alert.get('EndTime')}  \n"
+            f"**Time Generated (UTC)**: {alert.get('TimeGenerated')}  \n"
+            f"**Tactics**: {alert.get('Tactics')}  \n"
+            f"**Description**: {alert.get('Description')}  \n"
+            f"**Remediation**:{_get_remediation(alert.get("RemediationSteps"))}"
         )
         stix_incident = stix2.Incident(
             id=Incident.generate_id(incident_name, incident_created_at),
