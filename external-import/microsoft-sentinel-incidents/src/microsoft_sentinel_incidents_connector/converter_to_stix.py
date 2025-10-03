@@ -328,7 +328,7 @@ class ConverterToStix:
             return None
 
     @handle_stix2_error
-    def create_evidence_identity_system(self, evidence: dict) -> stix2.Identity:
+    def create_evidence_identity_system(self, evidence: dict) -> stix2.Identity | None:
         """
         Create STIX 2.1 Identity System object
         :param evidence: Evidence to create Identity system from

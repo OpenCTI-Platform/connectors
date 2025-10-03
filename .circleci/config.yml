@@ -15,7 +15,7 @@ executors:
     environment:
       BUILD_TAGS: <<parameters.tags>>
     docker:
-      - image: cimg/python:3.11
+      - image: cimg/python:3.12
   ci_notifications:
     docker:
       - image: "cimg/base:stable"
@@ -123,7 +123,7 @@ jobs:
             fi
   test:
     docker:
-      - image: cimg/python:3.11
+      - image: cimg/python:3.12
     working_directory: ~/repo
     parallelism: 4
     steps:
