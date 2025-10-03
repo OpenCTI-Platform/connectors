@@ -39,6 +39,17 @@ class ConfigConnector:
             return default_date
 
     @staticmethod
+    def prepare_tags(tags: str | None) -> list[str]:
+        """
+        Prepare tags from a comma-separated string to a list of trimmed strings.
+        :param tags: Comma-separated string of tags
+        :return: List of trimmed tags
+        """
+        if tags is not None and tags.strip():
+            return [tag.strip() for tag in tags.split(",") if tag.strip()]
+        return []
+
+    @staticmethod
     def _load_config() -> dict:
         """
         Load the configuration from the YAML file
@@ -104,3 +115,9 @@ class ConfigConnector:
         self.import_start_date = self.prepare_iso_format(
             microsoft_sentinel_import_start_date_var
         )
+        microsoft_sentinel_incidents_tags = get_config_variable(
+            "MICROSOFT_SENTINEL_INCIDENTS_TAGS",
+            ["microsoft_sentinel_incidents", "tags"],
+            self.load,
+        )
+        self.tags = self.prepare_tags(microsoft_sentinel_incidents_tags)
