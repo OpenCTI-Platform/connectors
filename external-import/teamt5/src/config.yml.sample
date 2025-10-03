@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Team T5 External Import Connector'
+  scope: 'ChangeMe'
+  log_level: 'error'
+  duration_period: 'P1D' # Interval given for scheduler process in ISO-8601 format
+
+teamt5:
+  api_base_url: 'https://api.threatvision.org/'
+  api_key: 'ChangeMe'
+  tlp_level: 'clear' # available values are: clear, white, green, amber, amber+strict, red - Default: 'clear'
+  first_run_retrieval_timestamp: 'ChangeMe'

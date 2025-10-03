@@ -1,0 +1,17 @@
+services:
+  teamt5-external-import:
+    image: opencti/teamt5-external-import:rolling
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=Team T5 External Import Connector
+      - CONNECTOR_SCOPE=CHANGEME
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=P1D 
+      - TEAMT5_API_BASE_URL=https://api.threatvision.org/
+      - TEAMT5_API_KEY=CHANGEME
+      - TEAMT5_TLP_LEVEL=clear 
+      - TEAMT5_FIRST_RUN_RETRIEVAL_TIMESTAMP=CHANGEME 
+
+    restart: always
