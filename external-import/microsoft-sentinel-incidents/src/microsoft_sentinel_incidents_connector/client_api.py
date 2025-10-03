@@ -68,17 +68,20 @@ class ConnectorClient:
             f"{self.log_analytics_url}/workspaces/{self.config.workspace_id}/query"
         )
         body = {
-            "query": f"""SecurityIncident 
+            "query": f"""
+            SecurityIncident 
             | sort by LastModifiedTime asc 
             | where LastModifiedTime > todatetime('"{date_str}"')
             """
         }
         if self.config.tags:
-            body["query"] += (
-                f" | mv-apply Labels on ("
-                f" where Labels.labelName has_any ({', '.join(f'\"{tag}\"' for tag in self.config.tags)})"
-                f" )"
+            body[
+                "query"
+            ] += f"""
+            | mv-apply Labels on (
+                where Labels.labelName has_any ({', '.join(f'"{tag}"' for tag in self.config.tags)})
             )
+            """
         while next_page_url:
             try:
                 response = self.session.post(url=next_page_url, json=body)
