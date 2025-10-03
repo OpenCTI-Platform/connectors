@@ -366,9 +366,6 @@ class VulnerabilityEnrichment(RecordedFutureBaseModel):
     lifecycleStage: str = Field(
         description="Lifecycle stage of the vulnerability.",
     )
-    cpe: list[str] = Field(
-        description="CPE naming standard of affected products.",
-    )
     nvdDescription: str = Field(
         description="NVD description of the vulnerability.",
     )
@@ -377,4 +374,8 @@ class VulnerabilityEnrichment(RecordedFutureBaseModel):
     )
     relatedLinks: list[str] = Field(
         description="A list of URLs that mention this vulnerability.",
+    )
+    cpe: Optional[list[str]] = Field(
+        description="CPE naming standard of affected products.",
+        default=None,
     )
