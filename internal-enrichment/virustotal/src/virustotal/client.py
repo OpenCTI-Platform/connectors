@@ -213,7 +213,7 @@ class VirusTotalClient:
         """
         url = f"{self.url}/ip_addresses/{ip}"
         return self._query(url)
-    
+
     def get_ip_resolutions(self, ip):
         """
         Retrieve the domains that resolve to a given IP.

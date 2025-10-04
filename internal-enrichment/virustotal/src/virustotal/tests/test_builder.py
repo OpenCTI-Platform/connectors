@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, PropertyMock
 
 import stix2
 from pycti import Identity
+
 from virustotal.builder import VirusTotalBuilder
 
 

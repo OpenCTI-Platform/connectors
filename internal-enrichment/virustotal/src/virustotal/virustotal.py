@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """VirusTotal enrichment module."""
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict
 
 import stix2
 import yaml
 from pycti import Identity, OpenCTIConnectorHelper, get_config_variable
-from datetime import datetime, timedelta
 
 from .builder import VirusTotalBuilder
 from .client import VirusTotalClient
@@ -79,11 +79,13 @@ class VirusTotalConnector:
             ["virustotal", "ip_add_relationships"],
             config,
         )
-        self.ip_multihost_threshold = int(get_config_variable(
-            "VIRUSTOTAL_IP_MULTIHOST_THRESHOLD",
-            ["virustotal", "ip_multihost_threshold"],
-            config,
-        ))
+        self.ip_multihost_threshold = int(
+            get_config_variable(
+                "VIRUSTOTAL_IP_MULTIHOST_THRESHOLD",
+                ["virustotal", "ip_multihost_threshold"],
+                config,
+            )
+        )
         self.ip_label_multihost = get_config_variable(
             "VIRUSTOTAL_IP_LABEL_MULTIHOST",
             ["virustotal", "ip_label_multihost"],
@@ -314,18 +316,17 @@ class VirusTotalConnector:
 
     def _process_resolutions(self, resolutions):
         """Process resolutions and return count and list of recent domains."""
-        from datetime import datetime, timedelta
-        
+
         one_month_ago = datetime.now() - timedelta(days=30)
         one_month_ago_timestamp = int(one_month_ago.timestamp())
-        
+
         recent_domains = []
-        for resolution in resolutions['data']:
-            resolution_date = resolution['attributes']['date']
+        for resolution in resolutions["data"]:
+            resolution_date = resolution["attributes"]["date"]
             if resolution_date >= one_month_ago_timestamp:
-                hostname = resolution['attributes']['host_name']
+                hostname = resolution["attributes"]["host_name"]
                 recent_domains.append(hostname)
-        
+
         return recent_domains
 
     def _process_ip(self, stix_objects, stix_entity, opencti_entity):
@@ -338,7 +339,9 @@ class VirusTotalConnector:
 
         multihost_domains = None
         if self.ip_label_multihost:
-            resolutions = self.client.get_ip_resolutions(opencti_entity["observable_value"])
+            resolutions = self.client.get_ip_resolutions(
+                opencti_entity["observable_value"]
+            )
             recent_domains = self._process_resolutions(resolutions)
             if len(recent_domains) >= self.ip_multihost_threshold:
                 self.helper.log_debug(

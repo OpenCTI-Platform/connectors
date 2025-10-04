@@ -376,14 +376,14 @@ class VirusTotalBuilder:
                 if self.include_attributes_in_note
                 else ""
             )
-            
+
             # Add multihost information if available
             if self.multihost_domains:
                 content += "\n\n## Multihost Detection\n\n"
                 content += f"This IP was considered multihost because the following {len(self.multihost_domains)} domains resolved to the IP in the last month:\n\n"
                 for domain in self.multihost_domains:
                     content += f"- {domain}\n"
-            
+
             self.create_note(
                 "VirusTotal Results",
                 content,
@@ -545,7 +545,7 @@ class VirusTotalBuilder:
                 tag,
                 True,
             )
-    
+
     def add_multihost_label(self):
         """Add the multihost label to the IP observable."""
         self.helper.log_debug(
