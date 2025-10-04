@@ -65,6 +65,8 @@ Configuration parameters are provided using environment variables as described b
 | IP indicator valid minutes    | `ip_indicator_valid_minutes`    | `VIRUSTOTAL_IP_INDICATOR_VALID_MINUTES`    | `2880`  | No        | How long the indicator is valid for in minutes                                         |
 | IP indicator detect           | `ip_indicator_detect`           | `VIRUSTOTAL_IP_INDICATOR_DETECT`           | `True`  | No        | Whether or not to set detection for the indicator to true                              |
 | IP add relationships          | `ip_add_relationships`          | `VIRUSTOTAL_IP_ADD_RELATIONSHIPS`          | /       | No        | Whether or not to add ASN and location resolution relationships                        |
+| IP multihost threshold        | `ip_multihost_threshold`        | `VIRUSTOTAL_IP_MULTIHOST_THRESHOLD`        | `5`     | No        | Domains resolving to IP above which the connector should consider the IP as multihost  |
+| IP label multihost            | `ip_label_multihost`            | `VIRUSTOTAL_IP_LABEL_MULTIHOST`            | `False` | No       | Whether or not to add a label "multihost" to observables that surpass the threshold     |
 
 ---
 

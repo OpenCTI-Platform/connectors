@@ -34,6 +34,7 @@ class VirusTotalBuilder:
         data: dict,
         include_attributes_in_note: Optional[bool] = False,
         url_related_object_data: dict = {},
+        multihost_domains=None,
     ) -> None:
         """Initialize Virustotal builder."""
         self.helper = helper
@@ -46,6 +47,7 @@ class VirusTotalBuilder:
         self.score = self._compute_score(self.attributes["last_analysis_stats"])
         self.include_attributes_in_note = include_attributes_in_note
         self.url_related_object_data = url_related_object_data
+        self.multihost_domains = multihost_domains
 
         # Update score of observable.
         OpenCTIStix2.put_attribute_in_extension(
@@ -339,7 +341,6 @@ class VirusTotalBuilder:
     def create_notes(self):
         """
         Create Notes with the analysis results and categories.
-
         Notes are directly append in the bundle.
         """
         if self.attributes["last_analysis_stats"]["malicious"] != 0:
@@ -375,11 +376,18 @@ class VirusTotalBuilder:
                 if self.include_attributes_in_note
                 else ""
             )
+
+            # Add multihost information if available
+            if self.multihost_domains:
+                content += "\n\n## Multihost Detection\n\n"
+                content += f"This IP was considered multihost because the following {len(self.multihost_domains)} domains resolved to the IP in the last month:\n\n"
+                for domain in self.multihost_domains:
+                    content += f"- {domain}\n"
+
             self.create_note(
                 "VirusTotal Results",
                 content,
             )
-
         if "categories" in self.attributes and len(self.attributes["categories"]) > 0:
             content = "| Vendor | Category |\n"
             content += "|--------|----------|\n"
@@ -537,6 +545,19 @@ class VirusTotalBuilder:
                 tag,
                 True,
             )
+
+    def add_multihost_label(self):
+        """Add the multihost label to the IP observable."""
+        self.helper.log_debug(
+            f'[VirusTotal] adding multihost label to IP {self.opencti_entity["observable_value"]}'
+        )
+        OpenCTIStix2.put_attribute_in_extension(
+            self.stix_entity,
+            STIX_EXT_OCTI_SCO,
+            "labels",
+            "multihost",
+            True,
+        )
 
     def update_names(self, main: bool = False):
         """
