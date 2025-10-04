@@ -27,7 +27,7 @@ services:
       - VIRUSTOTAL_IP_INDICATOR_DETECT=true # Whether or not to set detection for the indicator to true
       - VIRUSTOTAL_IP_ADD_RELATIONSHIPS=true # Whether or not to add ASN and location resolution relationships
       - VIRUSTOTAL_IP_MULTIHOST_THRESHOLD=5 # The number of different domains that should have resolved to this IP in the last month to consider it multihost
-      - VIRUSTOTAL_IP_LABEL_MULTIHOST=true # Whether or not to add a label "multihost" to observables that surpass the threshold
+      - VIRUSTOTAL_IP_LABEL_MULTIHOST=false # Whether or not to add a label "multihost" to observables that surpass the threshold
       # Domain specific config settings
       - VIRUSTOTAL_DOMAIN_INDICATOR_CREATE_POSITIVES=10 # Create an indicator for Domain based observables once this positive theshold is reached. Note: specify 0 to disable indicator creation
       - VIRUSTOTAL_DOMAIN_INDICATOR_VALID_MINUTES=2880 # How long the indicator is valid for in minutes
