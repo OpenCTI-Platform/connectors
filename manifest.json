@@ -3601,6 +3601,213 @@
       }
     },
     {
+      "title": "VirusTotal",
+      "slug": "virustotal",
+      "description": "VirusTotal is a comprehensive service that aggregates data from numerous antivirus products and online scanners to analyze suspicious files and URLs for potential threats. By providing collective analysis results, VirusTotal helps security teams identify malicious content quickly and effectively, supporting more comprehensive cybersecurity efforts.\n\nIntegrating VirusTotal with OpenCTI enhances threat intelligence by providing access to the collective insights of numerous security vendors. This integration allows for the automatic import of analysis results for files and URLs, enriching the threat intelligence platform with detailed threat data. Security teams can leverage VirusTotal data to confirm, investigate, and respond to potential threats more efficiently, fortifying their overall security posture.",
+      "short_description": "VirusTotal aggregates data from antivirus products and scanners to analyze files and URLs, aiding in the quick identification of malicious content. Its integration with OpenCTI imports analysis results, enriching threat intelligence for efficient threat confirmation and response.",
+      "logo": "data:image/png;base64,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",
+      "use_cases": [
+        "Enrichment & Analysis",
+        "Malware Analysis"
+      ],
+      "verified": true,
+      "last_verified_date": "",
+      "playbook_supported": true,
+      "max_confidence_level": 50,
+      "support_version": ">=6.5.1",
+      "subscription_link": "https://www.virustotal.com",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/virustotal",
+      "manager_supported": true,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-virustotal",
+      "container_type": "INTERNAL_ENRICHMENT",
+      "config_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://www.filigran.io/connectors/virustotal_config.schema.json",
+        "type": "object",
+        "properties": {
+          "OPENCTI_URL": {
+            "description": "The OpenCTI platform URL.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "OPENCTI_TOKEN": {
+            "description": "The token of the user who represents the connector in the OpenCTI platform.",
+            "type": "string"
+          },
+          "CONNECTOR_NAME": {
+            "default": "VirusTotal",
+            "description": "Name of the connector.",
+            "type": "string"
+          },
+          "CONNECTOR_SCOPE": {
+            "default": [
+              "StixFile",
+              "Artifact",
+              "IPv4-Addr",
+              "Domain-Name",
+              "Url",
+              "Hostname"
+            ],
+            "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "CONNECTOR_TYPE": {
+            "default": "INTERNAL_ENRICHMENT",
+            "description": "Should always be set to INTERNAL_ENRICHMENT for this connector.",
+            "type": "string"
+          },
+          "CONNECTOR_AUTO": {
+            "default": false,
+            "description": "Enables or disables automatic enrichment of observables for OpenCTI.",
+            "type": "boolean"
+          },
+          "CONNECTOR_LOG_LEVEL": {
+            "default": "error",
+            "description": "Determines the verbosity of the logs.",
+            "enum": [
+              "debug",
+              "info",
+              "warn",
+              "warning",
+              "error"
+            ],
+            "type": "string"
+          },
+          "VIRUSTOTAL_TOKEN": {
+            "description": "VirusTotal API token for authentication.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "VIRUSTOTAL_MAX_TLP": {
+            "default": "TLP:AMBER",
+            "description": "Traffic Light Protocol (TLP) level to apply on objects imported into OpenCTI. Available values: TLP:CLEAR, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED",
+            "enum": [
+              "TLP:CLEAR",
+              "TLP:WHITE",
+              "TLP:GREEN",
+              "TLP:AMBER",
+              "TLP:AMBER+STRICT",
+              "TLP:RED"
+            ],
+            "type": "string"
+          },
+          "VIRUSTOTAL_REPLACE_WITH_LOWER_SCORE": {
+            "default": true,
+            "description": "Whether to keep the higher of the VT or existing score (false) or force the score to be updated with the VT score even if its lower than existing score (true).",
+            "type": "boolean"
+          },
+          "VIRUSTOTAL_FILE_CREATE_NOTE_FULL_REPORT": {
+            "default": true,
+            "description": "Whether or not to include the full report as a Note.",
+            "type": "boolean"
+          },
+          "VIRUSTOTAL_FILE_UPLOAD_UNSEEN_ARTIFACTS": {
+            "default": true,
+            "description": "Whether to upload artifacts (smaller than 32MB) that VirusTotal has no record of for analysis.",
+            "type": "boolean"
+          },
+          "VIRUSTOTAL_FILE_IMPORT_YARA": {
+            "default": true,
+            "description": "Whether or not to import Crowdsourced YARA rules.",
+            "type": "boolean"
+          },
+          "VIRUSTOTAL_FILE_INDICATOR_CREATE_POSITIVES": {
+            "default": 10,
+            "description": "Create an indicator for File/Artifact based observables once this positive threshold is reached.",
+            "type": "integer"
+          },
+          "VIRUSTOTAL_FILE_INDICATOR_VALID_MINUTES": {
+            "default": 2880,
+            "description": "How long the indicator is valid for in minutes.",
+            "type": "integer"
+          },
+          "VIRUSTOTAL_FILE_INDICATOR_DETECT": {
+            "default": true,
+            "description": "Whether or not to set detection for the indicator to true.",
+            "type": "boolean"
+          },
+          "VIRUSTOTAL_IP_ADD_RELATIONSHIPS": {
+            "default": false,
+            "description": "Whether or not to add ASN and location resolution relationships.",
+            "type": "boolean"
+          },
+          "VIRUSTOTAL_IP_INDICATOR_CREATE_POSITIVES": {
+            "default": 10,
+            "description": "Create an indicator for IPv4 based observables once this positive threshold is reached.",
+            "type": "integer"
+          },
+          "VIRUSTOTAL_IP_INDICATOR_VALID_MINUTES": {
+            "default": 2880,
+            "description": "How long the indicator is valid for in minutes.",
+            "type": "integer"
+          },
+          "VIRUSTOTAL_IP_INDICATOR_DETECT": {
+            "default": true,
+            "description": "Whether or not to set detection for the indicator to true.",
+            "type": "boolean"
+          },
+          "VIRUSTOTAL_DOMAIN_ADD_RELATIONSHIPS": {
+            "default": false,
+            "description": "Whether or not to add IP resolution relationships.",
+            "type": "boolean"
+          },
+          "VIRUSTOTAL_DOMAIN_INDICATOR_CREATE_POSITIVES": {
+            "default": 10,
+            "description": "Create an indicator for Domain based observables once this positive threshold is reached.",
+            "type": "integer"
+          },
+          "VIRUSTOTAL_DOMAIN_INDICATOR_VALID_MINUTES": {
+            "default": 2880,
+            "description": "How long the indicator is valid for in minutes.",
+            "type": "integer"
+          },
+          "VIRUSTOTAL_DOMAIN_INDICATOR_DETECT": {
+            "default": true,
+            "description": "Whether or not to set detection for the indicator to true.",
+            "type": "boolean"
+          },
+          "VIRUSTOTAL_URL_UPLOAD_UNSEEN": {
+            "default": true,
+            "description": "Whether to upload URLs that VirusTotal has no record of for analysis.",
+            "type": "boolean"
+          },
+          "VIRUSTOTAL_URL_INDICATOR_CREATE_POSITIVES": {
+            "default": 10,
+            "description": "Create an indicator for URL based observables once this positive threshold is reached.",
+            "type": "integer"
+          },
+          "VIRUSTOTAL_URL_INDICATOR_VALID_MINUTES": {
+            "default": 2880,
+            "description": "How long the indicator is valid for in minutes.",
+            "type": "integer"
+          },
+          "VIRUSTOTAL_URL_INDICATOR_DETECT": {
+            "default": true,
+            "description": "Whether or not to set detection for the indicator to true.",
+            "type": "boolean"
+          },
+          "VIRUSTOTAL_INCLUDE_ATTRIBUTES_IN_NOTE": {
+            "default": false,
+            "description": "Whether or not to include the attributes info in Note.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "OPENCTI_URL",
+          "OPENCTI_TOKEN",
+          "VIRUSTOTAL_TOKEN"
+        ],
+        "additionalProperties": true
+      }
+    },
+    {
       "title": "VMray Analyzer",
       "slug": "vmray-analyzer",
       "description": "VMRay provides advanced threat analysis and detection by integrating its unique agentless hypervisor-based sandbox with a real-time reputation engine.\n\nThis connector enables the enrichment and analysis of artefact observables through VMRay Analyzer.",
