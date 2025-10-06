@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Bash script to generate config JSON schemas for a single targeted connector
+# Bash script to generate config JSON schema for a single targeted connector
 # This is the singular version of generate_connectors_config_json_schemas.sh
 
 set -euo pipefail  # exit on error
@@ -221,14 +221,14 @@ if [ -n "$requirements_file" ]; then
             echo -e "\033[36m> Generating connector JSON schema...\033[0m"
             
             # Generate connector JSON schema in __metadata__
-            generator_path=$(find "$original_dir" -name "generate_connectors_config_json_schemas.py.sample")
+            generator_path=$(find "$original_dir" -name "generate_connector_config_json_schema.py.sample")
             if [ -n "$generator_path" ]; then
-                cp "$generator_path" "generate_connectors_config_json_schemas_tmp.py"
-                python "generate_connectors_config_json_schemas_tmp.py"
-                rm "generate_connectors_config_json_schemas_tmp.py"
+                cp "$generator_path" "generate_connector_config_json_schema_tmp.py"
+                python "generate_connector_config_json_schema_tmp.py"
+                rm "generate_connector_config_json_schema_tmp.py"
                 echo -e "\033[32m✅ JSON schema generated successfully\033[0m"
             else
-                echo -e "\033[31m❌ Could not find generate_connectors_config_json_schemas.py.sample\033[0m"
+                echo -e "\033[31m❌ Could not find generate_connector_config_json_schema.py.sample\033[0m"
             fi
             
             echo -e "\033[36m> Generating configurations table...\033[0m"

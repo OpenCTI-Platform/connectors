@@ -86,10 +86,10 @@ do
         (
           activate_venv "$connector_directory_path"
           # Generate connector JSON schema in __metadata__
-          generator_path=$(find . -name "generate_connectors_config_json_schemas.py.sample")
-          cp "$generator_path" "$connector_directory_path/generate_connectors_config_json_schemas_tmp.py"
-          python "$connector_directory_path/generate_connectors_config_json_schemas_tmp.py"
-          rm "$connector_directory_path/generate_connectors_config_json_schemas_tmp.py"
+          generator_path=$(find . -name "generate_connector_config_json_schema.py.sample")
+          cp "$generator_path" "$connector_directory_path/generate_connector_config_json_schema_tmp.py"
+          python "$connector_directory_path/generate_connector_config_json_schema_tmp.py"
+          rm "$connector_directory_path/generate_connector_config_json_schema_tmp.py"
 
           # Generate configurations table in __metadata/CONNECTOR_CONFIG_DOC.md
           python -m pip install -q --disable-pip-version-check jsonschema_markdown
