@@ -1,15 +1,13 @@
 # -*- coding: utf-8 -*-
 """VirusTotal enrichment module."""
-from pathlib import Path
+
 from typing import Dict
 
 import stix2
-import yaml
-from pycti import Identity, OpenCTIConnectorHelper, get_config_variable
-
-from .builder import VirusTotalBuilder
-from .client import VirusTotalClient
-from .indicator_config import IndicatorConfig
+from pycti import Identity, OpenCTIConnectorHelper
+from virustotal.builder import VirusTotalBuilder
+from virustotal.client import VirusTotalClient
+from virustotal.models.configs.config_loader import ConfigLoader
 
 
 class VirusTotalConnector:
@@ -18,24 +16,11 @@ class VirusTotalConnector:
     _SOURCE_NAME = "VirusTotal"
     _API_URL = "https://www.virustotal.com/api/v3"
 
-    def __init__(self):
+    def __init__(self, config: ConfigLoader, helper: OpenCTIConnectorHelper):
         # Instantiate the connector helper from config
-        config_file_path = Path(__file__).parent.parent.resolve() / "config.yml"
-        config = (
-            yaml.load(open(config_file_path, encoding="utf-8"), Loader=yaml.FullLoader)
-            if config_file_path.is_file()
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config, playbook_compatible=True)
-        token = get_config_variable("VIRUSTOTAL_TOKEN", ["virustotal", "token"], config)
-        self.max_tlp = get_config_variable(
-            "VIRUSTOTAL_MAX_TLP", ["virustotal", "max_tlp"], config
-        )
-        self.replace_with_lower_score = get_config_variable(
-            "VIRUSTOTAL_REPLACE_WITH_LOWER_SCORE",
-            ["virustotal", "replace_with_lower_score"],
-            config,
-        )
+        self.config = config
+        self.helper = helper
+
         self.author = stix2.Identity(
             id=Identity.generate_id(self._SOURCE_NAME, "organization"),
             name=self._SOURCE_NAME,
@@ -44,65 +29,47 @@ class VirusTotalConnector:
             confidence=self.helper.connect_confidence_level,
         )
 
+        self.max_tlp = self.config.virustotal.max_tlp
+        self.replace_with_lower_score = self.config.virustotal.replace_with_lower_score
+        token = self.config.virustotal.token.get_secret_value()
         self.client = VirusTotalClient(self.helper, self._API_URL, token)
 
         # Cache to store YARA rulesets.
         self.yara_cache = {}
 
         # File/Artifact specific settings
-        self.file_create_note_full_report = get_config_variable(
-            "VIRUSTOTAL_FILE_CREATE_NOTE_FULL_REPORT",
-            ["virustotal", "file_create_note_full_report"],
-            config,
-            default=True,
+        self.file_create_note_full_report = (
+            self.config.virustotal.file_create_note_full_report
         )
-        self.file_import_yara = get_config_variable(
-            "VIRUSTOTAL_FILE_IMPORT_YARA",
-            ["virustotal", "file_import_yara"],
-            config,
-            default=True,
+        self.file_import_yara = self.config.virustotal.file_import_yara
+        self.file_upload_unseen_artifacts = (
+            self.config.virustotal.file_upload_unseen_artifacts
         )
-        self.file_upload_unseen_artifacts = get_config_variable(
-            "VIRUSTOTAL_FILE_UPLOAD_UNSEEN_ARTIFACTS",
-            ["virustotal", "file_upload_unseen_artifacts"],
-            config,
-            default=True,
-        )
-        self.file_indicator_config = IndicatorConfig.load_indicator_config(
-            config, "FILE"
+        self.file_indicator_config = self.config.virustotal.model_extra.get(
+            "file_indicator_config"
         )
 
         # IP specific settings
-        self.ip_add_relationships = get_config_variable(
-            "VIRUSTOTAL_IP_ADD_RELATIONSHIPS",
-            ["virustotal", "ip_add_relationships"],
-            config,
+        self.ip_add_relationships = self.config.virustotal.ip_add_relationships
+        self.ip_indicator_config = self.config.virustotal.model_extra.get(
+            "ip_indicator_config"
         )
-        self.ip_indicator_config = IndicatorConfig.load_indicator_config(config, "IP")
 
         # Domain specific settings
-        self.domain_add_relationships = get_config_variable(
-            "VIRUSTOTAL_DOMAIN_ADD_RELATIONSHIPS",
-            ["virustotal", "domain_add_relationships"],
-            config,
-        )
-        self.domain_indicator_config = IndicatorConfig.load_indicator_config(
-            config, "DOMAIN"
+        self.domain_add_relationships = self.config.virustotal.domain_add_relationships
+        self.domain_indicator_config = self.config.virustotal.model_extra.get(
+            "domain_indicator_config"
         )
 
         # Url specific settings
-        self.url_upload_unseen = get_config_variable(
-            "VIRUSTOTAL_URL_UPLOAD_UNSEEN",
-            ["virustotal", "url_upload_unseen"],
-            config,
-            default=True,
+        self.url_upload_unseen = self.config.virustotal.url_upload_unseen
+        self.url_indicator_config = self.config.virustotal.model_extra.get(
+            "url_indicator_config"
         )
-        self.url_indicator_config = IndicatorConfig.load_indicator_config(config, "URL")
-        self.include_attributes_in_note = get_config_variable(
-            "VIRUSTOTAL_INCLUDE_ATTRIBUTES_IN_NOTE",
-            ["virustotal", "include_attributes_in_note"],
-            config,
-            default=False,
+
+        # Generic config settings for File, IP, Domain, URL
+        self.include_attributes_in_note = (
+            self.config.virustotal.include_attributes_in_note
         )
 
     def resolve_default_value(self, stix_entity):
@@ -420,7 +387,7 @@ class VirusTotalConnector:
         )
 
         builder.create_indicator_based_on(
-            self.ip_indicator_config,
+            self.url_indicator_config,
             f"""[url:value = '{opencti_entity["observable_value"]}']""",
         )
         builder.create_notes()
