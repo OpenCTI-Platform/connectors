@@ -214,6 +214,22 @@ class VirusTotalClient:
         url = f"{self.url}/ip_addresses/{ip}"
         return self._query(url)
 
+    def get_ip_resolutions(self, ip):
+        """
+        Retrieve the domains that resolve to a given IP.
+
+        Parameters
+        ----------
+        ip : str
+            IP address.
+
+        Returns
+        -------
+        list of resolution objects, see https://docs.virustotal.com/reference/resolution-object
+        """
+        url = f"{self.url}/ip_addresses/{ip}/resolutions"
+        return self._query(url)
+
     def get_domain_info(self, domain):
         """
         Retrieve Domain report based on the given Domain.

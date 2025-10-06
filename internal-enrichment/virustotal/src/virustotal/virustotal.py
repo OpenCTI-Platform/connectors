@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """VirusTotal enrichment module."""
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict
 
@@ -77,6 +78,22 @@ class VirusTotalConnector:
             "VIRUSTOTAL_IP_ADD_RELATIONSHIPS",
             ["virustotal", "ip_add_relationships"],
             config,
+        )
+        self.ip_multihost_threshold = int(
+            get_config_variable(
+                "VIRUSTOTAL_IP_MULTIHOST_THRESHOLD",
+                ["virustotal", "ip_multihost_threshold"],
+                config,
+            )
+        )
+        self.ip_label_multihost = get_config_variable(
+            "VIRUSTOTAL_IP_LABEL_MULTIHOST",
+            ["virustotal", "ip_label_multihost"],
+            config,
+        )
+        # create the label in advance
+        self.label_multihost = self.helper.api.label.read_or_create_unchecked(
+            value="multihost", color="#ff0000"  # red color
         )
         self.ip_indicator_config = IndicatorConfig.load_indicator_config(config, "IP")
 
@@ -297,6 +314,21 @@ class VirusTotalConnector:
                 builder.create_note("VirusTotal Report", content)
         return builder.send_bundle()
 
+    def _process_resolutions(self, resolutions):
+        """Process resolutions and return count and list of recent domains."""
+
+        one_month_ago = datetime.now() - timedelta(days=30)
+        one_month_ago_timestamp = int(one_month_ago.timestamp())
+
+        recent_domains = []
+        for resolution in resolutions["data"]:
+            resolution_date = resolution["attributes"]["date"]
+            if resolution_date >= one_month_ago_timestamp:
+                hostname = resolution["attributes"]["host_name"]
+                recent_domains.append(hostname)
+
+        return recent_domains
+
     def _process_ip(self, stix_objects, stix_entity, opencti_entity):
         json_data = self.client.get_ip_info(opencti_entity["observable_value"])
         assert json_data
@@ -304,6 +336,18 @@ class VirusTotalConnector:
             raise ValueError(json_data["error"]["message"])
         if "data" not in json_data or "attributes" not in json_data["data"]:
             raise ValueError("An error has occurred.")
+
+        multihost_domains = None
+        if self.ip_label_multihost:
+            resolutions = self.client.get_ip_resolutions(
+                opencti_entity["observable_value"]
+            )
+            recent_domains = self._process_resolutions(resolutions)
+            if len(recent_domains) >= self.ip_multihost_threshold:
+                self.helper.log_debug(
+                    f'[VirusTotal] IP {opencti_entity["observable_value"]} exceeded multihost threshold'
+                )
+                multihost_domains = recent_domains
 
         builder = VirusTotalBuilder(
             self.helper,
@@ -314,11 +358,15 @@ class VirusTotalConnector:
             opencti_entity,
             json_data["data"],
             include_attributes_in_note=self.include_attributes_in_note,
+            multihost_domains=multihost_domains,
         )
 
         if self.ip_add_relationships:
             builder.create_asn_belongs_to()
             builder.create_location_located_at()
+
+        if multihost_domains:
+            builder.add_multihost_label()
 
         builder.create_indicator_based_on(
             self.ip_indicator_config,
