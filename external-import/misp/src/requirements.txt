@@ -1,3 +1,5 @@
-pycti==6.8.1
+pycti==6.8.2
 urllib3==2.5.0
-pymisp
+pymisp==2.5.4
+pydantic==2.11.6
+pydantic-settings==2.10.1

@@ -12,7 +12,7 @@ from models.configs.recorded_future_configs import (
     _ConfigLoaderPlaybookAlert,
     _ConfigLoaderRecordedFuture,
 )
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import (
     BaseSettings,
     DotEnvSettingsSource,
@@ -62,9 +62,10 @@ class ConfigLoader(ConfigBaseSettings):
         default_factory=ConfigLoaderConnector,
         description="Connector configurations.",
     )
-    rf: _ConfigLoaderRecordedFuture = Field(
+    recorded_future: _ConfigLoaderRecordedFuture = Field(
         default_factory=_ConfigLoaderRecordedFuture,
         description="Recorded Future configurations.",
+        validation_alias=AliasChoices("rf", "recorded_future"),
     )
     alert: _ConfigLoaderAlert = Field(
         default_factory=_ConfigLoaderAlert,
