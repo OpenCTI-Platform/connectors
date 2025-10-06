@@ -6,7 +6,7 @@ services:
       - OPENCTI_URL=http://localhost:PORT
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-     # - CONNECTOR_SCOPE=vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference,software
+      # - CONNECTOR_SCOPE=vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference,software,attack-pattern,course-of-action,x-mitre-data-source
       - CONNECTOR_VULNCHECK_API_KEY=ChangeMe
-     # - CONNECTOR_VULNCHECK_DATA_SOURCES=botnets,epss,exploits,initial-access,ipintel,nist-nvd2,ransomware,snort,suricata,threat-actors,vulncheck-kev,vulncheck-nvd2
+      # - CONNECTOR_VULNCHECK_DATA_SOURCES=botnets,epss,exploits,initial-access,ipintel,nist-nvd2,ransomware,snort,suricata,threat-actors,vulncheck-kev,vulncheck-nvd2
     restart: always

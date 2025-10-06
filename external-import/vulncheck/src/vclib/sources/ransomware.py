@@ -20,6 +20,7 @@ def _create_malware(
         name=entity.ransomware_family,
         is_family=True,
         first_seen=entity.date_added,
+        labels=[entity.ransomware_family],
     )
 
 
@@ -34,6 +35,7 @@ def _create_vuln(converter_to_stix, cve: str, logger) -> stix2.Vulnerability:
 def _create_rel_exploits(
     malware: stix2.Malware,
     vulnerability: stix2.Vulnerability,
+    labels: list[str],
     converter_to_stix,
     logger,
 ) -> stix2.Relationship:
@@ -44,6 +46,7 @@ def _create_rel_exploits(
         source_id=malware["id"],
         relationship_type="exploits",
         target_id=vulnerability["id"],
+        labels=labels,
     )
 
 
@@ -76,6 +79,11 @@ def _extract_stix_from_ransomware(
                         _create_rel_exploits(
                             malware=malware,
                             vulnerability=vuln,
+                            labels=(
+                                [entity.ransomware_family]
+                                if entity.ransomware_family is not None
+                                else []
+                            ),
                             converter_to_stix=converter_to_stix,
                             logger=logger,
                         )
