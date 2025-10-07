@@ -6,8 +6,8 @@ import time
 from datetime import timedelta
 from typing import Any
 
-from pycti import OpenCTIConnectorHelper
 from models import ConfigLoader
+from pycti import OpenCTIConnectorHelper
 
 from .api import OFFSET_PAGINATION, MandiantAPI
 from .constants import (

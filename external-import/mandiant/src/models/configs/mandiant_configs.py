@@ -1,5 +1,5 @@
+from datetime import datetime, timedelta
 from typing import Literal
-from datetime import timedelta, datetime
 
 from models.configs.base_settings import ConfigBaseSettings
 from pydantic import Field, PositiveInt, SecretStr
