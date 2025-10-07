@@ -3,8 +3,11 @@ import os
 import traceback
 from dataclasses import asdict, dataclass, field, fields
 from datetime import date
+from functools import lru_cache
 from pathlib import Path
 from typing import Generator, Literal
+
+import mistune
 
 CONNECTOR_METADATA_DIRECTORY = "__metadata__"
 CONNECTOR_MANIFEST_FILENAME = "connector_manifest.json"
@@ -97,6 +100,95 @@ class ConnectorsManifestsGenerator:
     ]:
         return repository_subdirectory.upper().replace("-", "_")
 
+    @lru_cache  # use cache to avoid re-open and parse the same README file multiple times
+    def _parse_connector_readme(self, connector_directory_path: str) -> dict:
+        readme_path = Path(connector_directory_path) / "README.md"
+        if os.path.exists(readme_path):
+            with open(readme_path, "r", encoding="utf-8") as file:
+                readme_content = file.read()
+                markdown_parser = mistune.create_markdown(renderer="ast")
+                ast = markdown_parser(readme_content)
+                return ast
+
+        return None
+
+    def get_connector_description_from_readme(
+        self, connector_directory_path: str
+    ) -> str:
+        def get_node_text(node):
+            def get_node_text_recursively(recursive_node):
+                in_verified_table = any(
+                    [
+                        child
+                        for child in recursive_node.get("children", [])
+                        if "|FiligranVerified|" in "".join(child.get("raw", "").split())
+                    ]
+                )
+                if in_verified_table:
+                    return []
+
+                paragraphs = []
+                if recursive_node.get("children", []):
+                    for child in recursive_node.get("children", []):
+                        paragraphs.extend(get_node_text_recursively(child))
+                elif recursive_node.get("type") == "blank_line":
+                    paragraphs.append("\n")
+                elif (
+                    recursive_node.get("raw")
+                    and recursive_node.get("raw") != "Table of Contents"
+                ):
+                    paragraphs.append(recursive_node.get("raw"))
+
+                return paragraphs
+
+            return get_node_text_recursively(node)
+
+        readme_ast = self._parse_connector_readme(connector_directory_path)
+        if not readme_ast:
+            return ""
+
+        # Try to find the index of description/overview section
+        # If not found, start from 0 (beginning of the file)
+        description_heading_index = next(
+            (
+                index
+                for index, node in enumerate(readme_ast)
+                if (
+                    node["type"] == "heading"
+                    and node.get("children")
+                    and node.get("children")[0].get("raw", "").lower()
+                    in ["description", "overwiew"]
+                )
+            ),
+            0,
+        )
+
+        paragraphs = []
+        in_description_section = False
+        for node in readme_ast[description_heading_index:]:
+            # Always ignore HTML blocks
+            if node["type"] == "block_html":
+                continue
+
+            # Look for the description section
+            if node["type"] == "heading":
+                if in_description_section:
+                    break  # Stop when reaching the next heading
+                in_description_section = True
+                continue
+
+            # In description section, get text from nodes recursively
+            if in_description_section:
+                # Preserve format as much as possible
+                if node["type"] == "blank_line":
+                    paragraphs.append("\n")
+                # Get paragrah text
+                if node["type"] == "paragraph":
+                    node_text = get_node_text(node)
+                    paragraphs.extend(node_text)
+
+        return "".join(paragraphs).strip()
+
     def build_connector_manifest(
         self, connector_directory_path: str
     ) -> ConnectorManifest:
@@ -121,6 +213,26 @@ class ConnectorsManifestsGenerator:
                 or self.to_manifest_title(connector_name)
             ),
             slug=connector_manifest_data.get("slug") or connector_name,
+            description=(
+                connector_manifest_data.get("description")
+                if connector_manifest_data.get("description")
+                and connector_manifest_data.get("description")
+                != "Information coming soon"
+                else self.get_connector_description_from_readme(
+                    connector_directory_path
+                )
+                or "Information coming soon"
+            ),
+            short_description=(
+                connector_manifest_data.get("short_description")
+                if connector_manifest_data.get("short_description")
+                and connector_manifest_data.get("short_description")
+                != "Information coming soon"
+                else self.get_connector_description_from_readme(
+                    connector_directory_path
+                )
+                or "Information coming soon"
+            ),
             source_code=(
                 connector_manifest_data.get("source_code")
                 or f"https://github.com/OpenCTI-Platform/connectors/tree/master/{connector_category}/{connector_name}"
@@ -134,7 +246,6 @@ class ConnectorsManifestsGenerator:
                 or self.to_manifest_container_type(connector_category)
             ),
             # TODO: add default logo ?
-            # TODO: add description / short_description from connector's README
             # TODO: add verification fields from connector's README
         )
 
