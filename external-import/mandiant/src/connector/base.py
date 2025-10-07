@@ -537,7 +537,7 @@ class Mandiant:
             end_epoch=end_timestamp.unix_format,
             limit=1000,
         )
-        
+
         if response and response.get("indicators"):
             for indicator in response["indicators"]:
                 try:
@@ -548,7 +548,7 @@ class Mandiant:
                     self.helper.connector_logger.error(
                         f"Error processing indicator {indicator.get('id')}: {e}"
                     )
-            
+
             # Note: The indicators API doesn't support pagination with offset
             # All results are returned in the single response
 
@@ -562,7 +562,7 @@ class Mandiant:
             end_epoch=end_timestamp.unix_format,
             limit=100,
         )
-        
+
         if response and response.get("vulnerability"):
             for vulnerability in response["vulnerability"]:
                 try:
@@ -576,7 +576,7 @@ class Mandiant:
                     self.helper.connector_logger.error(
                         f"Error processing vulnerability {vulnerability.get('id')}: {e}"
                     )
-            
+
             # Note: The vulnerabilities API doesn't support pagination with offset
             # Results are limited by the limit parameter
 
