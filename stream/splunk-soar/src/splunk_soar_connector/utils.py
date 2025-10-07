@@ -2,7 +2,7 @@
 Utility functions for Splunk SOAR connector
 """
 
-from typing import Dict, Optional
+from typing import Dict
 
 
 def get_entity_type(stix_data: Dict) -> str:

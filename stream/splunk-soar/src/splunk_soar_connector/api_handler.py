@@ -4,7 +4,6 @@ Splunk SOAR API Handler
 Handles all interactions with the Splunk SOAR REST API.
 """
 
-import json
 import traceback
 from typing import Dict, List, Optional
 
@@ -121,7 +120,7 @@ class SplunkSoarApiHandler:
             if response.status_code in [200, 201]:
                 result = response.json()
                 self.helper.connector_logger.info(
-                    f"Created SOAR container",
+                    "Created SOAR container",
                     {"container_id": result.get("id"), "type": container_type},
                 )
                 return result
@@ -182,7 +181,7 @@ class SplunkSoarApiHandler:
 
             if response.status_code in [200, 204]:
                 self.helper.connector_logger.info(
-                    f"Updated SOAR container", {"container_id": container_id}
+                    "Updated SOAR container", {"container_id": container_id}
                 )
                 return True
             else:

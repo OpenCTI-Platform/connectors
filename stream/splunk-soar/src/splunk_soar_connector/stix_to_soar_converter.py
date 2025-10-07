@@ -10,7 +10,6 @@ from typing import Dict, List, Optional
 
 from .stix_pattern_parser import combine_file_observables, parse_stix_pattern
 from .utils import (
-    extract_labels_as_tags,
     get_severity_from_stix,
     get_status_from_stix,
     sanitize_for_soar,
