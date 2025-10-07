@@ -1,0 +1,38 @@
+opencti:
+  url: 'ChangeMe'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'STREAM'
+  name: 'Splunk SOAR Push'
+  scope: 'splunk-soar-push'
+  confidence_level: 100
+  log_level: 'info'
+  live_stream_id: 'ChangeMe' # ID of the live stream created in OpenCTI
+  live_stream_listen_delete: true
+  live_stream_no_dependencies: false
+
+splunk_soar:
+  url: 'https://your-splunk-soar-instance.com' # Your Splunk SOAR URL
+  # Use either API token (preferred) or username/password
+  api_token: 'ChangeMe' # Splunk SOAR API token
+  # username: 'ChangeMe' # Alternative: username
+  # password: 'ChangeMe' # Alternative: password
+  verify_ssl: true
+  # proxy_url: 'http://proxy:8080' # Optional proxy
+  delete_on_removal: false # Close SOAR entities when removed from stream
+  
+  # Mapping configuration
+  default_severity: 'medium'
+  default_status: 'new'
+  
+  # Performance settings
+  max_artifacts_per_container: 1000
+  batch_size: 100
+
+# Optional proxy configuration
+# proxy:
+#   http_proxy: 'http://proxy:8080'
+#   https_proxy: 'http://proxy:8080'
+#   no_proxy: 'localhost,127.0.0.1'
