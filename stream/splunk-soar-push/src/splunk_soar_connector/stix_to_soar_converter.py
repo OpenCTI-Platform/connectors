@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Improved STIX to SOAR converter for Splunk SOAR connector
+Improved STIX to SOAR converter for Splunk SOAR Push connector
 Handles OpenCTI STIX bundles and converts them to Splunk SOAR format
 """
 

@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 
 from .base_settings import ConfigBaseSettings
 
@@ -15,7 +15,7 @@ class _ConfigLoaderSoar(ConfigBaseSettings):
         alias="SPLUNK_SOAR_URL",
         description="The Splunk SOAR platform URL.",
     )
-    api_token: Optional[str] = Field(
+    api_token: Optional[SecretStr] = Field(
         default=None,
         alias="SPLUNK_SOAR_API_TOKEN",
         description="API token for Splunk SOAR authentication (preferred).",
@@ -25,7 +25,7 @@ class _ConfigLoaderSoar(ConfigBaseSettings):
         alias="SPLUNK_SOAR_USERNAME",
         description="Username for Splunk SOAR (if not using token).",
     )
-    password: Optional[str] = Field(
+    password: Optional[SecretStr] = Field(
         default=None,
         alias="SPLUNK_SOAR_PASSWORD",
         description="Password for Splunk SOAR (if not using token).",

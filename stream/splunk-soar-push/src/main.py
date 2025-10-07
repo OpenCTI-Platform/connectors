@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Splunk SOAR Stream Connector - Main Entry Point
+Splunk SOAR Push Stream Connector - Main Entry Point
 
-This is the main entry point for the Splunk SOAR stream connector.
+This is the main entry point for the Splunk SOAR Push stream connector.
 It initializes and starts the connector to stream data from OpenCTI to Splunk SOAR.
 """
 

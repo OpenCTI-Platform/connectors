@@ -1,4 +1,4 @@
-"""Configuration loader for Splunk SOAR connector."""
+"""Configuration loader for Splunk SOAR Push connector."""
 
 import os
 from pathlib import Path
@@ -21,15 +21,15 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
     """A concrete implementation of _ConfigLoaderConnector defining default connector configuration values."""
 
     id: str = Field(
-        default="splunk-soar-connector",
+        default="splunk-soar-push-connector",
         description="A unique identifier for this connector instance.",
     )
     name: str = Field(
-        default="Splunk SOAR",
+        default="Splunk SOAR Push",
         description="Name of the connector.",
     )
     scope: str = Field(
-        default="splunk-soar",
+        default="splunk-soar-push",
         description="The scope or type of data the connector is processing.",
     )
     live_stream_id: str = Field(
@@ -98,7 +98,7 @@ class ConfigLoader(ConfigBaseSettings):
         return {
             "opencti": {
                 "url": str(self.opencti.url),
-                "token": self.opencti.token,
+                "token": self.opencti.token.get_secret_value(),
             },
             "connector": {
                 "id": self.connector.id,

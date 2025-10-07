@@ -1,5 +1,5 @@
 """
-Utility functions for Splunk SOAR connector
+Utility functions for Splunk SOAR Push connector
 """
 
 from typing import Dict

@@ -1,7 +1,7 @@
 """
-Splunk SOAR Stream Connector
+Splunk SOAR Push Stream Connector
 
-This connector streams threat intelligence from OpenCTI to Splunk SOAR,
+This connector pushes threat intelligence from OpenCTI to Splunk SOAR,
 creating events from incidents and cases from containers
 (reports, groupings, case-incidents, case-rfi, case-rft).
 """

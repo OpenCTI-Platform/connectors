@@ -2,7 +2,7 @@
 
 from typing import Annotated, Literal
 
-from pydantic import Field, HttpUrl, PlainSerializer
+from pydantic import Field, HttpUrl, PlainSerializer, SecretStr
 
 from .base_settings import ConfigBaseSettings
 
@@ -22,7 +22,7 @@ class _ConfigLoaderOCTI(ConfigBaseSettings):
         alias="OPENCTI_URL",
         description="The OpenCTI platform URL.",
     )
-    token: str = Field(
+    token: SecretStr = Field(
         alias="OPENCTI_TOKEN",
         description="The token of the user who represents the connector in the OpenCTI platform.",
     )
