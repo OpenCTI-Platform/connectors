@@ -39,14 +39,16 @@ class ConfigConnector:
             return default_date
 
     @staticmethod
-    def prepare_tags(tags: str | None) -> list[str]:
+    def prepare_filter_labels(filter_labels: str | None) -> list[str]:
         """
-        Prepare tags from a comma-separated string to a list of trimmed strings.
-        :param tags: Comma-separated string of tags
-        :return: List of trimmed tags
+        Prepare labels from a comma-separated string to a list of trimmed strings.
+        :param filter_labels: Comma-separated string of labels
+        :return: List of trimmed labels
         """
-        if tags is not None and tags.strip():
-            return [tag.strip() for tag in tags.split(",") if tag.strip()]
+        if filter_labels is not None and filter_labels.strip():
+            return [
+                label.strip() for label in filter_labels.split(",") if label.strip()
+            ]
         return []
 
     @staticmethod
@@ -115,9 +117,11 @@ class ConfigConnector:
         self.import_start_date = self.prepare_iso_format(
             microsoft_sentinel_import_start_date_var
         )
-        microsoft_sentinel_incidents_tags = get_config_variable(
-            "MICROSOFT_SENTINEL_INCIDENTS_TAGS",
-            ["microsoft_sentinel_incidents", "tags"],
+        microsoft_sentinel_filter_labels = get_config_variable(
+            "MICROSOFT_SENTINEL_INCIDENTS_FILTER_LABELS",
+            ["microsoft_sentinel_incidents", "filter_labels"],
             self.load,
         )
-        self.tags = self.prepare_tags(microsoft_sentinel_incidents_tags)
+        self.filter_labels = self.prepare_filter_labels(
+            microsoft_sentinel_filter_labels
+        )

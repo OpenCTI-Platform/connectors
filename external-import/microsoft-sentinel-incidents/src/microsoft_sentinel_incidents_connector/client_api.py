@@ -74,12 +74,12 @@ class ConnectorClient:
             | where LastModifiedTime > todatetime('"{date_str}"')
             """
         }
-        if self.config.tags:
+        if self.config.filter_labels:
             body[
                 "query"
             ] += f"""
             | mv-apply Labels on (
-                where Labels.labelName has_any ({', '.join(f'"{tag}"' for tag in self.config.tags)})
+                where Labels.labelName has_any ({', '.join(f'"{label}"' for label in self.config.filter_labels)})
             )
             """
         while next_page_url:
@@ -166,7 +166,6 @@ class ConnectorClient:
         collected. If any request results in an error (retry error, HTTP error, timeout, or connection error), it will
         log the issue and halt further pagination.
 
-        :param initial_url: The initial URL for retrieving alerts.
         :return: A list of all alerts as dictionaries containing mixed data types.
         """
         all_alerts = []

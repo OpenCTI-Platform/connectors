@@ -3,7 +3,7 @@ from src.microsoft_sentinel_incidents_connector.config_variables import ConfigCo
 
 
 @pytest.mark.parametrize(
-    "input_tags,expected",
+    "input_filter_labels,expected",
     [
         (None, []),
         ("", []),
@@ -19,5 +19,5 @@ from src.microsoft_sentinel_incidents_connector.config_variables import ConfigCo
         ("tag 1,tag 2", ["tag 1", "tag 2"]),
     ],
 )
-def test_prepare_tags(input_tags, expected):
-    assert ConfigConnector.prepare_tags(input_tags) == expected
+def test_prepare_filter_labels(input_filter_labels, expected):
+    assert ConfigConnector.prepare_filter_labels(input_filter_labels) == expected
