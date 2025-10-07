@@ -1,4 +1,3 @@
-import importlib
 import json
 import os
 import sys
@@ -6,8 +5,8 @@ import time
 from datetime import timedelta
 from typing import Any
 
-from models import ConfigLoader
 from pycti import OpenCTIConnectorHelper
+from models import ConfigLoader
 
 from .api import OFFSET_PAGINATION, MandiantAPI
 from .constants import (
@@ -28,179 +27,119 @@ class Mandiant:
     def __init__(self):
         # Load configuration using the new config loader
         self.config = ConfigLoader()
-
+        
         # Initialize OpenCTI helper with the configuration
         self.helper = OpenCTIConnectorHelper(self.config.model_dump_pycti())
 
         # Extract configuration values from the loaded config
         self.duration_period = self.config.connector.duration_period
-
+        
         # Mandiant API credentials
         self.mandiant_api_v4_key_id = self.config.mandiant.api_v4_key_id
-        self.mandiant_api_v4_key_secret = (
-            self.config.mandiant.api_v4_key_secret.get_secret_value()
-        )
-
+        self.mandiant_api_v4_key_secret = self.config.mandiant.api_v4_key_secret.get_secret_value()
+        
         # Import date settings
         self.mandiant_import_start_date = self.config.mandiant.import_start_date
-        self.mandiant_indicator_import_start_date = (
-            self.config.mandiant.indicator_import_start_date
-        )
+        self.mandiant_indicator_import_start_date = self.config.mandiant.indicator_import_start_date
         self.mandiant_import_period = self.config.mandiant.import_period
-
+        
         # Processing options
         self.mandiant_create_notes = self.config.mandiant.create_notes
-        self.mandiant_remove_statement_marking = (
-            self.config.mandiant.remove_statement_marking
-        )
-
+        self.mandiant_remove_statement_marking = self.config.mandiant.remove_statement_marking
+        
         # Marking definition
         self.mandiant_marking = self.config.mandiant.marking_definition
         self._convert_tlp_to_marking_definition()
 
         # Build collections list based on what's enabled
         self.mandiant_collections = []
-
+        
         if self.config.mandiant.import_actors:
             self.mandiant_collections.append("actors")
-        self.mandiant_actors_interval = timedelta(
-            hours=self.config.mandiant.import_actors_interval
-        )
+        self.mandiant_actors_interval = timedelta(hours=self.config.mandiant.import_actors_interval)
         self.mandiant_import_actors_aliases = self.config.mandiant.import_actors_aliases
-
+        
         if self.config.mandiant.import_reports:
             self.mandiant_collections.append("reports")
-        self.mandiant_reports_interval = timedelta(
-            hours=self.config.mandiant.import_reports_interval
-        )
-
+        self.mandiant_reports_interval = timedelta(hours=self.config.mandiant.import_reports_interval)
+        
         if self.config.mandiant.import_malwares:
             self.mandiant_collections.append("malwares")
-        self.mandiant_malwares_interval = timedelta(
-            hours=self.config.mandiant.import_malwares_interval
-        )
-        self.mandiant_import_malwares_aliases = (
-            self.config.mandiant.import_malwares_aliases
-        )
-
+        self.mandiant_malwares_interval = timedelta(hours=self.config.mandiant.import_malwares_interval)
+        self.mandiant_import_malwares_aliases = self.config.mandiant.import_malwares_aliases
+        
         if self.config.mandiant.import_campaigns:
             self.mandiant_collections.append("campaigns")
-        self.mandiant_campaigns_interval = timedelta(
-            hours=self.config.mandiant.import_campaigns_interval
-        )
-
+        self.mandiant_campaigns_interval = timedelta(hours=self.config.mandiant.import_campaigns_interval)
+        
         # When importing indicators, import full campaigns (campaign details and related entities)
-        self.import_indicators_with_full_campaigns = (
-            self.config.mandiant.import_indicators_with_full_campaigns
-        )
-
+        self.import_indicators_with_full_campaigns = self.config.mandiant.import_indicators_with_full_campaigns
+        
         if self.config.mandiant.import_indicators:
             self.mandiant_collections.append("indicators")
-        self.mandiant_indicators_interval = timedelta(
-            hours=self.config.mandiant.import_indicators_interval
-        )
-
+        self.mandiant_indicators_interval = timedelta(hours=self.config.mandiant.import_indicators_interval)
+        
         if self.config.mandiant.import_vulnerabilities:
             self.mandiant_collections.append("vulnerabilities")
-        self.mandiant_vulnerabilities_interval = timedelta(
-            hours=self.config.mandiant.import_vulnerabilities_interval
-        )
+        self.mandiant_vulnerabilities_interval = timedelta(hours=self.config.mandiant.import_vulnerabilities_interval)
 
         # Build report types dictionary
         self.mandiant_report_types = {}
-
+        
         if self.config.mandiant.actor_profile_report:
-            self.mandiant_report_types["Actor Profile"] = (
-                self.config.mandiant.actor_profile_report_type
-            )
-
+            self.mandiant_report_types["Actor Profile"] = self.config.mandiant.actor_profile_report_type
+        
         if self.config.mandiant.country_profile_report:
-            self.mandiant_report_types["Country Profile"] = (
-                self.config.mandiant.country_profile_report_type
-            )
-
+            self.mandiant_report_types["Country Profile"] = self.config.mandiant.country_profile_report_type
+        
         if self.config.mandiant.event_coverage_implication_report:
-            self.mandiant_report_types["Event Coverage/Implication"] = (
-                self.config.mandiant.event_coverage_implication_report_type
-            )
-
+            self.mandiant_report_types["Event Coverage/Implication"] = self.config.mandiant.event_coverage_implication_report_type
+        
         if self.config.mandiant.executive_perspective_report:
-            self.mandiant_report_types["Executive Perspective"] = (
-                self.config.mandiant.executive_perspective_report_type
-            )
-
+            self.mandiant_report_types["Executive Perspective"] = self.config.mandiant.executive_perspective_report_type
+        
         if self.config.mandiant.ics_security_roundup_report:
-            self.mandiant_report_types["ICS Security Roundup"] = (
-                self.config.mandiant.ics_security_roundup_report_type
-            )
-
+            self.mandiant_report_types["ICS Security Roundup"] = self.config.mandiant.ics_security_roundup_report_type
+        
         if self.config.mandiant.industry_reporting_report:
-            self.mandiant_report_types["Industry Reporting"] = (
-                self.config.mandiant.industry_reporting_report_type
-            )
-
+            self.mandiant_report_types["Industry Reporting"] = self.config.mandiant.industry_reporting_report_type
+        
         if self.config.mandiant.malware_profile_report:
-            self.mandiant_report_types["Malware Profile"] = (
-                self.config.mandiant.malware_profile_report_type
-            )
-
+            self.mandiant_report_types["Malware Profile"] = self.config.mandiant.malware_profile_report_type
+        
         if self.config.mandiant.network_activity_report:
-            self.mandiant_report_types["Network Activity Reports"] = (
-                self.config.mandiant.network_activity_report_type
-            )
-
+            self.mandiant_report_types["Network Activity Reports"] = self.config.mandiant.network_activity_report_type
+        
         if self.config.mandiant.patch_report:
-            self.mandiant_report_types["Patch Report"] = (
-                self.config.mandiant.patch_report_type
-            )
-
+            self.mandiant_report_types["Patch Report"] = self.config.mandiant.patch_report_type
+        
         if self.config.mandiant.ttp_deep_dive_report:
-            self.mandiant_report_types["TTP Deep Dive"] = (
-                self.config.mandiant.ttp_deep_dive_report_type
-            )
-
+            self.mandiant_report_types["TTP Deep Dive"] = self.config.mandiant.ttp_deep_dive_report_type
+        
         if self.config.mandiant.threat_activity_alert_report:
-            self.mandiant_report_types["Threat Activity Alert"] = (
-                self.config.mandiant.threat_activity_alert_report_type
-            )
-
+            self.mandiant_report_types["Threat Activity Alert"] = self.config.mandiant.threat_activity_alert_report_type
+        
         if self.config.mandiant.threat_activity_report:
-            self.mandiant_report_types["Threat Activity Report"] = (
-                self.config.mandiant.threat_activity_report_type
-            )
-
+            self.mandiant_report_types["Threat Activity Report"] = self.config.mandiant.threat_activity_report_type
+        
         if self.config.mandiant.trends_and_forecasting_report:
-            self.mandiant_report_types["Trends and Forecasting"] = (
-                self.config.mandiant.trends_and_forecasting_report_type
-            )
-
+            self.mandiant_report_types["Trends and Forecasting"] = self.config.mandiant.trends_and_forecasting_report_type
+        
         if self.config.mandiant.vulnerability_report:
-            self.mandiant_report_types["Vulnerability Report"] = (
-                self.config.mandiant.vulnerability_report_type
-            )
-
+            self.mandiant_report_types["Vulnerability Report"] = self.config.mandiant.vulnerability_report_type
+        
         # Vulnerability-specific settings
-        self.mandiant_import_software_cpe = (
-            self.config.mandiant.vulnerability_import_software_cpe
-        )
-        self.vulnerability_max_cpe_relationship = (
-            self.config.mandiant.vulnerability_max_cpe_relationship
-        )
-
+        self.mandiant_import_software_cpe = self.config.mandiant.vulnerability_import_software_cpe
+        self.vulnerability_max_cpe_relationship = self.config.mandiant.vulnerability_max_cpe_relationship
+        
         if self.config.mandiant.weekly_vulnerability_exploitation_report:
-            self.mandiant_report_types["Weekly Vulnerability Exploitation Report"] = (
-                self.config.mandiant.weekly_vulnerability_exploitation_report_type
-            )
-
+            self.mandiant_report_types["Weekly Vulnerability Exploitation Report"] = self.config.mandiant.weekly_vulnerability_exploitation_report_type
+        
         if self.config.mandiant.news_analysis_report:
-            self.mandiant_report_types["News Analysis"] = (
-                self.config.mandiant.news_analysis_report_type
-            )
+            self.mandiant_report_types["News Analysis"] = self.config.mandiant.news_analysis_report_type
 
         # Relationship guessing configuration
-        self.guess_relationships_reports = (
-            self.config.mandiant.guess_relationships_reports
-        )
+        self.guess_relationships_reports = self.config.mandiant.guess_relationships_reports
 
         allowed_report_types = [
             "All",
@@ -268,14 +207,14 @@ class Mandiant:
             self.guess_relationships_reports = valid
 
         # Initialize the API client
-        self.mandiant_api_client = MandiantAPI(
+        self.api = MandiantAPI(
             self.helper,
             self.mandiant_api_v4_key_id,
             self.mandiant_api_v4_key_secret,
         )
 
     def _convert_tlp_to_marking_definition(self) -> None:
-        """Convert TLP marking to lowercase."""
+        """Convert TLP marking to proper format."""
         mapping = TLP_MARKING_DEFINITION_MAPPING.get(self.mandiant_marking.upper())
         if not mapping:
             self.helper.connector_logger.warning(
@@ -291,11 +230,32 @@ class Mandiant:
 
         get_run_and_terminate = getattr(self.helper, "get_run_and_terminate", None)
         if callable(get_run_and_terminate) and self.helper.get_run_and_terminate():
-            self.run_once()
+            self._run()
+            self.helper.force_ping()
         else:
             while True:
                 try:
-                    self.run_once()
+                    timestamp = Timestamp.now()
+                    current_state = self._get_state()
+                    
+                    self.helper.connector_logger.info(
+                        "[CONNECTOR] Running connector...", {"state": current_state}
+                    )
+                    
+                    self._run()
+                    
+                    # Update state
+                    current_state[STATE_LAST_RUN] = timestamp.iso
+                    self._set_state(current_state)
+                    
+                    # Sleep
+                    if self.duration_period:
+                        sleep_duration = self._parse_duration(self.duration_period)
+                        self.helper.connector_logger.info(
+                            f"[CONNECTOR] Sleeping for {sleep_duration} seconds..."
+                        )
+                        time.sleep(sleep_duration)
+                    
                 except StateError as e:
                     self.helper.connector_logger.error(
                         f"[CONNECTOR] State error: {e}", {"state": e.state}
@@ -303,19 +263,8 @@ class Mandiant:
                     # State related errors might be transient, so we continue
                     pass
                 except Exception as err:
-                    self.helper.connector_logger.error(
-                        f"[CONNECTOR] Fatal error: {err}"
-                    )
-                    # For non-state errors, we re-raise to let the system handle it
+                    self.helper.connector_logger.error(f"[CONNECTOR] Fatal error: {err}")
                     raise
-                finally:
-                    # Sleep for the configured period before next run
-                    if self.duration_period:
-                        sleep_duration = self._parse_duration(self.duration_period)
-                        self.helper.connector_logger.info(
-                            f"[CONNECTOR] Sleeping for {sleep_duration} seconds..."
-                        )
-                        time.sleep(sleep_duration)
 
     def _parse_duration(self, duration_str: str) -> int:
         """Parse ISO 8601 duration format to seconds."""
@@ -331,76 +280,255 @@ class Mandiant:
         # Default to 5 minutes if unable to parse
         return 300
 
-    def run_once(self):
-        """Run one iteration of the connector."""
-        try:
-            for collection_name in self.mandiant_collections:
-                # Dynamically import and run collection processors
-                # Use the actual module name (actors.py, not actor.py)
-                module = importlib.import_module(f"connector.{collection_name}")
-                importer = getattr(module, f"{collection_name.capitalize()}Importer")
-
-                # Get interval for this collection
-                interval = getattr(self, f"mandiant_{collection_name}_interval")
-
-                # Initialize and run importer
-                importer_instance = importer(
-                    self.helper,
-                    self.mandiant_api_client,
-                    self.mandiant_marking,
-                    collection_name,
-                    interval,
+    def _run(self):
+        """Run all collections."""
+        for collection in self.mandiant_collections:
+            try:
+                self._run_collection(collection)
+            except Exception as e:
+                self.helper.connector_logger.error(
+                    f"Error processing collection {collection}: {e}"
                 )
+                # Continue with other collections
+                continue
 
-                # Add collection-specific settings
-                if collection_name == "actors" and self.mandiant_import_actors_aliases:
-                    importer_instance.import_aliases = True
-                elif (
-                    collection_name == "malwares"
-                    and self.mandiant_import_malwares_aliases
-                ):
-                    importer_instance.import_aliases = True
-                elif collection_name == "reports":
-                    importer_instance.report_types = self.mandiant_report_types
-                    importer_instance.guess_relationships_reports = (
-                        self.guess_relationships_reports
-                    )
-                    importer_instance.create_notes = self.mandiant_create_notes
-                    importer_instance.remove_statement_marking = (
-                        self.mandiant_remove_statement_marking
-                    )
-                elif collection_name == "indicators":
-                    importer_instance.import_with_full_campaigns = (
-                        self.import_indicators_with_full_campaigns
-                    )
-                elif collection_name == "vulnerabilities":
-                    importer_instance.import_software_cpe = (
-                        self.mandiant_import_software_cpe
-                    )
-                    importer_instance.max_cpe_relationship = (
-                        self.vulnerability_max_cpe_relationship
-                    )
-
-                # Set start dates
-                if collection_name == "indicators":
-                    importer_instance.import_start_date = (
-                        self.mandiant_indicator_import_start_date
-                    )
-                else:
-                    importer_instance.import_start_date = (
-                        self.mandiant_import_start_date
-                    )
-
-                importer_instance.import_period = self.mandiant_import_period
-
-                # Run the importer
-                importer_instance.run()
-
-        except Exception as err:
-            self.helper.connector_logger.error(f"[CONNECTOR] Error in run_once: {err}")
+    def _run_collection(self, collection: str):
+        """Run a specific collection."""
+        self.helper.connector_logger.info(f"[{collection.upper()}] Starting collection")
+        
+        # Get collection-specific settings
+        start_date_field = "mandiant_indicator_import_start_date" if collection == "indicators" else "mandiant_import_start_date"
+        start_date = getattr(self, start_date_field)
+        interval = getattr(self, f"mandiant_{collection}_interval")
+        
+        # Get current state for this collection
+        state_key = f"{collection}_state"
+        current_state = self._get_state()
+        collection_state = current_state.get(state_key, {})
+        
+        # Determine time range
+        if collection_state.get(STATE_LAST_RUN):
+            start_timestamp = Timestamp.from_iso(collection_state[STATE_LAST_RUN])
+        else:
+            start_timestamp = Timestamp.from_date(start_date)
+        
+        end_timestamp = Timestamp.now()
+        
+        # Check if we should run based on interval
+        if collection_state.get(STATE_LAST_RUN):
+            last_run = Timestamp.from_iso(collection_state[STATE_LAST_RUN])
+            if (end_timestamp.datetime - last_run.datetime) < interval:
+                self.helper.connector_logger.info(
+                    f"[{collection.upper()}] Skipping run - interval not reached"
+                )
+                return
+        
+        work_id = self.helper.api.work.initiate_work(
+            self.helper.connect_id,
+            f"{collection.upper()} run @ {end_timestamp.iso}"
+        )
+        
+        try:
+            # Process collection
+            if collection == "actors":
+                self._process_actors(start_timestamp, end_timestamp, work_id)
+            elif collection == "reports":
+                self._process_reports(start_timestamp, end_timestamp, work_id)
+            elif collection == "malwares":
+                self._process_malwares(start_timestamp, end_timestamp, work_id)
+            elif collection == "campaigns":
+                self._process_campaigns(start_timestamp, end_timestamp, work_id)
+            elif collection == "indicators":
+                self._process_indicators(start_timestamp, end_timestamp, work_id)
+            elif collection == "vulnerabilities":
+                self._process_vulnerabilities(start_timestamp, end_timestamp, work_id)
+            
+            # Update state
+            collection_state[STATE_LAST_RUN] = end_timestamp.iso
+            current_state[state_key] = collection_state
+            self._set_state(current_state)
+            
+            message = f"[{collection.upper()}] Collection completed"
+            self.helper.api.work.to_processed(work_id, message)
+            
+        except Exception as e:
+            self.helper.api.work.to_processed(work_id, str(e), in_error=True)
             raise
 
-    # Keep all the original methods that are referenced in the collection modules
+    def _process_actors(self, start_timestamp, end_timestamp, work_id):
+        """Process actors collection."""
+        from . import actors
+        
+        offset = 0
+        while True:
+            response = self.api.actors(
+                start_timestamp.unix,
+                end_timestamp.unix,
+                offset,
+                limit=100
+            )
+            
+            if not response or not response.get("actors"):
+                break
+                
+            for actor in response["actors"]:
+                try:
+                    actors.process(self, actor)
+                except Exception as e:
+                    self.helper.connector_logger.error(
+                        f"Error processing actor {actor.get('id')}: {e}"
+                    )
+            
+            if not response.get("next"):
+                break
+            offset += 100
+
+    def _process_reports(self, start_timestamp, end_timestamp, work_id):
+        """Process reports collection."""
+        from . import reports
+        
+        offset = 0
+        while True:
+            response = self.api.reports(
+                start_timestamp.unix,
+                end_timestamp.unix,
+                offset,
+                limit=BATCH_REPORT_SIZE
+            )
+            
+            if not response or not response.get("reports"):
+                break
+                
+            for report in response["reports"]:
+                try:
+                    if report.get("report_type") in self.mandiant_report_types.values():
+                        reports.process(self, report)
+                except Exception as e:
+                    self.helper.connector_logger.error(
+                        f"Error processing report {report.get('id')}: {e}"
+                    )
+            
+            if not response.get("next"):
+                break
+            offset += BATCH_REPORT_SIZE
+
+    def _process_malwares(self, start_timestamp, end_timestamp, work_id):
+        """Process malwares collection."""
+        from . import malwares
+        
+        offset = 0
+        while True:
+            response = self.api.malwares(
+                start_timestamp.unix,
+                end_timestamp.unix,
+                offset,
+                limit=100
+            )
+            
+            if not response or not response.get("malware"):
+                break
+                
+            for malware in response["malware"]:
+                try:
+                    malwares.process(self, malware)
+                except Exception as e:
+                    self.helper.connector_logger.error(
+                        f"Error processing malware {malware.get('id')}: {e}"
+                    )
+            
+            if not response.get("next"):
+                break
+            offset += 100
+
+    def _process_campaigns(self, start_timestamp, end_timestamp, work_id):
+        """Process campaigns collection."""
+        from . import campaigns
+        
+        offset = 0
+        while True:
+            response = self.api.campaigns(
+                start_timestamp.unix,
+                end_timestamp.unix,
+                offset,
+                limit=100
+            )
+            
+            if not response or not response.get("campaigns"):
+                break
+                
+            for campaign in response["campaigns"]:
+                try:
+                    campaigns.process(self, campaign)
+                except Exception as e:
+                    self.helper.connector_logger.error(
+                        f"Error processing campaign {campaign.get('id')}: {e}"
+                    )
+            
+            if not response.get("next"):
+                break
+            offset += 100
+
+    def _process_indicators(self, start_timestamp, end_timestamp, work_id):
+        """Process indicators collection."""
+        from . import indicators
+        
+        offset = 0
+        while True:
+            response = self.api.indicators(
+                start_timestamp.unix,
+                end_timestamp.unix,
+                offset,
+                limit=1000
+            )
+            
+            if not response or not response.get("indicators"):
+                break
+                
+            for indicator in response["indicators"]:
+                try:
+                    indicators.process(self, indicator, self.import_indicators_with_full_campaigns)
+                except Exception as e:
+                    self.helper.connector_logger.error(
+                        f"Error processing indicator {indicator.get('id')}: {e}"
+                    )
+            
+            if not response.get("next"):
+                break
+            offset += 1000
+
+    def _process_vulnerabilities(self, start_timestamp, end_timestamp, work_id):
+        """Process vulnerabilities collection."""
+        from . import vulnerabilities
+        
+        offset = 0
+        while True:
+            response = self.api.vulnerabilities(
+                start_timestamp.unix,
+                end_timestamp.unix,
+                offset,
+                limit=100
+            )
+            
+            if not response or not response.get("vulnerability"):
+                break
+                
+            for vulnerability in response["vulnerability"]:
+                try:
+                    vulnerabilities.process(
+                        self, 
+                        vulnerability,
+                        self.mandiant_import_software_cpe,
+                        self.vulnerability_max_cpe_relationship
+                    )
+                except Exception as e:
+                    self.helper.connector_logger.error(
+                        f"Error processing vulnerability {vulnerability.get('id')}: {e}"
+                    )
+            
+            if not response.get("next"):
+                break
+            offset += 100
+
     def _get_state(self) -> dict[str, Any]:
         """Retrieve the stored state of the connector."""
         return self.helper.get_state() or {}
@@ -408,27 +536,3 @@ class Mandiant:
     def _set_state(self, state: dict[str, Any]) -> None:
         """Store the state of the connector."""
         self.helper.set_state(state)
-
-    def get_interval(self, collection: str) -> timedelta:
-        """Get the interval for a specific collection."""
-        return getattr(self, f"mandiant_{collection}_interval")
-
-    def initiate_work(self, friendly_name: str) -> str:
-        """Create a work entry for tracking."""
-        return self.helper.api.work.initiate_work(self.helper.connect_id, friendly_name)
-
-    def work_to_processed(
-        self, work_id: str, message: str, in_error: bool = False
-    ) -> None:
-        """Mark a work entry as processed."""
-        return self.helper.api.work.to_processed(work_id, message, in_error)
-
-    def send_bundle(self, bundle: dict[str, Any], work_id: str = None) -> None:
-        """Send a STIX bundle to OpenCTI."""
-        serialized_bundle = json.dumps(bundle)
-        self.helper.send_stix2_bundle(
-            serialized_bundle,
-            entities_types=self.helper.connect_scope,
-            update=True,
-            work_id=work_id,
-        )
