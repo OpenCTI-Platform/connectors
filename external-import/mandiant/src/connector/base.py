@@ -1,22 +1,15 @@
-import json
-import os
-import sys
 import time
 from datetime import timedelta, timezone
 from typing import Any
 
 from models import ConfigLoader
-from pycti import OpenCTIConnectorHelper
 
-from .api import OFFSET_PAGINATION, MandiantAPI
+from pycti import OpenCTIConnectorHelper
+from .api import MandiantAPI
 from .constants import (
     BATCH_REPORT_SIZE,
     DEFAULT_TLP_MARKING_DEFINITION,
-    STATE_END,
     STATE_LAST_RUN,
-    STATE_OFFSET,
-    STATE_START,
-    STATEMENT_MARKINGS,
     TLP_MARKING_DEFINITION_MAPPING,
 )
 from .errors import StateError
