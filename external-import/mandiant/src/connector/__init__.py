@@ -1,0 +1,1 @@
+# Mandiant connector initialization
