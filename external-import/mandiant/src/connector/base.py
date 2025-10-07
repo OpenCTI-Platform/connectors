@@ -2,7 +2,7 @@ import json
 import os
 import sys
 import time
-from datetime import timedelta
+from datetime import timedelta, timezone
 from typing import Any
 
 from pycti import OpenCTIConnectorHelper
@@ -305,7 +305,7 @@ class Mandiant:
                     self._run()
 
                     # Update state
-                    current_state[STATE_LAST_RUN] = timestamp.iso
+                    current_state[STATE_LAST_RUN] = timestamp.iso_format
                     self._set_state(current_state)
 
                     # Sleep
@@ -361,7 +361,7 @@ class Mandiant:
         # Get collection-specific settings
         start_date_field = (
             "mandiant_indicator_import_start_date"
-            if collection == "indicators"
+                    if collection == "indicators"
             else "mandiant_import_start_date"
         )
         start_date = getattr(self, start_date_field)
@@ -376,21 +376,24 @@ class Mandiant:
         if collection_state.get(STATE_LAST_RUN):
             start_timestamp = Timestamp.from_iso(collection_state[STATE_LAST_RUN])
         else:
-            start_timestamp = Timestamp.from_date(start_date)
-
+            # Convert date string to datetime then to Timestamp
+            from datetime import datetime
+            date_dt = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            start_timestamp = Timestamp(date_dt)
+        
         end_timestamp = Timestamp.now()
-
+        
         # Check if we should run based on interval
         if collection_state.get(STATE_LAST_RUN):
             last_run = Timestamp.from_iso(collection_state[STATE_LAST_RUN])
-            if (end_timestamp.datetime - last_run.datetime) < interval:
+            if (end_timestamp.value - last_run.value) < interval:
                 self.helper.connector_logger.info(
                     f"[{collection.upper()}] Skipping run - interval not reached"
                 )
                 return
 
         work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id, f"{collection.upper()} run @ {end_timestamp.iso}"
+            self.helper.connect_id, f"{collection.upper()} run @ {end_timestamp.iso_format}"
         )
 
         try:
@@ -409,7 +412,7 @@ class Mandiant:
                 self._process_vulnerabilities(start_timestamp, end_timestamp, work_id)
 
             # Update state
-            collection_state[STATE_LAST_RUN] = end_timestamp.iso
+            collection_state[STATE_LAST_RUN] = end_timestamp.iso_format
             current_state[state_key] = collection_state
             self._set_state(current_state)
 
@@ -427,7 +430,7 @@ class Mandiant:
         offset = 0
         while True:
             response = self.api.actors(
-                start_timestamp.unix, end_timestamp.unix, offset, limit=100
+                start_timestamp.unix_format, end_timestamp.unix_format, offset, limit=100
             )
 
             if not response or not response.get("actors"):
@@ -452,8 +455,8 @@ class Mandiant:
         offset = 0
         while True:
             response = self.api.reports(
-                start_timestamp.unix,
-                end_timestamp.unix,
+                start_timestamp.unix_format,
+                end_timestamp.unix_format,
                 offset,
                 limit=BATCH_REPORT_SIZE,
             )
@@ -481,7 +484,7 @@ class Mandiant:
         offset = 0
         while True:
             response = self.api.malwares(
-                start_timestamp.unix, end_timestamp.unix, offset, limit=100
+                start_timestamp.unix_format, end_timestamp.unix_format, offset, limit=100
             )
 
             if not response or not response.get("malware"):
@@ -506,7 +509,7 @@ class Mandiant:
         offset = 0
         while True:
             response = self.api.campaigns(
-                start_timestamp.unix, end_timestamp.unix, offset, limit=100
+                start_timestamp.unix_format, end_timestamp.unix_format, offset, limit=100
             )
 
             if not response or not response.get("campaigns"):
@@ -531,7 +534,7 @@ class Mandiant:
         offset = 0
         while True:
             response = self.api.indicators(
-                start_timestamp.unix, end_timestamp.unix, offset, limit=1000
+                start_timestamp.unix_format, end_timestamp.unix_format, offset, limit=1000
             )
 
             if not response or not response.get("indicators"):
@@ -558,7 +561,7 @@ class Mandiant:
         offset = 0
         while True:
             response = self.api.vulnerabilities(
-                start_timestamp.unix, end_timestamp.unix, offset, limit=100
+                start_timestamp.unix_format, end_timestamp.unix_format, offset, limit=100
             )
 
             if not response or not response.get("vulnerability"):
