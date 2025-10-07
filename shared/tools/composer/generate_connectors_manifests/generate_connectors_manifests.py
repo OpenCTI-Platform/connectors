@@ -1,13 +1,14 @@
-import dataclasses
 import json
 import os
 import traceback
+from dataclasses import asdict, dataclass, field, fields
 from datetime import date
 from pathlib import Path
 from typing import Generator, Literal
 
 CONNECTOR_METADATA_DIRECTORY = "__metadata__"
 CONNECTOR_MANIFEST_FILENAME = "connector_manifest.json"
+
 REPOSITORY_SUBDIRECTORIES_TO_INCLUDE = [
     "external-import",
     "internal-enrichment",
@@ -17,22 +18,22 @@ REPOSITORY_SUBDIRECTORIES_TO_INCLUDE = [
 ]
 
 
-@dataclasses.dataclass(kw_only=True)
+@dataclass(kw_only=True)
 class ConnectorManifest:
     title: str
     slug: str
     description: str = "Information coming soon"
     short_description: str = "Information coming soon"
-    logo: str
-    use_cases: list[str]
-    verified: str = False
+    logo: str | None = None
+    use_cases: list[str] = field(default_factory=lambda: [])
+    verified: bool = False
     last_verified_date: date | None = None
-    playbook_supported: str = False
+    playbook_supported: bool = False
     max_confidence_level: int = 50
     support_version: str = ">=6.8.0"
-    subscription_link: str
+    subscription_link: str | None = None
     source_code: str
-    manager_supported: str = False
+    manager_supported: bool = False
     container_version: str = "rolling"
     container_image: str
     container_type: Literal[
@@ -45,9 +46,16 @@ class ConnectorManifest:
 
     def __post_init__(self):
         # All fields are required for validation, whether the values come from init args or defaults.
-        for field in dataclasses.fields(self):
-            if getattr(self, field.name) is None and field.default is not None:
-                raise ValueError(f"Field {field.name} is required and cannot be None")
+        for field_info in fields(self):
+            if (
+                getattr(self, field_info.name) is None
+                and field_info.default is not None
+            ):
+                raise ValueError(
+                    f"Field {field_info.name} is required and cannot be None"
+                )
+
+        # TODO: add type checks and other validations as needed
 
 
 class ConnectorsManifestsGenerator:
@@ -66,33 +74,71 @@ class ConnectorsManifestsGenerator:
                 if not entry.is_dir() or entry.name.startswith("."):
                     continue
 
-                # TODO: to remove before merge - only for dev purposes
-                connector_manifest_file_path = os.path.join(
-                    ".",
-                    repository_subdirectory,
-                    entry.name,
-                    CONNECTOR_METADATA_DIRECTORY,
-                    CONNECTOR_MANIFEST_FILENAME,
-                )
-                if os.path.exists(connector_manifest_file_path):
-                    continue  # Skip if __metadata__/connector_manifest.json already exists in connector directory
-
                 yield entry.name
 
-    def get_connector_manifest(self, connector_directory: str) -> ConnectorManifest:
-        # TODO: get real values here - not just placeholders
-        connector_manifest = ConnectorManifest(
-            title=connector_directory,
-            slug=connector_directory,
-            logo="",
-            use_cases=[],
-            subscription_link="",
-            source_code="",
-            container_image=f"opencti/connector-{connector_directory}",
-            container_type="connector_directory",
+    def to_manifest_title(self, connector_directory_name: str) -> str:
+        return connector_directory_name.replace("-", " ").title()
+
+    def to_manifest_container_type(
+        self,
+        repository_subdirectory: Literal[
+            "external-import",
+            "internal-enrichment",
+            "internal-export-file",
+            "internal-import-file",
+            "stream",
+        ],
+    ) -> Literal[
+        "EXTERNAL_IMPORT",
+        "INTERNAL_ENRICHMENT",
+        "INTERNAL_EXPORT_FILE",
+        "INTERNAL_IMPORT_FILE",
+        "STREAM",
+    ]:
+        return repository_subdirectory.upper().replace("-", "_")
+
+    def build_connector_manifest(
+        self, connector_directory_path: str
+    ) -> ConnectorManifest:
+        connector_manifest_data = {}
+
+        # Try to get the current manifest to update it
+        connector_manifest_path = (
+            Path(connector_directory_path)
+            / CONNECTOR_METADATA_DIRECTORY
+            / CONNECTOR_MANIFEST_FILENAME
+        )
+        if os.path.exists(connector_manifest_path):
+            with open(connector_manifest_path, "r", encoding="utf-8") as file:
+                connector_manifest_data = json.load(file)
+
+        connector_name = os.path.basename(connector_directory_path)
+        connector_category = os.path.basename(os.path.dirname(connector_directory_path))
+
+        connector_manifest_data.update(
+            title=(
+                connector_manifest_data.get("title")
+                or self.to_manifest_title(connector_name)
+            ),
+            slug=connector_manifest_data.get("slug") or connector_name,
+            source_code=(
+                connector_manifest_data.get("source_code")
+                or f"https://github.com/OpenCTI-Platform/connectors/tree/master/{connector_category}/{connector_name}"
+            ),
+            container_image=(
+                connector_manifest_data.get("container_image")
+                or f"opencti/connector-{connector_name}"
+            ),
+            container_type=(
+                connector_manifest_data.get("container_type")
+                or self.to_manifest_container_type(connector_category)
+            ),
+            # TODO: add default logo ?
+            # TODO: add description / short_description from connector's README
+            # TODO: add verification fields from connector's README
         )
 
-        return connector_manifest
+        return ConnectorManifest(**connector_manifest_data)
 
     def generate_manifests(self):
         for repository_subdirectory in REPOSITORY_SUBDIRECTORIES_TO_INCLUDE:
@@ -102,6 +148,12 @@ class ConnectorsManifestsGenerator:
                 try:
                     # Build the manifest data
                     # TODO: do not overwrite existing manifest file if it is complete
+                    connector_directory_path = Path(
+                        Path(".") / repository_subdirectory / connector_directory
+                    )
+                    connector_manifest = self.build_connector_manifest(
+                        connector_directory_path=connector_directory_path
+                    )
 
                     # Ensure __metadata__ directory exists before creating the manifest file
                     Path.mkdir(
@@ -115,11 +167,10 @@ class ConnectorsManifestsGenerator:
                         / CONNECTOR_METADATA_DIRECTORY
                         / CONNECTOR_MANIFEST_FILENAME
                     )
-                    with open(connector_manifest_file_path, "w") as file:
-                        connector_manifest = self.get_connector_manifest(
-                            connector_directory
-                        )
-                        connector_manifest_dict = dataclasses.asdict(connector_manifest)
+                    with open(
+                        connector_manifest_file_path, "w", encoding="utf-8"
+                    ) as file:
+                        connector_manifest_dict = asdict(connector_manifest)
                         file.write(json.dumps(connector_manifest_dict, indent=2))
 
                     print(f"{connector_manifest_file_path} file created")
