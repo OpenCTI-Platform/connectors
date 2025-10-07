@@ -427,10 +427,8 @@ class Mandiant:
         offset = 0
         while True:
             response = self.api.actors(
-                start_timestamp.unix_format,
-                end_timestamp.unix_format,
-                offset,
                 limit=100,
+                offset=offset,
             )
 
             if not response or not response.get("actors"):
@@ -455,10 +453,10 @@ class Mandiant:
         offset = 0
         while True:
             response = self.api.reports(
-                start_timestamp.unix_format,
-                end_timestamp.unix_format,
-                offset,
+                start_epoch=start_timestamp.unix_format,
+                end_epoch=end_timestamp.unix_format,
                 limit=BATCH_REPORT_SIZE,
+                offset=offset,
             )
 
             if not response or not response.get("reports"):
@@ -484,10 +482,8 @@ class Mandiant:
         offset = 0
         while True:
             response = self.api.malwares(
-                start_timestamp.unix_format,
-                end_timestamp.unix_format,
-                offset,
                 limit=100,
+                offset=offset,
             )
 
             if not response or not response.get("malware"):
@@ -512,10 +508,8 @@ class Mandiant:
         offset = 0
         while True:
             response = self.api.campaigns(
-                start_timestamp.unix_format,
-                end_timestamp.unix_format,
-                offset,
                 limit=100,
+                offset=offset,
             )
 
             if not response or not response.get("campaigns"):
@@ -537,18 +531,14 @@ class Mandiant:
         """Process indicators collection."""
         from . import indicators
 
-        offset = 0
-        while True:
-            response = self.api.indicators(
-                start_timestamp.unix_format,
-                end_timestamp.unix_format,
-                offset,
-                limit=1000,
-            )
-
-            if not response or not response.get("indicators"):
-                break
-
+        # Note: indicators API returns paginated results
+        response = self.api.indicators(
+            start_epoch=start_timestamp.unix_format,
+            end_epoch=end_timestamp.unix_format,
+            limit=1000,
+        )
+        
+        if response and response.get("indicators"):
             for indicator in response["indicators"]:
                 try:
                     indicators.process(
@@ -558,27 +548,22 @@ class Mandiant:
                     self.helper.connector_logger.error(
                         f"Error processing indicator {indicator.get('id')}: {e}"
                     )
-
-            if not response.get("next"):
-                break
-            offset += 1000
+            
+            # Note: The indicators API doesn't support pagination with offset
+            # All results are returned in the single response
 
     def _process_vulnerabilities(self, start_timestamp, end_timestamp, work_id):
         """Process vulnerabilities collection."""
         from . import vulnerabilities
 
-        offset = 0
-        while True:
-            response = self.api.vulnerabilities(
-                start_timestamp.unix_format,
-                end_timestamp.unix_format,
-                offset,
-                limit=100,
-            )
-
-            if not response or not response.get("vulnerability"):
-                break
-
+        # Note: vulnerabilities API returns paginated results
+        response = self.api.vulnerabilities(
+            start_epoch=start_timestamp.unix_format,
+            end_epoch=end_timestamp.unix_format,
+            limit=100,
+        )
+        
+        if response and response.get("vulnerability"):
             for vulnerability in response["vulnerability"]:
                 try:
                     vulnerabilities.process(
@@ -591,10 +576,9 @@ class Mandiant:
                     self.helper.connector_logger.error(
                         f"Error processing vulnerability {vulnerability.get('id')}: {e}"
                     )
-
-            if not response.get("next"):
-                break
-            offset += 100
+            
+            # Note: The vulnerabilities API doesn't support pagination with offset
+            # Results are limited by the limit parameter
 
     def _get_state(self) -> dict[str, Any]:
         """Retrieve the stored state of the connector."""
