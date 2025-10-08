@@ -1,19 +1,31 @@
 version: '3'
 services:
   connector-import-document-ai:
-    image: opencti/connector-import-document-ai:rolling
+    image: opencti/connector-import-document-ai:6.7.5
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=ImportDocumentAI
       - CONNECTOR_VALIDATE_BEFORE_IMPORT=true # Validate any bundle before import
-      - IMPORT_DOCUMENT_INCLUDE_RELATIONSHIPS=true
-      - CONNECTOR_SCOPE=application/pdf,text/plain,text/html,text/markdown
+      - CONNECTOR_SCOPE=application/pdf,text/plain,text/html,text/markdown,text/csv,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,application/octet-stream
       - CONNECTOR_AUTO=false # Enable/disable auto-import of file
       - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_LICENCE_KEY_PEM = |
+      - CONNECTOR_LICENCE_KEY_PEM=|
         -----BEGIN CERTIFICATE-----
         ... 
         -----END CERTIFICATE-----
+      # Optional: Select which AI backend to use (Ariane or AzureOpenAI)
+      - IMPORT_DOCUMENT_AI_PROVIDER=Ariane
+      # Optional: Select which AI model to use (default: gpt-4o)
+      - IMPORT_DOCUMENT_AI_MODEL=gpt-4o
+      # Optional: Enable/disable PDF OCR (default: true)
+      - IMPORT_DOCUMENT_PDF_OCR=true
+      # Optional: Azure OpenAI integration (set all to enable)
+      # - AZURE_OPENAI_ENDPOINT=https://YOUR-RESOURCE-NAME.openai.azure.com/
+      # - AZURE_OPENAI_KEY=YOUR_AZURE_OPENAI_KEY
+      # - AZURE_OPENAI_DEPLOYMENT=YOUR_DEPLOYMENT_NAME
+      # - AZURE_OPENAI_API_VERSION=2024-02-15-preview
+      # Optional: Set the max model tokens (input + output) for Azure OpenAI (default: 12000)
+      - IMPORT_DOCUMENT_MAX_MODEL_TOKENS=32000
     restart: always

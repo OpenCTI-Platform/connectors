@@ -1,1 +1,26 @@
+# Configuration files
+.env
 config.yml
+
+# Python bytecode and caches
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*$py.class
+
+# Local envs and tooling caches
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# VCS and build outputs
+.git/
+.gitignore
+dist/
+build/
+*.egg-info/
+.coverage
+htmlcov/
+.vscode/

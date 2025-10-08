@@ -1,6 +1,9 @@
-# -*- coding: utf-8 -*-
-"""OpenCTI ReportImporter connector module."""
+"""
+OpenCTI ReportImporter connector module.
 
-from reportimporter.core import ReportImporter
+This module exposes the main ReportImporter class for use in the connector.
+"""
 
-__all__ = ["ReportImporter"]
+from .core import ReportImporter
+
+__all__: list[str] = ["ReportImporter"]

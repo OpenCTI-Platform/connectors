@@ -2,19 +2,42 @@ opencti:
   url: 'http://localhost:PORT'
   token: 'ChangeMe'
 
+
 connector:
   id: 'ChangeMe'
   type: 'INTERNAL_IMPORT_FILE'
   name: 'ImportDocumentAI'
-  validate_before_import: true # Validate any bundle before import
-  scope: 'application/pdf,text/plain,text/html,text/markdown'
-  auto: false # Enable/disable auto-import of file
+  validate_before_import: true
+  scope: 'application/pdf,text/plain,text/html,text/markdown,text/csv,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,application/octet-stream'
+  auto: false
   log_level: 'info'
   licence_key_pem: |
     -----BEGIN CERTIFICATE-----
     ...
     -----END CERTIFICATE-----
+  web_service_url: 'https://importdoc.ariane.filigran.io'
+  # AI backend selection: default is Ariane
+  ai_provider: Ariane
+  ai_model: gpt-4o
+  # Optional: soft rate-limit for OpenAI/Azure calls (requests per minute). 0 or unset disables it.
+  openai_rpm: 0
 
 import_document:
-  include_relationships: 'true'
-  
+  create_indicator: false
+  max_model_tokens: 4096
+  model_input_ratio: 0.3
+  pdf_ocr: true
+  pdf_ocr_langs: ["en"]
+  pdf_ocr_min_img_area: 60000
+  pdf_ocr_page_dpi: 300
+  # Optional: override system prompt file (also overridable via REPORTIMPORTER_SYSTEM_PROMPT env)
+  prompt_path: "reportimporter/prompts/system_prompt_relations.md"
+  trace_payloads: false  # Enable detailed tracing logs (also via REPORTIMPORTER_TRACE_PAYLOADS)
+
+# Optional Azure OpenAI configuration (only required when using AzureOpenAI)
+azure_openai:
+  endpoint: "https://YOUR-RESOURCE-NAME.openai.azure.com/"
+  key: "YOUR_AZURE_OPENAI_KEY"
+  deployment: "YOUR_DEPLOYMENT_NAME"
+  api_version: "2024-02-15-preview"
+  max_model_tokens: 32000
