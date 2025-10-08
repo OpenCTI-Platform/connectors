@@ -109,6 +109,22 @@ class ConnectorsManifestsGenerator:
     ]:
         return repository_subdirectory.upper().replace("-", "_")
 
+    def get_manifest_logo(self, connector_directory_path: str) -> str | None:
+        connector_metadata_directory_path = (
+            Path(connector_directory_path) / CONNECTOR_METADATA_DIRECTORY
+        )
+        if os.path.exists(connector_metadata_directory_path):
+            files = os.listdir(connector_metadata_directory_path)
+            for file in files:
+                if file.startswith("logo."):
+                    return (
+                        Path(connector_directory_path)
+                        / CONNECTOR_METADATA_DIRECTORY
+                        / file
+                    ).as_posix()
+
+        return None
+
     @lru_cache  # use cache to avoid re-open and parse the same README file multiple times
     def _parse_connector_readme(self, connector_directory_path: str) -> dict:
         readme_path = Path(connector_directory_path) / "README.md"
@@ -289,6 +305,7 @@ class ConnectorsManifestsGenerator:
                 )
                 or "Information coming soon"
             ),
+            logo=self.get_manifest_logo(connector_directory_path),
             verified=(
                 connector_manifest_data.get("verified")
                 if connector_manifest_data.get("verified") is not None
@@ -317,7 +334,6 @@ class ConnectorsManifestsGenerator:
                 connector_manifest_data.get("container_type")
                 or self.to_manifest_container_type(connector_category)
             ),
-            # TODO: add default logo ?
         )
 
         return ConnectorManifest(**connector_manifest_data)
