@@ -821,6 +821,18 @@ class ReportImporter:
             if isinstance(o, dict) and "id" in o
         }
 
+        # return if there is nothing to process
+        if len(observables) + len(entities) == 0:
+            self.helper.connector_logger.info(
+                f"{trace} [FINAL] STIX bundle empty for {file_name}: "
+                f"0 observables, 0 entities."
+            )
+
+            return (
+                f"{trace} SUCCESS: Sent 0 total objects, "
+                f"0 relationships, and 0 indicators"
+            )
+
         relationships, skipped_rels = self._build_predicted_relationships(
             predicted_rels,
             uuid_to_stix=uuid_to_stix,

@@ -86,7 +86,14 @@ def test_relations_ndjson_merge(simple_helper):
     with patch.object(simple_helper, "call_openai", return_value=ndjson), patch.object(
         simple_helper,
         "build_hints_and_chunks",
-        return_value=[{"text": "abcdef" * 50, "start": 0, "end": 300, "hints": []}],
+        return_value=[
+            {
+                "text": "abcdef" * 50,
+                "start": 0,
+                "end": 300,
+                "hints": [{"id": "dummy", "label": "dummy"}],
+            }
+        ],
     ):
         out = simple_helper.openai_extract_relations("dummy")
         spans = (out.get("metadata") or {}).get("span_based_entities") or []
@@ -189,7 +196,14 @@ def test_incident_mapper_creates_incident(simple_helper):
     with patch.object(simple_helper, "call_openai", return_value=ndjson), patch.object(
         simple_helper,
         "build_hints_and_chunks",
-        return_value=[{"text": "dummy", "start": 0, "end": 5, "hints": []}],
+        return_value=[
+            {
+                "text": "abcdef" * 50,
+                "start": 0,
+                "end": 300,
+                "hints": [{"id": "dummy", "label": "dummy"}],
+            }
+        ],
     ):
         out = simple_helper.openai_extract_relations("dummy")
         spans = (out.get("metadata") or {}).get("span_based_entities") or []

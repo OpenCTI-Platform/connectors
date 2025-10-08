@@ -623,7 +623,7 @@ class OpenAIHelper:
         self._continuations_used = 0
 
         chunks = self.build_hints_and_chunks(source_text)
-        if not chunks:
+        if not chunks or len(chunks) == 1 and not (chunks[0].get("hints") or []):
             return {"metadata": {"span_based_entities": []}, "relations": []}
 
         # Pre-accumulate absolute positions from hints
