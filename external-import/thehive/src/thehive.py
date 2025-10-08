@@ -39,7 +39,7 @@ from utils import format_datetime  # isort: skip
 
 class TheHive:
     def __init__(self):
-        # # Instantiate the connector helper from config
+        #Instantiate the connector helper from config
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
         config = (
             yaml.load(open(config_file_path), Loader=yaml.FullLoader)
@@ -200,6 +200,8 @@ class TheHive:
 
     def generate_alert_bundle(self, alert):
         """Generate a STIX bundle from a given alert."""
+
+        # Initial logging
         self.helper.log_info(f"Starting import for alert '{alert.get('title')}'")
         bundle_objects = []
         try:
@@ -252,7 +254,8 @@ class TheHive:
         )
 
         bundle_objects.extend(processed_observables)
-
+        
+        # Create a temporary dummy_case to get a valid STIX ID for attachments
         # Temporary creation of a STIX object to retrieve its ID
         dummy_case = CustomObjectCaseIncident(
             id=CaseIncident.generate_id(
@@ -267,12 +270,13 @@ class TheHive:
             ),
             custom_properties={"dummy": True},
         )
-
+        # Attachments relations are later redirected to the real stix_case
         attachments, opencti_files = self.process_attachments(case, dummy_case)
 
         # Now that we have the files, we create the actual object.
         stix_case = self.process_main_case(case, markings, case_object_refs)
-
+        
+        # Relationships generated earlier now point to stix_case, ensuring correct linkage.
         # Add if opencti_files exists
         if opencti_files:
             # We recreate a new stix_case with custom_properties
@@ -289,7 +293,8 @@ class TheHive:
             self.helper.log_info(
                 f"Completed generation of STIX bundle for case: {case.get('title')}"
             )
-            self.helper.send_stix2_bundle(bundle, update=self.update_existing_data)
+            self.helper.send_stix2_bundle(bundle)
+
         except Exception as e:
             self.helper.log_error(f"Error serializing STIX bundle for 'case': {str(e)}")
             return {}
@@ -299,35 +304,15 @@ class TheHive:
             try:
                 self.helper.log_info("Sending STIX artifacts bundle (attachments)...")
                 self.helper.send_stix2_bundle(
-                    self.helper.stix2_create_bundle(attachments),
-                    update=self.update_existing_data,
+                    self.helper.stix2_create_bundle(attachments)
                 )
+
             except Exception as e:
                 self.helper.log_error(f"Error when sending artifacts: {str(e)}")
 
         return bundle
 
-    def send_attachments(self, case, stix_case):
-        """Asynchronous sending of attachments for a given box."""
-        self.helper.log_info(
-            f"Starting asynchronous attachments processing for case: {case.get('title')}"
-        )
-        attachments = self.process_attachements(case, stix_case)
-        if attachments:
-            bundle_objects = []
-            # Attachments are sent as a separate bundle.
-            bundle_objects.extend(attachments)
-            try:
-                bundle = self.helper.stix2_create_bundle(bundle_objects)
-                self.helper.send_stix2_bundle(bundle, update=self.update_existing_data)
-                self.helper.log_info(f"Attachments sent for case: {case.get('title')}")
-            except Exception as e:
-                self.helper.log_error(
-                    f"Error sending attachments for case: {case.get('title')}: {str(e)}"
-                )
-        else:
-            self.helper.log_info(f"No attachments found for case: {case.get('title')}")
-
+    
     def generate_sighting(self, observable, stix_observable):
         """Generate a STIX sighting from a provided observable and stix observable."""
         if observable.get("sighted"):
@@ -411,12 +396,12 @@ class TheHive:
                 stix_bundle = process_func(item)
                 self.helper.send_stix2_bundle(
                     stix_bundle,
-                    update=self.update_existing_data,
                     work_id=work_id,
                 )
+
                 updated_last_date = self.get_updated_date(item, updated_last_date)
             else:
-                self.helper.log_warn(
+                self.helper.log_warning(
                     f"Ignoring {item.get('title')} due to TLP too high."
                 )
         message = f"Processing complete, last update: {updated_last_date}"
@@ -695,10 +680,7 @@ class TheHive:
                         encoded_content = base64.b64encode(response.content).decode(
                             "utf-8"
                         )
-                        artifact_id = f"artifact--{uuid.uuid4()}"
-
                         file_artifact = stix2.Artifact(
-                            id=artifact_id,
                             mime_type=content_type,
                             payload_bin=encoded_content,
                             allow_custom=True,
@@ -707,14 +689,15 @@ class TheHive:
 
                         artifact_relationship = stix2.Relationship(
                             id=StixCoreRelationship.generate_id(
-                                "related-to", artifact_id, stix_case.id
+                                "related-to", file_artifact.id, stix_case.id
                             ),
                             relationship_type="related-to",
                             created_by_ref=self.identity.get("standard_id", ""),
-                            source_ref=artifact_id,
+                            source_ref=file_artifact.id,
                             target_ref=stix_case.id,
                             allow_custom=True,
                         )
+
 
                         processed_attachments.append(file_artifact)
                         processed_attachments.append(artifact_relationship)
@@ -741,6 +724,8 @@ class TheHive:
 
     def run(self):
         """Function to process cases, alerts, and pause based on provided interval."""
+
+        # Main connector loop — fetches cases and alerts, converts to STIX, sends to OpenCTI.
         while True:
             self.helper.log_info("Starting TheHive Connector run loop...")
             try:
