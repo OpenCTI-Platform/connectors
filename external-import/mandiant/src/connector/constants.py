@@ -32,6 +32,7 @@ BATCH_REPORT_SIZE = 10
 
 TLP_MARKING_DEFINITION_MAPPING = {
     "white": stix2.TLP_WHITE,
+    "clear": stix2.TLP_WHITE,
     "green": stix2.TLP_GREEN,
     "amber": stix2.TLP_AMBER,
     "amber+strict": stix2.MarkingDefinition(
@@ -44,12 +45,3 @@ TLP_MARKING_DEFINITION_MAPPING = {
     ),
     "red": stix2.TLP_RED,
 }
-
-DEFAULT_TLP_MARKING_DEFINITION = stix2.MarkingDefinition(
-    id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
-    definition_type="statement",
-    definition={"statement": "custom"},
-    allow_custom=True,
-    x_opencti_definition_type="TLP",
-    x_opencti_definition="TLP:AMBER+STRICT",
-)
