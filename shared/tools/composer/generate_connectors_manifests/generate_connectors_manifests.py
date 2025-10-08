@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import traceback
 from dataclasses import asdict, dataclass, field, fields
 from datetime import date
@@ -59,6 +60,14 @@ class ConnectorManifest:
                 )
 
         # TODO: add type checks and other validations as needed
+
+    def to_json(self) -> dict:
+        manifest_dict = asdict(self)
+        manifest_dict["last_verified_date"] = (
+            self.last_verified_date.isoformat() if self.last_verified_date else None
+        )
+
+        return manifest_dict
 
 
 class ConnectorsManifestsGenerator:
@@ -189,6 +198,53 @@ class ConnectorsManifestsGenerator:
 
         return "".join(paragraphs).strip()
 
+    def get_connector_last_verified_at_from_readme(
+        self, connector_directory_path: str
+    ) -> date | None:
+        def get_node_text(node):
+            def get_node_text_recursively(recursive_node):
+                last_verified_row = next(
+                    (
+                        "".join(child.get("raw", "").split())  # raw without whitespaces
+                        for child in reversed(recursive_node.get("children", []))
+                        if "|FiligranVerified|" in "".join(child.get("raw", "").split())
+                    ),
+                    None,
+                )
+                if not last_verified_row:
+                    if recursive_node.get("children", []):
+                        for child in recursive_node.get("children", []):
+                            last_verified_row = get_node_text_recursively(child)
+                            if last_verified_row:
+                                break
+
+                return last_verified_row
+
+            last_verified_row = get_node_text_recursively(node)
+            if last_verified_row:
+                last_verified_date_match = re.search(
+                    r"\|20[0-9]{2}-[0-9]{2}-[0-9]{2}\|",
+                    last_verified_row,
+                )
+                last_verified_date_match = (
+                    last_verified_date_match.group()
+                    if last_verified_date_match
+                    else None
+                )
+                if last_verified_date_match:
+                    last_verified_iso = last_verified_date_match.replace("|", "")
+                    if last_verified_iso:
+                        return date.fromisoformat(last_verified_iso)
+
+        readme_ast = self._parse_connector_readme(connector_directory_path)
+        if not readme_ast:
+            return None
+
+        for node in readme_ast:
+            last_verified_at = get_node_text(node)
+            if last_verified_at:
+                return last_verified_at
+
     def build_connector_manifest(
         self, connector_directory_path: str
     ) -> ConnectorManifest:
@@ -233,6 +289,22 @@ class ConnectorsManifestsGenerator:
                 )
                 or "Information coming soon"
             ),
+            verified=(
+                connector_manifest_data.get("verified")
+                if connector_manifest_data.get("verified") is not None
+                else bool(
+                    self.get_connector_last_verified_at_from_readme(
+                        connector_directory_path
+                    )
+                )
+            ),
+            last_verified_date=(
+                date.fromisoformat(connector_manifest_data.get("last_verified_date"))
+                if connector_manifest_data.get("last_verified_date")
+                else self.get_connector_last_verified_at_from_readme(
+                    connector_directory_path
+                )
+            ),
             source_code=(
                 connector_manifest_data.get("source_code")
                 or f"https://github.com/OpenCTI-Platform/connectors/tree/master/{connector_category}/{connector_name}"
@@ -246,7 +318,6 @@ class ConnectorsManifestsGenerator:
                 or self.to_manifest_container_type(connector_category)
             ),
             # TODO: add default logo ?
-            # TODO: add verification fields from connector's README
         )
 
         return ConnectorManifest(**connector_manifest_data)
@@ -281,8 +352,7 @@ class ConnectorsManifestsGenerator:
                     with open(
                         connector_manifest_file_path, "w", encoding="utf-8"
                     ) as file:
-                        connector_manifest_dict = asdict(connector_manifest)
-                        file.write(json.dumps(connector_manifest_dict, indent=2))
+                        file.write(json.dumps(connector_manifest.to_json(), indent=2))
 
                     print(f"{connector_manifest_file_path} file created")
                 except Exception as e:
