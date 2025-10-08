@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 from typing import Annotated, Literal
 
 from connector.models.configs import ConfigBaseSettings
@@ -31,14 +31,17 @@ TimedeltaHours = Annotated[
     BeforeValidator(lambda v: timedelta(hours=v) if isinstance(v, (int, str)) else v),
 ]
 
+
 def parse_date(value):
     date.fromisoformat(value)
     return value
+
 
 DateToString = Annotated[
     str,
     BeforeValidator(parse_date),
 ]
+
 
 def _get_default_start_date():
     """Get the default start date as 30 days ago from today."""
