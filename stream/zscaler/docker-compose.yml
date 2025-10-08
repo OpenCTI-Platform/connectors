@@ -2,6 +2,7 @@ version: '3'
 services:
   connector-zscaler:
     image: opencti/connector-zscaler:rolling
+    environment:
       - OPENCTI_URL=ChangeMe
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
@@ -18,5 +19,3 @@ services:
       - ZSCALER_BLACKLIST_NAME=ChangeMe #Add name of your Zscaler blacklist
     networks:
       - opencti_network
-
-

@@ -1,2 +1,2 @@
-pycti==6.7.20
+pycti==6.8.3
 yara-python>=4.3.0

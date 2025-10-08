@@ -9,13 +9,7 @@ from pycti import (
     StixCoreRelationship,
     ThreatActorGroup,
 )
-from ransomwarelive.utils import (
-    fetch_country_domain,
-    ip_fetcher,
-    is_ipv4,
-    is_ipv6,
-    threat_description_generator,
-)
+from ransomwarelive.utils import threat_description_generator
 
 
 class ConverterToStix:
@@ -52,12 +46,11 @@ class ConverterToStix:
 
         return author
 
-    def create_domain(self, domain_name: str, description="-"):
+    def create_domain(self, domain_name: str):
         """
         Create a STIX object for a domain
         Params:
             domain_name: name of the domain in string
-            description: description of the domain in string or "-"
         Return:
             DomainName in STIX 2.1 format
         """
@@ -66,7 +59,6 @@ class ConverterToStix:
             type="domain-name",
             object_marking_refs=[self.marking.get("id")],
             custom_properties={
-                "x_opencti_description": description,
                 "x_opencti_created_by_ref": self.author.get("id"),
             },
         )
@@ -311,35 +303,14 @@ class ConverterToStix:
         Returns:
             domain: stix2 Domain object
             relation_victim_domain: stix2 Relationship between victim and domain
-            ip_object: stix2 IPv4 or IPv6 linked to the domain name
-            relation_domain_ip: stix2 Relationship between domain and ip
         """
-        description = fetch_country_domain(domain_name)
-
-        domain = self.create_domain(domain_name=domain_name, description=description)
+        domain = self.create_domain(domain_name=domain_name)
 
         relation_victim_domain = self.create_relationship(
             domain.get("id"), victim.get("id"), "belongs-to"
         )
 
-        # Fetching IP address of the domain
-        resolved_ip = ip_fetcher(domain_name)
-        if is_ipv4(resolved_ip):
-            ip_object = self.create_ipv4(resolved_ip)
-        elif is_ipv6(resolved_ip):
-            ip_object = self.create_ipv6(resolved_ip)
-        else:
-            ip_object = None
-
-        relation_domain_ip = None
-        if ip_object and ip_object.get("id"):
-            relation_domain_ip = self.create_relationship(
-                source_ref=domain.get("id"),
-                target_ref=ip_object.get("id"),
-                relationship_type="resolves-to",
-            )
-
-        return domain, relation_victim_domain, ip_object, relation_domain_ip
+        return domain, relation_victim_domain
 
     def process_external_references(self, item: dict):
         """

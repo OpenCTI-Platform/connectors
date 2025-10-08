@@ -1,4 +1,4 @@
-pycti==6.7.20
+pycti==6.8.3
 pydantic>=2.10, <3
 pydantic-settings==2.10.1
 python-dateutil==2.9.0.post0

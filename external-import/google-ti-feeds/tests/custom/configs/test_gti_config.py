@@ -15,7 +15,7 @@ from connector.src.octi.connector import Connector
 from connector.src.octi.exceptions.configuration_error import ConfigurationError
 from connector.src.octi.global_config import GlobalConfig
 from pycti import OpenCTIConnectorHelper  # type: ignore
-from pydantic import HttpUrl
+from pydantic import HttpUrl, SecretStr
 from tests.conftest import mock_env_vars
 
 # =====================
@@ -78,7 +78,7 @@ def all_optional_config(request) -> dict[str, str]:
         {"gti_api_url": "https://www.virustotal.com/api/v3"},
         {"gti_import_reports": "True"},
         {"gti_report_types": "All"},
-        {"gti_report_origins": "All"},
+        {"gti_report_origins": "google threat intelligence"},
     ]
 )
 def all_defaulted_config(request) -> dict[str, str]:
@@ -142,7 +142,7 @@ def valid_gti_report_origins(request) -> dict[str, str]:
 
 @pytest.fixture(
     params=[
-        {"gti_report_origins": "invalid origin"},
+        {"gti_report_origins": '"invalid origin"'},
         {"gti_report_origins": "google threat intelligence,partner,other"},
     ]
 )
@@ -194,11 +194,11 @@ def test_gti_connector_all_defaulted_config(  # type: ignore
 ) -> None:
     """Test GTI connector with all defaulted configuration."""
     # Given a minimum required configuration for GTI and all defaulted configuration
-    mock_env = _given_setup_env_vars(min_required_config)
+    data = {**min_required_config, **all_defaulted_config}
+    mock_env = _given_setup_env_vars(data)
     # When the connector is created
     connector, _ = _when_connector_created()
     # Then the connector should be created successfully and all defaulted values should be set correctly
-    data = {**min_required_config, **all_defaulted_config}
     _then_connector_created_successfully(capfd, mock_env, connector, data)
 
 
@@ -317,11 +317,13 @@ def _then_connector_created_successfully(capfd, mock_env, connector, data) -> No
                 assert val == isodate.parse_duration(value)  # noqa: S101
 
             else:
-                if isinstance(attr, HttpUrl):
-                    assert attr.unicode_string() == value  # noqa: S101
+                if isinstance(val, HttpUrl):
+                    assert val.unicode_string() == value  # noqa: S101
+                elif isinstance(val, SecretStr):
+                    assert val.get_secret_value() == value  # noqa: S101
+                elif isinstance(val, list):
+                    assert ",".join(val) == value  # noqa: S101
                 else:
-                    if type(val) is list:
-                        val = ",".join(val)
                     assert str(val) == value  # noqa: S101
 
     log_records = capfd.readouterr()

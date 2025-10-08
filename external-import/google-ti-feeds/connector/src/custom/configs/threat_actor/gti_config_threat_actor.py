@@ -4,13 +4,13 @@ This module defines configuration settings specific to GTI threat actor imports.
 """
 
 from datetime import timedelta
-from typing import List
 
 from connector.src.custom.configs.gti_config_common import (
     ALLOWED_ORIGINS,
     GTIBaseConfig,
     validate_origins_list,
 )
+from connectors_sdk.core.pydantic import ListFromString
 from pydantic import Field, field_validator
 
 
@@ -27,15 +27,15 @@ class GTIThreatActorConfig(GTIBaseConfig):
         description="Whether to enable importing threat actor data from GTI",
     )
 
-    threat_actor_origins: List[str] | str = Field(
-        default="All",
+    threat_actor_origins: ListFromString = Field(
+        default=["google threat intelligence"],
         description="Comma-separated list of threat actor origins to import, or 'All' for all origins. "
         f"Allowed values: {', '.join(ALLOWED_ORIGINS)}",
         examples=["All", "partner,google threat intelligence", "crowdsourced"],
     )
 
-    @field_validator("threat_actor_origins", mode="before")
+    @field_validator("threat_actor_origins", mode="after")
     @classmethod
-    def split_and_validate_threat_actor_origins(cls, v: str) -> List[str]:
-        """Split and validate a comma-separated string into a list and validate its contents."""
+    def validate_threat_actor_origins(cls, v: list[str]) -> list[str]:
+        """Validate threat actor origins against allowed values."""
         return validate_origins_list(v, "threat actor origin", ALLOWED_ORIGINS)

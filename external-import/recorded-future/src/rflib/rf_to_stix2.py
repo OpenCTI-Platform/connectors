@@ -1250,7 +1250,7 @@ class StixNote:
                     )
                 capability_obj.create_stix_objects()
                 capability = capability_obj.stix_obj
-                event_attr.append(capability)
+                event_objects.append(capability)
 
             # Create relation adversary-capability
             event_objects.append(
