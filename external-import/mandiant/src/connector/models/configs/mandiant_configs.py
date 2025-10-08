@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta, date
 from typing import Annotated, Literal
 
 from connector.models.configs import ConfigBaseSettings
@@ -31,6 +31,19 @@ TimedeltaHours = Annotated[
     BeforeValidator(lambda v: timedelta(hours=v) if isinstance(v, (int, str)) else v),
 ]
 
+def parse_date(value):
+    date.fromisoformat(value)
+    return value
+
+DateToString = Annotated[
+    str,
+    BeforeValidator(parse_date),
+]
+
+def _get_default_start_date():
+    """Get the default start date as 30 days ago from today."""
+    return (datetime.now() - timedelta(days=30)).date().isoformat()
+
 
 class ConfigLoaderMandiant(ConfigBaseSettings):
     """Interface for loading Mandiant dedicated configuration."""
@@ -61,18 +74,20 @@ class ConfigLoaderMandiant(ConfigBaseSettings):
         description="Whether to create notes from imported data.",
     )
 
-    import_start_date: str = Field(
-        default="2023-01-01",
-        description="Date to start collect data. (Format: YYYY-MM-DD)",
+    import_start_date: DateToString = Field(
+        default_factory=_get_default_start_date,
+        description="Date to start collect data (Format: YYYY-MM-DD). "
+        "Defaults to 30 days ago before first run the connector.",
     )
     import_period: PositiveInt = Field(
         default=1,
         description="Number of days to fetch in one round trip.",
     )
 
-    indicator_import_start_date: str = Field(
-        default="2023-01-01",
-        description="Date to start collect indicators. (Format: YYYY-MM-DD)",
+    indicator_import_start_date: DateToString = Field(
+        default_factory=_get_default_start_date,
+        description="Date to start collect indicators (Format: YYYY-MM-DD). "
+        "Defaults to 30 days ago before first run the connector.",
     )
     indicator_minimum_score: PositiveInt = Field(
         default=80,

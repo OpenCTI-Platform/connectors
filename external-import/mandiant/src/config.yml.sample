@@ -17,10 +17,10 @@ mandiant:
 #  remove_statement_marking: false
 #  create_notes: false
 #
-#  import_start_date: "2023-01-01"
+#  import_start_date: "Defaults to 30 days ago before first run the connector"
 #  import_period: 1
 
-#  indicator_import_start_date: "2023-01-01"
+#  indicator_import_start_date: "Defaults to 30 days ago before first run the connector"
 #  indicator_minimum_score: 80
 #  import_indicators: true
 #  import_indicators_interval: 1
