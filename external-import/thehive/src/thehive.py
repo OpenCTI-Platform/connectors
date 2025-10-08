@@ -39,7 +39,7 @@ from utils import format_datetime  # isort: skip
 
 class TheHive:
     def __init__(self):
-        #Instantiate the connector helper from config
+        # Instantiate the connector helper from config
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
         config = (
             yaml.load(open(config_file_path), Loader=yaml.FullLoader)
@@ -254,7 +254,7 @@ class TheHive:
         )
 
         bundle_objects.extend(processed_observables)
-        
+
         # Create a temporary dummy_case to get a valid STIX ID for attachments
         # Temporary creation of a STIX object to retrieve its ID
         dummy_case = CustomObjectCaseIncident(
@@ -275,7 +275,7 @@ class TheHive:
 
         # Now that we have the files, we create the actual object.
         stix_case = self.process_main_case(case, markings, case_object_refs)
-        
+
         # Relationships generated earlier now point to stix_case, ensuring correct linkage.
         # Add if opencti_files exists
         if opencti_files:
@@ -312,7 +312,6 @@ class TheHive:
 
         return bundle
 
-    
     def generate_sighting(self, observable, stix_observable):
         """Generate a STIX sighting from a provided observable and stix observable."""
         if observable.get("sighted"):
@@ -697,7 +696,6 @@ class TheHive:
                             target_ref=stix_case.id,
                             allow_custom=True,
                         )
-
 
                         processed_attachments.append(file_artifact)
                         processed_attachments.append(artifact_relationship)
