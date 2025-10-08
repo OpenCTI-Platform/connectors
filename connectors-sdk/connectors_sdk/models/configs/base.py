@@ -98,6 +98,7 @@ class BaseConnectorSettings(BaseSettings, ABC):
     )
 
     model_config = SettingsConfigDict(
+        extra="allow",
         enable_decoding=False,
         env_nested_delimiter="_",
         env_nested_max_split=1,
