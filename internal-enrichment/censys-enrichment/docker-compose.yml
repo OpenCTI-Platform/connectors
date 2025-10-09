@@ -1,0 +1,16 @@
+---
+
+version: '3'
+services:
+  connector-censys-enrichment:
+    image: opencti/connector-censys-enrichment:rolling
+    environment:
+#       OpenCTI configuration
+      OPENCTI_URL: http://localhost:8080
+      OPENCTI_TOKEN: ChangeMe
+
+      # Common connector configuration
+#      CONNECTOR_ID: Censys-Enrichment-Connector
+#      CONNECTOR_NAME: Censys Enrichment
+#      CONNECTOR_SCOPE: IPv4-Addr
+#      CONNECTOR_LOG_LEVEL: error
