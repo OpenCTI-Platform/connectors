@@ -24,6 +24,10 @@ REPOSITORY_SUBDIRECTORIES_TO_INCLUDE = [
 
 @dataclass(kw_only=True)
 class ConnectorManifest:
+    """
+    Define and validate fields of a connector's manifest.
+    """
+
     title: str
     slug: str
     description: str = "Information coming soon"
@@ -49,7 +53,10 @@ class ConnectorManifest:
     ]
 
     def __post_init__(self):
-        # All fields are required for validation, whether the values come from init args or defaults.
+        """
+        Check that every field has a value.
+        All fields are required to validate the instance (even if the default is None).
+        """
         for field_info in fields(self):
             if (
                 getattr(self, field_info.name) is None
@@ -60,6 +67,9 @@ class ConnectorManifest:
                 )
 
     def to_json(self) -> dict:
+        """
+        Convert the instance to a JSON serializable dict.
+        """
         manifest_dict = asdict(self)
         manifest_dict["last_verified_date"] = (
             self.last_verified_date.isoformat() if self.last_verified_date else None
@@ -69,11 +79,24 @@ class ConnectorManifest:
 
 
 class ConnectorManifestBuilder:
+    """
+    Build a connector's manifest based on connector's directory.
+    It uses the directory path, directory name, `__metadata__` subdirectory and `README.md`.
+    It will write `__metadata__/connector_manifest.json` on disk.
+    """
+
     def __init__(self, directory_path: str):
+        """
+        Init a `ConnectorManifestBuilder` instance.
+        :param directory_path: Directory path of a connector, e.g. "external-import/cve" for the CVE connector.
+        """
         self.directory_path = directory_path
 
     @property
     def manifest_title(self) -> str:
+        """
+        Return value for `connector_manifest["title"]`.
+        """
         directory_name = os.path.basename(self.directory_path)
         return directory_name.replace("-", " ").title()
 
@@ -87,22 +110,34 @@ class ConnectorManifestBuilder:
 
     @property
     def manifest_source_code(self) -> str:
+        """
+        Return value for `connector_manifest["source_code"]`.
+        """
         parent_directory_name = os.path.basename(os.path.dirname(self.directory_path))
         directory_name = os.path.basename(self.directory_path)
         return f"https://github.com/OpenCTI-Platform/connectors/tree/master/{parent_directory_name}/{directory_name}"
 
     @property
     def manifest_container_image(self) -> str:
+        """
+        Return value for `connector_manifest["container_image"]`.
+        """
         directory_name = os.path.basename(self.directory_path)
         return f"opencti/connector-{directory_name}"
 
     @property
     def manifest_container_type(self) -> str:
+        """
+        Return value for `connector_manifest["container_type"]`.
+        """
         parent_directory_name = os.path.basename(os.path.dirname(self.directory_path))
         return parent_directory_name.upper().replace("-", "_")
 
     @property
     def manifest_logo(self) -> str | None:
+        """
+        Return value for `connector_manifest["logo"]`.
+        """
         connector_metadata_directory_path = (
             Path(self.directory_path) / CONNECTOR_METADATA_DIRECTORY
         )
@@ -119,17 +154,29 @@ class ConnectorManifestBuilder:
 
     @property
     def manifest_description(self) -> str:
+        """
+        Return value for `connector_manifest["description"]` and `connector_manifest["short_description"]`.
+        Try to get description from connector's README, otherwise return the default.
+        """
         return self._get_readme_description() or "Information coming soon"
 
     @property
     def manifest_last_verified_date(self) -> date | None:
+        """
+        Return value for `connector_manifest["verified"]` and `connector_manifest["last_verified_date"]`.
+        Try to get verification info from connector's README, otherwise return `None`.
+        """
         last_verified_iso = self._get_readme_last_verified_date()
         if last_verified_iso:
             return date.fromisoformat(last_verified_iso)
         return None
 
-    @lru_cache  # use cache to avoid re-open and parse the same README file multiple times
+    @lru_cache
     def _parse_readme(self) -> dict | None:
+        """
+        Parse connector's README as AST.
+        Use cache to avoid re-open and parse the same README file multiple times.
+        """
         readme_path = Path(self.directory_path) / "README.md"
         if os.path.exists(readme_path):
             with open(readme_path, "r", encoding="utf-8") as file:
@@ -141,6 +188,11 @@ class ConnectorManifestBuilder:
         return None
 
     def _get_readme_description(self) -> str | None:
+        """
+        Try to find the connector's description by browsing the first sections of its README,
+        otherwise return `None`.
+        """
+
         def get_node_text_recursively(node):
             in_verified_table = any(
                 [
@@ -210,6 +262,11 @@ class ConnectorManifestBuilder:
         return "".join(paragraphs).strip() or None
 
     def _get_readme_last_verified_date(self) -> str | None:
+        """
+        Try to find the connector's verification status by browsing its README,
+        otherwise return `None`.
+        """
+
         def get_node_text_recursively(node):
             last_verified_row = next(
                 (
@@ -250,7 +307,10 @@ class ConnectorManifestBuilder:
             if last_verified_iso:
                 return last_verified_iso
 
-    def _get_current_manifest_data(self) -> dict:
+    def _get_current_manifest_data(self) -> dict | None:
+        """
+        Parse current connector's manifest if it exists on disk, otherwise return `None`.
+        """
         manifest_path = (
             Path(self.directory_path)
             / CONNECTOR_METADATA_DIRECTORY
@@ -264,6 +324,10 @@ class ConnectorManifestBuilder:
         return None
 
     def _build_manifest(self) -> ConnectorManifest:
+        """
+        Build the connector's manifest.
+        If a manifest exists on disk, it will be updated when necessary.
+        """
         manifest_data = self._get_current_manifest_data() or {}
 
         manifest_data.update(
@@ -304,6 +368,9 @@ class ConnectorManifestBuilder:
         return ConnectorManifest(**manifest_data)
 
     def create_manifest(self):
+        """
+        Build the connector's manifest and write it on disk (`__metadata__/connector_manifest.json`).
+        """
         connector_manifest = self._build_manifest()
 
         # Ensure __metadata__ directory exists before creating the manifest file
@@ -326,7 +393,8 @@ class ConnectorManifestBuilder:
 
 if __name__ == "__main__":
     """
-    Entry point of the script
+    Entry point of the script.
+    Iterate over every connector to build and save its manifest.
     """
     try:
         connectors_directories_paths = []
