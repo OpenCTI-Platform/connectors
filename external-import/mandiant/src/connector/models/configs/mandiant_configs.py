@@ -26,11 +26,6 @@ TLPToLower = Annotated[
     PlainSerializer(lambda v: v.lower(), return_type=str),
 ]
 
-TimedeltaHours = Annotated[
-    timedelta,
-    BeforeValidator(lambda v: timedelta(hours=v) if isinstance(v, (int, str)) else v),
-]
-
 
 def parse_date(value):
     date.fromisoformat(value)
@@ -101,7 +96,7 @@ class ConfigLoaderMandiant(ConfigBaseSettings):
         default=True,
         description="Enable to collect indicators.",
     )
-    import_indicators_interval: TimedeltaHours = Field(
+    import_indicators_interval: PositiveInt = Field(
         default=1,
         description="Interval in hours to check and collect new indicators.",
     )
@@ -110,7 +105,7 @@ class ConfigLoaderMandiant(ConfigBaseSettings):
         default=True,
         description="Enable to collect actors.",
     )
-    import_actors_interval: TimedeltaHours = Field(
+    import_actors_interval: PositiveInt = Field(
         default=1,
         description="Interval in hours to check and collect new actors.",
     )
@@ -123,7 +118,7 @@ class ConfigLoaderMandiant(ConfigBaseSettings):
         default=True,
         description="Enable to collect malwares.",
     )
-    import_malwares_interval: TimedeltaHours = Field(
+    import_malwares_interval: PositiveInt = Field(
         default=1,
         description="Interval in hours to check and collect new malwares.",
     )
@@ -136,7 +131,7 @@ class ConfigLoaderMandiant(ConfigBaseSettings):
         default=True,
         description="Enable to collect campaigns.",
     )
-    import_campaigns_interval: TimedeltaHours = Field(
+    import_campaigns_interval: PositiveInt = Field(
         default=1,
         description="Interval in hours to check and collect new campaigns.",
     )
@@ -149,7 +144,7 @@ class ConfigLoaderMandiant(ConfigBaseSettings):
         default=False,
         description="Enable to collect vulnerabilities.",
     )
-    import_vulnerabilities_interval: TimedeltaHours = Field(
+    import_vulnerabilities_interval: PositiveInt = Field(
         default=1,
         description="Interval in hours to check and collect new vulnerabilities.",
     )
@@ -158,7 +153,7 @@ class ConfigLoaderMandiant(ConfigBaseSettings):
         default=True,
         description="Enable to collect reports.",
     )
-    import_reports_interval: TimedeltaHours = Field(
+    import_reports_interval: PositiveInt = Field(
         default=1,
         description="Interval in hours to check and collect new reports.",
     )
