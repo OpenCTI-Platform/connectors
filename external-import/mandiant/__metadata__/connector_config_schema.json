@@ -115,8 +115,8 @@
     "MANDIANT_IMPORT_INDICATORS_INTERVAL": {
       "default": 1,
       "description": "Interval in hours to check and collect new indicators.",
-      "format": "duration",
-      "type": "string"
+      "exclusiveMinimum": 0,
+      "type": "integer"
     },
     "MANDIANT_IMPORT_ACTORS": {
       "default": true,
@@ -126,8 +126,8 @@
     "MANDIANT_IMPORT_ACTORS_INTERVAL": {
       "default": 1,
       "description": "Interval in hours to check and collect new actors.",
-      "format": "duration",
-      "type": "string"
+      "exclusiveMinimum": 0,
+      "type": "integer"
     },
     "MANDIANT_IMPORT_ACTORS_ALIASES": {
       "default": false,
@@ -142,8 +142,8 @@
     "MANDIANT_IMPORT_MALWARES_INTERVAL": {
       "default": 1,
       "description": "Interval in hours to check and collect new malwares.",
-      "format": "duration",
-      "type": "string"
+      "exclusiveMinimum": 0,
+      "type": "integer"
     },
     "MANDIANT_IMPORT_MALWARES_ALIASES": {
       "default": false,
@@ -158,8 +158,8 @@
     "MANDIANT_IMPORT_CAMPAIGNS_INTERVAL": {
       "default": 1,
       "description": "Interval in hours to check and collect new campaigns.",
-      "format": "duration",
-      "type": "string"
+      "exclusiveMinimum": 0,
+      "type": "integer"
     },
     "MANDIANT_IMPORT_INDICATORS_WITH_FULL_CAMPAIGNS": {
       "default": false,
@@ -174,8 +174,8 @@
     "MANDIANT_IMPORT_VULNERABILITIES_INTERVAL": {
       "default": 1,
       "description": "Interval in hours to check and collect new vulnerabilities.",
-      "format": "duration",
-      "type": "string"
+      "exclusiveMinimum": 0,
+      "type": "integer"
     },
     "MANDIANT_IMPORT_REPORTS": {
       "default": true,
@@ -185,8 +185,8 @@
     "MANDIANT_IMPORT_REPORTS_INTERVAL": {
       "default": 1,
       "description": "Interval in hours to check and collect new reports.",
-      "format": "duration",
-      "type": "string"
+      "exclusiveMinimum": 0,
+      "type": "integer"
     },
     "MANDIANT_ACTOR_PROFILE_REPORT": {
       "default": true,

@@ -23,20 +23,20 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | MANDIANT_INDICATOR_IMPORT_START_DATE | `string` |  | string |  | Date to start collect indicators (Format: YYYY-MM-DD). Defaults to 30 days ago before first run the connector. |
 | MANDIANT_INDICATOR_MINIMUM_SCORE | `integer` |  | `0 < x ` | `80` | Minimum score (based on mscore) that an indicator must have to be processed. |
 | MANDIANT_IMPORT_INDICATORS | `boolean` |  | boolean | `true` | Enable to collect indicators. |
-| MANDIANT_IMPORT_INDICATORS_INTERVAL | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `1` | Interval in hours to check and collect new indicators. |
+| MANDIANT_IMPORT_INDICATORS_INTERVAL | `integer` |  | `0 < x ` | `1` | Interval in hours to check and collect new indicators. |
 | MANDIANT_IMPORT_ACTORS | `boolean` |  | boolean | `true` | Enable to collect actors. |
-| MANDIANT_IMPORT_ACTORS_INTERVAL | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `1` | Interval in hours to check and collect new actors. |
+| MANDIANT_IMPORT_ACTORS_INTERVAL | `integer` |  | `0 < x ` | `1` | Interval in hours to check and collect new actors. |
 | MANDIANT_IMPORT_ACTORS_ALIASES | `boolean` |  | boolean | `false` | Import actors aliases. |
 | MANDIANT_IMPORT_MALWARES | `boolean` |  | boolean | `true` | Enable to collect malwares. |
-| MANDIANT_IMPORT_MALWARES_INTERVAL | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `1` | Interval in hours to check and collect new malwares. |
+| MANDIANT_IMPORT_MALWARES_INTERVAL | `integer` |  | `0 < x ` | `1` | Interval in hours to check and collect new malwares. |
 | MANDIANT_IMPORT_MALWARES_ALIASES | `boolean` |  | boolean | `false` | Import malwares aliases. |
 | MANDIANT_IMPORT_CAMPAIGNS | `boolean` |  | boolean | `true` | Enable to collect campaigns. |
-| MANDIANT_IMPORT_CAMPAIGNS_INTERVAL | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `1` | Interval in hours to check and collect new campaigns. |
+| MANDIANT_IMPORT_CAMPAIGNS_INTERVAL | `integer` |  | `0 < x ` | `1` | Interval in hours to check and collect new campaigns. |
 | MANDIANT_IMPORT_INDICATORS_WITH_FULL_CAMPAIGNS | `boolean` |  | boolean | `false` | Enable to collect campaigns with related entities when importing IOC linked to this campaign. |
 | MANDIANT_IMPORT_VULNERABILITIES | `boolean` |  | boolean | `false` | Enable to collect vulnerabilities. |
-| MANDIANT_IMPORT_VULNERABILITIES_INTERVAL | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `1` | Interval in hours to check and collect new vulnerabilities. |
+| MANDIANT_IMPORT_VULNERABILITIES_INTERVAL | `integer` |  | `0 < x ` | `1` | Interval in hours to check and collect new vulnerabilities. |
 | MANDIANT_IMPORT_REPORTS | `boolean` |  | boolean | `true` | Enable to collect reports. |
-| MANDIANT_IMPORT_REPORTS_INTERVAL | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `1` | Interval in hours to check and collect new reports. |
+| MANDIANT_IMPORT_REPORTS_INTERVAL | `integer` |  | `0 < x ` | `1` | Interval in hours to check and collect new reports. |
 | MANDIANT_ACTOR_PROFILE_REPORT | `boolean` |  | boolean | `true` | Enable to collect report type 'actor_profile'. |
 | MANDIANT_ACTOR_PROFILE_REPORT_TYPE | `string` |  | string | `"actor-profile"` | Report type on vocabulary 'report_types_ov'. |
 | MANDIANT_COUNTRY_PROFILE_REPORT | `boolean` |  | boolean | `true` | Enable to collect report type 'country_profile'. |
