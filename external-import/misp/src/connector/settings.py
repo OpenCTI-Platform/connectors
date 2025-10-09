@@ -293,6 +293,11 @@ class MispConfig(BaseConfigModel):
         default=None,
     )
 
+    search_limit: int | None = Field(
+        description="A limit parameter for query results.",
+        default=None,
+    )
+
     @field_validator("reference_url", mode="before")
     @classmethod
     def validate_reference_url(cls, value: Any) -> Any:
