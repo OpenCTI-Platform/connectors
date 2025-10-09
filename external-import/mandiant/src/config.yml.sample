@@ -1,16 +1,96 @@
 opencti:
-  url: 'http://localhost:8080'
-  token: 'ChangeMe'
+  url: "ChangeMe"
+  token: "ChangeMe"
 
-connector:
-  id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
-  name: 'Mandiant Cyber Threat Intelligence'
-  scope: 'mandiant'
-  log_level: 'info'
-  duration_period: 'PT5M' # ISO8601 Format starting with "P" for Period ex: "PT5M" = Period time of 5 minutes
+#connector:
+#  id: "ChangeMe"
+#  name: "Mandiant"
+#  scope: "mandiant"
+#  log_level: "error"
+#  duration_period: "PT5M"
 
 mandiant:
-  api_v4_key_id: 'ChangeMe'
-  api_v4_key_secret: 'ChangeMe'
-  marking_definition: 'amber+strict'
+  api_v4_key_id: "ChangeMe"
+  api_v4_key_secret: "ChangeMe"
+
+#  marking_definition: "amber+strict"
+#  remove_statement_marking: false
+#  create_notes: false
+#
+#  import_start_date: "Defaults to 30 days ago before first run the connector"
+#  import_period: 1
+
+#  indicator_import_start_date: "Defaults to 30 days ago before first run the connector"
+#  indicator_minimum_score: 80
+#  import_indicators: true
+#  import_indicators_interval: 1
+#  import_indicators_with_full_campaigns: false
+#
+#  import_actors: true
+#  import_actors_interval: 1
+#  import_actors_aliases: false
+#
+#  import_malwares: true
+#  import_malwares_interval: 1
+#  import_malwares_aliases: false
+#
+#  import_campaigns: true
+#  import_campaigns_interval: 1
+#
+#  import_vulnerabilities: false
+#  import_vulnerabilities_interval: 1
+#  vulnerability_import_software_cpe: true
+#  vulnerability_max_cpe_relationship: 200
+#
+#  import_reports: true
+#  import_reports_interval: 1
+
+#  actor_profile_report: true
+#  actor_profile_report_type: "actor-profile"
+#
+#  country_profile_report: true
+#  country_profile_report_type: "country-profile"
+#
+#  event_coverage_implication_report: true
+#  event_coverage_implication_report_type: "event-coverage"
+#
+#  executive_perspective_report: true
+#  executive_perspective_report_type: "executive-perspective"
+#
+#  ics_security_roundup_report: true
+#  ics_security_roundup_report_type: "ics-security-roundup"
+#
+#  industry_reporting_report: true
+#  industry_reporting_report_type: "industry"
+#
+#  malware_profile_report: true
+#  malware_profile_report_type: "malware-profile"
+#
+#  network_activity_report: true
+#  network_activity_report_type: "network-activity"
+#
+#  patch_report: true
+#  patch_report_type: "patch"
+#
+#  ttp_deep_dive_report: true
+#  ttp_deep_dive_report_type: "ttp-deep-dive"
+#
+#  threat_activity_alert_report: true
+#  threat_activity_alert_report_type: "threat-alert"
+#
+#  threat_activity_report: true
+#  threat_activity_report_type: "threat-activity"
+#
+#  trends_and_forecasting_report: true
+#  trends_and_forecasting_report_type: "trends-forecasting"
+#
+#  vulnerability_report: true
+#  vulnerability_report_type: "vulnerability"
+#
+#  weekly_vulnerability_exploitation_report: true
+#  weekly_vulnerability_exploitation_report_type: "vulnerability-exploitation"
+#
+#  news_analysis_report: true
+#  news_analysis_report_type: "news-analysis"
+#
+#  guess_relationships_reports: "Actor Profile, Malware Profile, Vulnerability Report"
