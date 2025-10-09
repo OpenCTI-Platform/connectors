@@ -3,6 +3,7 @@
 This module provides base classes for managing and loading configuration settings for different types of connectors.
 
 Exports:
+- BaseConnectorConfig
 - BaseConnectorSettings
 - BaseExternalImportConnectorSettings
 - BaseInternalEnrichmentsConnectorSettings
@@ -10,6 +11,7 @@ Exports:
 """
 
 from connectors_sdk.models.configs.base import (
+    BaseConnectorConfig,
     BaseConnectorSettings,
     BaseExternalImportConnectorSettings,
     BaseInternalEnrichmentsConnectorSettings,
@@ -17,6 +19,7 @@ from connectors_sdk.models.configs.base import (
 )
 
 __all__ = [
+    "BaseConnectorConfig",
     "BaseExternalImportConnectorSettings",
     "BaseInternalEnrichmentsConnectorSettings",
     "BaseStreamConnectorSettings",

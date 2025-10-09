@@ -54,7 +54,7 @@ def mock_yaml_config_settings_read_files(monkeypatch):
 @pytest.fixture
 def mock_env_config_settings_read_env_files(monkeypatch):
     def _read_env_files(self):
-        if self.settings_cls.__name__ == "BaseConnectorSettings":
+        if self.settings_cls.__name__ == "SettingsLoader":
             return {
                 "opencti": {"url": "http://localhost:8080", "token": "changeme"},
                 "connector": {
@@ -67,19 +67,6 @@ def mock_env_config_settings_read_env_files(monkeypatch):
             }
         return {}
 
-    def _settings_build_values(_, *args, **kwargs):
-        return {
-            "opencti": {"url": "http://localhost:8080", "token": "changeme"},
-            "connector": {
-                "id": "CHANGEME",
-                "name": "Test Connector",
-                "scope": "test",
-                "duration_period": "PT5M",
-                "log_level": "error",
-            },
-        }
-
     monkeypatch.setattr(
         "pydantic_settings.DotEnvSettingsSource._load_env_vars", _read_env_files
     )
-    # monkeypatch.setattr("pydantic_settings.BaseSettings._settings_build_values", _settings_build_values)
