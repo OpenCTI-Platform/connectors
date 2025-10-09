@@ -6,7 +6,7 @@ from dataclasses import asdict, dataclass, field, fields
 from datetime import date
 from functools import lru_cache
 from pathlib import Path
-from typing import Generator, Literal
+from typing import Literal
 
 import mistune
 
@@ -59,8 +59,6 @@ class ConnectorManifest:
                     f"Field {field_info.name} is required and cannot be None"
                 )
 
-        # TODO: add type checks and other validations as needed
-
     def to_json(self) -> dict:
         manifest_dict = asdict(self)
         manifest_dict["last_verified_date"] = (
@@ -70,64 +68,69 @@ class ConnectorManifest:
         return manifest_dict
 
 
-class ConnectorsManifestsGenerator:
-    def get_connector_directories(
-        self,
-        repository_subdirectory: Literal[
-            "external-import",
-            "internal-enrichment",
-            "internal-export-file",
-            "internal-import-file",
-            "stream",
-        ],
-    ) -> Generator[str, None, None]:
-        with os.scandir(repository_subdirectory) as entries:
-            for entry in entries:
-                if not entry.is_dir() or entry.name.startswith("."):
-                    continue
+class ConnectorManifestBuilder:
+    def __init__(self, directory_path: str):
+        self.directory_path = directory_path
 
-                yield entry.name
+    @property
+    def manifest_title(self) -> str:
+        directory_name = os.path.basename(self.directory_path)
+        return directory_name.replace("-", " ").title()
 
-    def to_manifest_title(self, connector_directory_name: str) -> str:
-        return connector_directory_name.replace("-", " ").title()
+    @property
+    def manifest_slug(self) -> str:
+        """
+        Return value for `connector_manifest["slug"]`.
+        """
+        directory_name = os.path.basename(self.directory_path)
+        return directory_name
 
-    def to_manifest_container_type(
-        self,
-        repository_subdirectory: Literal[
-            "external-import",
-            "internal-enrichment",
-            "internal-export-file",
-            "internal-import-file",
-            "stream",
-        ],
-    ) -> Literal[
-        "EXTERNAL_IMPORT",
-        "INTERNAL_ENRICHMENT",
-        "INTERNAL_EXPORT_FILE",
-        "INTERNAL_IMPORT_FILE",
-        "STREAM",
-    ]:
-        return repository_subdirectory.upper().replace("-", "_")
+    @property
+    def manifest_source_code(self) -> str:
+        parent_directory_name = os.path.basename(os.path.dirname(self.directory_path))
+        directory_name = os.path.basename(self.directory_path)
+        return f"https://github.com/OpenCTI-Platform/connectors/tree/master/{parent_directory_name}/{directory_name}"
 
-    def get_manifest_logo(self, connector_directory_path: str) -> str | None:
+    @property
+    def manifest_container_image(self) -> str:
+        directory_name = os.path.basename(self.directory_path)
+        return f"opencti/connector-{directory_name}"
+
+    @property
+    def manifest_container_type(self) -> str:
+        parent_directory_name = os.path.basename(os.path.dirname(self.directory_path))
+        return parent_directory_name.upper().replace("-", "_")
+
+    @property
+    def manifest_logo(self) -> str | None:
         connector_metadata_directory_path = (
-            Path(connector_directory_path) / CONNECTOR_METADATA_DIRECTORY
+            Path(self.directory_path) / CONNECTOR_METADATA_DIRECTORY
         )
         if os.path.exists(connector_metadata_directory_path):
             files = os.listdir(connector_metadata_directory_path)
             for file in files:
                 if file.startswith("logo."):
-                    return (
-                        Path(connector_directory_path)
-                        / CONNECTOR_METADATA_DIRECTORY
-                        / file
-                    ).as_posix()
+                    logo_path = (
+                        Path(self.directory_path) / CONNECTOR_METADATA_DIRECTORY / file
+                    )
+                    return logo_path.as_posix()
 
         return None
 
+    @property
+    def manifest_description(self) -> str:
+        return self._get_readme_description() or "Information coming soon"
+
+    @property
+    def manifest_last_verified_date(self) -> date | None:
+        last_verified_iso = self._get_readme_last_verified_date()
+        if last_verified_iso:
+            return date.fromisoformat(last_verified_iso)
+        return None
+
     @lru_cache  # use cache to avoid re-open and parse the same README file multiple times
-    def _parse_connector_readme(self, connector_directory_path: str) -> dict:
-        readme_path = Path(connector_directory_path) / "README.md"
+    def _parse_readme(self) -> dict | None:
+        readme_path = Path(self.directory_path) / "README.md"
         if os.path.exists(readme_path):
             with open(readme_path, "r", encoding="utf-8") as file:
                 readme_content = file.read()
@@ -137,40 +140,32 @@ class ConnectorsManifestsGenerator:
 
         return None
 
-    def get_connector_description_from_readme(
-        self, connector_directory_path: str
-    ) -> str:
-        def get_node_text(node):
-            def get_node_text_recursively(recursive_node):
-                in_verified_table = any(
-                    [
-                        child
-                        for child in recursive_node.get("children", [])
-                        if "|FiligranVerified|" in "".join(child.get("raw", "").split())
-                    ]
-                )
-                if in_verified_table:
-                    return []
+    def _get_readme_description(self) -> str | None:
+        def get_node_text_recursively(node):
+            in_verified_table = any(
+                [
+                    child
+                    for child in node.get("children", [])
+                    if "|FiligranVerified|" in "".join(child.get("raw", "").split())
+                ]
+            )
+            if in_verified_table:
+                return []
 
-                paragraphs = []
-                if recursive_node.get("children", []):
-                    for child in recursive_node.get("children", []):
-                        paragraphs.extend(get_node_text_recursively(child))
-                elif recursive_node.get("type") == "blank_line":
-                    paragraphs.append("\n")
-                elif (
-                    recursive_node.get("raw")
-                    and recursive_node.get("raw") != "Table of Contents"
-                ):
-                    paragraphs.append(recursive_node.get("raw"))
+            paragraphs = []
+            if node.get("children", []):
+                for child in node.get("children", []):
+                    paragraphs.extend(get_node_text_recursively(child))
+            elif node.get("type") == "blank_line":
+                paragraphs.append("\n")
+            elif node.get("raw") and node.get("raw") != "Table of Contents":
+                paragraphs.append(node.get("raw"))
 
-                return paragraphs
+            return paragraphs
 
-            return get_node_text_recursively(node)
-
-        readme_ast = self._parse_connector_readme(connector_directory_path)
+        readme_ast = self._parse_readme()
         if not readme_ast:
-            return ""
+            return None
 
         # Try to find the index of description/overview section
         # If not found, start from 0 (beginning of the file)
@@ -209,34 +204,28 @@ class ConnectorsManifestsGenerator:
                     paragraphs.append("\n")
                 # Get paragrah text
                 if node["type"] == "paragraph":
-                    node_text = get_node_text(node)
+                    node_text = get_node_text_recursively(node)
                     paragraphs.extend(node_text)
 
-        return "".join(paragraphs).strip()
+        return "".join(paragraphs).strip() or None
 
-    def get_connector_last_verified_at_from_readme(
-        self, connector_directory_path: str
-    ) -> date | None:
-        def get_node_text(node):
-            def get_node_text_recursively(recursive_node):
-                last_verified_row = next(
-                    (
-                        "".join(child.get("raw", "").split())  # raw without whitespaces
-                        for child in reversed(recursive_node.get("children", []))
-                        if "|FiligranVerified|" in "".join(child.get("raw", "").split())
-                    ),
-                    None,
-                )
-                if not last_verified_row:
-                    if recursive_node.get("children", []):
-                        for child in recursive_node.get("children", []):
-                            last_verified_row = get_node_text_recursively(child)
-                            if last_verified_row:
-                                break
+    def _get_readme_last_verified_date(self) -> str | None:
+        def get_node_text_recursively(node):
+            last_verified_row = next(
+                (
+                    "".join(child.get("raw", "").split())  # raw without whitespaces
+                    for child in reversed(node.get("children", []))
+                    if "|FiligranVerified|" in "".join(child.get("raw", "").split())
+                ),
+                None,
+            )
+            if not last_verified_row:
+                if node.get("children", []):
+                    for child in node.get("children", []):
+                        last_verified_row = get_node_text_recursively(child)
+                        if last_verified_row:
+                            break
 
-                return last_verified_row
-
-            last_verified_row = get_node_text_recursively(node)
             if last_verified_row:
                 last_verified_date_match = re.search(
                     r"\|20[0-9]{2}-[0-9]{2}-[0-9]{2}\|",
@@ -250,133 +239,89 @@ class ConnectorsManifestsGenerator:
                 if last_verified_date_match:
                     last_verified_iso = last_verified_date_match.replace("|", "")
                     if last_verified_iso:
-                        return date.fromisoformat(last_verified_iso)
+                        return last_verified_iso
 
-        readme_ast = self._parse_connector_readme(connector_directory_path)
+        readme_ast = self._parse_readme()
         if not readme_ast:
             return None
 
         for node in readme_ast:
-            last_verified_at = get_node_text(node)
-            if last_verified_at:
-                return last_verified_at
+            last_verified_iso = get_node_text_recursively(node)
+            if last_verified_iso:
+                return last_verified_iso
 
-    def build_connector_manifest(
-        self, connector_directory_path: str
-    ) -> ConnectorManifest:
-        connector_manifest_data = {}
-
-        # Try to get the current manifest to update it
-        connector_manifest_path = (
-            Path(connector_directory_path)
+    def _get_current_manifest_data(self) -> dict:
+        manifest_path = (
+            Path(self.directory_path)
             / CONNECTOR_METADATA_DIRECTORY
             / CONNECTOR_MANIFEST_FILENAME
         )
-        if os.path.exists(connector_manifest_path):
-            with open(connector_manifest_path, "r", encoding="utf-8") as file:
-                connector_manifest_data = json.load(file)
+        if os.path.exists(manifest_path):
+            with open(manifest_path, "r", encoding="utf-8") as file:
+                manifest = json.load(file)
+                return manifest
 
-        connector_name = os.path.basename(connector_directory_path)
-        connector_category = os.path.basename(os.path.dirname(connector_directory_path))
+        return None
 
-        connector_manifest_data.update(
-            title=(
-                connector_manifest_data.get("title")
-                or self.to_manifest_title(connector_name)
-            ),
-            slug=connector_manifest_data.get("slug") or connector_name,
+    def _build_manifest(self) -> ConnectorManifest:
+        manifest_data = self._get_current_manifest_data() or {}
+
+        manifest_data.update(
+            title=manifest_data.get("title") or self.manifest_title,
+            slug=manifest_data.get("slug") or self.manifest_slug,
             description=(
-                connector_manifest_data.get("description")
-                if connector_manifest_data.get("description")
-                and connector_manifest_data.get("description")
-                != "Information coming soon"
-                else self.get_connector_description_from_readme(
-                    connector_directory_path
-                )
-                or "Information coming soon"
+                manifest_data.get("description")
+                if manifest_data.get("description")
+                and manifest_data.get("description") != "Information coming soon"
+                else self.manifest_description
             ),
             short_description=(
-                connector_manifest_data.get("short_description")
-                if connector_manifest_data.get("short_description")
-                and connector_manifest_data.get("short_description")
-                != "Information coming soon"
-                else self.get_connector_description_from_readme(
-                    connector_directory_path
-                )
-                or "Information coming soon"
+                manifest_data.get("short_description")
+                if manifest_data.get("short_description")
+                and manifest_data.get("short_description") != "Information coming soon"
+                else self.manifest_description
             ),
-            logo=self.get_manifest_logo(connector_directory_path),
+            logo=self.manifest_logo,
             verified=(
-                connector_manifest_data.get("verified")
-                if connector_manifest_data.get("verified") is not None
-                else bool(
-                    self.get_connector_last_verified_at_from_readme(
-                        connector_directory_path
-                    )
-                )
+                manifest_data.get("verified")
+                if manifest_data.get("verified") is not None
+                else bool(self.manifest_last_verified_date)
             ),
             last_verified_date=(
-                date.fromisoformat(connector_manifest_data.get("last_verified_date"))
-                if connector_manifest_data.get("last_verified_date")
-                else self.get_connector_last_verified_at_from_readme(
-                    connector_directory_path
-                )
+                date.fromisoformat(manifest_data.get("last_verified_date"))
+                if manifest_data.get("last_verified_date")
+                else self.manifest_last_verified_date
             ),
-            source_code=(
-                connector_manifest_data.get("source_code")
-                or f"https://github.com/OpenCTI-Platform/connectors/tree/master/{connector_category}/{connector_name}"
-            ),
+            source_code=manifest_data.get("source_code") or self.manifest_source_code,
             container_image=(
-                connector_manifest_data.get("container_image")
-                or f"opencti/connector-{connector_name}"
+                manifest_data.get("container_image") or self.manifest_container_image
             ),
             container_type=(
-                connector_manifest_data.get("container_type")
-                or self.to_manifest_container_type(connector_category)
+                manifest_data.get("container_type") or self.manifest_container_type
             ),
         )
 
-        return ConnectorManifest(**connector_manifest_data)
+        return ConnectorManifest(**manifest_data)
 
-    def generate_manifests(self):
-        for repository_subdirectory in REPOSITORY_SUBDIRECTORIES_TO_INCLUDE:
-            for connector_directory in self.get_connector_directories(
-                repository_subdirectory=repository_subdirectory
-            ):
-                try:
-                    # Build the manifest data
-                    # TODO: do not overwrite existing manifest file if it is complete
-                    connector_directory_path = Path(
-                        Path(".") / repository_subdirectory / connector_directory
-                    )
-                    connector_manifest = self.build_connector_manifest(
-                        connector_directory_path=connector_directory_path
-                    )
+    def create_manifest(self):
+        connector_manifest = self._build_manifest()
 
-                    # Ensure __metadata__ directory exists before creating the manifest file
-                    Path.mkdir(
-                        connector_directory_path / CONNECTOR_METADATA_DIRECTORY,
-                        exist_ok=True,
-                    )
+        # Ensure __metadata__ directory exists before creating the manifest file
+        Path.mkdir(
+            self.directory_path / CONNECTOR_METADATA_DIRECTORY,
+            exist_ok=True,
+        )
 
-                    # Create the manifest file
-                    connector_manifest_file_path = (
-                        connector_directory_path
-                        / CONNECTOR_METADATA_DIRECTORY
-                        / CONNECTOR_MANIFEST_FILENAME
-                    )
-                    with open(
-                        connector_manifest_file_path, "w", encoding="utf-8"
-                    ) as file:
-                        file.write(json.dumps(connector_manifest.to_json(), indent=2))
+        # Create the manifest file
+        connector_manifest_file_path = (
+            self.directory_path
+            / CONNECTOR_METADATA_DIRECTORY
+            / CONNECTOR_MANIFEST_FILENAME
+        )
+        with open(connector_manifest_file_path, "w", encoding="utf-8") as file:
+            file.write(json.dumps(connector_manifest.to_json(), indent=2))
 
-                    print(f"{connector_manifest_file_path} file created")
-                except Exception as e:
-                    print(
-                        f"Error while creating manifest for {connector_directory}: {e}"
-                    )
-                    traceback.print_exc()
-                    pass  # Skip the connector and try the next one
+        print(f"✅ {connector_manifest_file_path} file created")
 
 
 if __name__ == "__main__":
@@ -384,8 +329,28 @@ if __name__ == "__main__":
     Entry point of the script
     """
     try:
-        connectors_manifests_generator = ConnectorsManifestsGenerator()
-        connectors_manifests_generator.generate_manifests()
+        connectors_directories_paths = []
+        for repository_subdirectory in REPOSITORY_SUBDIRECTORIES_TO_INCLUDE:
+            with os.scandir(repository_subdirectory) as entries:
+                for entry in entries:
+                    if entry.is_dir() and not entry.name.startswith("."):
+                        connector_directory_path = (
+                            Path(repository_subdirectory) / entry.name
+                        )
+                        connectors_directories_paths.append(connector_directory_path)
+
+        for connector_directory_path in connectors_directories_paths:
+            try:
+                manifest_builder = ConnectorManifestBuilder(
+                    directory_path=connector_directory_path
+                )
+                manifest_builder.create_manifest()
+            except Exception as e:
+                print(
+                    f"❌ Error while creating manifest for {connector_directory_path}: {e}"
+                )
+                traceback.print_exc()
+                pass  # Skip the connector and try the next one
     except Exception:
         traceback.print_exc()
         exit(1)
