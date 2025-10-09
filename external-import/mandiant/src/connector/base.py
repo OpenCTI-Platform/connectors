@@ -376,7 +376,9 @@ class Mandiant:
             try:
                 # Handle interval config
                 date_now_value = Timestamp.now().value
-                collection_interval = getattr(self, f"mandiant_{collection}_interval")
+                collection_interval = timedelta(
+                    hours=getattr(self, f"mandiant_{collection}_interval")
+                )
 
                 last_run_value = Timestamp.from_iso(
                     self.get_state_value(
