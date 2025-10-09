@@ -341,17 +341,34 @@ class SplunkSoarConnector:
         """
         try:
             entity_id = self.helper.get_attribute_in_extension("id", entity_data)
-
-            # Get existing external reference to find SOAR ID
-            entity = self.helper.api.stix_domain_object.read(id=entity_id)
             soar_id = None
 
-            if entity and "externalReferences" in entity:
-                for ext_ref_edge in entity["externalReferences"]["edges"]:
-                    ext_ref = ext_ref_edge["node"]
+            # First check if SOAR ID is in the STIX entity data itself (snake_case format)
+            if "external_references" in entity_data:
+                for ext_ref in entity_data["external_references"]:
                     if ext_ref.get("source_name") == "Splunk SOAR":
                         soar_id = ext_ref.get("external_id")
                         break
+
+            # If not found in STIX data, fetch from API (might have different format)
+            if not soar_id:
+                entity = self.helper.api.stix_domain_object.read(id=entity_id)
+                if entity and "externalReferences" in entity:
+                    # Handle both list format and GraphQL edges format for compatibility
+                    ext_refs = entity["externalReferences"]
+                    if isinstance(ext_refs, dict) and "edges" in ext_refs:
+                        # GraphQL format with edges/node
+                        for ext_ref_edge in ext_refs["edges"]:
+                            ext_ref = ext_ref_edge["node"]
+                            if ext_ref.get("source_name") == "Splunk SOAR":
+                                soar_id = ext_ref.get("external_id")
+                                break
+                    elif isinstance(ext_refs, list):
+                        # Direct list format
+                        for ext_ref in ext_refs:
+                            if ext_ref.get("source_name") == "Splunk SOAR":
+                                soar_id = ext_ref.get("external_id")
+                                break
 
             if not soar_id:
                 # No existing SOAR entity, create new one
@@ -412,32 +429,51 @@ class SplunkSoarConnector:
 
                     if "externalReferences" in entity:
                         # Look for the SOAR external reference
-                        for ext_ref_edge in entity["externalReferences"]["edges"]:
-                            ext_ref = ext_ref_edge["node"]
-                            if ext_ref.get("source_name") == "Splunk SOAR" or (
-                                ext_ref.get("url")
-                                and f"{self.config.splunk_soar.url}/mission/"
-                                in ext_ref.get("url", "")
-                            ):
-                                # Remove this external reference from the entity
-                                self.helper.api.stix_domain_object.remove_external_reference(
-                                    id=entity_id, external_reference_id=ext_ref["id"]
-                                )
-                                self.helper.connector_logger.info(
-                                    "[DELETE] Removed external reference from OpenCTI entity",
-                                    {
-                                        "entity_id": entity_id,
-                                        "external_ref_id": ext_ref["id"],
-                                    },
-                                )
+                        # Handle both list format and GraphQL edges format for compatibility
+                        ext_refs = entity["externalReferences"]
+                        soar_ref = None
 
-                                # Also try to close/delete in SOAR if configured
-                                if self.config.splunk_soar.delete_on_removal:
-                                    soar_id = ext_ref.get("external_id")
-                                    if soar_id:
-                                        # Close the case/event in SOAR
-                                        self.api.close_entity(soar_id)
-                                break
+                        if isinstance(ext_refs, dict) and "edges" in ext_refs:
+                            # GraphQL format with edges/node
+                            for ext_ref_edge in ext_refs["edges"]:
+                                ext_ref = ext_ref_edge["node"]
+                                if ext_ref.get("source_name") == "Splunk SOAR" or (
+                                    ext_ref.get("url")
+                                    and f"{self.config.splunk_soar.url}/mission/"
+                                    in ext_ref.get("url", "")
+                                ):
+                                    soar_ref = ext_ref
+                                    break
+                        elif isinstance(ext_refs, list):
+                            # Direct list format
+                            for ext_ref in ext_refs:
+                                if ext_ref.get("source_name") == "Splunk SOAR" or (
+                                    ext_ref.get("url")
+                                    and f"{self.config.splunk_soar.url}/mission/"
+                                    in ext_ref.get("url", "")
+                                ):
+                                    soar_ref = ext_ref
+                                    break
+
+                        if soar_ref:
+                            # Remove this external reference from the entity
+                            self.helper.api.stix_domain_object.remove_external_reference(
+                                id=entity_id, external_reference_id=soar_ref["id"]
+                            )
+                            self.helper.connector_logger.info(
+                                "[DELETE] Removed external reference from OpenCTI entity",
+                                {
+                                    "entity_id": entity_id,
+                                    "external_ref_id": soar_ref["id"],
+                                },
+                            )
+
+                            # Also try to close/delete in SOAR if configured
+                            if self.config.splunk_soar.delete_on_removal:
+                                soar_id = soar_ref.get("external_id")
+                                if soar_id:
+                                    # Close the case/event in SOAR
+                                    self.api.close_entity(soar_id)
                 else:
                     # Entity doesn't exist - it was actually deleted
                     self.helper.connector_logger.info(
