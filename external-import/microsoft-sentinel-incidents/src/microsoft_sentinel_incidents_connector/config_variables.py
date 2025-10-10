@@ -39,6 +39,19 @@ class ConfigConnector:
             return default_date
 
     @staticmethod
+    def prepare_filter_labels(filter_labels: str | None) -> list[str]:
+        """
+        Prepare labels from a comma-separated string to a list of trimmed strings.
+        :param filter_labels: Comma-separated string of labels
+        :return: List of trimmed labels
+        """
+        if filter_labels is not None and filter_labels.strip():
+            return [
+                label.strip() for label in filter_labels.split(",") if label.strip()
+            ]
+        return []
+
+    @staticmethod
     def _load_config() -> dict:
         """
         Load the configuration from the YAML file
@@ -103,4 +116,12 @@ class ConfigConnector:
         )
         self.import_start_date = self.prepare_iso_format(
             microsoft_sentinel_import_start_date_var
+        )
+        microsoft_sentinel_filter_labels = get_config_variable(
+            "MICROSOFT_SENTINEL_INCIDENTS_FILTER_LABELS",
+            ["microsoft_sentinel_incidents", "filter_labels"],
+            self.load,
+        )
+        self.filter_labels = self.prepare_filter_labels(
+            microsoft_sentinel_filter_labels
         )

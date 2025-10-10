@@ -27,3 +27,4 @@ microsoft_sentinel_incidents:
   resource_group: 'ChangeMe'
   workspace_id: 'ChangeMe'
   import_start_date: '2025-01-01T00:00:00Z'
+  filter_labels: 'ChangeMe,OrDeleteMe'
