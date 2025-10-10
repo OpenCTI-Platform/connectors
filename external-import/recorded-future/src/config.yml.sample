@@ -8,7 +8,7 @@ connector:
   name: 'Recorded Future' # Required
   scope: 'ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1'
   log_level: 'info'
-  duration_period: 'PT1H' # ISO8601 Format starting with "P" for Period ex: "PT24H" // Period time of 5 minutes
+  duration_period: 'PT24H' # ISO8601 Format starting with "P" for Period ex: "PT24H" // Period time of 24 Hours
 
 rf:
   token: 'ChangeMe' # Required
