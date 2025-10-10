@@ -390,10 +390,7 @@ class ReportImporter:
                 return f"[TRACE {trace_id}] ERROR: File download failed (bypass active): {e}"
             return f"[TRACE {trace_id}] ERROR: File download failed: {e}"
 
-        entity_id = data.get("entity_id")
-        entity = (
-            self.helper.api.stix_core_object.read(id=entity_id) if entity_id else None
-        )
+        entity = self._find_report_container(data, trace_id)
 
         if self.helper.get_only_contextual() and entity is None:
             return f"[TRACE {trace_id}] Connector is contextual-only and no entity is provided."
@@ -475,6 +472,88 @@ class ReportImporter:
             f"[TRACE {trace_id}] SUCCESS: Sent {observable_cnt} observables, "
             f"1 report update, and {entity_cnt} entity connections as STIX bundle"
         )
+
+    def _find_report_container(self, data: dict, trace_id: str) -> Optional[dict]:
+        """
+        Resolve the correct container entity for this import.
+
+        1. If `entity_id` belongs to a STIX Core Object (e.g. Report, Case, Grouping),
+        return that entity.
+        2. If `entity_id` belongs to an External Reference, attempt to locate its
+        parent Report via GraphQL.
+        3. If no parent or valid entity found, return None.
+
+        Args:
+            data (dict): Job payload from OpenCTI.
+            trace_id (str): Correlation trace ID for logging.
+
+        Returns:
+            Optional[dict]: A valid OpenCTI entity dict, or None.
+        """
+        entity_id = data.get("entity_id")
+        if not entity_id:
+            return None
+
+        entity = None
+
+        # Step 1: Try to read as a core STIX object (Report, Grouping, Case, etc.)
+        try:
+            entity = self.helper.api.stix_core_object.read(id=entity_id)
+        except Exception as err:
+            self.helper.connector_logger.warning(
+                f"[TRACE {trace_id}] Failed to read entity {entity_id}: {err}"
+            )
+
+        # Step 2: Fallback for External References (common with OpenCTI jobs)
+        if not entity and "External-Reference" in data.get("file_id", ""):
+            try:
+                result = self.helper.api.query(
+                    """
+                    query FindReportsByRef($refId: Any!) {
+                        reports(
+                            first: 5
+                            filters: {
+                            mode: and
+                            filters: [{ key: "externalReferences", values: [$refId] }]
+                            filterGroups: []
+                            }
+                        ) {
+                            edges {
+                                node {
+                                    id
+                                    standard_id
+                                    entity_type
+                                    name
+                                }
+                            }
+                        }
+                    }
+                    """,
+                    {"refId": entity_id},
+                )
+
+                parent_edges = (
+                    ((result or {}).get("data") or {}).get("reports") or {}
+                ).get("edges") or []
+
+                if parent_edges:
+                    node = parent_edges[0].get("node")
+                    if node:
+                        self.helper.connector_logger.info(
+                            f"[TRACE {trace_id}] Resolved parent report for external reference {entity_id}: "
+                            f"{node.get('name')} ({node.get('standard_id')})"
+                        )
+                        return node
+                else:
+                    self.helper.connector_logger.debug(
+                        f"[TRACE {trace_id}] No parent report found for external reference {entity_id}"
+                    )
+            except Exception as err:
+                self.helper.connector_logger.warning(
+                    f"[TRACE {trace_id}] Failed to resolve parent report for {entity_id}: {err}"
+                )
+
+        return entity
 
     def _extract_text_and_meta(
         self, data: Dict, file_name: str, file_buffer: BytesIO
@@ -1207,154 +1286,149 @@ class ReportImporter:
         if not objects:
             return []
 
-        object_ids = []
-        for o in objects:
-            if not isinstance(o, dict):
-                continue
-            t = (o.get("type") or "").lower()
-            if t == "relationship":
-                continue  # skip relationship objects entirely
-            oid = o.get("standard_id") or o.get("id")
-            if (
-                isinstance(oid, str)
-                and "--" in oid
-                and not oid.startswith("relationship--")
-            ):
-                object_ids.append(oid)
+        object_ids = [
+            (o.get("standard_id") or o.get("id"))
+            for o in objects
+            if isinstance(o, dict)
+            and (o.get("type") or "").lower() != "relationship"
+            and isinstance(o.get("id") or o.get("standard_id"), str)
+            and "--" in (o.get("id") or o.get("standard_id"))
+        ]
 
         # --------------------------------------------------------------
-        # Case 1: Link into an existing container entity
+        # Create new Report if no context entity
         # --------------------------------------------------------------
-        if entity:
-            container_types = {
-                "report",
-                "grouping",
-                "x-opencti-case-incident",
-                "x-opencti-case-rfi",
-                "x-opencti-case-rft",
-                "note",
-                "opinion",
-                "observed-data",
-            }
-
-            entity_type = entity.get("entity_type") or entity.get("type", "")
-            standard_id = entity.get("standard_id")
-
-            if not standard_id:
-                self.helper.connector_logger.error(
-                    f"Context entity {entity.get('id')} missing standard_id; skipping container link"
-                )
-                return objects
-
-            stix_entity = None
-            try:
-                bundle = (
-                    self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
-                        entity_type=entity_type,
-                        entity_id=entity.get("id"),
-                    )
-                    or {}
-                )
-                obj = bundle.get("objects") or []
-                if obj:
-                    stix_entity = dict(obj[0])
-            except Exception as err:
-                self.helper.connector_logger.warning(
-                    f"Failed to export context entity {entity.get('id')}: {err}"
-                )
-                stix_entity = None
-
-            gql_to_stix = {
-                "Report": "report",
-                "Grouping": "grouping",
-                "Case-Incident": "x-opencti-case-incident",
-                "Case-Rfi": "x-opencti-case-rfi",
-                "Case-Rft": "x-opencti-case-rft",
-                "Note": "note",
-                "Opinion": "opinion",
-                "Observed-Data": "observed-data",
-            }
-            stix_type = (
-                stix_entity.get("type")
-                if stix_entity
-                else gql_to_stix.get(entity_type, entity_type.lower())
+        if not entity:
+            now = datetime.now(timezone.utc)
+            report = stix2.Report(
+                id=Report.generate_id(file_name, now),
+                name=f"import-document-ai_{file_name}",
+                description="Automatic import",
+                published=now,
+                report_types=["threat-report"],
+                object_refs=object_ids,
+                allow_custom=True,
+                custom_properties={
+                    "x_opencti_files": [file_attachment] if file_attachment else []
+                },
+            )
+            entity = json.loads(report.serialize())
+            objects.append(entity)
+            self.helper.connector_logger.debug(
+                f"Created new Report container for {file_name} with {len(object_ids)} object_refs"
             )
 
-            if not stix_entity:
-                stix_entity = {"type": stix_type, "id": standard_id}
+        # --------------------------------------------------------------
+        # Link into existing container entity
+        # --------------------------------------------------------------
+        container_types = {
+            "report",
+            "grouping",
+            "x-opencti-case-incident",
+            "x-opencti-case-rfi",
+            "x-opencti-case-rft",
+            "note",
+            "opinion",
+            "observed-data",
+        }
 
-            refs_to_add = [oid for oid in object_ids if oid != standard_id]
+        entity_type = entity.get("entity_type") or entity.get("type", "")
+        standard_id = entity.get("standard_id")
 
-            if stix_type in container_types:
-                existing_refs = stix_entity.get("object_refs") or []
-                if not isinstance(existing_refs, list):
-                    existing_refs = []
-                stix_entity["object_refs"] = list(
-                    dict.fromkeys(existing_refs + refs_to_add)
-                )
-
-                if file_attachment:
-                    stix_entity["x_opencti_files"] = [file_attachment]
-
-                objects.append(stix_entity)
-
-                for oid in refs_to_add:
-                    if isinstance(oid, str) and "--" in oid:
-                        rel = stix2.Relationship(
-                            id=StixCoreRelationship.generate_id(
-                                "related-to", oid, standard_id
-                            ),
-                            relationship_type="related-to",
-                            source_ref=oid,
-                            target_ref=standard_id,
-                            allow_custom=True,
-                        )
-                        objects.append(rel)
-
-                self.helper.connector_logger.debug(
-                    f"Linked {len(refs_to_add)} objects into {stix_type} ({standard_id})"
-                )
-            else:
-                for oid in refs_to_add:
-                    if isinstance(oid, str) and "--" in oid:
-                        rel = stix2.Relationship(
-                            id=StixCoreRelationship.generate_id(
-                                "related-to", oid, standard_id
-                            ),
-                            relationship_type="related-to",
-                            source_ref=oid,
-                            target_ref=standard_id,
-                            allow_custom=True,
-                        )
-                        objects.append(rel)
-
-                objects.append({"type": stix_type, "id": standard_id})
-                self.helper.connector_logger.debug(
-                    f"Linked {len(refs_to_add)} objects to non-container {stix_type} ({standard_id})"
-                )
-
+        if not standard_id:
+            self.helper.connector_logger.error(
+                f"Context entity {entity.get('id')} missing standard_id; skipping container link"
+            )
             return objects
 
-        # --------------------------------------------------------------
-        # Case 2: No context entity — create new Report container
-        # --------------------------------------------------------------
-        now = datetime.now(timezone.utc)
-        report = stix2.Report(
-            id=Report.generate_id(file_name, now),
-            name=f"import-document-ai_{file_name}",
-            description="Automatic import",
-            published=now,
-            report_types=["threat-report"],
-            object_refs=object_ids,
-            allow_custom=True,
-            custom_properties={
-                "x_opencti_files": [file_attachment] if file_attachment else []
-            },
+        stix_entity = None
+        try:
+            bundle = (
+                self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
+                    entity_type=entity_type, entity_id=entity.get("id")
+                )
+                or {}
+            )
+            obj_list = bundle.get("objects") or []
+            for obj in obj_list:
+                if obj.get("id") == standard_id:
+                    stix_entity = dict(obj)
+                    break
+            if not stix_entity and obj_list:
+                stix_entity = dict(obj_list[0])
+        except Exception as err:
+            self.helper.connector_logger.warning(
+                f"Failed to export context entity {entity.get('id')}: {err}"
+            )
+
+        gql_to_stix = {
+            "Report": "report",
+            "Grouping": "grouping",
+            "Case-Incident": "x-opencti-case-incident",
+            "Case-Rfi": "x-opencti-case-rfi",
+            "Case-Rft": "x-opencti-case-rft",
+            "Note": "note",
+            "Opinion": "opinion",
+            "Observed-Data": "observed-data",
+        }
+        stix_type = (
+            stix_entity.get("type")
+            if stix_entity
+            else gql_to_stix.get(entity_type, entity_type.lower())
         )
-        objects.append(report)
-        self.helper.connector_logger.debug(
-            f"Created new Report container for {file_name} with {len(object_ids)} object_refs"
-        )
+
+        # Safety: fix mismatched type/id prefix
+        if standard_id and not standard_id.startswith(f"{stix_type}--"):
+            self.helper.connector_logger.warning(
+                f"Type/ID mismatch detected ({stix_type} vs {standard_id}); inferring from ID prefix."
+            )
+            stix_type = standard_id.split("--", 1)[0]
+
+        refs_to_add = [oid for oid in object_ids if oid != standard_id]
+
+        if stix_type in container_types:
+            existing_refs = stix_entity.get("object_refs") or []
+            if not isinstance(existing_refs, list):
+                existing_refs = []
+            stix_entity["object_refs"] = list(
+                dict.fromkeys(existing_refs + refs_to_add)
+            )
+            if file_attachment:
+                stix_entity["x_opencti_files"] = [file_attachment]
+            objects.append(stix_entity)
+            for oid in refs_to_add:
+                if isinstance(oid, str) and "--" in oid:
+                    rel = stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "related-to", oid, standard_id
+                        ),
+                        relationship_type="related-to",
+                        source_ref=oid,
+                        target_ref=standard_id,
+                        allow_custom=True,
+                    )
+                    objects.append(rel)
+            self.helper.connector_logger.debug(
+                f"Linked {len(refs_to_add)} objects into {stix_type} ({standard_id})"
+            )
+        else:
+            # Non-container: relationships only, no dummy entity append
+            for oid in refs_to_add:
+                if isinstance(oid, str) and "--" in oid:
+                    rel = stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "related-to", oid, standard_id
+                        ),
+                        relationship_type="related-to",
+                        source_ref=oid,
+                        target_ref=standard_id,
+                        allow_custom=True,
+                    )
+                    objects.append(rel)
+            self.helper.connector_logger.debug(
+                f"Linked {len(refs_to_add)} objects to non-container {stix_type} ({standard_id})"
+            )
+
         return objects
 
     def _get_attack_pattern(self, mitre_id: str) -> Optional[dict]:

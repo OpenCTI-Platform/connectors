@@ -23,6 +23,7 @@ import stix2
 import tldextract
 from pycti import (
     AttackPattern,
+    Campaign,
     Channel,
     CourseOfAction,
     Identity,
@@ -683,7 +684,7 @@ stix_object_mapping: dict[str, Callable[[str, list[str], dict[str, Any]], Any]] 
         **_cp({**(cp or {}), "x_mitre_id": v.strip()}),
     ),
     "Campaign": lambda v, om, cp: stix2.Campaign(
-        id=stix2.Campaign.generate_id(name=v.strip()),
+        id=Campaign.generate_id(name=v.strip()),
         name=v.strip(),
         description=cp.get("description", f"Campaign: {v.strip()}"),
         objective=cp.get("objective", ""),
