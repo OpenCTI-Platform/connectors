@@ -233,7 +233,11 @@ class Misp:
                     event.Event, self.config.misp.datetime_attribute
                 )
 
-                if self.config.misp.datetime_attribute == "timestamp":
+                if self.config.misp.datetime_attribute in [
+                    "timestamp",
+                    "publish_timestamp",
+                    "sighting_timestamp",
+                ]:
                     event_datetime = datetime.fromtimestamp(
                         int(event_datetime_value), tz=timezone.utc
                     )
