@@ -1,0 +1,14 @@
+[
+  {
+    "type": "entity",
+    "category": "Domain-Name.value",
+    "match": "example.com",
+    "id": "domain-name--c9b7b7c2-4b8a-4e2a-9e2b-2b7b7c2b8a4e"
+  },
+  {
+    "type": "observable",
+    "category": "Domain-Name.value",
+    "match": "example.net",
+    "id": "domain-name--b7b7c2c9-8a4e-4e2a-9e2b-2b7b7c2b8a4e"
+  }
+]

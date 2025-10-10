@@ -1,17 +1,23 @@
-"""Load and validate allowed STIX relationship types."""
+"""Helpers for validating STIX relationships against the OpenCTI schema.
+
+These utilities are used to:
+- Fetch and normalize the OpenCTI relation type matrix.
+- Normalize STIX object types into the keys OpenCTI expects.
+- Check if a given relation is allowed between two STIX object types.
+"""
+
+from __future__ import annotations
+
+from pycti import OpenCTIConnectorHelper
 
 
 def load_allowed_relations(
-    helper,
+    helper: OpenCTIConnectorHelper,
 ) -> dict[tuple[str, str], set[str]]:
-    """Fetch the allowed relations matrix from OpenCTI and return it.
+    """Fetch and normalize the allowed relations matrix from OpenCTI.
 
-    Args:
-        helper (OpenCTIConnectorHelper): The connector helper to query OpenCTI.
-
-    Returns:
-        dict: Returns a dict where each key is (FROM_TYPE, TO_TYPE) and
-            each value is a set of allowed relationship names (uppercased).
+    Returns a mapping of (FROM_TYPE, TO_TYPE) -> set of ALLOWED_RELATION_TYPES,
+    all uppercased for case-insensitive lookup.
     """
     query = """
     query LoadRelationMapping {
@@ -21,40 +27,44 @@ def load_allowed_relations(
       }
     }
     """
-    data = helper.api.query(query)["data"]["schemaRelationsTypesMapping"]
+    data = (
+        helper.api.query(query).get("data", {}).get("schemaRelationsTypesMapping", [])
+    )
     mapping: dict[tuple[str, str], set[str]] = {}
     for entry in data:
-        # key comes as "FromType_ToType"
-        key = entry["key"].upper()
+        key = str(entry.get("key", ""))
+        if "_" not in key:
+            continue
         from_type, to_type = key.split("_", 1)
-        mapping[(from_type, to_type)] = {v.upper() for v in entry["values"]}
+        values = entry.get("values") or []
+        mapping[(from_type.upper(), to_type.upper())] = {str(v).upper() for v in values}
     return mapping
 
 
 def stix_lookup_type(obj: dict[str, object] | None) -> str:
-    """Given a STIX object dict from pycti, return the key used
-    in OpenCTI’s schemaRelationsTypesMapping.
+    """Return the normalized OpenCTI type key for a STIX object.
 
-    - For identity objects, prefer x_opencti_identity_type over identity_class.
-    - For location objects, use x_opencti_location_type.
-    - Otherwise, use the upper-cased STIX type.
+    Special cases:
+    - Identity → returns its x_opencti_identity_type or identity_class
+    - Location → returns its x_opencti_location_type
+    - Others   → returns the STIX `type` field
 
-    Args:
-        obj (dict[str, object] | None): STIX object dict or None
-
-    Returns:
-        str: A normalized type name used for relationship validation.
+    Returns an empty string if obj is None or type is missing.
     """
     if not obj:
         return ""
-    t = str(obj.get("type", "")).upper()
-    if t == "IDENTITY":
-        return str(
-            obj.get("x_opencti_identity_type") or obj.get("identity_class") or ""
-        ).upper()
-    if t == "LOCATION":
+    stix_type = str(obj.get("type", "")).upper()
+    if stix_type == "IDENTITY":
+        identity_type = obj.get("x_opencti_identity_type") or obj.get("identity_class")
+        return str(identity_type or "").upper()
+    if stix_type == "LOCATION":
         return str(obj.get("x_opencti_location_type", "")).upper()
-    return t
+    if stix_type == "THREAT-ACTOR":
+        actor_type = obj.get("x_opencti_identity_type")
+        if actor_type:
+            return f"THREAT-ACTOR-{actor_type.upper()}"
+        return "THREAT-ACTOR-GROUP"
+    return stix_type
 
 
 def is_relation_allowed(
@@ -63,17 +73,18 @@ def is_relation_allowed(
     to_type: str,
     rel_type: str,
 ) -> bool:
-    """Determines whether a given STIX relationship type is allowed between two object types.
+    """Check whether a STIX relation is allowed between two object types.
 
     Args:
-        allowed_relations (dict[tuple[str, str], set[str]]): OCTI allowed relationship mappings.
-        from_type (str): The source object's normalized STIX/OpenCTI type.
-        to_type (str): The target object's normalized STIX/OpenCTI type.
-        rel_type (str): The STIX relationship type.
+        allowed_relations: Pre-fetched relation mapping from load_allowed_relations().
+        from_type: Source object type (case-insensitive).
+        to_type: Target object type (case-insensitive).
+        rel_type: Relation type to check (case-insensitive).
 
     Returns:
-        bool: True if the relationship is allowed, False otherwise.
+        True if rel_type is allowed for (from_type, to_type), else False.
     """
-    return rel_type.upper() in allowed_relations.get(
-        (from_type.upper(), to_type.upper()), set()
-    )
+    if not rel_type:
+        return False
+    key = (str(from_type).upper(), str(to_type).upper())
+    return str(rel_type).upper() in allowed_relations.get(key, set())

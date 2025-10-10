@@ -1,0 +1,398 @@
+[
+  {
+    "type": "entity",
+    "category": "Intrusion-Set",
+    "match": "APT1",
+    "original_start": 1000,
+    "original_end": 1010,
+    "range": [
+      1000,
+      1010
+    ]
+  },
+  {
+    "type": "entity",
+    "category": "Threat-Actor-Group",
+    "match": "Ugly Gorilla",
+    "original_start": 1020,
+    "original_end": 1030,
+    "range": [
+      1020,
+      1030
+    ]
+  },
+  {
+    "type": "entity",
+    "category": "Threat-Actor-Group",
+    "match": "DOTA",
+    "original_start": 1040,
+    "original_end": 1050,
+    "range": [
+      1040,
+      1050
+    ]
+  },
+  {
+    "type": "entity",
+    "category": "Threat-Actor-Group",
+    "match": "SuperHard",
+    "original_start": 1060,
+    "original_end": 1070,
+    "range": [
+      1060,
+      1070
+    ]
+  },
+  {
+    "type": "entity",
+    "category": "Threat-Actor-Group",
+    "match": "Communist Party of China",
+    "original_start": 1080,
+    "original_end": 1090,
+    "range": [
+      1080,
+      1090
+    ]
+  },
+  {
+    "type": "entity",
+    "category": "Threat-Actor-Group",
+    "match": "Unit 61398",
+    "original_start": 1100,
+    "original_end": 1110,
+    "range": [
+      1100,
+      1110
+    ]
+  },
+  {
+    "type": "entity",
+    "category": "Threat-Actor-Group",
+    "match": "JackWang",
+    "original_start": 1120,
+    "original_end": 1130,
+    "range": [
+      1120,
+      1130
+    ]
+  },
+  {
+    "type": "entity",
+    "category": "Threat-Actor-Group",
+    "match": "Wang Dong",
+    "original_start": 1140,
+    "original_end": 1150,
+    "range": [
+      1140,
+      1150
+    ]
+  },
+  {
+    "type": "entity",
+    "category": "Threat-Actor-Group",
+    "match": "dota",
+    "original_start": 1160,
+    "original_end": 1170,
+    "range": [
+      1160,
+      1170
+    ]
+  },
+  {
+    "type": "entity",
+    "category": "Threat-Actor-Group",
+    "match": "Mei Qiang",
+    "original_start": 1180,
+    "original_end": 1190,
+    "range": [
+      1180,
+      1190
+    ]
+  },
+  {
+    "type": "observable",
+    "category": "IPv4-Addr.value",
+    "match": "223.166.0.0/15",
+    "original_start": 1200,
+    "original_end": 1210,
+    "range": [
+      1200,
+      1210
+    ]
+  },
+  {
+    "type": "observable",
+    "category": "IPv4-Addr.value",
+    "match": "58.246.0.0/15",
+    "original_start": 1220,
+    "original_end": 1230,
+    "range": [
+      1220,
+      1230
+    ]
+  },
+  {
+    "type": "observable",
+    "category": "IPv4-Addr.value",
+    "match": "112.64.0.0/15",
+    "original_start": 1240,
+    "original_end": 1250,
+    "range": [
+      1240,
+      1250
+    ]
+  },
+  {
+    "type": "observable",
+    "category": "IPv4-Addr.value",
+    "match": "139.226.0.0/15",
+    "original_start": 1260,
+    "original_end": 1270,
+    "range": [
+      1260,
+      1270
+    ]
+  },
+  {
+    "type": "observable",
+    "category": "Domain-Name.value",
+    "match": "hugesoft.org",
+    "original_start": 1280,
+    "original_end": 1290,
+    "range": [
+      1280,
+      1290
+    ]
+  },
+  {
+    "type": "observable",
+    "category": "Domain-Name.value",
+    "match": "arrowservice.net",
+    "original_start": 1300,
+    "original_end": 1310,
+    "range": [
+      1300,
+      1310
+    ]
+  },
+  {
+    "type": "observable",
+    "category": "Domain-Name.value",
+    "match": "msnhome.org",
+    "original_start": 1320,
+    "original_end": 1330,
+    "range": [
+      1320,
+      1330
+    ]
+  },
+  {
+    "type": "observable",
+    "category": "File.hashes.MD5",
+    "match": "001dd76872d80801692ff942308c64e6",
+    "original_start": 1340,
+    "original_end": 1350,
+    "range": [
+      1340,
+      1350
+    ]
+  },
+  {
+    "type": "observable",
+    "category": "File.hashes.MD5",
+    "match": "002325a0a67fded0381b5648d7fe9b8e",
+    "original_start": 1360,
+    "original_end": 1370,
+    "range": [
+      1360,
+      1370
+    ]
+  },
+  {
+    "type": "observable",
+    "category": "File.hashes.MD5",
+    "match": "00dbb9e1c09dbdafb360f3163ba5a3de",
+    "original_start": 1380,
+    "original_end": 1390,
+    "range": [
+      1380,
+      1390
+    ]
+  },
+  {
+    "type": "entity",
+    "category": "Malware",
+    "match": "MANITSME",
+    "original_start": 1400,
+    "original_end": 1410,
+    "range": [
+      1400,
+      1410
+    ]
+  },
+  {
+    "type": "entity",
+    "category": "Malware",
+    "match": "WEBC2-UGX",
+    "original_start": 1420,
+    "original_end": 1430,
+    "range": [
+      1420,
+      1430
+    ]
+  },
+  {
+    "type": "entity",
+    "category": "Malware",
+    "match": "WEBC2 Backdoor",
+    "original_start": 1440,
+    "original_end": 1450,
+    "range": [
+      1440,
+      1450
+    ]
+  },
+  {
+    "type": "entity",
+    "category": "Malware",
+    "match": "HUC Packet Transmit Tool (HTRAN)",
+    "original_start": 1460,
+    "original_end": 1470,
+    "range": [
+      1460,
+      1470
+    ]
+  },
+  {
+    "type": "entity",
+    "category": "Malware",
+    "match": "AURIGA",
+    "original_start": 1480,
+    "original_end": 1490,
+    "range": [
+      1480,
+      1490
+    ]
+  },
+  {
+    "type": "entity",
+    "category": "Malware",
+    "match": "BANGAT",
+    "original_start": 1500,
+    "original_end": 1510,
+    "range": [
+      1500,
+      1510
+    ]
+  },
+  {
+    "type": "entity",
+    "category": "Tool",
+    "match": "cachedump",
+    "original_start": 1520,
+    "original_end": 1530,
+    "range": [
+      1520,
+      1530
+    ]
+  },
+  {
+    "type": "entity",
+    "category": "Tool",
+    "match": "fgdump",
+    "original_start": 1540,
+    "original_end": 1550,
+    "range": [
+      1540,
+      1550
+    ]
+  },
+  {
+    "type": "entity",
+    "category": "Tool",
+    "match": "gsecdump",
+    "original_start": 1560,
+    "original_end": 1570,
+    "range": [
+      1560,
+      1570
+    ]
+  },
+  {
+    "type": "entity",
+    "category": "Tool",
+    "match": "lslsass",
+    "original_start": 1580,
+    "original_end": 1590,
+    "range": [
+      1580,
+      1590
+    ]
+  },
+  {
+    "type": "entity",
+    "category": "Tool",
+    "match": "mimikatz",
+    "original_start": 1600,
+    "original_end": 1610,
+    "range": [
+      1600,
+      1610
+    ]
+  },
+  {
+    "type": "entity",
+    "category": "Tool",
+    "match": "pass-the-hash toolkit",
+    "original_start": 1620,
+    "original_end": 1630,
+    "range": [
+      1620,
+      1630
+    ]
+  },
+  {
+    "type": "entity",
+    "category": "Tool",
+    "match": "pwdump7",
+    "original_start": 1640,
+    "original_end": 1650,
+    "range": [
+      1640,
+      1650
+    ]
+  },
+  {
+    "type": "entity",
+    "category": "Tool",
+    "match": "pwdumpX",
+    "original_start": 1660,
+    "original_end": 1670,
+    "range": [
+      1660,
+      1670
+    ]
+  },
+  {
+    "type": "entity",
+    "category": "Tool",
+    "match": "GETMAIL",
+    "original_start": 1680,
+    "original_end": 1690,
+    "range": [
+      1680,
+      1690
+    ]
+  },
+  {
+    "type": "entity",
+    "category": "Tool",
+    "match": "MAPIGET",
+    "original_start": 1700,
+    "original_end": 1710,
+    "range": [
+      1700,
+      1710
+    ]
+  }
+]
