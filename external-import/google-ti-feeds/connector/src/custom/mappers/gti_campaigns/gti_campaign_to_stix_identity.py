@@ -1,7 +1,6 @@
 """Converts GTI campaign data to STIX identity objects."""
 
 from datetime import datetime, timezone
-from typing import Optional
 
 from connector.src.custom.models.gti.gti_campaign_model import (
     GTICampaignData,
@@ -23,8 +22,8 @@ class IdentityWithTiming(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
     identity: Identity
-    first_seen: Optional[datetime] = None
-    last_seen: Optional[datetime] = None
+    first_seen: datetime | None = None
+    last_seen: datetime | None = None
 
 
 class GTICampaignToSTIXIdentity(BaseMapper):
@@ -127,7 +126,7 @@ class GTICampaignToSTIXIdentity(BaseMapper):
             last_seen=last_seen,
         )
 
-    def _process_industry(self, industry_data: TargetedIndustry) -> Optional[Identity]:
+    def _process_industry(self, industry_data: TargetedIndustry) -> Identity | None:
         """Process a targeted industry entry and convert to a sector Identity.
 
         Args:
@@ -150,14 +149,14 @@ class GTICampaignToSTIXIdentity(BaseMapper):
 
     def _process_industry_with_timing(
         self, industry_data: TargetedIndustry
-    ) -> Optional[IdentityWithTiming]:
+    ) -> IdentityWithTiming | None:
         """Process a targeted industry entry and convert to IdentityWithTiming.
 
         Args:
             industry_data (TargetedIndustry): The targeted industry data to process.
 
         Returns:
-            Optional[IdentityWithTiming]: The IdentityWithTiming object, or None if no valid industry found.
+            IdentityWithTiming | None: The IdentityWithTiming object, or None if no valid industry found.
 
         """
         # Skip industries without valid names - both industry_group and industry must be empty/whitespace
