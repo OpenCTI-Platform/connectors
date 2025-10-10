@@ -234,8 +234,12 @@ class _MISPConfig(_ConfigBaseModel):
     create_observables: bool = Field(
         description="Whether to create an observable for each imported MISP attribute or not.",
     )
-    # TODO: check if Literal is correct
-    datetime_attribute: Literal["date", "timestamp"] = Field(
+    datetime_attribute: Literal[
+        "date",
+        "timestamp",
+        "publish_timestamp",
+        "sighting_timestamp",
+    ] = Field(
         description="The attribute to use as MISP events date.",
         default="timestamp",
     )
@@ -336,16 +340,13 @@ class _MISPConfig(_ConfigBaseModel):
         description="Whether to import attachment attribute content as a file (works only with PDF).",
         default=False,
     )
-    # ? What does it mean ??
     import_to_ids_no_score: int = Field(
         description="A score value for the indicator/observable if the attribute `to_ids` value is no.",
     )
-    # ? What does it mean ??
     import_unsupported_observables_as_text: bool = Field(
         description="Whether to import unsupported observable as x_opencti_text or not.",
         default=False,
     )
-    # ? What does it mean ??
     import_unsupported_observables_as_text_transparent: bool = Field(
         description="Whether to import unsupported observable as x_opencti_text or not (just with the value).",
         default=True,
