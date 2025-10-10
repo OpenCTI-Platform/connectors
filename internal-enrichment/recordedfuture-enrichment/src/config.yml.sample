@@ -12,4 +12,4 @@ recorded_future:
   token: 'ChangeMe'
   create_indicator_threshold: 0
   info_max_tlp: 'TLP:AMBER'
-  vulnerability_enrichment_optional_fields: 'aiInsights,risk'
+  vulnerability_enrichment_optional_fields: 'aiInsights,cpe,risk'
