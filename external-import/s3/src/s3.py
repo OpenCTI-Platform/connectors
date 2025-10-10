@@ -220,7 +220,6 @@ class S3Connector:
             if "object_marking_refs" not in obj:
                 obj["object_marking_refs"] = [self.s3_marking["id"]]
 
-
             if "x_severity" in obj:
                 # handle mapping of "x_severity" on Vulnerability object
                 if obj["type"] == "vulnerability":
@@ -243,7 +242,6 @@ class S3Connector:
                         obj["x_opencti_score"] = 60
                     elif obj["x_severity"] == "low":
                         obj["x_opencti_score"] = 30
-
 
             # Aliases
             if "x_alias" in obj:
@@ -286,7 +284,7 @@ class S3Connector:
             # Title Note
             if obj.get("x_title", None) and obj.get("x_acti_uuid", None):
                 # generate a unique note identifier that don't change in the time even of the obj_name change or x_title change
-                note_key = obj.get("x_acti_uuid")+" - Title"
+                note_key = obj.get("x_acti_uuid") + " - Title"
                 note_abstract = obj.get("name") + " - Title"
                 note = stix2.Note(
                     id=Note.generate_id(obj["created"], note_key),
@@ -306,7 +304,7 @@ class S3Connector:
             # Analysis Note
             if obj.get("x_analysis", None) and obj.get("x_acti_uuid", None):
                 # generate a unique note identifier that don't change in the time even of the obj_name change or x_analysis change
-                note_key = obj.get("x_acti_uuid")+" - Analysis"
+                note_key = obj.get("x_acti_uuid") + " - Analysis"
                 note_abstract = obj.get("name") + " - Analysis"
                 note = stix2.Note(
                     id=Note.generate_id(obj["created"], note_key),
@@ -329,7 +327,7 @@ class S3Connector:
                 for history in obj.get("x_history"):
                     note_content += f"| {history.get('timestamp', '')} | {history.get('comment', '')} |\n"
 
-                note_key = obj.get("x_acti_uuid")+" - History"
+                note_key = obj.get("x_acti_uuid") + " - History"
                 abstract = obj.get("name") + " - History"
                 note = stix2.Note(
                     id=Note.generate_id(obj["created"], note_key),
