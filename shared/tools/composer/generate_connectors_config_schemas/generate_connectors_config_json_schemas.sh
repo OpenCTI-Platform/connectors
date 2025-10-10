@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -euo pipefail  # exit on error
+set -eo pipefail  # exit on error
 
 CONNECTOR_METADATA_DIRECTORY="__metadata__"
 VENV_NAME=".temp_venv"
@@ -31,9 +31,9 @@ activate_venv() {
 
     # Activate virtual environment according to OS
     if [ -f "$1/$VENV_NAME/bin/activate" ]; then
-      source "$1/$VENV_NAME/bin/activate"  # Linux/MacOS
+      . "$1/$VENV_NAME/bin/activate"  # Linux/MacOS
     elif [ -f "$1/$VENV_NAME/Scripts/activate" ]; then
-      source "$1/$VENV_NAME/Scripts/activate"  # Windows
+      . "$1/$VENV_NAME/Scripts/activate"  # Windows
     fi
 
     echo '> Installing requirements in: ' "$1"
@@ -60,13 +60,15 @@ deactivate_venv() {
 
 # Find all parents directory of connector with config loader
 # printf action with the %h format specifier, which prints the directory part (parent directory) of the file path
-connector_directories_path=$(find . -type d -name "$CONNECTOR_METADATA_DIRECTORY" -printf '%h\n')
+# (macOS/Bash 3.2 fix: replace unsupported -printf with sed)
+connector_directories_path=$(find . -type d -name "$CONNECTOR_METADATA_DIRECTORY" | sed 's:/*'"$CONNECTOR_METADATA_DIRECTORY"'$::' | sort -u)
 
 # Loop in each connector directory with infos and regenerate JSON schema if changed
 for connector_directory_path in $connector_directories_path
 do
   if [ -d "$connector_directory_path" ]; then
     # Only generate schema for directory that changed
+    CIRCLE_BRANCH=${CIRCLE_BRANCH:-""}
     if [ "$CIRCLE_BRANCH" = "master" ]; then
       directory_has_changed=$(git diff HEAD~1 HEAD -- "$connector_directory_path")
     else

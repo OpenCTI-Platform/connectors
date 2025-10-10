@@ -25,7 +25,7 @@ find_connector_directories() {
       # If no exact match, find the root directory matching the pattern
       # Use -maxdepth to limit how deep we search, then filter
       find . -type d -path "*$search_term" -o -type d -path "*$search_term/*" 2>/dev/null \
-        | while read -r dir; do
+        | while read dir; do
           # Only output if this is the root match (not a subdirectory of another match)
           parent_match=$(echo "$dir" | grep -o ".*/$search_term")
           if [ -n "$parent_match" ]; then
@@ -39,7 +39,7 @@ find_connector_directories() {
     # Search for directory name - but only connector roots
     # Look for directories with requirements.txt, src/, or __metadata__/
     find . -type d -iname "*$search_term*" 2>/dev/null \
-      | while read -r dir; do
+      | while read dir; do
           # Check if it's likely a connector root
           if [ -f "$dir/requirements.txt" ] || [ -d "$dir/src" ] || [ -d "$dir/__metadata__" ]; then
             echo "$dir"
@@ -77,9 +77,9 @@ activate_venv() {
 
     # Activate virtual environment according to OS
     if [ -f "$1/$VENV_NAME/bin/activate" ]; then
-      source "$1/$VENV_NAME/bin/activate"  # Linux/MacOS
+      . "$1/$VENV_NAME/bin/activate"  # Linux/MacOS
     elif [ -f "$1/$VENV_NAME/Scripts/activate" ]; then
-      source "$1/$VENV_NAME/Scripts/activate"  # Windows
+      . "$1/$VENV_NAME/Scripts/activate"  # Windows
     fi
 
     echo '> Installing requirements in: ' "$1"
@@ -112,7 +112,9 @@ echo ""
 read -p "Which connector do you want to generate schemas for? (give connector folder name) " CONNECTOR_NAME
 
 # Find matching connector directories
-IFS=$'\n' read -r -d '' -a matching_directories < <(find_connector_directories "$CONNECTOR_NAME" && printf '\0')
+# Bash 3.2 does not support process substitution in arrays, so we use a workaround
+matching_directories=$(find_connector_directories "$CONNECTOR_NAME")
+IFS=$'\n' read -r -a matching_directories <<< "$matching_directories"
 
 if [ ${#matching_directories[@]} -eq 0 ]; then
     echo -e "\033[31mNo connector found matching: '$CONNECTOR_NAME'\033[0m"
@@ -133,7 +135,8 @@ if [ ${#matching_directories[@]} -eq 1 ]; then
     # Ask for confirmation
     read -p "Is this the correct connector? (y/n) " ANSWER
     
-    if [[ ! "${ANSWER,,}" =~ ^y ]]; then
+    ANSWER_LOWER=$(echo "$ANSWER" | tr '[:upper:]' '[:lower:]')
+    if [[ ! "$ANSWER_LOWER" =~ ^y ]]; then
         echo -e "\033[33mAborted by user.\033[0m"
         exit 0
     fi
@@ -191,7 +194,8 @@ if [ -f "$manifest_path" ]; then
         is_not_supported=true
         echo -e "\033[33mWarning: Connector is marked as not supported in manifest.\033[0m"
         read -p "Do you want to continue anyway? (y/n) " continue_answer
-        if [[ ! "${continue_answer,,}" =~ ^y ]]; then
+        continue_answer_lower=$(echo "$continue_answer" | tr '[:upper:]' '[:lower:]')
+        if [[ ! "$continue_answer_lower" =~ ^y ]]; then
             echo -e "\033[33mAborted by user.\033[0m"
             exit 0
         fi
