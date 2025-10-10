@@ -25,9 +25,6 @@ def get_connectors_paths() -> list[str]:
 
 @pytest.mark.parametrize("connector_path", get_connectors_paths())
 def test_every_connector_contains_metadata_subdirectory(connector_path: str):
-    # TODO: remove xfail() once every connector has its __metadata__ subdir
-    pytest.xfail(reason="Not implemented in every connector yet")
-
     # Given a connector path
     # When checking connector's `__metadata__` subdirectory
     # Then it should exist
@@ -36,9 +33,6 @@ def test_every_connector_contains_metadata_subdirectory(connector_path: str):
 
 @pytest.mark.parametrize("connector_path", get_connectors_paths())
 def test_every_connector_metadata_contains_connector_manifest(connector_path: str):
-    # TODO: remove xfail() once every connector has its manifest
-    pytest.xfail(reason="Not implemented in every connector yet")
-
     # Given a connector path
     # When checking connector's `__metadata__` subdirectory
     # Then `connector_manifest.json` should exist
