@@ -1,4 +1,4 @@
-pycti==6.8.3
+pycti==6.8.4
 pycountry==24.6.1
 pydantic>=2.10, <3
 pydantic-settings==2.10.1

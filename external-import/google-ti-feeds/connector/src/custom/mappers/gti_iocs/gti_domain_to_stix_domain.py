@@ -1,7 +1,7 @@
 """Converts a GTI domain to a STIX domain object and indicator."""
 
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from connector.src.custom.models.gti.gti_domain_model import (
     GTIDomainData,
@@ -157,11 +157,11 @@ class GTIDomainToSTIXDomain(BaseMapper):
 
         return relationship
 
-    def to_stix(self) -> List[Any]:
+    def to_stix(self) -> list[Any]:
         """Convert the GTI domain to STIX domain and indicator objects.
 
         Returns:
-        List[Any]: List containing the STIX domain observable, indicator model objects, and their relationship.
+        list[Any]: list containing the STIX domain observable, indicator model objects, and their relationship.
 
         """
         domain_observable = self._create_stix_domain()
@@ -172,11 +172,11 @@ class GTIDomainToSTIXDomain(BaseMapper):
 
         return [domain_observable, indicator, relationship]
 
-    def _get_timestamps(self) -> Dict[str, datetime]:
+    def _get_timestamps(self) -> dict[str, datetime]:
         """Extract creation and modification timestamps from domain attributes.
 
         Returns:
-            Dict[str, datetime]: Dictionary with 'created' and 'modified' timestamps
+            dict[str, datetime]: dictionary with 'created' and 'modified' timestamps
 
         """
         created = datetime.now(timezone.utc)
@@ -194,7 +194,7 @@ class GTIDomainToSTIXDomain(BaseMapper):
 
         return {"created": created, "modified": modified}
 
-    def _get_score(self) -> Optional[int]:
+    def _get_score(self) -> int | None:
         """Get score from domain attributes.
 
         Priority order:
@@ -202,7 +202,7 @@ class GTIDomainToSTIXDomain(BaseMapper):
         2. threat_score.value
 
         Returns:
-            Optional[int]: The score if available, None otherwise
+            int | None: The score if available, None otherwise
 
         """
         if (
@@ -229,11 +229,11 @@ class GTIDomainToSTIXDomain(BaseMapper):
 
         return None
 
-    def _determine_indicator_types(self) -> List[IndicatorTypeOV]:
+    def _determine_indicator_types(self) -> list[IndicatorTypeOV]:
         """Determine indicator types based on domain attributes.
 
         Returns:
-            List[IndicatorTypeOV]: List of indicator types
+            list[IndicatorTypeOV]: list of indicator types
 
         """
         indicator_types = []
@@ -247,11 +247,11 @@ class GTIDomainToSTIXDomain(BaseMapper):
 
         return indicator_types
 
-    def _get_types_from_gti_assessment(self) -> List[IndicatorTypeOV]:
+    def _get_types_from_gti_assessment(self) -> list[IndicatorTypeOV]:
         """Extract indicator types from GTI assessment verdict.
 
         Returns:
-            List[IndicatorTypeOV]: List of indicator types from GTI assessment
+            list[IndicatorTypeOV]: list of indicator types from GTI assessment
 
         """
         if not (self.domain.attributes and self.domain.attributes.gti_assessment):

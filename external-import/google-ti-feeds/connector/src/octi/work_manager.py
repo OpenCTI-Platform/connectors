@@ -2,7 +2,7 @@
 
 import logging
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
     from logging import Logger
@@ -33,9 +33,9 @@ class WorkManager:
         self._config = config
         self._helper = helper
         self._logger = logger or logging.getLogger(__name__)
-        self._current_work_id: Optional[str] = None
+        self._current_work_id: str | None = None
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """Get the current state dict of the Connector.
 
         Returns:
@@ -62,11 +62,11 @@ class WorkManager:
         except ValueError:
             return False
 
-    def get_current_work_id(self) -> Optional[str]:
+    def get_current_work_id(self) -> str | None:
         """Get the current work ID.
 
         Returns:
-            Optional[str]: The current work ID or None if no work is currently active.
+            str | None: The current work ID or None if no work is currently active.
 
         """
         return self._current_work_id
@@ -113,12 +113,12 @@ class WorkManager:
                 {"prefix": LOG_PREFIX, "state_key": state_key, "date": now},
             )
 
-    def initiate_work(self, name: str, work_counter: Optional[int] = None) -> str:
+    def initiate_work(self, name: str, work_counter: int | None = None) -> str:
         """Initiate a new work for the Connector.
 
         Args:
             name (str): The name of the work.
-            work_counter (Optional[int]): The counter for the work.
+            work_counter (int | None): The counter for the work.
 
         Returns:
             str: The ID of the initiated work.
@@ -140,14 +140,14 @@ class WorkManager:
         self,
         work_id: str,
         error_flag: bool = False,
-        error_message: Optional[str] = None,
+        error_message: str | None = None,
     ) -> None:
         """Work to process.
 
         Args:
             work_id (str): The ID of the work.
             error_flag (bool): Whether the work finished in error.
-            error_message (Optional[str]): Specific error message to report. Defaults to None.
+            error_message (str | None): Specific error message to report. Defaults to None.
 
         """
         message = "Connector's work finished gracefully"
@@ -167,13 +167,13 @@ class WorkManager:
         )
 
     def process_all_remaining_works(
-        self, error_flag: bool = False, error_message: Optional[str] = None
+        self, error_flag: bool = False, error_message: str | None = None
     ) -> None:
         """Process all remaining works and update the state.
 
         Args:
-            error_flag (bool): Whether the work finished in error.
-            error_message (Optional[str]): Specific error message to report. Defaults to None.
+        error_flag (bool): Whether the work finished in error.
+        error_message (str | None): Specific error message to report. Defaults to None.
 
         """
         works = self._helper.api.work.get_connector_works(

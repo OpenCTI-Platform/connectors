@@ -1,6 +1,6 @@
 """Exception for errors when processing partial data after interruption."""
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 from connector.src.custom.exceptions.connector_errors.gti_work_processing_error import (
     GTIWorkProcessingError,
@@ -13,10 +13,10 @@ class GTIPartialDataProcessingError(GTIWorkProcessingError):
     def __init__(
         self,
         message: str,
-        work_id: Optional[str] = None,
-        interruption_type: Optional[str] = None,
-        reports_count: Optional[int] = None,
-        details: Optional[Dict[str, Any]] = None,
+        work_id: str | None = None,
+        interruption_type: str | None = None,
+        reports_count: int | None = None,
+        details: dict[str, Any] | None = None,
     ):
         """Initialize the exception.
 

@@ -1,7 +1,7 @@
 """Shared client API class for common subentity fetching methods."""
 
 import logging
-from typing import Any, Dict, List
+from typing import Any
 
 from connector.src.custom.client_api.client_api_base import BaseClientAPI
 from connector.src.utils.api_engine.exceptions.api_http_error import ApiHttpError
@@ -24,7 +24,7 @@ class ClientAPIShared(BaseClientAPI):
 
     async def fetch_subentities_ids(
         self, entity_name: str, entity_id: str, subentity_types: list[str]
-    ) -> Dict[str, List[str]]:
+    ) -> dict[str, list[str]]:
         """Fetch subentities IDs from the API.
 
         Args:
@@ -33,7 +33,7 @@ class ClientAPIShared(BaseClientAPI):
             subentity_types (list[str]): The type of subentities to fetch.
 
         Returns:
-            Dict[str, List[str]]: The fetched subentities IDs.
+            dict[str, list[str]]: The fetched subentities IDs.
 
         """
         subentities_ids = {}
@@ -126,18 +126,18 @@ class ClientAPIShared(BaseClientAPI):
             )
 
     async def fetch_subentity_details(
-        self, subentity_ids: Dict[str, List[str]]
-    ) -> Dict[str, List[Any]]:
+        self, subentity_ids: dict[str, list[str]]
+    ) -> dict[str, list[Any]]:
         """Fetch subentity details in parallel for multiple IDs.
 
         Args:
-            subentity_ids: Dictionary mapping entity types to lists of IDs
+            subentity_ids: dictionary mapping entity types to lists of IDs
 
         Returns:
-            Dictionary mapping entity types to lists of fetched entities
+            dictionary mapping entity types to lists of fetched entities
 
         """
-        subentities: Dict[str, List[Any]] = {}
+        subentities: dict[str, list[Any]] = {}
         total_to_fetch = sum(len(ids) for ids in subentity_ids.values())
 
         if total_to_fetch > 0:

@@ -33,6 +33,7 @@ SCOPE_ENTITIES = [
 
 VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS = [
     "aiInsights",
+    "cpe",
     "risk",
 ]
 
@@ -105,7 +106,7 @@ class _ConfigBaseModel(BaseModel):
 
     model_config = ConfigDict(
         frozen=True,
-        extra="ignore",
+        extra="allow",
         validate_default=True,
     )
 
@@ -211,7 +212,7 @@ class ConnectorConfig(BaseSettings):
     # Setup model config and env vars parsing
     model_config = SettingsConfigDict(
         frozen=True,
-        extra="ignore",
+        extra="allow",
         env_nested_delimiter="_",
         env_nested_max_split=1,
         enable_decoding=False,

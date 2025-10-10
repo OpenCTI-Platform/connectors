@@ -2,7 +2,7 @@
 
 import ipaddress
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from connector.src.custom.models.gti.gti_ip_addresses_model import (
     GTIIPData,
@@ -109,11 +109,11 @@ class GTIIPToSTIXIP(BaseMapper):
         except ValueError as e:
             raise ValueError(f"Invalid IP address format '{self.ip.id}': {e}") from e
 
-    def _create_stix_ip(self) -> Union[IPv4Address, IPv6Address]:
+    def _create_stix_ip(self) -> IPv4Address | IPv6Address:
         """Create the STIX IP observable object (IPv4 or IPv6).
 
         Returns:
-        Union[IPv4AddressModel, IPv6AddressModel]: The STIX IP observable model object.
+         IPv4Address | IPv6Address: The STIX IP observable model object.
 
         """
         score = self._get_score()
@@ -122,7 +122,7 @@ class GTIIPToSTIXIP(BaseMapper):
 
         timestamps = self._get_timestamps()
 
-        ip_model: Union[IPv4AddressModel, IPv6AddressModel]
+        ip_model: IPv4AddressModel | IPv6AddressModel
         if ip_version == "ipv4":
             ip_model = OctiIPv4AddressModel.create(
                 value=self.ip.id,
@@ -184,13 +184,13 @@ class GTIIPToSTIXIP(BaseMapper):
     def _create_relationship_indicator_ip(
         self,
         indicator: IndicatorModel,
-        ip_observable: Union[IPv4Address, IPv6Address],
+        ip_observable: IPv4Address | IPv6Address,
     ) -> RelationshipModel:
         """Create a based-on relationship from indicator to IP observable.
 
         Args:
             indicator (IndicatorModel): The source indicator object.
-            ip_observable (Union[IPv4Address, IPv6Address]): The target IP observable object.
+            ip_observable (IPv4Address | IPv6Address): The target IP observable object.
 
         Returns:
             RelationshipModel: The relationship model object.
@@ -212,11 +212,11 @@ class GTIIPToSTIXIP(BaseMapper):
 
         return relationship
 
-    def to_stix(self) -> List[Any]:
+    def to_stix(self) -> list[Any]:
         """Convert the GTI IP to STIX IP and indicator objects.
 
         Returns:
-        List[Any]: List containing the STIX IP observable, indicator model objects, and their relationship.
+        list[Any]: list containing the STIX IP observable, indicator model objects, and their relationship.
 
         """
         ip_observable = self._create_stix_ip()
@@ -225,11 +225,11 @@ class GTIIPToSTIXIP(BaseMapper):
 
         return [ip_observable, indicator, relationship]
 
-    def _get_timestamps(self) -> Dict[str, datetime]:
+    def _get_timestamps(self) -> dict[str, datetime]:
         """Extract creation and modification timestamps from IP attributes.
 
         Returns:
-            Dict[str, datetime]: Dictionary with 'created' and 'modified' timestamps
+            dict[str, datetime]: dictionary with 'created' and 'modified' timestamps
 
         """
         created = datetime.now(timezone.utc)
@@ -247,7 +247,7 @@ class GTIIPToSTIXIP(BaseMapper):
 
         return {"created": created, "modified": modified}
 
-    def _get_score(self) -> Optional[int]:
+    def _get_score(self) -> int | None:
         """Get score from IP attributes.
 
         Priority order:
@@ -255,7 +255,7 @@ class GTIIPToSTIXIP(BaseMapper):
         2. threat_score.value
 
         Returns:
-            Optional[int]: The score if available, None otherwise
+            int | None: The score if available, None otherwise
 
         """
         if (
@@ -296,11 +296,11 @@ class GTIIPToSTIXIP(BaseMapper):
         else:
             return f"[ipv6-addr:value = '{self.ip.id}']"
 
-    def _determine_indicator_types(self) -> List[IndicatorTypeOV]:
+    def _determine_indicator_types(self) -> list[IndicatorTypeOV]:
         """Determine indicator types based on IP attributes.
 
         Returns:
-            List[IndicatorTypeOV]: List of indicator types
+            list[IndicatorTypeOV]: list of indicator types
 
         """
         indicator_types = []
@@ -314,11 +314,11 @@ class GTIIPToSTIXIP(BaseMapper):
 
         return indicator_types
 
-    def _get_types_from_gti_assessment(self) -> List[IndicatorTypeOV]:
+    def _get_types_from_gti_assessment(self) -> list[IndicatorTypeOV]:
         """Extract indicator types from GTI assessment verdict.
 
         Returns:
-            List[IndicatorTypeOV]: List of indicator types from GTI assessment
+            list[IndicatorTypeOV]: list of indicator types from GTI assessment
 
         """
         if not (self.ip.attributes and self.ip.attributes.gti_assessment):

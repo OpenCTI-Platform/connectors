@@ -1,7 +1,7 @@
 """Converts a GTI report into STIX relationship objects."""
 
 from datetime import datetime, timezone
-from typing import Any, List, Optional
+from typing import Any
 
 from connector.src.custom.models.gti.gti_report_model import GTIReportData
 from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
@@ -54,16 +54,16 @@ class GTIReportRelationship:
         self,
         relationship_type: str,
         target_ref: str,
-        target_name: Optional[str] = None,
-        description: Optional[str] = None,
+        target_name: str | None = None,
+        description: str | None = None,
     ) -> RelationshipModel:
         """Create a generic relationship from report to any target entity.
 
         Args:
             relationship_type (str): The type of relationship (e.g., 'targets', 'indicates').
             target_ref (str): The ID of the target entity.
-            target_name (Optional[str]): The name of the target entity, for description purposes.
-            description (Optional[str]): Custom description for the relationship.
+            target_name (str | None): The name of the target entity, for description purposes.
+            description (str | None): Custom description for the relationship.
 
         Returns:
             Relationship: The STIX relationship object.
@@ -88,15 +88,15 @@ class GTIReportRelationship:
         )
 
     @staticmethod
-    def to_stix(**kwargs: Any) -> List[Relationship]:
+    def to_stix(**kwargs: Any) -> list[Relationship]:
         """Convert the GTI report into STIX relationship objects.
 
         Args:
             **kwargs: Additional arguments passed to the method.
 
         Returns:
-            List[Relationship]: The list of STIX relationship objects.
+            list[Relationship]: The list of STIX relationship objects.
 
         """
-        result: List[Relationship] = []
+        result: list[Relationship] = []
         return result
