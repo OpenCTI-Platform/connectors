@@ -72,9 +72,10 @@ class ConnectorClient:
             f"| where LastModifiedTime > todatetime('{date_str}')"
         }
         if self.config.filter_labels:
+            labels = ", ".join(f'"{label}"' for label in self.config.filter_labels)
             body["query"] += (
                 "| mv-apply labelsFiltered=Labels on ("
-                f"where labelsFiltered.labelName has_any ({', '.join(f'"{label}"' for label in self.config.filter_labels)})"
+                f"where labelsFiltered.labelName has_any ({labels})"
                 "| take 1 )"
             )
         while next_page_url:
