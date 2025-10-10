@@ -1,5 +1,7 @@
 from typing import Any
 
+
+from censys_enrichment.client import Client
 from censys_enrichment.config import Config
 from pycti import OpenCTIConnectorHelper
 
@@ -23,9 +25,11 @@ class Connector:
         self,
         config: Config,
         helper: OpenCTIConnectorHelper,
+        client: Client,
     ) -> None:
         self.config = config
         self.helper = helper
+        self.client = client
 
     def _send_bundle(self, stix_objects: list[dict[str, Any]]) -> str:
         bundle = self.helper.stix2_create_bundle(items=stix_objects)
@@ -58,6 +62,9 @@ class Connector:
         self, observable: dict[str, Any]
     ) -> list[dict[str, Any]]:
         match observable["entity_type"]:
+            case "IPv4-Addr" | "IPv6-Addr":
+                host = self.client.fetch_ip(observable["value"])
+
             case _:
                 raise EntityTypeNotSupportedError(
                     f"Observable type {observable['entity_type']} not supported"

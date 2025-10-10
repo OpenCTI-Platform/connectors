@@ -7,7 +7,7 @@ from censys_enrichment.base_config import (
     BaseInternalEnrichmentsConnectorConfig,
 )
 from connectors_sdk.core.pydantic import ListFromString
-from pydantic import Field
+from pydantic import Field, SecretStr
 
 _FILE_PATH = os.path.dirname(os.path.abspath(__file__))
 
@@ -46,6 +46,13 @@ class _CensysEnrichmentConfig(BaseConfigModel):
     ] = Field(
         default="TLP:AMBER",
         description="The maximum TLP level allowed for enrichment.",
+    )
+
+    organisation_id: SecretStr = Field(
+        description="Censys organisation ID.",
+    )
+    token: SecretStr = Field(
+        description="Censys API token.",
     )
 
 

@@ -1,3 +1,4 @@
+censys-platform==0.8.0
 pycti==6.8.3
 pydantic==2.12.0
 pydantic-settings==2.11.0

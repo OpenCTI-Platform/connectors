@@ -11,18 +11,27 @@ It signals to the operating system and any calling processes that the program di
 import sys
 import traceback
 
+from censys_enrichment.client import Client
 from censys_enrichment.config import Config
 from censys_enrichment.connector import Connector
 from pycti import OpenCTIConnectorHelper
 
+from censys_enrichment.converter import Converter
+
 if __name__ == "__main__":
     try:
         config = Config()
+        helper = OpenCTIConnectorHelper(
+            config=config.model_dump_pycti(),
+            playbook_compatible=True,
+        )
+        client = Client(
+            organisation_id=config.censys_enrichment.organisation_id.get_secret_value(),
+            token=config.censys_enrichment.token.get_secret_value(),
+        )
+        converter = Converter()
         connector = Connector(
-            config=config,
-            helper=OpenCTIConnectorHelper(
-                config=config.model_dump_pycti(), playbook_compatible=True
-            ),
+            config=config, helper=helper, client=client, converter=converter
         )
         connector.run()
     except Exception:
