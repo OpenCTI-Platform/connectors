@@ -1,7 +1,7 @@
 """The module contains the OctiLocationModel class, which represents an OpenCTI Location."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from connector.src.stix.v21.models.ovs.region_ov_enums import RegionOV
 from connector.src.stix.v21.models.sdos.location_model import LocationModel
@@ -15,8 +15,8 @@ class OctiLocationModel:
         name: str,
         country_code: str,
         organization_id: str,
-        marking_ids: List[str],
-        description: Optional[str] = None,
+        marking_ids: list[str],
+        description: str | None = None,
         **kwargs: Any,
     ) -> LocationModel:
         """Create a Country Location model with OpenCTI custom properties.
@@ -25,7 +25,7 @@ class OctiLocationModel:
             name: The name of the country
             country_code: The ISO 3166-1 alpha-2 country code
             organization_id: The ID of the organization that created this location
-            marking_ids: List of marking definition IDs to apply to the location
+            marking_ids: list of marking definition IDs to apply to the location
             description: Description of the location
             **kwargs: Additional arguments to pass to LocationModel
 
@@ -33,7 +33,7 @@ class OctiLocationModel:
             LocationModel: The created location model
 
         """
-        custom_properties: Dict[str, Any] = kwargs.pop("custom_properties", {})
+        custom_properties: dict[str, Any] = kwargs.pop("custom_properties", {})
         custom_properties["x_opencti_location_type"] = "Country"
 
         data = {
@@ -57,8 +57,8 @@ class OctiLocationModel:
         name: str,
         region_value: RegionOV,
         organization_id: str,
-        marking_ids: List[str],
-        description: Optional[str] = None,
+        marking_ids: list[str],
+        description: str | None = None,
         **kwargs: Any,
     ) -> LocationModel:
         """Create a Region Location model with OpenCTI custom properties.
@@ -67,7 +67,7 @@ class OctiLocationModel:
             name: The name of the region
             region_value: The region value from RegionOV enum
             organization_id: The ID of the organization that created this location
-            marking_ids: List of marking definition IDs to apply to the location
+            marking_ids: list of marking definition IDs to apply to the location
             description: Description of the location
             **kwargs: Additional arguments to pass to LocationModel
 
@@ -75,7 +75,7 @@ class OctiLocationModel:
             LocationModel: The created location model
 
         """
-        custom_properties: Dict[str, Any] = kwargs.pop("custom_properties", {})
+        custom_properties: dict[str, Any] = kwargs.pop("custom_properties", {})
         custom_properties["x_opencti_location_type"] = "Region"
 
         data = {

@@ -1,7 +1,7 @@
 """The module defines a FileModel class that represents a file in STIX 2.1 format."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import Field, model_validator
@@ -14,57 +14,55 @@ from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
 class FileModel(BaseSCOModel):
     """FileModel class represents a file in STIX 2.1 format."""
 
-    extensions: Optional[Dict[str, Dict[str, Any]]] = Field(
+    extensions: dict[str, dict[str, Any]] | None = Field(
         default=None,
-        description="Dictionary of file extensions (e.g., ntfs-ext, pdf-ext, archive-ext). Keys MUST be extension names.",
+        description="dictionary of file extensions (e.g., ntfs-ext, pdf-ext, archive-ext). Keys MUST be extension names.",
     )
 
-    hashes: Optional[Dict[str, str]] = Field(
+    hashes: dict[str, str] | None = Field(
         default=None,
-        description="Dictionary of hash algorithm names and hash values. Keys MUST come from hash-algorithm-ov.",
+        description="dictionary of hash algorithm names and hash values. Keys MUST come from hash-algorithm-ov.",
     )
 
-    size: Optional[int] = Field(
+    size: int | None = Field(
         default=None,
         ge=0,
         description="Size of the file in bytes. MUST NOT be negative.",
     )
-    name: Optional[str] = Field(
-        default=None, description="Name of the file as observed."
-    )
-    name_enc: Optional[str] = Field(
+    name: str | None = Field(default=None, description="Name of the file as observed.")
+    name_enc: str | None = Field(
         default=None,
         description="Character encoding used for the file name, per IANA character set registry.",
     )
 
-    magic_number_hex: Optional[str] = Field(
+    magic_number_hex: str | None = Field(
         default=None,
         description="Hexadecimal magic number associated with the file format.",
     )
-    mime_type: Optional[str] = Field(
+    mime_type: str | None = Field(
         default=None,
         description="MIME type of the file. SHOULD follow IANA media type registry.",
     )
 
-    ctime: Optional[datetime] = Field(
+    ctime: datetime | None = Field(
         default=None, description="Timestamp when the file was created."
     )
-    mtime: Optional[datetime] = Field(
+    mtime: datetime | None = Field(
         default=None, description="Timestamp when the file was last modified."
     )
-    atime: Optional[datetime] = Field(
+    atime: datetime | None = Field(
         default=None, description="Timestamp when the file was last accessed."
     )
 
-    parent_directory_ref: Optional[str] = Field(
+    parent_directory_ref: str | None = Field(
         default=None,
         description="Reference to a directory SCO representing this file's parent. MUST be of type 'directory'.",
     )
-    contains_refs: Optional[List[str]] = Field(
+    contains_refs: list[str] | None = Field(
         default=None,
-        description="List of references to other SCOs contained within the file (e.g., embedded IPs, appended files).",
+        description="list of references to other SCOs contained within the file (e.g., embedded IPs, appended files).",
     )
-    content_ref: Optional[str] = Field(
+    content_ref: str | None = Field(
         default=None,
         description="Reference to an Artifact object representing this file's content.",
     )

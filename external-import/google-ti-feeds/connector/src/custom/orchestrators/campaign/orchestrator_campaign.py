@@ -2,7 +2,7 @@
 
 import logging
 import re
-from typing import Any, Dict, Optional
+from typing import Any
 
 from connector.src.custom.configs import (
     CAMPAIGN_BATCH_PROCESSOR_CONFIG,
@@ -71,7 +71,7 @@ class OrchestratorCampaign(BaseOrchestrator):
             logger=self.logger,
         )
 
-    async def run(self, initial_state: Optional[Dict[str, Any]]) -> None:
+    async def run(self, initial_state: dict[str, Any] | None) -> None:
         """Run the campaign orchestrator.
 
         Args:
@@ -158,7 +158,7 @@ class OrchestratorCampaign(BaseOrchestrator):
 
                     all_entities = campaign_entities + (subentity_stix or [])
 
-                    entity_types: Dict[str, int] = {}
+                    entity_types: dict[str, int] = {}
                     for entity in all_entities:
                         entity_type = getattr(entity, "type", None)
                         if entity_type:

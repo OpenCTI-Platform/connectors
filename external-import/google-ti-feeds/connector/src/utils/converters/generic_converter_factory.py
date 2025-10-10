@@ -5,7 +5,7 @@ work with any input data format, mapper class, and output STIX entity type.
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Type
+from typing import Any
 
 from connector.src.utils.converters.generic_converter import GenericConverter
 from connector.src.utils.converters.generic_converter_config import (
@@ -22,8 +22,8 @@ class GenericConverterFactory:
 
     def __init__(
         self,
-        global_dependencies: Optional[Dict[str, Any]] = None,
-        logger: Optional[logging.Logger] = None,
+        global_dependencies: dict[str, Any] | None = None,
+        logger: logging.Logger | None = None,
     ):
         """Initialize the factory with common dependencies.
 
@@ -34,7 +34,7 @@ class GenericConverterFactory:
         """
         self.global_dependencies = global_dependencies or {}
         self.logger = logger or logging.getLogger(__name__)
-        self._converter_registry: Dict[str, GenericConverterConfig] = {}
+        self._converter_registry: dict[str, GenericConverterConfig] = {}
 
     def register_config(self, name: str, config: GenericConverterConfig) -> None:
         """Register a converter configuration with a name.
@@ -57,7 +57,7 @@ class GenericConverterFactory:
     def create_converter(
         self,
         config: GenericConverterConfig,
-        additional_dependencies: Optional[Dict[str, Any]] = None,
+        additional_dependencies: dict[str, Any] | None = None,
     ) -> GenericConverter:
         """Create a converter with the provided configuration.
 
@@ -79,7 +79,7 @@ class GenericConverterFactory:
     def create_converter_by_name(
         self,
         name: str,
-        additional_dependencies: Optional[Dict[str, Any]] = None,
+        additional_dependencies: dict[str, Any] | None = None,
     ) -> GenericConverter:
         """Create a converter using a registered configuration.
 
@@ -107,12 +107,12 @@ class GenericConverterFactory:
     def create_simple_converter(
         self,
         entity_type: str,
-        mapper_class: Type[BaseMapper],
+        mapper_class: type[BaseMapper],
         output_stix_type: str,
-        exception_class: Type[Exception],
+        exception_class: type[Exception],
         display_name: str,
-        input_model: Optional[Type[BaseModel]] = None,
-        additional_dependencies: Optional[Dict[str, Any]] = None,
+        input_model: type[BaseModel] | None = None,
+        additional_dependencies: dict[str, Any] | None = None,
         **config_kwargs: Any,
     ) -> GenericConverter:
         """Create a converter with a simple inline configuration.
@@ -123,7 +123,7 @@ class GenericConverterFactory:
             output_stix_type: The STIX object type being produced
             exception_class: Exception class to raise on errors
             display_name: Human-readable name for logging
-            input_model: Optional input model type for validation
+            input_model: type[BaseModel] | None for validation
             additional_dependencies: Additional dependencies for this converter
             **config_kwargs: Additional configuration parameters
 
@@ -143,34 +143,34 @@ class GenericConverterFactory:
 
         return self.create_converter(config, additional_dependencies)
 
-    def get_registered_configs(self) -> Dict[str, GenericConverterConfig]:
+    def get_registered_configs(self) -> dict[str, GenericConverterConfig]:
         """Get all registered converter configurations.
 
         Returns:
-            Dictionary mapping configuration names to their configs
+            dictionary mapping configuration names to their configs
 
         """
         return self._converter_registry.copy()
 
-    def get_available_config_names(self) -> List[str]:
+    def get_available_config_names(self) -> list[str]:
         """Get list of available configuration names.
 
         Returns:
-            List of registered configuration names
+            list of registered configuration names
 
         """
         return list(self._converter_registry.keys())
 
     def create_multiple_converters(
-        self, config_names: List[str]
-    ) -> Dict[str, GenericConverter]:
+        self, config_names: list[str]
+    ) -> dict[str, GenericConverter]:
         """Create multiple converters from registered configurations.
 
         Args:
-            config_names: List of configuration names to create converters for
+            config_names: list of configuration names to create converters for
 
         Returns:
-            Dictionary mapping configuration names to converters
+            dictionary mapping configuration names to converters
 
         Raises:
             ValueError: If any configuration name is not registered
@@ -181,11 +181,11 @@ class GenericConverterFactory:
             converters[name] = self.create_converter_by_name(name)
         return converters
 
-    def create_all_registered_converters(self) -> Dict[str, GenericConverter]:
+    def create_all_registered_converters(self) -> dict[str, GenericConverter]:
         """Create converters for all registered configurations.
 
         Returns:
-            Dictionary mapping configuration names to converters
+            dictionary mapping configuration names to converters
 
         """
         return {
@@ -195,17 +195,17 @@ class GenericConverterFactory:
 
     def create_conversion_pipeline(
         self,
-        converter_names: List[str],
-        shared_dependencies: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, GenericConverter]:
+        converter_names: list[str],
+        shared_dependencies: dict[str, Any] | None = None,
+    ) -> dict[str, GenericConverter]:
         """Create a pipeline of converters for batch processing.
 
         Args:
-            converter_names: List of converter configuration names
+            converter_names: list of converter configuration names
             shared_dependencies: Dependencies shared across all converters in the pipeline
 
         Returns:
-            Dictionary mapping converter names to converter instances
+            dictionary mapping converter names to converter instances
 
         Raises:
             ValueError: If any converter name is not registered
@@ -244,12 +244,12 @@ class GenericConverterFactory:
         return pipeline
 
     def register_batch_configs(
-        self, configs: Dict[str, GenericConverterConfig]
+        self, configs: dict[str, GenericConverterConfig]
     ) -> None:
         """Register multiple converter configurations at once.
 
         Args:
-            configs: Dictionary mapping configuration names to configs
+            configs: dictionary mapping configuration names to configs
 
         """
         for name, config in configs.items():
@@ -264,7 +264,7 @@ class GenericConverterFactory:
             },
         )
 
-    def get_config(self, name: str) -> Optional[GenericConverterConfig]:
+    def get_config(self, name: str) -> GenericConverterConfig | None:
         """Get a registered converter configuration by name.
 
         Args:
@@ -279,7 +279,7 @@ class GenericConverterFactory:
     def _merge_dependencies(
         self,
         config: GenericConverterConfig,
-        additional_dependencies: Optional[Dict[str, Any]] = None,
+        additional_dependencies: dict[str, Any] | None = None,
     ) -> GenericConverterConfig:
         """Merge global and additional dependencies into the configuration.
 

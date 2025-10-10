@@ -1,7 +1,6 @@
 """Converts GTI campaign location data to STIX location objects."""
 
 from datetime import datetime, timezone
-from typing import List, Optional
 
 from connector.src.custom.models.gti.gti_campaign_model import (
     GTICampaignData,
@@ -24,8 +23,8 @@ class LocationWithTiming(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
     location: Location
-    first_seen: Optional[datetime] = None
-    last_seen: Optional[datetime] = None
+    first_seen: datetime | None = None
+    last_seen: datetime | None = None
     is_targeted: bool = False
     is_source: bool = False
 
@@ -51,23 +50,23 @@ class GTICampaignToSTIXLocation(BaseMapper):
         self.organization = organization
         self.tlp_marking = tlp_marking
 
-    def to_stix(self) -> List[Location]:
+    def to_stix(self) -> list[Location]:
         """Convert GTI campaign location data to STIX location objects.
 
         Returns:
-            List[Location]: List of STIX location objects (countries only).
+            list[Location]: list of STIX location objects (countries only).
 
         """
         return [item.location for item in self.to_stix_with_timing()]
 
-    def to_stix_with_timing(self) -> List[LocationWithTiming]:
+    def to_stix_with_timing(self) -> list[LocationWithTiming]:
         """Convert the GTI campaign location data to LocationWithTiming objects.
 
         Returns:
-            List[LocationWithTiming]: The list of LocationWithTiming objects containing STIX Location objects and timing metadata.
+            list[LocationWithTiming]: The list of LocationWithTiming objects containing STIX Location objects and timing metadata.
 
         """
-        result: List[LocationWithTiming] = []
+        result: list[LocationWithTiming] = []
 
         if not hasattr(self.campaign, "attributes") or not self.campaign.attributes:
             return result
@@ -96,7 +95,7 @@ class GTICampaignToSTIXLocation(BaseMapper):
 
     def _create_country_with_timing(
         self, region_data, is_targeted: bool, is_source: bool
-    ) -> Optional[LocationWithTiming]:
+    ) -> LocationWithTiming | None:
         """Create a LocationWithTiming object from region data (countries only).
 
         Args:
@@ -105,7 +104,7 @@ class GTICampaignToSTIXLocation(BaseMapper):
             is_source: Whether this is a source region.
 
         Returns:
-            Optional[LocationWithTiming]: The LocationWithTiming object with timing metadata, or None if invalid.
+            LocationWithTiming | None: The LocationWithTiming object with timing metadata, or None if invalid.
 
         """
         if not region_data.country or not region_data.country_iso2:
@@ -142,14 +141,14 @@ class GTICampaignToSTIXLocation(BaseMapper):
 
     def _create_country_from_targeted_with_timing(
         self, region_data: TargetedRegion
-    ) -> Optional[LocationWithTiming]:
+    ) -> LocationWithTiming | None:
         """Create a LocationWithTiming object from targeted region data (countries only).
 
         Args:
             region_data (TargetedRegion): The targeted region data containing country information.
 
         Returns:
-            Optional[LocationWithTiming]: The LocationWithTiming object with timing metadata, or None if invalid.
+            LocationWithTiming | None: The LocationWithTiming object with timing metadata, or None if invalid.
 
         """
         return self._create_country_with_timing(
@@ -160,14 +159,14 @@ class GTICampaignToSTIXLocation(BaseMapper):
 
     def _create_country_from_source_with_timing(
         self, region_data: SourceRegion
-    ) -> Optional[LocationWithTiming]:
+    ) -> LocationWithTiming | None:
         """Create a LocationWithTiming object from source region data (countries only).
 
         Args:
             region_data (SourceRegion): The source region data containing country information.
 
         Returns:
-            Optional[LocationWithTiming]: The LocationWithTiming object with timing metadata, or None if invalid.
+            LocationWithTiming | None: The LocationWithTiming object with timing metadata, or None if invalid.
 
         """
         return self._create_country_with_timing(

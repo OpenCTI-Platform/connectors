@@ -1,7 +1,7 @@
 """Composite mapper that handles campaign to locations, identity, and campaign conversion in one step."""
 
 from datetime import datetime, timezone
-from typing import Any, List
+from typing import Any
 
 from connector.src.custom.mappers.gti_campaigns.gti_campaign_to_stix_campaign import (
     GTICampaignToSTIXCampaign,
@@ -44,11 +44,11 @@ class GTICampaignToSTIXComposite(BaseMapper):
         self.organization = organization
         self.tlp_marking = tlp_marking
 
-    def to_stix(self) -> List[Any]:
+    def to_stix(self) -> list[Any]:
         """Convert the GTI campaign to a list of STIX objects (locations, identities, campaign, relationships).
 
         Returns:
-            List of STIX objects in order: [locations..., identities..., campaign, relationships...]
+            list of STIX objects in order: [locations..., identities..., campaign, relationships...]
 
         """
         all_entities = []
@@ -93,21 +93,21 @@ class GTICampaignToSTIXComposite(BaseMapper):
     def _create_relationships(
         self,
         campaign: Any,
-        locations_with_timing: List[LocationWithTiming],
-        identities_with_timing: List[IdentityWithTiming],
-    ) -> List[Any]:
+        locations_with_timing: list[LocationWithTiming],
+        identities_with_timing: list[IdentityWithTiming],
+    ) -> list[Any]:
         """Create relationships between the campaign and other entities.
 
         Args:
             campaign: The campaign object
-            locations_with_timing: List of LocationWithTiming objects containing location and timing data
-            identities_with_timing: List of IdentityWithTiming objects containing identity and timing data
+            locations_with_timing: list of LocationWithTiming objects containing location and timing data
+            identities_with_timing: list of IdentityWithTiming objects containing identity and timing data
 
         Returns:
-            List of relationship objects
+            list of relationship objects
 
         """
-        relationships: List[Any] = []
+        relationships: list[Any] = []
 
         if not hasattr(self.campaign, "attributes") or not self.campaign.attributes:
             return relationships
@@ -179,15 +179,15 @@ class GTICampaignToSTIXComposite(BaseMapper):
         return relationships
 
     def _get_targeted_locations_with_timing(
-        self, locations_with_timing: List[LocationWithTiming]
-    ) -> List[LocationWithTiming]:
+        self, locations_with_timing: list[LocationWithTiming]
+    ) -> list[LocationWithTiming]:
         """Get LocationWithTiming objects that correspond to targeted regions.
 
         Args:
-            locations_with_timing: List of all LocationWithTiming objects
+            locations_with_timing: list of all LocationWithTiming objects
 
         Returns:
-            List of LocationWithTiming objects that correspond to targeted regions
+            list of LocationWithTiming objects that correspond to targeted regions
 
         """
         return [
@@ -197,15 +197,15 @@ class GTICampaignToSTIXComposite(BaseMapper):
         ]
 
     def _get_source_locations_with_timing(
-        self, locations_with_timing: List[LocationWithTiming]
-    ) -> List[LocationWithTiming]:
+        self, locations_with_timing: list[LocationWithTiming]
+    ) -> list[LocationWithTiming]:
         """Get LocationWithTiming objects that correspond to source regions.
 
         Args:
-            locations_with_timing: List of all LocationWithTiming objects
+            locations_with_timing: list of all LocationWithTiming objects
 
         Returns:
-            List of LocationWithTiming objects that correspond to source regions
+            list of LocationWithTiming objects that correspond to source regions
 
         """
         return [

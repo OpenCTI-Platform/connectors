@@ -1,7 +1,6 @@
 """Converts a GTI threat actor's country regions to STIX Location objects."""
 
 from datetime import datetime, timezone
-from typing import List, Optional
 
 from connector.src.custom.models.gti.gti_threat_actor_model import (
     GTIThreatActorData,
@@ -24,8 +23,8 @@ class LocationWithTiming(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
     location: Location
-    first_seen: Optional[datetime] = None
-    last_seen: Optional[datetime] = None
+    first_seen: datetime | None = None
+    last_seen: datetime | None = None
     is_targeted: bool = False
     is_source: bool = False
 
@@ -51,23 +50,23 @@ class GTIThreatActorToSTIXLocation(BaseMapper):
         self.organization = organization
         self.tlp_marking = tlp_marking
 
-    def to_stix(self) -> List[Location]:
+    def to_stix(self) -> list[Location]:
         """Convert the GTI threat actor country regions to STIX Location objects.
 
         Returns:
-            List[Location]: The list of STIX Location objects (countries only).
+            list[Location]: The list of STIX Location objects (countries only).
 
         """
         return [item.location for item in self.to_stix_with_timing()]
 
-    def to_stix_with_timing(self) -> List[LocationWithTiming]:
+    def to_stix_with_timing(self) -> list[LocationWithTiming]:
         """Convert the GTI threat actor country regions to LocationWithTiming objects.
 
         Returns:
-            List[LocationWithTiming]: The list of LocationWithTiming objects containing STIX Location objects and timing metadata.
+            list[LocationWithTiming]: The list of LocationWithTiming objects containing STIX Location objects and timing metadata.
 
         """
-        result: List[LocationWithTiming] = []
+        result: list[LocationWithTiming] = []
 
         if (
             not hasattr(self.threat_actor, "attributes")
@@ -97,7 +96,7 @@ class GTIThreatActorToSTIXLocation(BaseMapper):
 
     def _create_country_with_timing(
         self, region_data, is_targeted: bool, is_source: bool
-    ) -> Optional[LocationWithTiming]:
+    ) -> LocationWithTiming | None:
         """Create a LocationWithTiming object from region data (countries only).
 
         Args:
@@ -106,7 +105,7 @@ class GTIThreatActorToSTIXLocation(BaseMapper):
             is_source: Whether this is a source region.
 
         Returns:
-            Optional[LocationWithTiming]: The LocationWithTiming object with timing metadata, or None if invalid.
+            LocationWithTiming | None: The LocationWithTiming object with timing metadata, or None if invalid.
 
         """
         if not region_data.country or not region_data.country_iso2:
@@ -143,14 +142,14 @@ class GTIThreatActorToSTIXLocation(BaseMapper):
 
     def _create_country_from_source_with_timing(
         self, region_data: SourceRegion
-    ) -> Optional[LocationWithTiming]:
+    ) -> LocationWithTiming | None:
         """Create a LocationWithTiming object from source region data (countries only).
 
         Args:
             region_data (SourceRegion): The source region data containing country information.
 
         Returns:
-            Optional[LocationWithTiming]: The LocationWithTiming object with timing metadata, or None if invalid.
+            LocationWithTiming | None: The LocationWithTiming object with timing metadata, or None if invalid.
 
         """
         return self._create_country_with_timing(
@@ -161,14 +160,14 @@ class GTIThreatActorToSTIXLocation(BaseMapper):
 
     def _create_country_from_targeted_with_timing(
         self, region_data: TargetedRegion
-    ) -> Optional[LocationWithTiming]:
+    ) -> LocationWithTiming | None:
         """Create a LocationWithTiming object from targeted region data (countries only).
 
         Args:
             region_data (TargetedRegion): The targeted region data containing country information.
 
         Returns:
-            Optional[LocationWithTiming]: The LocationWithTiming object with timing metadata, or None if invalid.
+            LocationWithTiming | None: The LocationWithTiming object with timing metadata, or None if invalid.
 
         """
         return self._create_country_with_timing(
@@ -179,14 +178,14 @@ class GTIThreatActorToSTIXLocation(BaseMapper):
 
     def _create_country_from_targeted(
         self, region_data: TargetedRegion
-    ) -> Optional[Location]:
+    ) -> Location | None:
         """Create a Location object from targeted region data (countries only).
 
         Args:
             region_data (TargetedRegion): The targeted region data containing country information.
 
         Returns:
-            Optional[Location]: The STIX Location object, or None if invalid.
+            Location | None: The STIX Location object, or None if invalid.
 
         """
         location_with_timing = self._create_country_from_targeted_with_timing(
@@ -194,16 +193,14 @@ class GTIThreatActorToSTIXLocation(BaseMapper):
         )
         return location_with_timing.location if location_with_timing else None
 
-    def _create_country_from_source(
-        self, region_data: SourceRegion
-    ) -> Optional[Location]:
+    def _create_country_from_source(self, region_data: SourceRegion) -> Location | None:
         """Create a Location object from source region data (countries only).
 
         Args:
             region_data (SourceRegion): The source region data containing country information.
 
         Returns:
-            Optional[Location]: The STIX Location object, or None if invalid.
+            Location | None: The STIX Location object, or None if invalid.
 
         """
         location_with_timing = self._create_country_from_source_with_timing(region_data)

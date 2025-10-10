@@ -203,7 +203,6 @@ To add support for a new entity type, follow these steps:
 ```python
 # File: src/custom/models/gti_reports/gti_{entity_type}_model.py
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Union
 
 class {EntityType}Model(BaseModel):
     """Model representing a GTI {entity_type}."""
@@ -216,12 +215,12 @@ class GTI{EntityType}Data(BaseModel):
     """Model representing data for a GTI {entity_type}."""
     id: str
     type: str = Field("{entity_type}")
-    links: Optional[Dict[str, str]] = None
-    attributes: Optional[{EntityType}Model] = None
+    links: Dict[str, str] | None = None
+    attributes: {EntityType}Model | None = None
 
 class GTI{EntityType}Response(BaseModel):
     """Model representing a response containing GTI {entity_type} data."""
-    data: Union[GTI{EntityType}Data, List[GTI{EntityType}Data]]
+    data: GTI{EntityType}Data | list[GTI{EntityType}Data]
 ```
 
 #### Step 2: Create the Mapper Class

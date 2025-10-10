@@ -1,7 +1,5 @@
 """Exception for errors when converting GTI threat actors to STIX intrusion sets."""
 
-from typing import Optional
-
 from connector.src.custom.exceptions.convert_errors.gti_entity_conversion_error import (
     GTIEntityConversionError,
 )
@@ -13,8 +11,8 @@ class GTIActorConversionError(GTIEntityConversionError):
     def __init__(
         self,
         message: str,
-        actor_id: Optional[str] = None,
-        actor_name: Optional[str] = None,
+        actor_id: str | None = None,
+        actor_name: str | None = None,
     ):
         """Initialize the exception.
 

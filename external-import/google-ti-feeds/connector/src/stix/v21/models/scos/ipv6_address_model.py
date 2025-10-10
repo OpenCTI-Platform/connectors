@@ -1,7 +1,5 @@
 """The module defines the IPv6AddressModel class, which represents a STIX 2.1 IPv6 Address object."""
 
-from typing import List, Optional
-
 from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import Field
 from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
@@ -18,12 +16,12 @@ class IPv6AddressModel(BaseSCOModel):
         description="One or more IPv6 addresses expressed in CIDR notation (e.g., '2001:db8::1/64'). /128 MAY be omitted for single addresses.",
     )
 
-    resolves_to_refs: Optional[List[str]] = Field(
+    resolves_to_refs: list[str] | None = Field(
         default=None,
         description="(Deprecated) References to MAC address objects this IPv6 resolves to. MUST be of type 'mac-addr'.",
     )
 
-    belongs_to_refs: Optional[List[str]] = Field(
+    belongs_to_refs: list[str] | None = Field(
         default=None,
         description="(Deprecated) References to autonomous system objects this IPv6 belongs to. MUST be of type 'autonomous-system'.",
     )

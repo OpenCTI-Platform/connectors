@@ -1,7 +1,7 @@
 """The module contains the OctiAttackPatternModel class, which represents an OpenCTI Attack Pattern."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from connector.src.stix.v21.models.cdts.kill_chain_phase_model import (
     KillChainPhaseModel,
@@ -18,13 +18,13 @@ class OctiAttackPatternModel:
         mitre_id: str,
         organization_id: str,
         marking_ids: list[str],
-        description: Optional[str] = None,
-        aliases: Optional[List[str]] = None,
-        first_seen: Optional[datetime] = None,
-        last_seen: Optional[datetime] = None,
-        kill_chain_phases: Optional[List[KillChainPhaseModel]] = None,
-        labels: Optional[List[str]] = None,
-        external_references: Optional[List[Dict[str, Any]]] = None,
+        description: str | None = None,
+        aliases: list[str] | None = None,
+        first_seen: datetime | None = None,
+        last_seen: datetime | None = None,
+        kill_chain_phases: list[KillChainPhaseModel] | None = None,
+        labels: list[str] | None = None,
+        external_references: list[dict[str, Any]] | None = None,
         **kwargs: Any,
     ) -> AttackPatternModel:
         """Create an Attack Pattern model.
@@ -33,7 +33,7 @@ class OctiAttackPatternModel:
             name: The name of the attack pattern
             mitre_id: MITRE ATT&CK ID for the attack pattern
             organization_id: The ID of the organization that created this attack pattern
-            marking_ids: List of marking definition IDs to apply to the attack pattern
+            marking_ids: list of marking definition IDs to apply to the attack pattern
             description: Description of the attack pattern
             aliases: Alternative names for the attack pattern
             first_seen: First time the attack pattern was observed

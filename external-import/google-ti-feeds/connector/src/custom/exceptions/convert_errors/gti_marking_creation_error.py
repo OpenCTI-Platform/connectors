@@ -1,14 +1,12 @@
 """Exception for errors when creating TLP marking definitions."""
 
-from typing import Optional
-
 from connector.src.custom.exceptions.gti_converting_error import GTIConvertingError
 
 
 class GTIMarkingCreationError(GTIConvertingError):
     """Exception raised when there's an error creating the TLP marking definition."""
 
-    def __init__(self, message: str, tlp_level: Optional[str] = None):
+    def __init__(self, message: str, tlp_level: str | None = None):
         """Initialize the exception.
 
         Args:

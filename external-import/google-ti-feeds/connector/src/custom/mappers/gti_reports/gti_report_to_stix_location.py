@@ -1,7 +1,5 @@
 """Converts a GTI report's targeted regions to STIX Location objects."""
 
-from typing import List, Optional
-
 from connector.src.custom.models.gti.gti_report_model import (
     GTIReportData,
     TargetedRegion,
@@ -37,14 +35,14 @@ class GTIReportToSTIXLocation(BaseMapper):
         self.organization = organization
         self.tlp_marking = tlp_marking
 
-    def to_stix(self) -> List[Location]:
+    def to_stix(self) -> list[Location]:
         """Convert the GTI report targeted regions to STIX Location objects.
 
         Returns:
-            List[Location]: The list of STIX Location objects.
+            list[Location]: The list of STIX Location objects.
 
         """
-        result: List[Location] = []
+        result: list[Location] = []
 
         if not hasattr(self.report, "attributes") or not self.report.attributes:
             raise ValueError("Invalid report attributes")
@@ -60,14 +58,14 @@ class GTIReportToSTIXLocation(BaseMapper):
 
         return result
 
-    def _process_region(self, region_data: TargetedRegion) -> Optional[Location]:
+    def _process_region(self, region_data: TargetedRegion) -> Location | None:
         """Process a targeted region entry and convert to appropriate Location type.
 
         Args:
             region_data (TargetedRegion): The targeted region data to process.
 
         Returns:
-            Optional[Location]: The STIX Location object, or None if no valid location found.
+                Location | None: The STIX Location object, or None if no valid location found.
 
         """
         location = None
@@ -80,7 +78,7 @@ class GTIReportToSTIXLocation(BaseMapper):
 
         return location
 
-    def _create_country(self, region_data: TargetedRegion) -> Optional[Location]:
+    def _create_country(self, region_data: TargetedRegion) -> Location | None:
         """Create a LocationCountry object.
 
         Args:
@@ -110,7 +108,7 @@ class GTIReportToSTIXLocation(BaseMapper):
 
     def _create_region(
         self, region_data: TargetedRegion, is_sub_region: bool
-    ) -> Optional[Location]:
+    ) -> Location | None:
         """Create a LocationRegion object.
 
         Args:

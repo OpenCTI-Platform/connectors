@@ -3,7 +3,6 @@
 import asyncio
 import time
 from collections import deque
-from typing import Dict
 
 from .interfaces.base_rate_limiter import BaseRateLimiter
 
@@ -35,7 +34,7 @@ class TokenBucketRateLimiter(BaseRateLimiter):
 class RateLimiterRegistry:
     """Rate limiter registry implementation."""
 
-    _store: Dict[str, BaseRateLimiter] = {}
+    _store: dict[str, BaseRateLimiter] = {}
     _lock = asyncio.Lock()
 
     @classmethod

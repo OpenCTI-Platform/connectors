@@ -1,7 +1,7 @@
 """Converts a GTI file to a STIX file object and indicator."""
 
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from connector.src.custom.models.gti.gti_file_model import (
     GTIFileData,
@@ -185,11 +185,11 @@ class GTIFileToSTIXFile(BaseMapper):
 
         return relationship
 
-    def to_stix(self) -> List[Any]:
+    def to_stix(self) -> list[Any]:
         """Convert the GTI file to STIX file and indicator objects.
 
         Returns:
-        List[Any]: List containing the STIX file observable, indicator model objects, and their relationship.
+        list[Any]: list containing the STIX file observable, indicator model objects, and their relationship.
 
         """
         file_observable = self._create_stix_file()
@@ -200,11 +200,11 @@ class GTIFileToSTIXFile(BaseMapper):
 
         return [file_observable, indicator, relationship]
 
-    def _get_timestamps(self) -> Dict[str, datetime]:
+    def _get_timestamps(self) -> dict[str, datetime]:
         """Extract creation and modification timestamps from file attributes.
 
         Returns:
-            Dict[str, datetime]: Dictionary with 'created' and 'modified' timestamps
+            dict[str, datetime]: dictionary with 'created' and 'modified' timestamps
 
         """
         created = datetime.now(timezone.utc)
@@ -222,7 +222,7 @@ class GTIFileToSTIXFile(BaseMapper):
 
         return {"created": created, "modified": modified}
 
-    def _get_score(self) -> Optional[int]:
+    def _get_score(self) -> int | None:
         """Get score from file attributes.
 
         Priority order:
@@ -230,7 +230,7 @@ class GTIFileToSTIXFile(BaseMapper):
         2. threat_score.value
 
         Returns:
-            Optional[int]: The score if available, None otherwise
+            int | None: The score if available, None otherwise
 
         """
         if (
@@ -257,11 +257,11 @@ class GTIFileToSTIXFile(BaseMapper):
 
         return None
 
-    def _build_hashes(self) -> Optional[Dict[str, str]]:
+    def _build_hashes(self) -> dict[str, str] | None:
         """Build hashes dictionary from file attributes.
 
         Returns:
-            Optional[Dict[str, str]]: Dictionary of hashes if available, None otherwise
+            dict[str, str] | None: dictionary of hashes if available, None otherwise
 
         """
         if not self.file.attributes:
@@ -301,11 +301,11 @@ class GTIFileToSTIXFile(BaseMapper):
         else:
             return f"[file:hashes.'SHA-256' = '{self.file.id}']"
 
-    def _determine_indicator_types(self) -> List[IndicatorTypeOV]:
+    def _determine_indicator_types(self) -> list[IndicatorTypeOV]:
         """Determine indicator types based on file attributes.
 
         Returns:
-            List[IndicatorTypeOV]: List of indicator types
+            list[IndicatorTypeOV]: list of indicator types
 
         """
         indicator_types = []
@@ -319,11 +319,11 @@ class GTIFileToSTIXFile(BaseMapper):
 
         return indicator_types
 
-    def _get_types_from_gti_assessment(self) -> List[IndicatorTypeOV]:
+    def _get_types_from_gti_assessment(self) -> list[IndicatorTypeOV]:
         """Extract indicator types from GTI assessment verdict.
 
         Returns:
-            List[IndicatorTypeOV]: List of indicator types from GTI assessment
+            list[IndicatorTypeOV]: list of indicator types from GTI assessment
 
         """
         if not (self.file.attributes and self.file.attributes.gti_assessment):

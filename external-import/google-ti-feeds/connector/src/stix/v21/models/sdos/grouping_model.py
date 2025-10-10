@@ -1,6 +1,6 @@
 """The module contains the GroupingModel class, which represents a STIX 2.1 Grouping object."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pycti  # type: ignore  # Missing library stubs
 from connector.src.stix.v21.models.ovs.grouping_context_ov_enums import (
@@ -17,10 +17,10 @@ from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
 class GroupingModel(BaseSDOModel):
     """Model representing a Grouping in STIX 2.1 format."""
 
-    name: Optional[str] = Field(
+    name: str | None = Field(
         default=None, description="A name used to identify the Grouping."
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
         default=None,
         description="A description that provides more details and context about the Grouping, potentially including its purpose and key characteristics.",
     )
@@ -28,20 +28,20 @@ class GroupingModel(BaseSDOModel):
         ...,
         description="Short descriptor of the context shared by the content in this Grouping. SHOULD come from the grouping-context-ov vocabulary.",
     )
-    object_refs: List[str] = Field(
+    object_refs: list[str] = Field(
         ...,
-        description="List of STIX Object identifiers referred to by this Grouping.",
+        description="list of STIX Object identifiers referred to by this Grouping.",
     )
 
     @model_validator(mode="before")
     @classmethod
-    def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+    def generate_id(cls, data: dict[str, Any]) -> dict[str, Any]:
         """Generate ID regardless of whether one is provided."""
         data["id"] = GroupingModel._generate_id(data=data)
         return data
 
     @classmethod
-    def _generate_id(cls, data: Dict[str, Any]) -> Any:
+    def _generate_id(cls, data: dict[str, Any]) -> Any:
         """Generate ID regardless of whether one is provided."""
         if isinstance(data, dict) and "name" in data:
             name = data.get("name", None)

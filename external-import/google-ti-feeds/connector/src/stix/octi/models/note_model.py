@@ -1,7 +1,7 @@
 """The module contains the OctiNoteModel class, which represents an OpenCTI Note."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from connector.src.stix.v21.models.sdos.note_model import NoteModel
 
@@ -15,12 +15,12 @@ class OctiNoteModel:
         created: datetime,
         modified: datetime,
         organization_id: str,
-        marking_ids: List[str],
-        object_refs: List[str],
-        abstract: Optional[str] = None,
-        authors: Optional[List[str]] = None,
-        labels: Optional[List[str]] = None,
-        external_references: Optional[List[Dict[str, Any]]] = None,
+        marking_ids: list[str],
+        object_refs: list[str],
+        abstract: str | None = None,
+        authors: list[str] | None = None,
+        labels: list[str] | None = None,
+        external_references: list[dict[str, Any]] | None = None,
         **kwargs: Any,
     ) -> NoteModel:
         """Create a Note model with OpenCTI custom properties.
@@ -30,12 +30,12 @@ class OctiNoteModel:
             created: When the note was created
             modified: When the note was last modified
             organization_id: The ID of the organization that created this note
-            marking_ids: List of marking definition IDs to apply to the note
+            marking_ids: list of marking definition IDs to apply to the note
             object_refs: STIX Object identifiers this note applies to
             abstract: A brief summary of the note content
             authors: Names of the author(s) of this note
-            labels: List of labels for this note
-            external_references: List of external references
+            labels: list of labels for this note
+            external_references: list of external references
             **kwargs: Additional arguments to pass to NoteModel
 
         Returns:

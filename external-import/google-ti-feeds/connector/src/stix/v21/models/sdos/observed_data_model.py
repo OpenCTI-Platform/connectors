@@ -1,7 +1,7 @@
 """The module defines the ObservedDataModel class, which represents a STIX 2.1 Observed Data object."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pycti  # type: ignore  # Missing library stubs
 from connector.src.stix.v21.models.sdos.sdo_common_model import BaseSDOModel
@@ -28,13 +28,13 @@ class ObservedDataModel(BaseSDOModel):
         le=999_999_999,
         description="Number of times the data was observed. MUST be an integer between 1 and 999,999,999 inclusive.",
     )
-    objects: Optional[Dict[str, Dict[str, Any]]] = Field(
+    objects: dict[str, dict[str, Any]] | None = Field(
         default=None,
-        description="(Deprecated) Dictionary of SCOs observed. MUST NOT be present if object_refs is set. Will be removed in future STIX versions.",
+        description="(Deprecated) dictionary of SCOs observed. MUST NOT be present if object_refs is set. Will be removed in future STIX versions.",
     )
-    object_refs: Optional[List[str]] = Field(
+    object_refs: list[str] | None = Field(
         default=None,
-        description="List of references to SCOs/SROs observed. MUST NOT be set if 'objects' is present.",
+        description="list of references to SCOs/SROs observed. MUST NOT be set if 'objects' is present.",
     )
 
     @model_validator(mode="after")
@@ -54,13 +54,13 @@ class ObservedDataModel(BaseSDOModel):
 
     @model_validator(mode="before")
     @classmethod
-    def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+    def generate_id(cls, data: dict[str, Any]) -> dict[str, Any]:
         """Generate ID regardless of whether one is provided."""
         data["id"] = ObservedDataModel._generate_id(data=data)
         return data
 
     @classmethod
-    def _generate_id(cls, data: Dict[str, Any]) -> Any:
+    def _generate_id(cls, data: dict[str, Any]) -> Any:
         """Generate ID regardless of whether one is provided."""
         if isinstance(data, dict) and "object_refs" in data:
             object_ids = data.get("object_refs", [])

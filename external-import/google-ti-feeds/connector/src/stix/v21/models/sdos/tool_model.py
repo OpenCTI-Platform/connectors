@@ -1,6 +1,6 @@
 """The module defines the ToolModel class, which represents a STIX 2.1 Tool object."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pycti  # type: ignore  # Missing library stubs
 from connector.src.stix.v21.models.cdts.kill_chain_phase_model import (
@@ -19,35 +19,35 @@ class ToolModel(BaseSDOModel):
     """Model representing a Tool in STIX 2.1 format."""
 
     name: str = Field(..., description="The name used to identify the Tool.")
-    description: Optional[str] = Field(
+    description: str | None = Field(
         default=None,
         description="Details about the Tool's purpose, use, and characteristics.",
     )
-    tool_types: List[ToolTypeOV] = Field(
+    tool_types: list[ToolTypeOV] = Field(
         ...,
         description="Open vocabulary of tool types. SHOULD come from tool-type-ov.",
     )
-    aliases: Optional[List[str]] = Field(
+    aliases: list[str] | None = Field(
         default=None,
         description="Alternative names used to identify this Tool.",
     )
-    kill_chain_phases: Optional[List[KillChainPhaseModel]] = Field(
+    kill_chain_phases: list[KillChainPhaseModel] | None = Field(
         default=None,
         description="Kill Chain Phases where this Tool can be used.",
     )
-    tool_version: Optional[str] = Field(
+    tool_version: str | None = Field(
         default=None, description="Version identifier of the Tool."
     )
 
     @model_validator(mode="before")
     @classmethod
-    def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+    def generate_id(cls, data: dict[str, Any]) -> dict[str, Any]:
         """Generate ID regardless of whether one is provided."""
         data["id"] = ToolModel._generate_id(data=data)
         return data
 
     @classmethod
-    def _generate_id(cls, data: Dict[str, Any]) -> Any:
+    def _generate_id(cls, data: dict[str, Any]) -> Any:
         """Generate ID regardless of whether one is provided."""
         if isinstance(data, dict) and "name" in data:
             data["id"] = pycti.Tool.generate_id(name=data["name"])

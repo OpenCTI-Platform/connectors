@@ -1,7 +1,7 @@
 """Module to test the STIX 2.1 SCO (STIX Cyber-observable Objects) models."""
 
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 from connector.src.stix.v21.models.ovs.account_type_ov_enums import AccountTypeOV
@@ -43,7 +43,7 @@ def now() -> datetime:
 
 
 @pytest.fixture
-def common_sco_fields() -> Dict[str, Any]:
+def common_sco_fields() -> dict[str, Any]:
     """Create Common fields for all SCO objects."""
     return {
         "spec_version": "2.1",

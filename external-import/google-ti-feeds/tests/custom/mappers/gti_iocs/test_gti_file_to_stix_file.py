@@ -1,7 +1,7 @@
 """Tests for GTI file to STIX file mapper."""
 
 from datetime import datetime, timezone
-from typing import Any, List
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -918,12 +918,12 @@ def _given_gti_file_mapper(
     )
 
 
-def _when_convert_to_stix(mapper: GTIFileToSTIXFile) -> List[Any]:
+def _when_convert_to_stix(mapper: GTIFileToSTIXFile) -> list[Any]:
     """Convert GTI file to STIX objects."""
     return mapper.to_stix()
 
 
-def _then_stix_objects_created_successfully(stix_objects: List[Any]) -> None:
+def _then_stix_objects_created_successfully(stix_objects: list[Any]) -> None:
     """Assert that STIX objects were created successfully."""
     assert stix_objects is not None  # noqa: S101
     assert len(stix_objects) == 3  # noqa: S101

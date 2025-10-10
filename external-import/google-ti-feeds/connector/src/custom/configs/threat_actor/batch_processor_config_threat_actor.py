@@ -4,7 +4,7 @@ This module defines configuration for batch processing GTI threat actor STIX obj
 using the generic batch processor system.
 """
 
-from typing import Any, Optional
+from typing import Any
 
 from connector.src.custom.configs.batch_processor_config import (
     extract_stix_date_for_type,
@@ -17,7 +17,7 @@ from connector.src.utils.batch_processors.generic_batch_processor_config import 
 )
 
 
-def threat_actor_extract_stix_date(stix_object: Any) -> Optional[Any]:
+def threat_actor_extract_stix_date(stix_object: Any) -> Any | None:
     """Extract the latest date from a STIX object for state updates.
 
     Only extracts dates from intrusion-set objects to track the latest processed.

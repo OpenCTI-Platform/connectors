@@ -1,7 +1,7 @@
 """Module to test the GTI threat actor to STIX intrusion set mapper."""
 
 from datetime import datetime, timezone
-from typing import Any, List, Optional
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -823,7 +823,7 @@ def test_extract_motivations() -> None:
 
 
 # # When extract aliases
-# def _when_extract_aliases(attributes: ThreatActorModel) -> Optional[List[str]]:
+# def _when_extract_aliases(attributes: ThreatActorModel) -> list[str] | None:
 #     """Extract aliases from threat actor attributes."""
 #     return GTIThreatActorToSTIXIntrusionSet._extract_aliases(attributes)
 
@@ -831,7 +831,7 @@ def test_extract_motivations() -> None:
 # When extract seen dates
 def _when_extract_seen_dates(
     attributes: ThreatActorModel,
-) -> tuple[Optional[datetime], Optional[datetime]]:
+) -> tuple[datetime | None, datetime | None]:
     """Extract seen dates from threat actor attributes."""
     return GTIThreatActorToSTIXIntrusionSet._extract_seen_dates(attributes)
 
@@ -839,14 +839,14 @@ def _when_extract_seen_dates(
 # When extract motivations
 def _when_extract_motivations(
     mapper: GTIThreatActorToSTIXIntrusionSet, attributes: ThreatActorModel
-) -> tuple[Optional[str], Optional[List[str]]]:
+) -> tuple[str | None, list[str] | None]:
     """Extract motivations from threat actor attributes."""
     return mapper._extract_motivations(attributes)
 
 
 # # Then aliases extracted correctly
 # def _then_aliases_extracted_correctly(
-#     aliases: Optional[List[str]], expected: List[str]
+#     aliases: list[str] | None, expected: list[str]
 # ) -> None:
 #     """Check if aliases were extracted correctly."""
 #     assert aliases is not None  # noqa: S101
@@ -856,14 +856,14 @@ def _when_extract_motivations(
 
 
 # # Then aliases are None
-# def _then_aliases_are_none(aliases: Optional[List[str]]) -> None:
+# def _then_aliases_are_none(aliases: list[str] | None) -> None:
 #     """Check if aliases are None."""
 #     assert aliases is None  # noqa: S101
 
 
 # Then seen dates extracted correctly
 def _then_seen_dates_extracted_correctly(
-    first_seen: Optional[datetime], last_seen: Optional[datetime]
+    first_seen: datetime | None, last_seen: datetime | None
 ) -> None:
     """Check if seen dates were extracted correctly."""
     assert first_seen is not None  # noqa: S101
@@ -876,10 +876,10 @@ def _then_seen_dates_extracted_correctly(
 
 # Then motivations extracted correctly
 def _then_motivations_extracted_correctly(
-    primary: Optional[str],
-    secondary: Optional[List[str]],
+    primary: str | None,
+    secondary: list[str] | None,
     expected_primary: str,
-    expected_secondary: List[str],
+    expected_secondary: list[str],
 ) -> None:
     """Check if motivations were extracted correctly."""
     assert primary.value == expected_primary  # noqa: S101

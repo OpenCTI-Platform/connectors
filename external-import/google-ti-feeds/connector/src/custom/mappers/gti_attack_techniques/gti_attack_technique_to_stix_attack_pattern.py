@@ -1,7 +1,7 @@
 """Converts a GTI attack technique to a STIX attack pattern object."""
 
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from connector.src.custom.models.gti.gti_attack_technique_model import (
     AttackTechniqueModel,
@@ -113,14 +113,14 @@ class GTIAttackTechniqueToSTIXAttackPattern(BaseMapper):
         return attack_pattern_model
 
     @staticmethod
-    def _extract_aliases(attributes: AttackTechniqueModel) -> Optional[List[str]]:
+    def _extract_aliases(attributes: AttackTechniqueModel) -> list[str] | None:
         """Extract aliases from attack technique attributes.
 
         Args:
             attributes: The attack technique attributes
 
         Returns:
-            Optional[List[str]]: Extracted aliases or None if no aliases exist
+            list[str] | None: Extracted aliases or None if no aliases exist
 
         """
         if not attributes:
@@ -130,14 +130,14 @@ class GTIAttackTechniqueToSTIXAttackPattern(BaseMapper):
     @staticmethod
     def _extract_kill_chain_phases(
         attributes: AttackTechniqueModel,
-    ) -> Optional[List[KillChainPhaseModel]]:
+    ) -> list[KillChainPhaseModel] | None:
         """Extract kill chain phases from attack technique attributes.
 
         Args:
             attributes: The attack technique attributes
 
         Returns:
-            Optional[List[KillChainPhaseModel]]: Extracted kill chain phases or None if no phases exist
+                list[KillChainPhaseModel] | None: Extracted kill chain phases or None if no phases exist
 
         """
         if not attributes:
@@ -160,14 +160,14 @@ class GTIAttackTechniqueToSTIXAttackPattern(BaseMapper):
 
     def _create_external_references(
         self, attributes: AttackTechniqueModel
-    ) -> Optional[List[Dict[str, str]]]:
+    ) -> list[dict[str, str]] | None:
         """Create external references from attack technique attributes.
 
         Args:
             attributes: The attack technique attributes
 
         Returns:
-            Optional[List[Dict[str, str]]]: Created external references or None if no references exist
+                list[dict[str, str]] | None: Created external references or None if no references exist
 
         """
         if not attributes:

@@ -5,7 +5,7 @@ using the proper fetchers/converters/batch processor pattern.
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 from connector.src.custom.configs import GTIConfig
 from connector.src.custom.orchestrators.campaign.orchestrator_campaign import (
@@ -113,9 +113,9 @@ class Orchestrator:
             self.vulnerability_orchestrator = OrchestratorVulnerability(
                 work_manager, logger, config, tlp_level
             )
-        self.logger.info("Orchestrator initialized", {"prefix": LOG_PREFIX})
+            self.logger.info("Orchestrator initialized", {"prefix": LOG_PREFIX})
 
-    async def run_report(self, initial_state: Optional[Dict[str, Any]]) -> None:
+    async def run_report(self, initial_state: dict[str, Any] | None) -> None:
         """Run the report orchestrator.
 
         Args:
@@ -125,7 +125,7 @@ class Orchestrator:
         self.logger.info("Starting report orchestration", {"prefix": LOG_PREFIX})
         await self.report_orchestrator.run(initial_state)
 
-    async def run_threat_actor(self, initial_state: Optional[Dict[str, Any]]) -> None:
+    async def run_threat_actor(self, initial_state: dict[str, Any] | None) -> None:
         """Run the threat actor orchestrator.
 
         Args:
@@ -135,7 +135,7 @@ class Orchestrator:
         self.logger.info("Starting threat actor orchestration", {"prefix": LOG_PREFIX})
         await self.threat_actor_orchestrator.run(initial_state)
 
-    async def run_campaign(self, initial_state: Optional[Dict[str, Any]]) -> None:
+    async def run_campaign(self, initial_state: dict[str, Any] | None) -> None:
         """Run the campaign orchestrator.
 
         Args:
@@ -145,7 +145,7 @@ class Orchestrator:
         self.logger.info("Starting campaign orchestration", {"prefix": LOG_PREFIX})
         await self.campaign_orchestrator.run(initial_state)
 
-    async def run_malware_family(self, initial_state: Optional[Dict[str, Any]]) -> None:
+    async def run_malware_family(self, initial_state: dict[str, Any] | None) -> None:
         """Run the malware family orchestrator.
 
         Args:
@@ -157,7 +157,7 @@ class Orchestrator:
         )
         await self.malware_orchestrator.run(initial_state)
 
-    async def run_vulnerability(self, initial_state: Optional[Dict[str, Any]]) -> None:
+    async def run_vulnerability(self, initial_state: dict[str, Any] | None) -> None:
         """Run the vulnerability orchestrator.
 
         Args:
