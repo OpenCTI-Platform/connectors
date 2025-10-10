@@ -89,15 +89,15 @@ class GTIThreatActorToSTIXComposite(BaseMapper):
     def _create_relationships(
         self,
         intrusion_set: Any,
-        locations_with_timing: List[LocationWithTiming],
-        sectors_with_timing: List[IdentityWithTiming],
-    ) -> List[Any]:
+        locations_with_timing: list[LocationWithTiming],
+        sectors_with_timing: list[IdentityWithTiming],
+    ) -> list[Any]:
         """Create relationships between the intrusion set and other entities.
 
         Args:
             intrusion_set: The intrusion set object
-            locations_with_timing: List of LocationWithTiming objects containing location and timing data
-            sectors_with_timing: List of IdentityWithTiming objects containing sector identity and timing data
+            locations_with_timing: list of LocationWithTiming objects containing location and timing data
+            sectors_with_timing: list of IdentityWithTiming objects containing sector identity and timing data
 
         Returns:
             list of relationship objects
@@ -174,15 +174,15 @@ class GTIThreatActorToSTIXComposite(BaseMapper):
         return relationships
 
     def _get_targeted_locations_with_timing(
-        self, locations_with_timing: List[LocationWithTiming]
-    ) -> List[LocationWithTiming]:
+        self, locations_with_timing: list[LocationWithTiming]
+    ) -> list[LocationWithTiming]:
         """Get LocationWithTiming objects that correspond to targeted countries.
 
         Args:
-            locations_with_timing: List of all LocationWithTiming objects
+            locations_with_timing: list of all LocationWithTiming objects
 
         Returns:
-            List of LocationWithTiming objects that correspond to targeted countries
+            list of LocationWithTiming objects that correspond to targeted countries
 
         """
         return [
@@ -192,15 +192,15 @@ class GTIThreatActorToSTIXComposite(BaseMapper):
         ]
 
     def _get_source_locations_with_timing(
-        self, locations_with_timing: List[LocationWithTiming]
-    ) -> List[LocationWithTiming]:
+        self, locations_with_timing: list[LocationWithTiming]
+    ) -> list[LocationWithTiming]:
         """Get LocationWithTiming objects that correspond to source countries.
 
         Args:
-            locations_with_timing: List of all LocationWithTiming objects
+            locations_with_timing: list of all LocationWithTiming objects
 
         Returns:
-            List of LocationWithTiming objects that correspond to source countries
+            list of LocationWithTiming objects that correspond to source countries
 
         """
         return [

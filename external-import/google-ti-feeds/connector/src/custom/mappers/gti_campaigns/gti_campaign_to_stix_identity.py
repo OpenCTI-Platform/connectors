@@ -1,7 +1,7 @@
 """Converts GTI campaign data to STIX identity objects."""
 
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Optional
 
 from connector.src.custom.models.gti.gti_campaign_model import (
     GTICampaignData,
@@ -57,11 +57,11 @@ class GTICampaignToSTIXIdentity(BaseMapper):
         """
         return [item.identity for item in self.to_stix_with_timing()]
 
-    def to_stix_with_timing(self) -> List[IdentityWithTiming]:
+    def to_stix_with_timing(self) -> list[IdentityWithTiming]:
         """Convert the GTI campaign targeted industries to IdentityWithTiming objects.
 
         Returns:
-            List[IdentityWithTiming]: The list of IdentityWithTiming objects containing STIX Identity objects and timing metadata.
+            list[IdentityWithTiming]: The list of IdentityWithTiming objects containing STIX Identity objects and timing metadata.
 
         """
         if not hasattr(self.campaign, "attributes") or not self.campaign.attributes:
@@ -71,7 +71,7 @@ class GTICampaignToSTIXIdentity(BaseMapper):
         if not targeted_industries:
             return []
 
-        result: List[IdentityWithTiming] = []
+        result: list[IdentityWithTiming] = []
         processed_industries = set()  # Track to avoid duplicates
 
         for industry_data in targeted_industries:

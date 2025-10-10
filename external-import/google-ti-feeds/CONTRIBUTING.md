@@ -220,7 +220,7 @@ class GTI{EntityType}Data(BaseModel):
 
 class GTI{EntityType}Response(BaseModel):
     """Model representing a response containing GTI {entity_type} data."""
-    data: GTI{EntityType}Data | List[GTI{EntityType}Data]
+    data: GTI{EntityType}Data | list[GTI{EntityType}Data]
 ```
 
 #### Step 2: Create the Mapper Class

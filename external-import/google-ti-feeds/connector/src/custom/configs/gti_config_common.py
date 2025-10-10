@@ -47,7 +47,7 @@ def validate_origins_list(
     """Split and validate a comma-separated string into a list and validate its contents.
 
     Args:
-        v: List of values to validate
+        v: list of values to validate
         field_name: Name of the field for error messages
         allowed_origins: list of allowed values (defaults to ALLOWED_ORIGINS)
 
@@ -79,16 +79,16 @@ def validate_origins_list(
 
 
 def validate_report_types_list(
-    v: List[str], field_name: str = "report type"
-) -> List[str]:
+    v: list[str], field_name: str = "report type"
+) -> list[str]:
     """Validate a list of report types against allowed values.
 
     Args:
-        v: List of values to validate
+        v: list of values to validate
         field_name: Name of the field for error messages
 
     Returns:
-        List of validated report type strings
+        list of validated report type strings
 
     Raises:
         GTIConfigurationError: If validation fails

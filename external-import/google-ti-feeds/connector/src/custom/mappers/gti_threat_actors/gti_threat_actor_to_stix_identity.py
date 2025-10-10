@@ -1,7 +1,7 @@
 """Converts a GTI threat actor's targeted industries to STIX Identity objects as sectors."""
 
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Optional
 
 from connector.src.custom.models.gti.gti_threat_actor_model import (
     GTIThreatActorData,
@@ -57,14 +57,14 @@ class GTIThreatActorToSTIXIdentity(BaseMapper):
         """
         return [item.identity for item in self.to_stix_with_timing()]
 
-    def to_stix_with_timing(self) -> List[IdentityWithTiming]:
+    def to_stix_with_timing(self) -> list[IdentityWithTiming]:
         """Convert the GTI threat actor targeted industries to IdentityWithTiming objects.
 
         Returns:
-            List[IdentityWithTiming]: The list of IdentityWithTiming objects containing STIX Identity objects and timing metadata.
+            list[IdentityWithTiming]: The list of IdentityWithTiming objects containing STIX Identity objects and timing metadata.
 
         """
-        result: List[IdentityWithTiming] = []
+        result: list[IdentityWithTiming] = []
 
         if (
             not hasattr(self.threat_actor, "attributes")

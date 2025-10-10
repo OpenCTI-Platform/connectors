@@ -1,7 +1,7 @@
 """Converts GTI campaign location data to STIX location objects."""
 
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Optional
 
 from connector.src.custom.models.gti.gti_campaign_model import (
     GTICampaignData,
@@ -60,14 +60,14 @@ class GTICampaignToSTIXLocation(BaseMapper):
         """
         return [item.location for item in self.to_stix_with_timing()]
 
-    def to_stix_with_timing(self) -> List[LocationWithTiming]:
+    def to_stix_with_timing(self) -> list[LocationWithTiming]:
         """Convert the GTI campaign location data to LocationWithTiming objects.
 
         Returns:
-            List[LocationWithTiming]: The list of LocationWithTiming objects containing STIX Location objects and timing metadata.
+            list[LocationWithTiming]: The list of LocationWithTiming objects containing STIX Location objects and timing metadata.
 
         """
-        result: List[LocationWithTiming] = []
+        result: list[LocationWithTiming] = []
 
         if not hasattr(self.campaign, "attributes") or not self.campaign.attributes:
             return result

@@ -1,7 +1,7 @@
 """Converts a GTI threat actor's country regions to STIX Location objects."""
 
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Optional
 
 from connector.src.custom.models.gti.gti_threat_actor_model import (
     GTIThreatActorData,
@@ -60,14 +60,14 @@ class GTIThreatActorToSTIXLocation(BaseMapper):
         """
         return [item.location for item in self.to_stix_with_timing()]
 
-    def to_stix_with_timing(self) -> List[LocationWithTiming]:
+    def to_stix_with_timing(self) -> list[LocationWithTiming]:
         """Convert the GTI threat actor country regions to LocationWithTiming objects.
 
         Returns:
-            List[LocationWithTiming]: The list of LocationWithTiming objects containing STIX Location objects and timing metadata.
+            list[LocationWithTiming]: The list of LocationWithTiming objects containing STIX Location objects and timing metadata.
 
         """
-        result: List[LocationWithTiming] = []
+        result: list[LocationWithTiming] = []
 
         if (
             not hasattr(self.threat_actor, "attributes")
