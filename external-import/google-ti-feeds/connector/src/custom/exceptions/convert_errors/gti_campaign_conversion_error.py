@@ -1,7 +1,5 @@
 """Exception for errors when converting GTI campaigns to STIX format."""
 
-from typing import Optional
-
 from connector.src.custom.exceptions.convert_errors.gti_entity_conversion_error import (
     GTIEntityConversionError,
 )
@@ -13,8 +11,8 @@ class GTICampaignConversionError(GTIEntityConversionError):
     def __init__(
         self,
         message: str,
-        campaign_id: Optional[str] = None,
-        campaign_name: Optional[str] = None,
+        campaign_id: str | None = None,
+        campaign_name: str | None = None,
     ):
         """Initialize the exception.
 

@@ -1,7 +1,7 @@
 """The module contains the OctiRelationshipModel class, which represents an OpenCTI Relationship."""
 
 from datetime import datetime
-from typing import Any, List, Optional
+from typing import Any
 
 from connector.src.stix.v21.models.sros.relationship_model import RelationshipModel
 
@@ -15,10 +15,10 @@ class OctiRelationshipModel:
         source_ref: str,
         target_ref: str,
         organization_id: str,
-        marking_ids: List[str],
+        marking_ids: list[str],
         created: datetime,
         modified: datetime,
-        description: Optional[str] = None,
+        description: str | None = None,
         **kwargs: Any,
     ) -> RelationshipModel:
         """Create a Relationship model with OpenCTI custom properties.
@@ -28,7 +28,7 @@ class OctiRelationshipModel:
             source_ref: The ID of the source entity
             target_ref: The ID of the target entity
             organization_id: The ID of the organization that created this relationship
-            marking_ids: List of marking definition IDs to apply to the relationship
+            marking_ids: list of marking definition IDs to apply to the relationship
             created: When the relationship was created
             modified: When the relationship was last modified
             description: Description of the relationship
@@ -60,11 +60,11 @@ class OctiRelationshipModel:
         report_id: str,
         target_ref: str,
         organization_id: str,
-        marking_ids: List[str],
+        marking_ids: list[str],
         created: datetime,
         modified: datetime,
-        report_name: Optional[str] = None,
-        target_name: Optional[str] = None,
+        report_name: str | None = None,
+        target_name: str | None = None,
         **kwargs: Any,
     ) -> RelationshipModel:
         """Create a Relationship from a report to another entity.
@@ -74,7 +74,7 @@ class OctiRelationshipModel:
             report_id: The ID of the report
             target_ref: The ID of the target entity
             organization_id: The ID of the organization that created this relationship
-            marking_ids: List of marking definition IDs to apply to the relationship
+            marking_ids: list of marking definition IDs to apply to the relationship
             created: When the relationship was created
             modified: When the relationship was last modified
             report_name: The name of the report, for description purposes

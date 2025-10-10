@@ -5,7 +5,7 @@ work with any endpoint, response model, and exception handling configuration.
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Type
+from typing import Any
 
 from connector.src.utils.api_engine.api_client import ApiClient
 from connector.src.utils.fetchers.generic_fetcher import GenericFetcher
@@ -20,8 +20,8 @@ class GenericFetcherFactory:
     def __init__(
         self,
         api_client: ApiClient,
-        base_headers: Optional[Dict[str, str]] = None,
-        logger: Optional[logging.Logger] = None,
+        base_headers: dict[str, str] | None = None,
+        logger: logging.Logger | None = None,
     ):
         """Initialize the factory with common dependencies.
 
@@ -34,7 +34,7 @@ class GenericFetcherFactory:
         self.api_client = api_client
         self.base_headers = base_headers or {}
         self.logger = logger or logging.getLogger(__name__)
-        self._fetcher_registry: Dict[str, GenericFetcherConfig] = {}
+        self._fetcher_registry: dict[str, GenericFetcherConfig] = {}
 
     def register_config(self, name: str, config: GenericFetcherConfig) -> None:
         """Register a fetcher configuration with a name.
@@ -56,8 +56,8 @@ class GenericFetcherFactory:
     def create_fetcher(
         self,
         config: GenericFetcherConfig,
-        additional_headers: Optional[Dict[str, str]] = None,
-        base_url: Optional[str] = None,
+        additional_headers: dict[str, str] | None = None,
+        base_url: str | None = None,
     ) -> GenericFetcher:
         """Create a fetcher with the provided configuration.
 
@@ -86,8 +86,8 @@ class GenericFetcherFactory:
     def create_fetcher_by_name(
         self,
         name: str,
-        additional_headers: Optional[Dict[str, str]] = None,
-        base_url: Optional[str] = None,
+        additional_headers: dict[str, str] | None = None,
+        base_url: str | None = None,
     ) -> GenericFetcher:
         """Create a fetcher using a registered configuration.
 
@@ -118,11 +118,11 @@ class GenericFetcherFactory:
         entity_type: str,
         endpoint: str,
         display_name: str,
-        exception_class: Type[Exception],
-        response_model: Optional[Type[Any]] = None,
+        exception_class: type[Exception],
+        response_model: type[Any] | None = None,
         method: str = "GET",
-        additional_headers: Optional[Dict[str, str]] = None,
-        base_url: Optional[str] = None,
+        additional_headers: dict[str, str] | None = None,
+        base_url: str | None = None,
         **config_kwargs: Any,
     ) -> GenericFetcher:
         """Create a fetcher with a simple inline configuration.
@@ -154,35 +154,35 @@ class GenericFetcherFactory:
 
         return self.create_fetcher(config, additional_headers, base_url)
 
-    def get_registered_configs(self) -> Dict[str, GenericFetcherConfig]:
+    def get_registered_configs(self) -> dict[str, GenericFetcherConfig]:
         """Get all registered fetcher configurations.
 
         Returns:
-            Dictionary mapping configuration names to their configs
+            dictionary mapping configuration names to their configs
 
         """
         return self._fetcher_registry.copy()
 
-    def get_available_config_names(self) -> List[str]:
+    def get_available_config_names(self) -> list[str]:
         """Get list of available configuration names.
 
         Returns:
-            List of registered configuration names
+            list of registered configuration names
 
         """
         return list(self._fetcher_registry.keys())
 
     def create_multiple_fetchers(
-        self, config_names: List[str], base_url: Optional[str] = None
-    ) -> Dict[str, GenericFetcher]:
+        self, config_names: list[str], base_url: str | None = None
+    ) -> dict[str, GenericFetcher]:
         """Create multiple fetchers from registered configurations.
 
         Args:
-            config_names: List of configuration names to create fetchers for
+            config_names: list of configuration names to create fetchers for
             base_url: Optional base URL to prepend to all endpoints
 
         Returns:
-            Dictionary mapping configuration names to fetchers
+            dictionary mapping configuration names to fetchers
 
         Raises:
             ValueError: If any configuration name is not registered
@@ -194,15 +194,15 @@ class GenericFetcherFactory:
         return fetchers
 
     def create_all_registered_fetchers(
-        self, base_url: Optional[str] = None
-    ) -> Dict[str, GenericFetcher]:
+        self, base_url: str | None = None
+    ) -> dict[str, GenericFetcher]:
         """Create fetchers for all registered configurations.
 
         Args:
             base_url: Optional base URL to prepend to all endpoints
 
         Returns:
-            Dictionary mapping configuration names to fetchers
+            dictionary mapping configuration names to fetchers
 
         """
         return {

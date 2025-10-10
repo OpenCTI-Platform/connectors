@@ -4,7 +4,7 @@ import json
 import logging
 from datetime import timedelta
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 from pydantic import HttpUrl
@@ -20,9 +20,9 @@ class FakeWorkManager:
 
     def __init__(self) -> None:
         """Initialize the FakeWorkManager."""
-        self.updated_state: Dict[str, Any] = {}
+        self.updated_state: dict[str, Any] = {}
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """Get the current state of the FakeWorkManager."""
         return {}
 
@@ -626,7 +626,7 @@ def _then_orchestration_completed_successfully(
 # =====================
 
 
-def _load_debug_responses(debug_folder: Path) -> Dict[str, Any]:
+def _load_debug_responses(debug_folder: Path) -> dict[str, Any]:
     """Load all debug response files and return as dictionary."""
     response_types = [
         "main_reports",

@@ -1,6 +1,6 @@
 """The module defines the CourseOfActionModel class, which represents a course of action in STIX 2.1 format."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pycti  # type: ignore  # Missing library stubs
 from connector.src.stix.v21.models.cdts.external_reference_model import (
@@ -21,23 +21,23 @@ class CourseOfActionModel(BaseSDOModel):
     """Model representing a Course of Action in STIX 2.1 format."""
 
     name: str = Field(..., description="A name used to identify the Course of Action.")
-    description: Optional[str] = Field(
+    description: str | None = Field(
         default=None,
         description="Context for the Course of Action, possibly including intent and characteristics. May contain prose.",
     )
-    action_type: Optional[CourseOfActionTypeOV] = Field(
+    action_type: CourseOfActionTypeOV | None = Field(
         default=None,
         description="Open vocabulary describing the action type (e.g., textual:text/plain). Should use course-of-action-type-ov.",
     )
-    os_execution_envs: Optional[List[str]] = Field(
+    os_execution_envs: list[str] | None = Field(
         default=None,
         description="Recommended OS environments for execution. Preferably CPE v2.3 from NVD. Can include custom values.",
     )
-    action_bin: Optional[Base64Bytes] = Field(
+    action_bin: Base64Bytes | None = Field(
         default=None,
         description="Base64-encoded binary representing the Course of Action. MUST NOT be set with action_reference.",
     )
-    action_reference: Optional[ExternalReferenceModel] = Field(
+    action_reference: ExternalReferenceModel | None = Field(
         default=None,
         description="External reference to an action. MUST NOT be set if action_bin is present.",
     )
@@ -53,13 +53,13 @@ class CourseOfActionModel(BaseSDOModel):
 
     @model_validator(mode="before")
     @classmethod
-    def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+    def generate_id(cls, data: dict[str, Any]) -> dict[str, Any]:
         """Generate ID regardless of whether one is provided."""
         data["id"] = CourseOfActionModel._generate_id(data=data)
         return data
 
     @classmethod
-    def _generate_id(cls, data: Dict[str, Any]) -> Any:
+    def _generate_id(cls, data: dict[str, Any]) -> Any:
         """Generate ID regardless of whether one is provided."""
         if isinstance(data, dict) and "name" in data:
             x_mitre_id = data.get("custom_properties", {}).get("x_mitre_id", None)
