@@ -69,8 +69,11 @@ if [ ${#matching_directories[@]} -eq 1 ]; then
     
     # Ask for confirmation
     read -p "Is this the correct connector? (y/n) " ANSWER
+
+    # ✅ Bash 3.2–compatible lowercase conversion
+    ANSWER_LOWER=$(echo "$ANSWER" | tr '[:upper:]' '[:lower:]')
     
-    if [[ ! "${ANSWER,,}" =~ ^y ]]; then
+    if [[ ! "$ANSWER_LOWER" =~ ^y ]]; then
         echo "OK, then see you :)"
         exit 0
     fi

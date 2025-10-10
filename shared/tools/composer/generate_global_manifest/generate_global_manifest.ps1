@@ -1,10 +1,10 @@
-# PowerShell equivalent of generate_connectors_manifest.sh
+# PowerShell equivalent of generate_global_manifest.sh
 
 # Set error action preference to stop on error
 $ErrorActionPreference = "Stop"
 
-# Find generate_connectors_manifest.py
-$generate_manifest = Get-ChildItem -Path . -Recurse -Filter "generate_connectors_manifest.py" | Select-Object -First 1
+# Find generate_global_manifest.py
+$generate_manifest = Get-ChildItem -Path . -Recurse -Filter "generate_global_manifest.py" | Select-Object -First 1
 
 Write-Host "`nGenerating manifest file..."
 python "$($generate_manifest.FullName)"

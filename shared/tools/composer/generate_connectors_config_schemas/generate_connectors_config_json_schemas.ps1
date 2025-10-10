@@ -164,11 +164,11 @@ foreach ($connector_directory in $connector_directories) {
                         
                         if (Activate-Venv -ConnectorPath $ConnectorPath) {
                             # Generate connector JSON schema
-                            $generator = Get-ChildItem -Path . -Recurse -Filter "generate_connectors_config_json_schemas.py.sample" | 
+                            $generator = Get-ChildItem -Path . -Recurse -Filter "generate_connector_config_json_schema.py.sample" | 
                                 Select-Object -First 1
                             
                             if ($generator) {
-                                $tempScript = Join-Path $ConnectorPath "generate_connectors_config_json_schemas_tmp.py"
+                                $tempScript = Join-Path $ConnectorPath "generate_connector_config_json_schema_tmp.py"
                                 Copy-Item -Path $generator.FullName -Destination $tempScript
                                 & python $tempScript
                                 Remove-Item $tempScript -Force
