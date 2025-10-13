@@ -2,7 +2,6 @@
 
 from .error import (
     ConfigError,
-    ConfigNotFoundError,
     ConfigValidationError,
     DataRetrievalError,
     UseCaseError,
@@ -11,7 +10,6 @@ from .error import (
 __all__ = [
     "ConfigError",
     "ConfigValidationError",
-    "ConfigNotFoundError",
     "UseCaseError",
     "DataRetrievalError",
 ]

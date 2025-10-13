@@ -40,11 +40,3 @@ class ConfigValidationError(ConfigError):
     It can be used to indicate validation problems on the configuration that prevent
     the connector from starting or working correctly.
     """
-
-
-class ConfigNotFoundError(ConfigError):
-    """Base class for configuration not found-related errors.
-
-    This exception is raised when there is an issue with the configuration of the connector.
-    It can be used to indicate problems such as a configuration not found.
-    """
