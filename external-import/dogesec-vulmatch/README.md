@@ -126,7 +126,7 @@ The UUIDv5 logic uses
 
 This does mean some context is lost (i.e. not vulnerable CPEs, CPE Match information). However, this can be obtained in Vulmatch if needed.
 
-### What the final data will look like
+### How the data is structured in OpenCTI
 
 To help visualise what data is imported for each vulnerability using this connector, we have created the following diagram showing all objects, and the relationships that will be imported:
 
