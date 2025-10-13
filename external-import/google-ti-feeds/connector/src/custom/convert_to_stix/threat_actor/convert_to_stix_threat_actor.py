@@ -29,7 +29,15 @@ class ConvertToSTIXThreatActor(BaseConvertToSTIX):
 
         """
         try:
-            converter = self.converter_factory.create_converter_by_name("threat_actor")
+            additional_deps = {}
+            if hasattr(self.config, "enable_threat_actor_aliases"):
+                additional_deps["enable_threat_actor_aliases"] = (
+                    self.config.enable_threat_actor_aliases
+                )
+
+            converter = self.converter_factory.create_converter_by_name(
+                "threat_actor", additional_dependencies=additional_deps
+            )
             stix_entities = converter.convert_single(threat_actor_data)
 
             if not isinstance(stix_entities, list):
@@ -44,6 +52,46 @@ class ConvertToSTIXThreatActor(BaseConvertToSTIX):
         except Exception as e:
             self.logger.warning(
                 "Failed to convert threat actor to STIX",
+                {"prefix": LOG_PREFIX, "error": str(e)},
+            )
+            return []
+
+    def convert_threat_actor_malware_to_stix(
+        self, malware_family_data: Any
+    ) -> list[Any]:
+        """Convert threat actor related malware family to STIX objects.
+
+        Args:
+            malware_family_data: GTIMalwareFamilyData object from fetcher
+
+        Returns:
+            list of STIX entities (location, identity, malware)
+
+        """
+        try:
+            additional_deps = {}
+            if hasattr(self.config, "enable_malware_aliases"):
+                additional_deps["enable_malware_aliases"] = (
+                    self.config.enable_malware_aliases
+                )
+
+            converter = self.converter_factory.create_converter_by_name(
+                "threat_actor_malware_families", additional_dependencies=additional_deps
+            )
+            stix_entities = converter.convert_single(malware_family_data)
+
+            if not isinstance(stix_entities, list):
+                stix_entities = [stix_entities]
+
+            self.logger.debug(
+                "Converted threat actor malware family to STIX entities",
+                {"prefix": LOG_PREFIX, "entity_count": len(stix_entities)},
+            )
+            return stix_entities
+
+        except Exception as e:
+            self.logger.warning(
+                "Failed to convert threat actor malware family to STIX",
                 {"prefix": LOG_PREFIX, "error": str(e)},
             )
             return []
