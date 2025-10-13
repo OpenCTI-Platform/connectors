@@ -36,7 +36,7 @@ from pydantic_settings import (
 _MAIN_PATH = os.path.dirname(os.path.abspath(__main__.__file__))
 
 
-class _BaseConfigModel(BaseModel, ABC):
+class BaseConfigModel(BaseModel, ABC):
     """Base class for global config models
     To prevent attributes from being modified after initialization.
     """
@@ -44,7 +44,7 @@ class _BaseConfigModel(BaseModel, ABC):
     model_config = ConfigDict(extra="allow", frozen=True, validate_default=True)
 
 
-class _OpenCTIConfig(_BaseConfigModel):
+class _OpenCTIConfig(BaseConfigModel):
     url: HttpUrl = Field(
         description="The base URL of the OpenCTI instance.",
     )
@@ -53,7 +53,7 @@ class _OpenCTIConfig(_BaseConfigModel):
     )
 
 
-class BaseConnectorConfig(_BaseConfigModel, ABC):
+class _BaseConnectorConfig(BaseConfigModel, ABC):
     """Base class for connector configuration.
 
     Attributes:
@@ -62,7 +62,7 @@ class BaseConnectorConfig(_BaseConfigModel, ABC):
         scope (ListFromString): The scope of the connector, e.g. 'flashpoint
         duration_period (timedelta): The period of time to await between two runs of the connector.
         log_level (Literal): The minimum level of logs to display. Options are 'debug',
-            'info', 'warn', 'warning', 'error', 'critical'.
+            'info', 'warn', 'warning', 'error'.
     """
 
     id: str = Field(
@@ -77,7 +77,7 @@ class BaseConnectorConfig(_BaseConfigModel, ABC):
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector."
     )
-    log_level: Literal["debug", "info", "warn", "warning", "error", "critical"] = Field(
+    log_level: Literal["debug", "info", "warn", "warning", "error"] = Field(
         description="The minimum level of logs to display."
     )
 
@@ -118,7 +118,7 @@ class _SettingsLoader(BaseSettings):
         return (env_settings,)
 
 
-class BaseConnectorSettings(_BaseConfigModel, ABC):
+class BaseConnectorSettings(BaseConfigModel, ABC):
     """Interface class for managing and loading the global configuration for connectors.
 
     This class centralizes settings related to OpenCTI and the connector,
@@ -126,10 +126,10 @@ class BaseConnectorSettings(_BaseConfigModel, ABC):
 
     Attributes:
         opencti (_OpenCTIConfig): Configuration settings for connecting to OpenCTI.
-        connector (BaseConnectorConfig): Configuration settings specific to the connector.
+        connector (_BaseConnectorConfig): Configuration settings specific to the connector.
 
     Examples:
-        >>> class ConnectorSettings(BaseExternalImportConnectorSettings)
+        >>> class ConnectorSettings(BaseExternalImportConnectorConfig)
         ...     description: str = Field(
         ...         description="The description of the connector.",
         ...         default="POC Connector for demonstration purposes",
@@ -155,8 +155,8 @@ class BaseConnectorSettings(_BaseConfigModel, ABC):
         default_factory=_OpenCTIConfig,  # type: ignore[arg-type]
         description="OpenCTI configurations.",
     )
-    connector: BaseConnectorConfig = Field(
-        default_factory=BaseConnectorConfig,  # type: ignore[arg-type]
+    connector: _BaseConnectorConfig = Field(
+        default_factory=_BaseConnectorConfig,  # type: ignore[arg-type]
         description="Connector configurations.",
     )
 
@@ -187,7 +187,7 @@ class BaseConnectorSettings(_BaseConfigModel, ABC):
         return self.model_dump(mode="json", context={"mode": "pycti"})
 
 
-class BaseExternalImportConnectorSettings(BaseConnectorConfig):
+class BaseExternalImportConnectorConfig(_BaseConnectorConfig):
     """Settings class for external import connectors.
 
     Attributes:
@@ -196,14 +196,14 @@ class BaseExternalImportConnectorSettings(BaseConnectorConfig):
         scope (ListFromString): The scope of the connector, e.g. 'flashpoint'.
         duration_period (timedelta): The period of time to await between two runs of the connector.
         log_level (Literal): The minimum level of logs to display. Options are 'debug',
-            'info', 'warn', 'warning', 'error', 'critical'.
+            'info', 'warn', 'warning', 'error'.
         type (str): The type of the connector, set to "EXTERNAL_IMPORT" for external import connectors.
     """
 
-    type: str = "EXTERNAL_IMPORT"
+    type: Literal["EXTERNAL_IMPORT"] = "EXTERNAL_IMPORT"
 
 
-class BaseInternalEnrichmentsConnectorSettings(BaseConnectorConfig):
+class BaseInternalEnrichmentConnectorConfig(_BaseConnectorConfig):
     """Settings class for internal enrichment connectors.
 
     Attributes:
@@ -212,14 +212,14 @@ class BaseInternalEnrichmentsConnectorSettings(BaseConnectorConfig):
         scope (ListFromString): The scope of the connector, e.g. 'flashpoint'.
         duration_period (timedelta): The period of time to await between two runs of the connector.
         log_level (Literal): The minimum level of logs to display. Options are 'debug',
-            'info', 'warn', 'warning', 'error', 'critical'.
+            'info', 'warn', 'warning', 'error'.
         type (str): The type of the connector, set to "INTERNAL_ENRICHMENT" for internal enrichment connectors.
     """
 
-    type: str = "INTERNAL_ENRICHMENT"
+    type: Literal["INTERNAL_ENRICHMENT"] = "INTERNAL_ENRICHMENT"
 
 
-class BaseStreamConnectorSettings(BaseConnectorConfig):
+class BaseStreamConnectorConfig(_BaseConnectorConfig):
     """Settings class for stream connectors.
 
     Attributes:
@@ -228,8 +228,8 @@ class BaseStreamConnectorSettings(BaseConnectorConfig):
         scope (ListFromString): The scope of the connector, e.g. 'flashpoint'.
         duration_period (timedelta): The period of time to await between two runs of the connector.
         log_level (Literal): The minimum level of logs to display. Options are 'debug',
-            'info', 'warn', 'warning', 'error', 'critical'.
+            'info', 'warn', 'warning', 'error'.
         type (str): The type of the connector, set to "STREAM" for stream connectors
     """
 
-    type: str = "STREAM"
+    type: Literal["STREAM"] = "STREAM"
