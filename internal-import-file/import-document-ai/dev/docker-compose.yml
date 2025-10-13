@@ -139,9 +139,9 @@ services:
       - CONNECTOR_VALIDATE_BEFORE_IMPORT=true # Validate any bundle before import
       - CONNECTOR_SCOPE=application/pdf,text/plain,text/html,text/markdown
       - CONNECTOR_AUTO=false # Enable/disable auto-import of file
-      - CONNECTOR_WEB_SERVICE_URL=http://webservice:80
       - CONNECTOR_LOG_LEVEL=debug
-      - CONNECTOR_LICENCE_KEY_PEM=${CONNECTOR_LICENCE_KEY_PEM}
+      - IMPORT_DOCUMENT_AI_API_BASE_URL=http://webservice:80
+      - IMPORT_DOCUMENT_AI_API_KEY=${IMPORT_DOCUMENT_AI_API_KEY}
       - IMPORT_DOCUMENT_INCLUDE_RELATIONSHIPS=true
     depends_on:
       - opencti
@@ -150,21 +150,21 @@ services:
       - dev-opencti
     restart: unless-stopped
 
-  # is it really needed ?
-  connector-import-file-stix:
-    image: opencti/connector-import-file-stix:6.8.4
-    environment:
-      - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
-      - CONNECTOR_ID=430a1606-f9d9-47f9-8f1d-939e7c1ab76d
-      - CONNECTOR_NAME=ImportFileStix
-      - CONNECTOR_VALIDATE_BEFORE_IMPORT=true # Validate any bundle before import
-      - CONNECTOR_SCOPE=application/json,application/xml
-      - CONNECTOR_AUTO=false # Enable/disable auto-import of file
-      - CONNECTOR_LOG_LEVEL=debug
-    restart: unless-stopped
-    networks:
-      - dev-opencti
+  # # This is needed for workbench feature eventually
+  # connector-import-file-stix:
+  #   image: opencti/connector-import-file-stix:6.8.4
+  #   environment:
+  #     - OPENCTI_URL=http://opencti:8080
+  #     - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+  #     - CONNECTOR_ID=430a1606-f9d9-47f9-8f1d-939e7c1ab76d
+  #     - CONNECTOR_NAME=ImportFileStix
+  #     - CONNECTOR_VALIDATE_BEFORE_IMPORT=true # Validate any bundle before import
+  #     - CONNECTOR_SCOPE=application/json,application/xml
+  #     - CONNECTOR_AUTO=false # Enable/disable auto-import of file
+  #     - CONNECTOR_LOG_LEVEL=debug
+  #   restart: unless-stopped
+  #   networks:
+  #     - dev-opencti
 
 
 networks:
