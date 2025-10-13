@@ -1,0 +1,9 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+# Options available
+# ft3:
+  # interval: 7 # In days - default: 7
+  # tactics_url: 'https://raw.githubusercontent.com/stripe/ft3/refs/heads/master/FT3_Tactics.json' # Optional - custom URL for tactics
+  # techniques_url: 'https://raw.githubusercontent.com/stripe/ft3/refs/heads/master/FT3_Techniques.json' # Optional - custom URL for techniques
