@@ -209,3 +209,19 @@ async def extract_entities_relations(file: UploadFile):
         content = json.load(f)
     logger.warning(f"Received file: {file.filename}")
     return JSONResponse(status_code=200, content=content)
+
+
+@app.post("/stix", status_code=200)
+async def extract_stix(file: UploadFile):
+    """Fake endpoint to extract stix objects.
+
+    Args:
+        file (UploadFile): The file to process.
+
+    Returns:
+        JSONResponse: A response indicating the status of the operation.
+    """
+    with open(Path(__file__).parent / "responses" / "response_stix_200.json") as f:
+        content = json.load(f)
+    logger.warning(f"Received file: {file.filename}")
+    return JSONResponse(status_code=200, content=content)
