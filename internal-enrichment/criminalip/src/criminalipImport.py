@@ -60,7 +60,6 @@ class CriminalIPConnector:
             return None
     
     def _convert_score_to_confidence(self, score_str: str) -> int:
-        # score -> confidence
         score_map = {
             "Critical": 95,
             "Dangerous": 85,
@@ -70,10 +69,8 @@ class CriminalIPConnector:
         }
         return score_map.get(score_str, 0)
     
-    # IP 데이터 보강을 위한 함수
     def _to_stix_objects_for_ip(self, ip_data: Dict[str, Any], malicious_info_data: Dict[str, Any] = None) -> List[Any]:
         
-        # 로그 확인용 코드
         self.helper.log_info("--- RUNNING LATEST CODE VERSION ---")
         
         try:
@@ -109,7 +106,6 @@ class CriminalIPConnector:
             if category.get("type"):
                 labels.append(category.get("type").upper())
 
-        # malicious-info API 응답을 라벨로 추가
         if malicious_info_data:
             if malicious_info_data.get("is_malicious"):
                 labels.append("Malicious")
@@ -198,7 +194,6 @@ class CriminalIPConnector:
                 
         return objects
     
-    # Domain 데이터 보강을 위한 함수
     def _to_stix_objects_for_domain(self, domain_name_value: str, domain_data: Dict[str, Any]) -> List[Any]:
         """Convert Criminal IP API response for Domain to a list of STIX objects"""
         try:
@@ -247,7 +242,6 @@ class CriminalIPConnector:
             )
             objects.append(indicator)
 
-        # 관련된 IP 주소와 관계 생성
         related_ips = domain_data.get("connected_ip", [])
         for ip_info in related_ips:
             ip_value = ip_info.get("ip")
@@ -255,7 +249,6 @@ class CriminalIPConnector:
                 ip_stix = IPv4Address(value=ip_value)
                 objects.append(ip_stix)
                 
-                # 관계: domain-name이 ipv4-addr로 확인됨
                 resolves_to_rel = Relationship(
                     domain_stix,
                     'resolves-to',
@@ -264,13 +257,11 @@ class CriminalIPConnector:
                 )
                 objects.append(resolves_to_rel)
 
-        # 국가 등록
         countries = summary.get("list_of_countries", [])
         for country_code in countries:
             loc_stix = Location(country=country_code.upper(), allow_custom=True)
             objects.append(loc_stix)
 
-             # 관계: domain-name이 location과 관련됨
             related_to_rel = Relationship(
                 domain_stix.id,
                 'related-to',
@@ -298,40 +289,35 @@ class CriminalIPConnector:
         if observable_type == "IPv4-Addr":
             self.helper.log_info(f"Processing IP: {observable_value}")
             
-            # 기본 종합 정보 API 호출
             ip_report_endpoint = "/v1/asset/ip/report"
             params = {"ip": observable_value}
             ip_data = self._call_api(ip_report_endpoint, params)
             
-            # 악성 특징 정보 API 추가 호출
             malicious_info_endpoint = "/v1/feature/ip/malicious-info"
             malicious_data = self._call_api(malicious_info_endpoint, params)
             
             if ip_data:
                 stix_objects = self._to_stix_objects_for_ip(ip_data, malicious_data)
 
-        # Observable 타입이 도메인일 경우
         elif observable_type == "Domain-Name":
             scan_id = -1
             self.helper.log_info(f"Processing Domain: {observable_value}")
-            # 최근 1주일 내의 도메인 리포트 확인
             reports_endpoint = "/v1/domain/reports"
             reports_data = self._call_api(reports_endpoint, {"query": observable_value, "offset": 0})
             reports = reports_data.get("data")
-            if reports and len(reports) > 0: # Reports가 존재하면??
+            if reports and len(reports) > 0: 
                 report_time_str = reports.get("reports", [])[0].get("reg_dtime")
                 report_time = datetime.strptime(report_time_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
                 one_week_ago = datetime.now(timezone.utc) - timedelta(days=7)
 
                 if report_time >= one_week_ago:
                     scan_id = reports.get("reports", [])[0].get("scan_id")
-                else: # report가 1주일보다 이전
+                else: 
                     endpoint = f"/v1/domain/scan"
                     domain_data = {"query": observable_value}
                     scan_id_data = self._call_api_post(endpoint, domain_data)
                     scan_id = scan_id_data.get("data").get("scan_id")
 
-                    # 스캔 끝났는지 확인
                     flag = True
                     while flag:
                         endpoint = f"/v1/domain/status/{scan_id}"
@@ -344,14 +330,12 @@ class CriminalIPConnector:
                                 flag = False
                                 break
                         
-                        time.sleep(3) # 요청이 계속 가지 않도록 3초씩 텀 주기
+                        time.sleep(3) 
             
-            # scan_id 찾으면
             if scan_id:
                 endpoint = f"/v2/domain/report/{scan_id}"
-                domain_data = self._call_api(endpoint) # 이 API는 파라미터 없음
+                domain_data = self._call_api(endpoint) 
                 if domain_data:
-                    # 도메인 처리 전용 함수 호출
                     stix_objects = self._to_stix_objects_for_domain(observable_value, domain_data.get("data"))
         
         else:
@@ -370,7 +354,6 @@ class CriminalIPConnector:
         return "Success"
     
     def start(self):
-       # 커넥터 시작
         self.helper.listen(self._process_message)
 
 if __name__ == "__main__":
