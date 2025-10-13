@@ -176,6 +176,12 @@ class S3Connector:
                 if target_ref in id_mapping:
                     obj["target_ref"] = id_mapping[target_ref]
 
+            # rewrite note object_refs stix_id
+            if obj_type == "note":
+                for i, ref in enumerate(obj["object_refs"]):
+                    if ref in id_mapping:
+                        obj["object_refs"][i] = id_mapping[ref]
+
             elif obj_type in (
                 "infrastructure",
                 "identity",
@@ -215,12 +221,27 @@ class S3Connector:
                 obj["object_marking_refs"] = [self.s3_marking["id"]]
 
             if "x_severity" in obj:
-                if obj["x_severity"] == "high":
-                    obj["x_opencti_score"] = 90
-                elif obj["x_severity"] == "medium":
-                    obj["x_opencti_score"] = 60
-                elif obj["x_severity"] == "low":
-                    obj["x_opencti_score"] = 30
+                # handle mapping of "x_severity" on Vulnerability object
+                if obj["type"] == "vulnerability":
+                    if obj["x_severity"] == 1:
+                        obj["x_opencti_score"] = 20
+                    elif obj["x_severity"] == 2:
+                        obj["x_opencti_score"] = 40
+                    elif obj["x_severity"] == 3:
+                        obj["x_opencti_score"] = 60
+                    elif obj["x_severity"] == 4:
+                        obj["x_opencti_score"] = 80
+                    elif obj["x_severity"] == 5:
+                        obj["x_opencti_score"] = 100
+
+                # handle mapping of "x_severity" on other objects (ex: Indicator)
+                else:
+                    if obj["x_severity"] == "high":
+                        obj["x_opencti_score"] = 90
+                    elif obj["x_severity"] == "medium":
+                        obj["x_opencti_score"] = 60
+                    elif obj["x_severity"] == "low":
+                        obj["x_opencti_score"] = 30
 
             # Aliases
             if "x_alias" in obj:
@@ -260,12 +281,35 @@ class S3Connector:
             if "x_description" in obj:
                 obj["x_opencti_description"] = obj["x_description"]
 
-            # Note
-            if "x_title" in obj and "x_analysis" in obj:
+            # Title Note
+            if obj.get("x_title", None) and obj.get("x_acti_uuid", None):
+                # generate a unique note identifier that don't change in the time even of the obj_name change or x_title change
+                note_key = obj.get("x_acti_uuid") + " - Title"
+                note_abstract = obj.get("name") + " - Title"
                 note = stix2.Note(
-                    id=Note.generate_id(obj["created"], obj["x_analysis"]),
+                    id=Note.generate_id(obj["created"], note_key),
                     created=obj["created"],
-                    abstract=obj["x_title"],
+                    abstract=note_abstract,
+                    content=obj.get("x_title"),
+                    object_refs=[obj["id"]],
+                    object_marking_refs=[self.s3_marking["id"]],
+                    created_by_ref=(
+                        self.identity["standard_id"]
+                        if self.identity is not None
+                        else None
+                    ),
+                )
+                new_bundle_objects.append(note)
+
+            # Analysis Note
+            if obj.get("x_analysis", None) and obj.get("x_acti_uuid", None):
+                # generate a unique note identifier that don't change in the time even of the obj_name change or x_analysis change
+                note_key = obj.get("x_acti_uuid") + " - Analysis"
+                note_abstract = obj.get("name") + " - Analysis"
+                note = stix2.Note(
+                    id=Note.generate_id(obj["created"], note_key),
+                    created=obj["created"],
+                    abstract=note_abstract,
                     content=obj["x_analysis"],
                     object_refs=[obj["id"]],
                     object_marking_refs=[self.s3_marking["id"]],
@@ -278,14 +322,15 @@ class S3Connector:
                 new_bundle_objects.append(note)
 
             # History Note
-            if "x_history" in obj and obj["x_history"]:
+            if obj.get("x_history", None) and obj.get("x_acti_uuid", None):
                 note_content = "| Timestamp | Comment |\n|---------|---------|\n"
                 for history in obj.get("x_history"):
                     note_content += f"| {history.get('timestamp', '')} | {history.get('comment', '')} |\n"
 
+                note_key = obj.get("x_acti_uuid") + " - History"
                 abstract = obj.get("name") + " - History"
                 note = stix2.Note(
-                    id=Note.generate_id(obj["created"], abstract),
+                    id=Note.generate_id(obj["created"], note_key),
                     created=obj["created"],
                     abstract=abstract,
                     content=note_content,
