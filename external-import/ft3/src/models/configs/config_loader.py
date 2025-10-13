@@ -22,7 +22,7 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
     """A concrete implementation of _ConfigLoaderConnector defining default connector configuration values."""
 
     id: str = Field(
-        default="ft3--" + "a8c4f3b2-7d9e-4a61-9f8c-3e5b2c1a0d7e",
+        default="ft3--60685ef9-01eb-4b5e-845c-d2a552f08428",
         description="A unique UUIDv4 identifier for this connector instance.",
     )
     name: str = Field(

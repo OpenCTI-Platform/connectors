@@ -8,8 +8,8 @@
     "Open Source Threat Intel",
     "Fraud Prevention"
   ],
-  "verified": false,
-  "last_verified_date": "",
+  "verified": true,
+  "last_verified_date": "2025-10-13",
   "playbook_supported": false,
   "max_confidence_level": 50,
   "support_version": ">= 6.7.0",
