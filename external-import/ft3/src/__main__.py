@@ -7,10 +7,10 @@ import uuid
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
-from pycti import AttackPattern, Identity, OpenCTIConnectorHelper
-from pycti.utils.opencti_stix2_identifier import kill_chain_phase_generate_id
 from src import ConfigLoader
 from stix2.canonicalization.Canonicalize import canonicalize
+
+from pycti import AttackPattern, Identity, OpenCTIConnectorHelper
 
 FT3_TACTICS_URL = (
     "https://raw.githubusercontent.com/stripe/ft3/refs/heads/master/FT3_Tactics.json"
