@@ -30,6 +30,7 @@ services:
       - MICROSOFT_SENTINEL_INCIDENTS_RESOURCE_GROUP=ChangeMe # Sentinel Resource Group
       - MICROSOFT_SENTINEL_INCIDENTS_WORKSPACE_ID=ChangeMe # Sentinel Workspace ID
       - MICROSOFT_SENTINEL_INCIDENTS_IMPORT_START_DATE=2025-01-01T00:00:00Z
+      - MICROSOFT_SENTINEL_INCIDENTS_FILTER_LABELS=ChangeMe,OrDeleteMe # Comma separated list of labels to import
       # Add proxy parameters below if needed
       # - HTTP_PROXY=CHANGEME
       # - HTTPS_PROXY=CHANGEME
