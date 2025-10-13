@@ -1,4 +1,4 @@
-# PowerShell script to generate config JSON schemas for a single targeted connector
+# PowerShell script to generate config JSON schema for a single targeted connector
 # This is the singular version of generate_connectors_config_json_schemas.ps1
 
 # Set error action preference to stop on error
@@ -292,17 +292,17 @@ if ($requirements_file) {
                 
                 # Generate connector JSON schema
                 # Find the generator script from the original location
-                $generator = Get-ChildItem -Path $originalDir -Recurse -Filter "generate_connectors_config_json_schemas.py.sample" | 
+                $generator = Get-ChildItem -Path $originalDir -Recurse -Filter "generate_connector_config_json_schema.py.sample" | 
                     Select-Object -First 1
                 
                 if ($generator) {
-                    $tempScript = "generate_connectors_config_json_schemas_tmp.py"
+                    $tempScript = "generate_connector_config_json_schema_tmp.py"
                     Copy-Item -Path $generator.FullName -Destination $tempScript
                     & python $tempScript
                     Remove-Item $tempScript -Force
                     Write-Host "✅ JSON schema generated successfully" -ForegroundColor Green
                 } else {
-                    Write-Host "❌ Could not find generate_connectors_config_json_schemas.py.sample" -ForegroundColor Red
+                    Write-Host "❌ Could not find generate_connector_config_json_schema.py.sample" -ForegroundColor Red
                 }
                 
                 Write-Host "> Generating configurations table..." -ForegroundColor Cyan

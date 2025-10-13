@@ -1,7 +1,7 @@
 """
 This script is used for generating a JSON schema model purpose.
 Make sure to define or import ConfigLoader and ensure it is compatible (e.g., a Pydantic model).
-The code assumes that the __infos__ directory exists and contains the necessary JSON files.
+The code assumes that the __metadata__ directory exists and contains the necessary JSON files.
 All methods are documented for clarity and maintainability.
 The print statement in create_connector_config_json_schema provides positive feedback when the contract is generated.
 The connector configuration MUST use `pydantic` or `pydantic-settings` Python libraries.
