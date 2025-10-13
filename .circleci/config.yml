@@ -79,11 +79,11 @@ jobs:
       - run:
           name: Build Connectors Schemas for XTM composer and Update Config Documentation
           command: |
-            bash ./shared/tools/composer/generate_connectors_config_json_schemas.sh
+            bash ./shared/tools/composer/generate_connectors_config_schemas/generate_connectors_config_json_schemas.sh
       - run:
           name: Build Manifest for XTM composer
           command: |
-            bash ./shared/tools/composer/generate_connectors_manifest.sh
+            bash ./shared/tools/composer/generate_global_manifest/generate_global_manifest.sh
       - run:
           name: Commit Manifest if changed
           command: |
