@@ -1,0 +1,4 @@
+requests
+PyYAML
+stix2
+pycti
