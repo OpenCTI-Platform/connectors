@@ -3,8 +3,8 @@
 
 import traceback
 
-from pycti import OpenCTIConnectorHelper
 from import_doc_ai import ConfigConnector, Connector
+from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
     try:
