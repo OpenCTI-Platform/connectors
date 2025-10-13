@@ -12,7 +12,7 @@ import pycti
 import stix2
 import stix2.exceptions
 import stix2.properties
-from pycti import get_config_variable
+from pycti import StixCoreRelationship, get_config_variable
 from stix2.registry import STIX2_OBJ_MAPS
 
 logger = getLogger(__name__)
@@ -917,6 +917,9 @@ def relate_to(
             if source_id != target_id:
                 relationships.append(
                     stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "related-to", source_id, target_id
+                        ),
                         source_ref=source_id,
                         target_ref=target_id,
                         relationship_type="related-to",
