@@ -1,0 +1,9 @@
+services:
+  connector-sparta:
+    build: .
+    environment:
+      - OPENCTI_URL=http://localhost:8080
+      - OPENCTI_TOKEN=192aa124-3d46-44df-9f80-b9f56c417221
+#      - SPARTA_REMOVE_STATEMENT_MARKING=true
+#      - SPARTA_INTERVAL=7 # In days
+#    restart: always
