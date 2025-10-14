@@ -50,11 +50,11 @@ def test_fail_config() -> None:
         ConnectorSettings()
 
     errors = exc_info.value.args[1].errors()
-
+    assert len(errors) == 2
     assert errors[0]["msg"] == "Field required"
     assert errors[0]["type"] == "missing"
-    assert errors[0]["loc"] == ("opencti",)
+    assert errors[0]["loc"] == ("url",)
 
     assert errors[1]["msg"] == "Field required"
     assert errors[1]["type"] == "missing"
-    assert errors[1]["loc"] == ("connector",)
+    assert errors[1]["loc"] == ("token",)
