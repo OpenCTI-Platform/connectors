@@ -37,6 +37,7 @@ services:
       - MISP_IMPORT_KEYWORD= # Optional, search only events based on a keyword
       - MISP_IMPORT_DISTRIBUTION_LEVELS= # Optional, only import events with the given distribution levels (ex: 0,1,2,3)
       - MISP_IMPORT_THREAT_LEVELS= # Optional only import events with the given threat levels (ex: 1,2,3,4)
+      - MISP_THREAT_LEVEL_SCORE_MAPPING= # Optional, mapping of MISP threat level to score (ex: 1:90;2:60;3:30;4:50)
       - MISP_IMPORT_ONLY_PUBLISHED=false
       - MISP_IMPORT_WITH_ATTACHMENTS=false # Optional, try to import a PDF file from the attachment attribute
       - MISP_IMPORT_TO_IDS_NO_SCORE=40 # Optional, use as a score for the indicator/observable if the attribute to_ids is no

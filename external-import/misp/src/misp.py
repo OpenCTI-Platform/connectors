@@ -46,6 +46,7 @@ class Misp:
                 if self.config.misp.guess_threats_from_tags
                 else None
             ),
+            threat_level_score_mapping=self.config.misp.threat_level_score_mapping,
         )
 
     def process_event(self, event: EventRestSearchListItem):
