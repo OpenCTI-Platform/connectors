@@ -3,7 +3,7 @@ import hmac
 import json
 import logging
 from json import JSONDecodeError
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urljoin
 
 import requests
@@ -149,7 +149,7 @@ class ShadowserverAPI:
         limit: int = LIMIT,
         incident: dict = {},
         labels: List[str] = ["Shadowserver"],
-    ) -> Optional[Dict]:
+    ) -> list[Any]:
         """
         Retrieves a STIX report based on the specified report parameters.
 
@@ -160,7 +160,7 @@ class ShadowserverAPI:
             labels (list, optional): Labels to apply to the STIX objects. Defaults to ['Shadowserver'].
 
         Returns:
-            dict or None: The retrieved STIX report in dictionary format, or None if an error occurred.
+            list: A list of STIX objects.
         """
         if not report.get("id") or not report.get("report"):
             raise ValueError(f"Invalid report: {report}")
@@ -184,4 +184,4 @@ class ShadowserverAPI:
             )
             return stix_transformation.get_stix_objects()
         else:
-            return None
+            return []
