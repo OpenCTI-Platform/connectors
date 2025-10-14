@@ -74,9 +74,11 @@
       "default": "red",
       "description": "Default Traffic Light Protocol (TLP) marking for imported data.",
       "enum": [
+        "clear",
         "white",
         "green",
         "amber",
+        "amber+strict",
         "red"
       ],
       "type": "string"
