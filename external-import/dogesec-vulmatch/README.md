@@ -7,7 +7,7 @@
 Vulmatch is a web application that turns CVEs into STIX objects.
 
 ![](media/vulmatch-cve-list.png)
-![](media/vulmatch-graph.png)
+![](media/vulmatch-cve-graph.png)
 
 [vulmatch.com](https://www.vulmatch.com/).
 
