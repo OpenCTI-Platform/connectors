@@ -18,3 +18,4 @@ black
 .env
 .pytest_cache
 external-import/loaderinsightagency
+.devcontainer
