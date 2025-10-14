@@ -14,17 +14,20 @@
     },
     "CONNECTOR_NAME": {
       "default": "Email Intel IMAP",
+      "description": "The name of the connector.",
       "type": "string"
     },
     "CONNECTOR_TYPE": {
       "const": "EXTERNAL_IMPORT",
       "default": "EXTERNAL_IMPORT",
+      "description": "The type of the connector.",
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
       "default": [
         "email-intel-imap"
       ],
+      "description": "The scope of the connector.",
       "items": {
         "type": "string"
       },
@@ -32,6 +35,7 @@
     },
     "CONNECTOR_DURATION_PERIOD": {
       "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector.",
       "format": "duration",
       "type": "string"
     },
@@ -47,6 +51,7 @@
     },
     "EMAIL_INTEL_IMAP_TLP_LEVEL": {
       "default": "amber+strict",
+      "description": "Traffic Light Protocol (TLP) level to apply on objects imported into OpenCTI.",
       "enum": [
         "white",
         "clear",
@@ -59,34 +64,40 @@
     },
     "EMAIL_INTEL_IMAP_RELATIVE_IMPORT_START_DATE": {
       "default": "P30D",
+      "description": "The relative start date to import emails in ISO 8601 duration format (e.g. P30D for 30 days).",
       "format": "duration",
       "type": "string"
     },
     "EMAIL_INTEL_IMAP_HOST": {
+      "description": "IMAP server hostname or IP address",
       "type": "string"
     },
     "EMAIL_INTEL_IMAP_PORT": {
       "default": 993,
+      "description": "IMAP server port number",
       "type": "integer"
     },
     "EMAIL_INTEL_IMAP_USERNAME": {
+      "description": "Username to authenticate to the IMAP server. Either `password` or `google_token_json` must be set as well.",
       "type": "string"
     },
     "EMAIL_INTEL_IMAP_PASSWORD": {
       "default": null,
+      "description": "Password to authenticate to the IMAP server. Either `password` or `google_token_json` must be set.",
       "format": "password",
       "type": "string",
       "writeOnly": true
     },
     "EMAIL_INTEL_IMAP_GOOGLE_TOKEN_JSON": {
       "default": null,
-      "description": "Content of the token.json file from Google API",
+      "description": "Content of the token.json file from Google API. Either `password` or `google_token_json` must be set.",
       "format": "password",
       "type": "string",
       "writeOnly": true
     },
     "EMAIL_INTEL_IMAP_MAILBOX": {
       "default": "INBOX",
+      "description": "The mailbox to monitor (e.g., INBOX)",
       "type": "string"
     },
     "EMAIL_INTEL_IMAP_ATTACHMENTS_MIME_TYPES": {
@@ -95,6 +106,7 @@
         "text/csv",
         "text/plain"
       ],
+      "description": "List of attachment MIME types to process (comma-separated)",
       "items": {
         "type": "string"
       },
