@@ -1,5 +1,5 @@
-pycti==6.8.4
-feedly-client==0.26
+pycti==6.8.5
+feedly-client==0.27
 schedule==1.2.2
 Markdown==3.9
 pydantic>=2.10, <3

@@ -743,7 +743,7 @@
       "support_version": ">= 6.5.1",
       "subscription_link": "",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/email-intel-imap",
-      "manager_supported": false,
+      "manager_supported": true,
       "container_version": "rolling",
       "container_image": "opencti/connector-email-intel-imap",
       "container_type": "EXTERNAL_IMPORT",
@@ -763,17 +763,20 @@
           },
           "CONNECTOR_NAME": {
             "default": "Email Intel IMAP",
+            "description": "The name of the connector.",
             "type": "string"
           },
           "CONNECTOR_TYPE": {
             "const": "EXTERNAL_IMPORT",
             "default": "EXTERNAL_IMPORT",
+            "description": "The type of the connector.",
             "type": "string"
           },
           "CONNECTOR_SCOPE": {
             "default": [
               "email-intel-imap"
             ],
+            "description": "The scope of the connector.",
             "items": {
               "type": "string"
             },
@@ -781,6 +784,7 @@
           },
           "CONNECTOR_DURATION_PERIOD": {
             "default": "PT1H",
+            "description": "The period of time to await between two runs of the connector.",
             "format": "duration",
             "type": "string"
           },
@@ -796,6 +800,7 @@
           },
           "EMAIL_INTEL_IMAP_TLP_LEVEL": {
             "default": "amber+strict",
+            "description": "Traffic Light Protocol (TLP) level to apply on objects imported into OpenCTI.",
             "enum": [
               "white",
               "clear",
@@ -808,34 +813,40 @@
           },
           "EMAIL_INTEL_IMAP_RELATIVE_IMPORT_START_DATE": {
             "default": "P30D",
+            "description": "The relative start date to import emails in ISO 8601 duration format (e.g. P30D for 30 days).",
             "format": "duration",
             "type": "string"
           },
           "EMAIL_INTEL_IMAP_HOST": {
+            "description": "IMAP server hostname or IP address",
             "type": "string"
           },
           "EMAIL_INTEL_IMAP_PORT": {
             "default": 993,
+            "description": "IMAP server port number",
             "type": "integer"
           },
           "EMAIL_INTEL_IMAP_USERNAME": {
+            "description": "Username to authenticate to the IMAP server. Either `password` or `google_token_json` must be set as well.",
             "type": "string"
           },
           "EMAIL_INTEL_IMAP_PASSWORD": {
             "default": null,
+            "description": "Password to authenticate to the IMAP server. Either `password` or `google_token_json` must be set.",
             "format": "password",
             "type": "string",
             "writeOnly": true
           },
           "EMAIL_INTEL_IMAP_GOOGLE_TOKEN_JSON": {
             "default": null,
-            "description": "Content of the token.json file from Google API",
+            "description": "Content of the token.json file from Google API. Either `password` or `google_token_json` must be set.",
             "format": "password",
             "type": "string",
             "writeOnly": true
           },
           "EMAIL_INTEL_IMAP_MAILBOX": {
             "default": "INBOX",
+            "description": "The mailbox to monitor (e.g., INBOX)",
             "type": "string"
           },
           "EMAIL_INTEL_IMAP_ATTACHMENTS_MIME_TYPES": {
@@ -844,6 +855,7 @@
               "text/csv",
               "text/plain"
             ],
+            "description": "List of attachment MIME types to process (comma-separated)",
             "items": {
               "type": "string"
             },
@@ -1252,14 +1264,89 @@
       "verified": true,
       "last_verified_date": "2025-10-13",
       "playbook_supported": false,
-      "max_confidence_level": 50,
+      "max_confidence_level": 75,
       "support_version": ">= 6.7.0",
       "subscription_link": "https://github.com/stripe/ft3",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/ft3",
       "manager_supported": true,
       "container_version": "rolling",
       "container_image": "opencti/connector-ft3",
-      "container_type": "EXTERNAL_IMPORT"
+      "container_type": "EXTERNAL_IMPORT",
+      "config_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://www.filigran.io/connectors/ft3_config.schema.json",
+        "type": "object",
+        "properties": {
+          "OPENCTI_URL": {
+            "description": "The OpenCTI platform URL.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "OPENCTI_TOKEN": {
+            "description": "The token of the user who represents the connector in the OpenCTI platform.",
+            "type": "string"
+          },
+          "CONNECTOR_NAME": {
+            "default": "FT3 Framework",
+            "description": "Name of the connector.",
+            "type": "string"
+          },
+          "CONNECTOR_SCOPE": {
+            "default": [
+              "identity",
+              "attack-pattern",
+              "x-mitre-tactic",
+              "x-opencti-kill-chain",
+              "marking-definition"
+            ],
+            "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "CONNECTOR_TYPE": {
+            "default": "EXTERNAL_IMPORT",
+            "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
+            "type": "string"
+          },
+          "CONNECTOR_LOG_LEVEL": {
+            "default": "error",
+            "description": "Determines the verbosity of the logs.",
+            "enum": [
+              "debug",
+              "info",
+              "warn",
+              "warning",
+              "error"
+            ],
+            "type": "string"
+          },
+          "FT3_INTERVAL": {
+            "default": 5,
+            "description": "Polling interval in days for fetching and refreshing FT3 data. Determines how often the system checks for updates to FT3 datasets.",
+            "exclusiveMinimum": 0,
+            "type": "integer"
+          },
+          "FT3_TACTICS_URL": {
+            "default": "https://raw.githubusercontent.com/stripe/ft3/refs/heads/master/FT3_Tactics.json",
+            "description": "URL to the FT3 Tactics JSON file. This dataset includes fraud tactics from the FT3 framework.",
+            "type": "string"
+          },
+          "FT3_TECHNIQUES_URL": {
+            "default": "https://raw.githubusercontent.com/stripe/ft3/refs/heads/master/FT3_Techniques.json",
+            "description": "URL to the FT3 Techniques JSON file. Contains fraud techniques and their relationships to tactics.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "OPENCTI_URL",
+          "OPENCTI_TOKEN"
+        ],
+        "additionalProperties": true
+      }
     },
     {
       "title": "Google Threat Intelligence",
@@ -2579,9 +2666,11 @@
             "default": "red",
             "description": "Default Traffic Light Protocol (TLP) marking for imported data.",
             "enum": [
+              "clear",
               "white",
               "green",
               "amber",
+              "amber+strict",
               "red"
             ],
             "type": "string"
