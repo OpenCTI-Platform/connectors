@@ -5,9 +5,9 @@ VULMATCH Connector
 import itertools
 import os
 import time
+import uuid
 from datetime import UTC, datetime, timedelta
 from urllib.parse import urljoin
-import uuid
 
 import requests
 import schedule
