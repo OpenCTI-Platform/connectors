@@ -106,15 +106,21 @@ class _SettingsLoader(BaseSettings):
 
         This method is called by the Pydantic BaseSettings class to determine the order of sources.
         The configuration come in this order either from:
-            1. YAML file
-            2. .env file
-            3. Environment variables
+            1. Environment variables
+            2. YAML file
+            3. .env file
             4. Default values
         """
         if Path(settings_cls.model_config["yaml_file"] or "").is_file():  # type: ignore
-            return (YamlConfigSettingsSource(settings_cls),)
+            return (
+                env_settings,
+                YamlConfigSettingsSource(settings_cls),
+            )
         if Path(settings_cls.model_config["env_file"] or "").is_file():  # type: ignore
-            return (dotenv_settings,)
+            return (
+                env_settings,
+                dotenv_settings,
+            )
         return (env_settings,)
 
 
