@@ -17,7 +17,7 @@ class _ConfigLoaderFT3(ConfigBaseSettings):
 
     # Config Loader
     interval: PositiveInt = Field(
-        default=7,
+        default=5,
         description=(
             "Polling interval in days for fetching and refreshing FT3 data. "
             "Determines how often the system checks for updates to FT3 datasets."
