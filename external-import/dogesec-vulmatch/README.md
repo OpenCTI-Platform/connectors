@@ -27,7 +27,7 @@ _Note: The OpenCTI Vulmatch Connector only works with Vulmatch Web. It does not 
 ![](media/vulmatch-create-api-key.png)
 
 1. Log in to your Vulmatch account and navigate to "Account Settings"
-2. Locate the API section and select "Create Token"
+2. Locate the API section and select "Create New API Key"
 3. Select the team you want to use and generate the key
 4. Copy the key, it will be needed for the configoration
 
