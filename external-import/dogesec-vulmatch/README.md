@@ -9,7 +9,7 @@ Vulmatch is a web application that turns CVEs into STIX objects.
 ![](media/vulmatch-cve-list.png)
 ![](media/vulmatch-graph.png)
 
-[You can read more and sign up for Vulmatch for free here](https://www.vulmatch.com/).
+[vulmatch.com](https://www.vulmatch.com/).
 
 The OpenCTI Vulmatch Connector syncs vulnerability intelligence from Vulmatch to OpenCTI.
 
@@ -23,6 +23,8 @@ _Note: The OpenCTI Vulmatch Connector only works with Vulmatch Web. It does not 
 * OpenCTI >= 6.5.10
 
 ### Generating an Vulmatch API Key
+
+![](media/vulmatch-create-api-key.png)
 
 1. Log in to your Vulmatch account and navigate to "Account Settings"
 2. Locate the API section and select "Create Token"
