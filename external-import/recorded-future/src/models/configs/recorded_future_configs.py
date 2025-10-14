@@ -16,7 +16,7 @@ class _ConfigLoaderRecordedFuture(ConfigBaseSettings):
         default=240,
         description="Initial lookback period in hours when first running the connector.",
     )
-    tlp: Literal["white", "green", "amber", "red"] = Field(
+    tlp: Literal["clear", "white", "green", "amber", "amber+strict", "red"] = Field(
         default="red",
         description="Default Traffic Light Protocol (TLP) marking for imported data.",
     )
