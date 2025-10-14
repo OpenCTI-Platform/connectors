@@ -63,9 +63,9 @@ class TaxiiPostConnector:
             + "/objects/"
         )
         headers = {
-            "Content-Type": "application/vnd.oasis.stix+json; version="
+            "Content-Type": "application/taxii+json; version="
             + self.taxii_stix_version,
-            "Accept": "application/vnd.oasis.taxii+json; version=" + self.taxii_version,
+            "Accept": "application/taxii+json; version=" + self.taxii_version,
         }
         try:
             data_object = data
