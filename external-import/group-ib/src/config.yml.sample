@@ -74,6 +74,7 @@ ti_api:
         enable: false
         local_custom_tag: null
         ttl: 90
+        use_hunting_rules: false
       
       apt/threat_actor:
         description:
@@ -250,6 +251,7 @@ ti_api:
         enable: false
         local_custom_tag: null
         ttl: 90
+        use_hunting_rules: false
       
       hi/threat_actor:
         description:

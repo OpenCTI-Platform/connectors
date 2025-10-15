@@ -105,7 +105,7 @@ class ConfigConnector:
 
     def get_collection_settings(self, collection, setting_name) -> Any:
         collection_attr_name = f"ti_api_collections_{collection}_{setting_name}"
-        return getattr(self, collection_attr_name)
+        return getattr(self, collection_attr_name, None)
 
     def get_extra_settings_by_name(self, setting_name):
         cextra_setting_attr_name = f"ti_api_extra_settings_{setting_name}"
