@@ -2,7 +2,7 @@
 
 import logging
 from asyncio import TimeoutError
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from aiohttp import (
     ClientConnectorError,
@@ -84,25 +84,25 @@ class AioHttpClient(BaseHttpClient):
         self,
         method: str,
         url: str,
-        headers: Optional[Dict[str, str]] = None,
-        params: Optional[Dict[str, Any]] = None,
-        data: Optional[Dict[str, Any]] = None,
-        json_payload: Optional[Dict[str, Any]] = None,
-        timeout: Optional[int] = None,
+        headers: dict[str, str] | None = None,
+        params: dict[str, Any] | None = None,
+        data: dict[str, Any] | None = None,
+        json_payload: dict[str, Any] | None = None,
+        timeout: int | None = None,
     ) -> Any:
         """Make an asynchronous HTTP request using aiohttp.
 
         Args:
             method (str): The HTTP method to use.
             url (str): The URL to send the request to.
-            headers (Optional[Dict[str, str]], optional): The headers to include in the request. Defaults to None.
-            params (Optional[Dict[str, Any]], optional): The query parameters to include in the request. Defaults to None.
-            data (Optional[Dict[str, Any]], optional): The data to include in the request body. Defaults to None.
-            json_payload (Optional[Dict[str, Any]], optional): The JSON data to include in the request body. Defaults to None.
-            timeout (Optional[int], optional): The timeout in seconds for the request. Defaults to None.
+            headers (dict[str, str] | None, optional): The headers to include in the request. Defaults to None.
+            params (dict[str, Any] | None, optional): The query parameters to include in the request. Defaults to None.
+            data (dict[str, Any] | None, optional): The data to include in the request body. Defaults to None.
+            json_payload (dict[str, Any] | None, optional): The JSON data to include in the request body. Defaults to None.
+            timeout (int | None, optional): The timeout in seconds for the request. Defaults to None.
 
         Returns:
-            Dict[str, Any]: The JSON response from the server.
+            dict[str, Any]: The JSON response from the server.
 
         Raises:
             ApiTimeoutError: If the request times out.
@@ -112,8 +112,14 @@ class AioHttpClient(BaseHttpClient):
         """
         actual_timeout = ClientTimeout(total=timeout or self.default_timeout)
         self._logger.debug(
-            f"{LOG_PREFIX} Making {method} request to {url} with timeout {actual_timeout.total}s. "
-            f"Params: {params is not None}, JSON: {json_payload is not None}"
+            f"{LOG_PREFIX} Making request",
+            {
+                "method": method,
+                "url": url,
+                "timeout": actual_timeout.total,
+                "has_params": params is not None,
+                "has_json": json_payload is not None,
+            },
         )
         try:
             async with ClientSession(timeout=actual_timeout, trust_env=True) as session:
@@ -126,30 +132,55 @@ class AioHttpClient(BaseHttpClient):
                     json=json_payload,
                 ) as response:
                     self._logger.debug(
-                        f"{LOG_PREFIX} Received response with status {response.status} for {method} {url}"
+                        f"{LOG_PREFIX} Received response",
+                        {
+                            "status": response.status,
+                            "method": method,
+                            "url": url,
+                        },
                     )
                     if response.status >= 400:
                         response_text = await response.text()
 
                         self._logger.warning(
-                            f"{LOG_PREFIX} HTTP Error {response.status} for {method} {url}: {response_text}",
+                            f"{LOG_PREFIX} HTTP Error",
+                            {
+                                "status": response.status,
+                                "method": method,
+                                "url": url,
+                                "response_text": response_text,
+                            },
                         )
                         raise ApiHttpError(response.status, response_text)
                     return await response.json(content_type=None)
         except TimeoutError as e:
             self._logger.warning(
-                f"{LOG_PREFIX} Request to {url} timed out after {actual_timeout.total}s: {e}",
+                f"{LOG_PREFIX} Request timed out",
+                {
+                    "url": url,
+                    "timeout": actual_timeout.total,
+                    "error": str(e),
+                },
             )
             raise ApiTimeoutError("Request timed out") from e
         except ClientError as e:
             if self._is_network_error(e):
                 self._logger.warning(
-                    f"{LOG_PREFIX} Network connectivity issue for {method} {url}: {str(e)}",
+                    f"{LOG_PREFIX} Network connectivity issue",
+                    {
+                        "method": method,
+                        "url": url,
+                        "error": str(e),
+                    },
                 )
                 raise ApiNetworkError(f"Network connectivity issue: {str(e)}") from e
             else:
                 self._logger.warning(
-                    f"{LOG_PREFIX} ClientError for {url}: {e}",
+                    f"{LOG_PREFIX} ClientError",
+                    {
+                        "url": url,
+                        "error": str(e),
+                    },
                 )
                 raise ApiHttpError(0, str(e)) from e
         except ApiHttpError:
@@ -157,11 +188,20 @@ class AioHttpClient(BaseHttpClient):
         except Exception as e:
             if self._is_network_error(e):
                 self._logger.warning(
-                    f"{LOG_PREFIX} Network connectivity issue for {method} {url}: {str(e)}",
+                    f"{LOG_PREFIX} Network connectivity issue",
+                    {
+                        "method": method,
+                        "url": url,
+                        "error": str(e),
+                    },
                 )
                 raise ApiNetworkError(f"Network connectivity issue: {str(e)}") from e
 
             self._logger.warning(
-                f"{LOG_PREFIX} Unexpected error during request to {url}: {e}",
+                f"{LOG_PREFIX} Unexpected error during request",
+                {
+                    "url": url,
+                    "error": str(e),
+                },
             )
             raise ApiError(f"Unexpected error: {str(e)}") from e

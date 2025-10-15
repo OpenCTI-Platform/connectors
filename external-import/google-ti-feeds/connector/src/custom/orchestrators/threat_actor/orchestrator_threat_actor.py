@@ -2,7 +2,7 @@
 
 import logging
 import re
-from typing import Any, Dict, Optional
+from typing import Any
 
 from connector.src.custom.configs import (
     THREAT_ACTOR_BATCH_PROCESSOR_CONFIG,
@@ -10,6 +10,9 @@ from connector.src.custom.configs import (
 )
 from connector.src.custom.convert_to_stix.threat_actor.convert_to_stix_threat_actor import (
     ConvertToSTIXThreatActor,
+)
+from connector.src.custom.models.gti.gti_attack_technique_id_model import (
+    GTIAttackTechniqueIDData,
 )
 from connector.src.custom.orchestrators.base_orchestrator import BaseOrchestrator
 from connector.src.octi.work_manager import WorkManager
@@ -39,9 +42,16 @@ class OrchestratorThreatActor(BaseOrchestrator):
         """
         super().__init__(work_manager, logger, config, tlp_level)
 
-        self.logger.info(f"{LOG_PREFIX} API URL: {self.config.api_url}")
         self.logger.info(
-            f"{LOG_PREFIX} Threat actor import start date: {self.config.threat_actor_import_start_date}"
+            "API URL",
+            {"prefix": LOG_PREFIX, "api_url": self.config.api_url.unicode_string()},
+        )
+        self.logger.info(
+            "Threat actor import start date",
+            {
+                "prefix": LOG_PREFIX,
+                "start_date": self.config.threat_actor_import_start_date,
+            },
         )
 
         self.converter = ConvertToSTIXThreatActor(config, logger, tlp_level)
@@ -61,7 +71,7 @@ class OrchestratorThreatActor(BaseOrchestrator):
             logger=self.logger,
         )
 
-    async def run(self, initial_state: Optional[Dict[str, Any]]) -> None:
+    async def run(self, initial_state: dict[str, Any] | None) -> None:
         """Run the threat actor orchestrator.
 
         Args:
@@ -70,13 +80,14 @@ class OrchestratorThreatActor(BaseOrchestrator):
         """
         subentity_types = [
             "malware_families",
-            # "reports",
             "attack_techniques",
             "vulnerabilities",
-            #            "domains",
-            #            "files",
-            #            "urls",
-            #            "ip_addresses",
+            # "campaigns",
+            # "reports",
+            # "domains",
+            # "files",
+            # "urls",
+            # "ip_addresses",
         ]
         try:
             async for gti_threat_actors in self.client_api.fetch_threat_actors(
@@ -84,6 +95,7 @@ class OrchestratorThreatActor(BaseOrchestrator):
             ):
                 total_threat_actors = len(gti_threat_actors)
                 for threat_actor_idx, threat_actor in enumerate(gti_threat_actors):
+                    self._update_index_inplace()
                     threat_actor_entities = self.converter.convert_threat_actor_to_stix(
                         threat_actor
                     )
@@ -98,12 +110,46 @@ class OrchestratorThreatActor(BaseOrchestrator):
                     )
                     if len(rel_summary) > 0:
                         self.logger.info(
-                            f"{LOG_PREFIX} ({threat_actor_idx + 1}/{total_threat_actors}) Found relationships {{{rel_summary}}}"
+                            "Found relationships",
+                            {
+                                "prefix": LOG_PREFIX,
+                                "current": threat_actor_idx + 1,
+                                "total": total_threat_actors,
+                                "relationships": rel_summary,
+                            },
+                        )
+
+                    # Skip fetch_subentity_details for attack_techniques (quota optimization)
+                    attack_technique_ids = subentities_ids.get("attack_techniques", [])
+                    filtered_subentities_ids = {
+                        k: v
+                        for k, v in subentities_ids.items()
+                        if k != "attack_techniques"
+                    }
+
+                    if attack_technique_ids:
+                        self.logger.info(
+                            "Using ID-only approach for attack techniques (quota optimization)",
+                            {
+                                "prefix": LOG_PREFIX,
+                                "attack_technique_count": len(attack_technique_ids),
+                            },
                         )
 
                     subentities_detailed = (
-                        await self.client_api.fetch_subentity_details(subentities_ids)
+                        await self.client_api.fetch_subentity_details(
+                            filtered_subentities_ids
+                        )
                     )
+
+                    # Convert attack technique IDs to proper model format for conversion
+                    if attack_technique_ids:
+                        attack_technique_data = GTIAttackTechniqueIDData.from_id_list(
+                            attack_technique_ids
+                        )
+                        subentities_detailed["attack_techniques"] = [
+                            attack_technique_data
+                        ]
                     subentity_stix = (
                         self.converter.convert_subentities_to_stix_with_linking(
                             subentities=subentities_detailed,
@@ -114,7 +160,7 @@ class OrchestratorThreatActor(BaseOrchestrator):
 
                     all_entities = threat_actor_entities + (subentity_stix or [])
 
-                    entity_types: Dict[str, int] = {}
+                    entity_types: dict[str, int] = {}
                     for entity in all_entities:
                         entity_type = getattr(entity, "type", None)
                         if entity_type:
@@ -125,11 +171,17 @@ class OrchestratorThreatActor(BaseOrchestrator):
                         [f"{k}: {v}" for k, v in entity_types.items()]
                     )
                     self.logger.info(
-                        f"{LOG_PREFIX} ({threat_actor_idx + 1}/{total_threat_actors}) Converted to {len(all_entities)} STIX entities {{{entities_summary}}}"
+                        "Converted to STIX entities",
+                        {
+                            "prefix": LOG_PREFIX,
+                            "current": threat_actor_idx + 1,
+                            "total": total_threat_actors,
+                            "entities_count": len(all_entities),
+                            "entities_summary": entities_summary,
+                        },
                     )
 
                     self._check_batch_size_and_flush(self.batch_processor, all_entities)
-                    self._update_index_inplace()
                     self._add_entities_to_batch(
                         self.batch_processor, all_entities, self.converter
                     )
@@ -160,10 +212,12 @@ class OrchestratorThreatActor(BaseOrchestrator):
             work_id = self.batch_processor.flush()
             if work_id:
                 self.logger.info(
-                    f"{LOG_PREFIX} Threat actor batch processor: Flushed remaining items"
+                    "Threat actor batch processor: Flushed remaining items",
+                    {"prefix": LOG_PREFIX},
                 )
             self.batch_processor.update_final_state()
         except Exception as e:
             self.logger.error(
-                f"{LOG_PREFIX} Failed to flush threat actor batch processor: {str(e)}"
+                "Failed to flush threat actor batch processor",
+                {"prefix": LOG_PREFIX, "error": str(e)},
             )

@@ -9,7 +9,7 @@ import sys
 import traceback
 from typing import TYPE_CHECKING
 
-import pycti  # type: ignore[import-untyped] # pycti does not provide stubs
+import pycti
 from connectors_sdk.models.octi import (
     ExternalReference,
     Indicator,

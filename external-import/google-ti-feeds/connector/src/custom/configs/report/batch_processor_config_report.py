@@ -4,7 +4,7 @@ This module defines configuration for batch processing GTI report STIX objects
 using the generic batch processor system.
 """
 
-from typing import Any, Optional
+from typing import Any
 
 from connector.src.custom.configs.batch_processor_config import (
     extract_stix_date_for_type,
@@ -17,7 +17,7 @@ from connector.src.utils.batch_processors.generic_batch_processor_config import 
 )
 
 
-def report_extract_stix_date(stix_object: Any) -> Optional[Any]:
+def report_extract_stix_date(stix_object: Any) -> Any | None:
     """Extract the latest date from a STIX object for state updates.
 
     Only extracts dates from report objects to track the latest processed report.
@@ -34,7 +34,7 @@ def report_extract_stix_date(stix_object: Any) -> Optional[Any]:
 
 
 REPORT_BATCH_PROCESSOR_CONFIG = GenericBatchProcessorConfig(
-    batch_size=500,
+    batch_size=9999,
     work_name_template="Google Threat Intel - Batch #{batch_num} (~ 0/0 reports)",
     state_key="report_next_cursor_start_date",
     entity_type="stix_objects",

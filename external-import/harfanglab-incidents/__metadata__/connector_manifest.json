@@ -1,0 +1,22 @@
+{
+  "title": "HarfangLab Incidents",
+  "slug": "harfanglab-incidents",
+  "description": "The OpenCTI HarfangLab Incidents External Import Connector is designed to integrate incident data from Harfanglab's Endpoint Detection and Response (EDR) solution into the OpenCTI platform. By leveraging HarfangLab's expertise in detecting and analyzing cyber threats at the endpoint level, this connector facilitates the import of incident-related intelligence, enriching OpenCTI's threat database with detailed insights and analysis derived from real-world endpoint detections.",
+  "short_description": "HarfangLab Connector imports endpoint incident data from HarfangLab EDR into OpenCTI, enriching threat intelligence.",
+  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "use_cases": [
+    "Incident Response & Ticketing",
+    "EDR"
+  ],
+  "verified": true,
+  "last_verified_date": "",
+  "playbook_supported": false,
+  "max_confidence_level": 75,
+  "support_version": ">= 6.5.1",
+  "subscription_link": "https://harfanglab.io",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/harfanglab-incidents",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-harfanglab-incidents",
+  "container_type": "EXTERNAL_IMPORT"
+}

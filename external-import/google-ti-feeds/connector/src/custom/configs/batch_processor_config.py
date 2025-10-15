@@ -4,8 +4,9 @@ This module defines common utilities for batch processing GTI STIX objects
 using the generic batch processor system.
 """
 
+import logging
 from datetime import datetime, timezone
-from typing import Any, List, Optional
+from typing import Any
 
 LOG_PREFIX = "[GenericBatchProcessor]"
 
@@ -21,7 +22,7 @@ def extract_stix_date_for_type(target_object_type: str) -> Any:
 
     """
 
-    def extract_stix_date(stix_object: Any) -> Optional[Any]:
+    def extract_stix_date(stix_object: Any) -> Any | None:
         """Extract the latest date from a STIX object for state updates.
 
         Only extracts dates from the specified object type to track the latest processed.
@@ -101,16 +102,14 @@ def validate_stix_object(stix_obj: Any) -> bool:
     )
 
 
-def log_batch_completion(stix_objects: List[Any], work_id: str) -> None:
+def log_batch_completion(stix_objects: list[Any], work_id: str) -> None:
     """Log successful batch completion with object type breakdown.
 
     Args:
-        stix_objects: List of processed STIX objects
+        stix_objects: list of processed STIX objects
         work_id: Work ID that was created
 
     """
-    import logging
-
     logger = logging.getLogger(__name__)
 
     object_types: dict[str, int] = {}
@@ -141,5 +140,11 @@ def log_batch_completion(stix_objects: List[Any], work_id: str) -> None:
         )
 
     logger.info(
-        f"{LOG_PREFIX} Batch {work_id} completed successfully: {total_count} objects ({type_summary})"
+        "Batch completed successfully",
+        {
+            "prefix": LOG_PREFIX,
+            "work_id": work_id,
+            "total_count": total_count,
+            "type_summary": type_summary,
+        },
     )

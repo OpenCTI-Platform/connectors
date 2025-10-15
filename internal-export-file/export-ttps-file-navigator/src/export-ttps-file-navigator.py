@@ -20,12 +20,17 @@ class ExportTTPsFileNavigator:
         self.helper = OpenCTIConnectorHelper(config)
 
     def _process_message(self, data):
-        if "entity_type" not in data or "entity_id" not in data:
+        export_scope = data["export_scope"]  # query or selection or single
+        if (
+            "entity_type" not in data
+            or "entity_id" not in data
+            or export_scope == "selection"
+            or export_scope == "query"
+        ):
             raise ValueError(
                 "This Connector currently only handles direct export (single entity and not list)"
             )
         file_name = data["file_name"]
-        export_scope = data["export_scope"]  # query or selection or single
         export_type = data["export_type"]  # Simple or Full
         entity_name = data["entity_name"]
         entity_type = data["entity_type"]
@@ -59,7 +64,8 @@ class ExportTTPsFileNavigator:
         related_ttps = []
         # Get the relations from the main entity to attack pattern
         stix_relations = self.helper.api_impersonate.stix_core_relationship.list(
-            fromId=entity_id, toTypes=["Attack-Pattern"]
+            fromId=entity_id,
+            toTypes=["Attack-Pattern"],
         )
         for relation in stix_relations:
             attack_pattern = self.helper.api_impersonate.attack_pattern.read(

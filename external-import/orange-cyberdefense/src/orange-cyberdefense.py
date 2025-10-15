@@ -304,7 +304,8 @@ class OrangeCyberDefense:
             x_opencti_order=99,
             x_opencti_color="#ff7900",
         )
-        self.datalake_instance = Datalake(longterm_token=self.ocd_datalake_token)
+        if self.ocd_import_datalake or self.ocd_import_threat_library:
+            self.datalake_instance = Datalake(longterm_token=self.ocd_datalake_token)
         self.cache = {}
 
     def _generate_indicator_note(self, indicator_object):
@@ -608,15 +609,19 @@ class OrangeCyberDefense:
         # Getting the iocs object from the report
         self.helper.log_info("Getting iocs from Datalake...")
         if report["datalake_url"]:
-            hashkey = extract_datalake_query_hash(report["datalake_url"]["url"])
-            if hashkey:
-                report_iocs = self._get_report_iocs(
-                    datalake_query_hash=hashkey,
-                )
+            if self.ocd_import_datalake or self.ocd_import_threat_library:
+                hashkey = extract_datalake_query_hash(report["datalake_url"]["url"])
+                if hashkey:
+                    report_iocs = self._get_report_iocs(
+                        datalake_query_hash=hashkey,
+                    )
+                else:
+                    self.helper.log_info(
+                        f"No hashkey found in datalake url: {report['datalake_url']['url']}"
+                    )
+                    report_iocs = []
             else:
-                self.helper.log_info(
-                    f"No hashkey found in datalake url: {report['datalake_url']['url']}"
-                )
+                self.helper.log_info("Skipping because datalake is not configured")
                 report_iocs = []
         else:
             self.helper.log_info("No datalake url found")
@@ -626,7 +631,7 @@ class OrangeCyberDefense:
         # Getting the report entities
         self.helper.log_info("Getting report entities...")
         tags = set(report["tags"]) | set(report["advisory_tags"])
-        if tags:
+        if (self.ocd_import_datalake or self.ocd_import_threat_library) and tags:
             report_entities = self._get_report_entities(tags)
         else:
             report_entities = []

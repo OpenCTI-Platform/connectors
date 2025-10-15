@@ -1,10 +1,11 @@
 """Module to test the OpenCTI connector GTI configuration loading and instantiation."""
 
 from os import environ as os_environ
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import patch
 from uuid import uuid4
 
+import isodate
 import pytest
 from connector.src.custom.configs.gti_config import GTIConfig
 from connector.src.custom.exceptions.gti_configuration_error import (
@@ -14,6 +15,8 @@ from connector.src.octi.connector import Connector
 from connector.src.octi.exceptions.configuration_error import ConfigurationError
 from connector.src.octi.global_config import GlobalConfig
 from pycti import OpenCTIConnectorHelper  # type: ignore
+from pydantic import HttpUrl, SecretStr
+
 from tests.conftest import mock_env_vars
 
 # =====================
@@ -24,7 +27,7 @@ from tests.conftest import mock_env_vars
 @pytest.fixture(
     params=[
         {
-            "opencti_url": "http://fake:8080",
+            "opencti_url": "http://fake:8080/",
             "opencti_token": f"{uuid4()}",
             "connector_id": f"{uuid4()}",
             "gti_api_key": f"{uuid4()}",
@@ -45,14 +48,14 @@ def min_required_config(request) -> dict[str, str]:  # type: ignore
     params=[
         {
             "gti_report_import_start_date": "P3D",
-            "gti_api_url": "https://api.gti.com",
+            "gti_api_url": "https://api.gti.com/",
             "gti_import_reports": "False",
             "gti_report_types": "Actor Profile",
             "gti_report_origins": "google threat intelligence",
         },
         {
             "gti_report_import_start_date": "P20D",
-            "gti_api_url": "https://api2.gti.com",
+            "gti_api_url": "https://api2.gti.com/",
             "gti_import_reports": "True",
             "gti_report_types": "Patch Report,TTP Deep Dive",
             "gti_report_origins": "google threat intelligence,partner",
@@ -76,7 +79,7 @@ def all_optional_config(request) -> dict[str, str]:
         {"gti_api_url": "https://www.virustotal.com/api/v3"},
         {"gti_import_reports": "True"},
         {"gti_report_types": "All"},
-        {"gti_report_origins": "All"},
+        {"gti_report_origins": "google threat intelligence"},
     ]
 )
 def all_defaulted_config(request) -> dict[str, str]:
@@ -140,7 +143,7 @@ def valid_gti_report_origins(request) -> dict[str, str]:
 
 @pytest.fixture(
     params=[
-        {"gti_report_origins": "invalid origin"},
+        {"gti_report_origins": '"invalid origin"'},
         {"gti_report_origins": "google threat intelligence,partner,other"},
     ]
 )
@@ -157,7 +160,7 @@ def invalid_gti_report_origins(request) -> dict[str, str]:
 # Scenario: Create a connector with minimum required configuration for GTI
 @pytest.mark.order(0)
 def test_gti_connector_min_required_config(  # type: ignore
-    capfd, min_required_config: Dict[str, str]
+    capfd, min_required_config: dict[str, str]
 ) -> None:
     """Test GTI connector with minimum required configuration."""
     # Given a minimum required configuration for GTI
@@ -173,7 +176,7 @@ def test_gti_connector_min_required_config(  # type: ignore
 # Scenario: Create a connector with all optional configuration for GTI
 @pytest.mark.order(0)
 def test_gti_connector_all_optional_config(  # type: ignore
-    capfd, min_required_config: Dict[str, str], all_optional_config: Dict[str, str]
+    capfd, min_required_config: dict[str, str], all_optional_config: dict[str, str]
 ) -> None:
     """Test GTI connector with all optional configuration."""
     data = {**min_required_config, **all_optional_config}
@@ -188,15 +191,15 @@ def test_gti_connector_all_optional_config(  # type: ignore
 # Scenario: Ensure that all defaulted configuration values are set correctly
 @pytest.mark.order(0)
 def test_gti_connector_all_defaulted_config(  # type: ignore
-    capfd, min_required_config: Dict[str, str], all_defaulted_config: Dict[str, str]
+    capfd, min_required_config: dict[str, str], all_defaulted_config: dict[str, str]
 ) -> None:
     """Test GTI connector with all defaulted configuration."""
     # Given a minimum required configuration for GTI and all defaulted configuration
-    mock_env = _given_setup_env_vars(min_required_config)
+    data = {**min_required_config, **all_defaulted_config}
+    mock_env = _given_setup_env_vars(data)
     # When the connector is created
     connector, _ = _when_connector_created()
     # Then the connector should be created successfully and all defaulted values should be set correctly
-    data = {**min_required_config, **all_defaulted_config}
     _then_connector_created_successfully(capfd, mock_env, connector, data)
 
 
@@ -204,7 +207,7 @@ def test_gti_connector_all_defaulted_config(  # type: ignore
 # Scenario: Create a connector with valid GTI report types
 @pytest.mark.order(0)
 def test_gti_connector_valid_gti_report_types(  # type: ignore
-    capfd, min_required_config: Dict[str, str], valid_gti_report_types: Dict[str, str]
+    capfd, min_required_config: dict[str, str], valid_gti_report_types: dict[str, str]
 ) -> None:
     """Test GTI connector with valid GTI report types."""
     # Given a minimum required configuration for GTI and valid GTI report types
@@ -219,7 +222,7 @@ def test_gti_connector_valid_gti_report_types(  # type: ignore
 # Scenario: Create a connector with invalid GTI report types
 @pytest.mark.order(0)
 def test_gti_connector_invalid_gti_report_types(  # type: ignore
-    min_required_config: Dict[str, str], invalid_gti_report_types: Dict[str, str]
+    min_required_config: dict[str, str], invalid_gti_report_types: dict[str, str]
 ) -> None:
     """Test GTI connector with invalid GTI report types."""
     # Given a minimum required configuration for GTI and invalid GTI report types
@@ -235,7 +238,7 @@ def test_gti_connector_invalid_gti_report_types(  # type: ignore
 # Scenario: Create a connector with valid GTI report origins
 @pytest.mark.order(0)
 def test_gti_connector_valid_gti_report_origins(  # type: ignore
-    capfd, min_required_config: Dict[str, str], valid_gti_report_origins: Dict[str, str]
+    capfd, min_required_config: dict[str, str], valid_gti_report_origins: dict[str, str]
 ) -> None:
     """Test GTI connector with valid GTI report origins."""
     # Given a minimum required configuration for GTI and valid GTI report origins
@@ -250,7 +253,7 @@ def test_gti_connector_valid_gti_report_origins(  # type: ignore
 # Scenario: Create a connector with invalid GTI report origins
 @pytest.mark.order(0)
 def test_gti_connector_invalid_gti_report_origins(  # type: ignore
-    min_required_config: Dict[str, str], invalid_gti_report_origins: Dict[str, str]
+    min_required_config: dict[str, str], invalid_gti_report_origins: dict[str, str]
 ) -> None:
     """Test GTI connector with invalid GTI report origins."""
     # Given a minimum required configuration for GTI and invalid GTI report origins
@@ -301,17 +304,28 @@ def _then_connector_created_successfully(capfd, mock_env, connector, data) -> No
         if key.startswith("OPENCTI_"):
             config_key = key[len("OPENCTI_") :].lower()
             # noinspection PyProtectedMember
-            assert (  # noqa: S101
-                getattr(connector._config.octi_config, config_key)
-            ) == value
+            attr = getattr(connector._config.octi_config, config_key)
+            if isinstance(attr, HttpUrl):
+                assert attr.unicode_string() == value  # noqa: S101
+            else:
+                assert attr == value  # noqa: S101
         elif key.startswith("GTI_"):
             config_key = key[len("GTI_") :].lower()
             # noinspection PyProtectedMember
             gti_config = connector._config.get_config_class(GTIConfig)
             val = getattr(gti_config, config_key)
-            if type(val) is list:
-                val = ",".join(val)
-            assert str(val) == value  # noqa: S101
+            if config_key.endswith("import_start_date"):
+                assert val == isodate.parse_duration(value)  # noqa: S101
+
+            else:
+                if isinstance(val, HttpUrl):
+                    assert val.unicode_string() == value  # noqa: S101
+                elif isinstance(val, SecretStr):
+                    assert val.get_secret_value() == value  # noqa: S101
+                elif isinstance(val, list):
+                    assert ",".join(val) == value  # noqa: S101
+                else:
+                    assert str(val) == value  # noqa: S101
 
     log_records = capfd.readouterr()
     # noinspection PyProtectedMember

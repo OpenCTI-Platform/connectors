@@ -1,7 +1,7 @@
 """Shared converter class for common subentity conversion methods."""
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from connector.src.custom.convert_to_stix.convert_to_stix_base import BaseConvertToSTIX
 
@@ -16,39 +16,41 @@ class ConvertToSTIXShared(BaseConvertToSTIX):
         super().__init__(config, logger, tlp_level)
 
     def convert_subentities_to_stix(
-        self, subentities: Dict[str, List[Any]], main_entity: Optional[str] = None
-    ) -> List[Any]:
+        self, subentities: dict[str, list[Any]], main_entity: str | None = None
+    ) -> list[Any]:
         """Convert each subentity to STIX format.
 
         Args:
-            subentities: Dictionary mapping entity types to lists of entities
+            subentities: dictionary mapping entity types to lists of entities
             main_entity: Type of the main entity
 
         Returns:
-            List of converted STIX objects
+            list of converted STIX objects
 
         """
-        self.logger.debug(f"{LOG_PREFIX} Starting subentity conversion")
+        self.logger.debug("Starting subentity conversion", {"prefix": LOG_PREFIX})
         return super().convert_subentities_to_stix(subentities, main_entity)
 
     def convert_subentities_to_stix_with_linking(
         self,
-        subentities: Dict[str, List[Any]],
+        subentities: dict[str, list[Any]],
         main_entity: str,
-        main_entities: List[Any],
-    ) -> Optional[List[Any]]:
+        main_entities: list[Any],
+    ) -> list[Any] | None:
         """Convert each subentity to STIX format with linking.
 
         Args:
-            subentities: Dictionary mapping entity types to lists of entities
+            subentities: dictionary mapping entity types to lists of entities
             main_entity: The main entity type
-            main_entities: List containing the main entity STIX object
+            main_entities: list containing the main entity STIX object
 
         Returns:
-            List of converted STIX objects
+            list of converted STIX objects
 
         """
-        self.logger.debug(f"{LOG_PREFIX} Starting subentity conversion with linking")
+        self.logger.debug(
+            "Starting subentity conversion with linking", {"prefix": LOG_PREFIX}
+        )
         return super().convert_subentities_to_stix_with_linking(
             subentities, main_entity, main_entities
         )

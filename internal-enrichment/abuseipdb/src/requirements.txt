@@ -1,2 +1,5 @@
 python-dateutil==2.9.0.post0
-pycti==6.7.9
+pydantic-settings==2.10.1
+pydantic>=2.10, <3
+pycti==6.8.6
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.8.6#subdirectory=connectors-sdk

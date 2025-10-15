@@ -17,3 +17,4 @@ black
 *.crt
 .env
 .pytest_cache
+external-import/loaderinsightagency

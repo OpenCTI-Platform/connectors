@@ -1,5 +1,11 @@
 # Sekoia CTI Connector
 
+## Status Filigran
+
+| Status            | Date | Comment |
+|-------------------|------|---------|
+| Filigran Verified | -    | -       |
+
 ## Objective
 Collect Sekoia.io CTI data in an existing OpenCTI instance for any operational purpose (such as CTI aggregation, dissemination, hunting...).
 
@@ -8,13 +14,22 @@ Collect Sekoia.io CTI data in an existing OpenCTI instance for any operational p
 - An active Sekoia CTI subscription (Sekoia Intelligence) : https://www.sekoia.io/en/product/cti/. If you want to test Sekoia CTI please contact : contact@sekoia.io
 - [Creating a Sekoia.io API KEY](https://docs.sekoia.io/getting_started/manage_api_keys/) with the "View intelligence" premission (at least)
 
+## Requirements
+- pycti==6.7.17
+- pydantic>=2.10, <3
+- pydantic-settings==2.10.1
+- python-dateutil==2.9.0.post0
+
+## Configuration variables environment
+Find all the configuration variables available (default/required) here: [Connector Configurations](./__metadata__)
+
 ## OpenCTI on-prem version configuration
 
 1. Add the following code to the end of docker-compose.yml file in the OpenCTI docker repository
 
 ```
 connector-sekoia:
-    image: opencti/connector-sekoia:6.7.9
+    image: opencti/connector-sekoia:6.8.6
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe

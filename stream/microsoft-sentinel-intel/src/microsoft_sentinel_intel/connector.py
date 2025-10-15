@@ -114,5 +114,4 @@ class Connector:
         The connector have the capability to listen a live stream from the platform.
         The helper provide an easy way to listen to the events.
         """
-        self.helper.set_state({})
         self.helper.listen_stream(message_callback=self.process_message)

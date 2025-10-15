@@ -1,0 +1,40 @@
+opencti:
+  url: 'ChangeMe'  # OpenCTI platform URL
+  token: 'ChangeMe'  # OpenCTI API token
+
+connector:
+  id: 'ChangeMe'  # Connector UUID
+  type: 'STREAM'
+  name: 'MISP Intel'
+  scope: 'misp'
+  confidence_level: 80  # From 0 (not confident) to 100 (fully confident)
+  log_level: 'info'  # Logging level (debug, info, warning, error)
+  live_stream_id: 'live'  # ID of the live stream to listen to
+  live_stream_listen_delete: true  # Listen to delete events
+  live_stream_no_dependencies: false  # Do not auto-resolve dependencies
+  # Comma-separated list of container types to process
+  container_types: 'report,grouping,case-incident,case-rfi,case-rft'
+
+misp:
+  url: 'ChangeMe'  # MISP instance URL (e.g., https://misp.example.com)
+  api_key: 'ChangeMe'  # MISP API key
+  ssl_verify: true  # Verify SSL certificates
+  
+  # Organization configuration
+  # owner_org: 'ChangeMe'  # Optional: Organization that will own the events in MISP
+  
+  # Event configuration
+  distribution_level: 1  # 0: Your organisation only, 1: This community only, 2: Connected communities, 3: All communities
+  threat_level: 2  # 1: High, 2: Medium, 3: Low, 4: Undefined
+  publish_on_create: false  # Automatically publish events when created
+  publish_on_update: false  # Automatically publish events when updated
+  
+  # Tagging configuration
+  tag_opencti: true  # Add OpenCTI-specific tags to MISP events
+  tag_prefix: 'opencti:'  # Prefix for OpenCTI tags
+
+# Optional proxy configuration
+proxy:
+  http: ''  # HTTP proxy URL (e.g., http://proxy:8080)
+  https: ''  # HTTPS proxy URL (e.g., http://proxy:8080)
+  no_proxy: 'localhost,127.0.0.1'  # Comma-separated list of hosts to bypass proxy

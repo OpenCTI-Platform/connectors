@@ -1,7 +1,6 @@
 """The module contains the OctiDomainModel class, which represents an OpenCTI Domain Name."""
 
-from typing import Any, Optional
-from uuid import uuid4
+from typing import Any
 
 from connector.src.stix.v21.models.scos.domain_name_model import DomainNameModel
 
@@ -15,7 +14,7 @@ class OctiDomainModel:
         organization_id: str,
         marking_ids: list[str],
         create_indicator: bool = False,
-        score: Optional[int] = None,
+        score: int | None = None,
         **kwargs: Any,
     ) -> DomainNameModel:
         """Create a Domain Name model.
@@ -23,7 +22,7 @@ class OctiDomainModel:
         Args:
             value: The domain name value
             organization_id: The ID of the organization that created this domain
-            marking_ids: List of marking definition IDs to apply to the domain
+            marking_ids: list of marking definition IDs to apply to the domain
             create_indicator: Whether to create an indicator for the domain name
             score: The confidence score of the domain name
             **kwargs: Additional arguments to pass to DomainNameModel
@@ -41,7 +40,6 @@ class OctiDomainModel:
             custom_properties["x_opencti_create_indicator"] = create_indicator
 
         data = {
-            "id": f"domain-name--{uuid4()}",
             "type": "domain-name",
             "spec_version": "2.1",
             "value": value,

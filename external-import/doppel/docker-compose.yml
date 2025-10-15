@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-doppel:
-    image: opencti/connector-doppel:6.7.9
+    image: opencti/connector-doppel:rolling
     environment:
       # OpenCTI connection
       - OPENCTI_URL=http://opencti:8080
@@ -11,16 +11,18 @@ services:
       - CONNECTOR_ID=changeMe
       - CONNECTOR_NAME=Doppel Threat Intelligence
       - CONNECTOR_SCOPE=doppel
-      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_DURATION_PERIOD=PT1H
 
       # Doppel-specific config
       - DOPPEL_API_BASE_URL=https://api.doppel.com/v1
       - DOPPEL_API_KEY=changeMe
+      - DOPPEL_USER_API_KEY=changeMe
       - DOPPEL_TLP_LEVEL=clear
       - DOPPEL_ALERTS_ENDPOINT=/alerts
       - DOPPEL_HISTORICAL_POLLING_DAYS=30
       - DOPPEL_MAX_RETRIES=3
       - DOPPEL_RETRY_DELAY=30
+      - DOPPEL_PAGE_SIZE=100
 
     restart: always

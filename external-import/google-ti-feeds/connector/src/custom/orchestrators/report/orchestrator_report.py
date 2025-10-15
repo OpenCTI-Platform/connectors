@@ -2,7 +2,7 @@
 
 import logging
 import re
-from typing import Any, Dict, Optional
+from typing import Any
 
 from connector.src.custom.configs import (
     REPORT_BATCH_PROCESSOR_CONFIG,
@@ -10,6 +10,9 @@ from connector.src.custom.configs import (
 )
 from connector.src.custom.convert_to_stix.report.convert_to_stix_report import (
     ConvertToSTIXReport,
+)
+from connector.src.custom.models.gti.gti_attack_technique_id_model import (
+    GTIAttackTechniqueIDData,
 )
 from connector.src.custom.orchestrators.base_orchestrator import BaseOrchestrator
 from connector.src.octi.work_manager import WorkManager
@@ -39,9 +42,13 @@ class OrchestratorReport(BaseOrchestrator):
         """
         super().__init__(work_manager, logger, config, tlp_level)
 
-        self.logger.info(f"{LOG_PREFIX} API URL: {self.config.api_url}")
         self.logger.info(
-            f"{LOG_PREFIX} Report import start date: {self.config.report_import_start_date}"
+            "API URL",
+            {"prefix": LOG_PREFIX, "api_url": self.config.api_url.unicode_string()},
+        )
+        self.logger.info(
+            "Report import start date",
+            {"prefix": LOG_PREFIX, "start_date": self.config.report_import_start_date},
         )
 
         self.converter = ConvertToSTIXReport(config, logger, tlp_level)
@@ -61,7 +68,7 @@ class OrchestratorReport(BaseOrchestrator):
             logger=self.logger,
         )
 
-    async def run(self, initial_state: Optional[Dict[str, Any]]) -> None:
+    async def run(self, initial_state: dict[str, Any] | None) -> None:
         """Run the report orchestrator.
 
         Args:
@@ -73,6 +80,7 @@ class OrchestratorReport(BaseOrchestrator):
             "threat_actors",
             "attack_techniques",
             "vulnerabilities",
+            "campaigns",
             "domains",
             "files",
             "urls",
@@ -82,6 +90,7 @@ class OrchestratorReport(BaseOrchestrator):
             async for gti_reports in self.client_api.fetch_reports(initial_state):
                 total_reports = len(gti_reports)
                 for report_idx, report in enumerate(gti_reports):
+                    self._update_index_inplace()
                     report_entities = self.converter.convert_report_to_stix(report)
                     subentities_ids = await self.client_api.fetch_subentities_ids(
                         entity_name="entity_id",
@@ -94,12 +103,46 @@ class OrchestratorReport(BaseOrchestrator):
                     )
                     if len(rel_summary) > 0:
                         self.logger.info(
-                            f"{LOG_PREFIX} ({report_idx + 1}/{total_reports}) Found relationships {{{rel_summary}}}"
+                            "Found relationships",
+                            {
+                                "prefix": LOG_PREFIX,
+                                "current": report_idx + 1,
+                                "total": total_reports,
+                                "relationships": rel_summary,
+                            },
+                        )
+
+                    # Skip fetch_subentity_details for attack_techniques (quota optimization)
+                    attack_technique_ids = subentities_ids.get("attack_techniques", [])
+                    filtered_subentities_ids = {
+                        k: v
+                        for k, v in subentities_ids.items()
+                        if k != "attack_techniques"
+                    }
+
+                    if attack_technique_ids:
+                        self.logger.info(
+                            "Using ID-only approach for attack techniques (quota optimization)",
+                            {
+                                "prefix": LOG_PREFIX,
+                                "attack_technique_count": len(attack_technique_ids),
+                            },
                         )
 
                     subentities_detailed = (
-                        await self.client_api.fetch_subentity_details(subentities_ids)
+                        await self.client_api.fetch_subentity_details(
+                            filtered_subentities_ids
+                        )
                     )
+
+                    # Convert attack technique IDs to proper model format for conversion
+                    if attack_technique_ids:
+                        attack_technique_data = GTIAttackTechniqueIDData.from_id_list(
+                            attack_technique_ids
+                        )
+                        subentities_detailed["attack_techniques"] = [
+                            attack_technique_data
+                        ]
                     subentity_stix = (
                         self.converter.convert_subentities_to_stix_with_linking(
                             subentities=subentities_detailed,
@@ -110,7 +153,7 @@ class OrchestratorReport(BaseOrchestrator):
 
                     all_entities = report_entities + (subentity_stix or [])
 
-                    entity_types: Dict[str, int] = {}
+                    entity_types: dict[str, int] = {}
                     for entity in all_entities:
                         entity_type = getattr(entity, "type", None)
                         if entity_type:
@@ -121,11 +164,17 @@ class OrchestratorReport(BaseOrchestrator):
                         [f"{k}: {v}" for k, v in entity_types.items()]
                     )
                     self.logger.info(
-                        f"{LOG_PREFIX} ({report_idx + 1}/{total_reports}) Converted to {len(all_entities)} STIX entities {{{entities_summary}}}"
+                        "Converted to STIX entities",
+                        {
+                            "prefix": LOG_PREFIX,
+                            "current": report_idx + 1,
+                            "total": total_reports,
+                            "entities_count": len(all_entities),
+                            "entities_summary": entities_summary,
+                        },
                     )
 
                     self._check_batch_size_and_flush(self.batch_processor, all_entities)
-                    self._update_index_inplace()
                     self._add_entities_to_batch(
                         self.batch_processor, all_entities, self.converter
                     )
@@ -156,8 +205,12 @@ class OrchestratorReport(BaseOrchestrator):
             work_id = self.batch_processor.flush()
             if work_id:
                 self.logger.info(
-                    f"{LOG_PREFIX} Batch processor: Flushed remaining items"
+                    "Batch processor: Flushed remaining items",
+                    {"prefix": LOG_PREFIX},
                 )
             self.batch_processor.update_final_state()
         except Exception as e:
-            self.logger.error(f"{LOG_PREFIX} Failed to flush batch processor: {str(e)}")
+            self.logger.error(
+                "Failed to flush batch processor",
+                {"prefix": LOG_PREFIX, "error": str(e)},
+            )

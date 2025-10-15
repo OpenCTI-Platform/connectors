@@ -1,17 +1,22 @@
+import datetime
 import json
 import os
 import sys
 import time
 import traceback
-from datetime import datetime
 
 import boto3
 import pytz
 import stix2
 import yaml
 from pycti import (
+    CourseOfAction,
+    Identity,
+    Infrastructure,
     Note,
     OpenCTIConnectorHelper,
+    StixCoreRelationship,
+    Vulnerability,
     get_config_variable,
 )
 
@@ -34,15 +39,11 @@ mapped_keys = [
     "x_first_seen_active",
     "x_history",
     "x_acti_uuid",
-]
-ignored_keys = [
-    "x_acti_guid",
-    "x_version",
     "x_product",
-    "x_vendor",
     "x_and_prior_versions",
     "x_credit",
 ]
+ignored_keys = ["x_acti_guid", "x_version", "x_vendor"]
 
 
 class S3Connector:
@@ -101,7 +102,10 @@ class S3Connector:
             default=True,
         )
         self.s3_interval = get_config_variable(
-            "S3_INTERVAL", ["s3", "interval"], config, isNumber=True, default=5
+            "S3_INTERVAL", ["s3", "interval"], config, isNumber=True, default=120
+        )
+        self.s3_cutoff = get_config_variable(
+            "S3_CUTOFF", ["s3", "cutoff"], config, isNumber=True, default=360
         )
 
         # Create the identity
@@ -122,11 +126,83 @@ class S3Connector:
     def get_interval(self):
         return int(self.s3_interval) * 60
 
+    def rewrite_stix_ids(self, objects):
+        # First pass: Build ID mapping for objects that need new IDs
+        id_mapping = {}
+
+        for obj in objects:
+            obj_type = obj.get("type")
+
+            if obj_type == "vulnerability":
+                old_id = obj["id"]
+                new_id = Vulnerability.generate_id(obj["name"])
+                id_mapping[old_id] = new_id
+
+            if obj_type == "infrastructure":
+                old_id = obj["id"]
+                new_id = Infrastructure.generate_id(obj["name"])
+                id_mapping[old_id] = new_id
+
+            elif obj_type == "identity":
+                old_id = obj["id"]
+                new_id = Identity.generate_id(obj["name"], obj["identity_class"])
+                id_mapping[old_id] = new_id
+
+            elif obj_type == "course-of-action":
+                old_id = obj["id"]
+                new_id = CourseOfAction.generate_id(obj["name"], obj.get("x_mitre_id"))
+                id_mapping[old_id] = new_id
+
+        # Second pass: Update all objects with new IDs and references
+        for obj in objects:
+            obj_type = obj.get("type")
+
+            if obj_type == "relationship":
+                # Update relationship ID
+                obj["id"] = StixCoreRelationship.generate_id(
+                    obj["relationship_type"],
+                    obj["source_ref"],
+                    obj["target_ref"],
+                    obj.get("start_time"),
+                    obj.get("stop_time"),
+                )
+
+                # Update references using the mapping
+                source_ref = obj.get("source_ref")
+                target_ref = obj.get("target_ref")
+
+                if source_ref in id_mapping:
+                    obj["source_ref"] = id_mapping[source_ref]
+                if target_ref in id_mapping:
+                    obj["target_ref"] = id_mapping[target_ref]
+
+            # rewrite note object_refs stix_id
+            if obj_type == "note":
+                for i, ref in enumerate(obj["object_refs"]):
+                    if ref in id_mapping:
+                        obj["object_refs"][i] = id_mapping[ref]
+
+            elif obj_type in (
+                "infrastructure",
+                "identity",
+                "course-of-action",
+                "vulnerability",
+            ):
+                # Update the object's ID from the mapping
+                old_id = obj["id"]
+                if old_id in id_mapping:
+                    obj["id"] = id_mapping[old_id]
+
+        return objects
+
     def fix_bundle(self, bundle):
         included_entities = []
-        data = json.loads(bundle)
-        new_bundle_objects = []
         new_bundle = []
+        new_bundle_objects = []
+        try:
+            data = json.loads(bundle)
+        except:
+            return new_bundle
         for obj in data["objects"]:
             included_entities.append(obj["id"])
         for obj in data["objects"]:
@@ -145,12 +221,27 @@ class S3Connector:
                 obj["object_marking_refs"] = [self.s3_marking["id"]]
 
             if "x_severity" in obj:
-                if obj["x_severity"] == "high":
-                    obj["x_opencti_score"] = 90
-                elif obj["x_severity"] == "medium":
-                    obj["x_opencti_score"] = 60
-                elif obj["x_severity"] == "low":
-                    obj["x_opencti_score"] = 30
+                # handle mapping of "x_severity" on Vulnerability object
+                if obj["type"] == "vulnerability":
+                    if obj["x_severity"] == 1:
+                        obj["x_opencti_score"] = 20
+                    elif obj["x_severity"] == 2:
+                        obj["x_opencti_score"] = 40
+                    elif obj["x_severity"] == 3:
+                        obj["x_opencti_score"] = 60
+                    elif obj["x_severity"] == 4:
+                        obj["x_opencti_score"] = 80
+                    elif obj["x_severity"] == 5:
+                        obj["x_opencti_score"] = 100
+
+                # handle mapping of "x_severity" on other objects (ex: Indicator)
+                else:
+                    if obj["x_severity"] == "high":
+                        obj["x_opencti_score"] = 90
+                    elif obj["x_severity"] == "medium":
+                        obj["x_opencti_score"] = 60
+                    elif obj["x_severity"] == "low":
+                        obj["x_opencti_score"] = 30
 
             # Aliases
             if "x_alias" in obj:
@@ -190,12 +281,35 @@ class S3Connector:
             if "x_description" in obj:
                 obj["x_opencti_description"] = obj["x_description"]
 
-            # Note
-            if "x_title" in obj and "x_analysis" in obj:
+            # Title Note
+            if obj.get("x_title", None) and obj.get("x_acti_uuid", None):
+                # generate a unique note identifier that don't change in the time even of the obj_name change or x_title change
+                note_key = obj.get("x_acti_uuid") + " - Title"
+                note_abstract = obj.get("name") + " - Title"
                 note = stix2.Note(
-                    id=Note.generate_id(obj["created"], obj["x_analysis"]),
+                    id=Note.generate_id(obj["created"], note_key),
                     created=obj["created"],
-                    abstract=obj["x_title"],
+                    abstract=note_abstract,
+                    content=obj.get("x_title"),
+                    object_refs=[obj["id"]],
+                    object_marking_refs=[self.s3_marking["id"]],
+                    created_by_ref=(
+                        self.identity["standard_id"]
+                        if self.identity is not None
+                        else None
+                    ),
+                )
+                new_bundle_objects.append(note)
+
+            # Analysis Note
+            if obj.get("x_analysis", None) and obj.get("x_acti_uuid", None):
+                # generate a unique note identifier that don't change in the time even of the obj_name change or x_analysis change
+                note_key = obj.get("x_acti_uuid") + " - Analysis"
+                note_abstract = obj.get("name") + " - Analysis"
+                note = stix2.Note(
+                    id=Note.generate_id(obj["created"], note_key),
+                    created=obj["created"],
+                    abstract=note_abstract,
                     content=obj["x_analysis"],
                     object_refs=[obj["id"]],
                     object_marking_refs=[self.s3_marking["id"]],
@@ -208,14 +322,15 @@ class S3Connector:
                 new_bundle_objects.append(note)
 
             # History Note
-            if "x_history" in obj and obj["x_history"]:
+            if obj.get("x_history", None) and obj.get("x_acti_uuid", None):
                 note_content = "| Timestamp | Comment |\n|---------|---------|\n"
                 for history in obj.get("x_history"):
                     note_content += f"| {history.get('timestamp', '')} | {history.get('comment', '')} |\n"
 
+                note_key = obj.get("x_acti_uuid") + " - History"
                 abstract = obj.get("name") + " - History"
                 note = stix2.Note(
-                    id=Note.generate_id(obj["created"], abstract),
+                    id=Note.generate_id(obj["created"], note_key),
                     created=obj["created"],
                     abstract=abstract,
                     content=note_content,
@@ -245,6 +360,11 @@ class S3Connector:
                     obj["labels"].append("notable-vuln")
                 else:
                     obj["labels"] = ["notable-vuln"]
+            if "x_and_prior_versions" in obj and obj["x_and_prior_versions"]:
+                if "labels" in obj:
+                    obj["labels"].append("and-prior-versions")
+                else:
+                    obj["labels"] = ["and-prior-versions"]
 
             # x_product
             if "x_product" in obj:
@@ -252,13 +372,42 @@ class S3Connector:
 
             # x_acti_uuid
             if "x_acti_uuid" in obj:
-                external_ref = (
-                    {"source_name": "ACTI UUID", "external_id": obj["x_acti_uuid"]},
-                )
+                external_ref = {
+                    "source_name": "ACTI UUID",
+                    "external_id": obj["x_acti_uuid"],
+                }
+
                 if "external_references" in obj:
                     obj["external_references"].append(external_ref)
                 else:
                     obj["external_references"] = [external_ref]
+
+            # x_credit mapping
+            if "x_credit" in obj and obj["x_credit"]:
+                individual_credit = stix2.Identity(
+                    id=Identity.generate_id(
+                        name=obj["x_credit"], identity_class="individual"
+                    ),
+                    name=obj["x_credit"],
+                    identity_class="individual",
+                    object_marking_refs=[self.s3_marking["id"]],
+                )
+                credit_relationship = stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to", obj["id"], individual_credit.id
+                    ),
+                    relationship_type="related-to",
+                    source_ref=obj["id"],
+                    target_ref=individual_credit.id,
+                    object_marking_refs=[self.s3_marking["id"]],
+                    created_by_ref=(
+                        self.identity["standard_id"]
+                        if self.identity is not None
+                        else None
+                    ),
+                )
+                new_bundle_objects.append(json.loads(individual_credit.serialize()))
+                new_bundle_objects.append(json.loads(credit_relationship.serialize()))
 
             # Relationships "has"
             if (
@@ -284,14 +433,6 @@ class S3Connector:
                 obj["source_ref"] = obj["target_ref"]
                 obj["target_ref"] = original_source_ref
 
-            # Ignored technology / technology-to
-            # TODO: TBD
-            if obj["type"] == "relationship" and (
-                obj["relationship_type"] == "technology"
-                or obj["relationship_type"] == "technology-to"
-            ):
-                continue
-
             # Cleanup orphan relationships
             if (
                 obj["type"] == "relationship"
@@ -315,12 +456,16 @@ class S3Connector:
                 continue
             new_bundle_objects.append(obj)
 
-        if new_bundle_objects:
-            new_bundle = self.helper.stix2_create_bundle(new_bundle_objects)
+        if len(new_bundle_objects) > 0:
+            rewritten_bundle_objects = self.rewrite_stix_ids(new_bundle_objects)
+            new_bundle = self.helper.stix2_create_bundle(rewritten_bundle_objects)
         return new_bundle
 
     def process(self):
-        now = datetime.now(pytz.UTC)
+        now = datetime.datetime.now(pytz.UTC)
+        # We always re-send 2 days of data before deleting to handle multi instances consuming, we are good with this approach
+        # OpenCTI will de-duplicate / upsert if necessary
+        cutoff = now - datetime.timedelta(minutes=self.s3_cutoff)
         objects = self.s3_client.list_objects(Bucket=self.s3_bucket_name)
         if objects.get("Contents") is not None and len(objects.get("Contents")) > 0:
             friendly_name = "S3 run @ " + now.astimezone(pytz.UTC).isoformat()
@@ -328,21 +473,36 @@ class S3Connector:
                 self.helper.connect_id, friendly_name
             )
             for o in objects.get("Contents"):
-                data = self.s3_client.get_object(
-                    Bucket=self.s3_bucket_name, Key=o.get("Key")
-                )
-                content = data["Body"].read()
+                try:
+                    last_modified = o.get("LastModified")
+                    data = self.s3_client.get_object(
+                        Bucket=self.s3_bucket_name, Key=o.get("Key")
+                    )
+                    content = data["Body"].read()
+                except:
+                    continue
                 self.helper.log_info("Sending file " + o.get("Key"))
                 fixed_bundle = self.fix_bundle(content)
                 if fixed_bundle:
                     self.helper.send_stix2_bundle(bundle=fixed_bundle, work_id=work_id)
                 else:
                     self.helper.log_info("No content to ingest")
-                if self.s3_delete_after_import:
-                    self.helper.log_info("Deleting file " + o.get("Key"))
-                    self.s3_client.delete_object(
-                        Bucket=self.s3_bucket_name, Key=o.get("Key")
+                if self.s3_delete_after_import and last_modified < cutoff:
+                    self.helper.log_info(
+                        "Deleting file "
+                        + o.get("Key")
+                        + "(2 days ago="
+                        + str(cutoff)
+                        + ", modified="
+                        + str(last_modified)
+                        + ")"
                     )
+                    try:
+                        self.s3_client.delete_object(
+                            Bucket=self.s3_bucket_name, Key=o.get("Key")
+                        )
+                    except:
+                        continue
             message = (
                 "Connector successfully run ("
                 + str(len(objects.get("Contents")))

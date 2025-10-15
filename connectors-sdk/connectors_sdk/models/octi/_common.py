@@ -3,11 +3,11 @@
 import codecs
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Literal, Optional, OrderedDict, TypeVar
+from typing import Any, Optional, OrderedDict, TypeVar
 
-import pycti  # type: ignore[import-untyped]  # pycti does not provide stubs
-import stix2  # type: ignore[import-untyped] # stix2 does not provide stubs
-import stix2.properties  # type: ignore[import-untyped]
+import stix2.properties
+from connectors_sdk.models.octi.enums import TLPLevel
+from pycti import MarkingDefinition as PyctiMarkingDefinition
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -16,6 +16,8 @@ from pydantic import (
     computed_field,
     model_validator,
 )
+from stix2.v21 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
+from stix2.v21 import MarkingDefinition as Stix2MarkingDefinition
 
 T = TypeVar("T", bound=BaseModel)  # Preserve metadata when using register decorator
 
@@ -102,20 +104,20 @@ class BaseEntity(BaseModel):
 class BaseIdentifiedEntity(BaseEntity):
     """Base class that can be identified thanks to a stix-like id."""
 
-    _stix2_id: Optional[str] = PrivateAttr(None)
+    _stix2_id: str | None = PrivateAttr(default=None)
 
-    author: Optional["Author"] = Field(
-        None,
+    author: "Author | None" = Field(
+        default=None,
         description="The Author reporting this Observable.",
     )
 
-    markings: Optional[list["TLPMarking"]] = Field(
-        None,
+    markings: list["TLPMarking"] | None = Field(
+        default=None,
         description="References for object marking.",
     )
 
-    external_references: Optional[list["ExternalReference"]] = Field(
-        None,
+    external_references: list["ExternalReference"] | None = Field(
+        default=None,
         description="External references of the observable.",
     )
 
@@ -253,24 +255,24 @@ class AssociatedFile(BaseEntity):
     name: str = Field(
         description="The name of the file.",
     )
-    description: Optional[str] = Field(
-        None,
+    description: str | None = Field(
+        default=None,
         description="Description of the file.",
     )
-    content: Optional[bytes] = Field(
-        None,
+    content: bytes | None = Field(
+        default=None,
         description="The file content.",
     )
-    mime_type: Optional[str] = Field(
-        None,
+    mime_type: str | None = Field(
+        default=None,
         description="File mime type.",
     )
-    markings: Optional[list["TLPMarking"]] = Field(
-        None,
+    markings: list["TLPMarking"] | None = Field(
+        default=None,
         description="References for object marking.",
     )
-    version: Optional[str] = Field(
-        None,
+    version: str | None = Field(
+        default=None,
         description="Version of the file.",
     )
 
@@ -325,26 +327,31 @@ class Author(ABC, BaseIdentifiedEntity):
 class TLPMarking(BaseIdentifiedEntity):
     """Represent a TLP marking definition."""
 
-    level: Literal["white", "green", "amber", "amber+strict", "red"] = Field(
-        description="The level of the TLP marking.",
-    )
+    level: TLPLevel = Field(description="The level of the TLP marking.")
 
-    def to_stix2_object(self) -> stix2.v21.MarkingDefinition:
+    def to_stix2_object(self) -> Stix2MarkingDefinition:
         """Make stix object."""
         mapping = {
-            "white": stix2.TLP_WHITE,
-            "green": stix2.TLP_GREEN,
-            "amber": stix2.TLP_AMBER,
-            "amber+strict": stix2.MarkingDefinition(
-                id=pycti.MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+            "clear": Stix2MarkingDefinition(
+                id=PyctiMarkingDefinition.generate_id("TLP", "TLP:CLEAR"),
                 definition_type="statement",
                 definition={"statement": "custom"},
-                custom_properties=dict(  # noqa: C408  # No literal dict for maintainability
-                    x_opencti_definition_type="TLP",
-                    x_opencti_definition="TLP:AMBER+STRICT",
-                ),
+                allow_custom=True,
+                x_opencti_definition_type="TLP",
+                x_opencti_definition="TLP:CLEAR",
             ),
-            "red": stix2.TLP_RED,
+            "white": TLP_WHITE,
+            "green": TLP_GREEN,
+            "amber": TLP_AMBER,
+            "amber+strict": Stix2MarkingDefinition(
+                id=PyctiMarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                allow_custom=True,
+                x_opencti_definition_type="TLP",
+                x_opencti_definition="TLP:AMBER+STRICT",
+            ),
+            "red": TLP_RED,
         }
         return mapping[self.level]
 
@@ -356,16 +363,16 @@ class ExternalReference(BaseEntity):
     source_name: str = Field(
         description="The name of the source of the external reference.",
     )
-    description: Optional[str] = Field(
-        None,
+    description: str | None = Field(
+        default=None,
         description="Description of the external reference.",
     )
-    url: Optional[str] = Field(
-        None,
+    url: str | None = Field(
+        default=None,
         description="URL of the external reference.",
     )
-    external_id: Optional[str] = Field(
-        None,
+    external_id: str | None = Field(
+        default=None,
         description="An identifier for the external reference content.",
     )
 
@@ -376,8 +383,6 @@ class ExternalReference(BaseEntity):
             description=self.description,
             url=self.url,
             external_id=self.external_id,
-            # unused
-            hashes=None,
         )
 
 

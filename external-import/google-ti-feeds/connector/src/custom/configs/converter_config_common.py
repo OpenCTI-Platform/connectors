@@ -5,7 +5,7 @@ to STIX format using the generic converter system.
 """
 
 import logging
-from typing import Any, List, Optional, Protocol
+from typing import Any, Protocol
 
 from connector.src.custom.mappers.gti_reports.gti_report_to_stix_report import (
     GTIReportToSTIXReport,
@@ -26,7 +26,7 @@ class RelationshipMapper(Protocol):
         ...
 
 
-def _find_report_in_output(stix_output: Any) -> Optional[Any]:
+def _find_report_in_output(stix_output: Any) -> Any | None:
     """Find a report object in the stix_output."""
     entities = stix_output if isinstance(stix_output, list) else [stix_output]
     for obj in entities:
@@ -77,7 +77,7 @@ def clear_all_contexts() -> None:
 def add_to_refs(
     context_key: str,
     linking_method: Any,
-    entity_type_filter: Optional[List[str]] = None,
+    entity_type_filter: list[str] | None = None,
 ) -> Any:
     """Add objects to parent's object_refs.
 
@@ -117,11 +117,18 @@ def add_to_refs(
             if object_ids:
                 linking_method(object_ids, parent)
                 _logger.debug(
-                    f"{LOG_PREFIX} Added {len(object_ids)} refs to {context_key}"
+                    "Added refs to context",
+                    {
+                        "log_prefix": LOG_PREFIX,
+                        "count": len(object_ids),
+                        "context_key": context_key,
+                    },
                 )
 
         except Exception as e:
-            _logger.warning(f"{LOG_PREFIX} Error adding refs: {str(e)}")
+            _logger.warning(
+                "Error adding refs", {"log_prefix": LOG_PREFIX, "error": str(e)}
+            )
 
         return stix_output
 
@@ -154,7 +161,8 @@ def create_relationship(
 
         if not hasattr(mapper_class, "create_relationship"):
             _logger.warning(
-                f"{LOG_PREFIX} Mapper {str(mapper_class)} lacks create_relationship method"
+                "Mapper lacks create_relationship method",
+                {"log_prefix": LOG_PREFIX, "mapper_class": str(mapper_class)},
             )
             return result
 
@@ -168,7 +176,12 @@ def create_relationship(
 
         except Exception as e:
             _logger.warning(
-                f"{LOG_PREFIX} Error creating {relationship_type}: {str(e)}"
+                "Error creating relationship",
+                {
+                    "log_prefix": LOG_PREFIX,
+                    "relationship_type": relationship_type,
+                    "error": str(e),
+                },
             )
 
         return result
@@ -182,7 +195,7 @@ def _create_single_relationship(
     relationship_type: str,
     mapper_class: RelationshipMapper,
     reverse: bool,
-) -> Optional[Any]:
+) -> Any | None:
     """Create a single relationship between two entities."""
     if not (hasattr(entity, "id") and not hasattr(entity, "relationship_type")):
         return None
@@ -193,26 +206,83 @@ def _create_single_relationship(
                 entity, relationship_type, context_entity
             )
             _logger.debug(
-                f"{LOG_PREFIX} Created reverse {relationship_type}: {entity.id} → {context_entity.id}"
+                "Created reverse relationship",
+                {
+                    "log_prefix": LOG_PREFIX,
+                    "relationship_type": relationship_type,
+                    "source_id": entity.id,
+                    "target_id": context_entity.id,
+                },
             )
         else:
             rel = mapper_class.create_relationship(
                 context_entity, relationship_type, entity
             )
             _logger.debug(
-                f"{LOG_PREFIX} Created {relationship_type}: {context_entity.id} → {entity.id}"
+                "Created relationship",
+                {
+                    "log_prefix": LOG_PREFIX,
+                    "relationship_type": relationship_type,
+                    "source_id": context_entity.id,
+                    "target_id": entity.id,
+                },
             )
 
         return rel
 
     except Exception as e:
         _logger.warning(
-            f"{LOG_PREFIX} Failed to create {relationship_type} for {entity.id}: {str(e)}"
+            "Failed to create relationship",
+            {
+                "log_prefix": LOG_PREFIX,
+                "relationship_type": relationship_type,
+                "entity_id": entity.id,
+                "error": str(e),
+            },
         )
         return None
 
 
-def manage_context(operation: str, context_key: Optional[str] = None) -> Any:
+def _find_entity_in_output(stix_output: Any, context_key: str) -> Any:
+    """Find entity in STIX output based on context key."""
+    entity = None
+    if isinstance(stix_output, list):
+        for obj in stix_output:
+            if hasattr(obj, "type") and obj.type == context_key.replace("_", "-"):
+                entity = obj
+                break
+    elif hasattr(stix_output, "type"):
+        entity = stix_output
+    return entity
+
+
+def _handle_set_operation(stix_output: Any, context_key: str) -> None:
+    """Handle the 'set' operation for context management."""
+    entity = _find_entity_in_output(stix_output, context_key)
+    if entity:
+        set_context(context_key, entity)
+        _logger.debug(
+            "Set context",
+            {"log_prefix": LOG_PREFIX, "context_key": context_key},
+        )
+
+
+def _handle_clear_operation(context_key: str) -> None:
+    """Handle the 'clear' operation for context management."""
+    clear_context(context_key)
+    _logger.debug(
+        "Cleared context",
+        {"log_prefix": LOG_PREFIX, "context_key": context_key},
+    )
+
+
+def _handle_clear_all_operation() -> None:
+    """Handle the 'clear_all' operation for context management."""
+    clear_all_contexts()
+    _logger.debug("Cleared all contexts", {"log_prefix": LOG_PREFIX})
+
+
+def manage_context(operation: str, context_key: str | None = None) -> Any:
     """Manage context storage.
 
     Args:
@@ -223,46 +293,32 @@ def manage_context(operation: str, context_key: Optional[str] = None) -> Any:
 
     def postprocess(stix_output: Any) -> Any:
         try:
-            if operation == "set" and context_key:
-                entity = None
-                if isinstance(stix_output, list):
-                    for obj in stix_output:
-                        if hasattr(obj, "type") and obj.type == context_key.replace(
-                            "_", "-"
-                        ):
-                            entity = obj
-                            break
-                elif hasattr(stix_output, "type"):
-                    entity = stix_output
-
-                if entity:
-                    set_context(context_key, entity)
-                    _logger.debug(f"{LOG_PREFIX} Set {context_key} context")
-
-            elif operation == "clear" and context_key:
-                clear_context(context_key)
-                _logger.debug(f"{LOG_PREFIX} Cleared {context_key} context")
-
-            elif operation == "clear_all":
-                clear_all_contexts()
-                _logger.debug(f"{LOG_PREFIX} Cleared all contexts")
+            match operation:
+                case "set" if context_key:
+                    _handle_set_operation(stix_output, context_key)
+                case "clear" if context_key:
+                    _handle_clear_operation(context_key)
+                case "clear_all":
+                    _handle_clear_all_operation()
 
         except Exception as e:
-            _logger.warning(f"{LOG_PREFIX} Error managing context: {str(e)}")
+            _logger.warning(
+                "Error managing context", {"log_prefix": LOG_PREFIX, "error": str(e)}
+            )
 
         return stix_output
 
     return postprocess
 
 
-def link_to_report(entity_type_filter: Optional[List[str]] = None) -> Any:
+def link_to_report(entity_type_filter: list[str] | None = None) -> Any:
     """Add objects to report's object_refs."""
     return add_to_refs(
         "report", GTIReportToSTIXReport.add_object_refs, entity_type_filter
     )
 
 
-def link_main_entity_to_report(entity_types: List[str]) -> Any:
+def link_main_entity_to_report(entity_types: list[str]) -> Any:
     """Add only main entities (by type) to report's object_refs."""
     return add_to_refs("report", GTIReportToSTIXReport.add_object_refs, entity_types)
 
@@ -295,6 +351,13 @@ def exploits_relationship(
     return create_relationship("exploits", source_context, mapper_class, reverse)
 
 
+def attributed_to_relationship(
+    mapper_class: Any, source_context: str, reverse: bool = False
+) -> Any:
+    """Create 'attributed-to' relationships from source context."""
+    return create_relationship("attributed-to", source_context, mapper_class, reverse)
+
+
 def context_to_report_relationship(
     source_context: str, relationship_creator: Any
 ) -> Any:
@@ -315,12 +378,18 @@ def context_to_report_relationship(
                 )
                 result.append(rel)
                 _logger.debug(
-                    f"{LOG_PREFIX} Created relationship: {entity.id} → {report.id}"
+                    "Created relationship",
+                    {
+                        "log_prefix": LOG_PREFIX,
+                        "source_id": entity.id,
+                        "target_id": report.id,
+                    },
                 )
 
         except Exception as e:
             _logger.warning(
-                f"{LOG_PREFIX} Error creating context-to-report relationship: {str(e)}"
+                "Error creating context-to-report relationship",
+                {"log_prefix": LOG_PREFIX, "error": str(e)},
             )
 
         return result
@@ -340,11 +409,15 @@ def add_context_to_report_refs(context_key: str) -> Any:
             report = _find_report_in_output(stix_output)
             if report:
                 GTIReportToSTIXReport.add_object_refs([entity.id], report)
-                _logger.debug(f"{LOG_PREFIX} Added {entity.id} to report refs")
+                _logger.debug(
+                    "Added entity to report refs",
+                    {"log_prefix": LOG_PREFIX, "entity_id": entity.id},
+                )
 
         except Exception as e:
             _logger.warning(
-                f"{LOG_PREFIX} Error adding context to report refs: {str(e)}"
+                "Error adding context to report refs",
+                {"log_prefix": LOG_PREFIX, "error": str(e)},
             )
 
         return stix_output
@@ -382,6 +455,11 @@ def set_report_context() -> Any:
     return set_context_for("report")
 
 
+def set_vulnerability_context() -> Any:
+    """Store vulnerability in context for later use."""
+    return set_context_for("vulnerability")
+
+
 def entity_to_report(
     context_key: str, entity_type: str, relationship_creator: Any
 ) -> Any:
@@ -411,6 +489,17 @@ def malware_family_to_report() -> Any:
 
     def postprocess(stix_output: Any) -> Any:
         result = add_context_to_report_refs("malware")(stix_output)
+
+        return result
+
+    return postprocess
+
+
+def vulnerability_to_report() -> Any:
+    """Create relationship + add ref from vulnerability to report."""
+
+    def postprocess(stix_output: Any) -> Any:
+        result = add_context_to_report_refs("vulnerability")(stix_output)
 
         return result
 
