@@ -3,12 +3,12 @@ import ssl
 import sys
 import time
 import urllib
-
 from datetime import datetime
+from typing import Optional
+
 from pycti import OpenCTIConnectorHelper
 from src import ConfigLoader
-from stix2 import Identity, TLP_WHITE
-from typing import Optional
+from stix2 import TLP_WHITE, Identity
 
 
 def time_from_unixtime(timestamp):
