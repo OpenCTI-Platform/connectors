@@ -11,7 +11,6 @@ def test_should_create_base_connector_settings(mock_basic_environment):
     assert settings.connector.id == "CHANGEME"
     assert settings.connector.name == "Test Connector"
     assert settings.connector.scope == ["test"]
-    assert settings.connector.duration_period.total_seconds() == 300
     assert settings.connector.log_level == "error"
 
 
@@ -22,7 +21,7 @@ def test_should_fail_with_missing_mandatory_env_vars():
 
 def test_should_dump_opencti_model(mock_basic_environment):
     settings = BaseConnectorSettings()
-    opencti_dict = settings.model_dump_pycti()
+    opencti_dict = settings.to_helper_config()
     assert opencti_dict == {
         "connector": {
             "duration_period": "PT5M",
@@ -44,7 +43,6 @@ def test_should_load_settings_from_yaml_file(
     assert settings.connector.id == "connector-poc--uid"
     assert settings.connector.name == "Connector POC"
     assert settings.connector.scope == ["ChangeMe"]
-    assert settings.connector.duration_period.total_seconds() == 300
     assert settings.connector.log_level == "info"
 
 
@@ -57,5 +55,4 @@ def test_should_load_settings_from_env_file(
     assert settings.connector.id == "CHANGEME"
     assert settings.connector.name == "Test Connector"
     assert settings.connector.scope == ["test"]
-    assert settings.connector.duration_period.total_seconds() == 300
     assert settings.connector.log_level == "error"

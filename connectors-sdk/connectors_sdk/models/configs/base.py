@@ -59,8 +59,7 @@ class _BaseConnectorConfig(BaseConfigModel, ABC):
     Attributes:
         id (str): A UUID v4 to identify the connector in OpenCTI.
         name (str): The name of the connector.
-        scope (ListFromString): The scope of the connector, e.g. 'flashpoint
-        duration_period (timedelta): The period of time to await between two runs of the connector.
+        scope (ListFromString): The scope of the connector, e.g. 'flashpoint'.
         log_level (Literal): The minimum level of logs to display. Options are 'debug',
             'info', 'warn', 'warning', 'error'.
     """
@@ -73,9 +72,6 @@ class _BaseConnectorConfig(BaseConfigModel, ABC):
     )
     scope: ListFromString = Field(
         description="The scope of the connector, e.g. 'flashpoint'."
-    )
-    duration_period: timedelta = Field(
-        description="The period of time to await between two runs of the connector."
     )
     log_level: Literal["debug", "info", "warn", "warning", "error"] = Field(
         description="The minimum level of logs to display."
@@ -198,7 +194,7 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
         config_dict: dict[str, Any] = settings_loader().model_dump()
         return config_dict
 
-    def model_dump_pycti(self) -> dict[str, Any]:
+    def to_helper_config(self) -> dict[str, Any]:
         """Convert model into a valid dict for `pycti.OpenCTIConnectorHelper`."""
         return self.model_dump(mode="json", context={"mode": "pycti"})
 
@@ -217,6 +213,9 @@ class BaseExternalImportConnectorConfig(_BaseConnectorConfig):
     """
 
     type: Literal["EXTERNAL_IMPORT"] = "EXTERNAL_IMPORT"
+    duration_period: timedelta = Field(
+        description="The period of time to await between two runs of the connector."
+    )
 
 
 class BaseInternalEnrichmentConnectorConfig(_BaseConnectorConfig):
@@ -226,13 +225,16 @@ class BaseInternalEnrichmentConnectorConfig(_BaseConnectorConfig):
         id (str): A UUID v4 to identify the connector in OpenCTI.
         name (str): The name of the connector.
         scope (ListFromString): The scope of the connector, e.g. 'flashpoint'.
-        duration_period (timedelta): The period of time to await between two runs of the connector.
         log_level (Literal): The minimum level of logs to display. Options are 'debug',
             'info', 'warn', 'warning', 'error'.
         type (str): The type of the connector, set to "INTERNAL_ENRICHMENT" for internal enrichment connectors.
     """
 
     type: Literal["INTERNAL_ENRICHMENT"] = "INTERNAL_ENRICHMENT"
+    auto: bool = Field(
+        default=False,
+        description="Whether the connector should run automatically when an entity is created or updated.",
+    )
 
 
 class BaseStreamConnectorConfig(_BaseConnectorConfig):
@@ -242,10 +244,20 @@ class BaseStreamConnectorConfig(_BaseConnectorConfig):
         id (str): A UUID v4 to identify the connector in OpenCTI.
         name (str): The name of the connector.
         scope (ListFromString): The scope of the connector, e.g. 'flashpoint'.
-        duration_period (timedelta): The period of time to await between two runs of the connector.
         log_level (Literal): The minimum level of logs to display. Options are 'debug',
             'info', 'warn', 'warning', 'error'.
         type (str): The type of the connector, set to "STREAM" for stream connectors
     """
 
     type: Literal["STREAM"] = "STREAM"
+    live_stream_id: str = Field(
+        description="The ID of the live stream to connect to.",
+    )
+    live_stream_listen_delete: bool = Field(
+        description="Whether to listen for delete events on the live stream.",
+        default=True,
+    )
+    live_stream_no_dependencies: bool = Field(
+        description="Whether to ignore dependencies when processing events from the live stream.",
+        default=True,
+    )
