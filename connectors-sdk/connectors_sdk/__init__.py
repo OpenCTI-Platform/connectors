@@ -2,6 +2,10 @@
 
 __version__ = "0.1.0"
 
+from connectors_sdk.exceptions.error import (
+    ConfigError,
+    ConfigValidationError,
+)
 from connectors_sdk.models.configs.base import (
     BaseConfigModel,
     BaseConnectorSettings,
@@ -22,4 +26,7 @@ __all__ = [
     "BaseInternalExportFileConnectorConfig",
     "BaseInternalImportFileConnectorConfig",
     "BaseStreamConnectorConfig",
+    # Exceptions
+    "ConfigError",
+    "ConfigValidationError",
 ]
