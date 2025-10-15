@@ -1,0 +1,7 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+# Options available
+# sparta:
+  # interval: 7 # In days - default: 7

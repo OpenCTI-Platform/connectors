@@ -1,0 +1,9 @@
+services:
+  connector-sparta:
+    image: opencti/connector-sparta:rolling
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=changeme
+#      - SPARTA_REMOVE_STATEMENT_MARKING=true
+#      - SPARTA_INTERVAL=7 # In days
+#    restart: always
