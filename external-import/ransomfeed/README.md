@@ -1,7 +1,7 @@
-# OpenCTI Ransomfeed Connector
+# OpenCTI RansomFeed Connector
 
 ## Introduction
-This custom connector for OpenCTI automatically imports ransomware claim data published by the official Ransomfeed.it external API. Each claim is transformed into OpenCTI-compatible STIX entities, thus enriching global ransomware threat intelligence. 
+This connector for OpenCTI automatically imports ransomware claim data from the RansomFeed API. Each claim is transformed into STIX 2.1 objects and sent to OpenCTI via RabbitMQ for processing by workers, enriching global ransomware threat intelligence. 
 
 ## Installation
 ```shell
@@ -27,6 +27,26 @@ Below are the parameters you'll need to set for OpenCTI:
 |---------------|------------|-----------------------------|-----------|------------------------------------------------------|
 | OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
 | OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+
+### Connector environment variables
+
+| Parameter               | config.yml           | Docker environment variable        | Mandatory | Description                                                |
+|-------------------------|----------------------|------------------------------------|-----------|-----------------------------------------------------------|
+| Connector ID            | id                   | `CONNECTOR_ID`                     | Yes       | A unique identifier for this connector instance.          |
+| Connector Type          | type                 | `CONNECTOR_TYPE`                   | Yes       | Must be `EXTERNAL_IMPORT`.                                |
+| Connector Name          | name                 | `CONNECTOR_NAME`                   | Yes       | Name of the connector.                                    |
+| Connector Scope         | scope                | `CONNECTOR_SCOPE`                  | Yes       | Scope of the connector (e.g., `ransomfeed`).              |
+| Confidence Level        | confidence_level     | `CONNECTOR_CONFIDENCE_LEVEL`       | Yes       | Confidence level for created entities (0-100).            |
+| Log Level               | log_level            | `CONNECTOR_LOG_LEVEL`              | Yes       | Log level (`debug`, `info`, `warning`, `error`).          |
+| Duration Period         | duration_period      | `CONNECTOR_DURATION_PERIOD`        | Yes       | Interval between runs (ISO 8601 format, e.g., `PT1H`).    |
+
+### RansomFeed-specific environment variables
+
+| Parameter               | config.yml           | Docker environment variable        | Mandatory | Description                                                |
+|-------------------------|----------------------|------------------------------------|-----------|-----------------------------------------------------------|
+| API URL                 | api_url              | `RANSOMFEED_API_URL`               | Yes       | Base URL of the RansomFeed API.                           |
+| TLP Level               | tlp_level            | `RANSOMFEED_TLP_LEVEL`             | No        | TLP marking level (default: `white`).                      |
+| Create Indicators       | create_indicators    | `RANSOMFEED_CREATE_INDICATORS`     | No        | Create indicators from file hashes (default: `true`).     |
 
 
 ## Deployment
@@ -67,7 +87,7 @@ Install the required python dependencies (preferably in a virtual environment):
 pip3 install -r requirements.txt
 ```
 
-Then, start the connector from recorded-future/src:
+Then, start the connector from ransomfeed/src:
 
 ```shell
 python3 main.py
@@ -86,17 +106,21 @@ download of data by re-running the connector.
 
 ## Behavior
 
-* Automatic data retrieval via API (`GET`).
-* Creation of:
+This connector follows OpenCTI best practices by creating STIX 2.1 objects and publishing them to RabbitMQ for processing by OpenCTI workers.
 
-  * `Intrusion Set` (gang ransomware)
-  * `Identity` (victims)
-  * `Incident` (attack)
-  * `Indicator` (hash, if available)
-* Relationships between objects:
+* **Data retrieval**: Automatic data retrieval via RansomFeed API.
+* **STIX Objects created**:
+  * `Identity` - Organization representing the victim
+  * `Intrusion Set` - Ransomware group
+  * `Report` - Contains all entities involved in the ransomware attack
+  * `Location` - Country where the victim is located (if available)
+  * `Domain Name` - Victim's website/domain (if available)
+  * `Indicator` - File hash indicators (if available and enabled)
+  * `Relationship` - Relationships between entities (`targets`, `located-at`, `belongs-to`)
+  
+* **Data modeling**: Following the pattern used in the `ransomwarelive` connector, this connector creates comprehensive **Report** entities (not Incidents) that contain all related entities and relationships for each ransomware attack.
 
-  * `attributed-to`, `targets`, `indicates`
-* Support for field geolocation `country`.
+* **Processing**: All STIX bundles are sent to OpenCTI's RabbitMQ queue for asynchronous processing by workers, rather than using direct GraphQL API calls.
 
 
 ## Debugging
