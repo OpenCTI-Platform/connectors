@@ -1,4 +1,5 @@
 import sys
+
 from .connector import PureSignalScoutConnector
 
 if __name__ == "__main__":
