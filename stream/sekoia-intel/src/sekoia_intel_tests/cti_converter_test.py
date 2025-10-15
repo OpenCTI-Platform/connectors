@@ -1,7 +1,6 @@
 from unittest.mock import Mock
 
 import pytest
-
 from sekoia_intel_connector.cti_converter import CTIConverter
 from sekoia_intel_connector.models import opencti
 
