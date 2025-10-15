@@ -89,8 +89,7 @@ class _SettingsLoader(BaseSettings):
         env_nested_delimiter="_",
         env_nested_max_split=1,
         enable_decoding=False,
-        yaml_file=f"{_MAIN_PATH}/config.yml",
-        env_file=f"{_MAIN_PATH}/.env",
+        env_file=f"{_MAIN_PATH}/../.env",
     )
 
     @classmethod
@@ -110,8 +109,19 @@ class _SettingsLoader(BaseSettings):
             2. YAML file
             3. .env file
             4. Default values
+
+        The variables loading order will remain the same as in `pycti.get_config_variable()`:
+            1. If a config.yml file is found, the order will be: `ENV VAR` → config.yml → default value
+            2. If a .env file is found, the order will be: `ENV VAR` → .env → default value
         """
-        if Path(settings_cls.model_config["yaml_file"] or "").is_file():  # type: ignore
+        yaml_file = settings_cls.model_config["yaml_file"]
+        if not yaml_file:
+            if Path(f"{_MAIN_PATH}/config.yml").is_file():
+                yaml_file = f"{_MAIN_PATH}/config.yml"
+            if Path(f"{_MAIN_PATH}/../config.yml").is_file():
+                yaml_file = f"{_MAIN_PATH}/../config.yml"
+
+        if Path(yaml_file or "").is_file():  # type: ignore
             return (
                 env_settings,
                 YamlConfigSettingsSource(settings_cls),
