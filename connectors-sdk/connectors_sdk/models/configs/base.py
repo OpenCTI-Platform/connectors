@@ -110,14 +110,13 @@ class _SettingsLoader(BaseSettings):
             1. If a config.yml file is found, the order will be: `ENV VAR` → config.yml → default value
             2. If a .env file is found, the order will be: `ENV VAR` → .env → default value
         """
-        yaml_file = settings_cls.model_config["yaml_file"]
-        if not yaml_file:
+        if not settings_cls.model_config["yaml_file"]:
             if Path(f"{_MAIN_PATH}/config.yml").is_file():
-                yaml_file = f"{_MAIN_PATH}/config.yml"
+                settings_cls.model_config["yaml_file"] = f"{_MAIN_PATH}/config.yml"
             if Path(f"{_MAIN_PATH}/../config.yml").is_file():
-                yaml_file = f"{_MAIN_PATH}/../config.yml"
+                settings_cls.model_config["yaml_file"] = f"{_MAIN_PATH}/../config.yml"
 
-        if Path(yaml_file or "").is_file():  # type: ignore
+        if Path(settings_cls.model_config["yaml_file"] or "").is_file():  # type: ignore
             return (
                 env_settings,
                 YamlConfigSettingsSource(settings_cls),
@@ -203,13 +202,8 @@ class BaseExternalImportConnectorConfig(_BaseConnectorConfig):
     """Settings class for external import connectors.
 
     Attributes:
-        id (str): A UUID v4 to identify the connector in OpenCTI.
-        name (str): The name of the connector.
-        scope (ListFromString): The scope of the connector, e.g. 'flashpoint'.
-        duration_period (timedelta): The period of time to await between two runs of the connector.
-        log_level (Literal): The minimum level of logs to display. Options are 'debug',
-            'info', 'warn', 'warning', 'error'.
         type (str): The type of the connector, set to "EXTERNAL_IMPORT" for external import connectors.
+        duration_period (timedelta): The period of time to await between two runs of the connector.
     """
 
     type: Literal["EXTERNAL_IMPORT"] = "EXTERNAL_IMPORT"
@@ -222,12 +216,8 @@ class BaseInternalEnrichmentConnectorConfig(_BaseConnectorConfig):
     """Settings class for internal enrichment connectors.
 
     Attributes:
-        id (str): A UUID v4 to identify the connector in OpenCTI.
-        name (str): The name of the connector.
-        scope (ListFromString): The scope of the connector, e.g. 'flashpoint'.
-        log_level (Literal): The minimum level of logs to display. Options are 'debug',
-            'info', 'warn', 'warning', 'error'.
         type (str): The type of the connector, set to "INTERNAL_ENRICHMENT" for internal enrichment connectors.
+        auto (bool): Whether the connector should run automatically when an entity is created or updated.
     """
 
     type: Literal["INTERNAL_ENRICHMENT"] = "INTERNAL_ENRICHMENT"
@@ -241,12 +231,10 @@ class BaseStreamConnectorConfig(_BaseConnectorConfig):
     """Settings class for stream connectors.
 
     Attributes:
-        id (str): A UUID v4 to identify the connector in OpenCTI.
-        name (str): The name of the connector.
-        scope (ListFromString): The scope of the connector, e.g. 'flashpoint'.
-        log_level (Literal): The minimum level of logs to display. Options are 'debug',
-            'info', 'warn', 'warning', 'error'.
         type (str): The type of the connector, set to "STREAM" for stream connectors
+        live_stream_id (str): The ID of the live stream to connect to.
+        live_stream_listen_delete (bool): Whether to listen for delete events on the live stream.
+        live_stream_no_dependencies (bool): Whether to ignore dependencies when processing events from the live stream.
     """
 
     type: Literal["STREAM"] = "STREAM"
@@ -254,10 +242,35 @@ class BaseStreamConnectorConfig(_BaseConnectorConfig):
         description="The ID of the live stream to connect to.",
     )
     live_stream_listen_delete: bool = Field(
-        description="Whether to listen for delete events on the live stream.",
         default=True,
+        description="Whether to listen for delete events on the live stream.",
     )
     live_stream_no_dependencies: bool = Field(
-        description="Whether to ignore dependencies when processing events from the live stream.",
         default=True,
+        description="Whether to ignore dependencies when processing events from the live stream.",
+    )
+
+
+class BaseInternalExportFileConnectorConfig(_BaseConnectorConfig):
+    """Settings class for internal export file connectors.
+
+    Attributes:
+        type (str): The type of the connector, set to "INTERNAL_EXPORT_FILE" for internal export file connectors.
+    """
+
+    type: Literal["INTERNAL_EXPORT_FILE"] = "INTERNAL_EXPORT_FILE"
+
+
+class BaseInternalImportFileConnectorConfig(_BaseConnectorConfig):
+    """Settings class for internal import file connectors.
+
+    Attributes:
+        type (str): The type of the connector, set to "INTERNAL_IMPORT_FILE" for internal import file connectors.
+        auto (bool): Whether the connector should run automatically when an entity is created or updated.
+    """
+
+    type: Literal["INTERNAL_IMPORT_FILE"] = "INTERNAL_IMPORT_FILE"
+    auto: bool = Field(
+        default=False,
+        description="Whether the connector should run automatically when an entity is created or updated.",
     )
