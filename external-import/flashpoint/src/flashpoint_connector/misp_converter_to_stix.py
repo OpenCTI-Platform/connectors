@@ -1642,16 +1642,8 @@ class MISPConverterToStix:
         if "Tag" in event["Event"]:
             event_tags = self._resolve_tags(event["Event"]["Tag"])
 
-        event_external_reference = stix2.ExternalReference(
-            source_name=self.helper.connect_name,
-            description=event["Event"]["info"],
-            external_id=event["Event"]["uuid"],
-            url="https://app.flashpoint.io/cti/malware/iocs?query="
-            + event["Event"]["uuid"],
-        )
-
         # Get indicators
-        event_external_references = [event_external_reference]
+        event_external_references = []
         indicators = []
         # Get attributes of event
         create_relationships = len(event["Event"].get("Attribute", [])) < 10000
