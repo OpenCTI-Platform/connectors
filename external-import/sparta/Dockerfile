@@ -1,11 +1,19 @@
 FROM python:3.12-alpine
-ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
-COPY src /opt/connector/src
-WORKDIR /opt/connector
+# Copy the connector
+COPY src /opt/opencti-connector-sparta
 
-RUN apk --no-cache add git build-base libmagic libffi-dev && \
-    pip3 install --no-cache-dir -r /opt/connector/src/requirements.txt && \
-    apk del git build-base
+# Install Python modules
+# hadolint ignore=DL3003
+RUN apk update && apk upgrade && \
+    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 
-CMD ["python", "-m", "src"]
+RUN cd /opt/opencti-connector-sparta && \
+    pip3 install --no-cache-dir -r requirements.txt && \
+    apk del git build-base && \
+    rm -rf /var/cache/apk/*
+
+# Expose and entrypoint
+COPY entrypoint.sh /
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
