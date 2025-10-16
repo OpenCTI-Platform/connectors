@@ -8,6 +8,7 @@ These models can be extended to create specific configurations for different typ
 
 import os
 from abc import ABC
+from copy import deepcopy
 from datetime import timedelta
 from pathlib import Path
 from typing import Any, Literal
@@ -128,6 +129,50 @@ class _SettingsLoader(BaseSettings):
             )
         return (env_settings,)
 
+    @classmethod
+    def build_loader_from_model(
+        cls, connector_settings: type["BaseConnectorSettings"]
+    ) -> type["_SettingsLoader"]:
+        """Build an untyped `_SettingsLoader` subclass for a connector's settings.
+
+        This method dynamically creates a subclass of `_SettingsLoader` that mirrors the
+        structure of the provided `BaseConnectorSettings` implementation. It disables all
+        Pydantic decoding, type coercion and validation so fields accept raw, unprocessed values.
+
+        The resulting model:
+        * Preserves values as-is from configuration sources
+        * Keeps YAML values as native Python types
+        * Keeps environment variables as plain strings
+        * Allows any field type (`Any`) without validation
+
+        Args:
+            connector_settings (type[BaseConnectorSettings]): The typed connector settings class to mirror.
+
+        Returns:
+            type[_SettingsLoader]: A dynamically generated subclass of `_SettingsLoader`
+                where all fields accept raw, unvalidated input.
+        """
+
+        class SettingsLoader(_SettingsLoader): ...
+
+        model_fields = deepcopy(connector_settings.model_fields)
+        for field_info in model_fields.values():
+            annotation = field_info.annotation
+            if annotation and issubclass(annotation, BaseModel):
+                fields: dict[str, Any] = dict.fromkeys(
+                    annotation.model_fields.keys(), Any
+                )
+                untyped_model = create_model(
+                    f"{annotation.__name__}Untyped",
+                    __base__=annotation,
+                    **fields,
+                )
+                field_info.annotation = untyped_model
+                field_info.default_factory = untyped_model
+
+        SettingsLoader.model_fields = model_fields  # type: ignore
+        return SettingsLoader
+
 
 class BaseConnectorSettings(BaseConfigModel, ABC):
     """Interface class for managing and loading the global configuration for connectors.
@@ -182,12 +227,7 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
     @classmethod
     def _load_config_dict(cls, _: Any) -> dict[str, Any]:
         # Re-define a SettingsLoader model with fields defined in BaseConnectorSettings
-        fields: dict[str, Any] = dict.fromkeys(cls.model_fields.keys(), dict)
-        settings_loader = create_model(
-            "SettingsLoader",
-            __base__=_SettingsLoader,
-            **fields,
-        )
+        settings_loader = _SettingsLoader.build_loader_from_model(cls)
 
         # Get config dict to send for validation
         config_dict: dict[str, Any] = settings_loader().model_dump()
