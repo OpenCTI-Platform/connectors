@@ -139,6 +139,10 @@ class ElasticApiClient:
                         }
                     )
 
+            if self.config.alert_rule_tags and len(self.config.alert_statuses) > 0:
+                # TODO: To implement
+                pass
+
             # Search for alerts using the .alerts-* index pattern
             url = f"{self.elastic_url}/.alerts-security.alerts-*/_search"
 
@@ -152,6 +156,7 @@ class ElasticApiClient:
 
             if response.status_code == 200:
                 result = response.json()
+                print(result)
                 hits = result.get("hits", {}).get("hits", [])
                 alerts = [hit["_source"] for hit in hits]
 
