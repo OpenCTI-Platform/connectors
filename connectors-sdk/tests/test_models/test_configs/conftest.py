@@ -5,7 +5,7 @@ import pytest
 def mock_basic_environment(monkeypatch):
     monkeypatch.setenv("OPENCTI_URL", "http://localhost:8080")
     monkeypatch.setenv("OPENCTI_TOKEN", "changeme")
-    monkeypatch.setenv("CONNECTOR_ID", "CHANGEME")
+    monkeypatch.setenv("CONNECTOR_ID", "connector-poc--uid")
     monkeypatch.setenv("CONNECTOR_NAME", "Test Connector")
     monkeypatch.setenv("CONNECTOR_SCOPE", "test")
     monkeypatch.setenv("CONNECTOR_DURATION_PERIOD", "PT5M")
@@ -39,11 +39,11 @@ def mock_yaml_config_settings_read_files(monkeypatch):
             "connector": {
                 "duration_period": "PT5M",
                 "id": "connector-poc--uid",
-                "log_level": "info",
-                "name": "Connector POC",
-                "scope": "ChangeMe",
+                "log_level": "error",
+                "name": "Test Connector",
+                "scope": "test",
             },
-            "opencti": {"token": "token", "url": "http://localhost:8080"},
+            "opencti": {"token": "changeme", "url": "http://localhost:8080"},
         }
 
     monkeypatch.setattr(
@@ -58,7 +58,7 @@ def mock_env_config_settings_read_env_files(monkeypatch):
             return {
                 "opencti": {"url": "http://localhost:8080", "token": "changeme"},
                 "connector": {
-                    "id": "CHANGEME",
+                    "id": "connector-poc--uid",
                     "name": "Test Connector",
                     "duration_period": "PT5M",
                     "log_level": "error",
