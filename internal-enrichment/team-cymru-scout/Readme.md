@@ -123,12 +123,6 @@ make docker-up
 
 ---
 
-### 🏢 Team Cymru Internal Deployment
-
-> **Note:** The `docker-compose-cymru.yml` file and associated CI/CD pipeline are for **Team Cymru internal use only**.
-
-This deployment method uses pre-built images from the GitLab Container Registry and is managed via the GitLab CI/CD pipeline. See `.gitlab-ci.yml` for pipeline configuration details
-
 
 ## ⚙️ Behavior
 
