@@ -313,15 +313,6 @@ class Author(ABC, BaseIdentifiedEntity):
 
     """
 
-    @abstractmethod
-    def to_stix2_object(self) -> stix2.v21._STIXBase21:
-        """Make stix object.
-
-        Returns:
-            (stix2.v21._STIXBase21): A stix object representing the author.
-
-        """
-
 
 @MODEL_REGISTRY.register
 class TLPMarking(BaseIdentifiedEntity):
