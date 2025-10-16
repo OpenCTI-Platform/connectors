@@ -156,7 +156,6 @@ class ElasticApiClient:
 
             if response.status_code == 200:
                 result = response.json()
-                print(result)
                 hits = result.get("hits", {}).get("hits", [])
                 alerts = [hit["_source"] for hit in hits]
 
