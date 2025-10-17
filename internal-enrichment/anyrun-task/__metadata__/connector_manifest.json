@@ -1,7 +1,7 @@
 {
-  "title": "Anyrun Task",
+  "title": "ANY.RUN Task",
   "slug": "anyrun-task",
-  "description": "Analyze Url or Artifact in ANY.RUN Interactive Online Malware Sandbox",
+  "description": "Analyze URL or Artifact in ANY.RUN Interactive Online Malware Sandbox",
   "short_description": "Analyze Url or Artifact in ANY.RUN Interactive Online Malware Sandbox",
   "logo": "internal-enrichment/anyrun-task/__metadata__/logo.png",
   "use_cases": [
