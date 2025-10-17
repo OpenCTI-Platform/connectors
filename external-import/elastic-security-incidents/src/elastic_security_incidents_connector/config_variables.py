@@ -117,6 +117,28 @@ class ConfigConnector:
         else:
             self.alert_statuses = []  # Default to no filtering
 
+        alert_rule_tags_raw = get_config_variable(
+            "ELASTIC_SECURITY_ALERT_RULE_TAGS",
+            ["elastic_security", "alert_rule_tags"],
+            self.load,
+            default=None,  # Default to None for no filtering
+        )
+        # Parse comma-separated string and trim whitespace
+        if alert_rule_tags_raw is None:
+            self.alert_rule_tags = []  # Empty list means no filtering
+        elif isinstance(alert_rule_tags_raw, str):
+            # Handle empty string or "none" as no filtering
+            if alert_rule_tags_raw.strip().lower() in ["", "none"]:
+                self.alert_rule_tags = []
+            else:
+                self.alert_rule_tags = [
+                    s.strip() for s in alert_rule_tags_raw.split(",") if s.strip()
+                ]
+        elif isinstance(alert_rule_tags_raw, list):
+            self.alert_rule_tags = alert_rule_tags_raw
+        else:
+            self.alert_rule_tags = []  # Default to no filtering
+
         case_statuses_raw = get_config_variable(
             "ELASTIC_SECURITY_CASE_STATUSES",
             ["elastic_security", "case_statuses"],
