@@ -15,9 +15,9 @@ from pydantic import (
 )
 
 if TYPE_CHECKING:
+    from connectors_sdk.models.external_reference import ExternalReference
     from connectors_sdk.models.octi._common import (
         Author,
-        ExternalReference,
         TLPMarking,
     )
 
