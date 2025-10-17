@@ -1,0 +1,19 @@
+{
+  "title": "Zerofox",
+  "slug": "zerofox",
+  "description": "The OpenCTI ZeroFox connector can be used to import knowledge from the ZeroFoxplatform. The connector leverages the Threat Intelligence data feeds to get data about ...\nNote: Requires subscription to the ZeroFox CTI feeds. The subscriptiondetails dictate what feeds are available to the connector.In order to get a suscription, please contact",
+  "short_description": "The OpenCTI ZeroFox connector can be used to import knowledge from the ZeroFoxplatform. The connector leverages the Threat Intelligence data feeds to get data about ...\nNote: Requires subscription to the ZeroFox CTI feeds. The subscriptiondetails dictate what feeds are available to the connector.In order to get a suscription, please contact",
+  "logo": null,
+  "use_cases": [],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/zerofox",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-zerofox",
+  "container_type": "EXTERNAL_IMPORT"
+}

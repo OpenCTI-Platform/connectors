@@ -1,0 +1,19 @@
+{
+  "title": "Export Report Pdf",
+  "slug": "export-report-pdf",
+  "description": "OpenCTI ExportReportPdf connector allows exporting PDF based reports for the following entities: Report (Analysis), Intrusion Set, and Threat Actor. The PDF may be useful for sharing threat intelligence with an external entity in a nice, well-groomed format.",
+  "short_description": "OpenCTI ExportReportPdf connector allows exporting PDF based reports for the following entities: Report (Analysis), Intrusion Set, and Threat Actor. The PDF may be useful for sharing threat intelligence with an external entity in a nice, well-groomed format.",
+  "logo": null,
+  "use_cases": [],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-export-file/export-report-pdf",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-export-report-pdf",
+  "container_type": "INTERNAL_EXPORT_FILE"
+}

@@ -60,21 +60,24 @@ class ConnectorClient:
         collected. If any request results in an error (retry error, HTTP error, timeout, or connection error), it will
         log the issue and halt further pagination.
 
-        :param initial_url: The initial URL for retrieving incidents.
+        :param date_str: The date string to filter incidents modified after this date.
         :return: A list of all incidents as dictionaries containing mixed data types.
         """
         all_incidents = []
         next_page_url = (
-            self.log_analytics_url
-            + "/workspaces/"
-            + self.config.workspace_id
-            + "/query"
+            f"{self.log_analytics_url}/workspaces/{self.config.workspace_id}/query"
         )
         body = {
-            "query": "SecurityIncident | sort by LastModifiedTime asc | where LastModifiedTime > todatetime('"
-            + date_str
-            + "')"
+            "query": "SecurityIncident | sort by LastModifiedTime asc"
+            f"| where LastModifiedTime > todatetime('{date_str}')"
         }
+        if self.config.filter_labels:
+            labels = ", ".join(f'"{label}"' for label in self.config.filter_labels)
+            body["query"] += (
+                "| mv-apply labelsFiltered=Labels on ("
+                f"where labelsFiltered.labelName has_any ({labels})"
+                "| take 1 )"
+            )
         while next_page_url:
             try:
                 response = self.session.post(url=next_page_url, json=body)
@@ -159,7 +162,6 @@ class ConnectorClient:
         collected. If any request results in an error (retry error, HTTP error, timeout, or connection error), it will
         log the issue and halt further pagination.
 
-        :param initial_url: The initial URL for retrieving alerts.
         :return: A list of all alerts as dictionaries containing mixed data types.
         """
         all_alerts = []
