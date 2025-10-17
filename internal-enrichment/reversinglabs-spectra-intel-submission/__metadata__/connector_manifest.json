@@ -3,8 +3,10 @@
   "slug": "reversinglabs-spectra-intel-submission",
   "description": "Connector supports enrichment of observables and creation of indicators based on the result received from ReversingLabs Spectra Intelligence. Connector enables file submission to the Spectra Intelligence and file analysis. Based on the result, connector creates indicators, malwares, calculates score, adds labels, adds MITRE tactics and techniques and creates relationships between created objects for submitted observable.\nConnector enables file and url submission to the ReversingLabs Spectra Intelligence.\nThe connector works for the following observable types:",
   "short_description": "Connector supports enrichment of observables and creation of indicators based on the result received from ReversingLabs Spectra Intelligence. Connector enables file submission to the Spectra Intelligence and file analysis. Based on the result, connector creates indicators, malwares, calculates score, adds labels, adds MITRE tactics and techniques and creates relationships between created objects for submitted observable.\nConnector enables file and url submission to the ReversingLabs Spectra Intelligence.\nThe connector works for the following observable types:",
-  "logo": null,
-  "use_cases": ["Enrichment & Analysis"],
+  "logo": "internal-enrichment/reversinglabs-spectra-intel-submission/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": true,

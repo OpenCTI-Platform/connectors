@@ -3,8 +3,10 @@
   "slug": "rst-whois-api",
   "description": "The RST WHOIS API Connector enriches domain and URL observables and indicators with domain registration data. It enhances the capabilities of OpenCTI by providing an affordable way to retrieve WHOIS and RDAP data, depending on which protocol is applicable for the domain. If the observable is a subdomain, the connector returns the WHOIS data of the parent domain. (RST WHOIS API).",
   "short_description": "The RST WHOIS API Connector enriches domain and URL observables and indicators with domain registration data. It enhances the capabilities of OpenCTI by providing an affordable way to retrieve WHOIS and RDAP data, depending on which protocol is applicable for the domain. If the observable is a subdomain, the connector returns the WHOIS data of the parent domain. (RST WHOIS API).",
-  "logo": null,
-  "use_cases": ["Enrichment & Analysis"],
+  "logo": "internal-enrichment/rst-whois-api/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": true,

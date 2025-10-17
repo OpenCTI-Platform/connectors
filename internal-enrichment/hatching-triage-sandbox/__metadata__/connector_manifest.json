@@ -4,7 +4,11 @@
   "description": "Information coming soon",
   "short_description": "Information coming soon",
   "logo": null,
-  "use_cases": ["Enrichment & Analysis", "Malware Analysis", "Sandbox"],
+  "use_cases": [
+    "Enrichment & Analysis",
+    "Malware Analysis",
+    "Sandbox"
+  ],
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

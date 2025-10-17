@@ -3,8 +3,10 @@
   "slug": "export-file-stix",
   "description": "Information coming soon",
   "short_description": "Information coming soon",
-  "logo": null,
-  "use_cases": ["Threat Intelligence"],
+  "logo": "internal-export-file/export-file-stix/__metadata__/logo.png",
+  "use_cases": [
+    "Threat Intelligence"
+  ],
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

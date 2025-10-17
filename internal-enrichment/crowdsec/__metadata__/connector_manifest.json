@@ -3,8 +3,10 @@
   "slug": "crowdsec",
   "description": "Connector which enriches your knowledge by using CrowdSec's CTI API.",
   "short_description": "Connector which enriches your knowledge by using CrowdSec's CTI API.",
-  "logo": null,
-  "use_cases": ["Enrichment & Analysis"],
+  "logo": "internal-enrichment/crowdsec/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

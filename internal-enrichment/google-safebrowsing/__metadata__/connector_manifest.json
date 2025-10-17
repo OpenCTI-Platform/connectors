@@ -1,10 +1,12 @@
 {
   "title": "Google Safe Browsing",
   "slug": "google-safebrowsing",
-  "description": "Information coming soon",
-  "short_description": "Information coming soon",
-  "logo": null,
-  "use_cases": ["Enrichment & Analysis"],
+  "description": "-->",
+  "short_description": "-->",
+  "logo": "internal-enrichment/google-safebrowsing/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

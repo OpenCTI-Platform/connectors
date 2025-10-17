@@ -3,8 +3,10 @@
   "slug": "malbeacon",
   "description": "This is an observable enrichment connector that uses the MalBeacon API to add information about origin networks of attackers.\nThe connector works for the following OpenCTI observable types:\nNOTE - this connector requires an API key.",
   "short_description": "This is an observable enrichment connector that uses the MalBeacon API to add information about origin networks of attackers.\nThe connector works for the following OpenCTI observable types:\nNOTE - this connector requires an API key.",
-  "logo": null,
-  "use_cases": ["Enrichment & Analysis"],
+  "logo": "internal-enrichment/malbeacon/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": true,

@@ -3,8 +3,10 @@
   "slug": "ivre",
   "description": "Information coming soon",
   "short_description": "Information coming soon",
-  "logo": null,
-  "use_cases": ["Enrichment & Analysis"],
+  "logo": "internal-enrichment/ivre/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

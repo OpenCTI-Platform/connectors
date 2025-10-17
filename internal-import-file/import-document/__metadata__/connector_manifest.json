@@ -3,8 +3,10 @@
   "slug": "import-document",
   "description": "This connector allows organizations to feed information from document to OpenCTI.\nThis connector extracts the information in the document files and then matches it against regular expressions for Entities from the OpenCTI knowledge base or new Observables.",
   "short_description": "This connector allows organizations to feed information from document to OpenCTI.\nThis connector extracts the information in the document files and then matches it against regular expressions for Entities from the OpenCTI knowledge base or new Observables.",
-  "logo": null,
-  "use_cases": ["Threat Intelligence"],
+  "logo": "internal-import-file/import-document/__metadata__/logo.png",
+  "use_cases": [
+    "Threat Intelligence"
+  ],
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

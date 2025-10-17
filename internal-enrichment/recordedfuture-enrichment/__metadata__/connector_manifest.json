@@ -3,8 +3,10 @@
   "slug": "recordedfuture-enrichment",
   "description": "This connector enriches individual OpenCTI Observables and Vulnerabilities with Recorded Future Information.For observables, currently enrichment of IP Address (ipv4 and ipv6), URLs, Domains, and Hashes (MD5, SHA1, and SHA256) only is supported.",
   "short_description": "This connector enriches individual OpenCTI Observables and Vulnerabilities with Recorded Future Information.For observables, currently enrichment of IP Address (ipv4 and ipv6), URLs, Domains, and Hashes (MD5, SHA1, and SHA256) only is supported.",
-  "logo": null,
-  "use_cases": ["Enrichment & Analysis"],
+  "logo": "internal-enrichment/recordedfuture-enrichment/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": true,

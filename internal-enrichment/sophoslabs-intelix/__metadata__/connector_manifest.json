@@ -3,8 +3,10 @@
   "slug": "sophoslabs-intelix",
   "description": "This is an OpenCTI Connector for Data Enrichment for IP, SHA256 and Domain Lookup, powered by SophosLabs Intelix.Before a pull request is submitted to the OpenCTI Project we're looking for public beta testers, any issues, or desired changes please log an issue.",
   "short_description": "This is an OpenCTI Connector for Data Enrichment for IP, SHA256 and Domain Lookup, powered by SophosLabs Intelix.Before a pull request is submitted to the OpenCTI Project we're looking for public beta testers, any issues, or desired changes please log an issue.",
-  "logo": null,
-  "use_cases": ["Enrichment & Analysis"],
+  "logo": "internal-enrichment/sophoslabs-intelix/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,
