@@ -13,7 +13,6 @@ from connectors_sdk.models.note import Note
 from connectors_sdk.models.octi._common import TLPMarking
 from connectors_sdk.models.octi.activities.observations import (
     URL,
-    Software,
 )
 from connectors_sdk.models.octi.knowledge.arsenal import Malware, Vulnerability
 from connectors_sdk.models.octi.knowledge.entities import (
@@ -37,6 +36,7 @@ from connectors_sdk.models.octi.relationships import (
 from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
 from connectors_sdk.models.organization_author import OrganizationAuthor
 from connectors_sdk.models.report import Report
+from connectors_sdk.models.software import Software
 
 __all__ = [
     # Models flat list
