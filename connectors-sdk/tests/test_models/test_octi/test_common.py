@@ -5,6 +5,7 @@ from typing import OrderedDict
 import pytest
 import stix2
 import stix2.properties
+from connectors_sdk.models._base_identified_entity import _BaseIdentifiedEntity
 from connectors_sdk.models._model_registry import _ModelRegistry
 from connectors_sdk.models.associated_file import AssociatedFile, AssociatedFileStix
 from connectors_sdk.models.base_entity import BaseEntity
@@ -337,13 +338,13 @@ def implemented_author():
     return ImplementedAuthor
 
 
-def test_author_should_be_a_base_identified_entity(implemented_author):
+def test_author_should_be_a__base_identified_entity(implemented_author):
     """Test that Author is a BaseIdentifiedEntity."""
     # Given an implemented Author
     author_class = implemented_author
     # When checking the class inheritance
     # Then it should be a subclass of BaseIdentifiedEntity
-    assert issubclass(author_class, BaseIdentifiedEntity)
+    assert issubclass(author_class, _BaseIdentifiedEntity)
 
 
 ### TEST ASSOCIATEDFILE

@@ -3,8 +3,8 @@
 from abc import ABC, abstractmethod
 
 import stix2.properties
+from connectors_sdk.models._base_identified_entity import _BaseIdentifiedEntity
 from connectors_sdk.models._model_registry import MODEL_REGISTRY
-from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.octi.enums import TLPLevel
 from pycti import MarkingDefinition as PyctiMarkingDefinition
 from pydantic import Field
@@ -13,7 +13,7 @@ from stix2.v21 import MarkingDefinition as Stix2MarkingDefinition
 
 
 @MODEL_REGISTRY.register
-class Author(ABC, BaseIdentifiedEntity):
+class Author(ABC, _BaseIdentifiedEntity):
     """Represent an author.
 
     Author is an OpenCTI concept, a stix-like identity considered as the creator of a
@@ -35,7 +35,7 @@ class Author(ABC, BaseIdentifiedEntity):
 
 
 @MODEL_REGISTRY.register
-class TLPMarking(BaseIdentifiedEntity):
+class TLPMarking(_BaseIdentifiedEntity):
     """Represent a TLP marking definition."""
 
     level: TLPLevel = Field(description="The level of the TLP marking.")
