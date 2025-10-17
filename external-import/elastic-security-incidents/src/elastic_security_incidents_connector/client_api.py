@@ -141,11 +141,7 @@ class ElasticApiClient:
 
             if self.config.alert_rule_tags and len(self.config.alert_rule_tags) > 0:
                 query["query"]["bool"]["filter"].append(
-                    {
-                        "terms": {
-                            "kibana.alert.rule.tags": self.config.alert_rule_tags
-                        }
-                    }
+                    {"terms": {"kibana.alert.rule.tags": self.config.alert_rule_tags}}
                 )
 
             # Search for alerts using the .alerts-* index pattern
