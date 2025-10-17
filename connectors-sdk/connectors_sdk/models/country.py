@@ -1,4 +1,4 @@
-"""Offer locations OpenCTI entities."""
+"""Country."""
 
 from connectors_sdk.models._location import Location
 from connectors_sdk.models._model_registry import MODEL_REGISTRY
@@ -41,11 +41,3 @@ class Country(BaseIdentifiedEntity):
             allow_custom=True,
             x_opencti_location_type=location_type,
         )
-
-
-MODEL_REGISTRY.rebuild_all()
-
-if __name__ == "__main__":  # pragma: no cover  # Do not run coverage on doctest
-    import doctest
-
-    doctest.testmod()

@@ -6,6 +6,7 @@ from connectors_sdk.models.octi import (
     BaseEntity,
     BaseIdentifiedEntity,
     City,
+    Country,
     DomainName,
     ExternalReference,
     File,
@@ -27,6 +28,7 @@ __all__ = [
     # Models flat list
     "AssociatedFile",
     "City",
+    "Country",
     "DomainName",
     "ExternalReference",
     "File",
