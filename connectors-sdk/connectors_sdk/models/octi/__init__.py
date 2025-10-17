@@ -1,8 +1,8 @@
 """Offer OpenCTI models."""
 
+from connectors_sdk.models.base_entity import BaseEntity
 from connectors_sdk.models.octi._common import (
     AssociatedFile,
-    BaseEntity,
     BaseIdentifiedEntity,
     ExternalReference,
     TLPMarking,
