@@ -8,36 +8,10 @@ from connectors_sdk.models._observable import Observable
 from connectors_sdk.models.octi.enums import HashAlgorithm
 from pydantic import AwareDatetime, Field, PositiveInt, field_validator, model_validator
 from stix2.v21 import URL as Stix2URL  # noqa: N811 # URL is not a constant but a class
-from stix2.v21 import DomainName as Stix2DomainName
 from stix2.v21 import File as Stix2File
 from stix2.v21 import IPv4Address as Stix2IPv4Address
 from stix2.v21 import IPv6Address as Stix2IPv6Address
 from stix2.v21 import Software as Stix2Software
-
-
-@MODEL_REGISTRY.register
-class DomainName(Observable):
-    """Define a domain name observable on OpenCTI.
-
-    Notes:
-        - The `resolves_to_refs` (from STIX2.1 spec) field is not implemented on OpenCTI.
-          It must be replaced by explicit `resolves-to` relationships.
-
-    """
-
-    value: str = Field(
-        description="Specifies the value of the domain name.",
-        min_length=1,
-    )
-
-    def to_stix2_object(self) -> Stix2DomainName:
-        """Make stix object."""
-        return Stix2DomainName(
-            value=self.value,
-            object_marking_refs=[marking.id for marking in self.markings or []],
-            allow_custom=True,
-            **self._custom_properties_to_stix(),
-        )
 
 
 @MODEL_REGISTRY.register

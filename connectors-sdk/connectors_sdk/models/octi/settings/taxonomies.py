@@ -26,8 +26,6 @@ class KillChainPhase(BaseEntity):
         )
 
 
-MODEL_REGISTRY.rebuild_all()
-
 if __name__ == "__main__":  # pragma: no cover # do not run coverage on doctests
     import doctest
 
