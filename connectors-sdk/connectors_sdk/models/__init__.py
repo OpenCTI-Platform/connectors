@@ -7,6 +7,7 @@ from connectors_sdk.models.octi import (
     ExternalReference,
     Note,
     OrganizationAuthor,
+    Report,
 )
 
 __all__ = [
@@ -15,6 +16,7 @@ __all__ = [
     "ExternalReference",
     "Note",
     "OrganizationAuthor",
+    "Report",
     # Typing purpose
     "BaseEntity",
     "BaseIdentifiedEntity",
