@@ -3,9 +3,9 @@
 
 import pytest
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
+from connectors_sdk.models.individual import Individual
 from connectors_sdk.models.octi.enums import Reliability
 from connectors_sdk.models.octi.knowledge.entities import (
-    Individual,
     Organization,
     Sector,
 )
