@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from connectors_sdk.models._author import Author
 from connectors_sdk.models._base_identified_entity import _BaseIdentifiedEntity
 from connectors_sdk.models._model_registry import MODEL_REGISTRY
 from pydantic import (
@@ -13,10 +14,7 @@ from pydantic import (
 
 if TYPE_CHECKING:
     from connectors_sdk.models.external_reference import ExternalReference
-    from connectors_sdk.models.octi._common import (
-        Author,
-        TLPMarking,
-    )
+    from connectors_sdk.models.octi._common import TLPMarking
 
 
 @MODEL_REGISTRY.register
