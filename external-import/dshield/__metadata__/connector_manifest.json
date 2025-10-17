@@ -4,7 +4,7 @@
   "description": "The DShield connector is a standalone Python process that collects data from the DShield.org Recommended Block List.Idea:damians-filigran",
   "short_description": "The DShield connector is a standalone Python process that collects data from the DShield.org Recommended Block List.Idea:damians-filigran",
   "logo": null,
-  "use_cases": [],
+  "use_cases": ["Open Source Threat Intel"],
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

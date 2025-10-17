@@ -1,10 +1,10 @@
 {
-  "title": "First Epss Bulk",
+  "title": "FIRST EPSS Bulk",
   "slug": "first-epss-bulk",
   "description": "Information coming soon",
   "short_description": "Information coming soon",
   "logo": null,
-  "use_cases": [],
+  "use_cases": ["Vulnerability Management"],
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,
