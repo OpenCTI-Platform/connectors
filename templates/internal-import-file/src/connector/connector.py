@@ -1,11 +1,10 @@
 import json
 
+from connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
-from .config_loader import ConfigConnector
 
-
-class ConnectorTemplate:
+class TemplateConnector:
     """
     Specifications of the Internal Import File connector
 
@@ -16,14 +15,12 @@ class ConnectorTemplate:
     It basically uses the same functions and principle than the internal enrichment connector type.
     ---
 
-    Attributes
-        - `config (ConfigConnector())`:
-            Initialize the connector with necessary configuration environment variables
-
-        - `helper (OpenCTIConnectorHelper(config))`:
-            This is the helper to use.
-            ALL connectors have to instantiate the connector helper with configurations.
-            Doing this will do a lot of operations behind the scene.
+    Attributes:
+        config (ConnectorSettings):
+            Store the connector's configuration. It defines how to connector will behave.
+        helper (OpenCTIConnectorHelper):
+            Handle the connection and the requests between the connector, OpenCTI and the workers.
+            _All connectors MUST use the connector helper with connector's configuration._
 
     ---
 
@@ -34,12 +31,14 @@ class ConnectorTemplate:
 
     """
 
-    def __init__(self, config: ConfigConnector, helper: OpenCTIConnectorHelper):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """
-        Initialize the Connector with necessary configurations
-        """
+        Initialize `TemplateConnector` with its configuration.
 
-        # Load configuration file and connection helper
+        Args:
+            config (ConnectorSettings): Configuration of the connector
+            helper (OpenCTIConnectorHelper): Helper to manage connection and requests to OpenCTI
+        """
         self.config = config
         self.helper = helper
 
