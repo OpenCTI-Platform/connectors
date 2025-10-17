@@ -4,14 +4,13 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'INTERNAL_IMPORT_FILE'
-  name: 'Internal Import File Connector Template'
+  name: 'TemplateConnector'
   scope: 'ChangeMe'
-  log_level: 'info'
+  log_level: 'error'
   live_stream_id: 'live' # ID of the live stream created in the OpenCTI UI
   live_stream_listen_delete: true
   live_stream_no_dependencies: true
 
-connector_template:
+template:
   api_base_url: 'ChangeMe'
   api_key: 'ChangeMe'
