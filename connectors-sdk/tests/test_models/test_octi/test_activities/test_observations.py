@@ -4,6 +4,7 @@
 from datetime import datetime
 
 import pytest
+from connectors_sdk.models._observable import Observable
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.octi.activities.observations import (
     URL,
@@ -12,7 +13,6 @@ from connectors_sdk.models.octi.activities.observations import (
     Indicator,
     IPV4Address,
     IPV6Address,
-    Observable,
     Software,
 )
 from pydantic import ValidationError
