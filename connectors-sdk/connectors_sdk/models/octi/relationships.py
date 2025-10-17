@@ -3,7 +3,7 @@
 from typing import Literal
 
 from connectors_sdk.models._model_registry import MODEL_REGISTRY
-from connectors_sdk.models.octi._common import BaseIdentifiedEntity
+from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from pycti import StixCoreRelationship as PyctiStixCoreRelationship
 from pydantic import AwareDatetime, Field
 from stix2.v21 import Relationship as Stix2Relationship

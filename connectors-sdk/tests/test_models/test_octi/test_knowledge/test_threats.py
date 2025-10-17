@@ -2,7 +2,7 @@
 """Offer tests for observations OpenCTI entities."""
 
 import pytest
-from connectors_sdk.models.octi._common import BaseIdentifiedEntity
+from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.octi.knowledge.threats import IntrusionSet, ThreatActorGroup
 from pydantic import ValidationError
 from stix2.v21 import IntrusionSet as Stix2IntrusionSet
