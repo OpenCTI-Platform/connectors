@@ -4,8 +4,8 @@ import ipaddress
 from abc import ABC, abstractmethod
 from typing import Any, Literal
 
+from connectors_sdk.models._model_registry import MODEL_REGISTRY
 from connectors_sdk.models.octi._common import (
-    MODEL_REGISTRY,
     AssociatedFile,
     BaseIdentifiedEntity,
 )
