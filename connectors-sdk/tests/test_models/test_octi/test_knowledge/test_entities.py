@@ -5,10 +5,8 @@ import pytest
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.individual import Individual
 from connectors_sdk.models.octi.enums import Reliability
-from connectors_sdk.models.octi.knowledge.entities import (
-    Sector,
-)
 from connectors_sdk.models.organization import Organization
+from connectors_sdk.models.sector import Sector
 from pydantic import ValidationError
 from stix2.v21 import Identity as Stix2Identity
 

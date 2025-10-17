@@ -61,12 +61,3 @@ class Sector(BaseIdentifiedEntity):
             x_opencti_reliability=self.reliability,
             x_opencti_aliases=self.aliases,
         )
-
-
-# See https://docs.pydantic.dev/latest/errors/usage_errors/#class-not-fully-defined (consulted on 2025-06-10)
-MODEL_REGISTRY.rebuild_all()
-
-if __name__ == "__main__":  # pragma: no cover  # Do not run coverage on doctest
-    import doctest
-
-    doctest.testmod()

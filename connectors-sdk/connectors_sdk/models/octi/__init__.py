@@ -13,9 +13,6 @@ from connectors_sdk.models.ipv6_address import IPV6Address
 from connectors_sdk.models.malware import Malware
 from connectors_sdk.models.note import Note
 from connectors_sdk.models.octi._common import TLPMarking
-from connectors_sdk.models.octi.knowledge.entities import (
-    Sector,
-)
 from connectors_sdk.models.octi.knowledge.locations import City, Country
 from connectors_sdk.models.octi.knowledge.techniques import AttackPattern
 from connectors_sdk.models.octi.knowledge.threats import IntrusionSet, ThreatActorGroup
@@ -33,6 +30,7 @@ from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
 from connectors_sdk.models.organization import Organization
 from connectors_sdk.models.organization_author import OrganizationAuthor
 from connectors_sdk.models.report import Report
+from connectors_sdk.models.sector import Sector
 from connectors_sdk.models.software import Software
 from connectors_sdk.models.url import URL
 from connectors_sdk.models.vulnerability import Vulnerability
