@@ -10,9 +10,9 @@ from connectors_sdk.models.domain_name import DomainName
 from connectors_sdk.models.file import File
 from connectors_sdk.models.indicator import Indicator
 from connectors_sdk.models.ipv4_address import IPV4Address
+from connectors_sdk.models.ipv6_address import IPV6Address
 from connectors_sdk.models.octi.activities.observations import (
     URL,
-    IPV6Address,
     Software,
 )
 from pydantic import ValidationError
