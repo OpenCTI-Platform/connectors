@@ -2,8 +2,8 @@
 """Offer tests for observations OpenCTI entities."""
 
 import pytest
+from connectors_sdk.models.attack_pattern import AttackPattern
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
-from connectors_sdk.models.octi.knowledge.techniques import AttackPattern
 from pydantic import ValidationError
 from stix2.v21 import AttackPattern as Stix2AttackPattern
 

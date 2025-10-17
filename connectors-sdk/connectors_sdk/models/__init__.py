@@ -3,6 +3,7 @@
 from connectors_sdk.models.octi import (
     URL,
     AssociatedFile,
+    AttackPattern,
     BaseEntity,
     BaseIdentifiedEntity,
     City,
@@ -27,6 +28,7 @@ from connectors_sdk.models.octi import (
 __all__ = [
     # Models flat list
     "AssociatedFile",
+    "AttackPattern",
     "City",
     "Country",
     "DomainName",
