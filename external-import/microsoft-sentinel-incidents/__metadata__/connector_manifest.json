@@ -1,15 +1,17 @@
 {
   "title": "Microsoft Sentinel Incidents",
   "slug": "microsoft-sentinel-incidents",
-  "description": "Information coming soon",
-  "short_description": "Information coming soon",
-  "logo": null,
-  "use_cases": [],
-  "verified": false,
+  "description": "This OpenCTI connector allows to import indicators and observables from Microsoft Sentinel's incidents to your OpenCTI platform.",
+  "short_description": "This OpenCTI connector allows to import indicators and observables from Microsoft Sentinel's incidents to your OpenCTI platform.",
+  "logo": "external-import/microsoft-sentinel-incidents/__metadata__/logo.png",
+  "use_cases": [
+    "Incident Response & Ticketing"
+  ],
+  "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 50,
-  "support_version": ">=6.8.0",
+  "support_version": ">=6.5.0",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/microsoft-sentinel-incidents",
   "manager_supported": false,
