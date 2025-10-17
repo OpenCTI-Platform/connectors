@@ -4,7 +4,7 @@
 import pytest
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.intrusion_set import IntrusionSet
-from connectors_sdk.models.octi.knowledge.threats import ThreatActorGroup
+from connectors_sdk.models.threat_actor_group import ThreatActorGroup
 from pydantic import ValidationError
 from stix2.v21 import IntrusionSet as Stix2IntrusionSet
 from stix2.v21 import ThreatActor as Stix2ThreatActor

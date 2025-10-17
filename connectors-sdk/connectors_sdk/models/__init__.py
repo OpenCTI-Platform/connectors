@@ -23,6 +23,7 @@ from connectors_sdk.models.octi import (
     Report,
     Sector,
     Software,
+    ThreatActorGroup,
     Vulnerability,
 )
 
@@ -47,6 +48,7 @@ __all__ = [
     "Report",
     "Sector",
     "Software",
+    "ThreatActorGroup",
     "URL",
     "Vulnerability",
     # Typing purpose

@@ -1,4 +1,4 @@
-"""Offer threats OpenCTI entities."""
+"""ThreatActorGroup."""
 
 from connectors_sdk.models._model_registry import MODEL_REGISTRY
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
@@ -98,11 +98,3 @@ class ThreatActorGroup(BaseIdentifiedEntity):
             ],
             object_marking_refs=[marking.id for marking in self.markings or []],
         )
-
-
-MODEL_REGISTRY.rebuild_all()
-
-if __name__ == "__main__":  # pragma: no cover  # Do not run coverage on doctest
-    import doctest
-
-    doctest.testmod()
