@@ -7,7 +7,7 @@ from collections import OrderedDict
 import stix2.properties
 from connectors_sdk.models.associated_file import AssociatedFile
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
-from connectors_sdk.models.octi.enums import Reliability, ReportType
+from connectors_sdk.models.enums import Reliability, ReportType
 from pycti import Report as PyctiReport
 from pydantic import AwareDatetime, Field
 from stix2.v21 import Report as Stix2Report

@@ -1,8 +1,8 @@
 """AttackPattern."""
 
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
+from connectors_sdk.models.enums import Permission, Platform
 from connectors_sdk.models.kill_chain_phase import KillChainPhase
-from connectors_sdk.models.octi.enums import Permission, Platform
 from pycti import AttackPattern as PyctiAttackPattern
 from pydantic import Field
 from stix2.v21 import AttackPattern as Stix2AttackPattern

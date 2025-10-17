@@ -5,13 +5,6 @@ from __future__ import annotations
 import warnings
 from enum import StrEnum
 
-warnings.warn(
-    "The 'connectors_sdk.models.octi.enums' module is deprecated and will be"
-    " removed in future versions. Please use 'connectors_sdk.models.enums' instead.",
-    DeprecationWarning,
-    stacklevel=2,
-)
-
 
 class PermissiveEnum(StrEnum):
     """Enum that allows for missing values."""
