@@ -25,7 +25,7 @@ from pycti import (
     get_config_variable,
 )
 from thehive4py import TheHiveApi
-from thehive4py.query import Gt
+from thehive4py.query import Gt, In
 from thehive4py.query.page import Paginate
 from thehive4py.query.sort import Asc
 from thehive4py.types.alert import OutputAlert
@@ -89,6 +89,13 @@ class TheHive:
             False,
             "",
         ).split(",")
+        self.thehive_case_tag_whitelist = get_config_variable(
+            "THEHIVE_CASE_TAG_WHITELIST",
+            ["thehive", "case_tag_whitelist"],
+            config,
+            False,
+            "",
+        ).split(",")
         self.thehive_task_status_mapping = get_config_variable(
             "THEHIVE_TASK_STATUS_MAPPING",
             ["thehive", "case_task_mapping"],
@@ -133,9 +140,15 @@ class TheHive:
             f"Constructing query with last date: {format_datetime(last_date, DEFAULT_UTC_DATETIME)}"
         )
         if type == "case":
-            return Gt("_updatedAt", int(last_date * 1000)) | Gt(
-                "_createdAt", int(last_date * 1000)
-            )
+            if any(self.thehive_case_tag_whitelist):
+                return In("tags", self.thehive_case_tag_whitelist) & (
+                    Gt("_updatedAt", int(last_date * 1000))
+                    | Gt("_createdAt", int(last_date * 1000))
+                )
+            else:
+                return Gt("_updatedAt", int(last_date * 1000)) | Gt(
+                    "_createdAt", int(last_date * 1000)
+                )
         elif type == "alert":
             return Gt("_updatedAt", int(last_date * 1000)) | Gt(
                 "_createdAt", int(last_date * 1000)
@@ -381,6 +394,7 @@ class TheHive:
 
         # check if type is case or alert, run search based on provided type.
         if type == "case":
+            self.helper.log_debug(f"query: {query}")
             items: list["OutputCase"] = self.thehive_api.case.find(
                 filters=query,
                 sortby=Asc("_updatedAt"),
