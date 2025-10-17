@@ -1,5 +1,5 @@
 {
-  "title": "Sentinel Incidents",
+  "title": "Sentinel Incidents (Deprecated)",
   "slug": "sentinel-incidents",
   "description": "This connector is deprecated. A mistake has been made as this connector actually pulls incident from Defender and not Sentinel.\nPlease use:\nThis connector will be removed in OpenCTI 6.6.0.",
   "short_description": "This connector is deprecated. A mistake has been made as this connector actually pulls incident from Defender and not Sentinel.\nPlease use:\nThis connector will be removed in OpenCTI 6.6.0.",

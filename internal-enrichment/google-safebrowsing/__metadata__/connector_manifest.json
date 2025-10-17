@@ -1,15 +1,17 @@
 {
-  "title": "Google Safebrowsing",
+  "title": "Google Safe Browsing",
   "slug": "google-safebrowsing",
   "description": "-->",
   "short_description": "-->",
-  "logo": null,
-  "use_cases": [],
-  "verified": false,
+  "logo": "internal-enrichment/google-safebrowsing/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
+  "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 50,
-  "support_version": ">=6.8.0",
+  "support_version": ">=6.0.6",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/google-safebrowsing",
   "manager_supported": false,

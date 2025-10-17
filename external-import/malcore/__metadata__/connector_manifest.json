@@ -1,8 +1,8 @@
 {
   "title": "Malcore",
   "slug": "malcore",
-  "description": "This connector imports data from Malcore\nThe connector creates the following OpenCTI entity types:",
-  "short_description": "This connector imports data from Malcore\nThe connector creates the following OpenCTI entity types:",
+  "description": "This connector imports data from Malcore.",
+  "short_description": "This connector imports data from Malcore. ",
   "logo": null,
   "use_cases": [],
   "verified": false,
