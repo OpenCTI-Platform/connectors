@@ -108,8 +108,8 @@ class ConfigConnector:
         return getattr(self, collection_attr_name, None)
 
     def get_extra_settings_by_name(self, setting_name):
-        cextra_setting_attr_name = f"ti_api_extra_settings_{setting_name}"
-        return getattr(self, cextra_setting_attr_name)
+        extra_setting_attr_name = f"ti_api_extra_settings_{setting_name}"
+        return getattr(self, extra_setting_attr_name, None)
 
     # Set up product metadata
     PRODUCT_TYPE = "SCRIPT"

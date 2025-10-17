@@ -13,6 +13,7 @@ Author: Pavel Reshetnikov, Integration developer, 2024
 import ipaddress
 import re
 from datetime import datetime
+from typing import Any, List, Optional, Tuple, Union
 from urllib.parse import urlparse
 
 import pycti  # type: ignore
@@ -111,7 +112,7 @@ class _CommonUtils:
 
     @staticmethod
     def _generate_malware_type(obj_type):
-        # type: (str) -> Optional[str, None]
+        # type: (str) -> Optional[str]
         """Generate Malware type object"""
         if obj_type.lower() in ConfigConnector.STIX_MALWARE_TYPE_MAP:
             return obj_type.lower()
@@ -176,12 +177,9 @@ class BaseEntity(_CommonUtils):
     def _generate_statement_marking(self):
         """Generate a custom statement marking with text equal to AUTHOR"""
         if self.config.get_extra_settings_by_name("enable_statement_marking"):
-            try:
-                marking_id = pycti.MarkingDefinition.generate_id(
-                    "statement", ConfigConnector.AUTHOR
-                )
-            except Exception:
-                marking_id = None
+            marking_id = pycti.MarkingDefinition.generate_id(
+                "statement", ConfigConnector.AUTHOR
+            )
             statement_marking = stix2.MarkingDefinition(
                 id=marking_id,
                 definition_type="statement",
