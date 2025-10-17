@@ -1,0 +1,19 @@
+{
+  "title": "Tweetfeed",
+  "slug": "tweetfeed",
+  "description": "Tweetfeed connect is a project aimed to collect evidences from Tweetfeed project.\nThis connector ingests Tweetfeed IOC in order to import Observables and Indicator collected from different researchers. Tweetfeed was developed by Daniel L\u00f3pez.This connector was built using the TAXII2 connector for OpenCTI as a base.",
+  "short_description": "Tweetfeed connect is a project aimed to collect evidences from Tweetfeed project.\nThis connector ingests Tweetfeed IOC in order to import Observables and Indicator collected from different researchers. Tweetfeed was developed by Daniel L\u00f3pez.This connector was built using the TAXII2 connector for OpenCTI as a base.",
+  "logo": null,
+  "use_cases": [],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/tweetfeed",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-tweetfeed",
+  "container_type": "EXTERNAL_IMPORT"
+}

@@ -3,12 +3,13 @@
   "slug": "disinfox",
   "description": "DISINFOX is a Threat Intelligence Exchange Platform developed by the University of Murcia, Spain, and specialized in disinformation campaigns and fake news. It is a platform that allows to spread intelligence about disinformation campaigns and fake news in real-time to allow organizations with CTI capabilities to act on it. The platform is designed to be user-friendly for non-technical users like journalists, fact-checkers, and researchers to upload their findings and share it with the community. Additionally, the platform is designed to be STIX-friendly for technical users like analysts, threat intelligence analysts, and data scientists to use the API to access the data and integrate it into their CTI platforms.\n\nThis connector retrieves data from a DISINFOX instance. It fetches STIX2 Bundles from the DISINFOX Public API to get newly added disinformation incidents to DISINFOX.\n\nA DISINFOX API Key is mandatory (from the Profile page at DISINFOX).",
   "short_description": "DISINFOX is a Threat Intelligence Exchange Platform developed by the University of Murcia, Spain, and specialized in disinformation campaigns and fake news. It is a platform that allows to spread intelligence about disinformation campaigns and fake news in real-time to allow organizations with CTI capabilities to act on it",
-  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "logo": "external-import/disinfox/__metadata__/logo.png",
   "use_cases": [
-    "Threat Intelligence", "FIMI"
+    "Threat Intelligence",
+    "FIMI"
   ],
   "verified": false,
-  "last_verified_date": "",
+  "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 50,
   "support_version": ">= 6.6.6",

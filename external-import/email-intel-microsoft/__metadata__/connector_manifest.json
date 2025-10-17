@@ -3,7 +3,7 @@
   "slug": "email-intel-microsoft",
   "description": "The Email Intel Microsoft Connector enables the ingestion of cyber threat intelligence reports received via email into the OpenCTI platform.\n\nThis connector allows organizations to automate the collection of intelligence shared through email by regularly polling a mailbox and transforming each message into an OpenCTI report.\n\nUsing the Microsoft Graph API,the connector polls a dedicated Microsoft 365/Exchange Online mailbox, transforms every message (plus accepted attachments) into an OpenCTI Report, and tags it with the chosen TLP.",
   "short_description": "The Email Intel Microsoft Connector allows for the ingestion of cyber threat intelligence reports received via email in a Microsoft 365/Exchange Online mailbox.",
-  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "logo": "external-import/email-intel-microsoft/__metadata__/logo.png",
   "use_cases": [
     "Email",
     "Threat Intelligence"

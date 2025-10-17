@@ -3,12 +3,12 @@
   "slug": "tenable-security-center",
   "description": "Tenable delivers comprehensive solutions for vulnerability management within IT infrastructures, using detailed assessments and analytics to reduce cyber risk. Integration with OpenCTI allows for seamless import of vulnerability data, enhancing threat intelligence and prioritization.\n\nThe integration of Tenable Security Center with OpenCTI enables the seamless import of detailed vulnerability data into the OpenCTI platform, aligning it with relevant entities in the ecosystem. The connector fetches data such as vulnerabilities, assets, and scan results, and integrates them into OpenCTI for further analysis and correlation with other threat intelligence data. This encompasses vulnerabilities, CVEs, severity levels, and affected assets, which can be utilized to enhance threat intelligence, optimize vulnerability management, and improve security operation workflows within OpenCTI.",
   "short_description": "Tenable delivers comprehensive solutions for vulnerability management within IT infrastructures, using detailed assessments and analytics to reduce cyber risk. Integration with OpenCTI allows for seamless import of vulnerability data, enhancing threat intelligence and prioritization.",
-  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "logo": "external-import/tenable-security-center/__metadata__/logo.png",
   "use_cases": [
     "Vulnerability Management"
   ],
   "verified": true,
-  "last_verified_date": "",
+  "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 50,
   "support_version": ">= 6.4.0",

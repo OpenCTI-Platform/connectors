@@ -1,0 +1,19 @@
+{
+  "title": "Threatmatch",
+  "slug": "threatmatch",
+  "description": "The ThreatMatch Connector imports ThreatMatch intelligence (alerts, profiles, IOCs, reports) into OpenCTI. Itauthenticates to the ThreatMatch Developer Platform, fetches items since the last successful run (or a configuredrelative start date on first run), and maps them to STIX 2.1 objects and relationships in OpenCTI.",
+  "short_description": "The ThreatMatch Connector imports ThreatMatch intelligence (alerts, profiles, IOCs, reports) into OpenCTI. Itauthenticates to the ThreatMatch Developer Platform, fetches items since the last successful run (or a configuredrelative start date on first run), and maps them to STIX 2.1 objects and relationships in OpenCTI.",
+  "logo": null,
+  "use_cases": [],
+  "verified": true,
+  "last_verified_date": "2025-08-18",
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/threatmatch",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-threatmatch",
+  "container_type": "EXTERNAL_IMPORT"
+}

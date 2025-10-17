@@ -3,7 +3,7 @@
   "slug": "vulncheck",
   "description": "VulnCheck focuses on delivering detailed insights into software vulnerabilities, helping organizations identify and prioritize security weaknesses for remediation. By providing timely, in-depth analysis of vulnerabilities, VulnCheck assists security teams in understanding the potential impact and urgency of addressing these issues to protect their digital assets effectively.\n\nThe VulnCheck connector retrieves and translates data from VulnCheck into STIX objects. It supports feeds for Known Exploited Vulnerabilities (KEVs), NVD-2, ransomware, threat actors, exploits, botnets, initial access indicators, and IP intelligence. Each data source is processed to create structured, meaningful objects like vulnerabilities, malware, infrastructure, and relationships.The VulnCheck Connector helps organizations enrich their threat intelligence within OpenCTI by automating the ingestion of curated vulnerability and threat actor data.",
   "short_description": "VulnCheck provides detailed insights into software vulnerabilities, helping prioritize and remediate security weaknesses. Its integration with OpenCTI brings timely vulnerability data to the platform, enhancing patching prioritization and maintaining a strong security posture.",
-  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "logo": "external-import/vulncheck/__metadata__/logo.png",
   "use_cases": [
     "Vulnerability Management",
     "Commercial Threat Intel"

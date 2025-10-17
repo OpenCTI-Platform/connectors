@@ -3,12 +3,12 @@
   "slug": "google-dns",
   "description": "Google Public DNS is a Google service that provides recursive DNS servers to Internet users.\n\nIntegrating Google DNS with OpenCTI allows for the automatic enrichment of domain name observables by querying the Google Public DNS service for record types such as NS, A, CNAME, MX, and TXT. The connector uses the query results to create observables and establish relationships among them.",
   "short_description": "Google Public DNS is a Google service that provides recursive DNS servers to Internet users used to enrich.",
-  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "logo": "internal-enrichment/google-dns/__metadata__/logo.png",
   "use_cases": [
     "Enrichment & Analysis"
   ],
   "verified": true,
-  "last_verified_date": "",
+  "last_verified_date": null,
   "playbook_supported": true,
   "max_confidence_level": 90,
   "support_version": ">= 6.5.1",

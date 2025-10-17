@@ -29,9 +29,6 @@ def get_manifests_paths() -> list[str]:
 
 @pytest.mark.parametrize("manifest_path", get_manifests_paths())
 def test_connectors_manifests_are_valid(manifest_path: str):
-    # TODO: remove xfail() once every connector has its manifest
-    pytest.xfail(reason="Not implemented in every connector yet")
-
     # Given a connectors' manifest path:
     with open(manifest_path, "r", encoding="utf-8") as file:
         # When reading the manifest

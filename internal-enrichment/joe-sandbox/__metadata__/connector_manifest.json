@@ -1,0 +1,19 @@
+{
+  "title": "Joe Sandbox",
+  "slug": "joe-sandbox",
+  "description": "This connector supports enrichment of observables via Joe Sandbox.The connector works for the following observable types:",
+  "short_description": "This connector supports enrichment of observables via Joe Sandbox.The connector works for the following observable types:",
+  "logo": null,
+  "use_cases": [],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/joe-sandbox",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-joe-sandbox",
+  "container_type": "INTERNAL_ENRICHMENT"
+}
