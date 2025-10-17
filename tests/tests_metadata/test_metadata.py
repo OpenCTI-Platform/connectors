@@ -46,9 +46,6 @@ def test_every_connector_metadata_contains_connector_manifest(connector_path: st
 
 @pytest.mark.parametrize("connector_path", get_connectors_paths())
 def test_every_connector_metadata_contains_connector_config_schema(connector_path: str):
-    # TODO: remove xfail() once every connector has its config JSON schema
-    pytest.xfail(reason="Not implemented in every connector yet")
-
     # Given a connector path
     # When checking connector's `__metadata__` subdirectory
     # Then `connector_config_schema.json` should exist
