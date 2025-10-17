@@ -1,6 +1,6 @@
 import pytest
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
-from connectors_sdk.models.octi.enums import Reliability
+from connectors_sdk.models.enums import Reliability
 from connectors_sdk.models.organization import Organization
 from pydantic import ValidationError
 from stix2.v21 import Identity as Stix2Identity

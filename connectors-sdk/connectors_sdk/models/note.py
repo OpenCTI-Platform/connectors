@@ -4,7 +4,7 @@ from collections import OrderedDict
 
 import stix2.properties
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
-from connectors_sdk.models.octi.enums import NoteType
+from connectors_sdk.models.enums import NoteType
 from pycti import Note as PyctiNote
 from pydantic import AwareDatetime, Field
 from stix2.v21 import Note as Stix2Note

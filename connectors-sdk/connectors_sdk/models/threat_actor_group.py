@@ -1,7 +1,7 @@
 """ThreatActorGroup."""
 
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
-from connectors_sdk.models.octi.enums import (
+from connectors_sdk.models.enums import (
     AttackMotivation,
     AttackResourceLevel,
     ThreatActorRole,
