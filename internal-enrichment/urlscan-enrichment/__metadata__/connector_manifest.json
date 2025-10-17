@@ -11,7 +11,7 @@
   "last_verified_date": null,
   "playbook_supported": true,
   "max_confidence_level": 60,
-  "support_version": ">= 6.5.1",
+  "support_version": ">= 6.0.7",
   "subscription_link": "https://urlscan.io",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/oob/connector_manager/internal-enrichment/urlscan-enrichment",
   "manager_supported": false,

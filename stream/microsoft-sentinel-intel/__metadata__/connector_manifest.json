@@ -11,7 +11,7 @@
   "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 50,
-  "support_version": ">= 6.7.19",
+  "support_version": ">= 6.7.5",
   "subscription_link": "https://learn.microsoft.com/en-us/azure/sentinel/overview?tabs=defender-portal",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/microsoft-sentinel-intel",
   "manager_supported": false,

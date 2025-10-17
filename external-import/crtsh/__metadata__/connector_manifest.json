@@ -1,15 +1,17 @@
 {
-  "title": "Crtsh",
+  "title": "crt.sh",
   "slug": "crtsh",
-  "description": "This connector integrates Cert.SH data with the OpenCTI platform, facilitating automated import and management of cybersecurity information. It allows users to track relevant intelligence and threats by importing domain-related data from Cert.SH into OpenCTI.",
-  "short_description": "This connector integrates Cert.SH data with the OpenCTI platform, facilitating automated import and management of cybersecurity information. It allows users to track relevant intelligence and threats by importing domain-related data from Cert.SH into OpenCTI.",
-  "logo": null,
-  "use_cases": [],
+  "description": "This connector integrates 'crt.sh' data with the OpenCTI platform, facilitating automated import and management of cybersecurity information. It allows users to track relevant intelligence and threats by importing domain-related data from 'crt.sh' into OpenCTI.",
+  "short_description": "This connector integrates 'crt.sh' data with the OpenCTI platform, facilitating automated import and management of cybersecurity information. It allows users to track relevant intelligence and threats by importing domain-related data from 'crt.sh' into OpenCTI.",
+  "logo": "external-import/crtsh/__metadata__/logo.png",
+  "use_cases": [
+    "Open Source Threat Intel"
+  ],
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 50,
-  "support_version": ">=6.8.0",
+  "support_version": ">=5.12.0",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/crtsh",
   "manager_supported": false,

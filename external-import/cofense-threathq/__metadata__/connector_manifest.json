@@ -1,9 +1,9 @@
 {
-  "title": "Cofense Threathq",
+  "title": "Cofense ThreatHQ",
   "slug": "cofense-threathq",
   "description": "Information coming soon",
   "short_description": "Information coming soon",
-  "logo": null,
+  "logo": "external-import/cofense-threathq/__metadata__/logo.png",
   "use_cases": [],
   "verified": false,
   "last_verified_date": null,

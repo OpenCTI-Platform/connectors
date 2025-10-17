@@ -3,7 +3,7 @@
   "slug": "dogesec-stixify",
   "description": "Information coming soon",
   "short_description": "Information coming soon",
-  "logo": null,
+  "logo": "external-import/dogesec-stixify/__metadata__/logo.png",
   "use_cases": [],
   "verified": false,
   "last_verified_date": null,

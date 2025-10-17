@@ -1,15 +1,17 @@
 {
-  "title": "Chapsvision",
+  "title": "ChapsVision",
   "slug": "chapsvision",
   "description": "Information coming soon",
   "short_description": "Information coming soon",
-  "logo": null,
-  "use_cases": [],
+  "logo": "external-import/chapsvision/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 50,
-  "support_version": ">=6.8.0",
+  "support_version": ">=5.5.4",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/chapsvision",
   "manager_supported": false,

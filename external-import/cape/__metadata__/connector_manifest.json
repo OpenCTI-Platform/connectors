@@ -6,7 +6,8 @@
   "logo": "external-import/cape/__metadata__/logo.png",
   "use_cases": [
     "Malware Analysis",
-    "Threat Intelligence"
+    "Threat Intelligence",
+    "Sandbox"
   ],
   "verified": true,
   "last_verified_date": null,
