@@ -17,6 +17,7 @@ from connectors_sdk.models.octi import (
     Organization,
     OrganizationAuthor,
     Report,
+    Sector,
     Software,
     Vulnerability,
 )
@@ -36,6 +37,7 @@ __all__ = [
     "Organization",
     "OrganizationAuthor",
     "Report",
+    "Sector",
     "Software",
     "URL",
     "Vulnerability",
