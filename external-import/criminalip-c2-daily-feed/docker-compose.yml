@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-criminalip-c2-daily-feed:
-    image: opencti/connector-criminalip-c2-daily-feed:6.7.4
+    image: opencti/connector-criminalip-c2-daily-feed:6.8.6
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
