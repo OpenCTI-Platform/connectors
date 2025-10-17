@@ -7,13 +7,13 @@ from connectors_sdk.models.domain_name import DomainName
 from connectors_sdk.models.external_reference import ExternalReference
 from connectors_sdk.models.file import File
 from connectors_sdk.models.indicator import Indicator
+from connectors_sdk.models.individual import Individual
 from connectors_sdk.models.ipv4_address import IPV4Address
 from connectors_sdk.models.ipv6_address import IPV6Address
 from connectors_sdk.models.malware import Malware
 from connectors_sdk.models.note import Note
 from connectors_sdk.models.octi._common import TLPMarking
 from connectors_sdk.models.octi.knowledge.entities import (
-    Individual,
     Organization,
     Sector,
 )
