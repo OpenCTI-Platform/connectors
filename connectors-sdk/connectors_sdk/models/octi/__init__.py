@@ -4,13 +4,13 @@ from connectors_sdk.models.associated_file import AssociatedFile
 from connectors_sdk.models.base_entity import BaseEntity
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.external_reference import ExternalReference
+from connectors_sdk.models.indicator import Indicator
 from connectors_sdk.models.note import Note
 from connectors_sdk.models.octi._common import TLPMarking
 from connectors_sdk.models.octi.activities.observations import (
     URL,
     DomainName,
     File,
-    Indicator,
     IPV4Address,
     IPV6Address,
     Software,
