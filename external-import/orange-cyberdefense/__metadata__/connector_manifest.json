@@ -1,15 +1,17 @@
 {
   "title": "Orange Cyberdefense",
   "slug": "orange-cyberdefense",
-  "description": "Information coming soon",
-  "short_description": "Information coming soon",
-  "logo": null,
-  "use_cases": [],
-  "verified": false,
+  "description": "This connector allows to ingest into OpenCTI the Cyber Threat Intelligence provided by the CERT Orange CyberDefense.\nDepending on its configuration and your subscription level it will ingest Indicators, Reports, Vulnerabilities, Intrusion Set, Malwares, ...",
+  "short_description": "This connector allows to ingest into OpenCTI the Cyber Threat Intelligence provided by the CERT Orange Cyberdefense.",
+  "logo": "external-import/orange-cyberdefense/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 50,
-  "support_version": ">=6.8.0",
+  "support_version": ">=5.5.4",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/orange-cyberdefense",
   "manager_supported": false,

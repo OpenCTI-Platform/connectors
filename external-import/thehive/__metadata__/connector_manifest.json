@@ -1,15 +1,17 @@
 {
-  "title": "Thehive",
+  "title": "TheHive",
   "slug": "thehive",
   "description": "The TheHive Connector allows for integration of TheHive's alert and case management capabilities into OpenCTI. This connector imports TheHive's cases, alerts, tasks, and observables into OpenCTI. The connector uses the Python modules thehive4py and will work on version 4 and 5.",
   "short_description": "The TheHive Connector allows for integration of TheHive's alert and case management capabilities into OpenCTI. This connector imports TheHive's cases, alerts, tasks, and observables into OpenCTI. The connector uses the Python modules thehive4py and will work on version 4 and 5.",
-  "logo": null,
-  "use_cases": [],
-  "verified": false,
+  "logo": "external-import/thehive/__metadata__/logo.png",
+  "use_cases": [
+    "Incident Response & Ticketing"
+  ],
+  "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 50,
-  "support_version": ">=6.8.0",
+  "support_version": ">=5.5.4",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/thehive",
   "manager_supported": false,
