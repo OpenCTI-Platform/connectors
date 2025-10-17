@@ -4,6 +4,7 @@ from connectors_sdk.models.octi import (
     AssociatedFile,
     BaseEntity,
     BaseIdentifiedEntity,
+    DomainName,
     ExternalReference,
     Indicator,
     Note,
@@ -15,6 +16,7 @@ __all__ = [
     # Models flat list
     "AssociatedFile",
     "ExternalReference",
+    "DomainName",
     "Indicator",
     "Note",
     "OrganizationAuthor",
