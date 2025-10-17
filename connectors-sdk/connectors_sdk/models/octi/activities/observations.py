@@ -5,8 +5,8 @@ from abc import ABC, abstractmethod
 from typing import Any, Literal
 
 from connectors_sdk.models._model_registry import MODEL_REGISTRY
+from connectors_sdk.models.associated_file import AssociatedFile
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
-from connectors_sdk.models.octi._common import AssociatedFile
 from connectors_sdk.models.octi.enums import HashAlgorithm
 from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
 from pycti import Indicator as PyctiIndicator
