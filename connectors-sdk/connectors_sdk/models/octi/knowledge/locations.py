@@ -1,7 +1,7 @@
 """Offer locations OpenCTI entities."""
 
 from connectors_sdk.models._model_registry import MODEL_REGISTRY
-from connectors_sdk.models.octi._common import BaseIdentifiedEntity
+from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.octi.enums import LocationType
 from pycti import Location as PyctiLocation
 from pydantic import Field

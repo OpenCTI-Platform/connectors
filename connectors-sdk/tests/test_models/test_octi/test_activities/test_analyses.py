@@ -2,7 +2,7 @@
 """Offer tests for observations OpenCTI entities."""
 
 import pytest
-from connectors_sdk.models.octi._common import BaseIdentifiedEntity
+from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.octi.activities.analyses import Note, Report
 from connectors_sdk.models.octi.enums import Reliability
 from pydantic import ValidationError

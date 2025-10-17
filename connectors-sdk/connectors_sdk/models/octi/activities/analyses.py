@@ -11,10 +11,8 @@ from collections import OrderedDict
 
 import stix2.properties
 from connectors_sdk.models._model_registry import MODEL_REGISTRY
-from connectors_sdk.models.octi._common import (
-    AssociatedFile,
-    BaseIdentifiedEntity,
-)
+from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
+from connectors_sdk.models.octi._common import AssociatedFile
 from connectors_sdk.models.octi.enums import NoteType, Reliability, ReportType
 from pycti import Note as PyctiNote
 from pycti import Report as PyctiReport
