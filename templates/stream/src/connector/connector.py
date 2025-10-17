@@ -1,29 +1,27 @@
-# import json
-
+from connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
+from template_client import TemplateClient
 
-from .config_loader import ConfigConnector
 
-
-class ConnectorTemplate:
+class TemplateConnector:
     """
-    Specifications of the Stream connector
+    Specifications of the stream connector:
 
-    This class encapsulates the main actions, expected to be run by any stream connector.
-    Note that the attributes defined below will be complemented per each connector type.
+    This class encapsulates the main actions, expected to be run by any connector of type `STREAM`.
     This type of connector has the capability to listen to live streams from the OpenCTI platform.
     It is highly useful for creating connectors that can react and make decisions in real time.
-    Actions on OpenCTI will apply the changes to the third-party connected platform
+    Actions on OpenCTI will apply the changes to the third-party connected platform.
+
     ---
 
-    Attributes
-        - `config (ConfigConnector())`:
-            Initialize the connector with necessary configuration environment variables
-
-        - `helper (OpenCTIConnectorHelper(config))`:
-            This is the helper to use.
-            ALL connectors have to instantiate the connector helper with configurations.
-            Doing this will do a lot of operations behind the scene.
+    Attributes:
+        config (ConnectorSettings):
+            Store the connector's configuration. It defines how to connector will behave.
+        helper (OpenCTIConnectorHelper):
+            Handle the connection and the requests between the connector, OpenCTI and the workers.
+            _All connectors MUST use the connector helper with connector's configuration._
+        client (TemplateClient):
+            Provide methods to request the external API.
 
     ---
 
@@ -32,14 +30,23 @@ class ConnectorTemplate:
 
     """
 
-    def __init__(self, config: ConfigConnector, helper: OpenCTIConnectorHelper):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """
-        Initialize the Connector with necessary configurations
-        """
+        Initialize `TemplateConnector` with its configuration.
 
-        # Load configuration file and connection helper
+        Args:
+            config (ConnectorSettings): Configuration of the connector
+            helper (OpenCTIConnectorHelper): Helper to manage connection and requests to OpenCTI
+        """
         self.config = config
         self.helper = helper
+
+        self.client = TemplateClient(
+            helper,
+            base_url=self.config.template.api_base_url,
+            api_key=self.config.template.api_key,
+            # Pass any arguments necessary to the client
+        )
 
     def check_stream_id(self) -> None:
         """
