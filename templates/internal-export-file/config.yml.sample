@@ -1,0 +1,12 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  name: 'TemplateConnector'
+  scope: 'ChangeMe'
+  log_level: 'error'
+
+template:
+  api_key: 'ChangeMe'
