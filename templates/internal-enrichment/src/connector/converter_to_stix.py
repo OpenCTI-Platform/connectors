@@ -1,8 +1,9 @@
 import ipaddress
+from typing import Literal
 
 import stix2
 import validators
-from pycti import Identity, StixCoreRelationship
+from pycti import Identity, OpenCTIConnectorHelper, StixCoreRelationship
 
 
 class ConverterToStix:
@@ -10,11 +11,26 @@ class ConverterToStix:
     Provides methods for converting various types of input data into STIX 2.1 objects.
 
     REQUIREMENTS:
-    - generate_id() for each entity from OpenCTI pycti library except observables to create
+        - `generate_id()` methods from `pycti` library MUST be used to generate the `id` of each entity (except observables),
+        e.g. `pycti.Identity.generate_id(name="Source Name", identity_class="organization")` for a STIX Identity.
     """
 
-    def __init__(self, helper):
+    def __init__(
+        self,
+        helper: OpenCTIConnectorHelper,
+        tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"],
+    ):
+        """
+        Initialize the converter with necessary configuration.
+        For log purpose, the connector's helper CAN be injected.
+        Other arguments CAN be added (e.g. `tlp_level`) if necessary.
+
+        Args:
+            helper (OpenCTIConnectorHelper): The helper of the connector. Used for logs.
+            tlp_level (str): The TLP level to add to the created STIX entities.
+        """
         self.helper = helper
+
         self.author = self.create_author()
 
     @staticmethod
