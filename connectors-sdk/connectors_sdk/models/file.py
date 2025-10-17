@@ -2,14 +2,12 @@
 
 from typing import Any
 
-from connectors_sdk.models._model_registry import MODEL_REGISTRY
 from connectors_sdk.models._observable import Observable
 from connectors_sdk.models.octi.enums import HashAlgorithm
 from pydantic import AwareDatetime, Field, PositiveInt, model_validator
 from stix2.v21 import File as Stix2File
 
 
-@MODEL_REGISTRY.register
 class File(Observable):
     """Define a file observable on OpenCTI.
 

@@ -1,6 +1,5 @@
 """Individual."""
 
-from connectors_sdk.models._model_registry import MODEL_REGISTRY
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.octi.enums import (
     Reliability,
@@ -10,7 +9,6 @@ from pydantic import Field
 from stix2.v21 import Identity as Stix2Identity
 
 
-@MODEL_REGISTRY.register
 class Individual(BaseIdentifiedEntity):
     """Define an OCTI organization.
 

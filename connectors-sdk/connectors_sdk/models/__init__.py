@@ -31,6 +31,9 @@ from connectors_sdk.models.octi import (
 )
 
 __all__ = [
+    # Typing purpose
+    "BaseEntity",
+    "BaseIdentifiedEntity",
     # Models flat list
     "AssociatedFile",
     "AttackPattern",
@@ -57,7 +60,4 @@ __all__ = [
     "TLPMarking",
     "URL",
     "Vulnerability",
-    # Typing purpose
-    "BaseEntity",
-    "BaseIdentifiedEntity",
 ]

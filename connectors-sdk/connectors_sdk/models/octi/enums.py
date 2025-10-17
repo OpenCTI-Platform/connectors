@@ -1,5 +1,7 @@
 """Offer enum for OpenCTI models."""
 
+from __future__ import annotations
+
 import warnings
 from enum import StrEnum
 
@@ -8,7 +10,7 @@ class PermissiveEnum(StrEnum):
     """Enum that allows for missing values."""
 
     @classmethod
-    def _missing_(cls: type["PermissiveEnum"], value: object) -> "PermissiveEnum":
+    def _missing_(cls: type[PermissiveEnum], value: object) -> PermissiveEnum:
         _value = str(value)
         warnings.warn(
             f"Value '{_value}' is out of {cls.__name__} defined values.",
