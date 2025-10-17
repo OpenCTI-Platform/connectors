@@ -1,7 +1,7 @@
 """Offers tests for the taxonomies entities."""
 
 from connectors_sdk.models.base_entity import BaseEntity
-from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
+from connectors_sdk.models.kill_chain_phase import KillChainPhase
 
 
 def test_kill_chain_phase_is_a_base_entity():
