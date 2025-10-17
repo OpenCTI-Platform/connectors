@@ -1,4 +1,4 @@
-"""Offers a set of taxonomies entities for the Octi connector."""
+"""KillChainPhase."""
 
 import stix2
 from connectors_sdk.models._model_registry import MODEL_REGISTRY
@@ -24,9 +24,3 @@ class KillChainPhase(BaseEntity):
             kill_chain_name=self.chain_name,
             phase_name=self.phase_name,
         )
-
-
-if __name__ == "__main__":  # pragma: no cover # do not run coverage on doctests
-    import doctest
-
-    doctest.testmod()

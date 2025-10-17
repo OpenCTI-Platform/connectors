@@ -14,6 +14,7 @@ from connectors_sdk.models.individual import Individual
 from connectors_sdk.models.intrusion_set import IntrusionSet
 from connectors_sdk.models.ipv4_address import IPV4Address
 from connectors_sdk.models.ipv6_address import IPV6Address
+from connectors_sdk.models.kill_chain_phase import KillChainPhase
 from connectors_sdk.models.malware import Malware
 from connectors_sdk.models.note import Note
 from connectors_sdk.models.octi._common import TLPMarking
@@ -27,7 +28,6 @@ from connectors_sdk.models.octi.relationships import (
     related_to,
     targets,
 )
-from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
 from connectors_sdk.models.organization import Organization
 from connectors_sdk.models.organization_author import OrganizationAuthor
 from connectors_sdk.models.report import Report
