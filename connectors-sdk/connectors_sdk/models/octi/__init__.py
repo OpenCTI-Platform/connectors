@@ -19,7 +19,6 @@ from connectors_sdk.models.malware import Malware
 from connectors_sdk.models.note import Note
 from connectors_sdk.models.octi._common import TLPMarking
 from connectors_sdk.models.octi.relationships import (
-    Relationship,
     based_on,
     derived_from,
     has,
@@ -30,6 +29,7 @@ from connectors_sdk.models.octi.relationships import (
 )
 from connectors_sdk.models.organization import Organization
 from connectors_sdk.models.organization_author import OrganizationAuthor
+from connectors_sdk.models.relationship import Relationship
 from connectors_sdk.models.report import Report
 from connectors_sdk.models.sector import Sector
 from connectors_sdk.models.software import Software
