@@ -1,4 +1,4 @@
-"""Offer observations OpenCTI entities."""
+"""URL."""
 
 from connectors_sdk.models._model_registry import MODEL_REGISTRY
 from connectors_sdk.models._observable import Observable
@@ -23,6 +23,3 @@ class URL(Observable):
             allow_custom=True,
             **self._custom_properties_to_stix(),
         )
-
-
-MODEL_REGISTRY.rebuild_all()
