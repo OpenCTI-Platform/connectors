@@ -13,8 +13,8 @@ from connectors_sdk.models.ipv4_address import IPV4Address
 from connectors_sdk.models.ipv6_address import IPV6Address
 from connectors_sdk.models.octi.activities.observations import (
     URL,
-    Software,
 )
+from connectors_sdk.models.software import Software
 from pydantic import ValidationError
 from stix2.v21 import URL as Stix2URL
 from stix2.v21 import DomainName as Stix2DomainName

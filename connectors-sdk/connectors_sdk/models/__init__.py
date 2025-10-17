@@ -13,6 +13,7 @@ from connectors_sdk.models.octi import (
     Note,
     OrganizationAuthor,
     Report,
+    Software,
 )
 
 __all__ = [
@@ -27,6 +28,7 @@ __all__ = [
     "Note",
     "OrganizationAuthor",
     "Report",
+    "Software",
     # Typing purpose
     "BaseEntity",
     "BaseIdentifiedEntity",
