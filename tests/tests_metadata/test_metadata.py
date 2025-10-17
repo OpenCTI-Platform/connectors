@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 
@@ -46,18 +47,24 @@ def test_every_connector_metadata_contains_connector_manifest(connector_path: st
 
 @pytest.mark.parametrize("connector_path", get_connectors_paths())
 def test_every_connector_metadata_contains_connector_config_schema(connector_path: str):
-    # TODO: remove xfail() once every connector has its config JSON schema
-    pytest.xfail(reason="Not implemented in every connector yet")
-
     # Given a connector path
     # When checking connector's `__metadata__` subdirectory
-    # Then `connector_config_schema.json` should exist
-    assert (
-        os.path.exists(
-            Path(connector_path) / "__metadata__" / "connector_config_schema.json"
-        )
-        is True
-    )
+    # Then `connector_config_schema.json` should exist if the connector is "manager_supported"
+    with open(
+        Path(connector_path) / "__metadata__" / "connector_manifest.json"
+    ) as file:
+        manifest = json.load(file)
+        if manifest.get("manager_supported") is True:
+            assert (
+                os.path.exists(
+                    Path(connector_path)
+                    / "__metadata__"
+                    / "connector_config_schema.json"
+                )
+                is True
+            )
+        else:
+            pytest.skip("Connector is not manager_supported")
 
 
 @pytest.mark.parametrize("connector_path", get_connectors_paths())

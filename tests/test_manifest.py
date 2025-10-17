@@ -89,9 +89,7 @@ def test_manifest_contracts_should_be_valid(contract: dict):
         "INTERNAL_IMPORT_FILE",
         "STREAM",
     ]
-    # Config schema is a dict
-    assert (
-        "config_schema" in contract
-        and isinstance(contract["config_schema"], dict)
-        or "config_schema" not in contract
+    # Config schema is a dict if present
+    assert ("config_schema" not in contract) or isinstance(
+        contract["config_schema"], dict
     )
