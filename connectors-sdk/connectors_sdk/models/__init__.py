@@ -16,6 +16,7 @@ from connectors_sdk.models.octi import (
     OrganizationAuthor,
     Report,
     Software,
+    Vulnerability,
 )
 
 __all__ = [
@@ -33,6 +34,7 @@ __all__ = [
     "Report",
     "Software",
     "URL",
+    "Vulnerability",
     # Typing purpose
     "BaseEntity",
     "BaseIdentifiedEntity",
