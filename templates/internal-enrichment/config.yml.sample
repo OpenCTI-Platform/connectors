@@ -1,0 +1,15 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  name: 'Template Connector'
+  scope: 'ChangeMe'
+  log_level: 'error'
+  auto: true # Enable/disable auto-enrichment of observables
+
+template:
+  api_base_url: 'ChangeMe'
+  api_key: 'ChangeMe'
+  max_tlp_level: 'amber+strict'  # available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber+strict')
