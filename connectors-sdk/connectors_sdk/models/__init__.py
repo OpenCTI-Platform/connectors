@@ -5,6 +5,7 @@ from connectors_sdk.models.octi import (
     BaseEntity,
     BaseIdentifiedEntity,
     ExternalReference,
+    Note,
     OrganizationAuthor,
 )
 
@@ -12,6 +13,7 @@ __all__ = [
     # Models flat list
     "AssociatedFile",
     "ExternalReference",
+    "Note",
     "OrganizationAuthor",
     # Typing purpose
     "BaseEntity",
