@@ -1,37 +1,38 @@
-import os
-import sys
-import time
-import traceback
-import uuid
-from datetime import datetime
+import os                                                        
+import sys                                                       
+import time                                                      
+import traceback                                                 
+import uuid                                                      
+from datetime import datetime                                    
 
-import stix2
-import yaml
-from constants import DEFAULT_DATETIME, DEFAULT_UTC_DATETIME, PAP_MAPPINGS, TLP_MAPPINGS
-from dateutil.parser import parse
-from hive_observable_transform import (
-    HiveObservableTransform,
-    UnsupportedIndicatorTypeError,
-)
-from pycti import (
-    CaseIncident,
-    CustomObjectCaseIncident,
-    CustomObjectTask,
-    Incident,
-    OpenCTIConnectorHelper,
-    StixCoreRelationship,
-    StixSightingRelationship,
-    Task,
-    get_config_variable,
-)
-from thehive4py import TheHiveApi
-from thehive4py.query import Gt, In
-from thehive4py.query.page import Paginate
-from thehive4py.query.sort import Asc
-from thehive4py.types.alert import OutputAlert
-from thehive4py.types.case import OutputCase
+import stix2                                                     
+import yaml                                                      
+from dateutil.parser import parse                                
+from pycti import (                                              
+    CaseIncident,                                                
+    CustomObjectCaseIncident,                                    
+    CustomObjectTask,                                            
+    Incident,                                                    
+    OpenCTIConnectorHelper,                                      
+    StixCoreRelationship,                                        
+    StixSightingRelationship,                                    
+    Task,                                                        
+    get_config_variable,                                         
+)                                                                
+from thehive4py import TheHiveApi                                
+from thehive4py.query import Gt, In                              
+from thehive4py.query.page import Paginate                       
+from thehive4py.query.sort import Asc                            
+from thehive4py.types.alert import OutputAlert                   
+from thehive4py.types.case import OutputCase                     
 
-from utils import format_datetime  # isort: skip
+from constants import DEFAULT_DATETIME, DEFAULT_UTC_DATETIME, PAP_MAPPINGS, TLP_MAPPINGS                                           
+from hive_observable_transform import (                          
+    HiveObservableTransform,                                     
+    UnsupportedIndicatorTypeError,                               
+)                                                                
+
+from utils import format_datetime  # isort: skip     
 
 
 class TheHive:
