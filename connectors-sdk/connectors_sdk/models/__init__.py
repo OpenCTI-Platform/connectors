@@ -26,6 +26,7 @@ from connectors_sdk.models.octi import (
     Sector,
     Software,
     ThreatActorGroup,
+    TLPMarking,
     Vulnerability,
 )
 
@@ -53,6 +54,7 @@ __all__ = [
     "Sector",
     "Software",
     "ThreatActorGroup",
+    "TLPMarking",
     "URL",
     "Vulnerability",
     # Typing purpose
