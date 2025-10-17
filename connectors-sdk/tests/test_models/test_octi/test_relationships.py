@@ -5,7 +5,6 @@ from datetime import datetime
 import pytest
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.octi.relationships import (
-    Relationship,
     based_on,
     derived_from,
     has,
@@ -14,6 +13,7 @@ from connectors_sdk.models.octi.relationships import (
     related_to,
     targets,
 )
+from connectors_sdk.models.relationship import Relationship
 from pydantic import ValidationError
 
 # Add the newly implemented relationship in this list
