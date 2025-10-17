@@ -71,6 +71,10 @@ source = [
     "./connectors_sdk",
     "*/site-packages/connectors_sdk", # CI | ../run_tests.sh specific
 ]
+[tool.coverage.run]
+omit = [
+    "connectors_sdk/models/octi/enums.py" # Deprecated file
+]
 
 [tool.ruff]
 exclude = [
