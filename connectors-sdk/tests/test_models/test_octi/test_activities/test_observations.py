@@ -7,10 +7,10 @@ import pytest
 from connectors_sdk.models._observable import Observable
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.domain_name import DomainName
+from connectors_sdk.models.file import File
 from connectors_sdk.models.indicator import Indicator
 from connectors_sdk.models.octi.activities.observations import (
     URL,
-    File,
     IPV4Address,
     IPV6Address,
     Software,
