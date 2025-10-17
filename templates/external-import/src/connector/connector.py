@@ -1,59 +1,68 @@
 import sys
 from datetime import datetime, timezone
 
+from connector.converter_to_stix import ConverterToStix
+from connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
-
-from .client_api import ConnectorClient
-from .config_loader import ConfigConnector
-from .converter_to_stix import ConverterToStix
+from template_client import TemplateClient
 
 
-class ConnectorTemplate:
+class TemplateConnector:
     """
-    Specifications of the external import connector
+    Specifications of the external import connector:
 
-    This class encapsulates the main actions, expected to be run by any external import connector.
-    Note that the attributes defined below will be complemented per each connector type.
-    This type of connector aim to fetch external data to create STIX bundle and send it in a RabbitMQ queue.
-    The STIX bundle in the queue will be processed by the workers.
+    This class encapsulates the main actions, expected to be run by any connector of type `EXTERNAL_IMPORT`.
+    This type of connector aim to fetch external data to create STIX bundle and send it to OpenCTI.
+    The STIX bundle in the queue will be processed by OpenCTI workers.
     This type of connector uses the basic methods of the helper.
 
     ---
 
-    Attributes
-        - `config (ConfigConnector())`:
-            Initialize the connector with necessary configuration environment variables
-
-        - `helper (OpenCTIConnectorHelper(config))`:
-            This is the helper to use.
-            ALL connectors have to instantiate the connector helper with configurations.
-            Doing this will do a lot of operations behind the scene.
-
-        - `converter_to_stix (ConnectorConverter(helper))`:
+    Attributes:
+        config (ConnectorSettings):
+            Store the connector's configuration. It defines how to connector will behave.
+        helper (OpenCTIConnectorHelper):
+            Handle the connection and the requests between the connector, OpenCTI and the workers.
+            _All connectors MUST use the connector helper with connector's configuration._
+        client (TemplateClient):
+            Provide methods to request the external API.
+        converter_to_stix (ConnectorConverter):
             Provide methods for converting various types of input data into STIX 2.1 objects.
 
     ---
 
-    Best practices
+    Best practices:
         - `self.helper.api.work.initiate_work(...)` is used to initiate a new work
-        - `self.helper.schedule_iso()` is used to encapsulate the main process in a scheduler
+        - `self.helper.schedule_iso()` is used to schedule connector's runs frequency
         - `self.helper.connector_logger.[info/debug/warning/error]` is used when logging a message
         - `self.helper.stix2_create_bundle(stix_objects)` is used when creating a bundle
-        - `self.helper.send_stix2_bundle(stix_objects_bundle)` is used to send the bundle to RabbitMQ
-        - `self.helper.set_state()` is used to set state
+        - `self.helper.send_stix2_bundle(stix_objects_bundle)` is used to send the bundle to OpenCTI
+        - `self.helper.set_state()` is used to store persistent data in connector's state
 
     """
 
-    def __init__(self, config: ConfigConnector, helper: OpenCTIConnectorHelper):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """
-        Initialize the Connector with necessary configurations
-        """
+        Initialize `TemplateConnector` with its configuration.
 
-        # Load configuration file and connection helper
+        Args:
+            config (ConnectorSettings): Configuration of the connector
+            helper (OpenCTIConnectorHelper): Helper to manage connection and requests to OpenCTI
+        """
         self.config = config
         self.helper = helper
-        self.client = ConnectorClient(self.helper, self.config)
-        self.converter_to_stix = ConverterToStix(self.helper, self.config)
+
+        self.client = TemplateClient(
+            self.helper,
+            base_url=self.config.template.api_base_url,
+            api_key=self.config.template.api_key,
+            # Pass any arguments necessary to the client
+        )
+        self.converter_to_stix = ConverterToStix(
+            self.helper,
+            tlp_level=self.config.template.tlp_level,
+            # Pass any arguments necessary to the converter
+        )
 
     def _collect_intelligence(self) -> list:
         """
@@ -183,17 +192,17 @@ class ConnectorTemplate:
 
     def run(self) -> None:
         """
-        Run the main process encapsulated in a scheduler
-        It allows you to schedule the process to run at a certain intervals
-        This specific scheduler from the pycti connector helper will also check the queue size of a connector
-        If `CONNECTOR_QUEUE_THRESHOLD` is set, if the connector's queue size exceeds the queue threshold,
+        Start the connector, schedule its runs and trigger the first run.
+        It allows you to schedule the process to run at a certain interval.
+        This specific scheduler from the `OpenCTIConnectorHelper` will also check the queue size of a connector.
+        If `CONNECTOR_QUEUE_THRESHOLD` is set, and if the connector's queue size exceeds the queue threshold,
         the connector's main process will not run until the queue is ingested and reduced sufficiently,
         allowing it to restart during the next scheduler check. (default is 500MB)
-        It requires the `duration_period` connector variable in ISO-8601 standard format
-        Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
-        :return: None
+
+        Example:
+            - If `CONNECTOR_DURATION_PERIOD=PT5M`, then the connector is running every 5 minutes.
         """
-        self.helper.schedule_iso(
+        self.helper.schedule_process(
             message_callback=self.process_message,
-            duration_period=self.config.duration_period,
+            duration_period=self.config.connector.duration_period.total_seconds(),
         )
