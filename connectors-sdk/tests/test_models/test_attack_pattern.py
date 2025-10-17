@@ -1,13 +1,8 @@
-# pragma: no cover  # do not compute coverage on test files
-"""Offer tests for observations OpenCTI entities."""
-
 import pytest
 from connectors_sdk.models.attack_pattern import AttackPattern
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from pydantic import ValidationError
 from stix2.v21 import AttackPattern as Stix2AttackPattern
-
-### ATTACK PATTERN
 
 
 def test_attack_pattern_is_a_base_identified_entity():
