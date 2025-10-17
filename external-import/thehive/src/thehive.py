@@ -87,7 +87,7 @@ class TheHive:
             ["thehive", "case_status_mapping"],
             config,
             False,
-			"",
+            "",
         ).split(",")
         self.thehive_case_tag_whitelist = get_config_variable(
             "THEHIVE_CASE_TAG_WHITELIST",
@@ -141,11 +141,14 @@ class TheHive:
         )
         if type == "case":
             if any(self.thehive_case_tag_whitelist):
-                return In("tags", self.thehive_case_tag_whitelist) & ( Gt("_updatedAt", int(last_date * 1000)) | Gt("_createdAt", int(last_date * 1000)))
+                return In("tags", self.thehive_case_tag_whitelist) & (
+                    Gt("_updatedAt", int(last_date * 1000))
+                    | Gt("_createdAt", int(last_date * 1000))
+                )
             else:
                 return Gt("_updatedAt", int(last_date * 1000)) | Gt(
-                "_createdAt", int(last_date * 1000)
-            )
+                    "_createdAt", int(last_date * 1000)
+                )
         elif type == "alert":
             return Gt("_updatedAt", int(last_date * 1000)) | Gt(
                 "_createdAt", int(last_date * 1000)
@@ -430,7 +433,7 @@ class TheHive:
             int(case.get("_createdAt")) / 1000, DEFAULT_UTC_DATETIME
         )
         opencti_case_status = None
-        if any(self.thehive_case_status_mapping):
+        if len(self.thehive_case_status_mapping) > 0:
             for case_status_mapping in self.thehive_case_status_mapping:
                 case_status_mapping_split = case_status_mapping.split(":")
                 if case.get("extendedStatus") == case_status_mapping_split[0]:
