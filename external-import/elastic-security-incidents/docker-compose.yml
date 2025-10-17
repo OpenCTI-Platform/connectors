@@ -15,5 +15,6 @@ services:
       - ELASTIC_SECURITY_IMPORT_ALERTS=true
       - ELASTIC_SECURITY_IMPORT_CASES=true
       # - "ELASTIC_SECURITY_ALERT_STATUSES=open,acknowledged,closed" # Uncomment to filter alerts
+      # - "ELASTIC_SECURITY_ALERT_RULE_TAGS=Domain: Endpoint,OS: Windows" # Uncomment to filter cases
       # - "ELASTIC_SECURITY_CASE_STATUSES=open,in-progress,closed" # Uncomment to filter cases
     restart: unless-stopped
