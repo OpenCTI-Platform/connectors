@@ -1,16 +1,25 @@
 import requests
+from pycti import OpenCTIConnectorHelper
+from pydantic import HttpUrl
 
 
-class ConnectorClient:
-    def __init__(self, helper, config):
+class TemplateClient:
+    def __init__(self, helper: OpenCTIConnectorHelper, base_url: HttpUrl, api_key: str):
         """
-        Initialize the client with necessary configurations
+        Initialize the client with necessary configuration.
+        For log purpose, the connector's helper CAN be injected.
+        Other arguments CAN be added (e.g. `api_key`) if necessary.
+
+        Args:
+            helper (OpenCTIConnectorHelper): The helper of the connector. Used for logs.
+            base_url (str): The external API base URL.
+            api_key (str): The API key to authenticate the connector to the external API.
         """
         self.helper = helper
-        self.config = config
 
+        self.base_url = base_url
         # Define headers in session and update when needed
-        headers = {"Bearer": self.config.api_key}
+        headers = {"Bearer": api_key}
         self.session = requests.Session()
         self.session.headers.update(headers)
 
