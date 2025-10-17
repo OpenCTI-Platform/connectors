@@ -1,7 +1,7 @@
 """Offer observations OpenCTI entities."""
 
 import ipaddress
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Any, Literal
 
 from connectors_sdk.models.octi._common import (
@@ -20,7 +20,6 @@ from stix2.v21 import Indicator as Stix2Indicator
 from stix2.v21 import IPv4Address as Stix2IPv4Address
 from stix2.v21 import IPv6Address as Stix2IPv6Address
 from stix2.v21 import Software as Stix2Software
-from stix2.v21 import _Observable as _Stix2Observable
 
 
 @MODEL_REGISTRY.register
@@ -70,15 +69,6 @@ class Observable(ABC, BaseIdentifiedEntity):
             ],
             x_opencti_create_indicator=self.create_indicator,
         )
-
-    @abstractmethod
-    def to_stix2_object(self) -> _Stix2Observable:
-        """Make stix object.
-
-        Notes:
-        - Observables do not need deterministic stix id generation. STIX python lib handles it.
-
-        """
 
 
 @MODEL_REGISTRY.register

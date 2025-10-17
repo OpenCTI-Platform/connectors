@@ -121,6 +121,25 @@ class BaseIdentifiedEntity(BaseEntity):
         description="External references of the observable.",
     )
 
+    def _common_properties(self) -> dict[str, Any]:
+        """Return common properties for this abstract class."""
+        return dict(  # noqa: C408 # No literal dict for maintainability
+            created_by_ref=self.author.id if self.author else None,
+            object_marking_refs=(
+                [marking.id for marking in self.markings or []]
+                if self.markings
+                else None
+            ),
+            external_references=(
+                [
+                    external_reference.to_stix2_object()
+                    for external_reference in self.external_references or []
+                ]
+                if self.external_references
+                else None
+            ),
+        )
+
     def model_post_init(self, context__: Any) -> None:
         """Define the post initialization method, automatically called after __init__ in a pydantic model initialization.
 
@@ -312,15 +331,6 @@ class Author(ABC, BaseIdentifiedEntity):
         This class cannot be used directly, it must be subclassed.
 
     """
-
-    @abstractmethod
-    def to_stix2_object(self) -> stix2.v21._STIXBase21:
-        """Make stix object.
-
-        Returns:
-            (stix2.v21._STIXBase21): A stix object representing the author.
-
-        """
 
 
 @MODEL_REGISTRY.register

@@ -193,6 +193,24 @@ def implemented_base_identified_entity():
                                 type="base-identified-entity", spec_version="2.1"
                             ),
                         ),
+                        (
+                            "created_by_ref",
+                            stix2.properties.ReferenceProperty(
+                                valid_types="identity", spec_version="2.1"
+                            ),
+                        ),
+                        (
+                            "object_marking_refs",
+                            stix2.properties.ListProperty(
+                                stix2.properties.ReferenceProperty(
+                                    valid_types="marking-definition", spec_version="2.1"
+                                )
+                            ),
+                        ),
+                        (
+                            "external_references",
+                            stix2.properties.ListProperty(stix2.ExternalReference),
+                        ),
                     ]
                 )
 
@@ -201,8 +219,7 @@ def implemented_base_identified_entity():
             encoded = "".join(str(ord(c)) for c in str(self.titi))[:4].ljust(4, "0")
             _id = f"base-identified-entity--123e4567-e89b-12d3-a456-42665544{encoded}"
             return DummyStixObject(
-                id=_id,
-                name=f"{self.toto}{self.titi}",
+                id=_id, name=f"{self.toto}{self.titi}", **super()._common_properties()
             )
 
     return ImplementedBaseIdentifiedEntity
@@ -275,7 +292,7 @@ def test_base_identified_entity_id_shouldbe_read_only(
     "common_param_name",
     [
         pytest.param("external_references", id="external_references"),
-        pytest.param("author", id="author"),
+        pytest.param("author", id="identity"),
         pytest.param("markings", id="markings"),
     ],
 )
@@ -327,13 +344,17 @@ def implemented_author():
                         (
                             "id",
                             stix2.properties.IDProperty(
-                                type="author", spec_version="2.1"
+                                type="identity", spec_version="2.1"
                             ),
                         ),
                     ]
                 )
 
-            return DummyStixObject(id=f"author--{self.name}", name=self.name)
+            # _id = f"base-identified-entity--123e4567-e89b-12d3-a456-42665544{"".join(str(ord(c)) for c in str(self.titi))[:4].ljust(4, '0')}"
+            # Not supported in python 3.11 => splitted to avoid generator in f-string
+            encoded = "".join(str(ord(c)) for c in str(self.name))[:4].ljust(4, "0")
+            _id = f"identity--123e4567-e89b-12d3-a456-42665544{encoded}"
+            return DummyStixObject(id=_id, name=self.name)
 
     return ImplementedAuthor
 
@@ -547,3 +568,30 @@ def test_model_registry_should_be_a_singleton():
     # Then it should return the same instance
     assert registry1 is registry2
     assert id(registry1) == id(registry2)
+
+
+def test_stix_object(
+    implemented_base_identified_entity,
+    implemented_author,
+    fake_valid_tlp_markings,
+    fake_valid_external_references,
+):
+    author = implemented_author(name="Name", email="test@test.com")
+    entity_instance = implemented_base_identified_entity(
+        toto="toto",
+        titi=1,
+        author=author,
+        markings=fake_valid_tlp_markings,
+        external_references=fake_valid_external_references,
+    )
+    stix_object = entity_instance.to_stix2_object()
+    assert isinstance(stix_object, stix2.v21._STIXBase21)
+    assert stix_object["id"] == entity_instance.id
+    assert stix_object["name"] == "toto1"
+    assert stix_object["created_by_ref"] == author.id
+    assert stix_object["object_marking_refs"] == [
+        marking.id for marking in fake_valid_tlp_markings
+    ]
+    assert stix_object["external_references"] == [
+        ext_ref.to_stix2_object() for ext_ref in fake_valid_external_references
+    ]
