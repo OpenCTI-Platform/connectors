@@ -1,8 +1,5 @@
 """Offer common tools to for OpenCTI models."""
 
-from abc import ABC, abstractmethod
-
-import stix2.properties
 from connectors_sdk.models._base_identified_entity import _BaseIdentifiedEntity
 from connectors_sdk.models._model_registry import MODEL_REGISTRY
 from connectors_sdk.models.octi.enums import TLPLevel
@@ -10,28 +7,6 @@ from pycti import MarkingDefinition as PyctiMarkingDefinition
 from pydantic import Field
 from stix2.v21 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
 from stix2.v21 import MarkingDefinition as Stix2MarkingDefinition
-
-
-@MODEL_REGISTRY.register
-class Author(ABC, _BaseIdentifiedEntity):
-    """Represent an author.
-
-    Author is an OpenCTI concept, a stix-like identity considered as the creator of a
-    report or an entity.
-
-    Warning:
-        This class cannot be used directly, it must be subclassed.
-
-    """
-
-    @abstractmethod
-    def to_stix2_object(self) -> stix2.v21._STIXBase21:
-        """Make stix object.
-
-        Returns:
-            (stix2.v21._STIXBase21): A stix object representing the author.
-
-        """
 
 
 @MODEL_REGISTRY.register
