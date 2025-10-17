@@ -1,6 +1,7 @@
 """Offer techniques OpenCTI entities."""
 
-from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
+from connectors_sdk.models._model_registry import MODEL_REGISTRY
+from connectors_sdk.models.octi._common import BaseIdentifiedEntity
 from connectors_sdk.models.octi.enums import Permission, Platform
 from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
 from pycti import AttackPattern as PyctiAttackPattern

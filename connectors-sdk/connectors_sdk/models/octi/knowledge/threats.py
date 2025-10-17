@@ -1,6 +1,7 @@
 """Offer threats OpenCTI entities."""
 
-from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
+from connectors_sdk.models._model_registry import MODEL_REGISTRY
+from connectors_sdk.models.octi._common import BaseIdentifiedEntity
 from connectors_sdk.models.octi.enums import (
     AttackMotivation,
     AttackResourceLevel,

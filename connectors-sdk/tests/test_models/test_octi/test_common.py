@@ -5,6 +5,7 @@ from typing import OrderedDict
 import pytest
 import stix2
 import stix2.properties
+from connectors_sdk.models._model_registry import _ModelRegistry
 from connectors_sdk.models.octi._common import (
     AssociatedFile,
     AssociatedFileStix,
@@ -13,7 +14,6 @@ from connectors_sdk.models.octi._common import (
     BaseIdentifiedEntity,
     ExternalReference,
     TLPMarking,
-    _ModelRegistry,
 )
 from pydantic import Field, ValidationError
 

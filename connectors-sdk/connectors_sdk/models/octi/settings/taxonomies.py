@@ -1,7 +1,8 @@
 """Offers a set of taxonomies entities for the Octi connector."""
 
 import stix2
-from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseEntity
+from connectors_sdk.models._model_registry import MODEL_REGISTRY
+from connectors_sdk.models.octi._common import BaseEntity
 from pydantic import Field
 
 
