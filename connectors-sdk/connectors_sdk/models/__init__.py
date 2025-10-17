@@ -1,6 +1,7 @@
 """Offer models."""
 
 from connectors_sdk.models.octi import (
+    URL,
     AssociatedFile,
     BaseEntity,
     BaseIdentifiedEntity,
@@ -29,6 +30,7 @@ __all__ = [
     "OrganizationAuthor",
     "Report",
     "Software",
+    "URL",
     # Typing purpose
     "BaseEntity",
     "BaseIdentifiedEntity",
