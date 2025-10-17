@@ -10,12 +10,12 @@ import traceback
 from typing import TYPE_CHECKING
 
 import pycti
+from connectors_sdk.models import OrganizationAuthor
 from connectors_sdk.models.octi import (
     ExternalReference,
     Indicator,
     IPV4Address,
     Organization,
-    OrganizationAuthor,
     TLPMarking,
     based_on,
     related_to,
