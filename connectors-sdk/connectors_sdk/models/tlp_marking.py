@@ -1,4 +1,4 @@
-"""Offer common tools to for OpenCTI models."""
+"""TLPMarking."""
 
 from connectors_sdk.models._base_identified_entity import _BaseIdentifiedEntity
 from connectors_sdk.models._model_registry import MODEL_REGISTRY
@@ -40,13 +40,3 @@ class TLPMarking(_BaseIdentifiedEntity):
             "red": TLP_RED,
         }
         return mapping[self.level]
-
-
-# See https://docs.pydantic.dev/latest/errors/usage_errors/#class-not-fully-defined (consulted on 2025-06-10)
-MODEL_REGISTRY.rebuild_all()
-
-
-if __name__ == "__main__":  # pragma: no cover # Do not compute coverage on doctest
-    import doctest
-
-    doctest.testmod()

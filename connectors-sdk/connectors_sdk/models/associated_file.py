@@ -9,7 +9,7 @@ from connectors_sdk.models.base_entity import BaseEntity
 from pydantic import Field
 
 if TYPE_CHECKING:
-    from connectors_sdk.models.octi._common import TLPMarking
+    from connectors_sdk.models.tlp_marking import TLPMarking
 
 
 class AssociatedFileStix(stix2.v21._STIXBase21):  # type: ignore[misc]
