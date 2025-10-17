@@ -14,7 +14,6 @@ from connectors_sdk.models.malware import Malware
 from connectors_sdk.models.note import Note
 from connectors_sdk.models.octi._common import TLPMarking
 from connectors_sdk.models.octi.knowledge.entities import (
-    Organization,
     Sector,
 )
 from connectors_sdk.models.octi.knowledge.locations import City, Country
@@ -31,6 +30,7 @@ from connectors_sdk.models.octi.relationships import (
     targets,
 )
 from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
+from connectors_sdk.models.organization import Organization
 from connectors_sdk.models.organization_author import OrganizationAuthor
 from connectors_sdk.models.report import Report
 from connectors_sdk.models.software import Software

@@ -2,7 +2,7 @@
 
 from connectors_sdk.models._model_registry import MODEL_REGISTRY
 from connectors_sdk.models.octi._common import Author
-from connectors_sdk.models.octi.knowledge.entities import Organization
+from connectors_sdk.models.organization import Organization
 from stix2.v21 import Identity as Stix2Identity
 
 
