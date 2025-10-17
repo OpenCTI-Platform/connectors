@@ -1,0 +1,19 @@
+{
+  "title": "Fortinet Ti",
+  "slug": "fortinet-ti",
+  "description": "This connector imports data from the Fortinet database\nThe connector creates the following OpenCTI entities:",
+  "short_description": "This connector imports data from the Fortinet database\nThe connector creates the following OpenCTI entities:",
+  "logo": null,
+  "use_cases": [],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/fortinet-ti",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-fortinet-ti",
+  "container_type": "EXTERNAL_IMPORT"
+}

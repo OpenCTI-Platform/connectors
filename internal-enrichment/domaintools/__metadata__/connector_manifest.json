@@ -1,0 +1,19 @@
+{
+  "title": "Domaintools",
+  "slug": "domaintools",
+  "description": "The OpenCTI DomainTools connector can be used to import knowledge from the DomainTools API. This connector uses the Domain Tools Official Python API.\nThe connector enrich the domain and ip with other domains, ips, email addresses and autonomous systems.",
+  "short_description": "The OpenCTI DomainTools connector can be used to import knowledge from the DomainTools API. This connector uses the Domain Tools Official Python API.\nThe connector enrich the domain and ip with other domains, ips, email addresses and autonomous systems.",
+  "logo": null,
+  "use_cases": [],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/domaintools",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-domaintools",
+  "container_type": "INTERNAL_ENRICHMENT"
+}
