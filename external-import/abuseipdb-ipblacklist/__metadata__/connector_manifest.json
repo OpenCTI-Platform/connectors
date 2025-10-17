@@ -3,12 +3,12 @@
   "slug": "abuseipdb-ipblacklist",
   "description": "The AbuseIPDB Blacklist connector let you ingest IP addresses present into Blacklist database of AbuseIPDB. The blacklist is a list of the most reported IP addresses by AbuseIPDB users.\n\nThe connector acts as an interface between AbuseIPDB and OpenCTI, transforming malicious IP address data into the STIX 2.1 format. This transformation allows the data to be ingested and utilized within the OpenCTI platform.\n\nIt creates a STIX Identity object for AbuseIPDB to ensure proper attribution of the data. It also establishes an external reference pointing to the AbuseIPDB website, allowing users to trace back to the original source of the information.\n\nThe connector assigns Traffic Light Protocol (TLP) markings to indicate the sensitivity and sharing restrictions of the data. These markings help manage the distribution and application of the threat intelligence data.\n\nThe connector transforms reported malicious IP addresses into STIX Observables, and then into STIX Indicator objects (if configured to do so). These indicators include patterns and descriptions that explain why the IPs are considered threats, aiding security analysts in their investigations.\n\nIt also supports the creation of relationships between STIX objects, which helps in building connections between different pieces of threat intelligence, such as linking malicious IPs to threat actors.\n\nOverall, the connector facilitates the incorporation of IP blacklist data from AbuseIPDB into OpenCTI, enhancing the platform's capabilities in analyzing and responding to cyber threats.",
   "short_description": "The AbuseIPDB Blacklist connector let you ingest IP addresses present into Blacklist database of AbuseIPDB. The blacklist is a list of the most reported IP addresses by AbuseIPDB users.",
-  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "logo": "external-import/abuseipdb-ipblacklist/__metadata__/logo.png",
   "use_cases": [
     "Open Source Threat Intel"
   ],
   "verified": true,
-  "last_verified_date": "",
+  "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 70,
   "support_version": ">= 5.5.4",

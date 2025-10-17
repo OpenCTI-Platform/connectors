@@ -1,0 +1,19 @@
+{
+  "title": "Wiz",
+  "slug": "wiz",
+  "description": "Information coming soon",
+  "short_description": "Information coming soon",
+  "logo": null,
+  "use_cases": [],
+  "verified": true,
+  "last_verified_date": "2025-04-09",
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/wiz",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-wiz",
+  "container_type": "EXTERNAL_IMPORT"
+}

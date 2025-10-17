@@ -1,0 +1,19 @@
+{
+  "title": "Cuckoo",
+  "slug": "cuckoo",
+  "description": "This is a connector for syncing Cuckoo snadbox analysis as reports and IOCs OpenCTI.",
+  "short_description": "This is a connector for syncing Cuckoo snadbox analysis as reports and IOCs OpenCTI.",
+  "logo": null,
+  "use_cases": [],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/cuckoo",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-cuckoo",
+  "container_type": "EXTERNAL_IMPORT"
+}

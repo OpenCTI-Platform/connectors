@@ -1,0 +1,19 @@
+{
+  "title": "Shadowserver",
+  "slug": "shadowserver",
+  "description": "The integration uses Shadowservers reports API to query the available Shadowserver reports and transform them into Stixobjects making them available within OpenCTI. All available reports are downloaded and an Artifact object is createdwith the original file. Stix Note objects are added to both the Report and the CustomObjectCaseIncident with amark-down rendition of each finding from the report.\nAPI and report references from The Shadowserver Foundation\nThe integration creates the following types of Stix objects and relationships between them.\nOn the initial run, the integration defaults to the last 30-days of reports. Every run after that, it provides an updatefor the last 3-days.",
+  "short_description": "The integration uses Shadowservers reports API to query the available Shadowserver reports and transform them into Stixobjects making them available within OpenCTI. All available reports are downloaded and an Artifact object is createdwith the original file. Stix Note objects are added to both the Report and the CustomObjectCaseIncident with amark-down rendition of each finding from the report.\nAPI and report references from The Shadowserver Foundation\nThe integration creates the following types of Stix objects and relationships between them.\nOn the initial run, the integration defaults to the last 30-days of reports. Every run after that, it provides an updatefor the last 3-days.",
+  "logo": null,
+  "use_cases": [],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/shadowserver",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-shadowserver",
+  "container_type": "EXTERNAL_IMPORT"
+}

@@ -1,0 +1,19 @@
+{
+  "title": "Pan Cortex Xsoar Intel",
+  "slug": "pan-cortex-xsoar-intel",
+  "description": "This connector allows organizations to push indicators to PAN Cortex XSOAR.",
+  "short_description": "This connector allows organizations to push indicators to PAN Cortex XSOAR.",
+  "logo": null,
+  "use_cases": [],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/pan-cortex-xsoar-intel",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-pan-cortex-xsoar-intel",
+  "container_type": "STREAM"
+}

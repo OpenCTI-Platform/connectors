@@ -3,13 +3,13 @@
   "slug": "virustotal",
   "description": "VirusTotal is a comprehensive service that aggregates data from numerous antivirus products and online scanners to analyze suspicious files and URLs for potential threats. By providing collective analysis results, VirusTotal helps security teams identify malicious content quickly and effectively, supporting more comprehensive cybersecurity efforts.\n\nIntegrating VirusTotal with OpenCTI enhances threat intelligence by providing access to the collective insights of numerous security vendors. This integration allows for the automatic import of analysis results for files and URLs, enriching the threat intelligence platform with detailed threat data. Security teams can leverage VirusTotal data to confirm, investigate, and respond to potential threats more efficiently, fortifying their overall security posture.",
   "short_description": "VirusTotal aggregates data from antivirus products and scanners to analyze files and URLs, aiding in the quick identification of malicious content. Its integration with OpenCTI imports analysis results, enriching threat intelligence for efficient threat confirmation and response.",
-  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
-  "use_cases" : [
+  "logo": "internal-enrichment/virustotal/__metadata__/logo.png",
+  "use_cases": [
     "Enrichment & Analysis",
     "Malware Analysis"
   ],
   "verified": true,
-  "last_verified_date": "",
+  "last_verified_date": null,
   "playbook_supported": true,
   "max_confidence_level": 50,
   "support_version": ">=6.5.1",

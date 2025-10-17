@@ -1,0 +1,19 @@
+{
+  "title": "Crowdstrike Endpoint Security",
+  "slug": "crowdstrike-endpoint-security",
+  "description": "The Crowdstrike Endpoint Security connector is a standalone Python process that monitors events from OpenCTI and executes related actions to create, update or delete a data in Crowdstrike.\nSummary",
+  "short_description": "The Crowdstrike Endpoint Security connector is a standalone Python process that monitors events from OpenCTI and executes related actions to create, update or delete a data in Crowdstrike.\nSummary",
+  "logo": null,
+  "use_cases": [],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/crowdstrike-endpoint-security",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-crowdstrike-endpoint-security",
+  "container_type": "STREAM"
+}
