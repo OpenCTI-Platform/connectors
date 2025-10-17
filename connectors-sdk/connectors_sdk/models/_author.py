@@ -4,10 +4,8 @@ from abc import ABC, abstractmethod
 
 import stix2.properties
 from connectors_sdk.models._base_identified_entity import _BaseIdentifiedEntity
-from connectors_sdk.models._model_registry import MODEL_REGISTRY
 
 
-@MODEL_REGISTRY.register
 class Author(ABC, _BaseIdentifiedEntity):
     """Represent an author.
 

@@ -2,7 +2,6 @@
 
 from typing import Literal
 
-from connectors_sdk.models._model_registry import MODEL_REGISTRY
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.relationship import Relationship
 
@@ -74,8 +73,6 @@ targets = relationship_builder("targets")
 located_at = relationship_builder("located-at")
 has = relationship_builder("has")
 
-
-MODEL_REGISTRY.rebuild_all()
 
 if __name__ == "__main__":  # pragma: no cover # do not run coverage on doctests
     import doctest

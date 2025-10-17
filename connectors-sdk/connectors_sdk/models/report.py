@@ -1,9 +1,10 @@
 """Report."""
 
+from __future__ import annotations
+
 from collections import OrderedDict
 
 import stix2.properties
-from connectors_sdk.models._model_registry import MODEL_REGISTRY
 from connectors_sdk.models.associated_file import AssociatedFile
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.octi.enums import Reliability, ReportType
@@ -27,7 +28,6 @@ class ReportStix(Stix2Report):  # type: ignore[misc]
     )
 
 
-@MODEL_REGISTRY.register
 class Report(BaseIdentifiedEntity):
     """Represent a report.
 

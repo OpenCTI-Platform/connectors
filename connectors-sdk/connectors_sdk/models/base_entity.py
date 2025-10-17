@@ -4,11 +4,9 @@ from abc import abstractmethod
 from typing import Any
 
 import stix2.properties
-from connectors_sdk.models._model_registry import MODEL_REGISTRY
 from pydantic import BaseModel, ConfigDict
 
 
-@MODEL_REGISTRY.register
 class BaseEntity(BaseModel):
     """Represent Base Entity for OpenCTI models."""
 

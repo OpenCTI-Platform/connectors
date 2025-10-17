@@ -2,13 +2,11 @@
 
 import ipaddress
 
-from connectors_sdk.models._model_registry import MODEL_REGISTRY
 from connectors_sdk.models._observable import Observable
 from pydantic import Field, field_validator
 from stix2.v21 import IPv4Address as Stix2IPv4Address
 
 
-@MODEL_REGISTRY.register
 class IPV4Address(Observable):
     """Define an IP V4 address observable on OpenCTI.
 

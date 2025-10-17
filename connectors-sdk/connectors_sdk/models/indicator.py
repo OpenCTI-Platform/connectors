@@ -2,7 +2,6 @@
 
 from typing import Literal
 
-from connectors_sdk.models._model_registry import MODEL_REGISTRY
 from connectors_sdk.models.associated_file import AssociatedFile
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.kill_chain_phase import KillChainPhase
@@ -11,7 +10,6 @@ from pydantic import AwareDatetime, Field
 from stix2.v21 import Indicator as Stix2Indicator
 
 
-@MODEL_REGISTRY.register
 class Indicator(BaseIdentifiedEntity):
     """Define OpenCTI Indicators.
 

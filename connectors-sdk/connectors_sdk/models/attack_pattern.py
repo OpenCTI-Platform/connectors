@@ -1,6 +1,5 @@
 """AttackPattern."""
 
-from connectors_sdk.models._model_registry import MODEL_REGISTRY
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.kill_chain_phase import KillChainPhase
 from connectors_sdk.models.octi.enums import Permission, Platform
@@ -9,7 +8,6 @@ from pydantic import Field
 from stix2.v21 import AttackPattern as Stix2AttackPattern
 
 
-@MODEL_REGISTRY.register
 class AttackPattern(BaseIdentifiedEntity):
     """Represents an attack pattern entity on OpenCTI."""
 

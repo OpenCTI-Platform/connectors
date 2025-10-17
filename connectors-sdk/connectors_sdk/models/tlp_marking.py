@@ -1,7 +1,6 @@
 """TLPMarking."""
 
 from connectors_sdk.models._base_identified_entity import _BaseIdentifiedEntity
-from connectors_sdk.models._model_registry import MODEL_REGISTRY
 from connectors_sdk.models.octi.enums import TLPLevel
 from pycti import MarkingDefinition as PyctiMarkingDefinition
 from pydantic import Field
@@ -9,7 +8,6 @@ from stix2.v21 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
 from stix2.v21 import MarkingDefinition as Stix2MarkingDefinition
 
 
-@MODEL_REGISTRY.register
 class TLPMarking(_BaseIdentifiedEntity):
     """Represent a TLP marking definition."""
 

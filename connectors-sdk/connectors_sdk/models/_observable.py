@@ -3,14 +3,12 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
-from connectors_sdk.models._model_registry import MODEL_REGISTRY
 from connectors_sdk.models.associated_file import AssociatedFile
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from pydantic import Field
 from stix2.v21 import _Observable as _Stix2Observable
 
 
-@MODEL_REGISTRY.register
 class Observable(ABC, BaseIdentifiedEntity):
     """Base class for OpenCTI Observables.
 
@@ -32,7 +30,7 @@ class Observable(ABC, BaseIdentifiedEntity):
         description="Labels of the observable.",
     )
 
-    associated_files: list["AssociatedFile"] | None = Field(
+    associated_files: list[AssociatedFile] | None = Field(
         default=None,
         description="Associated files for the observable.",
     )

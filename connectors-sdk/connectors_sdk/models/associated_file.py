@@ -1,15 +1,12 @@
 """AssociatedFile."""
 
 import codecs
-from typing import TYPE_CHECKING, OrderedDict
+from typing import OrderedDict
 
 import stix2.properties
-from connectors_sdk.models._model_registry import MODEL_REGISTRY
 from connectors_sdk.models.base_entity import BaseEntity
+from connectors_sdk.models.tlp_marking import TLPMarking
 from pydantic import Field
-
-if TYPE_CHECKING:
-    from connectors_sdk.models.tlp_marking import TLPMarking
 
 
 class AssociatedFileStix(stix2.v21._STIXBase21):  # type: ignore[misc]
@@ -49,7 +46,6 @@ class AssociatedFileStix(stix2.v21._STIXBase21):  # type: ignore[misc]
     )
 
 
-@MODEL_REGISTRY.register
 class AssociatedFile(BaseEntity):
     """Represents a SDO's or SCO's corresponding file, such as a Report PDF or an Artifact binary.
 
@@ -79,7 +75,7 @@ class AssociatedFile(BaseEntity):
         default=None,
         description="File mime type.",
     )
-    markings: list["TLPMarking"] | None = Field(
+    markings: list[TLPMarking] | None = Field(
         default=None,
         description="References for object marking.",
     )

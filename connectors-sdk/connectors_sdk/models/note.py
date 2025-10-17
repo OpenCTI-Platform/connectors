@@ -3,7 +3,6 @@
 from collections import OrderedDict
 
 import stix2.properties
-from connectors_sdk.models._model_registry import MODEL_REGISTRY
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.octi.enums import NoteType
 from pycti import Note as PyctiNote
@@ -26,7 +25,6 @@ class NoteStix(Stix2Note):  # type: ignore[misc]
     )
 
 
-@MODEL_REGISTRY.register
 class Note(BaseIdentifiedEntity):
     """Represent a note."""
 
