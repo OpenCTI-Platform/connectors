@@ -140,7 +140,7 @@ class TheHive:
             f"Constructing query with last date: {format_datetime(last_date, DEFAULT_UTC_DATETIME)}"
         )
         if type == "case":
-            if len(self.thehive_case_tag_whitelist) > 0:
+            if any(self.thehive_case_tag_whitelist):
                 return In("tags", self.thehive_case_tag_whitelist) & ( Gt("_updatedAt", int(last_date * 1000)) | Gt("_createdAt", int(last_date * 1000)))
             else:
                 return Gt("_updatedAt", int(last_date * 1000)) | Gt(
