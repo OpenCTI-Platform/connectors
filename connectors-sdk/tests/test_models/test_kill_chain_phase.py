@@ -1,5 +1,3 @@
-"""Offers tests for the taxonomies entities."""
-
 from connectors_sdk.models.base_entity import BaseEntity
 from connectors_sdk.models.kill_chain_phase import KillChainPhase
 
