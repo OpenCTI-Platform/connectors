@@ -3,8 +3,10 @@
   "slug": "criminalip-c2-daily-feed",
   "description": "The connector uses the criminalip C2-Daily-Feed to collect the malicious IP addresses derived from Criminal IP (https://www.criminalip.io/).",
   "short_description": "The connector uses the criminalip C2-Daily-Feed to collect the malicious IP addresses derived from Criminal IP (https://www.criminalip.io/).",
-  "logo": null,
-  "use_cases": ["Open Source Threat Intel"],
+  "logo": "external-import/criminalip-c2-daily-feed/__metadata__/logo.png",
+  "use_cases": [
+    "Open Source Threat Intel"
+  ],
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

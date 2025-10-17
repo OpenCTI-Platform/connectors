@@ -4,7 +4,9 @@
   "description": "Information coming soon",
   "short_description": "Information coming soon",
   "logo": null,
-  "use_cases": ["Open Source Threat Intel"],
+  "use_cases": [
+    "Open Source Threat Intel"
+  ],
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

@@ -3,8 +3,10 @@
   "slug": "ironnet",
   "description": "The OpenCTI IronNet connector can be used to import knowledge from the IronNet IronRadar threat intel feed.\nNote: Requires subscription to the IronRadar threat intel feed.",
   "short_description": "The OpenCTI IronNet connector can be used to import knowledge from the IronNet IronRadar threat intel feed.\nNote: Requires subscription to the IronRadar threat intel feed.",
-  "logo": null,
-  "use_cases": ["Commercial Threat Intel"],
+  "logo": "external-import/ironnet/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

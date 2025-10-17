@@ -3,8 +3,10 @@
   "slug": "comlaude",
   "description": "The Comlaude Connector is designed to integrate with the Comlaude API to leverage the Domain Search Endpoint. This endpoint provides a comprehensive list of all domains within a specified group, along with detailed information for each domain.",
   "short_description": "The Comlaude Connector is designed to integrate with the Comlaude API to leverage the Domain Search Endpoint. This endpoint provides a comprehensive list of all domains within a specified group, along with detailed information for each domain.",
-  "logo": null,
-  "use_cases": ["Commercial Threat Intel"],
+  "logo": "external-import/comlaude/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
   "verified": true,
   "last_verified_date": "2025-04-17",
   "playbook_supported": false,

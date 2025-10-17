@@ -5,7 +5,8 @@
   "short_description": "DISARM is a framework designed for describing and understanding disinformation incidents.\n\nThis connector import DISARM framework into OpenCTI.",
   "logo": "external-import/disarm-framework/__metadata__/logo.png",
   "use_cases": [
-    "Open Source Threat Intel", "FIMI"
+    "Open Source Threat Intel",
+    "FIMI"
   ],
   "verified": true,
   "last_verified_date": null,

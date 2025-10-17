@@ -3,8 +3,10 @@
   "slug": "cpe",
   "description": "This connector collects CPE data from the NVD, converts to STIX2 and imports them into OpenCTI at a regular intervals.",
   "short_description": "This connector collects CPE data from the NVD, converts to STIX2 and imports them into OpenCTI at a regular intervals.",
-  "logo": null,
-  "use_cases": ["Vulnerability Management"],
+  "logo": "external-import/cpe/__metadata__/logo.png",
+  "use_cases": [
+    "Vulnerability Management"
+  ],
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,
