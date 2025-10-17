@@ -3,7 +3,8 @@
 
 import pytest
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
-from connectors_sdk.models.octi.knowledge.locations import City, Country
+from connectors_sdk.models.city import City
+from connectors_sdk.models.octi.knowledge.locations import Country
 from pydantic import ValidationError
 from stix2.v21 import Location as Stix2Location
 

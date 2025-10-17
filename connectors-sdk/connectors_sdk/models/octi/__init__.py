@@ -3,6 +3,7 @@
 from connectors_sdk.models.associated_file import AssociatedFile
 from connectors_sdk.models.base_entity import BaseEntity
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
+from connectors_sdk.models.city import City
 from connectors_sdk.models.domain_name import DomainName
 from connectors_sdk.models.external_reference import ExternalReference
 from connectors_sdk.models.file import File
@@ -13,7 +14,7 @@ from connectors_sdk.models.ipv6_address import IPV6Address
 from connectors_sdk.models.malware import Malware
 from connectors_sdk.models.note import Note
 from connectors_sdk.models.octi._common import TLPMarking
-from connectors_sdk.models.octi.knowledge.locations import City, Country
+from connectors_sdk.models.octi.knowledge.locations import Country
 from connectors_sdk.models.octi.knowledge.techniques import AttackPattern
 from connectors_sdk.models.octi.knowledge.threats import IntrusionSet, ThreatActorGroup
 from connectors_sdk.models.octi.relationships import (
