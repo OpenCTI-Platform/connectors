@@ -15,6 +15,8 @@ packages = [{include = "connectors_sdk"}]
 
 [tool.poetry.dependencies]
 pycti = {version = ">= 6.7.19"}
+pydantic = {version = ">= 2.11.3, <3"}
+pydantic-settings = {version = ">= 2.11.0, <3"}
 
 # Optional dependencies
 # octi-connectors = {path = "../.", extras = ["dev"], optional=true}
