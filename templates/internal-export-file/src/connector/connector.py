@@ -1,28 +1,25 @@
+from connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
-from .config_loader import ConfigConnector
 
-
-class ConnectorTemplate:
+class TemplateConnector:
     """
-    Specifications of the internal export connector
+    Specifications of the internal export connector:
 
-    This class encapsulates the main actions, expected to be run by any internal export file connector.
-    Note that the attributes defined below will be complemented per each connector type.
+    This class encapsulates the main actions, expected to be run by any connector of type `INTERNAL_EXPORT_FILE`.
     This type of connector aim to support exporting features.
     Based on its configuration, it listens for execution commands through its RabbitMQ queue.
     Upon receiving an event, the connector generates a file and re-uploads the content back into the platform.
-    This connector will do direct API call from OpenCTI to export the file
+    This connector will do direct API call from OpenCTI to export the file.
+
     ---
 
-    Attributes
-        - `config (ConfigConnector())`:
-            Initialize the connector with necessary configuration environment variables
-
-        - `helper (OpenCTIConnectorHelper(config))`:
-            This is the helper to use.
-            ALL connectors have to instantiate the connector helper with configurations.
-            Doing this will do a lot of operations behind the scene.
+    Attributes:
+        config (ConnectorSettings):
+            Store the connector's configuration. It defines how to connector will behave.
+        helper (OpenCTIConnectorHelper):
+            Handle the connection and the requests between the connector, OpenCTI and the workers.
+            _All connectors MUST use the connector helper with connector's configuration._
 
     ---
 
@@ -34,12 +31,14 @@ class ConnectorTemplate:
 
     """
 
-    def __init__(self, config: ConfigConnector, helper: OpenCTIConnectorHelper):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """
-        Initialize the Connector with necessary configurations
-        """
+        Initialize `TemplateConnector` with its configuration.
 
-        # Load configuration file and connection helper
+        Args:
+            config (ConnectorSettings): Configuration of the connector
+            helper (OpenCTIConnectorHelper): Helper to manage connection and requests to OpenCTI
+        """
         self.config = config
         self.helper = helper
 
