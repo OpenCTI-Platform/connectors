@@ -4,8 +4,8 @@
 import pytest
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.note import Note
-from connectors_sdk.models.octi.activities.analyses import Report
 from connectors_sdk.models.octi.enums import Reliability
+from connectors_sdk.models.report import Report
 from pydantic import ValidationError
 from stix2.v21 import Note as Stix2Note
 from stix2.v21 import Report as Stix2Report

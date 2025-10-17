@@ -6,7 +6,6 @@ from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.external_reference import ExternalReference
 from connectors_sdk.models.note import Note
 from connectors_sdk.models.octi._common import TLPMarking
-from connectors_sdk.models.octi.activities.analyses import Report
 from connectors_sdk.models.octi.activities.observations import (
     URL,
     DomainName,
@@ -37,6 +36,7 @@ from connectors_sdk.models.octi.relationships import (
 )
 from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
 from connectors_sdk.models.organization_author import OrganizationAuthor
+from connectors_sdk.models.report import Report
 
 __all__ = [
     # Models flat list
