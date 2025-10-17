@@ -3,12 +3,10 @@
 
 import inspect
 
+import connectors_sdk.models as models
 import connectors_sdk.models.octi as octi
 
-# from connectors_sdk.models._model_registry import MODEL_REGISTRY
-# from connectors_sdk.models.base_entity import BaseEntity
-
-FEATURE_NAMES = [
+MODELS = [
     "AssociatedFile",
     "AttackPattern",
     "BaseEntity",
@@ -36,6 +34,8 @@ FEATURE_NAMES = [
     "TLPMarking",
     "URL",
     "Vulnerability",
+]
+FEATURE_NAMES = MODELS + [
     "related_to",
     "based_on",
     "derived_from",
@@ -75,18 +75,11 @@ def test_public_features_are_present():
     assert not extra, f"Unexpected features in octi model public api: {extra}"
 
 
-# def test_public_models_are_registered_to_be_rebuild():
-#     """Test that all public models are registered to be rebuilt."""
-#     # Given the MODEL_REGISTRY
-#     registry = MODEL_REGISTRY
-#     # When checking each public model
-#     for feature_name in octi.__all__:
-#         feat = getattr(octi, feature_name)
-#         if not inspect.isclass(feat):
-#             continue
-#         if not issubclass(feat, BaseEntity):
-#             continue
-#         # Then it should be registered to be rebuilt
-#         assert (
-#             feature_name in registry.models.keys()
-#         ), f"{feature_name} should be registered to be rebuilt"
+def test_public_models_are_present():
+    """Test that features are not removed by mistake."""
+    # Given the feature name
+    # Then it should all be present
+    missing = set(MODELS) - set(models.__all__)
+    extra = set(models.__all__) - set(MODELS)
+    assert not missing, f"Missing features in models model public api: {missing}"
+    assert not extra, f"Unexpected features in models model public api: {extra}"
