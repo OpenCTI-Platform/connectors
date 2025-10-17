@@ -1,9 +1,7 @@
 """Offer OpenCTI models."""
 
-from connectors_sdk.models._model_registry import MODEL_REGISTRY
 from connectors_sdk.models.octi._common import (
     AssociatedFile,
-    Author,
     BaseEntity,
     BaseIdentifiedEntity,
     ExternalReference,
@@ -39,7 +37,7 @@ from connectors_sdk.models.octi.relationships import (
     targets,
 )
 from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
-from stix2.v21 import Identity as Stix2Identity
+from connectors_sdk.models.organization_author import OrganizationAuthor
 
 __all__ = [
     # Models flat list
@@ -80,25 +78,3 @@ __all__ = [
     "BaseEntity",
     "BaseIdentifiedEntity",
 ]
-
-
-@MODEL_REGISTRY.register
-class OrganizationAuthor(Author, Organization):
-    """Represent an organization author.
-
-    This class extends the Organization class to include author-specific fields that will be
-    widely used for all other entities a connector processes.
-
-    Examples:
-        >>> my_author = OrganizationAuthor(name="Company providing SIEM")
-        >>> org = Organization(name="Example Corp", author=my_author)
-        >>> entity = org.to_stix2_object()
-
-    """
-
-    def to_stix2_object(self) -> Stix2Identity:
-        """Make stix object."""
-        return Organization.to_stix2_object(self)
-
-
-MODEL_REGISTRY.rebuild_all()

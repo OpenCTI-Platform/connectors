@@ -4,6 +4,7 @@
 import inspect
 
 import connectors_sdk.models.octi as octi
+from connectors_sdk.models._model_registry import MODEL_REGISTRY
 
 FEATURE_NAMES = [
     "AssociatedFile",
@@ -75,7 +76,7 @@ def test_public_features_are_present():
 def test_public_models_are_registered_to_be_rebuild():
     """Test that all public models are registered to be rebuilt."""
     # Given the MODEL_REGISTRY
-    registry = octi.MODEL_REGISTRY
+    registry = MODEL_REGISTRY
     # When checking each public model
     for feature_name in octi.__all__:
         feat = getattr(octi, feature_name)

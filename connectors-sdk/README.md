@@ -21,7 +21,8 @@ The SDK provides predefined models to represent data structures commonly used in
 You can use the models in your connector code as follows:
 
 ```python
-from connectors_sdk.models.octi import IPV4Address, Organization, OrganizationAuthor, TLPMarking, related_to
+from connectors_sdk.models import OrganizationAuthor
+from connectors_sdk.models.octi import IPV4Address, Organization, TLPMarking, related_to
 
 # Create an IOC provider (Author)
 author = OrganizationAuthor(name="Example Author")
