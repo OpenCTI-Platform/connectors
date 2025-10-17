@@ -12,7 +12,6 @@ from connectors_sdk.models.ipv6_address import IPV6Address
 from connectors_sdk.models.malware import Malware
 from connectors_sdk.models.note import Note
 from connectors_sdk.models.octi._common import TLPMarking
-from connectors_sdk.models.octi.knowledge.arsenal import Vulnerability
 from connectors_sdk.models.octi.knowledge.entities import (
     Individual,
     Organization,
@@ -36,6 +35,7 @@ from connectors_sdk.models.organization_author import OrganizationAuthor
 from connectors_sdk.models.report import Report
 from connectors_sdk.models.software import Software
 from connectors_sdk.models.url import URL
+from connectors_sdk.models.vulnerability import Vulnerability
 
 __all__ = [
     # Models flat list

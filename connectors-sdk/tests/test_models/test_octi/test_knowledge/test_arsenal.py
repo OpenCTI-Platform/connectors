@@ -11,7 +11,7 @@ from connectors_sdk.models.octi.enums import (
     MalwareType,
     ProcessorArchitecture,
 )
-from connectors_sdk.models.octi.knowledge.arsenal import Vulnerability
+from connectors_sdk.models.vulnerability import Vulnerability
 from pydantic import ValidationError
 from stix2.v21 import Malware as Stix2Malware
 from stix2.v21 import Vulnerability as Stix2Vulnerability
