@@ -23,7 +23,8 @@ The solution involves implementing a `MODEL_REGISTRY` that acts as a repository 
 For an entity defintion, the registration process would look like this:
 
 ```python
-from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseEntity
+from connectors_sdk.models._model_registry import MODEL_REGISTRY
+from connectors_sdk.models.base_entity import BaseEntity
 
 @MODEL_REGISTRY.register
 class MyNestedModel(BaseEntity):

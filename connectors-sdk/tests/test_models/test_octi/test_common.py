@@ -6,11 +6,11 @@ import pytest
 import stix2
 import stix2.properties
 from connectors_sdk.models._model_registry import _ModelRegistry
+from connectors_sdk.models.base_entity import BaseEntity
 from connectors_sdk.models.octi._common import (
     AssociatedFile,
     AssociatedFileStix,
     Author,
-    BaseEntity,
     BaseIdentifiedEntity,
     ExternalReference,
     TLPMarking,

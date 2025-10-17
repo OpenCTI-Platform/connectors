@@ -5,6 +5,7 @@ import inspect
 
 import connectors_sdk.models.octi as octi
 from connectors_sdk.models._model_registry import MODEL_REGISTRY
+from connectors_sdk.models.base_entity import BaseEntity
 
 FEATURE_NAMES = [
     "AssociatedFile",
@@ -82,7 +83,7 @@ def test_public_models_are_registered_to_be_rebuild():
         feat = getattr(octi, feature_name)
         if not inspect.isclass(feat):
             continue
-        if not issubclass(feat, octi.BaseEntity):
+        if not issubclass(feat, BaseEntity):
             continue
         # Then it should be registered to be rebuilt
         assert (
