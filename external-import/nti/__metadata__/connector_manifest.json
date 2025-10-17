@@ -1,6 +1,6 @@
 {
   "title": "Nti",
-  "slug": "NTI",
+  "slug": "nti",
   "description": "The OpenCTI NTI Connector can be used to import knowledge from NSFOCUS Threat Intelligence feed.",
   "short_description": "The OpenCTI NTI Connector can be used to import knowledge from NSFOCUS Threat Intelligence feed.",
   "logo": null,
@@ -11,9 +11,9 @@
   "max_confidence_level": 50,
   "support_version": ">=6.8.0",
   "subscription_link": null,
-  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/NTI",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/nti",
   "manager_supported": false,
   "container_version": "rolling",
-  "container_image": "opencti/connector-NTI",
+  "container_image": "opencti/connector-nti",
   "container_type": "EXTERNAL_IMPORT"
 }
