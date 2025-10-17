@@ -1,4 +1,4 @@
-"""Offer techniques OpenCTI entities."""
+"""AttackPattern."""
 
 from connectors_sdk.models._model_registry import MODEL_REGISTRY
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
@@ -77,12 +77,3 @@ class AttackPattern(BaseIdentifiedEntity):
             x_mitre_platforms=self.mitre_platforms,
             x_mitre_permissions_required=self.mitre_required_permissions,
         )
-
-
-# See https://docs.pydantic.dev/latest/errors/usage_errors/#class-not-fully-defined (consulted on 2025-06-10)
-MODEL_REGISTRY.rebuild_all()
-
-if __name__ == "__main__":  # pragma: no cover  # Do not run coverage on doctest
-    import doctest
-
-    doctest.testmod()
