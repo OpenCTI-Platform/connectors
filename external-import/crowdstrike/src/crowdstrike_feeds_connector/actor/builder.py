@@ -51,6 +51,7 @@ class ActorBundleBuilder:
         source_name: str,
         object_markings: List[MarkingDefinition],
         confidence_level: int,
+        related_indicators: Optional[List] = None,
     ) -> None:
         """Initialize actor bundle builder."""
         self.actor = actor
@@ -58,6 +59,7 @@ class ActorBundleBuilder:
         self.source_name = source_name
         self.object_markings = object_markings
         self.confidence_level = confidence_level
+        self.related_indicators = related_indicators or []
 
         first_seen = timestamp_to_datetime(self.actor["first_activity_date"])
         last_seen = timestamp_to_datetime(self.actor["last_activity_date"])
@@ -283,5 +285,8 @@ class ActorBundleBuilder:
             intrusion_sets, target_sectors
         )
         bundle_objects.extend(intrusion_sets_target_sectors)
+
+        # Add related indicators and their entities to bundle
+        bundle_objects.extend(self.related_indicators)
 
         return Bundle(objects=bundle_objects, allow_custom=True)
