@@ -91,7 +91,7 @@ class SocPrimeConfig(BaseModel):
                 "Configuration error. At least one job id or one content list name must be provided."
             )
 
-        # If content_list_name is set, indicator_siem_type must be set too (even if default=’sigma’)
+        # If content_list_name is set, indicator_siem_type must be set too (even if default='sigma')
         if self.content_list_name and not self.indicator_siem_type:
             raise ValueError(
                 "'indicator_siem_type' must be provided when 'content_list_name' is set."

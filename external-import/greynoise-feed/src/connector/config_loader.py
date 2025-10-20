@@ -200,7 +200,7 @@ class GreynoiseConfig(ConfigBaseModel):
         default=10_000,
     )
     import_metadata: bool = Field(
-        description="Import metadata (cities, sightings, etc.). ⚠️ Can generate a lot of data.",
+        description="Import metadata (cities, sightings, etc.). Warning: Can generate a lot of data.",
         default=False,
     )
     import_destination_sightings: bool = Field(

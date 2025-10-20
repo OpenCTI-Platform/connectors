@@ -60,8 +60,8 @@ class ServiceNowClient:
         the set of values available in the queried table.
 
         Args:
-            targeted_labels(list[str]): A list of elements that may come from the “state_to_exclude”,
-                                        “severity_to_exclude”, “priority_to_exclude” environment variables.
+            targeted_labels(list[str]): A list of elements that may come from the "state_to_exclude",
+                                        "severity_to_exclude", "priority_to_exclude" environment variables.
             table_name(str): Name of the ServiceNow table to be requested
             query_parameters (str): Parameters to be included in the request to filter data retrieved from ServiceNow.
 
