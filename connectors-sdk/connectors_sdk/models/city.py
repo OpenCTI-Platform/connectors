@@ -50,4 +50,5 @@ class City(BaseIdentifiedEntity):
             longitude=self.longitude,
             allow_custom=True,
             x_opencti_location_type=location_type,
+            **self._common_stix2_properties()
         )

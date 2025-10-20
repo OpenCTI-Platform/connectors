@@ -89,10 +89,5 @@ class ThreatActorGroup(BaseIdentifiedEntity):
             primary_motivation=self.primary_motivation,
             secondary_motivations=self.secondary_motivations,
             personal_motivations=self.personal_motivations,
-            created_by_ref=self.author.id if self.author else None,
-            external_references=[
-                external_reference.to_stix2_object()
-                for external_reference in self.external_references or []
-            ],
-            object_marking_refs=[marking.id for marking in self.markings or []],
+            **self._common_stix2_properties()
         )

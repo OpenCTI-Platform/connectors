@@ -1,3 +1,4 @@
+import pycti
 import pytest
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.country import Country
@@ -45,3 +46,39 @@ def test_country_to_stix2_object_returns_valid_stix_object(
     stix2_obj = country.to_stix2_object()
     # Then: A valid STIX2.1 Location is returned
     assert isinstance(stix2_obj, Stix2Location)
+
+
+def test_country_to_stix2_object(
+    fake_valid_organization_author,
+    fake_valid_tlp_markings,
+    fake_valid_external_references,
+) -> None:
+    """Test that Country to_stix2_object method returns correct STIX2.1 Location."""
+    country = Country(
+        name="France",
+        description="Country in Western Europe",
+        author=fake_valid_organization_author,
+        markings=fake_valid_tlp_markings,
+        external_references=fake_valid_external_references,
+    ).to_stix2_object()
+
+    assert country == Stix2Location(
+        id=pycti.Location.generate_id(
+            name="France",
+            x_opencti_location_type="Country",
+        ),
+        name="France",
+        country="France",
+        description="Country in Western Europe",
+        allow_custom=True,
+        created_by_ref=fake_valid_organization_author.id,
+        object_marking_refs=[marking.id for marking in fake_valid_tlp_markings],
+        external_references=[
+            ext_ref.to_stix2_object() for ext_ref in fake_valid_external_references
+        ],
+        created=country.created,
+        modified=country.modified,
+        custom_properties=dict(
+            x_opencti_location_type="Country",
+        ),
+    )
