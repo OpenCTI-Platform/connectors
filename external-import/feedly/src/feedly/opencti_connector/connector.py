@@ -27,7 +27,10 @@ class FeedlyConnector:
 
     def fetch_bundle(self, stream_id: str, newer_than: datetime) -> dict:
         bundle = StixIoCDownloader(
-            self.feedly_session, newer_than, stream_id
+            session=self.feedly_session,
+            newer_than=newer_than,
+            older_than=None,
+            stream_id=stream_id,
         ).download_all()
         _make_reports_content_instead_of_descriptions(bundle)
         _add_main_observable_type_to_indicators(bundle)
