@@ -23,12 +23,8 @@ do
   project="$(dirname "$requirements_file")"
 
   if [ "$CIRCLE_BRANCH" = "master" ]; then
-    directory_has_changed=$(git diff HEAD~1 HEAD -- "$project/..")
-  else
-    directory_has_changed=$(git diff $(git merge-base master HEAD) HEAD "$project/..")
-  fi
-
-  if [ -z "$directory_has_changed" ] ; then
+    echo "🔄 On master branch, running all tests for: " "$project"
+  elif [ -z $(git diff $(git merge-base master HEAD) HEAD "$project/..") ] ; then
     echo "☑️ Nothing has changed in: " "$project"
     continue
   else
