@@ -146,7 +146,9 @@ class RFClient:
                     )
                     res.raise_for_status()
                     lookup_data = res.json()
-                    if lookup_data.get("attributes") and lookup_data["attributes"].get("events"):
+                    if lookup_data.get("attributes") and lookup_data["attributes"].get(
+                        "events"
+                    ):
                         note["events"] = lookup_data["attributes"]["events"]
 
                     notes.append(note)
