@@ -11,7 +11,6 @@ from requests.adapters import HTTPAdapter, Retry
 class MISPClientError(Exception):
     """Custom exception for MISP client errors."""
 
-
 class MISPClient:
     """Wrapper of PyMISP client."""
 
@@ -46,6 +45,21 @@ class MISPClient:
             https_adapter=http_adapter,
         )
 
+    def _sanitize_user_id_in_tags(self, obj):
+        """
+        Recursively replace boolean user_id values with the string "unknown".
+        Works for structures where Tag objects can appear under Event.Tag,
+        Attribute.Tag, Object.Attribute.Tag, etc.
+        """
+        if isinstance(obj, dict):
+            if "user_id" in obj and isinstance(obj["user_id"], bool):
+                obj["user_id"] = "unknown"
+            for v in obj.values():
+                self._sanitize_user_id_in_tags(v)
+        elif isinstance(obj, list):
+            for it in obj:
+                self._sanitize_user_id_in_tags(it)
+                
     def search_events(
         self,
         date_field_filter: str,
@@ -97,6 +111,7 @@ class MISPClient:
 
                 for result in results:
                     try:
+                        self._sanitize_user_id_in_tags(result)
                         yield EventRestSearchListItem(**result)
                     except ValidationError as err:
                         event_id = result.get("Event", {}).get("id", "unknown")
