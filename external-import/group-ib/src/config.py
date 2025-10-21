@@ -6,7 +6,8 @@ import yaml
 from cyberintegrations.utils import FileHandler
 from dotenv import load_dotenv
 from pycti import get_config_variable
-from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
+import pycti
+from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE, MarkingDefinition
 from stix2.v21.vocab import MALWARE_TYPE
 
 
@@ -150,11 +151,29 @@ class ConfigConnector:
     MITRE_CACHE_FOLDER = os.path.join(DOCS_DIR, "cache")
 
     # Set common mapping variables
+    try:
+        TLP_AMBER_STRICT = MarkingDefinition(
+            id=pycti.MarkingDefinition.generate_id("TLP", "AMBER+STRICT"),
+            definition_type="TLP",
+            definition={"tlp": "AMBER+STRICT"},
+        )
+    except Exception:
+        # fallback if custom TLP cannot be created by stix2 in this runtime
+        TLP_AMBER_STRICT = TLP_AMBER
+
     STIX_TLP_MAP = {
         "white": TLP_WHITE,
         "green": TLP_GREEN,
         "amber": TLP_AMBER,
+        "amber+strict": TLP_AMBER_STRICT,
         "red": TLP_RED,
+    }
+
+    # Default TLPs by SDO type when upstream API did not provide a valid TLP
+    DEFAULT_TLP_BY_SDO = {
+        "malware": "amber+strict",
+        "threat-actor": "amber+strict",
+        "intrusion-set": "amber+strict",
     }
     STIX_MAIN_OBSERVABLE_TYPE_MAP = {
         "domain": "Domain-Name",
