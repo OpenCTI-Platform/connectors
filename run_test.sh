@@ -22,7 +22,7 @@ for requirements_file in $test_requirements_files
 do
   project="$(dirname "$requirements_file")"
 
-  if [ "$CIRCLE_BRANCH" = "master" ]; then
+  if [ "$CIRCLE_BRANCH" = "feat/4927-circleci-execute-the-tests-depending-on-the-context" ]; then
     echo "🔄 On master branch, running all tests for: " "$project"
   elif [ -z $(git diff $(git merge-base master HEAD) HEAD "$project/..") ] ; then
     echo "☑️ Nothing has changed in: " "$project"
