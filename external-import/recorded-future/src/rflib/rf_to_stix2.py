@@ -1017,6 +1017,14 @@ class StixNote:
         self.external_references = self._generate_external_references(
             attr.get("validation_urls", [])
         )
+
+        # added an external reference to point the analyst note on the RF portal
+        self.external_references.append(
+            {
+                "source_name": "Recorded Future",
+                "url": "https://app.recordedfuture.com/portal/research/record/"+note["id"]
+            }
+        )
         self.report_types = self._create_report_types(attr.get("topic", []))
         self.labels = [topic["name"] for topic in attr.get("topic", [])]
         self.attachments = attr["attachments"]
