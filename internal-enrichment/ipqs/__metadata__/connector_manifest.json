@@ -1,0 +1,21 @@
+{
+  "title": "IPQS",
+  "slug": "ipqs",
+  "description": "Information coming soon",
+  "short_description": "Information coming soon",
+  "logo": "internal-enrichment/ipqs/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=5.12.20",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/ipqs",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-ipqs",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

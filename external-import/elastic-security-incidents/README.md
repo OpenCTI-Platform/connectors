@@ -20,22 +20,23 @@ This connector imports alerts and cases from Elastic Security into OpenCTI as in
 
 ## Configuration
 
-| Parameter | Environment Variable | Description | Default |
-|-----------|---------------------|-------------|---------|
-| OpenCTI URL | `OPENCTI_URL` | The URL of the OpenCTI platform | - |
-| OpenCTI Token | `OPENCTI_TOKEN` | The OpenCTI token | - |
-| Connector ID | `CONNECTOR_ID` | A valid arbitrary UUID | - |
-| Connector Name | `CONNECTOR_NAME` | Name of the connector | Elastic Security Incidents |
-| Duration Period | `CONNECTOR_DURATION_PERIOD` | ISO-8601 duration between runs | PT30M |
-| Elastic URL | `ELASTIC_SECURITY_URL` | Elasticsearch cluster URL | - |
-| Elastic API Key | `ELASTIC_SECURITY_API_KEY` | API key for Elasticsearch | - |
-| Verify SSL | `ELASTIC_SECURITY_VERIFY_SSL` | Verify SSL certificates | true |
-| CA Certificate | `ELASTIC_SECURITY_CA_CERT` | Path to CA certificate file | - |
-| Import Start Date | `ELASTIC_SECURITY_IMPORT_START_DATE` | Initial import start date | 7 days ago |
-| Import Alerts | `ELASTIC_SECURITY_IMPORT_ALERTS` | Import security alerts | true |
-| Import Cases | `ELASTIC_SECURITY_IMPORT_CASES` | Import security cases | true |
-| Alert Statuses | `ELASTIC_SECURITY_ALERT_STATUSES` | Alert statuses to import (comma-separated, empty to import all) | (empty - imports all) |
-| Case Statuses | `ELASTIC_SECURITY_CASE_STATUSES` | Case statuses to import (comma-separated, empty to import all) | (empty - imports all) |
+| Parameter         | Environment Variable                 | Description                                                                                                        | Default                    |
+|-------------------|--------------------------------------|--------------------------------------------------------------------------------------------------------------------|----------------------------|
+| OpenCTI URL       | `OPENCTI_URL`                        | The URL of the OpenCTI platform                                                                                    | -                          |
+| OpenCTI Token     | `OPENCTI_TOKEN`                      | The OpenCTI token                                                                                                  | -                          |
+| Connector ID      | `CONNECTOR_ID`                       | A valid arbitrary UUID                                                                                             | -                          |
+| Connector Name    | `CONNECTOR_NAME`                     | Name of the connector                                                                                              | Elastic Security Incidents |
+| Duration Period   | `CONNECTOR_DURATION_PERIOD`          | ISO-8601 duration between runs                                                                                     | PT30M                      |
+| Elastic URL       | `ELASTIC_SECURITY_URL`               | Elasticsearch cluster URL                                                                                          | -                          |
+| Elastic API Key   | `ELASTIC_SECURITY_API_KEY`           | API key for Elasticsearch                                                                                          | -                          |
+| Verify SSL        | `ELASTIC_SECURITY_VERIFY_SSL`        | Verify SSL certificates                                                                                            | true                       |
+| CA Certificate    | `ELASTIC_SECURITY_CA_CERT`           | Path to CA certificate file                                                                                        | -                          |
+| Import Start Date | `ELASTIC_SECURITY_IMPORT_START_DATE` | Initial import start date                                                                                          | 7 days ago                 |
+| Import Alerts     | `ELASTIC_SECURITY_IMPORT_ALERTS`     | Import security alerts                                                                                             | true                       |
+| Import Cases      | `ELASTIC_SECURITY_IMPORT_CASES`      | Import security cases                                                                                              | true                       |
+| Alert Statuses    | `ELASTIC_SECURITY_ALERT_STATUSES`    | Alert statuses to import (comma-separated, empty to import all)                                                    | (empty - imports all)      |
+| Alert Rule Tags   | `ELASTIC_SECURITY_ALERT_RULE_TAGS`   | Rule tags to filter alerts (comma-separated, only import alerts from rules with these tags, empty to import all)   | (empty - imports all)      |
+| Case Statuses     | `ELASTIC_SECURITY_CASE_STATUSES`     | Case statuses to import (comma-separated, empty to import all)                                                     | (empty - imports all)      |
 
 ## Prerequisites
 

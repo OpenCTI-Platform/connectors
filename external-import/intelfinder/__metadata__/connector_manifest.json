@@ -1,0 +1,21 @@
+{
+  "title": "IntelFinder",
+  "slug": "intelfinder",
+  "description": "This connector is designed for integration with the OpenCTI platform and IntelFinder. The integration imports IntelFinder alerts and converts them into OpenCTI incidents. Applicable elements are transformed into their related Stix objects and linked to the parent incident.",
+  "short_description": "This connector is designed for integration with the OpenCTI platform and IntelFinder. The integration imports IntelFinder alerts and converts them into OpenCTI incidents. Applicable elements are transformed into their related Stix objects and linked to the parent incident.",
+  "logo": "external-import/intelfinder/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=5.12.14",
+  "subscription_link": "https://intelfinder.io",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/intelfinder",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-intelfinder",
+  "container_type": "EXTERNAL_IMPORT"
+}

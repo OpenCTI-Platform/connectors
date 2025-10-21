@@ -1,0 +1,21 @@
+{
+  "title": "Abuse SSL",
+  "slug": "abuse-ssl",
+  "description": "The connector uses the an Abuse-ssl csv file that lists botnet ips detected based on certain ssl signatures\nAn SSL certificate can be associated with one or more servers (IP address:port combination). SSLBL collects IP addresses that are running with an SSL certificate blacklisted on SSLBL. These are usually botnet Command&Control servers (C&C). SSLBL hence publishes a blacklist containing these IPs which can be used to detect botnet C2 traffic from infected machines towards the internet, leaving your network. The CSV format is useful if you want to process the blacklisted IP addresses further, e.g. loading them into your SIEM or CTI (or both, don't be shy).",
+  "short_description": "The connector uses the an Abuse-ssl csv file that lists botnet ips detected based on certain ssl signatures\nAn SSL certificate can be associated with one or more servers (IP address:port combination). SSLBL collects IP addresses that are running with an SSL certificate blacklisted on SSLBL. These are usually botnet Command&Control servers (C&C). SSLBL hence publishes a blacklist containing these IPs which can be used to detect botnet C2 traffic from infected machines towards the internet, leaving your network. The CSV format is useful if you want to process the blacklisted IP addresses further, e.g. loading them into your SIEM or CTI (or both, don't be shy).",
+  "logo": "external-import/abuse-ssl/__metadata__/logo.png",
+  "use_cases": [
+    "Open Source Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=5.5.4",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/abuse-ssl",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-abuse-ssl",
+  "container_type": "EXTERNAL_IMPORT"
+}

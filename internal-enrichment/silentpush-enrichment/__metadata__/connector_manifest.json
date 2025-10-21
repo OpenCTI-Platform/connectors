@@ -1,0 +1,21 @@
+{
+  "title": "Silent Push Enrichment",
+  "slug": "silentpush-enrichment",
+  "description": "Silent Push takes a unique approach to identifying developing cyber threats by creating Indicators of Future Attacks (IOFA) that are more useful, and more valuable than industry-standard IOCs.\n\nWe apply unique behavioral fingerprints to attacker activity and search across our proprietary DNS database \u2013 containing the most complete, accurate, and timely view of global internet-facing infrastructure anywhere in the world \u2013 to reveal adversary infrastructure and campaigns prior to launch.\n",
+  "short_description": "Silent Push takes a unique approach to identifying developing cyber threats by creating Indicators of Future Attacks (IOFA) that are more useful, and more valuable than industry-standard IOCs.\n",
+  "logo": "internal-enrichment/silentpush-enrichment/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 50,
+  "support_version": ">=6.6.18",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/silentpush-enrichment",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-silentpush-enrichment",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

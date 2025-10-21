@@ -1,0 +1,21 @@
+{
+  "title": "NIST NVD CPE",
+  "slug": "cpe",
+  "description": "This connector collects CPE data from the NVD, converts to STIX2 and imports them into OpenCTI at a regular intervals.",
+  "short_description": "This connector collects CPE data from the NVD, converts to STIX2 and imports them into OpenCTI at a regular intervals.",
+  "logo": "external-import/cpe/__metadata__/logo.png",
+  "use_cases": [
+    "Vulnerability Management"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=5.5.4",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/cpe",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-cpe",
+  "container_type": "EXTERNAL_IMPORT"
+}

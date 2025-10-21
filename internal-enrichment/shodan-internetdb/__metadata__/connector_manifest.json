@@ -1,0 +1,21 @@
+{
+  "title": "Shodan InternetDB",
+  "slug": "shodan-internetdb",
+  "description": "The InternetDB API provides a lot less data than a regular Shodan IP lookup, however it's free for non-commercial use.\nThis connector enriches IPv4 observables with domains, CPEs, Vulns, and Tags reported by the Shodan InternetDB API.",
+  "short_description": "The InternetDB API provides a lot less data than a regular Shodan IP lookup, however it's free for non-commercial use.\nThis connector enriches IPv4 observables with domains, CPEs, Vulns, and Tags reported by the Shodan InternetDB API.",
+  "logo": "internal-enrichment/shodan-internetdb/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
+  "verified": true,
+  "last_verified_date": "2025-04-25",
+  "playbook_supported": true,
+  "max_confidence_level": 50,
+  "support_version": ">=6.6.8",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/shodan-internetdb",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-shodan-internetdb",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

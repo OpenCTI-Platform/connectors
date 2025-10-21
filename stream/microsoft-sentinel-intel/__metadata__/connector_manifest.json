@@ -3,15 +3,15 @@
   "slug": "microsoft-sentinel-intel",
   "description": "Microsoft Sentinel is a scalable, cloud-native security information and event management (SIEM) that delivers scalable, cost-efficient security across multicloud and multi-platform environments with built-in AI, automation, threat intelligence, and a modern data lake architecture. Microsoft Sentinel provides cyberthreat detection, investigation, response, and proactive hunting, with a bird's-eye view across your enterprise. \n\nThe integration of Microsoft Sentinel with OpenCTI enables the automatic dissemination, update, and deletion of STIX indicators into Microsoft Sentinel. The connector consumes indicators from an OpenCTI stream and manages them in Microsoft Sentinel using the STIX objects API documented at https://learn.microsoft.com/en-us/azure/sentinel/stix-objects-api.",
   "short_description": "Microsoft Sentinel is a scalable, cloud-native security information and event management (SIEM) that delivers scalable, cost-efficient security across multicloud and multi-platform environments with built-in AI, automation, threat intelligence, and a modern data lake architecture. Microsoft Sentinel provides cyberthreat detection, investigation, response, and proactive hunting, with a bird's-eye view across your enterprise.",
-  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "logo": "stream/microsoft-sentinel-intel/__metadata__/logo.png",
   "use_cases": [
     "SIEM & Analytics"
   ],
   "verified": true,
-  "last_verified_date": "",
+  "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 50,
-  "support_version": ">= 6.7.19",
+  "support_version": ">= 6.7.5",
   "subscription_link": "https://learn.microsoft.com/en-us/azure/sentinel/overview?tabs=defender-portal",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/microsoft-sentinel-intel",
   "manager_supported": false,

@@ -1,0 +1,19 @@
+{
+  "title": "Backup Files",
+  "slug": "backup-files",
+  "description": "This connector allows organizations to consume their OpenCTI data and write them to a specific folder.",
+  "short_description": "This connector allows organizations to consume their OpenCTI data and write them to a specific folder.",
+  "logo": "stream/backup-files/__metadata__/logo.png",
+  "use_cases": [],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/backup-files",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-backup-files",
+  "container_type": "STREAM"
+}

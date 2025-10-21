@@ -1,0 +1,21 @@
+{
+  "title": "CrowdSec",
+  "slug": "crowdsec",
+  "description": "Connector which enriches your knowledge by using CrowdSec's CTI API.",
+  "short_description": "Connector which enriches your knowledge by using CrowdSec's CTI API.",
+  "logo": "internal-enrichment/crowdsec/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=5.6.1",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/crowdsec",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-crowdsec",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

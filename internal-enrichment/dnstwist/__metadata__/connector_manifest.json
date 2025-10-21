@@ -1,0 +1,21 @@
+{
+  "title": "DNSTwist",
+  "slug": "dnstwist",
+  "description": "This connector is an internal enrichment connector that uses the DNSTwist. This connector is used for finding typosquatting domains.",
+  "short_description": "This connector is an internal enrichment connector that uses the DNSTwist. This connector is used for finding typosquatting domains.",
+  "logo": "internal-enrichment/dnstwist/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 50,
+  "support_version": ">=6.0.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/dnstwist",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-dnstwist",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

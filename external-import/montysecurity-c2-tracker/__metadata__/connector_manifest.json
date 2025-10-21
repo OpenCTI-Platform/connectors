@@ -1,0 +1,21 @@
+{
+  "title": "Montysecurity C2 Tracker",
+  "slug": "montysecurity-c2-tracker",
+  "description": "The connector uses C2-Tracker from montysecurity to import the latest IOCs.\nThe intel feed collects IOCs weekly and it tracks various C2s, malware, botnets, etc. If the OpenCTI instance also has the MITRE Connector installed, the C2-Tracker connector will map IOCs to tools/malware from MITRE where applicable.\nThe connector will automatically deleted old IOCs as they age out of the IOC feed.",
+  "short_description": "The connector uses C2-Tracker from montysecurity to import the latest IOCs.\nThe intel feed collects IOCs weekly and it tracks various C2s, malware, botnets, etc. If the OpenCTI instance also has the MITRE Connector installed, the C2-Tracker connector will map IOCs to tools/malware from MITRE where applicable.\nThe connector will automatically deleted old IOCs as they age out of the IOC feed.",
+  "logo": "external-import/montysecurity-c2-tracker/__metadata__/logo.png",
+  "use_cases": [
+    "Open Source Threat Intel"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.0",
+  "subscription_link": "https://github.com/montysecurity/C2-Tracker",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/montysecurity-c2-tracker",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-montysecurity-c2-tracker",
+  "container_type": "EXTERNAL_IMPORT"
+}

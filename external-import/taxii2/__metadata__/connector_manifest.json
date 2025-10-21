@@ -1,0 +1,21 @@
+{
+  "title": "TAXII2",
+  "slug": "taxii2",
+  "description": "This is a generic TAXII2 connector for OpenCTI. It automates the importing of collection(s) from a specified TAXII2 2.0 and 2.1 servers.",
+  "short_description": "This is a generic TAXII2 connector for OpenCTI. It automates the importing of collection(s) from a specified TAXII2 2.0 and 2.1 servers.",
+  "logo": "external-import/taxii2/__metadata__/logo.png",
+  "use_cases": [
+    "Threat Intelligence"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=5.5.4",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/taxii2",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-taxii2",
+  "container_type": "EXTERNAL_IMPORT"
+}

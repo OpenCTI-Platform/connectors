@@ -1,0 +1,21 @@
+{
+  "title": "Dshield",
+  "slug": "dshield",
+  "description": "The DShield connector is a standalone Python process that collects data from the DShield.org Recommended Block List.Idea:damians-filigran",
+  "short_description": "The DShield connector is a standalone Python process that collects data from the DShield.org Recommended Block List.Idea:damians-filigran",
+  "logo": null,
+  "use_cases": [
+    "Open Source Threat Intel"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/dshield",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-dshield",
+  "container_type": "EXTERNAL_IMPORT"
+}

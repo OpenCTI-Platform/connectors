@@ -3,12 +3,12 @@
   "slug": "urlhaus",
   "description": "URLhaus is a platform from abuse.ch and Spamhaus dedicated to sharing malicious URLs that are being used for malware distribution. With this intelligence, gain insights into malware behavior, to help identify, track, and mitigate against malware and botnet-related cyber threats.\n\nThe integration of URLhaus with OpenCTI facilitates the automatic import of IOCs into the threat intelligence platform. \nThis integration imports URL observables/indicators and their related threats into OpenCTI.",
   "short_description": "URLhaus is a platform from abuse.ch and Spamhaus dedicated to sharing malicious URLs that are being used for malware distribution.",
-  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "logo": "external-import/urlhaus/__metadata__/logo.png",
   "use_cases": [
     "Open Source Threat Intel"
   ],
   "verified": true,
-  "last_verified_date": "",
+  "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 50,
   "support_version": ">= 6.5.1",

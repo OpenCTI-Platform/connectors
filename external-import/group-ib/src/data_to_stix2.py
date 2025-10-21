@@ -96,8 +96,12 @@ class _CommonUtils:
     @staticmethod
     def _generate_tlp_obj(color):
         # type: (str) -> Any
-        """Generate TLP object"""
-        return ConfigConnector.STIX_TLP_MAP.get(color.lower())
+        """Generate TLP object. Defaults to WHITE if color is None/unknown"""
+        if not color:
+            return ConfigConnector.STIX_TLP_MAP.get("white")
+        return ConfigConnector.STIX_TLP_MAP.get(
+            str(color).lower(), ConfigConnector.STIX_TLP_MAP.get("white")
+        )
 
     @staticmethod
     def _generate_main_observable_type(obj_type):
@@ -107,7 +111,7 @@ class _CommonUtils:
 
     @staticmethod
     def _generate_malware_type(obj_type):
-        # type: (str) -> Optional[str, None]
+        # type: (str) -> Optional[str]
         """Generate Malware type object"""
         if obj_type.lower() in ConfigConnector.STIX_MALWARE_TYPE_MAP:
             return obj_type.lower()
@@ -140,6 +144,8 @@ class BaseEntity(_CommonUtils):
         self.c_type = c_type
         self.author = self._generate_author()
         self.tlp = self._generate_tlp_obj(tlp_color)
+        self.config = ConfigConnector()
+        self.statement_marking = self._generate_statement_marking()
         self.is_ioc = False
         self.description = ""
 
@@ -166,6 +172,26 @@ class BaseEntity(_CommonUtils):
             name=ConfigConnector.AUTHOR,
             identity_class="organization",
         )
+
+    def _generate_statement_marking(self):
+        """Generate a custom statement marking with text equal to AUTHOR"""
+        if self.config.get_extra_settings_by_name("enable_statement_marking"):
+            marking_id = pycti.MarkingDefinition.generate_id(
+                "statement", ConfigConnector.AUTHOR
+            )
+            statement_marking = stix2.MarkingDefinition(
+                id=marking_id,
+                definition_type="statement",
+                definition={"statement": ConfigConnector.AUTHOR},
+            )
+            return statement_marking
+
+    def get_markings(self):
+        """Return both standard TLP and the custom statement marking"""
+        markings = [self.tlp]
+        if self.config.get_extra_settings_by_name("enable_statement_marking"):
+            markings.append(self.statement_marking)
+        return markings
 
     @staticmethod
     def stix_escape(value: str) -> str:
@@ -210,7 +236,7 @@ class BaseEntity(_CommonUtils):
             source_ref=source_id,
             target_ref=target_id,
             created_by_ref=self.author.id,
-            object_marking_refs=[self.tlp],
+            object_marking_refs=self.get_markings(),
         )
 
     def generate_relationship(
@@ -345,7 +371,7 @@ class _BaseIndicator(BaseEntity):
             valid_until=self.valid_until,
             pattern=self._create_pattern(self.name),
             created_by_ref=self.author.id,
-            object_marking_refs=[self.tlp],
+            object_marking_refs=self.get_markings(),
             custom_properties={
                 "x_opencti_score": self.risk_score or None,
                 "x_opencti_main_observable_type": self._generate_main_observable_type(
@@ -395,7 +421,7 @@ class Indicator(_BaseIndicator):
             valid_until=self.valid_until,
             created=self.created,
             created_by_ref=self.author.id,
-            object_marking_refs=[self.tlp],
+            object_marking_refs=self.get_markings(),
             custom_properties={
                 "x_opencti_score": self.risk_score or None,
                 "x_opencti_main_observable_type": self._generate_main_observable_type(
@@ -424,7 +450,7 @@ class FileHash(_BaseIndicator):
                 for _name in self.name
                 if _name
             },
-            object_marking_refs=[self.tlp],
+            object_marking_refs=self.get_markings(),
             custom_properties={
                 "x_opencti_score": self.risk_score or None,
                 "x_opencti_labels": self.labels,
@@ -445,7 +471,7 @@ class FileHash(_BaseIndicator):
                 valid_until=self.valid_until,
                 pattern=self._create_pattern(_name),
                 created_by_ref=self.author.id,
-                object_marking_refs=[self.tlp],
+                object_marking_refs=self.get_markings(),
                 custom_properties={
                     "x_opencti_score": self.risk_score or None,
                     "x_opencti_main_observable_type": self._generate_main_observable_type(
@@ -477,7 +503,7 @@ class IPAddress(_BaseIndicator):
     def _generate_observable(self):
         self.stix_main_object = stix2.IPv4Address(
             value=self.name,
-            object_marking_refs=[self.tlp],
+            object_marking_refs=self.get_markings(),
             custom_properties={
                 "x_opencti_score": self.risk_score or None,
                 "x_opencti_labels": self.labels,
@@ -500,7 +526,7 @@ class URL(_BaseIndicator):
     def _generate_observable(self):
         self.stix_main_object = stix2.URL(
             value=self.name,
-            object_marking_refs=[self.tlp],
+            object_marking_refs=self.get_markings(),
             custom_properties={
                 "x_opencti_score": self.risk_score or None,
                 "x_opencti_labels": self.labels,
@@ -523,7 +549,7 @@ class Domain(_BaseIndicator):
     def _generate_observable(self):
         self.stix_main_object = stix2.DomainName(
             value=self.name,
-            object_marking_refs=[self.tlp],
+            object_marking_refs=self.get_markings(),
             custom_properties={
                 "x_opencti_score": self.risk_score or None,
                 "x_opencti_labels": self.labels,
@@ -546,7 +572,7 @@ class Email(_BaseIndicator):
         self.stix_main_object = stix2.EmailAddress(
             value=self.name,
             display_name=self.name,
-            object_marking_refs=[self.tlp],
+            object_marking_refs=self.get_markings(),
             custom_properties={
                 "x_opencti_score": self.risk_score or None,
                 "x_opencti_labels": self.labels,
@@ -602,8 +628,8 @@ class ThreatActor(_BaseSDO):
             goals=self.goals,
             roles=self.roles,
             created_by_ref=self.author.id,
-            threat_actor_types=[self.global_label],
-            object_marking_refs=[self.tlp],
+            threat_actor_types=[self.global_label] if self.global_label else [],
+            object_marking_refs=self.get_markings(),
             custom_properties={
                 "x_opencti_score": self.risk_score or None,
                 "x_opencti_labels": self.labels,
@@ -651,7 +677,7 @@ class IntrusionSet(_BaseSDO):
             # roles=self.roles,
             created_by_ref=self.author.id,
             # threat_actor_types=[self.global_label],
-            object_marking_refs=[self.tlp],
+            object_marking_refs=self.get_markings(),
             custom_properties={
                 "x_opencti_score": self.risk_score or None,
                 "x_opencti_labels": self.labels,
@@ -695,7 +721,7 @@ class Malware(_BaseSDO):
             malware_types=self.malware_types or ["unknown"],
             is_family=False,
             created_by_ref=self.author.id,
-            object_marking_refs=[self.tlp],
+            object_marking_refs=self.get_markings(),
             custom_properties={
                 "x_opencti_score": self.risk_score or None,
                 "x_opencti_labels": self.labels,
@@ -750,22 +776,120 @@ class Vulnerability(_BaseSDO):
         else:
             self.cvss_severity = None
 
+    def _build_cvss_properties(self):
+        props = {}
+        vector = self.cvss_vector
+        if not vector:
+            # only base score/severity if provided (kept below in _generate_sdo)
+            return props
+
+        # Detect version
+        vector_upper = str(vector).upper()
+        is_v2 = ("AU:" in vector_upper) or vector_upper.startswith("CVSS:2")
+        is_v3 = (
+            "PR:" in vector_upper
+            or "UI:" in vector_upper
+            or "S:" in vector_upper
+            or vector_upper.startswith("CVSS:3")
+        ) and not is_v2
+
+        # Normalize tokens, skip any token that doesn't contain ':' (e.g., 'CVSS:3.1')
+        tokens = [t for t in vector_upper.split("/") if ":" in t]
+        kv = {}
+        for token in tokens:
+            try:
+                k, v = token.split(":", 1)
+                kv[k] = v
+            except Exception:
+                continue
+
+        if is_v2 or (not is_v3 and "AU" in kv):
+            # CVSS v2 mapping
+            av_map = {"L": "LOCAL", "A": "ADJACENT_NETWORK", "N": "NETWORK"}
+            ac_map = {"L": "LOW", "M": "MEDIUM", "H": "HIGH"}
+            au_map = {"N": "NONE", "S": "SINGLE", "M": "MULTIPLE"}
+            imp_map = {"N": "NONE", "P": "PARTIAL", "C": "COMPLETE"}
+
+            props.update(
+                {
+                    "x_opencti_cvss_v2_vector_string": vector,
+                    "x_opencti_cvss_v2_base_score": self.cvss_score,
+                    "x_opencti_cvss_v2_access_vector": av_map.get(
+                        kv.get("AV", ""), None
+                    ),
+                    "x_opencti_cvss_v2_access_complexity": ac_map.get(
+                        kv.get("AC", ""), None
+                    ),
+                    "x_opencti_cvss_v2_authentication": au_map.get(
+                        kv.get("AU", ""), None
+                    ),
+                    "x_opencti_cvss_v2_confidentiality_impact": imp_map.get(
+                        kv.get("C", ""), None
+                    ),
+                    "x_opencti_cvss_v2_integrity_impact": imp_map.get(
+                        kv.get("I", ""), None
+                    ),
+                    "x_opencti_cvss_v2_availability_impact": imp_map.get(
+                        kv.get("A", ""), None
+                    ),
+                }
+            )
+        else:
+            # CVSS v3 mapping
+            av_map = {"N": "NETWORK", "A": "ADJACENT", "L": "LOCAL", "P": "PHYSICAL"}
+            ac_map = {"L": "LOW", "H": "HIGH"}
+            pr_map = {"N": "NONE", "L": "LOW", "H": "HIGH"}
+            ui_map = {"N": "NONE", "R": "REQUIRED"}
+            scope_map = {"U": "UNCHANGED", "C": "CHANGED"}
+            imp_map = {"N": "NONE", "L": "LOW", "H": "HIGH"}
+
+            props.update(
+                {
+                    "x_opencti_cvss_vector_string": vector,
+                    "x_opencti_cvss_base_score": self.cvss_score,
+                    "x_opencti_cvss_base_severity": self.cvss_severity,
+                    "x_opencti_cvss_attack_vector": av_map.get(kv.get("AV", ""), None),
+                    "x_opencti_cvss_attack_complexity": ac_map.get(
+                        kv.get("AC", ""), None
+                    ),
+                    "x_opencti_cvss_privileges_required": pr_map.get(
+                        kv.get("PR", ""), None
+                    ),
+                    "x_opencti_cvss_user_interaction": ui_map.get(
+                        kv.get("UI", ""), None
+                    ),
+                    "x_opencti_cvss_scope": scope_map.get(kv.get("S", ""), None),
+                    "x_opencti_cvss_confidentiality_impact": imp_map.get(
+                        kv.get("C", ""), None
+                    ),
+                    "x_opencti_cvss_integrity_impact": imp_map.get(
+                        kv.get("I", ""), None
+                    ),
+                    "x_opencti_cvss_availability_impact": imp_map.get(
+                        kv.get("A", ""), None
+                    ),
+                }
+            )
+
+        return props
+
     def _generate_sdo(self):
+        custom_props = {
+            "x_opencti_score": self.risk_score or None,
+            "x_opencti_labels": self.labels,
+            "x_opencti_external_references": self.external_references,
+        }
+        # Add CVSS properties based on vector version
+        custom_props.update(self._build_cvss_properties())
+
         self.stix_main_object = stix2.Vulnerability(
             id=pycti.Vulnerability.generate_id(self.name),
             name=self.name,
             description=self.description,
             created=self.created,
             created_by_ref=self.author.id,
-            object_marking_refs=[self.tlp],
-            custom_properties={
-                "x_opencti_score": self.risk_score or None,
-                "x_opencti_labels": self.labels,
-                "x_opencti_external_references": self.external_references,
-                "x_opencti_cvss_base_score": self.cvss_score,
-                "x_opencti_cvss_base_severity": self.cvss_severity,
-                "x_opencti_cvss_attack_vector": self.cvss_vector,
-            },
+            object_marking_refs=self.get_markings(),
+            custom_properties=custom_props,
         )
         return self.stix_main_object
 
@@ -795,7 +919,7 @@ class AttackPattern(_BaseSDO):
             kill_chain_phases=self.kill_chain_phases,
             description=self.description,
             created_by_ref=self.author.id,
-            object_marking_refs=[self.tlp],
+            object_marking_refs=self.get_markings(),
             custom_properties={
                 "x_opencti_score": self.risk_score or None,
                 "x_opencti_labels": self.labels,
@@ -833,7 +957,7 @@ class Report(_BaseSDO):
             report_types=[self._generate_stix_report_type(self.c_type)],
             object_refs=self.related_objects_ids,
             created_by_ref=self.author.id,
-            object_marking_refs=[self.tlp],
+            object_marking_refs=self.get_markings(),
             custom_properties={
                 "x_opencti_score": self.risk_score or None,
                 "x_opencti_labels": self.labels,
@@ -869,14 +993,13 @@ class Location(_BaseCommon):
         self.location_type = location_type
 
     def _generate_common(self):
+        country_name = self._generate_country_by_cc(self.name) or str(self.name)
         self.stix_main_object = stix2.Location(
-            id=pycti.Location.generate_id(
-                self._generate_country_by_cc(self.name), self.location_type
-            ),
-            name=self._generate_country_by_cc(self.name),
+            id=pycti.Location.generate_id(country_name, self.location_type),
+            name=country_name,
             description=self.description,
             country=self.name,
-            object_marking_refs=[self.tlp],
+            object_marking_refs=self.get_markings(),
             custom_properties={
                 "x_opencti_labels": self.labels,
                 "x_opencti_external_references": self.external_references,

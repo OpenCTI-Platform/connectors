@@ -3,10 +3,12 @@
   "slug": "abuseipdb",
   "description": "AbuseIPDB is a robust platform that collects and shares data on malicious IP addresses reported by users around the world. It serves as a valuable tool for cybersecurity teams looking to identify and block IP addresses associated with abusive activities, such as spam, hacking attempts, and other malicious acts. By providing a community-driven database, AbuseIPDB helps organizations strengthen their defenses against network-based threats.\n\nThe integration of AbuseIPDB with OpenCTI allows for the seamless importation of malicious IP address data into the threat intelligence platform. This integration enriches threat intelligence by providing real-time context on potentially harmful IPs, enabling security teams to implement more effective blocking and monitoring strategies. By utilizing this data, organizations can enhance their ability to preemptively identify and mitigate threats from malicious IP sources.",
   "short_description": "AbuseIPDB collects and shares data on malicious IP addresses to help identify and block abusive activities. Integration with OpenCTI imports this data for real-time threat context, enhancing IP blocking and monitoring efforts.",
-  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
-  "use_cases" : ["Enrichment & Analysis"],
+  "logo": "internal-enrichment/abuseipdb/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
   "verified": true,
-  "last_verified_date": "",
+  "last_verified_date": null,
   "playbook_supported": true,
   "max_confidence_level": 50,
   "support_version": ">=6.5.1",

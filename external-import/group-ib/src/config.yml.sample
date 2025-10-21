@@ -60,6 +60,7 @@ ti_api:
       intrusion_set_instead_of_threat_actor: false
       schedule_time: 00:00
       time_output_format: '%Y-%m-%d %H:%M:%S'
+      enable_statement_marking: true
 
     collections:
       
@@ -73,6 +74,7 @@ ti_api:
         enable: false
         local_custom_tag: null
         ttl: 90
+        use_hunting_rules: false
       
       apt/threat_actor:
         description:
@@ -249,6 +251,7 @@ ti_api:
         enable: false
         local_custom_tag: null
         ttl: 90
+        use_hunting_rules: false
       
       hi/threat_actor:
         description:

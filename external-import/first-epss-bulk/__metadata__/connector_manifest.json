@@ -1,0 +1,21 @@
+{
+  "title": "FIRST EPSS Bulk",
+  "slug": "first-epss-bulk",
+  "description": "Information coming soon",
+  "short_description": "Information coming soon",
+  "logo": "external-import/first-epss-bulk/__metadata__/logo.png",
+  "use_cases": [
+    "Vulnerability Management"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/first-epss-bulk",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-first-epss-bulk",
+  "container_type": "EXTERNAL_IMPORT"
+}

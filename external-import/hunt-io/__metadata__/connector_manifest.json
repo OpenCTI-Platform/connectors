@@ -1,14 +1,14 @@
 {
   "title": "Hunt.io",
   "slug": "hunt-io",
-  "description": "Hunt.io connector imports Observables linked to C2 infrastructures detected by HuntIO sensors.\n\nYou need to provides a HuntIO API key.\n\nThe connector will convert scanned C2 Infrastructure data into various related STIX 2.1 Objects and relationships to ingest into OpenCTI:\n- IPv4, domains, network-traffic Observables\n- Infrastructure “consist-of” ipv4 and domains Observables\n- The infrastructure “controls” a Malware\n- url Indicator “indicates” a Malware\n- Observed Data wrapping up domain, ip and network traffic\n\nWarning: The volume of data to ingest at first launch may take a long time.",
+  "description": "Hunt.io connector imports Observables linked to C2 infrastructures detected by HuntIO sensors.\n\nYou need to provides a HuntIO API key.\n\nThe connector will convert scanned C2 Infrastructure data into various related STIX 2.1 Objects and relationships to ingest into OpenCTI:\n- IPv4, domains, network-traffic Observables\n- Infrastructure \u201cconsist-of\u201d ipv4 and domains Observables\n- The infrastructure \u201ccontrols\u201d a Malware\n- url Indicator \u201cindicates\u201d a Malware\n- Observed Data wrapping up domain, ip and network traffic\n\nWarning: The volume of data to ingest at first launch may take a long time.",
   "short_description": "Hunt.io connector imports Observables linked to C2 infrastructures detected by HuntIO sensors.",
-  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "logo": "external-import/hunt-io/__metadata__/logo.png",
   "use_cases": [
     "Commercial Threat Intel"
   ],
   "verified": false,
-  "last_verified_date": "",
+  "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 60,
   "support_version": ">= 6.5.1",

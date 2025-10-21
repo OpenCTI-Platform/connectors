@@ -1,0 +1,21 @@
+{
+  "title": "Siemrules",
+  "slug": "siemrules",
+  "description": "SIEM Rules is a global repository of detection rules written in Sigma format, with automatic conversions to most popular SIEM and XDR rule formats.\nSIEM Rules serves data over a TAXII 2.1 server.\nThis connector ingests STIX 2.1 objects from the SIEM Rules TAXII 2.1 server.\nThis connector was built using the TAXII2 connector for OpenCTI as a base.",
+  "short_description": "SIEM Rules is a global repository of detection rules written in Sigma format, with automatic conversions to most popular SIEM and XDR rule formats.\nSIEM Rules serves data over a TAXII 2.1 server.\nThis connector ingests STIX 2.1 objects from the SIEM Rules TAXII 2.1 server.\nThis connector was built using the TAXII2 connector for OpenCTI as a base.",
+  "logo": "external-import/siemrules/__metadata__/logo.png",
+  "use_cases": [
+    "Open Source Threat Intel"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/siemrules",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-siemrules",
+  "container_type": "EXTERNAL_IMPORT"
+}

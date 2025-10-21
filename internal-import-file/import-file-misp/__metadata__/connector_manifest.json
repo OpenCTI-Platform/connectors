@@ -1,0 +1,21 @@
+{
+  "title": "Import File MISP",
+  "slug": "import-file-misp",
+  "description": "Information coming soon",
+  "short_description": "Information coming soon",
+  "logo": "internal-import-file/import-file-misp/__metadata__/logo.png",
+  "use_cases": [
+    "Threat Intelligence"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.3.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-import-file/import-file-misp",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-import-file-misp",
+  "container_type": "INTERNAL_IMPORT_FILE"
+}

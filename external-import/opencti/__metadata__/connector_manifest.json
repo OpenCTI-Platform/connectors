@@ -1,0 +1,19 @@
+{
+  "title": "OpenCTI Datasets",
+  "slug": "opencti",
+  "description": "This connector collects data from the OpenCTI datasets repository in order to pre-populate your OpenCTI instance with information like the following:",
+  "short_description": "This connector collects data from the OpenCTI datasets repository in order to pre-populate your OpenCTI instance with information like the following:",
+  "logo": null,
+  "use_cases": [],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=5.5.4",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/opencti",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-opencti",
+  "container_type": "EXTERNAL_IMPORT"
+}

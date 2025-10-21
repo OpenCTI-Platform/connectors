@@ -1,0 +1,21 @@
+{
+  "title": "Import ATT&CK Navigator TTPs File",
+  "slug": "import-ttps-file-navigator",
+  "description": "This connector ingests techniques defined in an ATT&CK Navigator layer file, converting them as Attack Patterns.\nThe ATT&CK Navigator (https://mitre-attack.github.io/attack-navigator/) is a tool used to visualize and annotate different tactics and techniques from the MITRE ATT&CK framework. \nA \"layer file\" is a file format that represents saved visualizations (layers) of selected techniques within the Navigator tool.\n\nWhen importing a layer file from ATT&CK Navigator, you have the option to associate the imported techniques with an existing entity in the platform. Here are the types of relationships that can be established based on the selected entity:\n\n- **Threats**: If the entity is an intrusion set, a threat actor (either individual or group), a malware, or a campaign, the techniques will be linked to the selected entity using a \"uses\" relationship. This indicates that the techniques are employed by the entity in pursuit of its objectives.\n- **Security Platform**: If the selected entity is a Security Platform, the techniques will be linked to the entity using a \"should-cover\" relationship. This suggests that the security platform is expected to cover or mitigate these techniques as part of its functional capabilities.\n- **No Entity Selected**: If no entity is selected, the techniques will be imported globally.\n",
+  "short_description": "This connector ingests techniques defined in an ATT&CK Navigator layer file, converting them as Attack Patterns.",
+  "logo": "internal-import-file/import-ttps-file-navigator/__metadata__/logo.png",
+  "use_cases": [
+    "Threat Intelligence"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.7.10",
+  "subscription_link": "https://mitre-attack.github.io/attack-navigator/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-import-file/import-ttps-file-navigator",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-import-ttps-file-navigator",
+  "container_type": "INTERNAL_IMPORT_FILE"
+}

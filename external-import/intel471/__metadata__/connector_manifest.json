@@ -1,0 +1,21 @@
+{
+  "title": "Intel471 (Deprecated)",
+  "slug": "intel471",
+  "description": "Intel 471 delivers structured technical and non-technical data and intelligence on cyber threats.\nThis connector ingests STIX 2.1 objects from Intel 471's Titan cybercrime intelligence platform.\nIntel 471 Website: https://www.intel471.com\nThis connector runs four streams at this time:\n| Stream                | Operation                                                                                      | Produced objects|-----------------------|------------------------------------------------------------------------------------------------|--------------------------------------------------| Intel471IndicatorsStream | Fetches malware indicators from /indicators application programming interface (API) endpoint | Indicator and Malware SDOs related using Relationship object; URL, IPv4Address or File Observable related with the Indicator SDO using Relationship object| Intel471YARAStream | Fetches YARA rules from /yara API endpoint                                                   | Indicator and Malware SDOs related using Relationship object| Intel471IOCsStream | Fetches indicators of compromise (IoCs) from /iocs API endpoint                              | Indicator and Report SDOs and one of following Observables: URL, DomainName, IPv4Address, File. Both Indicator and Observable objects are related with the Report using Report's internal property object_refs. Observable and Indicator objects also are related using Relationship object| Intel471CVEsStream | Fetches Common Vulnerabilities and Exposures (CVE) reports from /cve/reports API endpoint    | Vulnerability SDO\nEach stream can be enabled or disabled and configured separately (see \"Configuration\" section for more details).",
+  "short_description": "Intel 471 delivers structured technical and non-technical data and intelligence on cyber threats.\nThis connector ingests STIX 2.1 objects from Intel 471's Titan cybercrime intelligence platform.\nIntel 471 Website: https://www.intel471.com\nThis connector runs four streams at this time:\n| Stream                | Operation                                                                                      | Produced objects|-----------------------|------------------------------------------------------------------------------------------------|--------------------------------------------------| Intel471IndicatorsStream | Fetches malware indicators from /indicators application programming interface (API) endpoint | Indicator and Malware SDOs related using Relationship object; URL, IPv4Address or File Observable related with the Indicator SDO using Relationship object| Intel471YARAStream | Fetches YARA rules from /yara API endpoint                                                   | Indicator and Malware SDOs related using Relationship object| Intel471IOCsStream | Fetches indicators of compromise (IoCs) from /iocs API endpoint                              | Indicator and Report SDOs and one of following Observables: URL, DomainName, IPv4Address, File. Both Indicator and Observable objects are related with the Report using Report's internal property object_refs. Observable and Indicator objects also are related using Relationship object| Intel471CVEsStream | Fetches Common Vulnerabilities and Exposures (CVE) reports from /cve/reports API endpoint    | Vulnerability SDO\nEach stream can be enabled or disabled and configured separately (see \"Configuration\" section for more details).",
+  "logo": "external-import/intel471/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=5.5.4",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/intel471",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-intel471",
+  "container_type": "EXTERNAL_IMPORT"
+}

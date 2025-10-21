@@ -1,0 +1,21 @@
+{
+  "title": "Valhalla",
+  "slug": "valhalla",
+  "description": "This connector imports knowledge from the Valhalla API.",
+  "short_description": "This connector imports knowledge from the Valhalla API. The connector adds data for the following Valhalla observable/indicator types: stix2 indicator pattern: yara",
+  "logo": "external-import/valhalla/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=5.5.4",
+  "subscription_link": "https://www.nextron-systems.com/valhalla/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/valhalla",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-valhalla",
+  "container_type": "EXTERNAL_IMPORT"
+}

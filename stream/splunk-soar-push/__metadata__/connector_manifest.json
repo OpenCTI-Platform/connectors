@@ -3,7 +3,7 @@
   "slug": "splunk-soar-push",
   "description": "The Splunk SOAR Push connector enables real-time streaming of OpenCTI incidents and containers to Splunk SOAR (formerly Phantom). It automatically pushes and converts OpenCTI incidents into SOAR events, and transforms OpenCTI containers (reports, groupings, cases) into SOAR cases with full entity resolution. The connector maps threat intelligence entities, observables, and indicators to SOAR artifacts, enabling seamless push integration from OpenCTI threat intelligence management to Splunk SOAR security orchestration, automation and response workflows.",
   "short_description": "Real-time push connector that exports OpenCTI incidents as SOAR events and containers as SOAR cases for automated incident response.",
-  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/splunk_soar_logo.png",
+  "logo": "stream/splunk-soar-push/__metadata__/logo.png",
   "use_cases": [
     "SIEM/SOAR",
     "Incident Response"

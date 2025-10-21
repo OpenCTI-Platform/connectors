@@ -1,0 +1,21 @@
+{
+  "title": "Malpedia",
+  "slug": "malpedia",
+  "description": "This connector imports knowledge from the Malpedia Library.",
+  "short_description": "This connector imports knowledge from the Malpedia Library.",
+  "logo": "external-import/malpedia/__metadata__/logo.png",
+  "use_cases": [
+    "Open Source Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=5.5.4",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/malpedia",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-malpedia",
+  "container_type": "EXTERNAL_IMPORT"
+}

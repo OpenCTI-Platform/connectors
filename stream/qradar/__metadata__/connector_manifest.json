@@ -1,14 +1,14 @@
 {
   "title": "IBM QRadar",
   "slug": "qradar",
-  "description": "IBM® QRadar® is a threat detection and response solution designed to help security teams manage and respond to incidents more efficiently. It supports enterprise-scale operations and enables organizations to strengthen their security posture across core technologies.\n\nThe integration of QRadar with OpenCTI enables the automatic dissemination, update, and deletion of STIX indicators into QRadar. The connector consumes STIX Indicators from an OpenCTI stream and manages them in QRadar Reference Sets, allowing security teams to leverage threat intelligence for enhanced detection and response capabilities.",
-  "short_description": "IBM® QRadar® is a threat detection and response solution designed to help security teams manage and respond to incidents more efficiently. It supports enterprise-scale operations and enables organizations to strengthen their security posture across core technologies.",
-  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "description": "IBM\u00ae QRadar\u00ae is a threat detection and response solution designed to help security teams manage and respond to incidents more efficiently. It supports enterprise-scale operations and enables organizations to strengthen their security posture across core technologies.\n\nThe integration of QRadar with OpenCTI enables the automatic dissemination, update, and deletion of STIX indicators into QRadar. The connector consumes STIX Indicators from an OpenCTI stream and manages them in QRadar Reference Sets, allowing security teams to leverage threat intelligence for enhanced detection and response capabilities.",
+  "short_description": "IBM\u00ae QRadar\u00ae is a threat detection and response solution designed to help security teams manage and respond to incidents more efficiently. It supports enterprise-scale operations and enables organizations to strengthen their security posture across core technologies.",
+  "logo": "stream/qradar/__metadata__/logo.png",
   "use_cases": [
     "SIEM & Analytics"
   ],
   "verified": true,
-  "last_verified_date": "",
+  "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 50,
   "support_version": ">= 5.8.0",

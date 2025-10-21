@@ -1,0 +1,21 @@
+{
+  "title": "Group-IB",
+  "slug": "group-ib",
+  "description": "The OpenCTI Group-IB Connector is a standalone Python process that collect data from Threat Intelligence via API calls and push it as STIX objects to OpenCTI server.\nIt  is a system for cyber-attack analysis and attribution, threat hunting, and network infrastructure protection based on data about adversary tactics, tools, and activities. TI combines unique data sources and experience in investigating high-tech crimes and responding to complex, multi-stage attacks worldwide. The system stores data on threat actors, domains, IPs, and infrastructure collected over the past 22 years, including those that criminals have attempted to take down.\nTo use the integration, please ensure that you have an active Threat Intelligence license to access the interface and that it covers the API endpoints you wish to reach. Documentation can be found here - https://tap.group-ib.com/hc/api?scope=integrations&q=en%2FIntegrations%2FCollections%20Info%2FCollections%20Details%2FCollections%20Details",
+  "short_description": "The OpenCTI Group-IB Connector is a standalone Python process that collect data from Threat Intelligence via API calls and push it as STIX objects to OpenCTI server.\nIt  is a system for cyber-attack analysis and attribution, threat hunting, and network infrastructure protection based on data about adversary tactics, tools, and activities. TI combines unique data sources and experience in investigating high-tech crimes and responding to complex, multi-stage attacks worldwide. The system stores data on threat actors, domains, IPs, and infrastructure collected over the past 22 years, including those that criminals have attempted to take down.\nTo use the integration, please ensure that you have an active Threat Intelligence license to access the interface and that it covers the API endpoints you wish to reach. Documentation can be found here - https://tap.group-ib.com/hc/api?scope=integrations&q=en%2FIntegrations%2FCollections%20Info%2FCollections%20Details%2FCollections%20Details",
+  "logo": "external-import/group-ib/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": "2025-03-10",
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.2.12",
+  "subscription_link": "https://www.group-ib.com",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/group-ib",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-group-ib",
+  "container_type": "EXTERNAL_IMPORT"
+}

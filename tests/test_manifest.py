@@ -26,9 +26,6 @@ def test_manifest_should_be_valid():
 
 @pytest.mark.parametrize("contract", get_manifest()["contracts"])
 def test_manifest_contracts_should_be_valid(contract: dict):
-    # TODO: remove xfail() once every connector has its manifest
-    pytest.xfail(reason="Not implemented in global manifest yet")
-
     # Given a manifest's contract
     # When checking the contract
     # Then it should be valid

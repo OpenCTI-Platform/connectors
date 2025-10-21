@@ -1,0 +1,21 @@
+{
+  "title": "HarfangLab Intel",
+  "slug": "harfanglab-intel",
+  "description": "This connector allows organizations to feed the HarfangLab EDR using OpenCTI knowledge.",
+  "short_description": "This connector allows organizations to feed the HarfangLab EDR using OpenCTI knowledge.",
+  "logo": "stream/harfanglab-intel/__metadata__/logo.png",
+  "use_cases": [
+    "EDR"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.4.0",
+  "subscription_link": "https://harfanglab.io",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/harfanglab-intel",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-harfanglab-intel",
+  "container_type": "STREAM"
+}

@@ -1,0 +1,19 @@
+{
+  "title": "Stream Minio Exporter",
+  "slug": "stream-exporter",
+  "description": "This connector listen to a stream and send the messages to a bucket in Minio. This connector is to be used with the stream-importer connector to synchronize two OpenCTI instances that don't have direct access with each other. The events of the live-stream can be exporter on Minio and then re-imported from Minio using the stream-importer connector.",
+  "short_description": "This connector listen to a stream and send the messages to a bucket in Minio. This connector is to be used with the stream-importer connector to synchronize two OpenCTI instances that don't have direct access with each other. The events of the live-stream can be exporter on Minio and then re-imported from Minio using the stream-importer connector.",
+  "logo": "stream/stream-exporter/__metadata__/logo.png",
+  "use_cases": [],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.4.1",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/stream-exporter",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-stream-exporter",
+  "container_type": "STREAM"
+}

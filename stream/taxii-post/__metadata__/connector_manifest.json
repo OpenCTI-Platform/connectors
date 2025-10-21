@@ -1,0 +1,19 @@
+{
+  "title": "Taxii POST",
+  "slug": "taxii-post",
+  "description": "This connector allows to consume an OpenCTI Stream and POST STIX knowledge / events to a TAXII Server.",
+  "short_description": "This connector allows to consume an OpenCTI Stream and POST STIX knowledge / events to a TAXII Server.",
+  "logo": "stream/taxii-post/__metadata__/logo.png",
+  "use_cases": [],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=5.9.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/taxii-post",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-taxii-post",
+  "container_type": "STREAM"
+}

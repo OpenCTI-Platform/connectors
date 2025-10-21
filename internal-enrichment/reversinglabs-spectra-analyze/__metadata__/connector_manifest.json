@@ -1,0 +1,21 @@
+{
+  "title": "ReversingLabs Spectra Analyze",
+  "slug": "reversinglabs-spectra-analyze",
+  "description": "The ReversingLabs Spectra Analyze connector supports enrichment of observables and creation of indicators based on the analysis result received from ReversingLabs Spectra Analyze. Connector enables file and url submission to the Spectra Analyze. Based on the result, connector creates indicators, malwares, calculates score, adds labels and creates relationships between created objects for submitted observable.\nIt enables file and URL submission to the ReversingLabs Spectra Analyze platform and obtaining network threat intelligence reports for URLs, domains and IP addresses.\nThe connector works for the following observable types in OpenCTI:",
+  "short_description": "The ReversingLabs Spectra Analyze connector supports enrichment of observables and creation of indicators based on the analysis result received from ReversingLabs Spectra Analyze. Connector enables file and url submission to the Spectra Analyze. Based on the result, connector creates indicators, malwares, calculates score, adds labels and creates relationships between created objects for submitted observable.\nIt enables file and URL submission to the ReversingLabs Spectra Analyze platform and obtaining network threat intelligence reports for URLs, domains and IP addresses.\nThe connector works for the following observable types in OpenCTI:",
+  "logo": "internal-enrichment/reversinglabs-spectra-analyze/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 50,
+  "support_version": ">=6.3.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/reversinglabs-spectra-analyze",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-reversinglabs-spectra-analyze",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

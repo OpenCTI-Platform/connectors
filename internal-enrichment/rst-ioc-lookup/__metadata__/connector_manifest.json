@@ -1,0 +1,21 @@
+{
+  "title": "RST IoC Lookup",
+  "slug": "rst-ioc-lookup",
+  "description": "The RST IoC Lookup Connector to determine whether observables and indicators are malicious and worth detecting. This connector performs checks on IP addresses, domains, URLs, and hash values via the RST Cloud API. It enhances the capabilities of OpenCTI by providing an affordable way to enrich observables or indicators found on the Internet with related threat information such as malware, threat actors, tools, CVEs, TTPs, and more. (RST IoC Lookup).",
+  "short_description": "The RST IoC Lookup Connector to determine whether observables and indicators are malicious and worth detecting. This connector performs checks on IP addresses, domains, URLs, and hash values via the RST Cloud API. It enhances the capabilities of OpenCTI by providing an affordable way to enrich observables or indicators found on the Internet with related threat information such as malware, threat actors, tools, CVEs, TTPs, and more. (RST IoC Lookup).",
+  "logo": "internal-enrichment/rst-ioc-lookup/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.4.8",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/rst-ioc-lookup",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-rst-ioc-lookup",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

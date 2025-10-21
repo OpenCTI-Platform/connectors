@@ -1,0 +1,21 @@
+{
+  "title": "Wiz",
+  "slug": "wiz",
+  "description": "This connector imports data made publicly available by Wiz exposed at https://threats.wiz.io/. The list of imported entities (with their relationships) :\n\nIncidents : A historical collection of past cloud security incidents and campaigns, offering insights into targeting patterns, initial access methods, and effective impact.\n\nActors : Profiles of threat actors involved in cloud security incidents, shedding light on their potential motivations and victimology, to aid in risk assessment and threat modeling. NB: These can be modeled as either Threat Actor or Intrusion Set objects, depending on the configuration variable. See threat_actor_as_intrusion_set in Configuration variables.\n\nTechniques : An overview of attack techniques used by threat actors in cloud security incidents, aligned with the MITRE ATT&CK matrix framework for additional context.\n\nTools : Details on software utilized by threat actors in their activities targeting cloud environments, ranging from penetration testing utilities to bespoke malware.\n\nTargeted Technologies : Analysis of frequently targeted software found in cloud environments, noting their prevalence and any related incidents and techniques.\n\nDefenses : A corpus of cloud security measures that can serve to mitigate risks and prevent or detect attack techniques. Each mechanism is mapped to the MITRE D3FEND matrix.",
+  "short_description": "This connector imports data made publicly available by Wiz exposed at https://threats.wiz.io/",
+  "logo": "external-import/wiz/__metadata__/logo.png",
+  "use_cases": [
+    "Open Source Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": "2025-04-09",
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.6.2",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/wiz",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-wiz",
+  "container_type": "EXTERNAL_IMPORT"
+}

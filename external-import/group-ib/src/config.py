@@ -105,18 +105,18 @@ class ConfigConnector:
 
     def get_collection_settings(self, collection, setting_name) -> Any:
         collection_attr_name = f"ti_api_collections_{collection}_{setting_name}"
-        return getattr(self, collection_attr_name)
+        return getattr(self, collection_attr_name, None)
 
     def get_extra_settings_by_name(self, setting_name):
-        cextra_setting_attr_name = f"ti_api_extra_settings_{setting_name}"
-        return getattr(self, cextra_setting_attr_name)
+        extra_setting_attr_name = f"ti_api_extra_settings_{setting_name}"
+        return getattr(self, extra_setting_attr_name, None)
 
     # Set up product metadata
     PRODUCT_TYPE = "SCRIPT"
     PRODUCT_NAME = "OpenCTI"
     PRODUCT_VERSION = "unknown"
     INTEGRATION = "GroupIB_TI_OpenCTI_Connector"
-    INTEGRATION_VERSION = "1.0.0"
+    INTEGRATION_VERSION = "1.1.0"
 
     # Author
     AUTHOR = "Group-IB"

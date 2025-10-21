@@ -1,0 +1,23 @@
+{
+  "title": "Hybrid Analysis Sandbox",
+  "slug": "hybrid-analysis-sandbox",
+  "description": "Information coming soon",
+  "short_description": "Information coming soon",
+  "logo": "internal-enrichment/hybrid-analysis-sandbox/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis",
+    "Malware Analysis",
+    "Sandbox"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 50,
+  "support_version": ">=5.6.1",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/hybrid-analysis-sandbox",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-hybrid-analysis-sandbox",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

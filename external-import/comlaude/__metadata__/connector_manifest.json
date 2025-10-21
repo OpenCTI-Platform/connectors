@@ -1,0 +1,21 @@
+{
+  "title": "Comlaude",
+  "slug": "comlaude",
+  "description": "The Comlaude Connector is designed to integrate with the Comlaude API to leverage the Domain Search Endpoint. This endpoint provides a comprehensive list of all domains within a specified group, along with detailed information for each domain.",
+  "short_description": "The Comlaude Connector is designed to integrate with the Comlaude API to leverage the Domain Search Endpoint. This endpoint provides a comprehensive list of all domains within a specified group, along with detailed information for each domain.",
+  "logo": "external-import/comlaude/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": "2025-04-17",
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.0.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/comlaude",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-comlaude",
+  "container_type": "EXTERNAL_IMPORT"
+}

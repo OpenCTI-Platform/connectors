@@ -3,7 +3,7 @@
   "slug": "ransomware-live",
   "description": "Ransomware.live is a specialized threat intelligence service focused on monitoring and reporting ransomware activities and incidents. By providing real-time data on ransomware campaigns, including attack vectors and ransom demands, RansomwareLive aids organizations in understanding and defending against this pervasive threat.\n\nIntegrating Ransomware.live with OpenCTI allows for the modeling of various attacks and ransomware group claims, as well as their victims, enabling tracking and alerts. This enhances the threat intelligence platform's capabilities with timely and detailed insights into the latest ransomware threats.",
   "short_description": "Ransomware.live is a threat intelligence service focused on ransomware activities, providing real-time insights into ransomware campaigns.",
-  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "logo": "external-import/ransomwarelive/__metadata__/logo.png",
   "use_cases": [
     "Open Source Threat Intel"
   ],

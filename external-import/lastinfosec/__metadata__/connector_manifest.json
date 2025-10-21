@@ -1,0 +1,21 @@
+{
+  "title": "Gatewatcher LastInfosec Feed",
+  "slug": "lastinfosec-feed",
+  "description": "OpenCTI LastInfoSec connectors.\nRequirement : if you want to use LastInfoSec's intelligence, you need an API key. You could contact LastInfoSec's team here https://info.gatewatcher.com/en/lp/opencti\nLastInfosec has been acquired by Gatewatcher => https://www.gatewatcher.com/en/our-solutions/lastinfosec/",
+  "short_description": "OpenCTI LastInfoSec connectors.\nRequirement : if you want to use LastInfoSec's intelligence, you need an API key. You could contact LastInfoSec's team here https://info.gatewatcher.com/en/lp/opencti\nLastInfosec has been acquired by Gatewatcher => https://www.gatewatcher.com/en/our-solutions/lastinfosec/",
+  "logo": "external-import/lastinfosec/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=5.5.4",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/lastinfosec",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-lastinfosec",
+  "container_type": "EXTERNAL_IMPORT"
+}

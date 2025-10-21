@@ -3,12 +3,12 @@
   "slug": "accenture-acti",
   "description": "The OpenCTI Accenture ACTI Connector integrates threat intelligence from Accenture's Cyber Threat Intelligence (ACTI) service directly into OpenCTI. Accenture ACTI provides comprehensive threat reporting based on extensive research and analysis of global cyber threats, including threat actors, campaigns, malware families, and emerging attack techniques. By ingesting reports and related entities from the Accenture ACTI STIX Report Feed, the connector enriches your OpenCTI instance with high-quality, analyst-vetted intelligence that covers both strategic and tactical aspects of the threat landscape, enabling more informed decision-making and proactive defense strategies.\n\nAs an OpenCTI connector, it authenticates with the Accenture ACTI feed, retrieves STIX-formatted reports and their associated entities (threat actors, indicators, vulnerabilities, tools, and relationships), and imports them into OpenCTI while preserving context and attribution. The connector handles incremental updates to avoid duplication, maintains report versioning, and maps ACTI's threat model to OpenCTI's data structure. This integration ensures that security teams have access to Accenture's professional threat research within their operational workflow.",
   "short_description": "The OpenCTI Accenture ACTI Connector integrates threat intelligence from Accenture's Cyber Threat Intelligence (ACTI) service directly into OpenCTI. Accenture ACTI provides comprehensive threat reporting based on extensive research and analysis of global cyber threats, including threat actors, campaigns, malware families, and emerging attack techniques.",
-  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "logo": "external-import/accenture-acti/__metadata__/logo.png",
   "use_cases": [
     "Commercial Threat Intel"
   ],
   "verified": true,
-  "last_verified_date": "",
+  "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 70,
   "support_version": ">= 6.6.12",
