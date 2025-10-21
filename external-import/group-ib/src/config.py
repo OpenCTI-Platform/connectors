@@ -2,11 +2,11 @@ import os
 from pathlib import Path
 from typing import Any
 
+import pycti
 import yaml
 from cyberintegrations.utils import FileHandler
 from dotenv import load_dotenv
 from pycti import get_config_variable
-import pycti
 from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE, MarkingDefinition
 from stix2.v21.vocab import MALWARE_TYPE
 
