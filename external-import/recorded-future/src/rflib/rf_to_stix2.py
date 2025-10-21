@@ -1022,7 +1022,8 @@ class StixNote:
         self.external_references.append(
             {
                 "source_name": "Recorded Future",
-                "url": "https://app.recordedfuture.com/portal/research/record/"+note["id"]
+                "url": "https://app.recordedfuture.com/portal/research/record/"
+                + note["id"],
             }
         )
         self.report_types = self._create_report_types(attr.get("topic", []))
