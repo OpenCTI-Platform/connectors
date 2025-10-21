@@ -18,17 +18,28 @@ else
   echo 'Found test-requirements.txt files:' "$test_requirements_files"
 fi
 
-sdk_has_change=$(git diff "$(git merge-base master HEAD)" HEAD "connectors-sdk")
+base_commit=$(git merge-base origin/master HEAD)
+changes_outside_of_connectors_scope=$(git diff --name-only "$base_commit" HEAD -- \
+  ':!connectors-sdk/**' \
+  ':!external-import/**' \
+  ':!internal-enrichment/**' \
+  ':!internal-export-file/**' \
+  ':!internal-import-file/**' \
+  ':!stream/**'
+)
+sdk_has_change=$(git diff "$base_commit" HEAD "connectors-sdk")
 echo 'connectors-sdk has changes:' "$sdk_has_change"
 
 for requirements_file in $test_requirements_files
 do
   project="$(dirname "$requirements_file")"
-  project_has_changed=$(git diff "$(git merge-base master HEAD)" HEAD "$project/..")
+  project_has_changed=$(git diff "$base_commit" HEAD "$project/..")
   project_has_sdk_dependency=$(grep -rl "connectors-sdk" "$project/.." || true)
 
   if [ "$CIRCLE_BRANCH" = "master" ]; then
     echo "🔄 On master branch, running all tests for: " "$project"
+  elif [ -n "$changes_outside_of_connectors_scope" ] ; then
+    echo "🔄 Changes detected outside of connectors scope - running all tests for: " "$project"
   elif [ -n "$sdk_has_change" ] && [ -n "$project_has_sdk_dependency" ] ; then
     echo "🔄 connectors-sdk changes affect: " "$project" "- running the tests"
   elif [ -n "$project_has_changed" ] ; then
