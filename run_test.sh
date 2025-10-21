@@ -52,6 +52,9 @@ do
     source "$venv_name/Scripts/activate"  # Windows
   fi
 
+  echo 'Installing latest version of pycti'
+  python -m pip install -q git+https://github.com/OpenCTI-Platform/client-python.git@master
+
   if [ -n "$project_has_sdk_dependency" ] ; then
     echo 'Installing connectors-sdk local version'
     python -m pip install -q ./connectors-sdk
