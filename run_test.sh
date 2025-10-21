@@ -18,17 +18,24 @@ else
   echo 'Found test-requirements.txt files:' "$test_requirements_files"
 fi
 
+sdk_has_change=$(git diff "$(git merge-base master HEAD)" HEAD "connectors-sdk")
+echo 'connectors-sdk has changes:' "$sdk_has_change"
+
 for requirements_file in $test_requirements_files
 do
   project="$(dirname "$requirements_file")"
+  project_has_changed=$(git diff "$(git merge-base master HEAD)" HEAD "$project/..")
+  project_has_sdk_dependency=$(grep -rl "connectors-sdk" "$project/.." || true)
 
   if [ "$CIRCLE_BRANCH" = "master" ]; then
     echo "🔄 On master branch, running all tests for: " "$project"
-  elif [ -z $(git diff $(git merge-base master HEAD) HEAD "$project/..") ] ; then
+  elif [ -n "$sdk_has_change" ] && [ -n "$project_has_sdk_dependency" ] ; then
+    echo "🔄 connectors-sdk changes affect: " "$project" "- running the tests"
+  elif [ -n "$project_has_changed" ] ; then
+    echo "🔄 Changes detected in: " "$project"
+  else
     echo "☑️ Nothing has changed in: " "$project"
     continue
-  else
-    echo "🔄 Changes detected in: " "$project"
   fi
 
   echo 'Running tests pipeline for project' "$project"
