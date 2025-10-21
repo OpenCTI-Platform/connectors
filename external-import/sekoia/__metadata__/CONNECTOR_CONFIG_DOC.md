@@ -21,3 +21,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | SEKOIA_CREATE_OBSERVABLES | `boolean` |  | boolean | `true` | Create observables from indicators. |
 | SEKOIA_IMPORT_SOURCE_LIST | `boolean` |  | boolean | `false` | Create the list of sources observed by Sekoia as label. |
 | SEKOIA_IMPORT_IOC_RELATIONSHIPS | `boolean` |  | boolean | `true` | Import IOCs relationships and related objects. |
+| SEKOIA_CONFIDENCE_SCORE | `integer` |  | ` 0 < x ` | `null` | This will be the score assigned to the indicators. Defaults to null, maximum 100. |
