@@ -52,9 +52,13 @@ do
     source "$venv_name/Scripts/activate"  # Windows
   fi
 
+  if [ -n "$project_has_sdk_dependency" ] ; then
+    echo 'Installing connectors-sdk local version'
+    python -m pip install -q ./connectors-sdk
+  fi
   echo 'Installing requirements'
   python -m pip install -q -r "$requirements_file"
-
+  python -m pip check || exit 1  # exit if dependencies are broken
 
   echo 'Running tests'
   python -m pytest "$project" --junitxml="$OUT_DIR/junit.xml" -q -rA  # exit non zero if no test run
