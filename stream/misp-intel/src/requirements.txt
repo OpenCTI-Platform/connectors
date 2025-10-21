@@ -5,5 +5,5 @@ jsonschema==4.25.1
 python-dateutil==2.9.0.post0
 tenacity==9.1.2
 certifi==2025.10.5
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@bug/5041-connectorssdk-fix-the-conflicts-between-the-dependencies-of-the-sdk-and-the-connectors#subdirectory=connectors-sdk
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.8.6#subdirectory=connectors-sdk
 pymisp
