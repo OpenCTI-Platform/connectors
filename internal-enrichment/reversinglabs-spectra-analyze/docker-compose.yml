@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-reversinglabs-spectra-analyze:
-    image: opencti/connector-reversinglabs-spectra-analyze:rolling
+    image: opencti/connector-reversinglabs-spectra-analyze:6.8.7
     environment:
       - CONNECTOR_NAME=ReversingLabs Spectra Analyze
       - CONNECTOR_SCOPE=Artifact,Url,StixFile,File,IPv4-Addr,Domain-Name

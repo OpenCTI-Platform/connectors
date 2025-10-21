@@ -1,6 +1,6 @@
 services:
   connector-ft3:
-    image: opencti/connector-ft3:rolling
+    image: opencti/connector-ft3:6.8.7
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
