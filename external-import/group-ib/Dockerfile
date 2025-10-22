@@ -14,7 +14,7 @@ COPY docs /opt/connector/docs
 WORKDIR /opt/connector/src
 
 # Install TI API lib
-RUN pip3 install /opt/connector/src/lib/cyberintegrations-0.6.6-py3-none-any.whl
+RUN pip3 install /opt/connector/src/lib/cyberintegrations-0.13.1-py3-none-any.whl
 
 # Expose and entrypoint
 COPY entrypoint.sh /

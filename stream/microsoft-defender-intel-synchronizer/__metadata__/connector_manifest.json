@@ -1,0 +1,19 @@
+{
+  "title": "Microsoft Defender Intel Synchronizer",
+  "slug": "microsoft-defender-intel-synchronizer",
+  "description": "This OpenCTI connector allows to synchronize OpenCTI TAXII collections with Microsoft Defender legacy intelligence (15 000 indicators maximum, taking the most recent ones).",
+  "short_description": "This OpenCTI connector allows to synchronize OpenCTI TAXII collections with Microsoft Defender legacy intelligence (15 000 indicators maximum, taking the most recent ones).",
+  "logo": "stream/microsoft-defender-intel-synchronizer/__metadata__/logo.png",
+  "use_cases": [],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.5.10",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/microsoft-defender-intel-synchronizer",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-microsoft-defender-intel-synchronizer",
+  "container_type": "STREAM"
+}

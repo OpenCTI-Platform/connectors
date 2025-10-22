@@ -1,6 +1,6 @@
 version: '3'
 services:
-  connector-hatching-triage-sandbox:
+  connector-unpac-me:
     image: opencti/connector-unpac-me:rolling
     environment:
       - OPENCTI_URL=ChangeMe
