@@ -63,15 +63,25 @@ do
     source "$venv_name/Scripts/activate"  # Windows
   fi
 
-  echo 'Installing latest version of pycti'
-  python -m pip install -q git+https://github.com/OpenCTI-Platform/client-python.git@master
-
-  if [ -n "$project_has_sdk_dependency" ] ; then
-    echo 'Installing connectors-sdk local version'
-    python -m pip install -q ./connectors-sdk
-  fi
   echo 'Installing requirements'
   python -m pip install -q -r "$requirements_file"
+
+  python -m pip freeze | grep "connectors-sdk\|pycti" || true
+
+  if [ -n "$project_has_sdk_dependency" ] ; then
+      echo 'Installing connectors-sdk local version'
+      python -m pip uninstall -y connectors-sdk
+      python -m pip install -q ./connectors-sdk
+  fi
+
+  python -m pip freeze | grep "connectors-sdk\|pycti" || true
+
+  echo 'Installing latest version of pycti'
+  python -m pip uninstall -y pycti
+  python -m pip install -q git+https://github.com/OpenCTI-Platform/client-python.git@master
+
+  python -m pip freeze | grep "connectors-sdk\|pycti" || true
+
   python -m pip check || exit 1  # exit if dependencies are broken
 
   echo 'Running tests'
