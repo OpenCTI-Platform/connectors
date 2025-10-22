@@ -45,12 +45,6 @@ class Client:
         self.check_response(res)
         return res.json() if res.content else None
 
-    def get_last_version(self):
-        return self.call("GET", "stix-bundles/versions/latest/")
-
-    def get_latest_bundle(self):
-        return self.call("GET", "stix-bundles/versions/latest/download/")
-
     def list_versions(self):
         return self.call("GET", "stix-bundles/versions/")
 
