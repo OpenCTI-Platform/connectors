@@ -13,7 +13,6 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any, Literal
 
-import __main__
 from connectors_sdk.core.pydantic import ListFromString
 from connectors_sdk.exceptions import (
     ConfigValidationError,
@@ -34,7 +33,7 @@ from pydantic_settings import (
     YamlConfigSettingsSource,
 )
 
-_MAIN_PATH = os.path.dirname(os.path.abspath(__main__.__file__))
+_MAIN_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
 class BaseConfigModel(BaseModel, ABC):
