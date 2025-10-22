@@ -32,6 +32,11 @@ class ElasticApiHandler:
             "Accept": "application/json",
             "kbn-xsrf": "true",  # Required for Kibana API calls
         }
+        self.cert = (
+            (config.elastic_client_cert, config.elastic_client_key)
+            if config.elastic_client_cert and config.elastic_client_key
+            else None
+        )
         self.verify_ssl = config.elastic_verify_ssl
         self.ca_cert = config.elastic_ca_cert
         self.index_name = config.elastic_index_name
@@ -197,6 +202,7 @@ class ElasticApiHandler:
                 headers=self.headers,  # Already includes kbn-xsrf header
                 json=rule,
                 verify=self._get_verify_config(),
+                cert=self.cert,
                 timeout=30,
             )
 
@@ -262,6 +268,7 @@ class ElasticApiHandler:
                 headers=self.headers,
                 json=rule_update,
                 verify=self._get_verify_config(),
+                cert=self.cert,
                 timeout=30,
             )
 
@@ -298,6 +305,7 @@ class ElasticApiHandler:
                 headers=self.headers,
                 params=params,
                 verify=self._get_verify_config(),
+                cert=self.cert,
                 timeout=30,
             )
 
@@ -332,6 +340,7 @@ class ElasticApiHandler:
                 headers=self.headers,
                 params=params,
                 verify=self._get_verify_config(),
+                cert=self.cert,
                 timeout=30,
             )
 
@@ -907,6 +916,7 @@ class ElasticApiHandler:
                 headers=self.headers,
                 json=ecs_doc,
                 verify=self._get_verify_config(),
+                cert=self.cert,
                 timeout=30,
             )
 
@@ -971,6 +981,7 @@ class ElasticApiHandler:
                 headers={**self.headers, "Content-Type": "application/x-ndjson"},
                 data=bulk_data,
                 verify=self._get_verify_config(),
+                cert=self.cert,
                 timeout=60,  # Longer timeout for bulk operations
             )
 
@@ -1051,6 +1062,7 @@ class ElasticApiHandler:
                 headers=self.headers,
                 json=delete_query,
                 verify=self._get_verify_config(),
+                cert=self.cert,
                 timeout=30,
             )
 
@@ -1061,6 +1073,7 @@ class ElasticApiHandler:
                 headers=self.headers,
                 json=ecs_doc,
                 verify=self._get_verify_config(),
+                cert=self.cert,
                 timeout=30,
             )
 
@@ -1104,6 +1117,7 @@ class ElasticApiHandler:
                 headers=self.headers,
                 json=delete_query,
                 verify=self._get_verify_config(),
+                cert=self.cert,
                 timeout=30,
             )
 
@@ -1142,7 +1156,11 @@ class ElasticApiHandler:
                 url = f"{self.elastic_url}/_cluster/health"
 
             response = requests.get(
-                url, headers=self.headers, verify=self._get_verify_config(), timeout=10
+                url,
+                headers=self.headers,
+                verify=self._get_verify_config(),
+                cert=self.cert,
+                timeout=10,
             )
 
             # Accept various success codes
@@ -1417,7 +1435,10 @@ class ElasticApiHandler:
             # Check if template already exists
             check_url = f"{self.elastic_url}/_index_template/logs-ti_custom_opencti"
             check_response = requests.get(
-                check_url, headers=self.headers, verify=self._get_verify_config()
+                check_url,
+                headers=self.headers,
+                verify=self._get_verify_config(),
+                cert=self.cert,
             )
 
             template_exists = check_response.status_code == 200
@@ -1429,6 +1450,7 @@ class ElasticApiHandler:
                 headers=self.headers,
                 json=index_template,
                 verify=self._get_verify_config(),
+                cert=self.cert,
             )
 
             if response.status_code in [200, 201]:
