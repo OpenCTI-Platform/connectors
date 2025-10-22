@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-import-ttps-file-navigator:
-    image: opencti/connector-import-ttps-file-navigator:rolling
+    image: opencti/connector-import-ttps-file-navigator:6.8.8
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
