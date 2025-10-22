@@ -34,8 +34,6 @@ from pydantic_settings import (
     YamlConfigSettingsSource,
 )
 
-_MAIN_PATH = os.path.dirname(os.path.abspath(__main__.__file__))
-
 
 class BaseConfigModel(BaseModel, ABC):
     """Base class for global config models
@@ -86,7 +84,6 @@ class _SettingsLoader(BaseSettings):
         env_nested_delimiter="_",
         env_nested_max_split=1,
         enable_decoding=False,
-        env_file=f"{_MAIN_PATH}/../.env",
     )
 
     @classmethod
@@ -111,11 +108,15 @@ class _SettingsLoader(BaseSettings):
             1. If a config.yml file is found, the order will be: `ENV VAR` → config.yml → default value
             2. If a .env file is found, the order will be: `ENV VAR` → .env → default value
         """
+        _main_path = os.path.dirname(os.path.abspath(__main__.__file__))
+
+        settings_cls.model_config["env_file"] = f"{_main_path}/../.env"
+
         if not settings_cls.model_config["yaml_file"]:
-            if Path(f"{_MAIN_PATH}/config.yml").is_file():
-                settings_cls.model_config["yaml_file"] = f"{_MAIN_PATH}/config.yml"
-            if Path(f"{_MAIN_PATH}/../config.yml").is_file():
-                settings_cls.model_config["yaml_file"] = f"{_MAIN_PATH}/../config.yml"
+            if Path(f"{_main_path}/config.yml").is_file():
+                settings_cls.model_config["yaml_file"] = f"{_main_path}/config.yml"
+            if Path(f"{_main_path}/../config.yml").is_file():
+                settings_cls.model_config["yaml_file"] = f"{_main_path}/../config.yml"
 
         if Path(settings_cls.model_config["yaml_file"] or "").is_file():  # type: ignore
             return (
