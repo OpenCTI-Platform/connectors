@@ -15,7 +15,9 @@ vulmatch:
   base_url: 'https://api.vulmatch.com/'
   api_key: CHANGEME
   sbom_only: true
-  cvss_base_score_min: CHANGEME #-1 to not use filter
+  cvss_v2_score_min: CHANGEME #-1 to not use filter
+  cvss_v3_score_min: CHANGEME #-1 to not use filter
+  cvss_v4_score_min: CHANGEME #-1 to not use filter
   epss_score_min: CHANGEME #-1 to not use filter
 
   days_to_backfill: 100 #max 356

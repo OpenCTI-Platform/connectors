@@ -2,8 +2,10 @@
 VULMATCH Connector
 """
 
+import itertools
 import os
 import time
+import uuid
 from datetime import UTC, datetime, timedelta
 from urllib.parse import urljoin
 
@@ -24,6 +26,10 @@ def parse_number(value: int):
     return value
 
 
+NAMESPACE = uuid.UUID("152ecfe1-5015-522b-97e4-86b60c57036d")
+SKIPPED_TYPES = ["grouping", "weakness", "exploit"]
+
+
 class VulmatchConnector:
     work_id = None
 
@@ -41,14 +47,22 @@ class VulmatchConnector:
         self.base_url = self._get_param("base_url") + "/"
         self.api_key = self._get_param("api_key")
         self.sbom_only = parse_bool(self._get_param("sbom_only"))
-        self.cvss_base_score_min = parse_number(
-            self._get_param("cvss_base_score_min", is_number=True, default_value=-1)
+        self.cvss_v2_score_min = parse_number(
+            self._get_param("cvss_v2_score_min", is_number=True, default_value=-1)
+        )
+        self.cvss_v3_score_min = parse_number(
+            self._get_param("cvss_v3_score_min", is_number=True, default_value=-1)
+        )
+        self.cvss_v4_score_min = parse_number(
+            self._get_param("cvss_v4_score_min", is_number=True, default_value=-1)
         )
         self.epss_score_min = parse_number(
             self._get_param("epss_score_min", is_number=True, default_value=-1)
         )
         self.interval_days = self._get_param("interval_days", is_number=True)
-        self.days_to_backfill = self._get_param("days_to_backfill", is_number=True)
+        self.days_to_backfill = min(
+            self._get_param("days_to_backfill", is_number=True), 365
+        )
 
         self.session = requests.Session()
         self.session.headers = {
@@ -100,12 +114,15 @@ class VulmatchConnector:
             list_key="objects",
             params=dict(
                 epss_score_min=self.epss_score_min,
-                cvss_base_score_min=self.cvss_base_score_min,
+                cvss_v2_score_min=self.cvss_v2_score_min,
+                cvss_v3_score_min=self.cvss_v3_score_min,
+                cvss_v4_score_min=self.cvss_v4_score_min,
                 cpes_in_pattern=",".join(cpes),
                 modified_min=modified_min,
                 modified_max=datetime.now(
                     UTC
                 ).isoformat(),  # make sure number of items do not increase while retrieving
+                sort="modified_ascending",
             ),
         )
         vulnerabilities = [v for v in vulnerabilities if v["modified"] > modified_min]
@@ -130,7 +147,8 @@ class VulmatchConnector:
             objects = self.retrieve(
                 f"v1/cve/objects/{cve_name}/bundle/", list_key="objects"
             )
-            bundle = self.helper.stix2_create_bundle(objects)
+            transformed_objects = self.transform_bundle_objects(objects)
+            bundle = self.helper.stix2_create_bundle(transformed_objects)
             self.helper.send_stix2_bundle(bundle, work_id=cve_work_id)
             self.helper.api.work.to_processed(
                 work_id=cve_work_id,
@@ -185,6 +203,63 @@ class VulmatchConnector:
         while True:
             schedule.run_pending()
             time.sleep(1)
+
+    def transform_bundle_objects(self, bundle_objects):
+        """
+        This function
+        - Removes objects of the following types
+        - - weakness
+        - - exploit
+        - - grouping
+        - Adds relationships between software and vulnerability using grouping.object_refs
+        """
+        objects = {}
+        groupings = {}
+        x_cpes_vulnerable_mapping = []
+        for obj in bundle_objects:
+            if obj["type"] == "grouping":
+                groupings[obj["id"]] = obj["object_refs"]
+            if obj["type"] in SKIPPED_TYPES:
+                continue
+            if obj.get("relationship_type") == "x-cpes-vulnerable":
+                x_cpes_vulnerable_mapping.append(
+                    (
+                        obj["source_ref"].replace("indicator", "vulnerability"),
+                        obj["target_ref"],
+                    )
+                )
+            if obj["type"] == "relationship":
+                source_type, _, _ = obj["source_ref"].partition("--")
+                target_type, _, _ = obj["target_ref"].partition("--")
+                if source_type in SKIPPED_TYPES or target_type in SKIPPED_TYPES:
+                    continue
+            objects[obj["id"]] = obj
+        relationships = []
+        for source_ref, target_ref in x_cpes_vulnerable_mapping:
+            for software_id in groupings.get(target_ref, []):
+                if software_id not in objects:
+                    continue
+                software_name = objects[software_id]["name"]
+                vuln_obj = objects[source_ref]
+                vulnerability_name = vuln_obj["name"]
+                relationships.append(
+                    {
+                        "type": "relationship",
+                        "spec_version": "2.1",
+                        "id": "relationship--"
+                        + str(uuid.uuid5(NAMESPACE, f"has+{source_ref}+{software_id}")),
+                        "created_by_ref": "identity--9779a2db-f98c-5f4b-8d08-8ee04e02dbb5",
+                        "created": vuln_obj["created"],
+                        "modified": vuln_obj["modified"],
+                        "relationship_type": "has",
+                        "source_ref": software_id,
+                        "target_ref": source_ref,
+                        "description": f"{software_name} is vulnerable to {vulnerability_name}",
+                        "object_marking_refs": vuln_obj["object_marking_refs"],
+                        "external_references": [vuln_obj["external_references"][0]],
+                    }
+                )
+        return list(itertools.chain(objects.values(), relationships))
 
 
 def chunked(lst):
