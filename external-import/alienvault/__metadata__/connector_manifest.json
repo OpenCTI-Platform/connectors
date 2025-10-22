@@ -3,12 +3,12 @@
   "slug": "alienvault",
   "description": "AlienVault OTX provides open access to a global community of threat researchers and security professionals, delivering community-generated threat data that enhances collaborative research. It automates the process of updating security infrastructure with threat data from various sources, thereby empowering the security community to discuss, research, and share the latest threat data, trends, and techniques. This collaborative approach strengthens your defenses while simultaneously aiding others in the community.\n\nThe integration of AlienVault OTX with OpenCTI enables the ingestion of threat knowledge from the Alien Labs Open Threat Exchange (OTX) platform. Utilizing the OTX DirectConnect API, the connector retrieves threat data from subscribed pulses and imports it into OpenCTI.",
   "short_description": "AlienVault OTX provides open access to a global community of threat researchers and security professionals, delivering community-generated threat data that enhances collaborative research",
-  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "logo": "external-import/alienvault/__metadata__/logo.png",
   "use_cases": [
     "Open Source Threat Intel"
   ],
   "verified": true,
-  "last_verified_date": "",
+  "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 50,
   "support_version": ">= 6.5.1",
