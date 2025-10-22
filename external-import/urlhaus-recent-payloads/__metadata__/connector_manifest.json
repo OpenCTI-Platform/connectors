@@ -1,0 +1,21 @@
+{
+  "title": "URLhaus Recent Payloads",
+  "slug": "urlhaus-recent-payloads",
+  "description": "Information coming soon",
+  "short_description": "Information coming soon",
+  "logo": "external-import/urlhaus-recent-payloads/__metadata__/logo.png",
+  "use_cases": [
+    "Open Source Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=5.5.4",
+  "subscription_link": "https://urlhaus.abuse.ch",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/urlhaus-recent-payloads",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-urlhaus-recent-payloads",
+  "container_type": "EXTERNAL_IMPORT"
+}

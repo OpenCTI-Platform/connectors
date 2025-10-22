@@ -1,0 +1,21 @@
+{
+  "title": "TeamT5",
+  "slug": "teamt5",
+  "description": "A connector enabling the automatic ingestion of Reports and Indicator Bundles from the Team T5 Platform to an OpenCTI Instance.",
+  "short_description": "A connector enabling the automatic ingestion of Reports and Indicator Bundles from the Team T5 Platform to an OpenCTI Instance.",
+  "logo": "external-import/teamt5/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": "2025-10-14",
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/teamt5",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-teamt5",
+  "container_type": "EXTERNAL_IMPORT"
+}

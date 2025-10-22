@@ -1,0 +1,21 @@
+{
+  "title": "Elastic Security Intel",
+  "slug": "elastic-security-intel",
+  "description": "This connector streams threat intelligence from OpenCTI to Elastic Security, creating and managing both threat indicators and SIEM detection rules.",
+  "short_description": "This connector streams threat intelligence from OpenCTI to Elastic Security, creating and managing both threat indicators and SIEM detection rules.",
+  "logo": "stream/elastic-security-intel/__metadata__/logo.png",
+  "use_cases": [
+    "SIEM & Analytics"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.7.19",
+  "subscription_link": "https://www.elastic.co/security",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/elastic-security-intel",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-elastic-security-intel",
+  "container_type": "STREAM"
+}

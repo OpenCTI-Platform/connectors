@@ -1,0 +1,21 @@
+{
+  "title": "Tanium Incidents",
+  "slug": "tanium-incidents",
+  "description": "This connector allows organizations to feed OpenCTI Sightings using Tanium Alerts knowledge.\nThis connector leverages OpenCTI connector *scheduler*, so it imports Tanium alerts and create corresponding sightings in OpenCTI at a defined periodicity.",
+  "short_description": "This connector allows organizations to feed OpenCTI Sightings using Tanium Alerts knowledge.",
+  "logo": "external-import/tanium-incidents/__metadata__/logo.png",
+  "use_cases": [
+    "Incident Response & Ticketing"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.4.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/tanium-incidents",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-tanium-incidents",
+  "container_type": "EXTERNAL_IMPORT"
+}

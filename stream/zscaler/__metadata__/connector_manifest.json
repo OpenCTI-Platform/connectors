@@ -1,0 +1,21 @@
+{
+  "title": "Zscaler",
+  "slug": "zscaler",
+  "description": "This connector integrates OpenCTI threat intelligence into the Zscaler environment.",
+  "short_description": "This connector integrates OpenCTI threat intelligence into the Zscaler environment.",
+  "logo": "stream/zscaler/__metadata__/logo.png",
+  "use_cases": [
+    "Network Security"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.4.0",
+  "subscription_link": "https://www.zscaler.com",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/zscaler",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-zscaler",
+  "container_type": "STREAM"
+}
