@@ -2,6 +2,6 @@
 pycti==6.8.8
 requests~=2.32.2
 python-dotenv==1.1.1
-pyyaml==6.0.2
+pyyaml==6.0.3
 validators==0.35.0
 tenacity==8.2.3
