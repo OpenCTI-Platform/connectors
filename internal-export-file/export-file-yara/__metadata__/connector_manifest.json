@@ -1,0 +1,21 @@
+{
+  "title": "Export File YARA",
+  "slug": "export-file-yara",
+  "description": "The YARA connector enables the export of YARA rules in .yar format. \nIt offers two export modes: exporting a complete set of YARA indicators or exporting a single YARA indicator. \nThis connector ensures efficient management of indicators by facilitating their storage and transfer while ensuring compliance with cybersecurity standards.\n",
+  "short_description": "The YARA connector enables the export of YARA rules in .yar format.",
+  "logo": "internal-export-file/export-file-yara/__metadata__/logo.png",
+  "use_cases": [
+    "Threat Intelligence"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.7.10",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-export-file/export-file-yara",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-export-file-yara",
+  "container_type": "INTERNAL_EXPORT_FILE"
+}

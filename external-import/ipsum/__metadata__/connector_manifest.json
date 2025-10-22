@@ -1,0 +1,21 @@
+{
+  "title": "IPsum",
+  "slug": "ipsum",
+  "description": "Information coming soon",
+  "short_description": "Information coming soon",
+  "logo": null,
+  "use_cases": [
+    "Open Source Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.4.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/ipsum",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-ipsum",
+  "container_type": "EXTERNAL_IMPORT"
+}

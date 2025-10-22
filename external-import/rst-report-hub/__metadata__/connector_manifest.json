@@ -1,0 +1,21 @@
+{
+  "title": "Rst Report Hub",
+  "slug": "rst-report-hub",
+  "description": "The RST Report Hub Connector integrates various APT reports, blogs, articles from government bodies, security companies, research groups, cyber communities, and individuals into OpenCTI. RST Cloud manages the conversion of human-readable texts into STIX 2.1 bundles. This connector retrieves data from RST Cloud, importing the PDF version of each report along with a corresponding summary, key ideas, and facts into OpenCTI. It also includes extracted objects and relationships between them, such as Intrusion Sets (threat actors), campaigns, malware, TTPs, tools, geographic data, sectors, CVEs, indicators, and other relevant objects. This integration enhances the capabilities of OpenCTI by providing valuable structured threat intelligence data, enabling CTI analysts to streamline APT report processing through automation via the RST Report Hub integration, ultimately saving time.\nNo need to manually copy and paste indicators from articles anymore, or extract them from images, or check if they are well-known benign values. If an article includes indicators that are 'noisy' or incorrectly specified by the authors as indicators of compromise, for example, legitimate but temporarily compromised resources, public DNS servers, CDNs, hashes of widely used software, or well-known domains, these indicators are only created as Observables. As the aliases are tracked at the cloud-level, objects with multiple names, such as malware and adversaries, are automatically mapped to a single entity, allowing for the automatic tracking of the same entities across various taxonomies used in different countries and created by different security companies. Definitions of malware and tools and adversary profiles are available as a part of RST Threat Library.",
+  "short_description": "The RST Report Hub Connector integrates various APT reports, blogs, articles from government bodies, security companies, research groups, cyber communities, and individuals into OpenCTI. RST Cloud manages the conversion of human-readable texts into STIX 2.1 bundles. This connector retrieves data from RST Cloud, importing the PDF version of each report along with a corresponding summary, key ideas, and facts into OpenCTI. It also includes extracted objects and relationships between them, such as Intrusion Sets (threat actors), campaigns, malware, TTPs, tools, geographic data, sectors, CVEs, indicators, and other relevant objects. This integration enhances the capabilities of OpenCTI by providing valuable structured threat intelligence data, enabling CTI analysts to streamline APT report processing through automation via the RST Report Hub integration, ultimately saving time.\nNo need to manually copy and paste indicators from articles anymore, or extract them from images, or check if they are well-known benign values. If an article includes indicators that are 'noisy' or incorrectly specified by the authors as indicators of compromise, for example, legitimate but temporarily compromised resources, public DNS servers, CDNs, hashes of widely used software, or well-known domains, these indicators are only created as Observables. As the aliases are tracked at the cloud-level, objects with multiple names, such as malware and adversaries, are automatically mapped to a single entity, allowing for the automatic tracking of the same entities across various taxonomies used in different countries and created by different security companies. Definitions of malware and tools and adversary profiles are available as a part of RST Threat Library.",
+  "logo": "external-import/rst-report-hub/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=5.12.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/rst-report-hub",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-rst-report-hub",
+  "container_type": "EXTERNAL_IMPORT"
+}

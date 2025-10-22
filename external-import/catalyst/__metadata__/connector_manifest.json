@@ -1,0 +1,21 @@
+{
+  "title": "Catalyst",
+  "slug": "catalyst",
+  "description": "This connector imports data from the CATALYST platform, provided by PRODAFT. The connector leverages the CATALYST API to retrieve threat intelligence and integrate it into your OpenCTI instance.",
+  "short_description": "This connector imports data from the CATALYST platform, provided by PRODAFT. The connector leverages the CATALYST API to retrieve threat intelligence and integrate it into your OpenCTI instance.",
+  "logo": "external-import/catalyst/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.6.4",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/catalyst",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-catalyst",
+  "container_type": "EXTERNAL_IMPORT"
+}

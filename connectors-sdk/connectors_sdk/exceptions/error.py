@@ -31,3 +31,12 @@ class UseCaseError(Exception):
     especially if it is designed to iterate over entities.
     It signals a problem in the connector's logic or implementation that needs to be addressed.
     """
+
+
+class ConfigValidationError(ConfigError):
+    """Base class for configuration validation-related errors.
+
+    This exception is raised when there is an issue with the configuration validation of the connector.
+    It can be used to indicate validation problems on the configuration that prevent
+    the connector from starting or working correctly.
+    """

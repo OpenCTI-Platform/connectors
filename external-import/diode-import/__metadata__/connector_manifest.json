@@ -1,0 +1,19 @@
+{
+  "title": "Diode Import",
+  "slug": "diode-import",
+  "description": "Import bundles exported by the send_to_directory mode\nThis connector will impersonate sources connectors registration.\nUser of the source will also be impersonated if correctly mapped to the target applicant id.Mapping is required as internal id of the exported user bundle will be different from the target user.",
+  "short_description": "Import bundles exported by the send_to_directory mode\nThis connector will impersonate sources connectors registration.\nUser of the source will also be impersonated if correctly mapped to the target applicant id.Mapping is required as internal id of the exported user bundle will be different from the target user.",
+  "logo": null,
+  "use_cases": [],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.0.10",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/diode-import",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-diode-import",
+  "container_type": "EXTERNAL_IMPORT"
+}
