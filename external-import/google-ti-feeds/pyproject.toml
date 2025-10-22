@@ -40,7 +40,7 @@ test = [
 ]
 dev = [
     "black ~=25.1",          # Code formatter
-    "isort ~=6.0.1",         # Import sorter
+    "isort ~=6.1.0",         # Import sorter
     "ruff ~=0.12.11",          # linter
     "mypy ~=1.18.2",         # Type validator
     "pip_audit ~=2.9.0",     # Security checker
