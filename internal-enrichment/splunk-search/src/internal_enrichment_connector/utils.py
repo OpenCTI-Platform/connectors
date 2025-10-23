@@ -48,5 +48,17 @@ def is_domain_name(value: str) -> bool:
 
 
 def is_hostname(value: str) -> bool:
-    """Detect if string looks like a short/internal hostname (no dots)."""
-    return bool(re.fullmatch(r"^[a-zA-Z0-9\-]{1,63}$", value))
+    """
+    Check if a string looks like a hostname.
+    Examples: dc01.internal.local, server1, host-name-2
+    """
+    if not value or not isinstance(value, str):
+        return False
+
+    # Skip IP addresses
+    if is_ipv4(value) or is_ipv6(value):
+        return False
+
+    # Match hostname patterns
+    hostname_pattern = r"^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*$"
+    return bool(re.match(hostname_pattern, value))

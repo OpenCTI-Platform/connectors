@@ -6,9 +6,11 @@ from .converter_to_stix import ConverterToStix
 
 from .splunk_client import SplunkClient
 from .splunk_result_parser import parse_observables_and_incident
-from .splunk_bundle import full_bundle
+from .splunk_bundle import spl_indicators
+from .splunk_indicators import SplunkIndicator, SplunkSearchPlan
 
 import re
+import json
 
 
 class ConnectorTemplate:
@@ -62,13 +64,25 @@ class ConnectorTemplate:
         )
 
         # Define variables
-        self.author = self.converter_to_stix.create_author()
-        self.tlp = None
         self.stix_objects_list = []
+        self.tlp = None
+        self.sighting_tlp_id = self.converter_to_stix.tlp_red.id
+        self.stix_objects_list.append(self.converter_to_stix.tlp_red)
+        self.author = self.converter_to_stix.create_author(self.sighting_tlp_id)
+        self._send_bundle([self.author, self.converter_to_stix.tlp_red])
+        self.stix_objects_list.append(self.author)
+        self._load_stix_bundle(spl_indicators)
 
-    def build_param_index(bundle=full_bundle) -> dict:
+    def build_param_index(self, bundle=None) -> dict:
+        """
+        Build an index of parameters keyed by Indicator ID from a STIX bundle.
+        If no bundle is provided, default to the module-level `spl_indicators`.
+        """
+        if bundle is None:
+            bundle = spl_indicators
+
         params_by_indicator = {}
-        for obj in bundle.get("objects", []):
+        for obj in bundle:
             if obj.get("type") != "note":
                 continue
             if "object_refs" not in obj:
@@ -81,6 +95,17 @@ class ConnectorTemplate:
                 if ref.startswith("indicator--"):
                     params_by_indicator[ref] = params
         return params_by_indicator
+
+    def _load_stix_bundle(self, bundle=spl_indicators):
+        searches = self.helper.api.indicator.list(
+            filters={
+                "mode": "and",
+                "filters": [{"key": "pattern_type", "values": ["spl", "splunk"]}],
+                "filterGroups": [],
+            }
+        )
+        if not searches:
+            self._send_bundle(bundle)
 
     def _splunk_searches(self, obs_type) -> list:
         """
@@ -151,7 +176,7 @@ class ConnectorTemplate:
             self.helper.connector_logger.info(
                 "[CONNECTOR] No Splunk searches found, returning predefined indicators."
             )
-            for obj in full_bundle.get("objects", []):
+            for obj in spl_indicators:
                 if obj.get("type") != "indicator":
                     self.stix_objects_list.append(obj)
                     continue
@@ -182,184 +207,328 @@ class ConnectorTemplate:
                 export = self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
                     entity_id=search_id, entity_type="Indicator", mode="simple"
                 )
-                indicators.append(export)
+                # `export` may be a STIX bundle. Extract the Indicator and keep non-Indicator
+                # objects (e.g., Notes, Relationships) in the working list so they go to the bundle.
+                if (
+                    isinstance(export, dict)
+                    and export.get("type") == "bundle"
+                    and "objects" in export
+                ):
+                    indicator_obj = None
+                    for obj in export["objects"]:
+                        if obj.get("type") == "indicator" and indicator_obj is None:
+                            indicator_obj = obj
+                        else:
+                            self.stix_objects_list.append(obj)
+                    if indicator_obj:
+                        indicators.append(indicator_obj)
+                else:
+                    # Already an indicator-like dict
+                    indicators.append(export)
         return indicators
 
-    def _render_spl(self, spl: str, value, obs_type: str, indicator_id: str) -> str:
+    def _run_splunk_plan(self, plan: SplunkSearchPlan):
         """
-        Render a Splunk SPL template by substituting placeholders with the provided observables.
-        Supports both legacy <PLACEHOLDER> tokens and {{token}} style.
-        - value: str or List[str]
-        - obs_type: e.g., "ipv4-addr", "domain-name", etc.
-        - indicator_id: the STIX indicator id
+        Execute a SplunkSearchPlan and return results list (dicts).
         """
-        # Normalize value(s)
-        if isinstance(value, list):
-            values = [str(v) for v in value]
-            value_str = values[0] if values else ""
-        else:
-            value_str = str(value) if value is not None else ""
-            values = [value_str] if value_str else []
-
-        # CSV suitable for SPL IN (...) lists, quoted
-        values_csv = ",".join([f'"{v}"' for v in values]) if values else ""
-
-        # Legacy angle-bracket placeholders (back-compat)
-        mapping = {
-            "<VALUE>": value_str,
-            "<VALUE_LIST>": values_csv,
-            "<OBS_VALUE>": value_str,
-            "<OBS_LIST>": values_csv,
-            "<INDICATOR_ID>": indicator_id,
-            # Common synonyms
-            "<IP_ADDRESS>": value_str,
-            "<IP_LIST>": values_csv,
-            "<HOSTNAME>": value_str,
-            "<HOSTNAME_LIST>": values_csv,
-            "<DOMAIN>": value_str,
-            "<DOMAIN_LIST>": values_csv,
-        }
-
-        for k, v in mapping.items():
-            spl = spl.replace(k, v)
-
-        # Mustache-style {{token}} placeholders
-        mustache_map = {
-            "value": value_str,
-            "values_csv": values_csv,
-            "indicator_id": indicator_id,
-            "obs_type": obs_type,
-        }
-
-        def _mustache_sub(match):
-            key = match.group(1).strip().lower()
-            return mustache_map.get(key, match.group(0))
-
-        spl = re.sub(r"\{\{\s*([a-zA-Z0-9_]+)\s*\}\}", _mustache_sub, spl)
-        return spl
+        return self.splunk_client.run_search(
+            plan.query,
+            earliest_time=plan.earliest,
+            latest_time=plan.latest,
+        )
 
     def _collect_stix_search(self, value, obs_type) -> list:
         """
-        Collect intelligence from the source and convert into STIX object
-        :return: List of STIX objects
+        Collect intelligence from the source and convert into STIX objects.
+        Returns the accumulated list of STIX objects (self.stix_objects_list)
+        so the caller can create a bundle.
         """
         self.helper.connector_logger.info("[CONNECTOR] Starting enrichment...")
         self.helper.connector_logger.debug("[CONNECTOR] Building Search List")
         indicators = self._splunk_searches(obs_type)
-        search_results = []
         self.helper.connector_logger.debug(
             "[CONNECTOR] Search List built, running Splunk search",
             {"count": len(indicators)},
         )
         parameters = self.build_param_index()
-        for indicator in indicators:
 
-            ind_id = indicator["id"]
-            search_name = indicator["name"]
-            self.stix_objects_list.append(indicator)
-            query = self._render_spl(indicator["pattern"], value, obs_type, ind_id)
-            self.helper.connector_logger.info(
-                "[SEARCH] Running Splunk search", {"name": search_name}
-            )
-            # Run the Splunk search and parse results
+        # Dedup guard: track IDs already added to the outgoing list
+        seen_ids = set()
+        for _obj in self.stix_objects_list:
+            if isinstance(_obj, dict) and "id" in _obj:
+                seen_ids.add(_obj["id"])
+
+        def _add(obj) -> None:
+            """Append a STIX object if not already present by id. Accepts dict, stix2 object, or JSON string."""
+            if obj is None:
+                return
+            # Normalize JSON string → dict
+            if isinstance(obj, str):
+                try:
+                    obj = json.loads(obj)
+                except Exception:
+                    return  # not valid JSON, skip
+            # Normalize stix2 object → dict
             try:
-                results = self.splunk_client.run_search(
-                    query, earliest_time=0, latest_time="now"
+                if hasattr(obj, "serialize"):
+                    obj = json.loads(obj.serialize())
+            except Exception:
+                pass
+            # Only proceed with dict-like objects that have an id (or at least a type)
+            if not isinstance(obj, dict):
+                return
+            obj_id = obj.get("id")
+            if obj_id:
+                if obj_id in seen_ids:
+                    return
+                seen_ids.add(obj_id)
+            self.stix_objects_list.append(obj)
+
+        for indicator in indicators:
+            try:
+                # Normalize bundle → indicator and carry forward non-indicator objects
+                if (
+                    isinstance(indicator, dict)
+                    and indicator.get("type") == "bundle"
+                    and "objects" in indicator
+                ):
+                    inner = next(
+                        (
+                            o
+                            for o in indicator["objects"]
+                            if o.get("type") == "indicator"
+                        ),
+                        None,
+                    )
+                    if inner:
+                        for obj in indicator["objects"]:
+                            if obj is not inner:
+                                _add(obj)
+                        indicator = inner
+
+                ind_id = indicator.get("id")
+                search_name = indicator.get("name", "(unnamed indicator)")
+                _add(indicator)
+
+                # Insert Indicator handling
+
+                # Guard for indicators missing a `pattern`
+                pattern = indicator.get("pattern")
+                if not pattern:
+                    self.helper.connector_logger.warning(
+                        "[SEARCH] Skipping indicator without pattern",
+                        {"indicator_id": ind_id, "name": search_name},
+                    )
+                    continue
+
+                # Construct a SplunkIndicator with the requested obs_type
+                si = SplunkIndicator(indicator=indicator, obs_type=obs_type)
+
+                # Load params from OpenCTI Notes (JSON content)
+                si.load_params_from_notes(self.helper)
+
+                # (Optional) overlay with defaults coming from the pre-seeded bundle
+                # You built this earlier: parameters = self.build_param_index()
+                bundle_params = parameters.get(ind_id, {})
+                # Decide precedence: let Notes override bundle defaults (most expected)
+                si.params = {**bundle_params, **si.params}
+
+                # Render the plan using the value(s) from the observable
+                values = [value] if not isinstance(value, list) else value
+                try:
+                    plan = si.render(values=values)
+                except ValueError as e:
+                    self.helper.connector_logger.warning(
+                        "[SEARCH] Unresolved tokens in SPL template; skipping indicator",
+                        {"indicator_id": ind_id, "error": str(e)},
+                    )
+                    continue
+
+                self.helper.connector_logger.info(
+                    "[SEARCH] Running Splunk search",
+                    {
+                        "name": search_name,
+                        "earliest": plan.earliest,
+                        "latest": plan.latest,
+                    },
                 )
+
+                results = self._run_splunk_plan(plan)
                 self.helper.connector_logger.info(
                     "[SEARCH] Splunk search returned results",
-                    {"count": len(results)},
+                    {"count": len(results) if results else 0},
                 )
+
                 if results:
                     for result in results:
                         self.helper.connector_logger.debug(
                             "[SEARCH] Processing result", {"result": result}
                         )
-                        processed_results = parse_observables_and_incident(
-                            result, self.author, self.tlp
+                        observables, source_identity, sightings = (
+                            parse_observables_and_incident(
+                                self.helper,
+                                result,
+                                self.author,
+                                self.tlp,
+                                self.sighting_tlp_id,
+                            )
                         )
-                        # stix_obj = self.converter_to_stix.create_from_result(result)
-                        # self.stix_objects_list.append(stix_obj)
-                        # Create Sighting object for the original indicator
-                        # sighting = self.converter_to_stix.create_sighting(
-                        #    ind_id, self.author, self.tlp
-                        # )
-                        # self.stix_objects_list.append(sighting)
-                        # Optionally create an Incident from the result
-                        # incident = self.converter_to_stix.create_incident_from_result(
-                        #     result, self.author, self.tlp
-                        # )
-                        # if incident:
-                        #    self.stix_objects_list.append(incident)
-                        return self.stix_objects_list
+                        self.helper.connector_logger.debug(
+                            "[SEARCH] source_identity",
+                            {"source_identity": source_identity},
+                        )
+                        self.helper.connector_logger.debug(
+                            "[SEARCH] observables", {"observables": observables}
+                        )
+                        self.helper.connector_logger.debug(
+                            "[SEARCH] sightings", {"sightings": sightings}
+                        )
+
+                        if source_identity:
+                            _add(source_identity)
+                        for obs in observables or []:
+                            _add(obs)
+                        for s in sightings or []:
+                            _add(s)
                 else:
-                    self.helper.connector_logger.info(
-                        "[SEARCH] Splunk search returned no results",
-                        {"name": search_name},
-                    )
+                    # Optional benign sighting / “checked but no match”
                     sighting = self.converter_to_stix.create_sighting(
-                        ind_id, self.author, self.tlp
+                        ind_id, self.author, self.sighting_tlp_id
                     )
-                    return [sighting]
+                    if sighting:
+                        _add(sighting)
 
             except Exception as e:
+                # Log and continue processing remaining indicators
                 self.helper.connector_logger.error(
-                    "[CONNECTOR] Splunk search failed", {"error": str(e)}
+                    "[CONNECTOR] Splunk search failed",
+                    {"error": str(e), "indicator_id": ind_id},
                 )
-                return []
+                continue
+
+        # After processing all indicators, return the full accumulated list
+        return self.stix_objects_list
 
     def _collect_splunk_search(self, indicator) -> list:
         """
-        Collect intelligence from the source and convert into STIX object
-        :return: List of STIX objects
+        Collect intelligence from a straight Splunk-based Indicator (pattern_type="splunk").
+        Uses SplunkIndicator to render the SPL (still supports tokens if present),
+        then runs and parses results.
         """
-        query = indicator["pattern"]
-        ind_id = indicator["id"]
-        search_name = indicator["name"]
-        self.helper.connector_logger.info("[CONNECTOR] Starting enrichment...")
-        self.helper.connector_logger.info(
-            "[SEARCH] Running Splunk search", {"name": search_name}
-        )
-        # Run the Splunk search and parse results
-        search_results = []
-        try:
-            results = self.splunk_client.run_search(
-                query,
+        ind_id = indicator.get("id")
+        search_name = indicator.get("name", "(unnamed indicator)")
+        pattern = indicator.get("pattern")
+
+        self.helper.connector_logger.info("[CONNECTOR] Starting enrichment (SPL)")
+        if not pattern:
+            self.helper.connector_logger.warning(
+                "[SEARCH] SPLUNK indicator missing pattern; skipping",
+                {"indicator_id": ind_id, "name": search_name},
             )
-            if results:
-                self.helper.connector_logger.info(
-                    "[SEARCH] Splunk search returned results",
-                    {"count": len(results)},
-                )
-                search_results.append(incident)
-                for result in search_results:
-                    stix_obj = self.converter_to_stix.create_from_result(result)
-                    self.stix_objects_list.append(stix_obj)
-                    # Create Sighting object for the original indicator
-                    sighting = self.converter_to_stix.create_sighting(
-                        ind_id, self.author, self.tlp
-                    )
-                    self.stix_objects_list.append(sighting)
-                    # Optionally create an Incident from the result
-                    incident = self.converter_to_stix.create_incident_from_result(
-                        result, self.author, self.tlp
-                    )
-                    if incident:
-                        self.stix_objects_list.append(incident)
-                    return self.stix_objects_list
-            else:
-                self.helper.connector_logger.info(
-                    "[SEARCH] Splunk search returned no results",
-                    {"name": search_name},
-                )
-                sighting = self.converter_to_stix.create_sighting(
-                    ind_id, self.author, self.tlp
-                )
+            return self.stix_objects_list
+
+        # obs_type may be embedded on the indicator; pass through
+        obs_type = indicator.get("x_opencti_main_observable_type", "")
+        si = SplunkIndicator(indicator=indicator, obs_type=obs_type)
+        si.load_params_from_notes(self.helper)
+
+        # After si.load_params_from_notes(self.helper)
+        bundle_params = self.build_param_index().get(ind_id, {})
+        # Let OpenCTI Notes override bundle defaults
+        si.params = {**bundle_params, **si.params}
+
+        # SPL indicators usually don’t substitute observable values,
+        # but render() will also validate there are no unresolved tokens.
+        try:
+            plan = si.render(values=[])
+        except ValueError as e:
+            self.helper.connector_logger.warning(
+                "[SEARCH] Unresolved tokens in SPL indicator; skipping",
+                {"indicator_id": ind_id, "error": str(e)},
+            )
+            return self.stix_objects_list
+
+        self.helper.connector_logger.info(
+            "[SEARCH] Running Splunk search",
+            {"name": search_name, "earliest": plan.earliest, "latest": plan.latest},
+        )
+
+        try:
+            results = self._run_splunk_plan(plan)
         except Exception as e:
             self.helper.connector_logger.error(
                 "[CONNECTOR] Splunk search failed", {"error": str(e)}
             )
-        raise NotImplementedError
+            return self.stix_objects_list
+
+        seen_ids = {
+            o.get("id")
+            for o in self.stix_objects_list
+            if isinstance(o, dict) and o.get("id")
+        }
+
+        def _add(obj):
+            if obj is None:
+                return
+            if isinstance(obj, str):
+                try:
+                    obj = json.loads(obj)
+                except Exception:
+                    return
+            try:
+                if hasattr(obj, "serialize"):
+                    obj = json.loads(obj.serialize())
+            except Exception:
+                pass
+            if not isinstance(obj, dict):
+                return
+            oid = obj.get("id")
+            if oid and oid in seen_ids:
+                return
+            if oid:
+                seen_ids.add(oid)
+            self.stix_objects_list.append(obj)
+
+        if results:
+            self.helper.connector_logger.info(
+                "[SEARCH] Splunk search returned results", {"count": len(results)}
+            )
+            for result in results:
+                try:
+                    observables, source_identity, sightings = (
+                        parse_observables_and_incident(
+                            self.helper,
+                            result,
+                            self.author,
+                            self.tlp,
+                            self.sighting_tlp_id,
+                        )
+                    )
+                    self.helper.connector_logger.debug(
+                        "[SEARCH] source_identity", {"source_identity": source_identity}
+                    )
+                    self.helper.connector_logger.debug(
+                        "[SEARCH] observables", {"observables": observables}
+                    )
+                    self.helper.connector_logger.debug(
+                        "[SEARCH] sightings", {"sightings": sightings}
+                    )
+                    _add(source_identity)
+                    for obs in observables or []:
+                        _add(obs)
+                    for s in sightings or []:
+                        _add(s)
+                except Exception as e:
+                    self.helper.connector_logger.error(
+                        "[CONNECTOR] Result parsing failed", {"error": str(e)}
+                    )
+                    continue
+        else:
+            self.helper.connector_logger.info(
+                "[SEARCH] Splunk search returned no results", {"name": search_name}
+            )
+
+        return self.stix_objects_list
 
     def entity_in_scope(self, data) -> bool:
         """
@@ -387,8 +556,7 @@ class ConnectorTemplate:
         if len(opencti_entity["objectMarking"]) != 0:
             for marking_definition in opencti_entity["objectMarking"]:
                 if marking_definition["definition_type"] == "TLP":
-                    self.tlp = marking_definition["definition"]
-                    print(self.tlp)
+                    self.tlp = marking_definition["standard_id"]
 
         valid_max_tlp = self.helper.check_max_tlp(self.tlp, self.config.max_tlp)
 
@@ -431,22 +599,22 @@ class ConnectorTemplate:
                     ind_type = indicator.get(
                         "x_opencti_main_observable_type", ""
                     ).lower()
-                    stix_objects = self._collect_stix_search(ind_value, ind_type)
+                    search = self._collect_stix_search(ind_value, ind_type)
 
-                elif pattern_type == "splunk":
-                    stix_objects = self._collect_intelligence(
-                        ind_standard_id, ind_value, ind_type
+                elif pattern_type in ("splunk", "spl"):
+                    search = self._collect_splunk_search(indicator)
+                self.helper.connector_logger.info(
+                    "[CONNECTOR] STIX objects created", {"count": len(search)}
+                )
+
+                if search is not None and len(search):
+                    self.helper.connector_logger.debug(
+                        "[CONNECTOR] STIX objects created", {"objects": search}
                     )
-
-                if stix_objects is not None and len(stix_objects):
-                    return self._send_bundle(stix_objects)
+                    return self._send_bundle(self.stix_objects_list)
                 else:
                     info_msg = "[CONNECTOR] No information found"
                     return info_msg
-
-                # ===========================
-                # === Add your code above ===
-                # ===========================
             else:
                 if not data.get("event_type"):
                     # If it is not in scope AND entity bundle passed through playbook, we should return the original bundle unchanged

@@ -1,8 +1,14 @@
 import ipaddress
 
 import stix2
+from stix2.v21 import TLP_WHITE, TLP_GREEN, TLP_AMBER, TLP_RED
 from .utils import is_domain_name
-from pycti import Identity, StixCoreRelationship, StixSightingRelationship
+from pycti import (
+    Identity,
+    StixCoreRelationship,
+    StixSightingRelationship,
+    MarkingDefinition,
+)
 
 
 class ConverterToStix:
@@ -15,18 +21,24 @@ class ConverterToStix:
 
     def __init__(self, helper):
         self.helper = helper
-        self.author = self.create_author()
+        self.tlp_white = TLP_WHITE
+        self.tlp_green = TLP_GREEN
+        self.tlp_amber = TLP_AMBER
+        self.tlp_red = TLP_RED
 
     @staticmethod
-    def create_author() -> dict:
+    def create_author(tlp_id) -> dict:
         """
         Create Author
         :return: Author in Stix2 object
         """
+        tlp_id = tlp_id if tlp_id is not None else TLP_RED["id"]
         author = stix2.Identity(
-            id=Identity.generate_id(name="Splunk", identity_class="system"),
+            id=Identity.generate_id(name="Splunk", identity_class="securityplatform"),
+            allow_custom=True,
             name="Splunk",
-            identity_class="system",
+            identity_class="securityplatform",
+            security_platform_type="SIEM",
             description="Splunk is a software platform widely used for searching, monitoring, and analyzing machine-generated big data via a web-style interface. It enables security operations, IT operations, and business intelligence through log and event data aggregation, real-time analytics, and alerting capabilities.",
             external_references=[
                 stix2.ExternalReference(
@@ -35,6 +47,8 @@ class ConverterToStix:
                     description="Official website for Splunk, the Data Platform for the hybrid world.",
                 )
             ],
+            objectMarkingRefs=[tlp_id],
+            x_opencti_type="SecurityPlatform",
         )
         return author
 
@@ -143,7 +157,9 @@ class ConverterToStix:
                 {"value": value},
             )
 
-    def create_sighting(self, sighted_ref: str, author: dict, tlp: str = None) -> dict:
+    def create_sighting(
+        self, sighted_ref: str, author: dict, description: str, tlp: str = None
+    ) -> dict:
         """
         Create a STIX Sighting object for a given observable or indicator.
         :param sighted_ref: ID of the sighted STIX object
@@ -152,14 +168,16 @@ class ConverterToStix:
         :return: STIX Sighting object
         """
         sighting = stix2.Sighting(
+            allow_custom=True,
+            id=StixSightingRelationship.generate_id(
+                sighted_ref, author["id"], "sighting"
+            ),
             sighting_of_ref=sighted_ref,
             created_by_ref=author["id"],
-            custom_properties={
-                "x_opencti_score": 80,
-                "x_opencti_detection": True,
-                "x_opencti_created_by_ref": author["id"],
-                **({"object_marking_refs": [tlp]} if tlp else {}),
-            },
+            x_opencti_score=80,
+            x_opencti_description=description,
+            object_marking_refs=[tlp],
+            x_opencti_created_by_ref=author["id"],
         )
         return sighting
 
