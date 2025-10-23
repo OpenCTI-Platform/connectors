@@ -12,6 +12,7 @@ from connectors_sdk.models.country import Country
 from connectors_sdk.models.domain_name import DomainName
 from connectors_sdk.models.external_reference import ExternalReference
 from connectors_sdk.models.file import File
+from connectors_sdk.models.hostname import Hostname
 from connectors_sdk.models.indicator import Indicator
 from connectors_sdk.models.individual import Individual
 from connectors_sdk.models.intrusion_set import IntrusionSet
@@ -46,6 +47,7 @@ __all__ = [
     "DomainName",
     "ExternalReference",
     "File",
+    "Hostname",
     "Indicator",
     "Individual",
     "IntrusionSet",
