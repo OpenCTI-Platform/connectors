@@ -89,6 +89,7 @@ def test_public_models_are_present():
         "TLPMarking",
         "URL",
         "Vulnerability",
+        "X509Certificate",
     }
     missing = models_import - set(models.__all__)
     extra = set(models.__all__) - models_import
