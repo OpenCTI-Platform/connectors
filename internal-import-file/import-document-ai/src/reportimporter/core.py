@@ -121,7 +121,7 @@ class ReportImporter:
         return cleaned if len(cleaned) >= 2 else None
 
     def _process_message(self, data: dict) -> str:
-        """Entry point when a new message arrives on the connector’s queue.
+        """Entry point when a new message arrives on the connector's queue.
 
         Args:
             data (dict): Payload from OpenCTI

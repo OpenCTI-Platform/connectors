@@ -26,7 +26,7 @@ def create_stix_object(
     Args:
         category (str): A string key indicating which STIX type to create.
         value (str): The raw/textual value for that object (e.g. the malware name,
-            the individual’s name, an IPv4 string, etc.). Leading/trailing
+            the individual's name, an IPv4 string, etc.). Leading/trailing
             whitespace and trailing commas will be trimmed.
         object_markings (list[str]): List of OpenCTI marking-definition standard IDs to apply.
         custom_properties (dict): Additional custom properties, usually containing keys such as

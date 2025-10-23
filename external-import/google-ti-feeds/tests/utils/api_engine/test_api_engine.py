@@ -60,7 +60,7 @@ def mock_aiohttp_client() -> AsyncMock:
                 timeout=timeout,
             )
         else:
-            raise NotImplementedError(f"Test fixture doesn’t handle HTTP {method!r}")
+            raise NotImplementedError(f"Test fixture doesn't handle HTTP {method!r}")
 
     mock.request = AsyncMock(side_effect=_request)
     return mock
