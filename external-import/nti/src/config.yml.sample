@@ -18,3 +18,4 @@ nti:
   create_domain: true
   create_file: true
   create_url: true
+  package_type: 'updated'
