@@ -68,6 +68,7 @@ def test_public_models_are_present():
         "DomainName",
         "ExternalReference",
         "File",
+        "Hostname",
         "Individual",
         "Indicator",
         "IntrusionSet",
