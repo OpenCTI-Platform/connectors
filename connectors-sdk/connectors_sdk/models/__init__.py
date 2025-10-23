@@ -33,6 +33,7 @@ from connectors_sdk.models.threat_actor_group import ThreatActorGroup
 from connectors_sdk.models.tlp_marking import TLPMarking
 from connectors_sdk.models.url import URL
 from connectors_sdk.models.vulnerability import Vulnerability
+from connectors_sdk.models.x509_certificate import X509Certificate
 
 __all__ = [
     # Typing purpose
@@ -70,4 +71,5 @@ __all__ = [
     "TLPMarking",
     "URL",
     "Vulnerability",
+    "X509Certificate",
 ]
