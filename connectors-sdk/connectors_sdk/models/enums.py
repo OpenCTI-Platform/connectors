@@ -20,6 +20,7 @@ __all__ = [
     "Permission",
     "Platform",
     "ProcessorArchitecture",
+    "RelationshipType",
     "Reliability",
     "ReportType",
     "ThreatActorRole",
@@ -334,6 +335,21 @@ class ProcessorArchitecture(_PermissiveEnum):
     SPARC = "sparc"
     X86 = "x86"
     X86_64 = "x86-64"
+
+
+class RelationshipType(_PermissiveEnum):
+    """Relationship Type Open Vocabulary.
+
+    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_e2e1szrqfoan
+    """
+
+    RELATED_TO = "related-to"
+    BASED_ON = "based-on"
+    DERIVED_FROM = "derived-from"
+    INDICATES = "indicates"
+    TARGETS = "targets"
+    LOCATED_AT = "located-at"
+    HAS = "has"
 
 
 class Reliability(_PermissiveEnum):
