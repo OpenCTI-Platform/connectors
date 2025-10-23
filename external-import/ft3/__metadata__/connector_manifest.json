@@ -1,0 +1,22 @@
+{
+  "title": "FT3 Framework",
+  "slug": "ft3",
+  "description": "Fraud Tools, Tactics, and Techniques (FT3) is Stripe's adaptation of ATT&CK-style security frameworks, specifically designed to enhance our understanding of the tactics, techniques, and procedures (TTPs) used by actors in fraudulent activities. Developed as a resource for combating financial crime and improving organizational fraud prevention, FT3 serves a variety of stakeholders across the Fraud ecosystem.",
+  "short_description": "FT3 is a fraud framework by Stripe that provides a structured taxonomy of fraud tactics and techniques, similar to MITRE ATT&CK but focused on fraud prevention and detection.",
+  "logo": "external-import/ft3/__metadata__/logo.png",
+  "use_cases": [
+    "Open Source Threat Intel",
+    "Fraud Prevention"
+  ],
+  "verified": true,
+  "last_verified_date": "2025-10-13",
+  "playbook_supported": false,
+  "max_confidence_level": 75,
+  "support_version": ">= 6.7.0",
+  "subscription_link": "https://github.com/stripe/ft3",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/ft3",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-ft3",
+  "container_type": "EXTERNAL_IMPORT"
+}

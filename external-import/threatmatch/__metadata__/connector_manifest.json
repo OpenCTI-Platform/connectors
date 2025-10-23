@@ -1,0 +1,21 @@
+{
+  "title": "ThreatMatch",
+  "slug": "threatmatch",
+  "description": "The ThreatMatch Connector imports ThreatMatch intelligence (alerts, profiles, IOCs, reports) into OpenCTI. It authenticates to the ThreatMatch Developer Platform, fetches items since the last successful run (or a configured relative start date on first run), and maps them to STIX 2.1 objects and relationships in OpenCTI.",
+  "short_description": "The ThreatMatch Connector imports ThreatMatch intelligence (alerts, profiles, IOCs, reports) into OpenCTI. It authenticates to the ThreatMatch Developer Platform, fetches items since the last successful run (or a configured relative start date on first run), and maps them to STIX 2.1 objects and relationships in OpenCTI.",
+  "logo": "external-import/threatmatch/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": "2025-08-18",
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=5.5.4",
+  "subscription_link": "https://www.secalliance.com/threat-intelligence-portal",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/threatmatch",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-threatmatch",
+  "container_type": "EXTERNAL_IMPORT"
+}

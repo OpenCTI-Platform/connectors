@@ -16,7 +16,7 @@ class _ConfigLoaderRecordedFuture(ConfigBaseSettings):
         default=240,
         description="Initial lookback period in hours when first running the connector.",
     )
-    tlp: Literal["white", "green", "amber", "red"] = Field(
+    tlp: Literal["clear", "white", "green", "amber", "amber+strict", "red"] = Field(
         default="red",
         description="Default Traffic Light Protocol (TLP) marking for imported data.",
     )
@@ -42,7 +42,7 @@ class _ConfigLoaderRecordedFuture(ConfigBaseSettings):
         description="Time window in hours for fetching recently published analyst notes.",
     )
     topic: Optional[ListFromString] = Field(
-        default=None,
+        default=["VTrvnW", "g1KBGl", "ZjnoP0", "aDKkpk", "TXSFt5", "UrMRnT", "TXSFt3"],
         description=(
             "Comma-separated list of topic IDs to filter analyst notes. "
             "Examples: VTrvnW (Yara Rule), g1KBGl (Sigma Rule), ZjnoP0 (Snort Rule), "
@@ -91,7 +91,7 @@ class _ConfigLoaderRecordedFuture(ConfigBaseSettings):
         description="Minimum risk score threshold (0-100) for importing risk list entities.",
     )
     risklist_related_entities: Optional[ListFromString] = Field(
-        default=None,
+        default=["Malware", "Hash", "URL", "Threat Actor", "MitreAttackIdentifier"],
         description=(
             "Comma-separated list of entity types to import from risk lists. "
             "Available choices: Malware, Hash, URL, Threat Actor, MitreAttackIdentifier."

@@ -37,7 +37,7 @@
       "type": "array"
     },
     "CONNECTOR_DURATION_PERIOD": {
-      "default": "PT1H",
+      "default": "PT24H",
       "description": "ISO8601 Duration format starting with 'P' for Period (e.g., 'PT24H' for 24 hours).",
       "type": "string"
     },
@@ -74,9 +74,11 @@
       "default": "red",
       "description": "Default Traffic Light Protocol (TLP) marking for imported data.",
       "enum": [
+        "clear",
         "white",
         "green",
         "amber",
+        "amber+strict",
         "red"
       ],
       "type": "string"
@@ -99,7 +101,15 @@
       "type": "integer"
     },
     "RECORDED_FUTURE_TOPIC": {
-      "default": null,
+      "default": [
+        "VTrvnW",
+        "g1KBGl",
+        "ZjnoP0",
+        "aDKkpk",
+        "TXSFt5",
+        "UrMRnT",
+        "TXSFt3"
+      ],
       "description": "Comma-separated list of topic IDs to filter analyst notes. Examples: VTrvnW (Yara Rule), g1KBGl (Sigma Rule), ZjnoP0 (Snort Rule), aDKkpk (TTP Instance), TXSFt5 (Validated Intelligence Event), UrMRnT (Informational), TXSFt3 (Threat Lead).",
       "items": {
         "type": "string"
@@ -154,7 +164,13 @@
       "type": "integer"
     },
     "RECORDED_FUTURE_RISKLIST_RELATED_ENTITIES": {
-      "default": null,
+      "default": [
+        "Malware",
+        "Hash",
+        "URL",
+        "Threat Actor",
+        "MitreAttackIdentifier"
+      ],
       "description": "Comma-separated list of entity types to import from risk lists. Available choices: Malware, Hash, URL, Threat Actor, MitreAttackIdentifier.",
       "items": {
         "type": "string"

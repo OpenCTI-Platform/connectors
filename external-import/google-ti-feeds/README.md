@@ -19,9 +19,11 @@ More information can be found in the [Google Threat Intel API documentation](htt
 
 ## **IMPORTANT DATA LIMITATIONS**
 
-> **BIG WARNING:** This connector does **NOT** model "threat actor" and "malware" aliases due to duplicate entries present in Google Threat Intelligence data.  
-This means that the connector will not create relationships between threat actors and malware based on aliases, but instead will create new entries for each alias.  
-This limitation affects the completeness of threat actor and malware entity relationships and may impact threat correlation capabilities.  
+> **IMPORTANT NOTE on Threat Actor/Malware Aliases:** The Google Threat Intelligence (GTI) platform aggregates data from both **curated** and **open-source** reports. 
+Because the open-source data often uses **overlapping or conflicting aliases** for the same threat actors and malware, the **OpenCTI connector does not currently fetch these aliases from GTI.**
+
+ - This means that the connector will not create relationships between threat actors and malware based on aliases, but instead will create new entries for each alias.  
+ - This limitation affects the completeness of threat actor and malware entity relationships and may impact threat correlation capabilities.  
 Please be aware of this constraint when using the imported data for analysis and reporting.  
 
 ---

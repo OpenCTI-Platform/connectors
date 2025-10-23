@@ -64,5 +64,5 @@ This connector allows to consume an OpenCTI Stream and open JIRA issues.
 
 
 ### Further notes
-- Currently, although updating or deleting an entity in OCTI triggers an update or delete event in the stream, the connector only supports creation events.
+- Currently, although updating or deleting an entity in OpenCTI triggers an update or delete event in the stream, the connector only supports creation events.
 - This connector is currently one-way

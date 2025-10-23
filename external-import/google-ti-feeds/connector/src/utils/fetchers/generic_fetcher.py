@@ -8,7 +8,7 @@ import hashlib
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from connector.src.utils.api_engine.api_client import ApiClient
 from connector.src.utils.api_engine.exceptions.api_network_error import ApiNetworkError
@@ -24,9 +24,9 @@ class GenericFetcher:
         self,
         config: GenericFetcherConfig,
         api_client: ApiClient,
-        base_headers: Optional[Dict[str, str]] = None,
-        base_url: Optional[str] = None,
-        logger: Optional[logging.Logger] = None,
+        base_headers: dict[str, str] | None = None,
+        base_url: str | None = None,
+        logger: logging.Logger | None = None,
     ):
         """Initialize the generic fetcher.
 
@@ -49,7 +49,7 @@ class GenericFetcher:
         if config.headers:
             self.headers.update(config.headers)
 
-    async def fetch_single(self, **endpoint_params: Any) -> Optional[Any]:
+    async def fetch_single(self, **endpoint_params: Any) -> Any | None:
         """Fetch a single entity from the configured endpoint.
 
         Args:
@@ -92,22 +92,22 @@ class GenericFetcher:
             return None
 
     async def fetch_multiple(
-        self, entity_ids: List[str], **endpoint_params: Any
-    ) -> List[Any]:
+        self, entity_ids: list[str], **endpoint_params: Any
+    ) -> list[Any]:
         """Fetch multiple entities by their IDs.
 
         Args:
-            entity_ids: List of entity IDs to fetch
+            entity_ids: list of entity IDs to fetch
             **endpoint_params: Additional parameters for endpoint formatting and query parameters
 
         Returns:
-            List of entity objects (successful fetches only)
+            list of entity objects (successful fetches only)
 
         Raises:
             Configured exception class: If there's a critical error
 
         """
-        entities: List[Any] = []
+        entities: list[Any] = []
 
         self._log_fetch_start(
             self.config.display_name, "multiple", count=len(entity_ids)
@@ -163,14 +163,14 @@ class GenericFetcher:
         self._log_fetch_result(self.config.display_name, len(entities))
         return entities
 
-    async def fetch_list(self, **endpoint_params: Any) -> List[Any]:
+    async def fetch_list(self, **endpoint_params: Any) -> list[Any]:
         """Fetch a list of entities from the endpoint.
 
         Args:
             **endpoint_params: Parameters to substitute in the endpoint URL and query parameters
 
         Returns:
-            List of entities
+            list of entities
 
         Raises:
             Configured exception class: If there's an error fetching the list
@@ -191,7 +191,7 @@ class GenericFetcher:
             )
             return []
 
-    async def fetch_full_response(self, **endpoint_params: Any) -> Optional[Any]:
+    async def fetch_full_response(self, **endpoint_params: Any) -> Any | None:
         """Fetch the complete response model from the endpoint.
 
         This method returns the full response model (with proper deserialization),
@@ -239,7 +239,7 @@ class GenericFetcher:
             return None
 
     def _handle_api_error(
-        self, net_err: ApiNetworkError, endpoint: str, entity_id: Optional[str] = None
+        self, net_err: ApiNetworkError, endpoint: str, entity_id: str | None = None
     ) -> None:
         """Handle API network errors.
 
@@ -282,7 +282,7 @@ class GenericFetcher:
         raise exception from net_err
 
     def _handle_general_error(
-        self, e: Exception, endpoint: str, entity_id: Optional[str] = None
+        self, e: Exception, endpoint: str, entity_id: str | None = None
     ) -> None:
         """Handle general exceptions.
 
@@ -324,9 +324,9 @@ class GenericFetcher:
 
     def _log_fetch_start(
         self,
-        entity_type: Optional[str],
-        entity_id: Optional[str],
-        count: Optional[int] = None,
+        entity_type: str | None,
+        entity_id: str | None,
+        count: int | None = None,
     ) -> None:
         """Log the start of a fetch operation.
 
@@ -357,10 +357,10 @@ class GenericFetcher:
 
     async def _make_api_call(
         self,
-        endpoint_params: Dict[str, Any],
-        entity_id: Optional[str] = None,
+        endpoint_params: dict[str, Any],
+        entity_id: str | None = None,
         use_raw_response: bool = False,
-    ) -> Optional[Any]:
+    ) -> Any | None:
         """Make the actual API call with error handling.
 
         Args:
@@ -432,7 +432,7 @@ class GenericFetcher:
         self,
         response: Any,
         endpoint: str,
-        query_params: Optional[Dict[str, Any]] = None,
+        query_params: dict[str, Any] | None = None,
     ) -> None:
         """Save the raw response to a file for debugging/testing purposes.
 
@@ -499,7 +499,7 @@ class GenericFetcher:
                 {"prefix": LOG_PREFIX, "error": str(e)},
             )
 
-    def _log_fetch_result(self, entity_type: Optional[str], count: int = 1) -> None:
+    def _log_fetch_result(self, entity_type: str | None, count: int = 1) -> None:
         """Log the result of a fetch operation.
 
         Args:

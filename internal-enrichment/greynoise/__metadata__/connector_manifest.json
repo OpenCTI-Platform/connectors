@@ -1,0 +1,21 @@
+{
+  "title": "Greynoise",
+  "slug": "greynoise",
+  "description": "GreyNoise is a system that collects, analyzes, and labels omnidirectional Internet scan and attack activity.\nThe purpose of this connector is to answer to this question : \"Is everyone else seeing this stuff, or is it just me?\"\nIn other words:  \"Is this just regular Internet background noise or is machine actually targeting and attacking ME specifically?\"",
+  "short_description": "GreyNoise is a system that collects, analyzes, and labels omnidirectional Internet scan and attack activity.\nThe purpose of this connector is to answer to this question : \"Is everyone else seeing this stuff, or is it just me?\"\nIn other words:  \"Is this just regular Internet background noise or is machine actually targeting and attacking ME specifically?\"",
+  "logo": "internal-enrichment/greynoise/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 50,
+  "support_version": ">=5.6.1",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/greynoise",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-greynoise",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

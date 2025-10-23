@@ -62,17 +62,36 @@ class _OpenCTIConfig(BaseModel):
 
 
 class ConnectorConfig(BaseModel):
-    id: str
-    name: str
-    type: Literal["EXTERNAL_IMPORT"] = Field(default="EXTERNAL_IMPORT")
-    scope: ListFromString
-    duration_period: datetime.timedelta
-    log_level: LogLevelType
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+    )
+    name: str = Field(
+        description="The name of the connector.",
+    )
+    type: Literal["EXTERNAL_IMPORT"] = Field(
+        default="EXTERNAL_IMPORT",
+        description="The type of the connector.",
+    )
+    scope: ListFromString = Field(
+        description="The scope of the connector.",
+    )
+    duration_period: datetime.timedelta = Field(
+        description="The period of time to await between two runs of the connector.",
+    )
+    log_level: LogLevelType = Field(
+        description="The minimum level of logs to display.",
+    )
 
 
 class BaseConnectorSettings(abc.ABC, BaseSettings):
-    opencti: _OpenCTIConfig
-    connector: ConnectorConfig
+    opencti: _OpenCTIConfig = Field(
+        default_factory=_OpenCTIConfig,
+        description="Configuration for the OpenCTI platform.",
+    )
+    connector: ConnectorConfig = Field(
+        default_factory=ConnectorConfig,
+        description="Configuration for the connector.",
+    )
 
     # files needs to be at the same level as the module
     model_config = SettingsConfigDict(

@@ -1,7 +1,6 @@
 """Converts GTI campaign data to STIX identity objects."""
 
 from datetime import datetime, timezone
-from typing import List, Optional
 
 from connector.src.custom.models.gti.gti_campaign_model import (
     GTICampaignData,
@@ -23,8 +22,8 @@ class IdentityWithTiming(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
     identity: Identity
-    first_seen: Optional[datetime] = None
-    last_seen: Optional[datetime] = None
+    first_seen: datetime | None = None
+    last_seen: datetime | None = None
 
 
 class GTICampaignToSTIXIdentity(BaseMapper):
@@ -48,20 +47,20 @@ class GTICampaignToSTIXIdentity(BaseMapper):
         self.organization = organization
         self.tlp_marking = tlp_marking
 
-    def to_stix(self) -> List[Identity]:
+    def to_stix(self) -> list[Identity]:
         """Convert the GTI campaign targeted industries to STIX Identity objects.
 
         Returns:
-            List[Identity]: The list of STIX Identity objects representing sectors.
+            list[Identity]: The list of STIX Identity objects representing sectors.
 
         """
         return [item.identity for item in self.to_stix_with_timing()]
 
-    def to_stix_with_timing(self) -> List[IdentityWithTiming]:
+    def to_stix_with_timing(self) -> list[IdentityWithTiming]:
         """Convert the GTI campaign targeted industries to IdentityWithTiming objects.
 
         Returns:
-            List[IdentityWithTiming]: The list of IdentityWithTiming objects containing STIX Identity objects and timing metadata.
+            list[IdentityWithTiming]: The list of IdentityWithTiming objects containing STIX Identity objects and timing metadata.
 
         """
         if not hasattr(self.campaign, "attributes") or not self.campaign.attributes:
@@ -71,7 +70,7 @@ class GTICampaignToSTIXIdentity(BaseMapper):
         if not targeted_industries:
             return []
 
-        result: List[IdentityWithTiming] = []
+        result: list[IdentityWithTiming] = []
         processed_industries = set()  # Track to avoid duplicates
 
         for industry_data in targeted_industries:
@@ -127,14 +126,14 @@ class GTICampaignToSTIXIdentity(BaseMapper):
             last_seen=last_seen,
         )
 
-    def _process_industry(self, industry_data: TargetedIndustry) -> Optional[Identity]:
+    def _process_industry(self, industry_data: TargetedIndustry) -> Identity | None:
         """Process a targeted industry entry and convert to a sector Identity.
 
         Args:
             industry_data (TargetedIndustry): The targeted industry data to process.
 
         Returns:
-            Optional[Identity]: The STIX Identity object, or None if no valid industry found.
+                Identity | None: The STIX Identity object, or None if no valid industry found.
 
         """
         # Skip industries without valid names - both industry_group and industry must be empty/whitespace
@@ -150,14 +149,14 @@ class GTICampaignToSTIXIdentity(BaseMapper):
 
     def _process_industry_with_timing(
         self, industry_data: TargetedIndustry
-    ) -> Optional[IdentityWithTiming]:
+    ) -> IdentityWithTiming | None:
         """Process a targeted industry entry and convert to IdentityWithTiming.
 
         Args:
             industry_data (TargetedIndustry): The targeted industry data to process.
 
         Returns:
-            Optional[IdentityWithTiming]: The IdentityWithTiming object, or None if no valid industry found.
+            IdentityWithTiming | None: The IdentityWithTiming object, or None if no valid industry found.
 
         """
         # Skip industries without valid names - both industry_group and industry must be empty/whitespace

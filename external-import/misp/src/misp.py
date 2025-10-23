@@ -233,7 +233,11 @@ class Misp:
                     event.Event, self.config.misp.datetime_attribute
                 )
 
-                if self.config.misp.datetime_attribute == "timestamp":
+                if self.config.misp.datetime_attribute in [
+                    "timestamp",
+                    "publish_timestamp",
+                    "sighting_timestamp",
+                ]:
                     event_datetime = datetime.fromtimestamp(
                         int(event_datetime_value), tz=timezone.utc
                     )
@@ -244,7 +248,7 @@ class Misp:
                 else:
                     # Should never be raised as it would mean that config/env vars are not validated correctly
                     raise ValueError(
-                        "`MISP_DATETIME_ATTRIBUTE` must be either 'timestamp' or 'date'"
+                        "`MISP_DATETIME_ATTRIBUTE` must be either: 'date', 'timestamp', 'publish_timestamp' or 'sighting_timestamp'"
                     )
 
                 # Need to check if datetime is more recent than the previous event since

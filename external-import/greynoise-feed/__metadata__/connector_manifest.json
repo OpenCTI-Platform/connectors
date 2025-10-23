@@ -3,10 +3,12 @@
   "slug": "greynoise-feed",
   "description": "The OpenCTI GreyNoise Feed Connector leverages the GreyNoise API to collect Internet scanner IPs, giving security teams timely awareness of background scanning activity on the public internet. By bringing this feed into your intelligence workflow, analysts can quickly distinguish commodity scanners from higher-risk signals, reduce false positives, and focus on events that truly warrant investigation.\n\nAs an OpenCTI connector, it authenticates to GreyNoise, periodically fetches the feed, and ingests records as IPv4 observables and optional indicators with appropriate labels and metadata. The connector deduplicates and updates entries over time so OpenCTI stays aligned with the latest feed contents, enabling correlation with internal telemetry, tagging, and downstream automation across detections and response.",
   "short_description": "GreyNoise Feed provides threat intelligence by distinguishing between benign internet noise and real threats, reducing false positives. Its integration with OpenCTI enables automatic ingestion of IP threat data, improving threat detection accuracy and efficiency.",
-  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
-  "use_cases" : ["Commercial Threat Intel"],
+  "logo": "external-import/greynoise-feed/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
   "verified": true,
-  "last_verified_date": "",
+  "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 60,
   "support_version": ">= 6.5.1",

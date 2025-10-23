@@ -1,0 +1,21 @@
+{
+  "title": "Google Drive",
+  "slug": "google-drive",
+  "description": "Create reports based on a Google drive folder.\nTo configure the Service Account:\nThose steps with screenshots can be found at the beginning of this blog post.",
+  "short_description": "Create reports based on a Google drive folder.\nTo configure the Service Account:\nThose steps with screenshots can be found at the beginning of this blog post.",
+  "logo": "external-import/google-drive/__metadata__/logo.png",
+  "use_cases": [
+    "Threat Intelligence"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=5.12.21",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/google-drive",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-google-drive",
+  "container_type": "EXTERNAL_IMPORT"
+}

@@ -2,13 +2,13 @@
 
 from abc import ABC
 from pathlib import Path
-from typing import ClassVar, Tuple, Type, cast
+from typing import ClassVar, cast
 
 import yaml
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
 
 SettingsSource = PydanticBaseSettingsSource
-SettingsSources = Tuple[SettingsSource, ...]
+SettingsSources = tuple[SettingsSource, ...]
 
 
 class BaseConfig(ABC, BaseSettings):
@@ -18,8 +18,8 @@ class BaseConfig(ABC, BaseSettings):
 
     @classmethod
     def settings_customise_sources(
-        cls: Type["BaseConfig"],
-        settings_cls: Type[BaseSettings],
+        cls: type["BaseConfig"],
+        settings_cls: type[BaseSettings],
         init_settings: SettingsSource,
         env_settings: SettingsSource,
         dotenv_settings: SettingsSource,

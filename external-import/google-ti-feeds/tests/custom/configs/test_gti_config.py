@@ -1,7 +1,7 @@
 """Module to test the OpenCTI connector GTI configuration loading and instantiation."""
 
 from os import environ as os_environ
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -16,6 +16,7 @@ from connector.src.octi.exceptions.configuration_error import ConfigurationError
 from connector.src.octi.global_config import GlobalConfig
 from pycti import OpenCTIConnectorHelper  # type: ignore
 from pydantic import HttpUrl, SecretStr
+
 from tests.conftest import mock_env_vars
 
 # =====================
@@ -159,7 +160,7 @@ def invalid_gti_report_origins(request) -> dict[str, str]:
 # Scenario: Create a connector with minimum required configuration for GTI
 @pytest.mark.order(0)
 def test_gti_connector_min_required_config(  # type: ignore
-    capfd, min_required_config: Dict[str, str]
+    capfd, min_required_config: dict[str, str]
 ) -> None:
     """Test GTI connector with minimum required configuration."""
     # Given a minimum required configuration for GTI
@@ -175,7 +176,7 @@ def test_gti_connector_min_required_config(  # type: ignore
 # Scenario: Create a connector with all optional configuration for GTI
 @pytest.mark.order(0)
 def test_gti_connector_all_optional_config(  # type: ignore
-    capfd, min_required_config: Dict[str, str], all_optional_config: Dict[str, str]
+    capfd, min_required_config: dict[str, str], all_optional_config: dict[str, str]
 ) -> None:
     """Test GTI connector with all optional configuration."""
     data = {**min_required_config, **all_optional_config}
@@ -190,7 +191,7 @@ def test_gti_connector_all_optional_config(  # type: ignore
 # Scenario: Ensure that all defaulted configuration values are set correctly
 @pytest.mark.order(0)
 def test_gti_connector_all_defaulted_config(  # type: ignore
-    capfd, min_required_config: Dict[str, str], all_defaulted_config: Dict[str, str]
+    capfd, min_required_config: dict[str, str], all_defaulted_config: dict[str, str]
 ) -> None:
     """Test GTI connector with all defaulted configuration."""
     # Given a minimum required configuration for GTI and all defaulted configuration
@@ -206,7 +207,7 @@ def test_gti_connector_all_defaulted_config(  # type: ignore
 # Scenario: Create a connector with valid GTI report types
 @pytest.mark.order(0)
 def test_gti_connector_valid_gti_report_types(  # type: ignore
-    capfd, min_required_config: Dict[str, str], valid_gti_report_types: Dict[str, str]
+    capfd, min_required_config: dict[str, str], valid_gti_report_types: dict[str, str]
 ) -> None:
     """Test GTI connector with valid GTI report types."""
     # Given a minimum required configuration for GTI and valid GTI report types
@@ -221,7 +222,7 @@ def test_gti_connector_valid_gti_report_types(  # type: ignore
 # Scenario: Create a connector with invalid GTI report types
 @pytest.mark.order(0)
 def test_gti_connector_invalid_gti_report_types(  # type: ignore
-    min_required_config: Dict[str, str], invalid_gti_report_types: Dict[str, str]
+    min_required_config: dict[str, str], invalid_gti_report_types: dict[str, str]
 ) -> None:
     """Test GTI connector with invalid GTI report types."""
     # Given a minimum required configuration for GTI and invalid GTI report types
@@ -237,7 +238,7 @@ def test_gti_connector_invalid_gti_report_types(  # type: ignore
 # Scenario: Create a connector with valid GTI report origins
 @pytest.mark.order(0)
 def test_gti_connector_valid_gti_report_origins(  # type: ignore
-    capfd, min_required_config: Dict[str, str], valid_gti_report_origins: Dict[str, str]
+    capfd, min_required_config: dict[str, str], valid_gti_report_origins: dict[str, str]
 ) -> None:
     """Test GTI connector with valid GTI report origins."""
     # Given a minimum required configuration for GTI and valid GTI report origins
@@ -252,7 +253,7 @@ def test_gti_connector_valid_gti_report_origins(  # type: ignore
 # Scenario: Create a connector with invalid GTI report origins
 @pytest.mark.order(0)
 def test_gti_connector_invalid_gti_report_origins(  # type: ignore
-    min_required_config: Dict[str, str], invalid_gti_report_origins: Dict[str, str]
+    min_required_config: dict[str, str], invalid_gti_report_origins: dict[str, str]
 ) -> None:
     """Test GTI connector with invalid GTI report origins."""
     # Given a minimum required configuration for GTI and invalid GTI report origins

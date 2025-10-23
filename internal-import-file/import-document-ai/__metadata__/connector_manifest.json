@@ -1,0 +1,21 @@
+{
+  "title": "Import Document AI",
+  "slug": "import-document-ai",
+  "description": "This connector allows Enterprise Edition Organizations to feed information from documents to OpenCTI, with more capabilities than regular Import Document connector.\nThis connector adds more extraction capabilities : it is possible to extract Malware, Country and Intrusion-Set entities.",
+  "short_description": "This connector allows Enterprise Edition Organizations to feed information from documents to OpenCTI, with more capabilities than regular Import Document connector.\nThis connector adds more extraction capabilities : it is possible to extract Malware, Country and Intrusion-Set entities.",
+  "logo": "internal-import-file/import-document-ai/__metadata__/logo.png",
+  "use_cases": [
+    "Threat Intelligence"
+  ],
+  "verified": true,
+  "last_verified_date": "2025-03-18",
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.6.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-import-file/import-document-ai",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-import-document-ai",
+  "container_type": "INTERNAL_IMPORT_FILE"
+}

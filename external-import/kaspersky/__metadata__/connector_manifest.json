@@ -1,0 +1,21 @@
+{
+  "title": "Kaspersky",
+  "slug": "kaspersky",
+  "description": "The OpenCTI Kaspersky connector can be used to import knowledge from the Kaspersky Threat Intelligence Portal. The connector leverages the Kaspersky Threat Intelligence Portal API to retrieve the intelligence published on the Kaspersky Threat Intelligence Portal, this includes report PDFs, IoCs and YARA rules.\nNote: A license is required to use the Kaspersky Threat Intelligence Portal services.",
+  "short_description": "The OpenCTI Kaspersky connector can be used to import knowledge from the Kaspersky Threat Intelligence Portal. The connector leverages the Kaspersky Threat Intelligence Portal API to retrieve the intelligence published on the Kaspersky Threat Intelligence Portal, this includes report PDFs, IoCs and YARA rules.\nNote: A license is required to use the Kaspersky Threat Intelligence Portal services.",
+  "logo": "external-import/kaspersky/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=5.5.4",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/kaspersky",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-kaspersky",
+  "container_type": "EXTERNAL_IMPORT"
+}
