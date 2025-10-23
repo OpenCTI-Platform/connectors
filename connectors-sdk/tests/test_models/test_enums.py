@@ -25,7 +25,9 @@ OCTI_ENUMS = {
     "ThreatActorTypes",
 }
 
-ENUMS = OCTI_ENUMS | set()
+ENUMS = OCTI_ENUMS | {
+    "RelationshipType",
+}
 
 
 def test_deprecated_warnings() -> None:
