@@ -23,6 +23,7 @@ from connectors_sdk.models.malware import Malware
 from connectors_sdk.models.note import Note
 from connectors_sdk.models.organization import Organization
 from connectors_sdk.models.organization_author import OrganizationAuthor
+from connectors_sdk.models.region import Region
 from connectors_sdk.models.relationship import Relationship
 from connectors_sdk.models.report import Report
 from connectors_sdk.models.sector import Sector
@@ -58,6 +59,7 @@ __all__ = [
     "Note",
     "Organization",
     "OrganizationAuthor",
+    "Region",
     "Relationship",
     "Report",
     "Sector",

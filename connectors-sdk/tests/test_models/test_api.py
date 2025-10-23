@@ -79,6 +79,7 @@ def test_public_models_are_present():
         "Note",
         "Organization",
         "OrganizationAuthor",
+        "Region",
         "Relationship",
         "Report",
         "Sector",
