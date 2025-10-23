@@ -56,6 +56,7 @@ def test_public_models_are_present():
     # Given the feature name
     # Then it should all be present
     models_import = {
+        "AdministrativeArea",
         "AssociatedFile",
         "AttackPattern",
         "BaseAuthorEntity",

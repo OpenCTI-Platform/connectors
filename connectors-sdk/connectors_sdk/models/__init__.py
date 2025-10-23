@@ -1,5 +1,6 @@
 """Offer models."""
 
+from connectors_sdk.models.administrative_area import AdministrativeArea
 from connectors_sdk.models.associated_file import AssociatedFile
 from connectors_sdk.models.attack_pattern import AttackPattern
 from connectors_sdk.models.base_author_entity import BaseAuthorEntity
@@ -41,6 +42,7 @@ __all__ = [
     "BaseIdentifiedEntity",
     "BaseObservableEntity",
     # Models flat list
+    "AdministrativeArea",
     "AssociatedFile",
     "AttackPattern",
     "City",
