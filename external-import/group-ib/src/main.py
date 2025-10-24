@@ -119,7 +119,7 @@ class CustomConnector(ExternalImportConnector):
         report_adapter = DataToSTIXAdapter(
             mitre_mapper=mitre_mapper,
             collection=collection,
-            tlp_color=json_evaluation_obj.get("tlp", "white"),
+            tlp_color=json_evaluation_obj.get("tlp"),
             helper=self.helper,
             is_ioc=True,
         )
