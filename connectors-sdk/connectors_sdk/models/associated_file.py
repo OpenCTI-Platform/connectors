@@ -101,9 +101,7 @@ class AssociatedFile(BaseObject):
             ),
             mime_type=self.mime_type,
             object_marking_refs=(
-                [marking.id for marking in self.markings or []]
-                if self.markings
-                else None
+                [marking.id for marking in self.markings] if self.markings else None
             ),
             version=self.version,
         )

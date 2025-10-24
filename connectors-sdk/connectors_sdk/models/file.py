@@ -96,8 +96,6 @@ class File(BaseObservableEntity):
             ctime=self.ctime,
             mtime=self.mtime,
             atime=self.atime,
-            object_marking_refs=[marking.id for marking in self.markings or []],
-            allow_custom=True,
             x_opencti_additional_names=self.additional_names,
-            **self._custom_properties_to_stix(),
+            **self._common_stix2_properties()
         )

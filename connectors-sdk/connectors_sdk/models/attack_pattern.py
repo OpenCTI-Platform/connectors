@@ -63,15 +63,10 @@ class AttackPattern(BaseIdentifiedEntity):
                 kill_chain_phase.to_stix2_object()
                 for kill_chain_phase in self.kill_chain_phases or []
             ],
-            created_by_ref=self.author.id if self.author else None,
-            object_marking_refs=[marking.id for marking in self.markings or []],
-            external_references=[
-                external_reference.to_stix2_object()
-                for external_reference in self.external_references or []
-            ],
             allow_custom=True,
             x_mitre_id=self.mitre_id,
             x_mitre_detection=self.mitre_detection,
             x_mitre_platforms=self.mitre_platforms,
             x_mitre_permissions_required=self.mitre_required_permissions,
+            **self._common_stix2_properties()
         )

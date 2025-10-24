@@ -56,13 +56,8 @@ class Individual(BaseIdentifiedEntity):
             name=self.name,
             description=self.description,
             contact_information=self.contact_information,
-            external_references=[
-                external_reference.to_stix2_object()
-                for external_reference in self.external_references or []
-            ],
-            object_marking_refs=[marking.id for marking in self.markings or []],
-            created_by_ref=self.author.id if self.author else None,
             allow_custom=True,
             x_opencti_reliability=self.reliability,
             x_opencti_aliases=self.aliases,
+            **self._common_stix2_properties()
         )

@@ -38,4 +38,5 @@ class Country(BaseIdentifiedEntity):
             description=self.description,
             allow_custom=True,
             x_opencti_location_type=location_type,
+            **self._common_stix2_properties()
         )

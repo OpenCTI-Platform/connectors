@@ -80,13 +80,8 @@ class Report(BaseIdentifiedEntity):
             report_types=self.report_types,
             labels=self.labels,
             object_refs=[obj.id for obj in self.objects or []],
-            created_by_ref=self.author.id if self.author else None,
-            external_references=[
-                external_reference.to_stix2_object()
-                for external_reference in self.external_references or []
-            ],
-            object_marking_refs=[marking.id for marking in self.markings or []],
             allow_custom=True,
             x_opencti_reliability=self.reliability,
             x_opencti_files=[file.to_stix2_object() for file in self.files or []],
+            **self._common_stix2_properties(),
         )

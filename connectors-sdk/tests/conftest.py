@@ -18,7 +18,7 @@ from connectors_sdk.models import (
 
 
 @pytest.fixture
-def fake_valid_organization_author():
+def fake_valid_organization_author() -> OrganizationAuthor:
     """Fixture to create a fake valid OrganizationAuthor."""
     return OrganizationAuthor(name="Example Corp")
 

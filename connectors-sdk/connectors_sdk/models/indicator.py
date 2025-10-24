@@ -143,12 +143,6 @@ class Indicator(BaseIdentifiedEntity):
                 kill_chain_phase.to_stix2_object()
                 for kill_chain_phase in self.kill_chain_phases or []
             ],
-            external_references=[
-                external_reference.to_stix2_object()
-                for external_reference in self.external_references or []
-            ],
-            created_by_ref=self.author.id if self.author else None,
-            object_marking_refs=[marking.id for marking in self.markings or []],
             allow_custom=True,
             x_opencti_score=self.score,
             x_mitre_platforms=self.platforms,
@@ -157,4 +151,5 @@ class Indicator(BaseIdentifiedEntity):
             x_opencti_files=[
                 file.to_stix2_object() for file in self.associated_files or []
             ],
+            **self._common_stix2_properties()
         )

@@ -55,9 +55,5 @@ class Relationship(BaseIdentifiedEntity):
             description=self.description,
             start_time=self.start_time,
             stop_time=self.stop_time,
-            created_by_ref=self.author.id if self.author else None,
-            object_marking_refs=[marking.id for marking in self.markings or []],
-            external_references=[
-                ref.to_stix2_object() for ref in self.external_references or []
-            ],
+            **self._common_stix2_properties()
         )

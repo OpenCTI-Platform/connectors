@@ -77,3 +77,22 @@ def test_associated_file_should_convert_to_stix2_object():
     # Then the STIX-like object should have the correct properties
     assert isinstance(stix_object, AssociatedFileStix)
     assert stix_object["name"] == "example_file.txt"
+
+
+def test_associated_file_to_stix2_object() -> None:
+    """Test the to_stix2_object method of AssociatedFile."""
+    # Given an AssociatedFile instance with all properties
+    associated_file = AssociatedFile(
+        name="example_file.txt",
+        description="A sample file",
+        content=b"Sample content",
+        mime_type="text/plain",
+        version="1.0",
+    )
+    assert associated_file.to_stix2_object() == AssociatedFileStix(
+        name="example_file.txt",
+        description="A sample file",
+        data="U2FtcGxlIGNvbnRlbnQ=\n",  # Base64 encoded content
+        mime_type="text/plain",
+        version="1.0",
+    )
