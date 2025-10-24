@@ -6,7 +6,7 @@ import inspect
 import connectors_sdk.models as models
 import connectors_sdk.models.octi as octi
 
-MODELS = [
+MODELS_OCTI = [  # Deprecated models from models.octi
     "AssociatedFile",
     "AttackPattern",
     "BaseEntity",
@@ -35,7 +35,12 @@ MODELS = [
     "URL",
     "Vulnerability",
 ]
-FEATURE_NAMES = MODELS + [
+
+MODELS = MODELS_OCTI + [
+    "BaseAuthorEntity",
+]
+
+FEATURE_NAMES = [
     "related_to",
     "based_on",
     "derived_from",
@@ -65,14 +70,14 @@ def test_no_public_class_are_abstract():
         ), f"{feature_name} should not be exposed as abstract class"
 
 
-def test_public_features_are_present():
+def test_deprecated_imports():
     """Test that features are not removed by mistake."""
     # Given the feature name
     # Then it should all be present
-    missing = set(FEATURE_NAMES) - set(octi.__all__)
-    extra = set(octi.__all__) - set(FEATURE_NAMES)
-    assert not missing, f"Missing features in octi model public api: {missing}"
-    assert not extra, f"Unexpected features in octi model public api: {extra}"
+    missing = set(MODELS_OCTI + FEATURE_NAMES) - set(octi.__all__)
+    extra = set(octi.__all__) - set(MODELS + FEATURE_NAMES)
+    assert not missing, f"Missing features in models model public api: {missing}"
+    assert not extra, f"Unexpected features in models model public api: {extra}"
 
 
 def test_public_models_are_present():

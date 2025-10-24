@@ -1,11 +1,11 @@
 """OrganizationAuthor."""
 
-from connectors_sdk.models._author import Author
+from connectors_sdk.models.base_author_entity import BaseAuthorEntity
 from connectors_sdk.models.organization import Organization
 from stix2.v21 import Identity as Stix2Identity
 
 
-class OrganizationAuthor(Author, Organization):
+class OrganizationAuthor(BaseAuthorEntity, Organization):
     """Represent an organization author.
 
     This class extends the Organization class to include author-specific fields that will be

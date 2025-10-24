@@ -3,8 +3,8 @@ from typing import OrderedDict
 import pytest
 import stix2
 import stix2.properties
-from connectors_sdk.models._author import Author
 from connectors_sdk.models._base_identified_entity import _BaseIdentifiedEntity
+from connectors_sdk.models.base_author_entity import BaseAuthorEntity
 from pydantic import Field
 
 
@@ -12,7 +12,7 @@ from pydantic import Field
 def implemented_author():
     """Fixture to provide an implemented Author."""
 
-    class ImplementedAuthor(Author):
+    class ImplementedAuthor(BaseAuthorEntity):
         """A concrete implementation of Author for testing."""
 
         name: str
