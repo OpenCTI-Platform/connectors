@@ -1,11 +1,11 @@
 """DomainName."""
 
-from connectors_sdk.models._observable import Observable
+from connectors_sdk.models.base_observable_entity import BaseObservableEntity
 from pydantic import Field
 from stix2.v21 import DomainName as Stix2DomainName
 
 
-class DomainName(Observable):
+class DomainName(BaseObservableEntity):
     """Define a domain name observable on OpenCTI.
 
     Notes:

@@ -9,7 +9,7 @@ from pydantic import Field
 from stix2.v21 import _Observable as _Stix2Observable
 
 
-class Observable(BaseIdentifiedEntity, ABC):
+class BaseObservableEntity(BaseIdentifiedEntity, ABC):
     """Base class for OpenCTI Observables.
 
     This class must be subclassed to create specific observable types.

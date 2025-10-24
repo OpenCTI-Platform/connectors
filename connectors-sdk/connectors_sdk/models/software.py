@@ -1,11 +1,11 @@
 """Software."""
 
-from connectors_sdk.models._observable import Observable
+from connectors_sdk.models.base_observable_entity import BaseObservableEntity
 from pydantic import Field
 from stix2.v21 import Software as Stix2Software
 
 
-class Software(Observable):
+class Software(BaseObservableEntity):
     """Represents a software observable."""
 
     name: str = Field(

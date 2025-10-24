@@ -2,12 +2,12 @@
 
 import ipaddress
 
-from connectors_sdk.models._observable import Observable
+from connectors_sdk.models.base_observable_entity import BaseObservableEntity
 from pydantic import Field, field_validator
 from stix2.v21 import IPv4Address as Stix2IPv4Address
 
 
-class IPV4Address(Observable):
+class IPV4Address(BaseObservableEntity):
     """Define an IP V4 address observable on OpenCTI.
 
     Examples:

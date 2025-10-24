@@ -1,7 +1,7 @@
 import pytest
 from connectors_sdk.models import IPV4Address
-from connectors_sdk.models._observable import Observable
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
+from connectors_sdk.models.base_observable_entity import BaseObservableEntity
 from stix2.v21 import IPv4Address as Stix2IPv4Address
 
 
@@ -10,14 +10,14 @@ def test_observable_is_a_base_identified_entity():
     # Given the Observable class
     # When checking iits type
     # Then it should be a subclass of BaseIdentifiedEntity
-    assert issubclass(Observable, BaseIdentifiedEntity)
+    assert issubclass(BaseObservableEntity, BaseIdentifiedEntity)
 
 
 def test_observable_has_required_fields():
     """Test that Observable has the default fields."""
 
     # Given an Observable implementation
-    class DummyObservable(Observable):
+    class DummyObservable(BaseObservableEntity):
         """Dummy Observable for testing."""
 
         def to_stix2_object(self):
@@ -46,4 +46,4 @@ def test_is_observable_subtype(observable_type):
     # Given an observable type
     # When checking its type
     # Then it should be a subclass of Observable
-    assert issubclass(observable_type, Observable)
+    assert issubclass(observable_type, BaseObservableEntity)

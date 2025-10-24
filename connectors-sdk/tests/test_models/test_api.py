@@ -62,6 +62,7 @@ def test_public_models_are_present():
         "BaseObject",
         "BaseIdentifiedEntity",
         "BaseIdentifiedObject",
+        "BaseObservableEntity",
         "City",
         "Country",
         "DomainName",
