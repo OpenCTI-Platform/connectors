@@ -9,9 +9,10 @@ from pathlib import Path
 
 import pytest
 
-from connectors_sdk.models import OrganizationAuthor, ExternalReference
-from connectors_sdk.models.octi import (
+from connectors_sdk.models import (
     AssociatedFile,
+    ExternalReference,
+    OrganizationAuthor,
     TLPMarking,
 )
 

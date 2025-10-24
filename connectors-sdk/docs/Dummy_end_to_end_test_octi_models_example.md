@@ -10,19 +10,18 @@ import traceback
 from typing import TYPE_CHECKING
 
 import pycti
-from connectors_sdk.models import OrganizationAuthor
-from connectors_sdk.models.octi import (
+from connectors_sdk.models import (
     ExternalReference,
     Indicator,
     IPV4Address,
     Organization,
+    OrganizationAuthor,
     TLPMarking,
-    based_on,
-    related_to,
 )
+from connectors_sdk.models.octi import based_on, related_to
 
 if TYPE_CHECKING:
-    from connectors_sdk.models.octi import BaseEntity
+    from connectors_sdk.models import BaseEntity
 
 
 class ConnectorExample:
