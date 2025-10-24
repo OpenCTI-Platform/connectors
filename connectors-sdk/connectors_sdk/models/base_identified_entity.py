@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from abc import ABC
+
 from connectors_sdk.models._author import Author
 from connectors_sdk.models._base_identified_entity import _BaseIdentifiedEntity
 from connectors_sdk.models.external_reference import ExternalReference
@@ -12,7 +14,7 @@ from pydantic import (
 )
 
 
-class BaseIdentifiedEntity(_BaseIdentifiedEntity):
+class BaseIdentifiedEntity(_BaseIdentifiedEntity, ABC):
     """Base class that can be identified thanks to a stix-like id."""
 
     _stix2_id: str | None = PrivateAttr(default=None)

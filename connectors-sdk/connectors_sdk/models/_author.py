@@ -6,7 +6,7 @@ import stix2.properties
 from connectors_sdk.models._base_identified_entity import _BaseIdentifiedEntity
 
 
-class Author(ABC, _BaseIdentifiedEntity):
+class Author(_BaseIdentifiedEntity, ABC):
     """Represent an author.
 
     Author is an OpenCTI concept, a stix-like identity considered as the creator of a

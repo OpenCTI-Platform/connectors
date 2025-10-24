@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import warnings
+from abc import ABC
 from typing import Any
 
 from connectors_sdk.models.base_entity import BaseEntity
@@ -13,7 +14,7 @@ from pydantic import (
 )
 
 
-class _BaseIdentifiedEntity(BaseEntity):
+class _BaseIdentifiedEntity(BaseEntity, ABC):
     """Base class that can be identified thanks to a stix-like id."""
 
     _stix2_id: str | None = PrivateAttr(default=None)
