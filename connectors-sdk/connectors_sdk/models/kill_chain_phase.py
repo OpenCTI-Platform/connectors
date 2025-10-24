@@ -1,11 +1,11 @@
 """KillChainPhase."""
 
 import stix2
-from connectors_sdk.models.base_entity import BaseEntity
+from connectors_sdk.models.base_object import BaseObject
 from pydantic import Field
 
 
-class KillChainPhase(BaseEntity):
+class KillChainPhase(BaseObject):
     """Represent a kill chain phase.
 
     Examples:

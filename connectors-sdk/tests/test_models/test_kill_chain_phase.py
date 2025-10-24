@@ -1,13 +1,13 @@
-from connectors_sdk.models.base_entity import BaseEntity
+from connectors_sdk.models.base_object import BaseObject
 from connectors_sdk.models.kill_chain_phase import KillChainPhase
 
 
 def test_kill_chain_phase_is_a_base_entity():
-    """Test that KillChainPhase is a BaseEntity."""
+    """Test that KillChainPhase is a BaseObject."""
     # Given the KillChainPhase class
     # When checking its type
-    # Then it should be a subclass of BaseEntity
-    assert issubclass(KillChainPhase, BaseEntity)
+    # Then it should be a subclass of BaseObject
+    assert issubclass(KillChainPhase, BaseObject)
 
 
 def test_kill_chain_phase_has_required_fields():

@@ -5,26 +5,26 @@ from typing import OrderedDict
 import pytest
 import stix2
 import stix2.properties
-from connectors_sdk.models.base_entity import BaseEntity
+from connectors_sdk.models.base_object import BaseObject
 from pydantic import Field, ValidationError
 
 
 def test_base_entity_should_not_implement_to_stix2_object_method():
-    """Test that BaseEntity does not implement to_stix2_object method."""
+    """Test that BaseObject does not implement to_stix2_object method."""
     # Given Base Entity definition
-    # When trying to instantiate BaseEntity
+    # When trying to instantiate BaseObject
     # Then it should raise an TypeError indicating that to_stix2_object is not implemented
     with pytest.raises(TypeError) as error:
-        BaseEntity().to_stix2_object()
+        BaseObject().to_stix2_object()
         assert "to_stix2_object" in str(error)
 
 
 @pytest.fixture
 def implemented_base_entity():
-    """Fixture to provide an implemented BaseEntity."""
+    """Fixture to provide an implemented BaseObject."""
 
-    class ImplementedBaseEntity(BaseEntity):
-        """A concrete implementation of BaseEntity for testing."""
+    class ImplementedBaseEntity(BaseObject):
+        """A concrete implementation of BaseObject for testing."""
 
         toto: str
         titi: int | None = Field(None, ge=0, le=100)
@@ -53,8 +53,8 @@ def implemented_base_entity():
 def test_base_entity_should_have_properties_set_and_properties_unset_attributes(
     implemented_base_entity, set_properties, unset_properties
 ):
-    """Test that BaseEntity has the correct properties set and unset."""
-    # Given an implemented BaseEntity
+    """Test that BaseObject has the correct properties set and unset."""
+    # Given an implemented BaseObject
     entity_class = implemented_base_entity
     # When creating an instance of the entity with specific properties
     entity_instance = entity_class(**set_properties)
@@ -66,8 +66,8 @@ def test_base_entity_should_have_properties_set_and_properties_unset_attributes(
 def test_base_entity_should_update_properties_set_and_properties_unset(
     implemented_base_entity,
 ):
-    """Test that BaseEntity update set properties."""
-    # Given an implemented BaseEntity
+    """Test that BaseObject update set properties."""
+    # Given an implemented BaseObject
     entity_class = implemented_base_entity
     # When creating an instance of the entity
     entity_instance = entity_class(toto="toto")
@@ -97,8 +97,8 @@ def test_base_entity_should_update_properties_set_and_properties_unset(
 def test_base_entity_should_not_allow_invalid_property(
     implemented_base_entity, properties
 ):
-    """Test that BaseEntity does not allow invalid properties."""
-    # Given an implemented BaseEntity
+    """Test that BaseObject does not allow invalid properties."""
+    # Given an implemented BaseObject
     entity_class = implemented_base_entity
     # When trying to set an invalid property
     with pytest.raises(ValidationError):
@@ -108,8 +108,8 @@ def test_base_entity_should_not_allow_invalid_property(
 def test_base_entity_should_revalidate_model_when_an_attribute_is_set(
     implemented_base_entity,
 ):
-    """Test that BaseEntity revalidates the model when an attribute is set."""
-    # Given an implemented BaseEntity
+    """Test that BaseObject revalidates the model when an attribute is set."""
+    # Given an implemented BaseObject
     entity_class = implemented_base_entity
     # When creating an instance of the entity
     entity_instance = entity_class(toto="toto", titi=1)
@@ -121,8 +121,8 @@ def test_base_entity_should_revalidate_model_when_an_attribute_is_set(
 
 
 def test_base_entity_can_be_hashed(implemented_base_entity):
-    """Test that BaseEntity can be hashed."""
-    # Given an implemented BaseEntity
+    """Test that BaseObject can be hashed."""
+    # Given an implemented BaseObject
     entity_class = implemented_base_entity
     # When creating an instance of the entity
     entity_instance = entity_class(toto="toto", titi=1)
@@ -131,8 +131,8 @@ def test_base_entity_can_be_hashed(implemented_base_entity):
 
 
 def test_base_entity_can_be_compared(implemented_base_entity):
-    """Test that BaseEntity can be compared."""
-    # Given two instances of the implemented BaseEntity
+    """Test that BaseObject can be compared."""
+    # Given two instances of the implemented BaseObject
     entity_class = implemented_base_entity
     entity_instance1 = entity_class(toto="toto", titi=1)
     entity_instance2 = entity_class(toto="toto", titi=1)
@@ -142,8 +142,8 @@ def test_base_entity_can_be_compared(implemented_base_entity):
 
 
 def test_base_entity_cannot_be_compared_with_different_class(implemented_base_entity):
-    """Test that BaseEntity cannot be compared with a different class."""
-    # Given an instance of the implemented BaseEntity
+    """Test that BaseObject cannot be compared with a different class."""
+    # Given an instance of the implemented BaseObject
     entity_class = implemented_base_entity
     entity_instance = entity_class(toto="toto", titi=1)
 

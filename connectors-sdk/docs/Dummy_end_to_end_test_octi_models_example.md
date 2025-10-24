@@ -21,7 +21,7 @@ from connectors_sdk.models import (
 from connectors_sdk.models.octi import based_on, related_to
 
 if TYPE_CHECKING:
-    from connectors_sdk.models import BaseEntity
+    from connectors_sdk.models import BaseObject
 
 
 class ConnectorExample:
@@ -48,7 +48,7 @@ class ConnectorExample:
     def work(self) -> None:
         """Define the connector work."""
         try:
-            octi_models: list[BaseEntity] = []  # results holder
+            octi_models: list[BaseObject] = []  # results holder
 
             # TLP Marking
             tlp_marking = TLPMarking(level="amber+strict")

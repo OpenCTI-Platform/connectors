@@ -1,4 +1,4 @@
-"""BaseEntity."""
+"""BaseObject."""
 
 from abc import ABC, abstractmethod
 from typing import Any
@@ -7,7 +7,7 @@ import stix2.properties
 from pydantic import BaseModel, ConfigDict
 
 
-class BaseEntity(BaseModel, ABC):
+class BaseObject(BaseModel, ABC):
     """Represent Base Entity for OpenCTI models."""
 
     model_config = ConfigDict(

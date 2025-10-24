@@ -4,7 +4,7 @@ import codecs
 from typing import OrderedDict
 
 import stix2.properties
-from connectors_sdk.models.base_entity import BaseEntity
+from connectors_sdk.models.base_object import BaseObject
 from connectors_sdk.models.tlp_marking import TLPMarking
 from pydantic import Field
 
@@ -46,7 +46,7 @@ class AssociatedFileStix(stix2.v21._STIXBase21):  # type: ignore[misc]
     )
 
 
-class AssociatedFile(BaseEntity):
+class AssociatedFile(BaseObject):
     """Represents a SDO's or SCO's corresponding file, such as a Report PDF or an Artifact binary.
 
     Examples:

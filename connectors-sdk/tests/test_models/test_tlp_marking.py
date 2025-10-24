@@ -3,17 +3,17 @@
 import pytest
 import stix2
 import stix2.properties
-from connectors_sdk.models.base_entity import BaseEntity
+from connectors_sdk.models.base_object import BaseObject
 from connectors_sdk.models.tlp_marking import TLPMarking
 from pydantic import ValidationError
 
 
 def test_tlp_marking_should_be_a_base_entity():
-    """Test that TLPMarking is a BaseEntity."""
+    """Test that TLPMarking is a BaseObject."""
     # Given the TLPMarking class
     # When checking the class inheritance
-    # Then it should be a subclass of BaseEntity
-    assert issubclass(TLPMarking, BaseEntity)
+    # Then it should be a subclass of BaseObject
+    assert issubclass(TLPMarking, BaseObject)
 
 
 @pytest.mark.parametrize(

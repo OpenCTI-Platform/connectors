@@ -2,7 +2,7 @@ import pytest
 import stix2
 import stix2.properties
 from connectors_sdk.models.associated_file import AssociatedFile, AssociatedFileStix
-from connectors_sdk.models.base_entity import BaseEntity
+from connectors_sdk.models.base_object import BaseObject
 from connectors_sdk.models.tlp_marking import TLPMarking
 
 
@@ -32,11 +32,11 @@ def test_associated_file_stix_should_have_required_properties():
 
 
 def test_associated_file_should_be_a_base_entity():
-    """Test that AssociatedFile is a BaseEntity."""
+    """Test that AssociatedFile is a BaseObject."""
     # Given the AssociatedFile class
     # When checking the class inheritance
-    # Then it should be a subclass of BaseEntity
-    assert issubclass(AssociatedFile, BaseEntity)
+    # Then it should be a subclass of BaseObject
+    assert issubclass(AssociatedFile, BaseObject)
 
 
 @pytest.mark.parametrize(

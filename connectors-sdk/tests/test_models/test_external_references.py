@@ -1,16 +1,16 @@
 import pytest
 import stix2
 import stix2.properties
-from connectors_sdk.models.base_entity import BaseEntity
+from connectors_sdk.models.base_object import BaseObject
 from connectors_sdk.models.external_reference import ExternalReference
 
 
 def test_external_reference_should_be_a_base_entity():
-    """Test that ExternalReference is a BaseEntity."""
+    """Test that ExternalReference is a BaseObject."""
     # Given the ExternalReference class
     # When checking the class inheritance
-    # Then it should be a subclass of BaseEntity
-    assert issubclass(ExternalReference, BaseEntity)
+    # Then it should be a subclass of BaseObject
+    assert issubclass(ExternalReference, BaseObject)
 
 
 @pytest.mark.parametrize(

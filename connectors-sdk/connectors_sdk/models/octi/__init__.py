@@ -6,8 +6,10 @@ from connectors_sdk.models import (
     URL,
     AssociatedFile,
     AttackPattern,
-    BaseEntity,
     BaseIdentifiedEntity,
+)
+from connectors_sdk.models import BaseObject as BaseEntity
+from connectors_sdk.models import (
     City,
     Country,
     DomainName,

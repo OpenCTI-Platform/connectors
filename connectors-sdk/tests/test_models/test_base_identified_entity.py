@@ -3,8 +3,8 @@ from typing import OrderedDict
 import pytest
 import stix2
 import stix2.properties
-from connectors_sdk.models.base_entity import BaseEntity
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
+from connectors_sdk.models.base_object import BaseObject
 from pydantic import Field, ValidationError
 
 
@@ -48,12 +48,12 @@ def implemented_base_identified_entity():
 def test_base_identified_entity_should_be_a_base_entity(
     implemented_base_identified_entity,
 ):
-    """Test that BaseIdentifiedEntity is a BaseEntity."""
+    """Test that BaseIdentifiedEntity is a BaseObject."""
     # Given an implemented BaseIdentifiedEntity
     entity_class = implemented_base_identified_entity
     # When checking the class inheritance
-    # Then it should be a subclass of BaseEntity
-    assert issubclass(entity_class, BaseEntity)
+    # Then it should be a subclass of BaseObject
+    assert issubclass(entity_class, BaseObject)
 
 
 def test_base_identified_entity_should_have_id(implemented_base_identified_entity):

@@ -6,7 +6,7 @@ import warnings
 from abc import ABC
 from typing import Any
 
-from connectors_sdk.models.base_entity import BaseEntity
+from connectors_sdk.models.base_object import BaseObject
 from pydantic import (
     PrivateAttr,
     computed_field,
@@ -14,7 +14,7 @@ from pydantic import (
 )
 
 
-class _BaseIdentifiedEntity(BaseEntity, ABC):
+class _BaseIdentifiedEntity(BaseObject, ABC):
     """Base class that can be identified thanks to a stix-like id."""
 
     _stix2_id: str | None = PrivateAttr(default=None)

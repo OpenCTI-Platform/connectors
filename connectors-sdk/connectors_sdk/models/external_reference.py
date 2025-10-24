@@ -1,11 +1,11 @@
 """ExternalReference."""
 
 import stix2
-from connectors_sdk.models.base_entity import BaseEntity
+from connectors_sdk.models.base_object import BaseObject
 from pydantic import Field
 
 
-class ExternalReference(BaseEntity):
+class ExternalReference(BaseObject):
     """Represents an external reference to a source of information."""
 
     source_name: str = Field(
