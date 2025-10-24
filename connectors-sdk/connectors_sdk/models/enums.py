@@ -29,11 +29,11 @@ __all__ = [
 ]
 
 
-class PermissiveEnum(StrEnum):
+class _PermissiveEnum(StrEnum):
     """Enum that allows for missing values."""
 
     @classmethod
-    def _missing_(cls: type[PermissiveEnum], value: object) -> PermissiveEnum:
+    def _missing_(cls: type[_PermissiveEnum], value: object) -> _PermissiveEnum:
         _value = str(value)
         warnings.warn(
             f"Value '{_value}' is out of {cls.__name__} defined values.",
@@ -46,7 +46,7 @@ class PermissiveEnum(StrEnum):
         return obj
 
 
-class AttackMotivation(PermissiveEnum):
+class AttackMotivation(_PermissiveEnum):
     """Attack Motivation Open Vocabulary.
 
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_dmb1khqsn650
@@ -64,7 +64,7 @@ class AttackMotivation(PermissiveEnum):
     UNPREDICTABLE = "unpredictable"
 
 
-class AttackResourceLevel(PermissiveEnum):
+class AttackResourceLevel(_PermissiveEnum):
     """Attack Resource Level Open Vocabulary.
 
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_moarppphq8vq
@@ -91,7 +91,7 @@ class CvssSeverity(StrEnum):
     UNKNOWN = "Unknown"
 
 
-class HashAlgorithm(PermissiveEnum):
+class HashAlgorithm(_PermissiveEnum):
     """Hash Algorithm Open Vocabulary.
 
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_tumklw3o2gyz
@@ -107,7 +107,7 @@ class HashAlgorithm(PermissiveEnum):
     TLSH = "TLSH"
 
 
-class ImplementationLanguage(PermissiveEnum):
+class ImplementationLanguage(_PermissiveEnum):
     """Implementation Language Open Vocabulary.
 
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_1s3o9ou3pbq
@@ -136,7 +136,7 @@ class ImplementationLanguage(PermissiveEnum):
     X86_64 = "x86-64"
 
 
-class IndustrySector(PermissiveEnum):
+class IndustrySector(_PermissiveEnum):
     """Industry Sector Open Vocabulary.
 
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_oogrswk3onck
@@ -197,7 +197,7 @@ class LocationType(StrEnum):
     POSITION = "Position"
 
 
-class MalwareCapability(PermissiveEnum):
+class MalwareCapability(_PermissiveEnum):
     """Malware Capability Open Vocabulary.
 
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_2b6es5hl7gmc
@@ -242,7 +242,7 @@ class MalwareCapability(PermissiveEnum):
     VIOLATES_SYSTEM_OPERATIONAL_INTEGRITY = "violates-system-operational-integrity"
 
 
-class MalwareType(PermissiveEnum):
+class MalwareType(_PermissiveEnum):
     """Malware Type Open Vocabulary.
 
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_oxlc4df65spl
@@ -272,7 +272,7 @@ class MalwareType(PermissiveEnum):
     WORM = "worm"
 
 
-class NoteType(PermissiveEnum):
+class NoteType(_PermissiveEnum):
     """Note Type Enum.
 
     See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L739
@@ -285,7 +285,7 @@ class NoteType(PermissiveEnum):
     EXTERNAL = "external"
 
 
-class OrganizationType(PermissiveEnum):
+class OrganizationType(_PermissiveEnum):
     """Organization Type Open Vocabulary.
 
     See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L770
@@ -298,7 +298,7 @@ class OrganizationType(PermissiveEnum):
     OTHER = "other"
 
 
-class Permission(PermissiveEnum):
+class Permission(_PermissiveEnum):
     """Permission Open Vocabulary.
 
     See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L793
@@ -308,7 +308,7 @@ class Permission(PermissiveEnum):
     ADMINISTRATOR = "administrator"
 
 
-class Platform(PermissiveEnum):
+class Platform(_PermissiveEnum):
     """Platform Open Vocabulary.
 
     See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L797
@@ -320,7 +320,7 @@ class Platform(PermissiveEnum):
     ANDROID = "android"
 
 
-class ProcessorArchitecture(PermissiveEnum):
+class ProcessorArchitecture(_PermissiveEnum):
     """Processor Architecture Open Vocabulary.
 
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_iup9ob79qwei
@@ -336,7 +336,7 @@ class ProcessorArchitecture(PermissiveEnum):
     X86_64 = "x86-64"
 
 
-class Reliability(PermissiveEnum):
+class Reliability(_PermissiveEnum):
     """Reliability Open Vocabulary.
 
     See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L866
@@ -350,7 +350,7 @@ class Reliability(PermissiveEnum):
     F = "F - Reliability cannot be judged"
 
 
-class ReportType(PermissiveEnum):
+class ReportType(_PermissiveEnum):
     """Report Type Open Vocabulary.
 
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_9lfdvxnyofxw
@@ -366,7 +366,7 @@ class ReportType(PermissiveEnum):
     THREAT_REPORT = "threat-report"
 
 
-class ThreatActorRole(PermissiveEnum):
+class ThreatActorRole(_PermissiveEnum):
     """Threat Actor Role Open Vocabulary.
 
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_u6befh8d18r
@@ -381,7 +381,7 @@ class ThreatActorRole(PermissiveEnum):
     SPONSOR = "sponsor"
 
 
-class ThreatActorSophistication(PermissiveEnum):
+class ThreatActorSophistication(_PermissiveEnum):
     """Threat Actor Sophistication Open Vocabulary.
 
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_8jm676xbnggg
@@ -396,7 +396,7 @@ class ThreatActorSophistication(PermissiveEnum):
     STRATEGIC = "strategic"
 
 
-class ThreatActorTypes(PermissiveEnum):
+class ThreatActorTypes(_PermissiveEnum):
     """Threat Actor Types Open Vocabulary.
 
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_tqbl8z36yoir
