@@ -1,4 +1,4 @@
-"""BaseIdentifiedEntity."""
+"""BaseIdentifiedObject."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from pydantic import (
 )
 
 
-class _BaseIdentifiedEntity(BaseObject, ABC):
+class BaseIdentifiedObject(BaseObject, ABC):
     """Base class that can be identified thanks to a stix-like id."""
 
     _stix2_id: str | None = PrivateAttr(default=None)
@@ -55,7 +55,7 @@ class _BaseIdentifiedEntity(BaseObject, ABC):
 
     # https://github.com/pydantic/pydantic/discussions/10098
     @model_validator(mode="after")
-    def _check_id(self) -> _BaseIdentifiedEntity:
+    def _check_id(self) -> BaseIdentifiedObject:
         """Ensure the id is correctly set and alert if it has changed.
 
         Raises:
@@ -63,7 +63,7 @@ class _BaseIdentifiedEntity(BaseObject, ABC):
             UserWarning: If the id has changed since the last time it was set.
 
         Examples:
-            >>> class Toto(_BaseIdentifiedEntity):
+            >>> class Toto(BaseIdentifiedObject):
             ...     # Example class that changes its id when value is changed.
             ...     titi: str
             ...     def to_stix2_object(self):

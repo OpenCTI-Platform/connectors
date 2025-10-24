@@ -4,6 +4,7 @@ from connectors_sdk.models.associated_file import AssociatedFile
 from connectors_sdk.models.attack_pattern import AttackPattern
 from connectors_sdk.models.base_author_entity import BaseAuthorEntity
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
+from connectors_sdk.models.base_identified_object import BaseIdentifiedObject
 from connectors_sdk.models.base_object import BaseObject
 from connectors_sdk.models.city import City
 from connectors_sdk.models.country import Country
@@ -31,6 +32,7 @@ from connectors_sdk.models.vulnerability import Vulnerability
 
 __all__ = [
     # Typing purpose
+    "BaseIdentifiedObject",
     "BaseObject",
     "BaseAuthorEntity",
     "BaseIdentifiedEntity",

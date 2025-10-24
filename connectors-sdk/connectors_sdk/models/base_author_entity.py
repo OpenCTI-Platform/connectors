@@ -3,10 +3,10 @@
 from abc import ABC, abstractmethod
 
 import stix2.properties
-from connectors_sdk.models._base_identified_entity import _BaseIdentifiedEntity
+from connectors_sdk.models.base_identified_object import BaseIdentifiedObject
 
 
-class BaseAuthorEntity(_BaseIdentifiedEntity, ABC):
+class BaseAuthorEntity(BaseIdentifiedObject, ABC):
     """Represent an author.
 
     BaseAuthorEntity is an OpenCTI concept, a stix-like identity considered as the creator of a

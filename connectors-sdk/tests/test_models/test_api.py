@@ -61,6 +61,7 @@ def test_public_models_are_present():
         "BaseAuthorEntity",
         "BaseObject",
         "BaseIdentifiedEntity",
+        "BaseIdentifiedObject",
         "City",
         "Country",
         "DomainName",

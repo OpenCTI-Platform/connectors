@@ -3,8 +3,8 @@ from typing import OrderedDict
 import pytest
 import stix2
 import stix2.properties
-from connectors_sdk.models._base_identified_entity import _BaseIdentifiedEntity
 from connectors_sdk.models.base_author_entity import BaseAuthorEntity
+from connectors_sdk.models.base_identified_object import BaseIdentifiedObject
 from pydantic import Field
 
 
@@ -44,4 +44,4 @@ def test_author_should_be_a__base_identified_entity(implemented_author):
     author_class = implemented_author
     # When checking the class inheritance
     # Then it should be a subclass of BaseIdentifiedEntity
-    assert issubclass(author_class, _BaseIdentifiedEntity)
+    assert issubclass(author_class, BaseIdentifiedObject)
