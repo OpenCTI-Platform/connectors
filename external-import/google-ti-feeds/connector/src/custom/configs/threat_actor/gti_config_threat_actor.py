@@ -34,6 +34,11 @@ class GTIThreatActorConfig(GTIBaseConfig):
         examples=["All", "partner,google threat intelligence", "crowdsourced"],
     )
 
+    enable_threat_actor_aliases: bool = Field(
+        default=False,
+        description="Whether to enable importing threat actor aliases from GTI",
+    )
+
     @field_validator("threat_actor_origins", mode="after")
     @classmethod
     def validate_threat_actor_origins(cls, v: list[str]) -> list[str]:
