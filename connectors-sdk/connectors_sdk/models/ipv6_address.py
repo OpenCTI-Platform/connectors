@@ -45,7 +45,5 @@ class IPV6Address(BaseObservableEntity):
         """Make stix object."""
         return Stix2IPv6Address(
             value=self.value,
-            object_marking_refs=[marking.id for marking in self.markings or []],
-            allow_custom=True,
-            **self._custom_properties_to_stix(),
+            **self._common_stix2_properties(),
         )
