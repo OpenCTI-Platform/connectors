@@ -15,9 +15,7 @@ from typing import Any, Literal
 
 import __main__
 from connectors_sdk.core.pydantic import ListFromString
-from connectors_sdk.exceptions import (
-    ConfigValidationError,
-)
+from connectors_sdk.settings.exceptions import ConfigValidationError
 from pydantic import (
     BaseModel,
     ConfigDict,
