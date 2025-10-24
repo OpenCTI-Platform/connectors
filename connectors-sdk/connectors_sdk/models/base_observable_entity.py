@@ -39,9 +39,16 @@ class BaseObservableEntity(BaseIdentifiedEntity, ABC):
         description="If True, an indicator and a `based-on` relationship will be created for this observable. (Delegated to OpenCTI Platform).",
     )
 
-    def _custom_properties_to_stix(self) -> dict[str, Any]:
+    def _common_stix2_properties(self) -> dict[str, Any]:
+        super()._common_stix2_properties()
         """Factorize custom params."""
         return dict(  # noqa: C408 # No literal dict for maintainability
+            allow_custom=True,
+            object_marking_refs=(
+                [marking.id for marking in self.markings]
+                if self.markings is not None
+                else None
+            ),
             x_opencti_score=self.score,
             x_opencti_description=self.description,
             x_opencti_labels=self.labels,

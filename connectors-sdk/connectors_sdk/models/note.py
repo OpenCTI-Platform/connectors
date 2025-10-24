@@ -67,13 +67,8 @@ class Note(BaseIdentifiedEntity):
             labels=self.labels,
             authors=self.authors,
             object_refs=[obj.id for obj in self.objects or []],
-            created_by_ref=self.author.id if self.author else None,
-            external_references=[
-                external_reference.to_stix2_object()
-                for external_reference in self.external_references or []
-            ],
-            object_marking_refs=[marking.id for marking in self.markings or []],
             created=self.publication_date,  # usually set by stix2 lib but here it MUST be equal to the datetime used for note's id.
             allow_custom=True,
             note_types=self.note_types,
+            **self._common_stix2_properties()
         )
