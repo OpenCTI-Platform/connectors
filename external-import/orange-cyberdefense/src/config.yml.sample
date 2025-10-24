@@ -26,3 +26,6 @@ ocd:
   threat_actor_as_intrusion_set: true
   interval: 30 # Required, in minutes. Minimum recommended 30
   reset_state: false # force the use of the start_dates from the config instead of getting the state saved in opencti
+  ignore_unscored_indicators: true
+  ignore_whitelisted_indicators: true
+  fallback_score: 0
