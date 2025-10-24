@@ -23,6 +23,7 @@ services:
       - RECORDED_FUTURE_TA_TO_INTRUSION_SET=False #optional, can remove
       - RECORDED_FUTURE_RISK_AS_SCORE=True #optional, can remove
       - RECORDED_FUTURE_RISK_THRESHOLD=60 #optional, can remove
+      - RECORDED_FUTURE_ANALYST_NOTES_GUESS_RELATIONSHIPS=False #optional, can remove
       - RECORDED_FUTURE_PULL_RISK_LIST=False #optional, can remove
       - RECORDED_FUTURE_RISKRULES_AS_LABEL=False #optional, can remove
       - RECORDED_FUTURE_RISK_LIST_THRESHOLD=70 #optional, can remove

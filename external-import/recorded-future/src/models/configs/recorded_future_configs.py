@@ -76,6 +76,10 @@ class _ConfigLoaderRecordedFuture(ConfigBaseSettings):
         default=60,
         description="Minimum risk score threshold (0-100) for importing entities.",
     )
+    analyst_notes_guess_relationships: bool = Field(
+        default=False,
+        description="Enable or disable the automatic guessing of relationships between entities when processing analyst notes.",
+    )
 
     # Risk List configuration
     pull_risk_list: bool = Field(

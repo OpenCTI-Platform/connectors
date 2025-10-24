@@ -20,6 +20,7 @@ class AnalystNote(threading.Thread):
         rf_TA_to_intrusion_set,
         risk_as_score,
         risk_threshold,
+        analyst_notes_guess_relationships,
     ):
         threading.Thread.__init__(self)
         self.helper = helper
@@ -34,6 +35,7 @@ class AnalystNote(threading.Thread):
         self.rf_TA_to_intrusion_set = rf_TA_to_intrusion_set
         self.risk_as_score = risk_as_score
         self.risk_threshold = risk_threshold
+        self.analyst_notes_guess_relationships = analyst_notes_guess_relationships
 
     def run(self):
         """
@@ -136,11 +138,12 @@ class AnalystNote(threading.Thread):
                     self.rf_TA_to_intrusion_set,
                     self.risk_as_score,
                     self.risk_threshold,
+                    self.analyst_notes_guess_relationships,
                 )
                 stix_note.from_json(note, self.tlp)
                 if note.get("events"):
                     stix_note.create_event_relations(events=note["events"])
-                else:
+                elif self.analyst_notes_guess_relationships:
                     stix_note.create_relations()
                 bundle = stix_note.to_stix_bundle()
                 self.helper.connector_logger.info(

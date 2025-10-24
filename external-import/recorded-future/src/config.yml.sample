@@ -23,6 +23,7 @@ rf:
   ta_to_intrusion_set: False # optional
   risk_as_score: True # optional
   risk_threshold: 60 # optional
+  analyst_notes_guess_relationships=False # optional
   pull_risk_list: False
   riskrules_as_label: False # optional
   risk_list_threshold: 70 # optional
