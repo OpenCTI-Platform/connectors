@@ -1,6 +1,6 @@
 import pytest
-from connectors_sdk.exceptions import ConfigValidationError
-from connectors_sdk.models.configs.base import BaseConnectorSettings, _SettingsLoader
+from connectors_sdk.settings.base_settings import BaseConnectorSettings, _SettingsLoader
+from connectors_sdk.settings.exceptions import ConfigValidationError
 from pydantic import HttpUrl
 
 
