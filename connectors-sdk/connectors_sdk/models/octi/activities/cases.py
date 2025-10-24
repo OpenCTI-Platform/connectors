@@ -1,1 +1,0 @@
-"""Offer cases OpenCTI entities."""
