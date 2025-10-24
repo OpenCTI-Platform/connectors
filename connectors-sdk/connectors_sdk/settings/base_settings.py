@@ -27,6 +27,7 @@ from pydantic import (
 )
 from pydantic_settings import (
     BaseSettings,
+    DotEnvSettingsSource,
     PydanticBaseSettingsSource,
     SettingsConfigDict,
     YamlConfigSettingsSource,
@@ -124,7 +125,7 @@ class _SettingsLoader(BaseSettings):
         if Path(settings_cls.model_config["env_file"] or "").is_file():  # type: ignore
             return (
                 env_settings,
-                dotenv_settings,
+                DotEnvSettingsSource(settings_cls),
             )
         return (env_settings,)
 
