@@ -27,12 +27,12 @@ If you are using it independently, remember that the connector will try to conne
 | `misp_ssl_verify`                             | `MISP_SSL_VERIFY`                             | Yes          | A boolean (`True` or `False`), check if the SSL certificate is valid when using `https`.             |
 | `misp_datetime_attribute`                     | `MISP_DATETIME_ATTRIBUTE`                     | Yes          | The attribute to be used to get the date of the event.                                         |
 | `misp_date_filter_field`                      | `MISP_DATE_FILTER_FIELD`                      | Yes          | The attribute to be used in filter to query new MISP events.                                         |
-| `misp_report_description_attribute_filter`    | `MISP_REPORT_DESCRIPTION_ATTRIBUTE_FILTER`    | No          |  Filter to be used to find the attribute with report description (example: "type=comment,category=Internal reference").                                         |
+| `misp_report_description_attribute_filter`    | `MISP_REPORT_DESCRIPTION_ATTRIBUTE_FILTER`    | No           |  Filter to be used to find the attribute with report description (example: "type=comment,category=Internal reference").                                         |
 | `misp_create_reports`                         | `MISP_CREATE_REPORTS`                         | Yes          | A boolean (`True` or `False`), create reports for each imported MISP event.                          |
 | `misp_create_object_observables`              | `MISP_CREATE_OBJECT_OBSERVABLES`              | Yes          | A boolean (`True` or `False`), create a text observable for each imported MISP object.               |
 | `misp_create_observables`                     | `MISP_CREATE_OBSERVABLES`                     | Yes          | A boolean (`True` or `False`), create an observable for each imported MISP attribute.                |
 | `misp_create_indicators`                      | `MISP_CREATE_INDICATORS`                      | Yes          | A boolean (`True` or `False`), create an indicator for each imported MISP attribute.                 |
-| `misp_create_tags_as_labels`                  | `MISP_CREATE_TAGS_AS_LABELS`                  | No          | A boolean (`True` or `False`), create tags as labels.                 |
+| `misp_create_tags_as_labels`                  | `MISP_CREATE_TAGS_AS_LABELS`                  | No           | A boolean (`True` or `False`), create tags as labels.                 |
 | `misp_report_class`                           | `MISP_REPORT_CLASS`                           | No           | If `create_reports` is `True`, specify the `report_class` (category), default is `MISP Event`        |
 | `misp_import_from_date`                       | `MISP_IMPORT_FROM_DATE`                       | No           | A date formatted `YYYY-MM-DD`, only import events created after this date.                           |
 | `misp_import_tags`                            | `MISP_IMPORT_TAGS`                            | No           | A list of tags separated with `,`, only import events with these tags.                               |
@@ -48,7 +48,8 @@ If you are using it independently, remember that the connector will try to conne
 | `misp_import_to_ids_no_score`                 | `MISP_IMPORT_TO_IDS_NO_SCORE`                 | No           | A score (`Integer`) value for the indicator/observable if the attribute `to_ids` value is no.        |
 | `misp_import_unsupported_observables_as_text` | `MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT` | No           | Import unsupported observable as x_opencti_text                                                      |
 | `misp_interval`                               | `MISP_INTERVAL`                               | Yes          | Check for new event to import every `n` minutes.                                                     |
-| `misp_propagate_labels`                       | `MISP_PROPAGATE_LABELS`               | No           | Apply labels from Misp EVENT to OpenCTI observables on top of MISP Attribute labels |
+| `misp_propagate_labels`                       | `MISP_PROPAGATE_LABELS`                       | No           | Apply labels from Misp EVENT to OpenCTI observables on top of MISP Attribute labels |
+| `misp_search_limit`                           | `MISP_SEARCH_LIMIT`                           | No           | Limit result in queries executions                                                    |
 
 ## Behavior
 
