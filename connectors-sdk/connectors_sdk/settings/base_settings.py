@@ -71,7 +71,8 @@ class _BaseConnectorConfig(BaseConfigModel, ABC):
         description="The scope of the connector, e.g. 'flashpoint'."
     )
     log_level: Literal["debug", "info", "warn", "warning", "error"] = Field(
-        description="The minimum level of logs to display."
+        description="The minimum level of logs to display.",
+        default="error",
     )
 
 
