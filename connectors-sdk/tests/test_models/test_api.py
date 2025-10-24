@@ -56,6 +56,7 @@ def test_public_models_are_present():
     # Given the feature name
     # Then it should all be present
     models_import = {
+        "AdministrativeArea",
         "AssociatedFile",
         "AttackPattern",
         "BaseAuthorEntity",
@@ -68,6 +69,7 @@ def test_public_models_are_present():
         "DomainName",
         "ExternalReference",
         "File",
+        "Hostname",
         "Individual",
         "Indicator",
         "IntrusionSet",
@@ -78,6 +80,7 @@ def test_public_models_are_present():
         "Note",
         "Organization",
         "OrganizationAuthor",
+        "Region",
         "Relationship",
         "Report",
         "Sector",
@@ -86,6 +89,7 @@ def test_public_models_are_present():
         "TLPMarking",
         "URL",
         "Vulnerability",
+        "X509Certificate",
     }
     missing = models_import - set(models.__all__)
     extra = set(models.__all__) - models_import

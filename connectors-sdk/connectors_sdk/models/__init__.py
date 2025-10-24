@@ -1,5 +1,6 @@
 """Offer models."""
 
+from connectors_sdk.models.administrative_area import AdministrativeArea
 from connectors_sdk.models.associated_file import AssociatedFile
 from connectors_sdk.models.attack_pattern import AttackPattern
 from connectors_sdk.models.base_author_entity import BaseAuthorEntity
@@ -12,6 +13,7 @@ from connectors_sdk.models.country import Country
 from connectors_sdk.models.domain_name import DomainName
 from connectors_sdk.models.external_reference import ExternalReference
 from connectors_sdk.models.file import File
+from connectors_sdk.models.hostname import Hostname
 from connectors_sdk.models.indicator import Indicator
 from connectors_sdk.models.individual import Individual
 from connectors_sdk.models.intrusion_set import IntrusionSet
@@ -22,6 +24,7 @@ from connectors_sdk.models.malware import Malware
 from connectors_sdk.models.note import Note
 from connectors_sdk.models.organization import Organization
 from connectors_sdk.models.organization_author import OrganizationAuthor
+from connectors_sdk.models.region import Region
 from connectors_sdk.models.relationship import Relationship
 from connectors_sdk.models.report import Report
 from connectors_sdk.models.sector import Sector
@@ -30,6 +33,7 @@ from connectors_sdk.models.threat_actor_group import ThreatActorGroup
 from connectors_sdk.models.tlp_marking import TLPMarking
 from connectors_sdk.models.url import URL
 from connectors_sdk.models.vulnerability import Vulnerability
+from connectors_sdk.models.x509_certificate import X509Certificate, X509V3Extensions
 
 __all__ = [
     # Typing purpose
@@ -39,6 +43,7 @@ __all__ = [
     "BaseIdentifiedEntity",
     "BaseObservableEntity",
     # Models flat list
+    "AdministrativeArea",
     "AssociatedFile",
     "AttackPattern",
     "City",
@@ -46,6 +51,7 @@ __all__ = [
     "DomainName",
     "ExternalReference",
     "File",
+    "Hostname",
     "Indicator",
     "Individual",
     "IntrusionSet",
@@ -56,6 +62,7 @@ __all__ = [
     "Note",
     "Organization",
     "OrganizationAuthor",
+    "Region",
     "Relationship",
     "Report",
     "Sector",
@@ -64,4 +71,6 @@ __all__ = [
     "TLPMarking",
     "URL",
     "Vulnerability",
+    "X509Certificate",
+    "X509V3Extensions",
 ]
