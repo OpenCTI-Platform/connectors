@@ -1,4 +1,4 @@
-FROM python:3.11-alpine
+FROM python:3.14-alpine
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 COPY src /opt/opencti-c2-tracker
