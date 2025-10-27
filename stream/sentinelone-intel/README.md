@@ -98,11 +98,11 @@ Below are the parameters you'll need to set for the connector:
 
 | Parameter    | config.yml   | Docker environment variable | Mandatory | Description |
 |--------------|--------------|-----------------------------|-----------|-----------| 
-| API URL      | api_url      | `SENTINELONE-INTEL_API_URL` | Yes       | The base URL of your SentinelOne management console (e.g., https://your-console.sentinelone.net) |
-| API Key      | api_key      | `SENTINELONE-INTEL_API_KEY` | Yes       | SentinelOne API token for authentication |
-| Account ID   | account_id   | `SENTINELONE-INTEL_ACCOUNT_ID` | No        | SentinelOne Account ID for scoping indicators (at least one ID required) |
-| Site ID      | site_id      | `SENTINELONE-INTEL_SITE_ID` | No        | SentinelOne Site ID for scoping indicators (cannot be used with Account ID) |
-| Group ID     | group_id     | `SENTINELONE-INTEL_GROUP_ID` | No        | SentinelOne Group ID for scoping indicators |
+| API URL      | url      | `SENTINELONE_INTEL_URL` | Yes       | The base URL of your SentinelOne management console (e.g., https://your-console.sentinelone.net) |
+| API Key      | api_key      | `SENTINELONE_INTEL_API_KEY` | Yes       | SentinelOne API token for authentication |
+| Account ID   | account_id   | `SENTINELONE_INTEL_ACCOUNT_ID` | No        | SentinelOne Account ID for scoping indicators (at least one ID required) |
+| Site ID      | site_id      | `SENTINELONE_INTEL_SITE_ID` | No        | SentinelOne Site ID for scoping indicators (cannot be used with Account ID) |
+| Group ID     | group_id     | `SENTINELONE_INTEL_SITE_ID` | No        | SentinelOne Group ID for scoping indicators |
 
 ## Deployment
 
