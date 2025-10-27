@@ -1,14 +1,46 @@
 """Offer enum for OpenCTI models."""
 
+from __future__ import annotations
+
 import warnings
 from enum import StrEnum
+
+warnings.warn(
+    "The 'connectors_sdk.models.octi.enums' module is deprecated and will be"
+    " removed in future versions. Please use 'connectors_sdk.models.enums' instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+__all__ = [
+    "AttackMotivation",
+    "AttackResourceLevel",
+    "CvssSeverity",
+    "HashAlgorithm",
+    "ImplementationLanguage",
+    "IndustrySector",
+    "LocationType",
+    "MalwareCapability",
+    "MalwareType",
+    "NoteType",
+    "OrganizationType",
+    "Permission",
+    "Platform",
+    "ProcessorArchitecture",
+    "Reliability",
+    "ReportType",
+    "ThreatActorRole",
+    "ThreatActorSophistication",
+    "ThreatActorTypes",
+    "TLPLevel",
+]
 
 
 class PermissiveEnum(StrEnum):
     """Enum that allows for missing values."""
 
     @classmethod
-    def _missing_(cls: type["PermissiveEnum"], value: object) -> "PermissiveEnum":
+    def _missing_(cls: type[PermissiveEnum], value: object) -> PermissiveEnum:
         _value = str(value)
         warnings.warn(
             f"Value '{_value}' is out of {cls.__name__} defined values.",

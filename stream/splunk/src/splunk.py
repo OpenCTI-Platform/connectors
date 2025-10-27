@@ -235,6 +235,7 @@ class SplunkConnector:
                     "is_inferred",
                     "main_observable_type",
                     "description",
+                    "detection",
                 ]:
                     attribute_value = extension_definition.get(attribute_name)
                     if attribute_value:
