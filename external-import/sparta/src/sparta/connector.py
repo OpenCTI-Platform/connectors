@@ -1,11 +1,10 @@
 import json
 import sys
 
-from connector.models import ConfigLoader
-from connector.services import DateTimeFormat
-from connector.services.client_api import SpartaClient
-from connector.services.utils import Utils
+from models.configs.config_loader import ConfigLoader
 from pycti import OpenCTIConnectorHelper
+from sparta.client_api import SpartaClient
+from sparta.utils import DateTimeFormat, Utils
 
 
 class Sparta:
