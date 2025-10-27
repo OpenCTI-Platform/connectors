@@ -3,6 +3,7 @@
 from connectors_sdk.models.administrative_area import AdministrativeArea
 from connectors_sdk.models.associated_file import AssociatedFile
 from connectors_sdk.models.attack_pattern import AttackPattern
+from connectors_sdk.models.autonomous_system import AutonomousSystem
 from connectors_sdk.models.base_author_entity import BaseAuthorEntity
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.base_identified_object import BaseIdentifiedObject
@@ -46,6 +47,7 @@ __all__ = [
     "AdministrativeArea",
     "AssociatedFile",
     "AttackPattern",
+    "AutonomousSystem",
     "City",
     "Country",
     "DomainName",
