@@ -159,6 +159,9 @@ class RFClient:
             if not data:
                 raise RFClientError("RecordedFuture API response does not include data")
 
+            if not data.get("nvdDescription"):
+                data.pop("nvdDescription")
+
             return VulnerabilityEnrichment(**data)
         except ValidationError as err:
             raise RFClientError("Invalid vulnerability enrichment data") from err
