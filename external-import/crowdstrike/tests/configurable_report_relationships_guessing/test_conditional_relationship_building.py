@@ -28,7 +28,7 @@ def fake_report_data() -> dict:
 @pytest.fixture
 def author_identity() -> Identity:
     """Fixture for author identity."""
-    return Identity(
+    return Identity(  # pylint: disable=W9101  # it's a test no real ingest
         name="CrowdStrike",
         identity_class="organization",
     )
