@@ -145,9 +145,11 @@ class RFClient:
                         ANALYST_NOTES_LOOKUP_ENDPOINT + "/" + note["id"], json=payload
                     )
                     res.raise_for_status()
-                    data = res.json()
-                    if data.get("attributes") and data["attributes"].get("events"):
-                        note["events"] = data["attributes"]["events"]
+                    lookup_data = res.json()
+                    if lookup_data.get("attributes") and lookup_data["attributes"].get(
+                        "events"
+                    ):
+                        note["events"] = lookup_data["attributes"]["events"]
 
                     notes.append(note)
                 if total == len(notes):

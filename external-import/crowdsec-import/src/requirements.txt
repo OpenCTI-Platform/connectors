@@ -1,4 +1,4 @@
-pycti==6.8.6
+pycti==6.8.8
 pycountry==24.6.1
 stix2==3.0.1
-PyYAML==6.0.2
+PyYAML==6.0.3

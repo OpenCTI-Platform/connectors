@@ -6,7 +6,7 @@
   "logo": "stream/pan-cortex-xsoar-intel/__metadata__/logo.png",
   "use_cases": [
     "SIEM/SOAR",
-    "Incident Response"
+    "Incident Response & Ticketing"
   ],
   "verified": true,
   "last_verified_date": null,

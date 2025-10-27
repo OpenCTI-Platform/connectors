@@ -2,11 +2,7 @@
 
 __version__ = "0.1.0"
 
-from connectors_sdk.exceptions.error import (
-    ConfigError,
-    ConfigValidationError,
-)
-from connectors_sdk.models.configs.base import (
+from connectors_sdk.settings.base_settings import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
@@ -15,12 +11,16 @@ from connectors_sdk.models.configs.base import (
     BaseInternalImportFileConnectorConfig,
     BaseStreamConnectorConfig,
 )
+from connectors_sdk.settings.exceptions import (
+    ConfigError,
+    ConfigValidationError,
+)
 
 __all__ = [
-    # Settings
-    "BaseConfigModel",
+    # Base Settings
     "BaseConnectorSettings",
-    # Base Connector Configs
+    # Base Configs
+    "BaseConfigModel",
     "BaseExternalImportConnectorConfig",
     "BaseInternalEnrichmentConnectorConfig",
     "BaseInternalExportFileConnectorConfig",

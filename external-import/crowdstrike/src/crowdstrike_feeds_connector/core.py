@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike connector core module."""
+
 import os
 import sys
 import time
@@ -183,11 +184,27 @@ class CrowdStrike:
         importers: List[BaseImporter] = []
 
         if self._CONFIG_SCOPE_ACTOR in scopes:
+            actor_indicator_config = {
+                "default_latest_timestamp": actor_start_timestamp,
+                "create_observables": create_observables,
+                "create_indicators": create_indicators,
+                "exclude_types": indicator_exclude_types,
+                "default_x_opencti_score": default_x_opencti_score,
+                "indicator_low_score": indicator_low_score,
+                "indicator_low_score_labels": set(indicator_low_score_labels),
+                "indicator_medium_score": indicator_medium_score,
+                "indicator_medium_score_labels": set(indicator_medium_score_labels),
+                "indicator_high_score": indicator_high_score,
+                "indicator_high_score_labels": set(indicator_high_score_labels),
+                "indicator_unwanted_labels": set(indicator_unwanted_labels),
+            }
+
             actor_importer = ActorImporter(
                 self.helper,
                 author,
                 actor_start_timestamp,
                 tlp_marking,
+                actor_indicator_config,
             )
 
             importers.append(actor_importer)

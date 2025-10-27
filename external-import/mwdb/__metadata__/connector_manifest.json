@@ -5,7 +5,7 @@
   "short_description": "MWDB is an opensource malware collector and databases. https://mwdb.readthedocs.io/en/latest/user-guide/1-Introduction-to-MWDB.html.\nThis connector ingests malware feeds in order to import Observables and Indicator related to malware and their configurations.\nThis connector was built using the TAXII2 connector for OpenCTI as a base.",
   "logo": "external-import/mwdb/__metadata__/logo.png",
   "use_cases": [
-    "Open Source Threat Intelligence",
+    "Open Source Threat Intel",
     "Malware Analysis"
   ],
   "verified": false,
