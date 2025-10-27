@@ -299,6 +299,7 @@ class ActorImporter(BaseImporter):
                     actor_name,
                 )
 
+        # MVP3
         bundle_builder = ActorBundleBuilder(
             actor,
             author,

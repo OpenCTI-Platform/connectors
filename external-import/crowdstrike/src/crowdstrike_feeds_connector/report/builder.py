@@ -286,6 +286,7 @@ class ReportBundleBuilder:
         bundle_objects.extend(indicators_linked)
 
         # Create object references for the report.
+        # breakpoint()
         object_refs = create_object_refs(
             intrusion_sets,
             malwares,
@@ -300,6 +301,30 @@ class ReportBundleBuilder:
             malwares_target_regions,
             malwares_target_countries,
         )
+
+        # MVP1
+        # # Create object references for the report.
+        # object_refs = create_object_refs(
+        #     intrusion_sets,
+        #     malwares,
+        #     target_sectors,
+        #     target_regions,
+        #     target_countries,
+        # )
+        # # Create guess relationships:
+        # guessing_relationships = create_object_refs(
+        #     object_refs,
+        #     intrusion_sets_use_malwares,
+        #     intrusion_sets_target_sectors,
+        #     malwares_target_sectors,
+        #     intrusion_sets_target_regions,
+        #     intrusion_sets_target_countries,
+        #     malwares_target_regions,
+        #     malwares_target_countries,
+        # )
+
+        # if guessing_relationships:
+        #     object_refs = guessing_relationships
 
         # TODO: Ignore reports without any references or not?
         # Hack, the report must have at least on object reference.

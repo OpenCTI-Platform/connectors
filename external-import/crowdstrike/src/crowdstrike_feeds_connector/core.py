@@ -289,6 +289,9 @@ class CrowdStrike:
 
             importers.append(snort_master_importer)
 
+        # MVP 5
+        # MVP 6
+
         self.importers = importers
 
     @staticmethod
