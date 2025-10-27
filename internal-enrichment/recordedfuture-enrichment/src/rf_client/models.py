@@ -366,8 +366,9 @@ class VulnerabilityEnrichment(RecordedFutureBaseModel):
     lifecycleStage: str = Field(
         description="Lifecycle stage of the vulnerability.",
     )
-    nvdDescription: str = Field(
+    nvdDescription: Optional[str] = Field(
         description="NVD description of the vulnerability.",
+        default=None,
     )
     nvdReferences: list[NvdReference] = Field(
         description="NVD advisory references and tools.",
