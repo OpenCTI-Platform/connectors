@@ -13,7 +13,7 @@ services:
       # Connector's definition parameters - OPTIONAL
       # - CONNECTOR_NAME=Aerospace SPARTA
       # - CONNECTOR_SCOPE=["attack-pattern", "course-of-action", "indicator", "identity"]
-      # - CONNECTOR_LOG_LEVEL=info
+      # - CONNECTOR_LOG_LEVEL=error
       # - CONNECTOR_DURATION_PERIOD=PT5H
       
       # SPARTA definition parameters - OPTIONAL
