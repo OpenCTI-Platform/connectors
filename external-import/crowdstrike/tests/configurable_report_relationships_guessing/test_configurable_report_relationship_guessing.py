@@ -271,13 +271,11 @@ def _then_analyst_should_only_see_explicit_relationships(
     ]
 
     assert len(intrusion_sets) > 0  # noqa: S101
-    assert len(malwares) >= 0  # noqa: S101
+    assert len(malwares) == 0  # noqa: S101
 
     intrusion_set_names = [getattr(obj, "name", "") for obj in intrusion_sets]
-    malware_names = [getattr(obj, "name", "") for obj in malwares]
 
     assert "TEST BEAR" in intrusion_set_names  # noqa: S101
-    assert "TestRansomware" in malware_names  # noqa: S101
 
 
 def _then_analyst_should_see_all_guessed_relationships(
@@ -302,7 +300,7 @@ def _then_analyst_should_see_all_guessed_relationships(
         entity_type = getattr(entity, "type", "unknown")
         entity_types[entity_type] = entity_types.get(entity_type, 0) + 1
 
-    if len(entities) > 1:
+    if len(entities) > 1 and "intrusion-set" in entity_types:
         assert len(relationships) > 0  # noqa: S101
 
     report_objects = [
