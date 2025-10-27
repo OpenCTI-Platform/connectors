@@ -78,7 +78,7 @@ class MISPClient:
                     return_format="json",
                     value=keyword,
                     searchall=True if keyword else None,
-                    tags=tags_query,
+                    tags=tags_query or None,
                     enforce_warninglist=enforce_warning_list,
                     with_attachments=with_attachments,
                     limit=limit,
