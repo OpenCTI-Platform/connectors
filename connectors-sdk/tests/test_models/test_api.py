@@ -59,6 +59,7 @@ def test_public_models_are_present():
         "AdministrativeArea",
         "AssociatedFile",
         "AttackPattern",
+        "AutonomousSystem",
         "BaseAuthorEntity",
         "BaseObject",
         "BaseIdentifiedEntity",
