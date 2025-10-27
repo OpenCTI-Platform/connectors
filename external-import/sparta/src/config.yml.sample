@@ -12,12 +12,6 @@ connector:
   #scope: 'ChangeMe' # Default: '["attack-pattern", "course-of-action", "indicator", "identity"]'
   #log_level: 'ChangeMe' # Default: 'info'
   #duration_period: 'ChangeMe' # Default: 'PT5H' (ISO8601 format in String, start with P...)
-  #queue_threshold: ChangeMe # Default: 500 MBytes, Float accepted
-  #run_and_terminate: ChangeMe # Default: False, True run connector once
-  #send_to_queue: ChangeMe # Default: True
-  #send_to_directory: ChangeMe # Default: False
-  #send_to_directory_path: 'ChangeMe' # if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path
-  #send_to_directory_retention: ChangeMe # Default: 7, in days
 
 sparta:
   # SPARTA definition parameters - OPTIONAL
