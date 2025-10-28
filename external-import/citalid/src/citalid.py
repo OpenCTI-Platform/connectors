@@ -82,7 +82,7 @@ class Citalid:
 
             self.helper.log_info("Connecting to customer sub domain ...")
             api_client = citalid_api.Client(
-                self.citalid_customer_sub_domain_url,
+                self.citalid_customer_sub_domain_url
             )
             api_client.login(self.citalid_user, self.citalid_password)
 
@@ -106,7 +106,8 @@ class Citalid:
             else:
                 for version_id in new_versions:
                     self.helper.log_info('Processing version "' + version_id + '"')
-                    bundle = api_client.download_version(version_id=version_id)
+                    bundle_dict = api_client.download_version(version_id=version_id)
+                    bundle = json.dumps(bundle_dict)
                     sent_bundle = self.send_bundle(work_id, bundle)
                     if sent_bundle is None:
                         self.helper.log_error("Error while sending bundle")
