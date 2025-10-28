@@ -91,10 +91,6 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
         default=None,
         description="Comma-separated list of target industries to filter reports.",
     )
-    report_guess_malware: bool = Field(
-        default=False,
-        description="Whether to use report tags to guess related malware.",
-    )
 
     # Indicator configuration
     indicator_start_timestamp: int = Field(
