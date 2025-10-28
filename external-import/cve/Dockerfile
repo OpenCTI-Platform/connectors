@@ -3,6 +3,7 @@ ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 # Copy the connector
 COPY src /opt/opencti-connector-cve/src
+COPY entrypoint.sh /opt/opencti-connector-cve/entrypoint.sh
 WORKDIR /opt/opencti-connector-cve
 
 # Install Python modules
@@ -15,4 +16,8 @@ RUN cd /opt/opencti-connector-cve/src && \
     apk del git build-base && \
     rm -rf /var/cache/apk/*
 
-CMD ["python", "-m", "src"]
+# Make entrypoint executable
+RUN chmod +x /opt/opencti-connector-cve/entrypoint.sh
+
+# Use the entrypoint script
+ENTRYPOINT ["/opt/opencti-connector-cve/entrypoint.sh"]
