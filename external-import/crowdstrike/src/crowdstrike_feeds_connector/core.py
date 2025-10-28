@@ -113,8 +113,6 @@ class CrowdStrike:
                 report_target_industries_str
             )
 
-        report_guess_malware = bool(self.config.report_guess_malware)
-
         indicator_start_timestamp = self.config.indicator_start_timestamp
         if is_timestamp_in_future(indicator_start_timestamp):
             raise ValueError("Indicator start timestamp is in the future")
@@ -233,7 +231,6 @@ class CrowdStrike:
                 report_target_industries,
                 report_status,
                 report_type,
-                report_guess_malware,
                 indicator_config,
                 no_file_trigger_import,
             )
