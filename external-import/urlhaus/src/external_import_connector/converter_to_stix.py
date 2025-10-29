@@ -52,7 +52,9 @@ class ConverterToStix:
         )
         return external_reference
 
-    def create_indicator(self, row: list, external_reference: stix2.ExternalReference) -> stix2.Indicator:
+    def create_indicator(
+        self, row: list, external_reference: stix2.ExternalReference
+    ) -> stix2.Indicator:
         """
         Create indicator according to value given
         :param row: the value of the row of urlhaus
@@ -86,7 +88,9 @@ class ConverterToStix:
         )
         return stix_indicator
 
-    def create_obs_url(self, row: list, external_reference: stix2.ExternalReference) -> stix2.URL:
+    def create_obs_url(
+        self, row: list, external_reference: stix2.ExternalReference
+    ) -> stix2.URL:
         """
         Create URL observable according to value given
         :param row: the value of the row of urlhaus
@@ -110,8 +114,10 @@ class ConverterToStix:
             },
         )
         return stix_observable
-    
-    def create_relationship(self, source_id: str, relationship_type: str, target_id: str) -> stix2.Relationship:
+
+    def create_relationship(
+        self, source_id: str, relationship_type: str, target_id: str
+    ) -> stix2.Relationship:
         """
         Creates Relationship object
         :param source_id: ID of source in string
@@ -142,36 +148,36 @@ class ConverterToStix:
             standard_id
             entity_type
         """
-        entities = (
-            self.helper.api.stix_domain_object.list(
-                types=[
-                    "Threat-Actor",
-                    "Intrusion-Set",
-                    "Malware",
-                    "Campaign",
-                    "Incident",
-                    "Tool",
+        entities = self.helper.api.stix_domain_object.list(
+            types=[
+                "Threat-Actor",
+                "Intrusion-Set",
+                "Malware",
+                "Campaign",
+                "Incident",
+                "Tool",
+            ],
+            filters={
+                "mode": "and",
+                "filters": [
+                    {
+                        "key": "name",
+                        "values": [name],
+                    }
                 ],
-                filters={
-                    "mode": "and",
-                    "filters": [
-                        {
-                            "key": "name",
-                            "values": [name],
-                        }
-                    ],
-                    "filterGroups": [],
-                },
-                customAttributes=custom_attributes,
-            )
+                "filterGroups": [],
+            },
+            customAttributes=custom_attributes,
         )
 
         if len(entities) > 0:
             threat = entities[0]
             self.config.threat_cache[name] = threat
             return threat
-    
-    def create_threat_relationship(self, row: list, indicator_id: str, observable_id: str) -> stix2.Relationship:
+
+    def create_threat_relationship(
+        self, row: list, indicator_id: str, observable_id: str
+    ) -> stix2.Relationship:
         """
         Creates threat Relationship object
         :param row: the value of the row of urlhaus
@@ -184,61 +190,55 @@ class ConverterToStix:
         for label in row[6].split(","):
             if label is None or label == "":
                 continue
-            
+
             if label in self.config.threat_cache:
                 threat = self.config.threat_cache[label]
             else:
                 threat = self._search_threat_by_name(label)
-            
+
             if threat is None:
                 continue
 
             entry_date = parse(row[1])
             # create threat => indicator relationship
-            stix_threat_relation_indicator = (
-                stix2.Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "indicates",
-                        indicator_id,
-                        threat["standard_id"],
-                        entry_date,
-                        entry_date,
-                    ),
-                    source_ref=indicator_id,
-                    target_ref=threat["standard_id"],
-                    relationship_type="indicates",
-                    start_time=entry_date,
-                    stop_time=entry_date
-                    + datetime.timedelta(0, 3),
-                    created_by_ref=self.author,
-                    object_marking_refs=[stix2.TLP_WHITE],
-                    created=entry_date,
-                    modified=entry_date,
-                    allow_custom=True,
-                )
+            stix_threat_relation_indicator = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "indicates",
+                    indicator_id,
+                    threat["standard_id"],
+                    entry_date,
+                    entry_date,
+                ),
+                source_ref=indicator_id,
+                target_ref=threat["standard_id"],
+                relationship_type="indicates",
+                start_time=entry_date,
+                stop_time=entry_date + datetime.timedelta(0, 3),
+                created_by_ref=self.author,
+                object_marking_refs=[stix2.TLP_WHITE],
+                created=entry_date,
+                modified=entry_date,
+                allow_custom=True,
             )
             # create threat => observable relationship
-            stix_threat_relation_observable = (
-                stix2.Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "related-to",
-                        observable_id,
-                        threat["standard_id"],
-                        entry_date,
-                        entry_date,
-                    ),
-                    source_ref=observable_id,
-                    target_ref=threat["standard_id"],
-                    relationship_type="related-to",
-                    start_time=entry_date,
-                    stop_time=entry_date
-                    + datetime.timedelta(0, 3),
-                    created_by_ref=self.author,
-                    object_marking_refs=[stix2.TLP_WHITE],
-                    created=entry_date,
-                    modified=entry_date,
-                    allow_custom=True,
-                )
+            stix_threat_relation_observable = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "related-to",
+                    observable_id,
+                    threat["standard_id"],
+                    entry_date,
+                    entry_date,
+                ),
+                source_ref=observable_id,
+                target_ref=threat["standard_id"],
+                relationship_type="related-to",
+                start_time=entry_date,
+                stop_time=entry_date + datetime.timedelta(0, 3),
+                created_by_ref=self.author,
+                object_marking_refs=[stix2.TLP_WHITE],
+                created=entry_date,
+                modified=entry_date,
+                allow_custom=True,
             )
 
             relations.append(stix_threat_relation_indicator)

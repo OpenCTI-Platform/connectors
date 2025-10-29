@@ -68,17 +68,29 @@ class ConnectorURLhaus:
         for entities in entities_generator:
             stix_objects = []
             for entity in entities:
-                external_reference = self.converter_to_stix.create_external_reference(entity)
-                stix_indicator = self.converter_to_stix.create_indicator(entity, external_reference)
-                stix_observable = self.converter_to_stix.create_obs_url(entity, external_reference)
-                stix_relationship = self.converter_to_stix.create_relationship(stix_indicator.id, "based-on", stix_observable.id)
+                external_reference = self.converter_to_stix.create_external_reference(
+                    entity
+                )
+                stix_indicator = self.converter_to_stix.create_indicator(
+                    entity, external_reference
+                )
+                stix_observable = self.converter_to_stix.create_obs_url(
+                    entity, external_reference
+                )
+                stix_relationship = self.converter_to_stix.create_relationship(
+                    stix_indicator.id, "based-on", stix_observable.id
+                )
 
                 stix_objects.append(stix_indicator)
                 stix_objects.append(stix_observable)
                 stix_objects.append(stix_relationship)
 
                 if self.config.threats_from_labels:
-                    stix_threat_relations = self.converter_to_stix.create_threat_relationship(entity, stix_indicator.id, stix_observable.id)
+                    stix_threat_relations = (
+                        self.converter_to_stix.create_threat_relationship(
+                            entity, stix_indicator.id, stix_observable.id
+                        )
+                    )
                     stix_objects.extend(stix_threat_relations)
             # end for
 

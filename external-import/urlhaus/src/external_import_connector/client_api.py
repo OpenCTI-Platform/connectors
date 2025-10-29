@@ -62,7 +62,7 @@ class ConnectorClient:
                     )
                     yield bundle_objects
                     bundle_objects = []
-                
+
                 # skip entry if newer events already processed in the past
                 if self.config.last_processed_entry_old > entry_date.timestamp():
                     continue
