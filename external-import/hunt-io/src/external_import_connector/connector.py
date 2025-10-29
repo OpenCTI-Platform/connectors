@@ -1,5 +1,5 @@
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from external_import_connector.batch_manager import BatchManager
@@ -264,9 +264,9 @@ class ConnectorHuntIo:
             )
             current_state = self.helper.get_state()
             current_state_datetime = now.strftime(DateTimeFormats.STANDARD_FORMAT)
-            last_run_datetime = datetime.fromtimestamp(current_timestamp).strftime(
-                DateTimeFormats.STANDARD_FORMAT
-            )
+            last_run_datetime = datetime.fromtimestamp(
+                current_timestamp, tz=timezone.utc
+            ).strftime(DateTimeFormats.STANDARD_FORMAT)
             if current_state:
                 current_state[StateKeys.LAST_RUN] = current_state_datetime
             else:
