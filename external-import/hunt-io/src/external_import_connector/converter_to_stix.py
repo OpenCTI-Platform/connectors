@@ -1,10 +1,9 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 import stix2
 from external_import_connector.constants import (
     AuthorInfo,
-    ExternalReferences,
     InfrastructureTypes,
 )
 from external_import_connector.models import (
@@ -30,17 +29,6 @@ class ConverterToStix:
     def __init__(self, helper):
         self.helper = helper
         self.author = self.create_author()
-        self.external_reference = self.create_external_reference()
-
-    @staticmethod
-    def create_external_reference() -> List[stix2.ExternalReference]:
-        """Create external reference for Hunt.IO."""
-        external_reference = stix2.ExternalReference(
-            source_name=ExternalReferences.SOURCE_NAME,
-            url=ExternalReferences.URL,
-            description=ExternalReferences.DESCRIPTION,
-        )
-        return [external_reference]
 
     @staticmethod
     def create_author() -> stix2.Identity:
