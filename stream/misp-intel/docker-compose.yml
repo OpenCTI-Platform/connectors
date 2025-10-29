@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   misp-intel:
-    image: opencti/connector-misp-intel:rolling
+    image: opencti/connector-misp-intel:6.8.9
     environment:
       # OpenCTI Configuration
       - OPENCTI_URL=${OPENCTI_URL}

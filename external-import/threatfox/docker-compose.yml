@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-threatfox:
-    image: opencti/connector-threatfox:rolling
+    image: opencti/connector-threatfox:6.8.9
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe

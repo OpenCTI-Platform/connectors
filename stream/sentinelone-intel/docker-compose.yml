@@ -1,6 +1,6 @@
 services:
   connector-sentinelone-intel:
-    image: opencti/connector-sentinelone-intel:rolling
+    image: opencti/connector-sentinelone-intel:6.8.9
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGEME

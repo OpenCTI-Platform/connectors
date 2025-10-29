@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-zscaler:
-    image: opencti/connector-zscaler:rolling
+    image: opencti/connector-zscaler:6.8.9
     environment:
       - OPENCTI_URL=ChangeMe
       - OPENCTI_TOKEN=ChangeMe
