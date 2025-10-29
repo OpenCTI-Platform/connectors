@@ -30,7 +30,7 @@ def test_should_run_connector(correct_config, api_response_mock):
     connector.helper.send_stix2_bundle = capture_sent_bundle
     connector.process_message()
 
-    nums_of_entities = 7 * len(api_response_mock) + 1  # Entities + Identity
+    nums_of_entities = 7 * len(api_response_mock) + 2  # Entities + Identity + Marking
     nums_of_relationships = 4 * len(api_response_mock)
 
     for item in api_response_mock:
@@ -87,7 +87,7 @@ def test_should_send_identity(correct_config, api_response_mock):
             count += 1
             assert item["created_by_ref"] == identity_id
 
-    assert count == len(sent_bundle["objects"]) - 1
+    assert count == len(sent_bundle["objects"]) - 2
 
 
 def test_should_add_external_references_to_organization_only(
@@ -127,3 +127,32 @@ def test_should_add_external_references_to_organization_only(
             "observed-data",
         ]:
             assert not item.get("external_references", None)
+
+
+def test_should_send_tpl_markings(correct_config, api_response_mock):
+    connector = ConnectorHuntIo()
+
+    sent_bundle = {}
+
+    def capture_sent_bundle(bundle: str, **_):
+        nonlocal sent_bundle
+        sent_bundle = json.loads(bundle)
+
+    connector.helper.send_stix2_bundle = capture_sent_bundle
+    connector.process_message()
+
+    marking_definition = find_dict_by_key_value(
+        sent_bundle["objects"], "type", "marking-definition"
+    )
+
+    assert marking_definition
+
+    marking_definition_id = marking_definition["id"]
+
+    count = 0
+    for item in sent_bundle["objects"]:
+        if item["type"] not in ["identity", "marking-definition"]:
+            count += 1
+            assert marking_definition_id in item["object_marking_refs"]
+
+    assert count == len(sent_bundle["objects"]) - 2
