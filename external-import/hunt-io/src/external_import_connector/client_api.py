@@ -5,18 +5,21 @@ from io import BytesIO
 from typing import List, Optional
 
 import requests
-from pycti import OpenCTIConnectorHelper
-from requests.adapters import HTTPAdapter
-from requests.exceptions import ConnectTimeout, HTTPError, ReadTimeout, RequestException
-from urllib3.util.retry import Retry
-
-from .constants import (
+from external_import_connector.constants import (
     APIConstants,
     LoggingPrefixes,
     ProcessingLimits,
 )
-from .exceptions import APIError, NonRetryableError, RetryableError
-from .models import C2
+from external_import_connector.exceptions import (
+    APIError,
+    NonRetryableError,
+    RetryableError,
+)
+from external_import_connector.models import C2
+from pycti import OpenCTIConnectorHelper
+from requests.adapters import HTTPAdapter
+from requests.exceptions import ConnectTimeout, HTTPError, ReadTimeout, RequestException
+from urllib3.util.retry import Retry
 
 
 class HTTPSessionManager:

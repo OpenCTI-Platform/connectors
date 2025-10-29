@@ -3,14 +3,13 @@
 from typing import Dict, List, Tuple
 
 import stix2
+from external_import_connector.constants import LoggingPrefixes, STIXRelationships
+from external_import_connector.converter_to_stix import ConverterToStix
+from external_import_connector.exceptions import STIXConversionError
+from external_import_connector.models import C2, C2ScanResult
+from external_import_connector.utils import convert_timestamp_to_iso_format
 from pycti import ObservedData as PyCTIObservedData
 from pycti import OpenCTIConnectorHelper
-
-from .constants import LoggingPrefixes, STIXRelationships
-from .converter_to_stix import ConverterToStix
-from .exceptions import STIXConversionError
-from .models import C2, C2ScanResult
-from .utils import convert_timestamp_to_iso_format
 
 
 class EntityMetadata:
