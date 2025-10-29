@@ -261,7 +261,7 @@ class ConnectorHuntIo:
             )
             current_state = self.helper.get_state()
             current_state_datetime = now.strftime(DateTimeFormats.STANDARD_FORMAT)
-            last_run_datetime = datetime.utcfromtimestamp(current_timestamp).strftime(
+            last_run_datetime = datetime.fromtimestamp(current_timestamp).strftime(
                 DateTimeFormats.STANDARD_FORMAT
             )
             if current_state:
