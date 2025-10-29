@@ -91,6 +91,7 @@ class STIXObjectCreator:
                     last_observed=timestamp,
                     number_observed=1,
                     object_refs=observed_data_refs,
+                    created_by_ref=self.converter.author,
                 )
 
             # Collect all STIX objects
@@ -223,6 +224,8 @@ class EntityProcessor:
             f"{LoggingPrefixes.PHASE_1} Processing {len(entities)} entities in "
             f"{total_batches} object-creation batches"
         )
+
+        all_objects.append(self.converter.author)
 
         for batch_idx in range(0, len(entities), batch_size):
             batch = entities[batch_idx : batch_idx + batch_size]
