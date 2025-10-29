@@ -4,6 +4,7 @@ from typing import Any
 import pytest
 from connectors_sdk import ConfigValidationError
 from external_import_connector import ConnectorHuntIo
+from external_import_connector.constants import ExternalReferences
 
 
 def has_key_value(dicts, key, value) -> bool:
@@ -87,3 +88,42 @@ def test_should_send_identity(correct_config, api_response_mock):
             assert item["created_by_ref"] == identity_id
 
     assert count == len(sent_bundle["objects"]) - 1
+
+
+def test_should_add_external_references_to_organization_only(
+    correct_config, api_response_mock
+):
+    connector = ConnectorHuntIo()
+
+    sent_bundle = {}
+
+    def capture_sent_bundle(bundle: str, **_):
+        nonlocal sent_bundle
+        sent_bundle = json.loads(bundle)
+
+    connector.helper.send_stix2_bundle = capture_sent_bundle
+    connector.process_message()
+
+    identity = find_dict_by_key_value(sent_bundle["objects"], "type", "identity")
+
+    assert (
+        identity["external_references"][0]["description"]
+        == ExternalReferences.DESCRIPTION
+    )
+    assert (
+        identity["external_references"][0]["source_name"]
+        == ExternalReferences.SOURCE_NAME
+    )
+    assert identity["external_references"][0]["url"] == ExternalReferences.URL
+
+    for item in sent_bundle["objects"]:
+        if item["type"] in ["ipv4-addr", "domain-name", "network-traffic"]:
+            assert not item.get("x_opencti_external_references", None)
+        elif item["type"] in [
+            "indicator",
+            "infrastructure",
+            "relationship",
+            "malware",
+            "observed-data",
+        ]:
+            assert not item.get("external_references", None)
