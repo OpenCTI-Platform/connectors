@@ -31,7 +31,11 @@ class QueueHealthMonitor:
         Returns False if the system is too overwhelmed to process new entities.
         """
         try:
-            connector_info = self.helper.api.connector.ping()
+            connector_info = self.helper.api.connector.ping(
+                self.helper.connector.id,
+                self.helper.connector_state,
+                self.helper.connector_info.all_details,
+            )
 
             if not connector_info:
                 self.helper.connector_logger.warning(
