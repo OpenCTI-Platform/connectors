@@ -164,6 +164,7 @@ class CustomProperties:
     """Custom STIX properties."""
 
     CREATED_BY = "x_opencti_created_by_ref"
+    CONNECTOR_VALUE = "hunt-io"
 
 
 # UUID Namespace for Hunt.IO
