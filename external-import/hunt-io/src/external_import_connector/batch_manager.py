@@ -5,9 +5,7 @@ from datetime import datetime, timezone
 from typing import List
 
 import stix2
-from pycti import OpenCTIConnectorHelper
-
-from .constants import (
+from external_import_connector.constants import (
     LoggingPrefixes,
     ProcessingLimits,
     QueueThresholds,
@@ -15,8 +13,9 @@ from .constants import (
     RetryConfig,
     StateKeys,
 )
-from .exceptions import BatchProcessingError
-from .models import C2
+from external_import_connector.exceptions import BatchProcessingError
+from external_import_connector.models import C2
+from pycti import OpenCTIConnectorHelper
 
 
 class QueueHealthMonitor:

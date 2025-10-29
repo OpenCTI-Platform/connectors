@@ -7,16 +7,15 @@ from typing import Any, Dict, Optional, TypedDict, Union
 
 import pycti
 import stix2
-from pycti import Identity as PyCTIIdentity
-from pycti import Infrastructure as PyCTIInfrastructure
-from pycti import Malware as PyCTIMalware
-
-from .constants import (
+from external_import_connector.constants import (
     CustomProperties,
     NetworkProtocols,
     UUIDNamespace,
 )
-from .exceptions import STIXConversionError
+from external_import_connector.exceptions import STIXConversionError
+from pycti import Identity as PyCTIIdentity
+from pycti import Infrastructure as PyCTIInfrastructure
+from pycti import Malware as PyCTIMalware
 
 
 class BaseModel(ABC):
