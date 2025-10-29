@@ -9,6 +9,7 @@ import pycti
 import stix2
 from external_import_connector.constants import (
     CustomProperties,
+    ExternalReferences,
     NetworkProtocols,
     UUIDNamespace,
 )
@@ -362,7 +363,17 @@ class Author(BaseModel):
         self.name = name
         self.description = description
         self.identity_class = identity_class
+        self.external_references = self.create_external_references()
         self.__post_init__()
+
+    @staticmethod
+    def create_external_references() -> list[stix2.ExternalReference]:
+        external_reference = stix2.ExternalReference(
+            source_name=ExternalReferences.SOURCE_NAME,
+            url=ExternalReferences.URL,
+            description=ExternalReferences.DESCRIPTION,
+        )
+        return [external_reference]
 
     def to_stix2_object(self) -> stix2.Identity:
         return stix2.Identity(
@@ -370,6 +381,7 @@ class Author(BaseModel):
             name=self.name,
             identity_class=self.identity_class,
             description=self.description,
+            external_references=self.external_references,
         )
 
 
