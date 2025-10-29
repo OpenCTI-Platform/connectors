@@ -163,10 +163,7 @@ class AuthorInfo:
 class CustomProperties:
     """Custom STIX properties."""
 
-    CONNECTOR = "x_opencti_connector"
-    CREATED_BY = "x_opencti_created_by"
-    CONNECTOR_VALUE = "hunt-io"
-    NETWORK_TRAFFIC_CREATED_BY = "enhanced_network_traffic_model"
+    CREATED_BY = "x_opencti_created_by_ref"
 
 
 # UUID Namespace for Hunt.IO

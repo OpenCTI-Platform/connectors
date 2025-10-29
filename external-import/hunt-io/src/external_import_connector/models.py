@@ -218,9 +218,10 @@ class C2ScanResult:
 class IPv4Address(BaseModel):
     """IPv4 observable with validation."""
 
-    def __init__(self, value: str):
+    def __init__(self, value: str, author: str):
         super().__init__()
         self.value = self._validate_ipv4(value)
+        self.author = author
         self.__post_init__()
 
     def _validate_ipv4(self, value: str) -> str:
@@ -247,15 +248,21 @@ class IPv4Address(BaseModel):
 
     def to_stix2_object(self) -> stix2.v21.observables.IPv4Address:
         """Create STIX2 IPv4Address object."""
-        return stix2.IPv4Address(value=self.value)
+        return stix2.IPv4Address(
+            value=self.value,
+            custom_properties={
+                CustomProperties.CREATED_BY: self.author,
+            },
+        )
 
 
 class DomainName(BaseModel):
     """DomainName observable with validation."""
 
-    def __init__(self, value: str):
+    def __init__(self, value: str, author: str):
         super().__init__()
         self.value = self._validate_domain(value)
+        self.author = author
         self.__post_init__()
 
     def _validate_domain(self, value: str) -> str:
@@ -278,16 +285,22 @@ class DomainName(BaseModel):
 
     def to_stix2_object(self) -> stix2.v21.observables.DomainName:
         """Create STIX2 DomainName object."""
-        return stix2.DomainName(value=self.value)
+        return stix2.DomainName(
+            value=self.value,
+            custom_properties={
+                CustomProperties.CREATED_BY: self.author,
+            },
+        )
 
 
 class Malware(BaseModel):
     """Malware object with validation."""
 
-    def __init__(self, malware_name: str, malware_subsystem: str):
+    def __init__(self, malware_name: str, malware_subsystem: str, author: str):
         super().__init__()
         self.name = self._validate_name(malware_name)
         self.malware_subsystem = self._validate_subsystem(malware_subsystem)
+        self.author = author
         self.is_family = False
         self.__post_init__()
 
@@ -312,6 +325,7 @@ class Malware(BaseModel):
             malware_types=(
                 [self.malware_subsystem] if self.malware_subsystem else ["unknown"]
             ),
+            created_by_ref=self.author,
         )
 
 
@@ -414,9 +428,10 @@ class NetworkTraffic(BaseModel):
         >>> traffic = create_network_traffic(port, src_ref)
     """
 
-    def __init__(self, port: Optional[int], src_ref: Optional[str]):
+    def __init__(self, port: Optional[int], src_ref: Optional[str], author: str):
         super().__init__()
         self.port = self._validate_port(port)
+        self.author = author
         self.src_ref = src_ref
         self.__post_init__()
 
@@ -441,7 +456,6 @@ class NetworkTraffic(BaseModel):
         # Create deterministic ID to prevent conflicts
         id_components = [
             "type:network-traffic",
-            f"connector:{CustomProperties.CONNECTOR_VALUE}",
             f"src_ref:{self.src_ref or 'none'}",
             f"dst_port:{self.port or 'none'}",
             f"protocols:{NetworkProtocols.TCP}",
@@ -462,8 +476,7 @@ class NetworkTraffic(BaseModel):
             dst_port=self.port,
             protocols=[NetworkProtocols.TCP],
             custom_properties={
-                CustomProperties.CONNECTOR: CustomProperties.CONNECTOR_VALUE,
-                CustomProperties.CREATED_BY: CustomProperties.NETWORK_TRAFFIC_CREATED_BY,
+                CustomProperties.CREATED_BY: self.author,
             },
         )
 

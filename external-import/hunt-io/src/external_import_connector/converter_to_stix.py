@@ -40,11 +40,9 @@ class ConverterToStix:
         return [external_reference]
 
     @staticmethod
-    def create_author() -> dict:
+    def create_author() -> stix2.Identity:
         """Create Author identity object."""
-        author = Author(AuthorInfo.NAME, AuthorInfo.DESCRIPTION).stix2_object
-        assert author is not None
-        return author
+        return Author(AuthorInfo.NAME, AuthorInfo.DESCRIPTION).stix2_object
 
     def create_c2_infrastructure(
         self,
@@ -62,14 +60,14 @@ class ConverterToStix:
         """
         Creates an IPv4 address observable.
         """
-        ipv4 = IPv4Address(ip)
+        ipv4 = IPv4Address(value=ip, author=self.author.id)
         return ipv4
 
     def create_domain_observable(self, hostname: str) -> DomainName:
         """
         Creates an domain name observable.
         """
-        domain = DomainName(hostname)
+        domain = DomainName(hostname, author=self.author.id)
         return domain
 
     def create_url_indicator(self, scan_uri: str, timestamp: datetime) -> URL:
@@ -85,7 +83,7 @@ class ConverterToStix:
         """
         Creates a malware object.
         """
-        malware = Malware(malware_name, malware_subsystem)
+        malware = Malware(malware_name, malware_subsystem, author=self.author.id)
         return malware
 
     def create_network_traffic(
@@ -94,7 +92,9 @@ class ConverterToStix:
         """
         Creates a network traffic object.
         """
-        network_traffic = NetworkTraffic(port, src_ref)
+        network_traffic = NetworkTraffic(
+            port=port, src_ref=src_ref, author=self.author.id
+        )
         return network_traffic
 
     def create_relationship(
