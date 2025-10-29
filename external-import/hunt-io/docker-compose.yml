@@ -6,7 +6,7 @@ services:
       - OPENCTI_TOKEN=${OPENCTI_TOKEN}
       - CONNECTOR_ID=${CONNECTOR_ID}
       - CONNECTOR_NAME=Hunt IO
-      - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,vulnerability,domain,url,StixFile
+      - CONNECTOR_SCOPE=Hunt IO
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_DURATION_PERIOD=PT24H
 
