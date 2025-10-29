@@ -1,11 +1,10 @@
 import warnings
 
 from connectors_sdk import BaseConnectorSettings, BaseExternalImportConnectorConfig
+from external_import_connector.constants import ConfigKeys
 from pycti import get_config_variable
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings
-
-from .constants import ConfigKeys
 
 
 class APIConfig(BaseSettings):

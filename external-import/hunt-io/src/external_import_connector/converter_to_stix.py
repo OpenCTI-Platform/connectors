@@ -2,9 +2,12 @@ from datetime import datetime
 from typing import List, Optional
 
 import stix2
-
-from .constants import AuthorInfo, ExternalReferences, InfrastructureTypes
-from .models import (
+from external_import_connector.constants import (
+    AuthorInfo,
+    ExternalReferences,
+    InfrastructureTypes,
+)
+from external_import_connector.models import (
     URL,
     Author,
     DomainName,
