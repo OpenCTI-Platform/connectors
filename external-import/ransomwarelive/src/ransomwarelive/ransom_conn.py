@@ -315,6 +315,8 @@ class RansomwareAPIConnector:
                 report.get("object_refs").append(relation_intrusion_location.get("id"))
                 report.get("object_refs").append(location_relation.get("id"))
 
+        bundle_objects.append(report)
+
         self.helper.connector_logger.info(
             "Sending STIX objects to collect_intelligence.",
             {"len_bundle_objects": len(bundle_objects)},
