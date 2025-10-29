@@ -2,15 +2,18 @@ import sys
 from datetime import datetime, timezone
 from typing import List, Optional
 
+from external_import_connector.batch_manager import BatchManager
+from external_import_connector.client_api import ConnectorClient
+from external_import_connector.config_variables import ConfigConnector
+from external_import_connector.constants import (
+    DateTimeFormats,
+    LoggingPrefixes,
+    StateKeys,
+)
+from external_import_connector.converter_to_stix import ConverterToStix
+from external_import_connector.entity_processor import EntityProcessor
+from external_import_connector.models import C2
 from pycti import OpenCTIConnectorHelper
-
-from .batch_manager import BatchManager
-from .client_api import ConnectorClient
-from .config_variables import ConfigConnector
-from .constants import DateTimeFormats, LoggingPrefixes, StateKeys
-from .converter_to_stix import ConverterToStix
-from .entity_processor import EntityProcessor
-from .models import C2
 
 
 class StateManager:
