@@ -117,6 +117,7 @@ class StateKeys:
 
     LAST_TIMESTAMP = "last_timestamp"
     LAST_RUN = "last_run"
+    LAST_RUN_WITH_INGESTED_DATA = "last_run_with_ingested_data"
     ENTITIES_PROCESSED = "entities_processed"
     PROCESSING = "processing"
     QUEUE_WARNING_MODE = "queue_warning_mode"
