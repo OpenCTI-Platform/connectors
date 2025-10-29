@@ -1,4 +1,5 @@
 import warnings
+from typing import Literal
 
 from connectors_sdk import BaseConnectorSettings, BaseExternalImportConnectorConfig
 from external_import_connector.constants import ConfigKeys
@@ -10,6 +11,9 @@ from pydantic_settings import BaseSettings
 class APIConfig(BaseSettings):
     api_base_url: str = Field(description="API base URL", default_factory=str)
     api_key: str = Field(description="API key", default_factory=str)
+    tlp_level: Literal["white", "clear", "green", "amber", "amber+strict", "red"] = (
+        Field(description="TLP level", default="amber")
+    )
 
     @model_validator(mode="before")
     @classmethod

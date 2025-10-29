@@ -218,10 +218,11 @@ class C2ScanResult:
 class IPv4Address(BaseModel):
     """IPv4 observable with validation."""
 
-    def __init__(self, value: str, author: str):
+    def __init__(self, value: str, author: str, tpl_marking: str):
         super().__init__()
         self.value = self._validate_ipv4(value)
         self.author = author
+        self.tpl_marking = tpl_marking
         self.__post_init__()
 
     def _validate_ipv4(self, value: str) -> str:
@@ -250,6 +251,7 @@ class IPv4Address(BaseModel):
         """Create STIX2 IPv4Address object."""
         return stix2.IPv4Address(
             value=self.value,
+            object_marking_refs=[self.tpl_marking],
             custom_properties={
                 CustomProperties.CREATED_BY: self.author,
             },
@@ -259,10 +261,11 @@ class IPv4Address(BaseModel):
 class DomainName(BaseModel):
     """DomainName observable with validation."""
 
-    def __init__(self, value: str, author: str):
+    def __init__(self, value: str, author: str, tpl_marking: str):
         super().__init__()
         self.value = self._validate_domain(value)
         self.author = author
+        self.tpl_marking = tpl_marking
         self.__post_init__()
 
     def _validate_domain(self, value: str) -> str:
@@ -287,6 +290,7 @@ class DomainName(BaseModel):
         """Create STIX2 DomainName object."""
         return stix2.DomainName(
             value=self.value,
+            object_marking_refs=[self.tpl_marking],
             custom_properties={
                 CustomProperties.CREATED_BY: self.author,
             },
@@ -296,11 +300,14 @@ class DomainName(BaseModel):
 class Malware(BaseModel):
     """Malware object with validation."""
 
-    def __init__(self, malware_name: str, malware_subsystem: str, author: str):
+    def __init__(
+        self, malware_name: str, malware_subsystem: str, author: str, tpl_marking: str
+    ):
         super().__init__()
         self.name = self._validate_name(malware_name)
         self.malware_subsystem = self._validate_subsystem(malware_subsystem)
         self.author = author
+        self.tpl_marking = tpl_marking
         self.is_family = False
         self.__post_init__()
 
@@ -325,6 +332,7 @@ class Malware(BaseModel):
             malware_types=(
                 [self.malware_subsystem] if self.malware_subsystem else ["unknown"]
             ),
+            object_marking_refs=[self.tpl_marking],
             created_by_ref=self.author,
         )
 
@@ -333,13 +341,19 @@ class URL(BaseModel):
     """URL indicator."""
 
     def __init__(
-        self, scan_uri: str, valid_from: datetime, author_id: str, description: str = ""
+        self,
+        scan_uri: str,
+        valid_from: datetime,
+        author_id: str,
+        tpl_marking: str,
+        description: str = "",
     ):
         super().__init__()
         self.scan_uri = scan_uri
         self.description = description
         self.valid_from = valid_from
         self.author_id = author_id
+        self.tpl_marking = tpl_marking
         self.__post_init__()
 
     def to_stix2_object(self) -> stix2.Indicator:
@@ -350,6 +364,7 @@ class URL(BaseModel):
             pattern_type="stix",
             valid_from=self.valid_from,
             pattern=f"[url:value = '{self.scan_uri}']",
+            object_marking_refs=[self.tpl_marking],
             created_by_ref=self.author_id,
         )
 
@@ -357,11 +372,12 @@ class URL(BaseModel):
 class Author(BaseModel):
     """Author organization."""
 
-    def __init__(self, name: str, description: str):
+    def __init__(self, name: str, description: str, tpl_marking: str):
         super().__init__()
         identity_class = "organization"
         self.name = name
         self.description = description
+        self.tpl_marking = tpl_marking
         self.identity_class = identity_class
         self.external_references = self.create_external_references()
         self.__post_init__()
@@ -382,6 +398,7 @@ class Author(BaseModel):
             identity_class=self.identity_class,
             description=self.description,
             external_references=self.external_references,
+            object_marking_refs=[self.tpl_marking],
         )
 
 
@@ -393,6 +410,7 @@ class Infrastructure(BaseModel):
         name: str,
         infrastructure_types: str,
         author: str,
+        tpl_marking: str,
         created: Optional[datetime] = None,
     ):
         super().__init__()
@@ -400,6 +418,7 @@ class Infrastructure(BaseModel):
         self.infrastructure_types = infrastructure_types
         self.created = created
         self.author = author
+        self.tpl_marking = tpl_marking
         self.__post_init__()
 
     def to_stix2_object(self) -> stix2.Infrastructure:
@@ -409,6 +428,7 @@ class Infrastructure(BaseModel):
             name=self.name,
             created_by_ref=self.author,
             infrastructure_types=[self.infrastructure_types],
+            object_marking_refs=[self.tpl_marking],
         )
 
 
@@ -439,10 +459,13 @@ class NetworkTraffic(BaseModel):
         >>> traffic = create_network_traffic(port, src_ref)
     """
 
-    def __init__(self, port: Optional[int], src_ref: Optional[str], author: str):
+    def __init__(
+        self, port: Optional[int], src_ref: Optional[str], author: str, tpl_marking: str
+    ):
         super().__init__()
         self.port = self._validate_port(port)
         self.author = author
+        self.tpl_marking = tpl_marking
         self.src_ref = src_ref
         self.__post_init__()
 
@@ -467,6 +490,7 @@ class NetworkTraffic(BaseModel):
         # Create deterministic ID to prevent conflicts
         id_components = [
             "type:network-traffic",
+            f"connector:{CustomProperties.CONNECTOR_VALUE}",
             f"src_ref:{self.src_ref or 'none'}",
             f"dst_port:{self.port or 'none'}",
             f"protocols:{NetworkProtocols.TCP}",
@@ -489,6 +513,7 @@ class NetworkTraffic(BaseModel):
             custom_properties={
                 CustomProperties.CREATED_BY: self.author,
             },
+            object_marking_refs=[self.tpl_marking],
         )
 
 
@@ -503,6 +528,7 @@ class Relationship(BaseModel):
         target_id: Optional[str],
         author: str,
         confidence: int,
+        tpl_marking: str,
     ):
         super().__init__()
         self.relationship_type = relationship_type
@@ -510,6 +536,7 @@ class Relationship(BaseModel):
         self.source_id = source_id
         self.target_id = target_id
         self.author = author
+        self.tpl_marking = tpl_marking
         self.confidence = confidence
         self.__post_init__()
 
@@ -524,4 +551,5 @@ class Relationship(BaseModel):
             target_ref=self.target_id,
             created_by_ref=self.author,
             confidence=self.confidence,
+            object_marking_refs=[self.tpl_marking],
         )

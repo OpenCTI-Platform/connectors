@@ -75,3 +75,7 @@ class RetryableError(HuntIOConnectorError):
 
 class NonRetryableError(HuntIOConnectorError):
     """Raised for errors that should not be retried."""
+
+
+class InvalidTlpLevelError(HuntIOConnectorError):
+    """Custom error for invalid TLP levels."""

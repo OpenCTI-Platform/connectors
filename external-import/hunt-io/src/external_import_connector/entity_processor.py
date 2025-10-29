@@ -3,7 +3,10 @@
 from typing import Dict, List, Tuple
 
 import stix2
-from external_import_connector.constants import LoggingPrefixes, STIXRelationships
+from external_import_connector.constants import (
+    LoggingPrefixes,
+    STIXRelationships,
+)
 from external_import_connector.converter_to_stix import ConverterToStix
 from external_import_connector.exceptions import STIXConversionError
 from external_import_connector.models import C2, C2ScanResult
@@ -91,6 +94,7 @@ class STIXObjectCreator:
                     number_observed=1,
                     object_refs=observed_data_refs,
                     created_by_ref=self.converter.author,
+                    object_marking_refs=[self.converter.tlp_marking.id],
                 )
 
             # Collect all STIX objects
@@ -225,6 +229,7 @@ class EntityProcessor:
         )
 
         all_objects.append(self.converter.author)
+        all_objects.append(self.converter.tlp_marking)
 
         for batch_idx in range(0, len(entities), batch_size):
             batch = entities[batch_idx : batch_idx + batch_size]
