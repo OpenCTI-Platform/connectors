@@ -156,3 +156,22 @@ def test_should_send_tpl_markings(correct_config, api_response_mock):
             assert marking_definition_id in item["object_marking_refs"]
 
     assert count == len(sent_bundle["objects"]) - 2
+
+
+def test_should_not_initiate_work_if_payload_is_empty(
+    correct_config, empty_api_response_mock
+):
+    connector = ConnectorHuntIo()
+
+    sent_bundle = {}
+
+    def capture_sent_bundle(bundle: str, **_):
+        nonlocal sent_bundle
+        sent_bundle = json.loads(bundle)
+
+    connector.helper.send_stix2_bundle = capture_sent_bundle
+    connector.process_message()
+
+    assert sent_bundle == {}
+    assert connector.helper.api.work.initiate_work.call_count == 0
+    assert connector.helper.api.work.to_processed.call_count == 0

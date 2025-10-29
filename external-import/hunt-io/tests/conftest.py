@@ -113,3 +113,11 @@ def api_response_mock():
         mock_get.return_value.raise_for_status = lambda: None
         mock_get.return_value.content = gzip_buffer
         yield c2_feed_batch
+
+
+@pytest.fixture
+def empty_api_response_mock():
+    with patch("requests.Session.get") as mock_get:
+        mock_get.return_value.raise_for_status = lambda: None
+        mock_get.return_value.content = gzip.compress("".encode("utf-8"))
+        yield
