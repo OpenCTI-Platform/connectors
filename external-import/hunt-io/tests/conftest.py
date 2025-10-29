@@ -21,9 +21,31 @@ def correct_config():
             "CONNECTOR_ID": "connector_id",
             "CONNECTOR_NAME": "connector_name",
             "CONNECTOR_TYPE": "EXTERNAL_IMPORT",
+            "CONNECTOR_LOG_LEVEL": "error",
+            "CONNECTOR_SCOPE": "scope",
             "CONNECTOR_DURATION_PERIOD": "PT5M",
             "CONNECTOR_HUNT_IO_API_BASE_URL": "http://api",
             "CONNECTOR_HUNT_IO_API_KEY": "api_key_value",
+        },
+    ):
+        yield
+
+
+@pytest.fixture
+def deprecated_config():
+    with patch(
+        "os.environ",
+        {
+            "OPENCTI_URL": "http://url",
+            "OPENCTI_TOKEN": "token",
+            "CONNECTOR_ID": "connector_id",
+            "CONNECTOR_NAME": "connector_name",
+            "CONNECTOR_TYPE": "EXTERNAL_IMPORT",
+            "CONNECTOR_LOG_LEVEL": "error",
+            "CONNECTOR_SCOPE": "scope",
+            "CONNECTOR_DURATION_PERIOD": "PT5M",
+            "CONNECTOR_HUNT_UI_API_BASE_URL": "http://api",
+            "CONNECTOR_HUNT_UI_API_KEY": "api_key_value",
         },
     ):
         yield

@@ -1,67 +1,56 @@
-import os
-from pathlib import Path
-from typing import Any, Dict
+import warnings
 
-import yaml
+from connectors_sdk import BaseConnectorSettings, BaseExternalImportConnectorConfig
 from pycti import get_config_variable
+from pydantic import Field, model_validator
+from pydantic_settings import BaseSettings
 
 from .constants import ConfigKeys
 
 
-class ConfigConnector:
+class APIConfig(BaseSettings):
+    api_base_url: str = Field(None, description="API base URL")
+    api_key: str = Field(None, description="API key")
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_deprecated_configs(cls, data: dict) -> dict:
+        deprecated_configs = [
+            {
+                "key": ConfigKeys.API_BASE_URL,
+                "yaml_path": ["connector_hunt_io", "api_base_url"],
+                "field_name": "api_base_url",
+                "old_name": ConfigKeys.API_BASE_URL,
+                "new_name": "CONNECTOR_HUNT_IO_API_BASE_URL",
+            },
+            {
+                "key": ConfigKeys.API_KEY,
+                "yaml_path": ["connector_hunt_io", "api_key"],
+                "field_name": "api_key",
+                "old_name": ConfigKeys.API_BASE_URL,
+                "new_name": "CONNECTOR_HUNT_IO_API_KEY",
+            },
+        ]
+
+        for config in deprecated_configs:
+            value = get_config_variable(config["key"], config["yaml_path"])
+            if value:
+                warnings.warn(
+                    message=f"Env var '{config['old_name']}' is deprecated. "
+                    f"Use '{config['new_name']}' instead.",
+                    category=DeprecationWarning,
+                )
+                data[config["field_name"]] = (
+                    data.get(config["field_name"], None) or value
+                )
+
+        return data
+
+
+class ConfigConnector(BaseConnectorSettings):
     """Handles connector configuration loading and validation."""
 
-    def __init__(self):
-        """Initialize the connector with necessary configurations."""
-        # Load configuration file
-        self.load = self._load_config()
-        self._initialize_configurations()
-
-    @staticmethod
-    def _load_config() -> Dict[str, Any]:
-        """
-        Load the configuration from the YAML file.
-
-        Returns:
-            Configuration dictionary
-        """
-        config_file_path = Path(__file__).parents[1].joinpath("config.yml")
-
-        if os.path.isfile(config_file_path):
-            with open(config_file_path, "r", encoding="utf-8") as config_file:
-                config = yaml.load(config_file, Loader=yaml.FullLoader)
-        else:
-            config = {}
-
-        return config
-
-    def _initialize_configurations(self) -> None:
-        """Initialize connector configuration variables."""
-        # OpenCTI configurations
-        self.duration_period = get_config_variable(
-            ConfigKeys.DURATION_PERIOD,
-            ["connector", "duration_period"],
-            self.load,
-        )
-
-        # Connector extra parameters
-        self.api_base_url = get_config_variable(
-            ConfigKeys.API_BASE_URL,
-            ["connector_hunt_io", "api_base_url"],
-            self.load,
-        )
-
-        self.api_key = get_config_variable(
-            ConfigKeys.API_KEY,
-            ["connector_hunt_io", "api_key"],
-            self.load,
-        )
-
-    def validate(self) -> None:
-        """Validate that required configuration is present."""
-        if not self.api_base_url:
-            raise ValueError("API base URL is required")
-        if not self.api_key:
-            raise ValueError("API key is required")
-        if not self.duration_period:
-            raise ValueError("Duration period is required")
+    connector: BaseExternalImportConnectorConfig = Field(
+        default_factory=BaseExternalImportConnectorConfig
+    )
+    connector_hunt_io: APIConfig = Field(default_factory=APIConfig)

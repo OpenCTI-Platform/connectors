@@ -1,6 +1,7 @@
 import json
 
 import pytest
+from connectors_sdk import ConfigValidationError
 from external_import_connector import ConnectorHuntIo
 
 
@@ -34,6 +35,11 @@ def test_should_run_connector(correct_config, api_response_mock):
 
 
 def test_should_fail_if_config_is_invalid():
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(ConfigValidationError) as e:
         ConnectorHuntIo()
-    assert str(e.value) == "An URL must be set"
+    assert str(e.value) == "Error validating configuration."
+
+
+def test_should_warn_if_deprecated_config_is_used(deprecated_config):
+    with pytest.deprecated_call():
+        ConnectorHuntIo()

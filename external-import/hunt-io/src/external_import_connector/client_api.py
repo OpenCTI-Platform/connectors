@@ -188,7 +188,9 @@ class ConnectorClient:
         self.data_processor = DataProcessor(helper)
 
         # Create HTTP session with resilience features
-        self.session = self.session_manager.create_session(self.config.api_key)
+        self.session = self.session_manager.create_session(
+            self.config.connector_hunt_io.api_key
+        )
 
     @property
     def latest_timestamp(self) -> Optional[str]:
@@ -313,7 +315,9 @@ class ConnectorClient:
             self.session.close()
 
             # Create new session with same configuration
-            self.session = self.session_manager.create_session(self.config.api_key)
+            self.session = self.session_manager.create_session(
+                self.config.connector_hunt_io.api_key
+            )
 
             self.helper.connector_logger.info(
                 f"{LoggingPrefixes.HTTP_RESILIENCE} HTTP session refreshed successfully"
@@ -353,7 +357,7 @@ class ConnectorClient:
 
             # Make API request
             response = self._request_data(
-                self.config.api_base_url, params=request_params
+                self.config.connector_hunt_io.api_base_url, params=request_params
             )
 
             # Process response data

@@ -177,7 +177,7 @@ class ConnectorHuntIo:
         """Initialize the Connector with necessary configurations."""
         # Load configuration and setup helper
         self.config = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
 
         # Initialize components following dependency injection pattern
         self.client = ConnectorClient(self.helper, self.config)
@@ -308,5 +308,5 @@ class ConnectorHuntIo:
         """
         self.helper.schedule_iso(
             message_callback=self.process_message,
-            duration_period=self.config.duration_period,
+            duration_period=self.helper.config["connector"]["duration_period"],
         )
