@@ -2,11 +2,7 @@ import datetime
 
 import stix2
 from dateutil.parser import parse
-from pycti import (
-    Identity,
-    StixCoreRelationship,
-    Indicator,
-)
+from pycti import Identity, Indicator, StixCoreRelationship
 
 
 class ConverterToStix:
