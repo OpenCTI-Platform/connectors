@@ -64,7 +64,7 @@ services:
       - dev-opencti
 
   opencti:
-    image: opencti/platform:6.8.6
+    image: opencti/platform:6.8.9
     environment:
       - NODE_OPTIONS=--max-old-space-size=8096
       - APP__PORT=8080
@@ -102,7 +102,7 @@ services:
     restart: unless-stopped
 
   worker:
-    image: opencti/worker:6.8.6
+    image: opencti/worker:6.8.9
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
@@ -150,21 +150,21 @@ services:
       - dev-opencti
     restart: unless-stopped
 
-  # # This is needed for workbench feature eventually
-  # connector-import-file-stix:
-  #   image: opencti/connector-import-file-stix:6.8.6
-  #   environment:
-  #     - OPENCTI_URL=http://opencti:8080
-  #     - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
-  #     - CONNECTOR_ID=430a1606-f9d9-47f9-8f1d-939e7c1ab76d
-  #     - CONNECTOR_NAME=ImportFileStix
-  #     - CONNECTOR_VALIDATE_BEFORE_IMPORT=true # Validate any bundle before import
-  #     - CONNECTOR_SCOPE=application/json,application/xml
-  #     - CONNECTOR_AUTO=false # Enable/disable auto-import of file
-  #     - CONNECTOR_LOG_LEVEL=debug
-  #   restart: unless-stopped
-  #   networks:
-  #     - dev-opencti
+  # This is needed for workbench feature eventually
+  connector-import-file-stix:
+    image: opencti/connector-import-file-stix:6.8.9
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_ID=430a1606-f9d9-47f9-8f1d-939e7c1ab76d
+      - CONNECTOR_NAME=ImportFileStix
+      - CONNECTOR_VALIDATE_BEFORE_IMPORT=true # Validate any bundle before import
+      - CONNECTOR_SCOPE=application/json,application/xml
+      - CONNECTOR_AUTO=false # Enable/disable auto-import of file
+      - CONNECTOR_LOG_LEVEL=debug
+    restart: unless-stopped
+    networks:
+      - dev-opencti
 
 networks:
   dev-opencti:

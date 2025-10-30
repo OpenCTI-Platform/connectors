@@ -9,6 +9,7 @@ import boto3
 import pytz
 import stix2
 import yaml
+from dateutil import parser
 from pycti import (
     CourseOfAction,
     Identity,
@@ -108,6 +109,15 @@ class S3Connector:
             "S3_CUTOFF", ["s3", "cutoff"], config, isNumber=True, default=360
         )
 
+        bucket_prefixes = get_config_variable(
+            "S3_BUCKET_PREFIXES",
+            ["s3", "bucket_prefixes"],
+            config,
+            isNumber=False,
+            default="ACI_TI,ACI_Vuln",
+        )
+        self.s3_bucket_prefixes = [x.strip() for x in bucket_prefixes.split(",")]
+
         # Create the identity
         self.identity = None
         if self.s3_author is not None:
@@ -123,10 +133,23 @@ class S3Connector:
             region_name=self.s3_region,
         )
 
+    def set_state_value(self, s3_prefix: str, value: str):
+        """Using this method to set the value of a specific key in the state collection.
+        See Also:
+            get_state_value
+        """
+        try:
+            state = self.helper.get_state()
+            state[s3_prefix] = value
+            self.helper.set_state(state)
+        except (KeyError, TypeError) as err:
+            raise Exception(f"State key {s3_prefix} not found") from err
+
     def get_interval(self):
         return int(self.s3_interval) * 60
 
-    def rewrite_stix_ids(self, objects):
+    @staticmethod
+    def rewrite_stix_ids(objects):
         # First pass: Build ID mapping for objects that need new IDs
         id_mapping = {}
 
@@ -462,60 +485,99 @@ class S3Connector:
         return new_bundle
 
     def process(self):
-        now = datetime.datetime.now(pytz.UTC)
-        # We always re-send 2 days of data before deleting to handle multi instances consuming, we are good with this approach
-        # OpenCTI will de-duplicate / upsert if necessary
-        cutoff = now - datetime.timedelta(minutes=self.s3_cutoff)
-        objects = self.s3_client.list_objects(Bucket=self.s3_bucket_name)
-        if objects.get("Contents") is not None and len(objects.get("Contents")) > 0:
-            friendly_name = "S3 run @ " + now.astimezone(pytz.UTC).isoformat()
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
+
+        state = self.helper.get_state()
+        if state is None:
+            state = {}
+
+        for prefix in self.s3_bucket_prefixes:
+
+            prefix_state = state.get(prefix, "")
+            if prefix_state:
+                prefix_state_date = parser.parse(prefix_state)
+            else:
+                prefix_state_date = None
+            self.helper.connector_logger.info(
+                f"Going to process files in S3 Prefix: '{prefix}', Prefix state: '{prefix_state}'"
             )
-            for o in objects.get("Contents"):
-                try:
-                    last_modified = o.get("LastModified")
-                    data = self.s3_client.get_object(
-                        Bucket=self.s3_bucket_name, Key=o.get("Key")
-                    )
-                    content = data["Body"].read()
-                except:
-                    continue
-                self.helper.log_info("Sending file " + o.get("Key"))
-                fixed_bundle = self.fix_bundle(content)
-                if fixed_bundle:
-                    self.helper.send_stix2_bundle(bundle=fixed_bundle, work_id=work_id)
-                else:
-                    self.helper.log_info("No content to ingest")
-                if self.s3_delete_after_import and last_modified < cutoff:
-                    self.helper.log_info(
-                        "Deleting file "
-                        + o.get("Key")
-                        + "(2 days ago="
-                        + str(cutoff)
-                        + ", modified="
-                        + str(last_modified)
-                        + ")"
-                    )
+
+            now = datetime.datetime.now(pytz.UTC)
+            # We always re-send 2 days of data before deleting to handle multi instances consuming, we are good with this approach
+            # OpenCTI will de-duplicate / upsert if necessary
+            cutoff = now - datetime.timedelta(minutes=self.s3_cutoff)
+            objects = self.s3_client.list_objects(
+                Bucket=self.s3_bucket_name, Prefix=prefix
+            )
+            self.helper.log_info(
+                f"{len(objects.get('Contents', []))} files listed in S3 Prefix: '{prefix}'"
+            )
+            if (
+                objects.get("Contents", None) is not None
+                and len(objects.get("Contents")) > 0
+            ):
+                friendly_name = (
+                    f"S3/{prefix} run @ " + now.astimezone(pytz.UTC).isoformat()
+                )
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id, friendly_name
+                )
+                updated_files = 0
+                for o in objects.get("Contents"):
                     try:
-                        self.s3_client.delete_object(
-                            Bucket=self.s3_bucket_name, Key=o.get("Key")
-                        )
-                    except:
+                        last_modified = o.get("LastModified")
+                        if (
+                            prefix_state_date is None
+                            or last_modified > prefix_state_date
+                        ):
+                            data = self.s3_client.get_object(
+                                Bucket=self.s3_bucket_name, Key=o.get("Key")
+                            )
+                            content = data["Body"].read()
+                            fixed_bundle = self.fix_bundle(content)
+                            if fixed_bundle:
+                                self.helper.log_info(
+                                    f"Sending STIX bundle from file: '{o.get("Key")}'"
+                                )
+                                self.helper.send_stix2_bundle(
+                                    bundle=fixed_bundle, work_id=work_id
+                                )
+                                state[prefix] = last_modified.strftime(
+                                    "%Y-%m-%d %H:%M:%S%z"
+                                )
+                                self.helper.set_state(state)
+                                updated_files += 1
+                            else:
+                                self.helper.log_info("No content to ingest")
+                    except Exception as ex:
+                        print(ex)
                         continue
-            message = (
-                "Connector successfully run ("
-                + str(len(objects.get("Contents")))
-                + " file(s) have been processed"
-            )
-            self.helper.log_info(message)
-            self.helper.api.work.to_processed(work_id, message)
-        else:
-            self.helper.log_info("Returned 0 files")
+                    if self.s3_delete_after_import and last_modified < cutoff:
+                        self.helper.log_info(
+                            "Deleting file "
+                            + o.get("Key")
+                            + "(2 days ago="
+                            + str(cutoff)
+                            + ", modified="
+                            + str(last_modified)
+                            + ")"
+                        )
+                        try:
+                            self.s3_client.delete_object(
+                                Bucket=self.s3_bucket_name, Key=o.get("Key")
+                            )
+                        except:
+                            continue
+                message = (
+                    f"Connector successfully processed S3 Prefix: '{prefix}' files, "
+                    f"'{updated_files}' file(s) have been ingested"
+                )
+                self.helper.log_info(message)
+                self.helper.api.work.to_processed(work_id, message)
+            else:
+                self.helper.log_info("Returned 0 files")
 
     def run(self):
-        get_run_and_terminate = getattr(self.helper, "get_run_and_terminate", None)
-        if callable(get_run_and_terminate) and self.helper.get_run_and_terminate():
+        if self.helper.get_run_and_terminate():
             self.process()
             self.helper.force_ping()
         else:
