@@ -1,4 +1,4 @@
-FROM python:3.13-slim 
+FROM python:3.14-slim 
 ENV CONNECTOR_TYPE=STREAM
 
 # Create working directory
