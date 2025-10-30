@@ -14,6 +14,5 @@ RUN cd /opt/opencti-connector-hunt-io && \
     apk del git build-base
 
 # Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+WORKDIR /opt/opencti-connector-hunt-io
+CMD ["python", "main.py"]
