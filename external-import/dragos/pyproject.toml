@@ -36,7 +36,7 @@ test= [
 ]
 dev = [
     "black >=25.1, <26",  # Code formatter
-    "isort >=6, <7",  # Import sorter
+    "isort >=7, <8",  # Import sorter
     "ruff >=0.7.2, <1",  # linter
     "mypy >=1.13.0, <2",  # Type validator
     "pip_audit >=2, <3",  # Security checker
