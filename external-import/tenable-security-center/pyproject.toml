@@ -31,7 +31,7 @@ test = [
 ]
 dev = [
     "black>=25.9,<26",  # Code formatter
-    "isort>=6,<7",  # Import sorter
+    "isort>=7,<8",  # Import sorter
     "ruff>=0.7.2,<1",  # linter
     "mypy>=1.13.0,<2",  # type validator
     "types-requests",  # stubs for requests lib
