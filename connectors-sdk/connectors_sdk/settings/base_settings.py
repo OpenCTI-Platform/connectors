@@ -27,6 +27,7 @@ from pydantic import (
 )
 from pydantic_settings import (
     BaseSettings,
+    DotEnvSettingsSource,
     PydanticBaseSettingsSource,
     SettingsConfigDict,
     YamlConfigSettingsSource,
@@ -71,7 +72,8 @@ class _BaseConnectorConfig(BaseConfigModel, ABC):
         description="The scope of the connector, e.g. 'flashpoint'."
     )
     log_level: Literal["debug", "info", "warn", "warning", "error"] = Field(
-        description="The minimum level of logs to display."
+        description="The minimum level of logs to display.",
+        default="error",
     )
 
 
@@ -124,7 +126,7 @@ class _SettingsLoader(BaseSettings):
         if Path(settings_cls.model_config["env_file"] or "").is_file():  # type: ignore
             return (
                 env_settings,
-                dotenv_settings,
+                DotEnvSettingsSource(settings_cls),
             )
         return (env_settings,)
 

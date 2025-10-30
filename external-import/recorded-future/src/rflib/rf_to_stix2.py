@@ -969,6 +969,7 @@ class StixNote:
         ta_to_intrusion_set=False,
         risk_as_score=False,
         risk_threshold=None,
+        analyst_notes_guess_relationships=False,
     ):
         self.author = self._create_author()
         self.name = None
@@ -987,6 +988,7 @@ class StixNote:
         self.tlp = stix2.TLP_RED
         self.rfapi = rfapi
         self.attachments = None
+        self.analyst_notes_guess_relationships = analyst_notes_guess_relationships
 
     @staticmethod
     def _create_author():
@@ -1309,7 +1311,7 @@ class StixNote:
 
         if event_objects:
             self.objects.extend(event_objects)
-        else:
+        elif self.analyst_notes_guess_relationships:
             self.create_relations()
 
     def _create_report_types(self, topics):
