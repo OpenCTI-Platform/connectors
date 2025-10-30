@@ -416,7 +416,12 @@ class AttributeConverter:
             return None
 
         # ! Be sure that the first observable is the main one in create_observables method
-        octi_main_observable_type = OCTI_MAIN_OBSERVABLE_TYPES[observables[0]["type"]]
+        octi_main_observable_type = OCTI_MAIN_OBSERVABLE_TYPES.get(
+            observables[0]["type"], None
+        )
+
+        if not octi_main_observable_type:
+            return None
 
         if attribute.type in ["yara", "sigma", "pcre", "snort", "suricata"]:
             # Use MISP IOCs as-is
