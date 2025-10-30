@@ -333,7 +333,7 @@ class AttributeConverter:
                 )
             case "windows-scheduled-task":
                 observables.append(
-                    observable=pycti.CustomObservableText(
+                    pycti.CustomObservableText(
                         value=attribute.value,
                         object_marking_refs=markings,
                         custom_properties=custom_properties,
@@ -405,7 +405,7 @@ class AttributeConverter:
     def create_indicator(
         self,
         attribute: ExtendedAttributeItem,
-        observables: stix2.v21._Observable,
+        observables: list[stix2.v21._Observable],
         score: int,
         labels: list[str],
         author: stix2.Identity,
