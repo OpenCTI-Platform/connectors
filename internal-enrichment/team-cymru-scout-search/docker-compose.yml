@@ -1,9 +1,6 @@
 services:
   scout-search-connector:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: opencti/scout-search-connector:rolling
+    image: opencti/scout-search-connector:rolling
     environment:
       - OPENCTI_URL=${OPENCTI_URL:-http://opencti:8080}
       - OPENCTI_TOKEN=${OPENCTI_TOKEN:-}
