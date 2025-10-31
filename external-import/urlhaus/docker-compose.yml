@@ -9,10 +9,9 @@ services:
       - CONNECTOR_NAME=Abuse.ch URLhaus
       - CONNECTOR_SCOPE=urlhaus
       - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_DURATION_PERIOD=P3D # In days, must be strictly greater than 1
-
-      - CONNECTOR_URLHAUS_CSV_URL=https://urlhaus.abuse.ch/downloads/csv_recent/
-      - CONNECTOR_URLHAUS_DEFAULT_X_OPENCTI_SCORE=80 # Optional: Defaults to 80.
-      - CONNECTOR_URLHAUS_IMPORT_OFFLINE=true
-      - CONNECTOR_URLHAUS_THREATS_FROM_LABELS=true
+      - URLHAUS_INTERVAL=3
+      - URLHAUS_CSV_URL=https://urlhaus.abuse.ch/downloads/csv_recent/
+      - URLHAUS_DEFAULT_X_OPENCTI_SCORE=80 # Optional: Defaults to 80.
+      - URLHAUS_IMPORT_OFFLINE=true
+      - URLHAUS_THREATS_FROM_LABELS=true
     restart: always

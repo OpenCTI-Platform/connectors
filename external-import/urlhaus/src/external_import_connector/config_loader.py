@@ -48,22 +48,25 @@ class ConfigConnector:
             self.load,
         )
 
-        self.duration_period = get_config_variable(
-            "CONNECTOR_DURATION_PERIOD",
-            ["connector", "duration_period"],
+        self.interval = get_config_variable(
+            "URLHAUS_INTERVAL",
+            ["urlhaus", "interval"],
             self.load,
+            isNumber=True,
+            default=3,
+            required=True,
         )
 
         # Connector extra parameters
         self.urlhaus_csv_url = get_config_variable(
-            "CONNECTOR_URLHAUS_CSV_URL",
-            ["connector_urlhaus", "csv_url"],
+            "URLHAUS_CSV_URL",
+            ["urlhaus", "csv_url"],
             self.load,
         )
 
         self.default_x_opencti_score = get_config_variable(
-            "CONNECTOR_URLHAUS_DEFAULT_X_OPENCTI_SCORE",
-            ["connector_urlhaus", "default_x_opencti_score"],
+            "URLHAUS_DEFAULT_X_OPENCTI_SCORE",
+            ["urlhaus", "default_x_opencti_score"],
             config=self.load,
             isNumber=True,
             default=80,
@@ -71,16 +74,16 @@ class ConfigConnector:
         )
 
         self.urlhaus_import_offline = get_config_variable(
-            "CONNECTOR_URLHAUS_IMPORT_OFFLINE",
-            ["connector_urlhaus", "import_offline"],
+            "URLHAUS_IMPORT_OFFLINE",
+            ["urlhaus", "import_offline"],
             self.load,
             False,
             True,
         )
 
         self.threats_from_labels = get_config_variable(
-            "CONNECTOR_URLHAUS_THREATS_FROM_LABELS",
-            ["connector_urlhaus", "threats_from_labels"],
+            "URLHAUS_THREATS_FROM_LABELS",
+            ["urlhaus", "threats_from_labels"],
             self.load,
             False,
             True,
