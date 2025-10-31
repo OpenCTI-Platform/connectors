@@ -42,7 +42,7 @@ ALLOWED_ORIGINS = [
 
 
 def validate_origins_list(
-    v: str, field_name: str, allowed_origins: list[str] | None = None
+    v: list[str], field_name: str, allowed_origins: list[str] | None = None
 ) -> list[str]:
     """Split and validate a comma-separated string into a list and validate its contents.
 
