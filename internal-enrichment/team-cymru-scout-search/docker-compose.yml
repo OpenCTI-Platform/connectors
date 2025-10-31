@@ -1,6 +1,6 @@
 services:
   scout-search-connector:
-    image: opencti/scout-search-connector:rolling
+    image: opencti/connector-scout-search:rolling
     environment:
       - OPENCTI_URL=${OPENCTI_URL:-http://opencti:8080}
       - OPENCTI_TOKEN=${OPENCTI_TOKEN:-}
