@@ -306,19 +306,29 @@ class MWDB:
         c2obj = []
         if "c2" in config.cfg:
             for c2 in config.cfg["c2"]:
-                if re.match("^https?://.*", c2):
-                    c2obj.extend(self.process_c2(c2, virus, "c2-url"))
-                if re.match(
-                    r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d{1,5})?",
-                    c2,
-                ):
-                    c2obj.extend(self.process_c2(c2, virus, "c2-ip"))
+                try:
+                    if re.match("^https?://.*", c2):
+                        c2obj.extend(self.process_c2(c2, virus, "c2-url"))
+                    if re.match(
+                        r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d{1,5})?",
+                        c2,
+                    ):
+                        c2obj.extend(self.process_c2(c2, virus, "c2-ip"))
+                except Exception as e:
+                    self.helper.log_error("Error processing C2 from config " + str(config))
+                    self.helper.log_error("Exception: " + str(e))
+                    continue
 
         if "attr" in config.cfg:
             if "url4cnc" in config.cfg["attr"].keys():
                 for url in config.cfg["attr"]["url4cnc"]:
-                    if re.match("^https?://.*", url):
-                        c2obj.extend(self.process_c2(url, virus, "c2-url-ref"))
+                    try:
+                        if re.match("^https?://.*", url):
+                            c2obj.extend(self.process_c2(url, virus, "c2-url-ref"))
+                    except Exception as e:
+                        self.helper.log_error("Error processing url4cnc from config " + str(config))
+                        self.helper.log_error("Exception: " + str(e))
+                        continue
 
         return c2obj
 
