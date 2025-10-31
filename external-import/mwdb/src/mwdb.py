@@ -122,8 +122,8 @@ class MWDB:
             "MWDB_MAX_START_RETENTION", ["mwdb", "max_start_retention"], config, True, 6
         )
 
-        ## Verify setting of the starting date in the config
-        ## ELSE retrieve le last month.
+        # Verify setting of the starting date in the config
+        # ELSE retrieve le last month.
         self.start_date = get_config_variable(
             "MWDB_START_DATE", ["mwdb", "start_date"], config, None
         )
@@ -134,7 +134,7 @@ class MWDB:
             last6month = datetime.now() - relativedelta(months=self.max_start_retention)
             self.start_date = last6month.isoformat()
 
-        ## CHECK IF IT'S IN ISO FORMAT
+        # CHECK IF IT'S IN ISO FORMAT
         self.identity = self.helper.api.identity.create(
             type="Organization", name=self.org_name, description=self.org_description
         )
@@ -301,7 +301,7 @@ class MWDB:
             objects.append(relation2c2)
         return objects
 
-    ## A function to process malware config data
+    # A function to process malware config data
     def process_config(self, config, virus):
         c2obj = []
         if "c2" in config.cfg:
@@ -332,7 +332,7 @@ class MWDB:
 
         return c2obj
 
-    ## A function to process malware tags using a CERT.PL taxonomies
+    # A function to process malware tags using a CERT.PL taxonomies
     def process_tags(self, tags) -> Mapping:
         attributes = {"yara": [], "family": [], "runnable": [], "extra": []}
         for tag in tags:
@@ -377,7 +377,7 @@ class MWDB:
                 )
                 relatsions.append(relationship)
 
-            ## first search in unstructured tag malware
+            # first search in unstructured tag malware
             fullsearch = self.helper.api.malware.read(
                 filters={
                     "mode": "and",
@@ -392,7 +392,7 @@ class MWDB:
                         == taglabel.lower().strip().replace(" ", "")
                         or malwsearc["name"].lower().strip() == taglabel.lower()
                     ):
-                        ### create relation and continue indicates
+                        # create relation and continue indicates
                         relationship = Relationship(
                             id=StixCoreRelationship.generate_id(
                                 "related-to",
@@ -406,7 +406,7 @@ class MWDB:
                         )
                         relatsions.append(relationship)
 
-            ## second search for intrusion set like APT
+            # second search for intrusion set like APT
             fullsearch = self.helper.api.intrusion_set.read(
                 filters={
                     "mode": "and",
@@ -435,7 +435,7 @@ class MWDB:
                             created_by_ref=self.identity["standard_id"],
                         )
                         relatsions.append(relationship)
-                        ### create relation and continue related-to
+                        # create relation and continue related-to
         return relatsions
 
     def process_virus(self, malware):
@@ -551,7 +551,7 @@ class MWDB:
                 bundle_objects.append(relationshipmal)
 
             if str(self.import_config).capitalize() == "True":
-                ## PROCESSING CONFIG
+                # PROCESSING CONFIG
                 if malware.config and self.import_config:
                     bundle_objects.extend(self.process_config(malware.config, virus))
 
