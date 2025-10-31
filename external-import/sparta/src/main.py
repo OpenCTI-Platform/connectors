@@ -1,8 +1,8 @@
 import traceback
 
-from connector.connector import Sparta
-from connector.services.config_loader_sparta import ConfigLoaderSparta
+from models import ConfigLoader
 from pycti import OpenCTIConnectorHelper
+from sparta.connector import Sparta
 
 if __name__ == "__main__":
     """
@@ -15,12 +15,9 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        config = ConfigLoaderSparta()
-        config_instance = config.load
-        # Convert the config into a dictionary, automatically excluding any parameters set to `None`.
-        config_dict = config_instance.model_dump(exclude_none=True)
-        helper = OpenCTIConnectorHelper(config=config_dict)
-        connector = Sparta(config_instance, helper)
+        config = ConfigLoader()
+        helper = OpenCTIConnectorHelper(config=config.model_dump_pycti())
+        connector = Sparta(helper=helper, config=config)
         connector.run()
     except Exception:
         traceback.print_exc()
