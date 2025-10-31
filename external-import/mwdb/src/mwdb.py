@@ -315,7 +315,9 @@ class MWDB:
                     ):
                         c2obj.extend(self.process_c2(c2, virus, "c2-ip"))
                 except Exception as e:
-                    self.helper.log_error("Error processing C2 from config " + str(config))
+                    self.helper.log_error(
+                        "Error processing C2 from config " + str(config)
+                    )
                     self.helper.log_error("Exception: " + str(e))
                     continue
 
@@ -326,7 +328,9 @@ class MWDB:
                         if re.match("^https?://.*", url):
                             c2obj.extend(self.process_c2(url, virus, "c2-url-ref"))
                     except Exception as e:
-                        self.helper.log_error("Error processing url4cnc from config " + str(config))
+                        self.helper.log_error(
+                            "Error processing url4cnc from config " + str(config)
+                        )
                         self.helper.log_error("Exception: " + str(e))
                         continue
 
