@@ -53,25 +53,25 @@ Below are the parameters you'll need to set for OpenCTI:
 
 Below are the parameters you'll need to set for running the connector properly:
 
-| Parameter       | config.yml | Docker environment variable | Default         | Mandatory | Description                                                                              |
-|-----------------|------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
-| Connector Name  | name       | `CONNECTOR_NAME`            | Abuse.ch URLhaus | Yes      | Name of the connector.                                                                   |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           | urlhaus         | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | error           | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
-| Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD`  | P3D       | Yes       | Interval for the scheduler process in ISO-8601 format (e.g., P1D for 1 day).        |
+| Parameter       | config.yml | Docker environment variable | Default          | Mandatory | Description                                                                              |
+|-----------------|------------|-----------------------------|------------------|-----------|------------------------------------------------------------------------------------------|
+| Connector ID    | id         | `CONNECTOR_ID`              | /                | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
+| Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT  | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
+| Connector Name  | name       | `CONNECTOR_NAME`            | Abuse.ch URLhaus | Yes       | Name of the connector.                                                                   |
+| Connector Scope | scope      | `CONNECTOR_SCOPE`           | urlhaus          | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
+| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | error            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
 
 ### Connector extra parameters environment variables
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description |
-|--------------|--------------|-----------------------------|---------|-----------|-------------|
-| API base URL | csv_url |   `CONNECTOR_URLHAUS_CSV_URL`    |    https://api.phishstats.info/api/phishing?_sort=-id     | Yes       |             |
-| Score        | default_x_opencti_score | `CONNECTOR_URLHAUS_DEFAULT_X_OPENCTI_SCORE` | 80     |  |
-| Import Offline  | import_offline | `CONNECTOR_URLHAUS_IMPORT_OFFLINE` | true     |  |
-| Related Threats | threats_from_labels | `CONNECTOR_URLHAUS_THREATS_FROM_LABELS` | true     |  |
+| Parameter       | config.yml              | Docker environment variable       | Default                                              | Mandatory | Description                                                                  |
+|-----------------|-------------------------|-----------------------------------|------------------------------------------------------|-----------|------------------------------------------------------------------------------|
+| API base URL    | csv_url                 | `URLHAUS_CSV_URL`                 | https://api.phishstats.info/api/phishing?_sort=-id   | Yes       |                                                                              |
+| Score           | default_x_opencti_score | `URLHAUS_DEFAULT_X_OPENCTI_SCORE` | 80                                                   |           |                                                                              |
+| Import Offline  | import_offline          | `URLHAUS_IMPORT_OFFLINE`          | true                                                 |           |                                                                              |
+| Related Threats | threats_from_labels     | `URLHAUS_THREATS_FROM_LABELS`     | true                                                 |           |                                                                              |
+| Interval        | interval                | `URLHAUS_INTERVAL`                | 3                                                    | Yes       | Interval for the scheduler process in days (e.g., 1 for 1 day).              |
 
 
 ## Deployment
@@ -120,7 +120,7 @@ python3 main.py
 
 ## Usage
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
+After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `interval`.
 
 However, if you would like to force an immediate download of a new batch of entities, navigate to:
 
