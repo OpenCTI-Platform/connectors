@@ -57,6 +57,18 @@ class ConfigConnector:
             ["elastic_security", "api_key"],
             self.load,
         )
+        self.elastic_client_cert = get_config_variable(
+            "ELASTIC_SECURITY_CLIENT_CERT",
+            ["elastic_security", "client_cert"],
+            self.load,
+            default=None,
+        )
+        self.elastic_client_key = get_config_variable(
+            "ELASTIC_SECURITY_CLIENT_KEY",
+            ["elastic_security", "client_key"],
+            self.load,
+            default=None,
+        )
         self.elastic_ca_cert = get_config_variable(
             "ELASTIC_SECURITY_CA_CERT",
             ["elastic_security", "ca_cert"],
