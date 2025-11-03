@@ -22,4 +22,5 @@ services:
       - THEHIVE_ALERT_STATUS_MAPPING= # TheHive_ExtStatus_Text1:OpenCTI_Status_ID1,TheHive_ExtStatus_Text2:OpenCTI_Status_ID2
       - THEHIVE_USER_MAPPING= # Format: TheHive_Assignee_Email1:OpenCTI_User_ID1,TheHive_Assignee_Email2:OpenCTI_User_ID2
       - THEHIVE_INTERVAL=5 # In minutes
+      - THEHIVE_CASE_TAG_WHITELIST= # TAG_OK,TAG_GOOD
     restart: always
