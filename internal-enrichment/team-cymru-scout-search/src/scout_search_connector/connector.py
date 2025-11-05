@@ -1,5 +1,7 @@
 import os
 from typing import Dict
+import uuid
+from datetime import datetime
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -82,7 +84,7 @@ class ScoutSearchConnectorConnector:
                 "the connector does not have access to this observable, please check the group of the connector user"
             )
 
-    def process_stix_data(self, data: Dict) -> list:
+    def process_stix_data(self, data: Dict, original_entity_id: str) -> list:
         """
         Process STIX data: Replace invalid relationships, skip unresolvable ones,
         and retain supported ones.
@@ -183,6 +185,24 @@ class ScoutSearchConnectorConnector:
                 f"[ScoutSearchConnector] Filtered STIX objects: {len(objects)} → {len(filtered_objects)}"
             )
 
+            new_relationships = []
+            for obj in filtered_objects:
+                if obj.get("type") not in ["relationship", "identity", "x509-certificate"]:
+                    # Create a relationship between the text and this object
+                    relationship = {
+                        "id": f"relationship--{str(uuid.uuid4())}",
+                        "type": "relationship",
+                        "relationship_type": "related-to",
+                        "source_ref": original_entity_id,
+                        "target_ref": obj.get("id"),
+                        "created": datetime.now().isoformat() + "Z",
+                        "modified": datetime.now().isoformat() + "Z"
+                    }
+                    new_relationships.append(relationship)
+
+            # Add all relationships at once after the loop
+            filtered_objects.extend(new_relationships)
+
             return filtered_objects or []
 
         except Exception as e:
@@ -241,7 +261,7 @@ class ScoutSearchConnectorConnector:
                 },
             )
 
-            processed_data = self.process_stix_data(intelligence_data)
+            processed_data = self.process_stix_data(intelligence_data, entity_id)
 
             if len(processed_data) == 0:
                 self.helper.connector_logger.info(
