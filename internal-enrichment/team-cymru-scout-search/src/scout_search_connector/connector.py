@@ -1,7 +1,7 @@
 import os
-from typing import Dict
 import uuid
 from datetime import datetime
+from typing import Dict
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -187,7 +187,11 @@ class ScoutSearchConnectorConnector:
 
             new_relationships = []
             for obj in filtered_objects:
-                if obj.get("type") not in ["relationship", "identity", "x509-certificate"]:
+                if obj.get("type") not in [
+                    "relationship",
+                    "identity",
+                    "x509-certificate",
+                ]:
                     # Create a relationship between the text and this object
                     relationship = {
                         "id": f"relationship--{str(uuid.uuid4())}",
@@ -196,7 +200,7 @@ class ScoutSearchConnectorConnector:
                         "source_ref": original_entity_id,
                         "target_ref": obj.get("id"),
                         "created": datetime.now().isoformat() + "Z",
-                        "modified": datetime.now().isoformat() + "Z"
+                        "modified": datetime.now().isoformat() + "Z",
                     }
                     new_relationships.append(relationship)
 
