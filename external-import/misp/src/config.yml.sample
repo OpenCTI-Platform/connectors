@@ -34,8 +34,8 @@ misp:
   import_from_date: '2010-01-01' # Optional, import all event from this date
   import_tags: '' # Optional, list of tags used to filter events to import
   import_tags_not: '' # Optional, list of tags to not include
-  import_creator_orgs: '' # Optional, only import events created by those orgs (put the identifiers here)
-  import_creator_orgs_not: '' # Optional, do not import events created by those orgs (put the identifiers here)
+  import_creator_orgs: '' # Optional, only import events created by those orgs (put the org identifier (ID), the org UUID or the org name)
+  import_creator_orgs_not: '' # Optional, do not import events created by those orgs (put the org identifier (ID), the org UUID or the org name)
   import_owner_orgs: '' # Optional, only import events owned by those orgs (put the identifiers here)
   import_owner_orgs_not: '' # Optional, do not import events owned by those orgs (put the identifiers here)
   import_owner_keyword: '' # Optional, search only events based on a keyword

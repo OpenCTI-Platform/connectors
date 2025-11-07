@@ -30,8 +30,8 @@ services:
       - MISP_IMPORT_FROM_DATE=2000-01-01 # Required, import all event from this date
       - MISP_IMPORT_TAGS= # Optional, list of tags used to filter events to import
       - MISP_IMPORT_TAGS_NOT= # Optional, list of tags to not include
-      - MISP_IMPORT_CREATOR_ORGS= # Optional, only import events created by those orgs (put the identifiers here)
-      - MISP_IMPORT_CREATOR_ORGS_NOT= # Optional, do not import events created by those orgs (put the identifiers here)
+      - MISP_IMPORT_CREATOR_ORGS= # Optional, only import events created by those orgs (put the org identifier (ID), the org UUID or the org name)
+      - MISP_IMPORT_CREATOR_ORGS_NOT= # Optional, do not import events created by those orgs (put the org identifier (ID), the org UUID or the org name)
       - MISP_IMPORT_OWNER_ORGS= # Optional, only import events owned by those orgs (put the identifiers here)
       - MISP_IMPORT_OWNER_ORGS_NOT= # Optional, do not import events owned by those orgs (put the identifiers here)
       - MISP_IMPORT_KEYWORD= # Optional, search only events based on a keyword

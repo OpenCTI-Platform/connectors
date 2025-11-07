@@ -51,24 +51,6 @@ class Misp:
     def process_event(self, event: EventRestSearchListItem):
         # Check against filter
         if (
-            self.config.misp.import_creator_orgs
-            and event.Event.Orgc.name not in self.config.misp.import_creator_orgs
-        ):
-            self.helper.connector_logger.info(
-                "Event creator Organization not in `MISP_IMPORT_CREATOR_ORGS`, skipping event",
-                {"event_creator_organization": event.Event.Orgc.name},
-            )
-            return
-        if (
-            self.config.misp.import_creator_orgs_not
-            and event.Event.Orgc.name in self.config.misp.import_creator_orgs_not
-        ):
-            self.helper.connector_logger.info(
-                "Event creator Organization in `MISP_IMPORT_CREATOR_ORGS_NOT`, skipping event",
-                {"event_creator_organization": event.Event.Orgc.name},
-            )
-            return
-        if (
             self.config.misp.import_owner_orgs
             and event.Event.Org.name not in self.config.misp.import_owner_orgs
         ):
@@ -194,6 +176,8 @@ class Misp:
                     "keyword": self.config.misp.import_keyword,
                     "included_tags": self.config.misp.import_tags,
                     "excluded_tags": self.config.misp.import_tags_not,
+                    "included_org_creators": self.config.misp.import_creator_orgs,
+                    "excluded_org_creators": self.config.misp.import_creator_orgs_not,
                     "enforce_warning_list": self.config.misp.enforce_warning_list,
                     "with_attachments": self.config.misp.import_with_attachments,
                 },
@@ -205,6 +189,8 @@ class Misp:
                 keyword=self.config.misp.import_keyword,
                 included_tags=self.config.misp.import_tags,
                 excluded_tags=self.config.misp.import_tags_not,
+                included_org_creators=self.config.misp.import_creator_orgs,
+                excluded_org_creators=self.config.misp.import_creator_orgs_not,
                 enforce_warning_list=self.config.misp.enforce_warning_list,
                 with_attachments=self.config.misp.import_with_attachments,
             )
