@@ -1,9 +1,11 @@
 import re
 
 SUMMARYS = [
+    ("ip.dest", 20),
     ("ip.organization", 20),
-    ("cert.domain", 20),
-    ("dns.domain", 20),
+    ("cert.hostname", 20),
+    ("cert.fingerprint.sha256", 20),
+    ("dns.hostname", 20),
     ("tcp.dest", 20),
     ("app.protocol", 20),
     ("ip.asn", 20),
@@ -12,9 +14,11 @@ SUMMARYS = [
 ]
 
 SUMMARY_TITLES = {
+    "ip.dest": "Top 20 IP addresses identified",
     "ip.organization": "Top 20 Organizations",
-    "cert.domain": "Top 20 TLS Cert Domains",
-    "dns.domain": "Top 20 DNS Domains",
+    "cert.hostname": "Top 20 TLS Cert Hostnames",
+    "cert.fingerprint.sha256": "Top 20 TLS Cert Fingerprints",
+    "dns.hostname": "Top 20 DNS Hostnames",
     "tcp.dest": "Top 20 TCP Ports",
     "app.protocol": "Top 20 Protocols",
     "ip.asn": "Top 20 Autonomous Systems",
@@ -41,36 +45,3 @@ ANALYTICAL_PIVOTS = [
 ]
 
 PIVOT_MAP = dict(ANALYTICAL_PIVOTS)
-
-
-def extract_observables_from_pattern(pattern, pattern_type="stix"):
-    observables = {}
-
-    if pattern_type == "stix":
-        regexes = {
-            "ipv4-addr": r"\[?ipv4-addr:value\s*=\s*'([^']+)'",
-            "ipv6-addr": r"\[?ipv6-addr:value\s*=\s*'([^']+)'",
-            "hostname": r"\[?hostname:value\s*=\s*'([^']+)'",
-            "x509-certificate": r"\[?x509-certificate:hashes\.'[^']+'\s*=\s*'([^']+)'",
-            "text": r"\[?text:value\s*=\s*'([^']+)'",
-        }
-    elif pattern_type == "shodan":
-        regexes = {
-            "ipv4-addr": r"\bip\s*:\s*([\d\.]+)",
-            "hostname": r"\b(?:hostname|dns|http\.host)\s*:\s*\"?([\w\.-]+)\"?",
-            "x509-certificate": r"\bssl\.cert\.fingerprint\s*:\s*([A-Fa-f0-9:]+)",
-            "text": r"\b(?:ja4t|hassh|hhhash|favicon)\S*:\s*(\S+)",
-        }
-
-    for obs_type, regex in regexes.items():
-        matches = re.findall(regex, pattern)
-        for match in matches:
-            # Normalize match for multi-capture groups
-            if isinstance(match, tuple):
-                value = next((m for m in match if m), None)
-            else:
-                value = match
-            if value:
-                observables[value] = obs_type
-
-    return observables
