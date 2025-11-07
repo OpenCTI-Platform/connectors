@@ -18,9 +18,9 @@ Table of Contents
 
 ## Status Filigran
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
+| Status            | Date       | Comment |
+|-------------------|------------|---------|
+| Filigran Verified | 2025-11-07 | -       |
 
 ## Introduction
 
