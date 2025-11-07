@@ -315,7 +315,9 @@ class MispApiHandler:
         try:
             # Delete the event
             # The 'hard' parameter prevents the UUID from being added to the blocklist
-            response = self.misp.delete_event(event_uuid, hard=hard)
+            response = self.misp.delete_event(event_uuid)
+            if hard:
+                self.misp.delete_event_blocklist(event_uuid)
 
             if isinstance(response, dict):
                 if response.get("saved", False) or response.get("success", False):
