@@ -22,7 +22,7 @@ from typing import (
 
 import stix2
 from lxml.html import fromstring  # type: ignore
-from pycti import Identity, Indicator, IntrusionSet, Location, Malware
+from pycti import AttackPattern, Identity, Indicator, IntrusionSet, Location, Malware
 from pycti import Report as PyCTIReport
 from pycti import StixCoreRelationship, Vulnerability
 from pycti.utils.constants import LocationTypes  # type: ignore
@@ -374,6 +374,33 @@ def create_kill_chain_phase(
 ) -> stix2.KillChainPhase:
     """Create a kill chain phase."""
     return stix2.KillChainPhase(kill_chain_name=kill_chain_name, phase_name=phase_name)
+
+
+def create_attack_pattern(
+    name: str,
+    mitre_id: str,
+    created_by: Optional[stix2.Identity] = None,
+    description: Optional[str] = None,
+    kill_chain_phases: Optional[List[stix2.KillChainPhase]] = None,
+    confidence: Optional[int] = None,
+    external_references: Optional[List[stix2.ExternalReference]] = None,
+    object_markings: Optional[List[stix2.MarkingDefinition]] = None,
+) -> stix2.AttackPattern:
+    """Create an attack pattern."""
+    attack_pattern_id = AttackPattern.generate_id(name, mitre_id)
+    custom_properties = {"x_mitre_id": mitre_id}
+
+    return stix2.AttackPattern(
+        id=attack_pattern_id,
+        name=name,
+        created_by_ref=created_by,
+        description=description,
+        kill_chain_phases=kill_chain_phases,
+        confidence=confidence,
+        external_references=external_references,
+        object_marking_refs=object_markings,
+        custom_properties=custom_properties,
+    )
 
 
 def create_intrusion_set(
