@@ -9,7 +9,7 @@ connector:
 
   # Connector definition parameters - OPTIONAL
   #name: 'Aerospace SPARTA'
-  #scope: '["attack-pattern", "course-of-action", "indicator", "identity"]'
+  #scope: 'attack-pattern, course-of-action, indicator, identity'
   #log_level: 'error'
   #duration_period: 'PT5H' # (ISO8601 format in String, start with P...)
 
