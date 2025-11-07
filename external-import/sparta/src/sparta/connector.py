@@ -1,11 +1,12 @@
 import json
 import sys
+from datetime import datetime, timezone
 
-from connector.models import ConfigLoader
-from connector.services import DateTimeFormat
-from connector.services.client_api import SpartaClient
-from connector.services.utils import Utils
+from models.configs.config_loader import ConfigLoader
 from pycti import OpenCTIConnectorHelper
+from sparta.client_api import SpartaClient
+from sparta.converter_to_stix import ConverterToStix
+from stix2 import TLP_WHITE
 
 
 class Sparta:
@@ -42,21 +43,22 @@ class Sparta:
     """
 
     def __init__(self, config: ConfigLoader, helper: OpenCTIConnectorHelper):
-        # Load configuration file and connection helper
-        # Instantiate the connector helper from config
+        """Load configuration file and connection helper
+        Instantiate the connector helper from config
+        """
         self.config = config
         self.helper = helper
         self.client = SpartaClient(self.helper, self.config)
-        self.utils = Utils()
+        self.converter_to_stix = ConverterToStix()
         self.last_run = None
         self.work_id = None
 
-    def _initiate_work(self) -> str:
+    def _initiate_work(self):
         """Starts a work process.
         Sends a request to the API with the initiate_work method to initialize the work.
         """
-
-        now_utc_isoformat = self.utils.get_now(DateTimeFormat.ISO)
+        now_utc = datetime.now(timezone.utc)
+        now_utc_isoformat = now_utc.isoformat(timespec="seconds")
         self.helper.connector_logger.info(
             "[CONNECTOR] Starting work...",
             {
@@ -70,7 +72,7 @@ class Sparta:
             self.config.connector.id, friendly_name
         )
 
-    def _send_intelligence(self, prepared_objects: list) -> int:
+    def _send_intelligence(self, prepared_objects: list):
         """This method prepares and sends unique STIX objects to OpenCTI.
         This method takes a list of objects prepared by the models, extracts their STIX representations, creates a
         serialized STIX bundle, and It then sends this bundle to OpenCTI.
@@ -79,9 +81,6 @@ class Sparta:
 
         Args:
             prepared_objects (list): A list of objects containing STIX representations to be sent to OpenCTI.
-
-        Returns:
-            int : Return the length bundle sent
         """
         bundle_sent = self.helper.send_stix2_bundle(
             prepared_objects,
@@ -94,15 +93,11 @@ class Sparta:
             "[CONNECTOR] Sending STIX objects to OpenCTI...",
             {"length_bundle_sent": length_bundle_sent},
         )
-        return length_bundle_sent
 
-    def _complete_work(self) -> None:
+    def _complete_work(self):
         """Marks the work process as complete.
         This method logs the completion of the work for a specific work ID.
         Sends a request to the API with the to_processed method to complete the work.
-
-        Returns:
-            None
         """
         self.helper.connector_logger.info(
             "[CONNECTOR] Complete work...",
@@ -111,7 +106,8 @@ class Sparta:
             },
         )
         message = "Aerospace SPARTA - Finished work"
-        self.helper.api.work.to_processed(self.work_id, message)
+        if self.work_id:
+            self.helper.api.work.to_processed(self.work_id, message)
         self.work_id = None
 
     def _collect_intelligence(self):
@@ -120,10 +116,7 @@ class Sparta:
             List of STIX objects or None
         """
         try:
-
             stix_bundle = self.client.retrieve_data()
-
-            self._initiate_work()
 
             return stix_bundle
         except Exception as err:
@@ -133,33 +126,27 @@ class Sparta:
             )
             raise
 
-    def _prepare_intelligence(self, collected_intelligence: list) -> list:
-        try:
-            self.helper.connector_logger.info(
-                "[CONNECTOR] Starts preparing data for Aerospace SPARTA..."
-            )
-
-            # Todo Validation
-            transformed_intelligence = self._transform_intelligence(
-                collected_intelligence
-            )
-
-            self.helper.connector_logger.info(
-                "[CONNECTOR] Finalisation of the preparing of intelligence from Aerospace SPARTA"
-            )
-            return transformed_intelligence
-        except Exception as err:
-            self.helper.connector_logger.error(
-                "[ERROR] An unexpected error has occurred during intelligence preparation.",
-                {"error": err},
-            )
-            raise
-
     def _transform_intelligence(self, collected_intelligence: list) -> list:
+        """Add author and TLP to each object in collected_intelligence
+        Returns:
+            List of STIX objects
+        """
         try:
             self.helper.connector_logger.info(
                 "[CONNECTOR] Starts transforming intelligence to STIX 2.1 format..."
             )
+
+            stix_objects = collected_intelligence["objects"]
+            author = self.converter_to_stix.create_author()
+
+            for stix_object in stix_objects:
+                stix_object["created_by_ref"] = author["id"]
+                stix_object["object_marking_refs"] = [str(TLP_WHITE.id)]
+
+            stix_objects.append(json.loads(author.serialize()))
+            stix_objects.append(json.loads(TLP_WHITE.serialize()))
+            collected_intelligence["objects"] = stix_objects
+
             # The SPARTA dataset is already a bundle
             len_stix_objects = len(collected_intelligence["objects"])
             self.helper.connector_logger.info(
@@ -185,7 +172,8 @@ class Sparta:
         """
         try:
             # Initialization to get the current start utc iso format.
-            current_start_utc_isoformat = self.utils.get_now(DateTimeFormat.ISO)
+            now_utc = datetime.now(timezone.utc)
+            current_start_utc_isoformat = now_utc.isoformat(timespec="seconds")
 
             # Get the current state
             current_state = self.helper.get_state()
@@ -208,8 +196,11 @@ class Sparta:
             collected_intelligence = self._collect_intelligence()
 
             if collected_intelligence:
-                # Start preparing data for OpenCTI - Converted to stix format
-                prepared_intelligence = self._prepare_intelligence(
+                # Initiate work
+                self._initiate_work()
+
+                # Start transforming data for OpenCTI - Converted to stix format
+                prepared_intelligence = self._transform_intelligence(
                     collected_intelligence
                 )
                 self._send_intelligence(prepared_intelligence)
@@ -228,8 +219,6 @@ class Sparta:
                 current_state = {"last_run": current_start_utc_isoformat}
 
             self.helper.set_state(current_state)
-            if self.work_id:
-                self._complete_work()
 
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
@@ -239,6 +228,8 @@ class Sparta:
             sys.exit(0)
         except Exception as err:
             self.helper.connector_logger.error(str(err))
+        finally:
+            self._complete_work()
 
     def run(self) -> None:
         """Run the main process encapsulated in a scheduler

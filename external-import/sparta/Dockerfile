@@ -2,6 +2,7 @@ FROM python:3.12-alpine
 
 # Copy the connector
 COPY src /opt/opencti-connector-sparta
+WORKDIR /opt/opencti-connector-sparta
 
 # Install Python modules
 # hadolint ignore=DL3003
@@ -13,7 +14,4 @@ RUN cd /opt/opencti-connector-sparta && \
     apk del git build-base && \
     rm -rf /var/cache/apk/*
 
-# Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+CMD [ "python", "main.py" ]

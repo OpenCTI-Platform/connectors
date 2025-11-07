@@ -7,14 +7,14 @@
   "use_cases": [
     "Open Source Threat Intel"
   ],
-  "verified": false,
-  "last_verified_date": "2025-01-01",
+  "verified": true,
+  "last_verified_date": "2025-11-07",
   "playbook_supported": false,
   "max_confidence_level": 50,
   "support_version": ">= 6.7.0",
   "subscription_link": "https://sparta.aerospace.org/contribute",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/sparta",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-sparta",
   "container_type": "EXTERNAL_IMPORT"
