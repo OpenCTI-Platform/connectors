@@ -90,6 +90,13 @@ class ConfigConnector:
             self.load,
             default=False,
         )
+        
+        self.pattern_type = get_config_variable(
+            "ONYPHE_PATTERN_TYPE",
+            ["onyphe", "pattern_type"],
+            self.load,
+            default="onyphe",
+        )
 
         self.import_full_data = get_config_variable(
             "ONYPHE_IMPORT_FULL_DATA",
