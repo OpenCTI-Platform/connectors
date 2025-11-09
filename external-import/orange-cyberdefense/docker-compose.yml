@@ -23,4 +23,7 @@ services:
       - OCD_THREAT_ACTOR_AS_INTRUSION_SET=true
       - OCD_INTERVAL=30 # Required, in minutes
       - OCD_RESET_STATE=false # force the use of the start_dates from the config instead of getting the state saved in opencti
+      - OCD_IGNORE_UNSCORED_INDICATORS=true
+      - OCD_IGNORE_WHITELISTED_INDICATORS=true
+      - OCD_FALLBACK_SCORE=0
     restart: always
