@@ -20,8 +20,10 @@ from onyphe_references import (
     ANALYTICAL_PIVOTS,
     HASH_KEY_MAP,
     PIVOT_MAP,
+    REVERSE_PIVOT_MAP,
     SUMMARY_TITLES,
     SUMMARYS,
+    TYPE_HANDLERS,
 )
 
 
@@ -290,125 +292,41 @@ class ONYPHEConnector:
     def _generate_stix_external_reference(
         self, type, value=None, x509_hashes=None, label_pivots=[]
     ):
+        self.helper.log_debug(f"Generating external reference for: {type}")
 
-        self.helper.log_debug(f"Generating external reference for : {type}")
-        url = None
-        description = None
-        external_id = None
-
-        if type in ["ipv4-addr", "ipv6-addr"]:
-            ip_value = value
-            if not ip_value:
-                return self.helper.log_error("Missing 'value' for IP observable.")
-            url = f"https://search.onyphe.io/search?q=category%3Actiscan+ip.dest%3A{ip_value}"
-            description = f"ONYPHE search for IP address {ip_value}"
-            external_id = ip_value
-
-        elif type == "hostname":
-            hostname = value
-            if not hostname:
-                return self.helper.log_error("Missing 'value' for hostname observable.")
-            url = (
-                f"https://search.onyphe.io/search?q=category%3Actiscan+"
-                f"%3Fdns.hostname%3A{hostname}+%3Fcert.hostname%3A{hostname}"
-            )
-            description = f"ONYPHE search for hostname {hostname}"
-            external_id = hostname
-
-        elif type == "domain-name":
-            domain = value
-            if not domain:
-                return self.helper.log_error(
-                    "Missing 'value' for domain-name observable."
-                )
-            url = (
-                f"https://search.onyphe.io/search?q=category%3Actiscan+"
-                f"%3Fcert.domain%3A{domain}+%3Fdns.domain%3A{domain}"
-            )
-            description = f"ONYPHE search for domain {domain}"
-            external_id = domain
-
-        elif type == "x509-certificate":
-            hashes = x509_hashes
-            if isinstance(hashes, dict):
-                for algo, hash_value in hashes.items():
-                    algo_upper = algo.upper()
-                    if algo_upper in HASH_KEY_MAP:
-                        hash_filter = HASH_KEY_MAP[algo_upper]
-                        url = (
-                            f"https://search.onyphe.io/search?q=category%3Actiscan+"
-                            f"cert.fingerprint.{hash_filter}%3A{hash_value}"
-                        )
-                        description = (
-                            f"ONYPHE search for certificate fingerprint ({algo})"
-                        )
-                        external_id = hash_value
-                        break
-                else:
-                    return self.helper.log_error(
-                        "No supported hash found in x509-certificate"
-                    )
-            else:
-                return self.helper.log_error(
-                    f"x509-certificate hashes field is not a dict: {hashes}"
-                )
-
-        elif type == "text":
-
-            REVERSE_PIVOT_MAP = {v: k for k, v in PIVOT_MAP.items()}
-
-            # Find ONYPHE filter from analytical pivot label on text observable
-            pivot_label = None
-            for label in label_pivots:
-                self.helper.log_debug(f"DEBUG: Checking : {label}")
-                if label in REVERSE_PIVOT_MAP:
-                    pivot_label = label
-
-            self.helper.log_debug(f"DEBUG: Found : {pivot_label}")
-            text_value = value
-
-            if pivot_label and text_value:
-                pivot_filter = REVERSE_PIVOT_MAP[pivot_label]
-                url = f"https://search.onyphe.io/search?q=category%3Actiscan+{pivot_filter}%3A{text_value}"
-                description = (
-                    f"ONYPHE search for analytical pivot {pivot_label} = {text_value}"
-                )
-                external_id = text_value
-            else:
-                return self.helper.log_debug(
-                    "No matching ONYPHE analytical pivot label found or value missing."
-                )
-
-        elif type == "organization":
-            org_name = value
-            if not org_name:
-                return self.helper.log_error(
-                    "Missing 'name' or 'value' for organization observable."
-                )
-            url = f'https://search.onyphe.io/search?q=category%3Actiscan+ip.organization%3A"{org_name}"'
-            description = f"ONYPHE search for organization {org_name}"
-            external_id = org_name
-
-        elif type == "asn":
-            asn_value = value
-            if not asn_value:
-                return self.helper.log_error(
-                    "Missing 'number' or 'value' for ASN observable."
-                )
-            url = f"https://search.onyphe.io/search?q=category%3Actiscan+ip.asn%3A{asn_value}"
-            description = f"ONYPHE search for ASN {asn_value}"
-            external_id = str(asn_value)
-
-        else:
+        # Handle the type
+        if type not in TYPE_HANDLERS:
             return self.helper.log_debug(f"Unsupported observable type: {type}")
 
+        url_func, desc_template, id_func = TYPE_HANDLERS[type]
+
+        # Generate URL, description, and external_id
+        if type == "x509-certificate":
+            if not x509_hashes or not isinstance(x509_hashes, dict):
+                return self.helper.log_error("No supported hash found in x509-certificate")
+            url = url_func(x509_hashes)
+            description = desc_template.format(algo=next(iter(x509_hashes.keys())))
+            external_id = id_func(x509_hashes)
+        elif type == "text":
+            if not label_pivots or not value:
+                return self.helper.log_debug("No matching ONYPHE analytical pivot label found or value missing.")
+            pivot_label = next((l for l in label_pivots if l in REVERSE_PIVOT_MAP), None)
+            if not pivot_label:
+                return self.helper.log_debug("No matching ONYPHE analytical pivot label found or value missing.")
+            url = url_func(value, label_pivots)
+            description = desc_template.format(pivot_label=pivot_label, value=value)
+            external_id = id_func(value)
+        else:
+            if not value:
+                return self.helper.log_error(f"Missing 'value' for {type} observable.")
+            url = url_func(value)
+            description = desc_template.format(value=value)
+            external_id = id_func(value)
+
         if not url or not external_id:
-            return self.helper.log_debug(
-                "Could not construct ONYPHE external reference for entity"
-            )
+            return self.helper.log_debug("Could not construct ONYPHE external reference for entity")
 
-        self.helper.log_debug(f"External reference : {url}")
-
+        self.helper.log_debug(f"External reference: {url}")
         external_reference = stix2.ExternalReference(
             source_name="ONYPHE",
             url=url,
@@ -807,114 +725,37 @@ class ONYPHEConnector:
         """
         self._extract_and_check_markings(opencti_entity)
 
+        entity_value = self._safe_get(stix_entity,"value")
+        is_observable = False
+        ctifilter = ""
+
         # Extract Value from opencti entity data
         if stix_entity["type"] == "ipv4-addr":
-            ip_value = stix_entity["value"]
-            self.helper.log_info(f"Processing IPv4 observable: {ip_value}")
-            try:
-                # Get ONYPHE ctiscan API Response
-                ctifilter = ""
-                ctifilter += f"ip.dest:{ip_value}"
-                oql = f"category:{self.onyphe_category} {ctifilter} -since:{self.config.time_since}"
-
-                count = self.onyphe_client.count(oql)
-                if count > self.config.pivot_threshold:
-                    return "Sent 0 bundles for import. Results over pivot threshold."
-
-                response = self.onyphe_client.search_oql(oql)
-
-                # Generate a stix bundle
-                bundle = self._generate_stix_bundle(
-                    response["results"], stix_objects, stix_entity
-                )
-
-                # send stix2 bundle
-                bundles_sent = self.helper.send_stix2_bundle(bundle)
-                ##time.sleep(self.auto_lag)
-                return "Sent " + str(len(bundles_sent)) + " STIX bundle(s) for import"
-            except APIError as e:
-                # Handling specific errors for ONYPHE API
-                raise ValueError(f"ONYPHE API Error : {str(e)}")
-            except Exception as e:
-                return self.helper.log_error(f"Unexpected Error occurred: {str(e)}")
+            ctifilter += f"ip.dest:{entity_value}"
+            is_observable = True
         elif stix_entity["type"] == "hostname":
-            hostname_value = stix_entity["value"]
-            self.helper.log_info(f"Processing hostname observable: {hostname_value}")
-            try:
-                # Get ONYPHE ctiscan API Response
-                ctifilter = ""
-                ctifilter += f"( ?dns.hostname:{hostname_value} ?cert.hostname:{hostname_value}) "
-                oql = f"category:{self.onyphe_category} {ctifilter} -since:{self.config.time_since}"
-
-                count = self.onyphe_client.count(oql)
-                if count > self.config.pivot_threshold:
-                    return "Sent 0 bundles for import. Results over pivot threshold."
-
-                response = self.onyphe_client.search_oql(oql)
-
-                # Generate a stix bundle
-                bundle = self._generate_stix_bundle(
-                    response["results"], stix_objects, stix_entity
-                )
-
-                # send stix2 bundle
-                bundles_sent = self.helper.send_stix2_bundle(bundle)
-                # time.sleep(self.auto_lag)
-                return "Sent " + str(len(bundles_sent)) + " STIX bundle(s) for import"
-            except APIError as e:
-                # Handling specific errors for ONYPHE API
-                raise ValueError(f"ONYPHE API Error : {str(e)}")
-            except Exception as e:
-                return self.helper.log_error(f"Unexpected Error occurred: {str(e)}")
+            ctifilter += f"( ?dns.hostname:{entity_value} ?cert.hostname:{entity_value}) "
+            is_observable = True
         elif stix_entity["type"] == "x509-certificate":
             if "hashes" in stix_entity:
                 hashes = stix_entity["hashes"]
-                self.helper.log_info(f"Processing x509 observable: {hashes}")
             else:
                 return self.helper.log_error(
                     f"x509-certificate doesn't contain hashes: {stix_entity}"
                 )
 
-            try:
-                if isinstance(hashes, dict):
-                    hash_type = next(iter(hashes))
-                    hash_filter = HASH_KEY_MAP[hash_type]
-                    hash_value = hashes[hash_type]
-                else:
-                    return self.helper.log_error(
-                        f"x509-certificate doesn't contain a dictionary of hashes: {hashes}"
-                    )
-
-                # Get ONYPHE ctiscan API Response
-                ctifilter = ""
-                ctifilter += f"cert.fingerprint.{hash_filter}:{hash_value} "
-                oql = f"category:{self.onyphe_category} {ctifilter} -since:{self.config.time_since}"
-
-                count = self.onyphe_client.count(oql)
-                if count > self.config.pivot_threshold:
-                    return "Sent 0 bundles for import. Results over pivot threshold."
-
-                response = self.onyphe_client.search_oql(oql)
-
-                # Generate a stix bundle
-                bundle = self._generate_stix_bundle(
-                    response["results"], stix_objects, stix_entity
+            if isinstance(hashes, dict):
+                hash_type = next(iter(hashes))
+                hash_filter = HASH_KEY_MAP[hash_type]
+                hash_value = hashes[hash_type]
+            else:
+                return self.helper.log_error(
+                    f"x509-certificate doesn't contain a dictionary of hashes: {hashes}"
                 )
 
-                # send stix2 bundle
-                bundles_sent = self.helper.send_stix2_bundle(bundle)
-                # time.sleep(self.auto_lag)
-                return "Sent " + str(len(bundles_sent)) + " STIX bundle(s) for import"
-
-            except APIError as e:
-                # Handling specific errors for ONYPHE API
-                raise ValueError(f"ONYPHE API Error : {str(e)}")
-            except Exception as e:
-                return self.helper.log_error(f"Unexpected Error occurred: {str(e)}")
-
+            ctifilter += f"cert.fingerprint.{hash_filter}:{hash_value} "
+            is_observable = True
         elif stix_entity["type"] == "text":
-            text_value = stix_entity["value"]
-            self.helper.log_info(f"Processing text observable: {text_value}")
             labels = stix_entity.get("x_opencti_labels", [])
 
             self.helper.log_debug(f"Labels found on entity: {labels}")
@@ -924,9 +765,9 @@ class ONYPHEConnector:
             onyphe_field = next(
                 (
                     field
-                    for field, label_value in PIVOT_MAP.items()
+                    for field, entity_value in PIVOT_MAP.items()
                     if any(
-                        label.strip().lower() == label_value.lower() for label in labels
+                        label.strip().lower() == entity_value.lower() for label in labels
                     )
                 ),
                 None,
@@ -935,10 +776,13 @@ class ONYPHEConnector:
                 self.helper.log_debug("No matching pivot label found.")
                 return "No matching pivot label found."
 
+            ctifilter += f"{onyphe_field}:{entity_value}"
+            is_observable = True
+
+        if is_observable:
             try:
+                self.helper.log_info(f"Processing {stix_entity["type"]} observable: {entity_value}")
                 # Get ONYPHE ctiscan API Response
-                ctifilter = ""
-                ctifilter += f"{onyphe_field}:{text_value}"
                 oql = f"category:{self.onyphe_category} {ctifilter} -since:{self.config.time_since}"
 
                 count = self.onyphe_client.count(oql)
@@ -954,14 +798,12 @@ class ONYPHEConnector:
 
                 # send stix2 bundle
                 bundles_sent = self.helper.send_stix2_bundle(bundle)
-                # time.sleep(self.auto_lag)
                 return "Sent " + str(len(bundles_sent)) + " STIX bundle(s) for import"
             except APIError as e:
                 # Handling specific errors for ONYPHE API
                 raise ValueError(f"ONYPHE API Error : {str(e)}")
             except Exception as e:
                 return self.helper.log_error(f"Unexpected Error occurred: {str(e)}")
-
         elif (
             stix_entity["type"] == "indicator"
             and stix_entity["pattern_type"] == self.config.pattern_type
@@ -995,7 +837,7 @@ class ONYPHEConnector:
                 if not "category:" in ctifilter:
                     ctifilter = f"category:{self.onyphe_category} " + ctifilter
 
-                # TODO : Check to see if user has passed category and time functions
+                # TODO : Check to see if user has passed time functions
                 if self.config.import_search_results:
                     # Get full ONYPHE API Response
                     oql = f"{ctifilter} -since:{self.config.time_since}"
@@ -1007,7 +849,7 @@ class ONYPHEConnector:
                 self.helper.log_debug(f"Trying ONYPHE query for : {oql}")
 
                 response = self.onyphe_client.search_oql(oql)
-                self.helper.log_debug(f"Got response: {response}")
+                self.helper.log_debug(f"Got json response: {response}")
                 results = response["results"]
                 number_processed = response["total"]
 
@@ -1066,14 +908,11 @@ class ONYPHEConnector:
 
                 # Import search results as observables
                 if self.config.import_search_results:
-
                     self.helper.log_debug("Importing search results as observables")
-
                     # Generate a stix bundle
                     bundle = self._generate_stix_bundle(
                         results, stix_objects, stix_entity, score, True
                     )
-
                     # create relationships to threats for observables
                     for bundle_object in bundle:
                         target_id = bundle_object["id"]
@@ -1087,16 +926,13 @@ class ONYPHEConnector:
                                     self.helper.log_debug(
                                         f'New relationship appended for {target_id} - related-to - {threat["id"]}'
                                     )
-
                     bundle_objects = bundle_objects + bundle
-
                 # send stix2 bundle
                 uniq_bundles_objects = list(
                     {obj["id"]: obj for obj in bundle_objects}.values()
                 )
                 bundle = self.helper.stix2_create_bundle(uniq_bundles_objects)
                 bundles_sent = self.helper.send_stix2_bundle(bundle)
-                # time.sleep(self.auto_lag)
 
                 self.helper.log_info(
                     str(number_processed)
