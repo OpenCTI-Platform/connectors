@@ -43,7 +43,7 @@ class Onyphe:
         try:
             response_data = response.json()
         except Exception as exc:
-            raise APIError(f"Couldn't parse response JSON from: {url}") from exc
+            raise OtherError(f"Couldn't parse response JSON from: {url}") from exc
 
         if response_data["error"] > 0:
             raise APIGeneralError(
@@ -66,6 +66,19 @@ class Onyphe:
         """Return data from specified category using Search API and the provided data as the OQL filter."""
         url_path = f"search/?q={oql}"
         return self._request(path=url_path)
+    
+    def count(self, oql: str):
+        """Return number of results using Search API and the provided data as the OQL filter."""
+        url_path = f"search/?q={oql}"
+        queryargs = {
+            "page": 1,
+            "size": 1,
+        }
+        results = self._request(path=url_path,query_params=queryargs)
+        if "total" in results:
+            return results["total"]
+        else:
+            raise OtherError(f'Error: Can\'t parse total from API results')
 
 
 class APIError(Exception):
@@ -99,7 +112,7 @@ class APIGeneralError(Exception):
 
 
 class OtherError(Exception):
-    """This exception gets raised when we can't parse an other observable"""
+    """This exception gets raised when we can't parse the json response"""
 
     def __init__(self, value):
         self.value = value

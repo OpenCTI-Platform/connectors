@@ -6,30 +6,24 @@ ONYPHE is a cyber threat intelligence and external attack surface monitoring pla
 
 ONYPHE enables analysts, red teams, and security operations teams to investigate and monitor a wide range of observables such as IP addresses, hostnames, domains, and certificates. Its core use cases span from threat enrichment to external attack surface management (ASM).
 
-Key ONYPHE capabilities used by this connector include:
-
-    Ctiscan: Provides high-level analytical summaries of activity and relationships for an observable — including the most common organizations, certificates, DNS domains, technologies, ports, and countries associated with it.
-
-    Vulnscan: Supports ASM by identifying internet-facing systems with known vulnerabilities (CVEs), providing insight into exposed and potentially exploitable assets.
-
-    Riskscan: Assesses internet-exposed assets for security misconfigurations and weak points, offering risk-based context to observables such as IPs or domains.
+This connector is specifically designed to leverage the Ctiscan category, providing detailed information about open ports, protocols, banners and relationships for an observable — including ASNs, organizations, certificates, DNS domains, technologies, ports, countries and analytical pivots such as Ja4x.
 
 Through these data sources, ONYPHE enables deep context and pivoting across observables to reveal infrastructure, ownership, exposure, and threat correlations — making it an ideal enrichment backend for threat intelligence platforms like OpenCTI.
 
-## What is scope for ONYPHE Connector ?
+## What is the scope for the ONYPHE Connector ?
 
     Scope : 
       - Observables
-        - IPv4,
-        - IPv6,
-        - x509-certificate,
+        - IPv4
+        - IPv6
+        - x509-certificate
         - hostname
-        - text (selected analaytical pivots with labels describing the relevant fingerprint)
-      - Indicator (pattern_type: stix)
+        - text
+      - Indicator (pattern_type: onyphe)
 
 ## What does ONYPHE Connector do ?
 
-This connector allows observables or indicators with a supported ‘stix’ pattern_type to be enriched. Other scopes are not currently supported but we welcome feature requests.
+This connector allows observables or indicators with a supported ‘onyphe’ pattern_type to be enriched. 'onyphe' type indicators allow for running Ctiscan OQL queries from within the OpenCTI platform.
 
 For an observable, it can be enriched with :
 
@@ -42,18 +36,7 @@ For an observable, it can be enriched with :
 - Text analytical pivots + relationship
 - Updating the observable enriched with a description, labels, external reference
 
-For indicators, a note is created with a summary of key data points for the indicator value.
-
-- Summary titles :
-  - Global
-  - Top 20 Organizations
-  - Top 20 TLS Certificate Domains
-  - Top 20 DNS Domains
-  - Top 20 TCP Ports
-  - Top 20 Application Protocols
-  - Top 20 Autonomous Systems
-  - Top 20 Countries
-  - Top 20 Technologies
+For indicators, a note or description is created with a summary of key data points for the indicator value.
 
 By default, the import_search_results environment variable is set to true, which means that for each enriched indicator, the connector will create stix cyber observables associated with that entity.
 
@@ -89,12 +72,13 @@ Below are the parameters you'll need to set for ONYPHE Connector:
 | api_key                 | `api_key`                 | `ONYPHE_API_KEY`                 | /           | Yes       | Your ONYPHE API Key ( available on profile page https://search.onyphe.io/profile)         |
 | base_url                 | `base_url`                 | `ONYPHE_BASE_URL`                 | `https://www.onyphe.io/api/v2/`           | No       | The target ONYPHE API endpoint         |
 | max_tlp               | `max_tlp`               | `ONYPHE_MAX_TLP`               | `TLP:AMBER` | No        | The maximal TLP of the observable being enriched.                                               |
-| time_since               | `time_since`               | `ONYPHE_TIME_SINCE`               | `1w` | No        | The time range used for ONYPHE queries. Increase to match your license level                  |
-| default_score         | `default_score`         | `ONYPHE_DEFAULT_SCORE`         | `50`        | No        | Default_score allows you to add a default score for an indicator and its observable             |
-| text_pivots         | `text_pivots`         | `ONYPHE_TEXT_PIVOTS`         | `None`        | No        | CSV list. Text pivots filters text observables so that auto enrichment is limited to the list of defined labels. See warning. |
-| import_search_results | `import_search_results` | `ONYPHE_IMPORT_SEARCH_RESULTS` | `True`      | No        | Returns the observable results of the search against the enriched indicator. |
-| create_note | `create_note` | `ONYPHE_CREATE_NOTE` | `False` | No        | Adds ONYPHE results to a note, otherwise it is saved in the description. |
-| import_full_data | `import_full_data` | `ONYPHE_IMPORT_FULL_DATA` | `False` | No        | Full app.data.text field are imported from ONYPHE results for each enriched observable. See warning. |
+| time_since               | `time_since`               | `ONYPHE_TIME_SINCE`               | `1w` | No        | The default time range used for ONYPHE queries. Increase to match your license level                  |
+| default_score         | `default_score`         | `ONYPHE_DEFAULT_SCORE`         | 50        | No        | Default_score allows you to add a default score for an indicator and its observable             |
+| import_search_results | `import_search_results` | `ONYPHE_IMPORT_SEARCH_RESULTS` | True      | No        | Returns the observable results of the search against the enriched indicator. |
+| create_note | `create_note` | `ONYPHE_CREATE_NOTE` | False | No        | Adds ONYPHE results to a note, otherwise it is saved in the description. |
+| import_full_data | `import_full_data` | `ONYPHE_IMPORT_FULL_DATA` | False | No        | Full app.data.text field is imported from ONYPHE results for each enriched observable. (default 2KB) |
+| pivot_threshold         | `pivot_threshold`         | `ONYPHE_PIVOT_THRESHOLD`         | 25        | No        | Enrichment only occurs if the number of results matching a single observable is less than or equal to this threshold |
+| pattern_type         | `pattern_type`         | `ONYPHE_PATTERN_TYPE`         | `onyphe`        | No        | OpenCTI vocabulary pattern_type used for ONYPHE OQL indicators |
 
 ## Deployment
 
@@ -140,12 +124,22 @@ Then, start the connector from onyphe/src:
 python3 main.py
 ```
 
+### TODO
+
+- Handle enrichment of domain observables
+- Allow for custom time functions within Indicator patterns
+- Allow for import of more than 100 results up to pivot threshold (paging of results)
+- Add http.hostname for virtual host association with hostname observables
+- Support intermediate domains (idomain)
+- and much more...
+
 ### Additional information
 
 #### Warnings
 
 - ⚠️ import_full_data = True : This setting could theoretically import 50MB per observable (max 100 ONYPHE results per enrichment, 500KB per result)
-- ⚠️ text_pivots : Use with caution when the CONNECTOR_AUTO setting is set to True. Adding a widely used analytical pivot label here such as `ja4t-md5` could import thousands or millions of related observables.
+- ⚠️ pivot_threshold : Increase with caution, especially when the CONNECTOR_AUTO setting is set to True.
+The number of potential results for each ONYPHE query is compared with this threshold while enriching observables. Pivots with a number of results over the threshold are discarded. This helps prevent an explosive increase in the number of imported observables (eg. IP address for a CDN, or reverse DNS domain for a hosting company, ...)
 - ⚠️ auto = True : The component 'auto' enrichment feature is powerful but can result in thousands (or millions) of data points being pulled into the platform and enriched in turn. We recommend using a Trigger filter in order to limit auto enrichment to Indicators and certain types of Observables :
 
   In the ONYPHE connector page: Data / Ingestion / Connectors / ONYPHE

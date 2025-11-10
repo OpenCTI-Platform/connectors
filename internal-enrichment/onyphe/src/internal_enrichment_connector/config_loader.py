@@ -36,6 +36,13 @@ class ConfigConnector:
         :return: None
         """
         # OpenCTI configurations
+        
+        self.auto = get_config_variable(
+            "CONNECTOR_AUTO",
+            ["connector", "auto"],
+            self.load,
+            default=False,
+        )
 
         # Connector extra parameters
         self.base_url = get_config_variable(
@@ -73,10 +80,6 @@ class ConfigConnector:
             isNumber=True,
         )
 
-        self.text_pivots = get_config_variable(
-            "ONYPHE_TEXT_PIVOTS", ["onyphe", "text_pivots"], self.load, default=None
-        )
-
         self.import_search_results = get_config_variable(
             "ONYPHE_IMPORT_SEARCH_RESULTS",
             ["onyphe", "import_search_results"],
@@ -104,10 +107,11 @@ class ConfigConnector:
             self.load,
             default=False,
         )
-
-        self.auto = get_config_variable(
-            "CONNECTOR_AUTO",
-            ["connector", "auto"],
+        
+        self.pivot_threshold = get_config_variable(
+            "ONYPHE_PIVOT_THRESHOLD",
+            ["onyphe","pivot_threshold"],
             self.load,
-            default=False,
+            default=25,
         )
+

@@ -16,7 +16,7 @@ onyphe:
   max_tlp: 'TLP:AMBER'
   time_since: '2w'
   default_score: 50
-  text_pivots: 'hhhash-sha256, hassh-md5'
   import_search_results: true
   create_note: false
   import_full_data: false
+  pivot_threshold: 10
