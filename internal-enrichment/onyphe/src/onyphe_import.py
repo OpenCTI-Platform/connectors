@@ -2,8 +2,6 @@ from datetime import datetime
 from typing import Dict
 
 import stix2
-
-# import time
 from pycti import (
     STIX_EXT_OCTI_SCO,
     CustomObservableHostname,
