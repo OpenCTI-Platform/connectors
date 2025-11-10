@@ -112,6 +112,6 @@ class ConfigConnector:
             "ONYPHE_PIVOT_THRESHOLD",
             ["onyphe", "pivot_threshold"],
             self.load,
-            default=25,
+            default=10,
             isNumber=True,
         )

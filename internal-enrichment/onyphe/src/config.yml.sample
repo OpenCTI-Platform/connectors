@@ -19,4 +19,4 @@ onyphe:
   import_search_results: true
   create_note: false
   import_full_data: false
-  pivot_threshold: 25
+  pivot_threshold: 10

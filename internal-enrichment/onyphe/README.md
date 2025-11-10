@@ -77,7 +77,7 @@ Below are the parameters you'll need to set for ONYPHE Connector:
 | import_search_results | `import_search_results` | `ONYPHE_IMPORT_SEARCH_RESULTS` | True      | No        | Returns the observable results of the search against the enriched indicator. |
 | create_note | `create_note` | `ONYPHE_CREATE_NOTE` | False | No        | Adds ONYPHE results to a note, otherwise it is saved in the description. |
 | import_full_data | `import_full_data` | `ONYPHE_IMPORT_FULL_DATA` | False | No        | Full app.data.text field is imported from ONYPHE results for each enriched observable. (default 2KB) |
-| pivot_threshold         | `pivot_threshold`         | `ONYPHE_PIVOT_THRESHOLD`         | 25        | No        | Enrichment only occurs if the number of results matching a single observable is less than or equal to this threshold |
+| pivot_threshold         | `pivot_threshold`         | `ONYPHE_PIVOT_THRESHOLD`         | 10        | No        | Enrichment only occurs if the number of results matching a single observable is less than or equal to this threshold |
 | pattern_type         | `pattern_type`         | `ONYPHE_PATTERN_TYPE`         | `onyphe`        | No        | OpenCTI vocabulary pattern_type used for ONYPHE OQL indicators |
 
 ## Deployment

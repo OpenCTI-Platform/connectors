@@ -21,7 +21,7 @@ services:
       - ONYPHE_IMPORT_SEARCH_RESULTS=true #Create observables from data when enriching an indicator
       - ONYPHE_CREATE_NOTE=false #Create a Note with ONYPHE search results each time an observable is enriched
       - ONYPHE_IMPORT_FULL_DATA=false #Import full app.data.text field per result into OpenCTI (false: truncated to 2KB)
-      - ONYPHE_PIVOT_THRESHOLD=25 #Max results limit for enriching an observable. 
+      - ONYPHE_PIVOT_THRESHOLD=10 #Max results limit for enriching an observable. 
     restart: always
     depends_on:
       opencti:
