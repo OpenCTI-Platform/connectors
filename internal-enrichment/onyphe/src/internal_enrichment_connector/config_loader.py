@@ -36,7 +36,7 @@ class ConfigConnector:
         :return: None
         """
         # OpenCTI configurations
-        
+
         self.auto = get_config_variable(
             "CONNECTOR_AUTO",
             ["connector", "auto"],
@@ -93,7 +93,7 @@ class ConfigConnector:
             self.load,
             default=False,
         )
-        
+
         self.pattern_type = get_config_variable(
             "ONYPHE_PATTERN_TYPE",
             ["onyphe", "pattern_type"],
@@ -107,11 +107,10 @@ class ConfigConnector:
             self.load,
             default=False,
         )
-        
+
         self.pivot_threshold = get_config_variable(
             "ONYPHE_PIVOT_THRESHOLD",
-            ["onyphe","pivot_threshold"],
+            ["onyphe", "pivot_threshold"],
             self.load,
             default=25,
         )
-
