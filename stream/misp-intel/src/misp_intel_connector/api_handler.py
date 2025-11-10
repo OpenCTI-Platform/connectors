@@ -231,6 +231,15 @@ class MispApiHandler:
                 existing_event.date = event_data["date"]
 
             # Clear existing attributes and objects to replace with new ones
+            # Note: We need to delete objects individually from MISP
+            for obj in existing_event.objects:
+                try:
+                    # Delete each object from MISP
+                    self.misp.delete_object(obj)
+                except:
+                    pass  # Object might already be deleted
+
+            # Now clear the lists
             existing_event.attributes = []
             existing_event.objects = []
 

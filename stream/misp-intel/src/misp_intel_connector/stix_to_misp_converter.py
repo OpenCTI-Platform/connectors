@@ -54,22 +54,37 @@ class STIXtoMISPConverter:
     PATTERN_TYPE_MAPPING = {
         # Network indicators
         "ipv4-addr": "ip-dst",
+        "ipv4-addr:value": "ip-dst",
         "ipv6-addr": "ip-dst",
+        "ipv6-addr:value": "ip-dst",
         "domain-name": "domain",
+        "domain-name:value": "domain",
         "hostname": "hostname",
+        "hostname:value": "hostname",
         "url": "url",
+        "url:value": "url",
         "email-addr": "email-src",
+        "email-addr:value": "email-src",
         "mac-addr": "mac-address",
+        "mac-addr:value": "mac-address",
         "autonomous-system": "AS",
         # File indicators
         "file:hashes.MD5": "md5",
+        "file:hashes.'MD5'": "md5",
         "file:hashes.SHA-1": "sha1",
+        "file:hashes.'SHA-1'": "sha1",
         "file:hashes.SHA1": "sha1",
+        "file:hashes.'SHA1'": "sha1",
         "file:hashes.SHA-256": "sha256",
+        "file:hashes.'SHA-256'": "sha256",
         "file:hashes.SHA256": "sha256",
+        "file:hashes.'SHA256'": "sha256",
         "file:hashes.SHA-512": "sha512",
+        "file:hashes.'SHA-512'": "sha512",
         "file:hashes.SHA512": "sha512",
+        "file:hashes.'SHA512'": "sha512",
         "file:hashes.SSDEEP": "ssdeep",
+        "file:hashes.'SSDEEP'": "ssdeep",
         "file:name": "filename",
         "file:size": "size-in-bytes",
         "file:mime_type": "mime-type",
@@ -126,6 +141,27 @@ class STIXtoMISPConverter:
         """
         self.helper = helper
         self.config = config
+        # Track added attribute values to prevent duplicates
+        self.added_attributes = {}
+
+    def _should_add_attribute(self, attr_type: str, value: str) -> bool:
+        """
+        Check if an attribute should be added (avoiding duplicates)
+
+        :param attr_type: MISP attribute type
+        :param value: Attribute value
+        :return: True if attribute should be added, False if it's a duplicate
+        """
+        # Create a key for tracking (type and value combination)
+        key = f"{attr_type}:{value}"
+
+        if key in self.added_attributes:
+            # Already added this attribute
+            return False
+
+        # Mark as added
+        self.added_attributes[key] = True
+        return True
 
     def convert_bundle_to_event(
         self, stix_bundle: Dict, custom_uuid: Optional[str] = None
@@ -138,6 +174,9 @@ class STIXtoMISPConverter:
         :return: MISP event dictionary or None
         """
         try:
+            # Reset attribute tracking for new conversion
+            self.added_attributes = {}
+
             # Validate bundle
             if not stix_bundle or "objects" not in stix_bundle:
                 self.helper.connector_logger.error(
@@ -182,6 +221,9 @@ class STIXtoMISPConverter:
                 if obj_type == "indicator":
                     self._process_indicator(misp_event, stix_obj)
                 elif obj_type in self.OBSERVABLE_TO_MISP_OBJECT:
+                    self._process_observable(misp_event, stix_obj)
+                elif obj_type == "hostname":
+                    # Process hostname observables specially
                     self._process_observable(misp_event, stix_obj)
                 elif obj_type == "observed-data":
                     self._process_observed_data(misp_event, stix_obj, stix_bundle)
@@ -439,10 +481,27 @@ class STIXtoMISPConverter:
                     misp_type = "url"
                 elif "email" in pattern_type.lower():
                     misp_type = "email-src"
+                elif "file:hashes" in pattern_type.lower():
+                    # Try to determine hash type from value length
+                    if len(pattern_value) == 32:
+                        misp_type = "md5"
+                    elif len(pattern_value) == 40:
+                        misp_type = "sha1"
+                    elif len(pattern_value) == 64:
+                        misp_type = "sha256"
+                    elif len(pattern_value) == 128:
+                        misp_type = "sha512"
+                    else:
+                        misp_type = "sha256"  # Default to SHA256
                 elif "file" in pattern_type.lower():
                     misp_type = "filename"
                 else:
                     misp_type = "text"
+
+            # Check for duplicates before adding
+            if not self._should_add_attribute(misp_type, pattern_value):
+                # Skip duplicate attribute
+                continue
 
             # Add attribute
             attr = event.add_attribute(
@@ -516,9 +575,43 @@ class STIXtoMISPConverter:
             elif obs_type == "artifact":
                 self._add_artifact_attributes(misp_obj, observable)
 
-            # Add labels as tags to the MISP object
-            for label in observable.get("labels", []):
-                misp_obj.add_tag(label)
+            # Get labels for metadata
+            # Check both 'labels' and 'x_opencti_labels'
+            labels = observable.get("labels", []) or observable.get(
+                "x_opencti_labels", []
+            )
+
+            # Add labels and metadata as comment on the object
+            comments = []
+            if labels:
+                comments.append(f"Labels: {', '.join(labels)}")
+
+            # Add threat level based on score if available
+            score = observable.get("x_opencti_score")
+            if score is not None:
+                comments.append(f"Threat Score: {score}")
+                if score >= 75:
+                    comments.append("Threat Level: High")
+                elif score >= 50:
+                    comments.append("Threat Level: Medium")
+                elif score >= 25:
+                    comments.append("Threat Level: Low")
+                else:
+                    comments.append("Threat Level: Info")
+
+            # Add infrastructure note for C2 servers
+            if obs_type in ["hostname", "domain-name", "url", "ipv4-addr", "ipv6-addr"]:
+                # Check if it's likely a C2 server based on labels
+                if any(
+                    label
+                    in ["c2", "c2-server", "command-and-control", "malware", "sparkcat"]
+                    for label in [l.lower() for l in labels]
+                ):
+                    comments.append("Infrastructure: C2 Server")
+
+            # Set comment on object
+            if comments:
+                misp_obj.comment = " | ".join(comments)
 
             # Add the object to the event
             if misp_obj.attributes:
@@ -1043,6 +1136,7 @@ class STIXtoMISPConverter:
             "ip-dst",
             "ip-src",
             "domain",
+            "hostname",
             "url",
             "email-src",
             "email-dst",
@@ -1240,6 +1334,8 @@ class STIXtoMISPConverter:
             misp_type = "ip-dst"
         elif "domain" in obs_type:
             misp_type = "domain"
+        elif "hostname" in obs_type:
+            misp_type = "hostname"
         elif "url" in obs_type:
             misp_type = "url"
         elif "email" in obs_type:
@@ -1249,13 +1345,53 @@ class STIXtoMISPConverter:
         else:
             misp_type = "text"
 
+        # Check for duplicates before adding
+        if not self._should_add_attribute(misp_type, value):
+            # Skip duplicate attribute
+            return
+
+        # Determine if this is a C2 server or malicious infrastructure
+        to_ids = False
+        if obs_type in ["hostname", "domain-name", "url", "ipv4-addr", "ipv6-addr"]:
+            # Network observables should be marked for IDS
+            to_ids = True
+
         attr = event.add_attribute(
             type=misp_type,
             value=value,
             category=self._get_category_for_type(misp_type),
             comment=f"Observable: {obs_type}",
+            to_ids=to_ids,
         )
 
         # Add labels as tags to the attribute
-        for label in observable.get("labels", []):
+        # Check both 'labels' and 'x_opencti_labels'
+        labels = observable.get("labels", []) or observable.get("x_opencti_labels", [])
+        for label in labels:
             attr.add_tag(label)
+
+        # Add threat level based on score if available
+        score = observable.get("x_opencti_score")
+        if score is not None:
+            if score >= 75:
+                attr.add_tag("threat-level:high")
+            elif score >= 50:
+                attr.add_tag("threat-level:medium")
+            elif score >= 25:
+                attr.add_tag("threat-level:low")
+            else:
+                attr.add_tag("threat-level:info")
+
+        # Add infrastructure galaxy tag for C2 servers
+        if obs_type in ["hostname", "domain-name", "url", "ipv4-addr", "ipv6-addr"]:
+            # Check if it's likely a C2 server based on labels
+            if any(
+                label
+                in ["c2", "c2-server", "command-and-control", "malware", "sparkcat"]
+                for label in [l.lower() for l in labels]
+            ):
+                # Add as C2 infrastructure
+                attr.add_tag("infrastructure:c2")
+
+        # Add observable type tag
+        attr.add_tag(f"observable-type:{obs_type}")
