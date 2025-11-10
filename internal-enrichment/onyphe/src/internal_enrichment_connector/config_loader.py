@@ -113,4 +113,5 @@ class ConfigConnector:
             ["onyphe", "pivot_threshold"],
             self.load,
             default=25,
+            isNumber=True,
         )
