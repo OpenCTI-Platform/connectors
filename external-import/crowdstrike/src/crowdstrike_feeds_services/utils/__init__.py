@@ -50,8 +50,8 @@ from .indicators import (
     create_indicator_pattern_file_sha1,
     create_indicator_pattern_file_sha256,
     create_indicator_pattern_hostname,
-    create_indicator_pattern_ipv4_address,
-    create_indicator_pattern_ipv6_address,
+    create_indicator_pattern_ip_address,
+    create_indicator_pattern_ip_address_block,
     create_indicator_pattern_mutex,
     create_indicator_pattern_url,
     create_indicator_pattern_user_agent,
@@ -70,8 +70,8 @@ from .observables import (
     create_observable_file_sha1,
     create_observable_file_sha256,
     create_observable_hostname,
-    create_observable_ipv4_address,
-    create_observable_ipv6_address,
+    create_observable_ip_address,
+    create_observable_ip_address_block,
     create_observable_mutex,
     create_observable_url,
     create_observable_user_agent,
@@ -90,11 +90,11 @@ class ObservationFactory(NamedTuple):
     create_indicator_pattern: Callable[[str], IndicatorPattern]
 
 
-OBSERVATION_FACTORY_IPV4_ADDRESS = ObservationFactory(
-    create_observable_ipv4_address, create_indicator_pattern_ipv4_address
+OBSERVATION_FACTORY_IP_ADDRESS = ObservationFactory(
+    create_observable_ip_address, create_indicator_pattern_ip_address
 )
-OBSERVATION_FACTORY_IPV6_ADDRESS = ObservationFactory(
-    create_observable_ipv6_address, create_indicator_pattern_ipv6_address
+OBSERVATION_FACTORY_IP_ADDRESS_BLOCK = ObservationFactory(
+    create_observable_ip_address_block, create_indicator_pattern_ip_address_block
 )
 OBSERVATION_FACTORY_DOMAIN_NAME = ObservationFactory(
     create_observable_domain_name, create_indicator_pattern_domain_name
@@ -918,7 +918,7 @@ def create_regions_and_countries_from_entities(
 
 
 def create_file_from_download(
-    download, report_name: str
+    download, report_name: str, no_file_trigger_import: bool
 ) -> Mapping[str, Union[str, bool]]:
 
     converted_report_pdf = BytesIO(download)
@@ -934,7 +934,7 @@ def create_file_from_download(
         "name": filename,
         "data": base64_data.decode("utf-8"),
         "mime_type": "application/pdf",
-        "no_trigger_import": True,
+        "no_trigger_import": no_file_trigger_import,
     }
 
 

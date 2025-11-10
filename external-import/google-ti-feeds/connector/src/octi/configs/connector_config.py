@@ -1,8 +1,10 @@
 """Connector-specific configuration definitions for OpenCTI external imports."""
 
-from typing import ClassVar, Literal, Optional
+from datetime import timedelta
+from typing import ClassVar, Literal
 
 from connector.src.octi.interfaces.base_config import BaseConfig
+from pydantic import Field
 from pydantic_settings import SettingsConfigDict
 
 
@@ -12,15 +14,37 @@ class ConnectorConfig(BaseConfig):
     yaml_section: ClassVar[str] = "connector"
     model_config = SettingsConfigDict(env_prefix="connector_")
 
-    id: str
-    type: Literal["EXTERNAL_IMPORT"] = "EXTERNAL_IMPORT"
-    name: str = "Google Threat Intel Feeds"
-    scope: str = (
-        "report,location,identity,attack_pattern,domain,file,ipv4,ipv6,malware,sector,intrusion_set,url,vulnerability"
+    id: str = Field(
+        ...,
+        description="Unique identifier for the connector instance",
+        min_length=1,
     )
-    log_level: Literal["debug", "info", "warn", "error"] = "error"
-    duration_period: str = "PT2H"
-    queue_threshold: int = 500
+    type: Literal["EXTERNAL_IMPORT"] = Field(
+        default="EXTERNAL_IMPORT",
+        description="Type of connector - must be EXTERNAL_IMPORT for import connectors",
+    )
+    name: str = Field(
+        default="Google Threat Intel Feeds",
+        description="Display name for the connector",
+        min_length=1,
+    )
+    scope: str = Field(
+        default="report,location,identity,attack_pattern,domain,file,ipv4,ipv6,malware,sector,intrusion_set,url,vulnerability,campaign",
+        description="Comma-separated list of OpenCTI entity types that this connector can import",
+    )
+    log_level: Literal["debug", "info", "warn", "warning", "error"] = Field(
+        default="error",
+        description="Logging level for the connector",
+    )
+    duration_period: timedelta = Field(
+        default=timedelta(hours=2),
+        description="ISO 8601 duration between connector runs (e.g., PT2H for 2 hours)",
+    )
+    queue_threshold: int = Field(
+        default=500,
+        description="Maximum number of messages in the connector queue before throttling",
+        ge=1,
+    )
     tlp_level: Literal[
         "WHITE",
         "GREEN",
@@ -30,9 +54,7 @@ class ConnectorConfig(BaseConfig):
         "GREEN+STRICT",
         "AMBER+STRICT",
         "RED+STRICT",
-    ] = "AMBER+STRICT"
-    run_and_terminate: Optional[bool] = None
-    send_to_queue: Optional[bool] = None
-    send_to_directory: Optional[bool] = None
-    send_to_directory_path: Optional[str] = None
-    send_to_directory_retention: Optional[int] = None
+    ] = Field(
+        default="AMBER+STRICT",
+        description="Traffic Light Protocol (TLP) marking for imported data",
+    )

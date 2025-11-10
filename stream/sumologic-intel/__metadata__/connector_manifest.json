@@ -1,0 +1,21 @@
+{
+  "title": "Sumo Logic Intel",
+  "slug": "sumologic-intel",
+  "description": "Sumo Logic SIEM is a cloud-native security information and event management system for modern enterprises. It manages security data by automating data ingestion, analysis, and visualization processes.\n\nThis OpenCTI connector allows the ability to create, update and delete STIX indicator data from your OpenCTI platform to Sumo Logic. The connector uses the following Sumo Logic APIs:\n* Uploads indicators in a STIX 2.x json format API to create/update STIX indicators: https://api.sumologic.com/docs/#operation/uploadStixIndicators\n* Removes indicators by their IDs API to remove expired STIX indicators: https://api.sumologic.com/docs/#operation/removeIndicators.",
+  "short_description": "Sumo Logic SIEM is a cloud-native security information and event management system for modern enterprises. It manages security data by automating data ingestion, analysis, and visualization processes.",
+  "logo": "stream/sumologic-intel/__metadata__/logo.png",
+  "use_cases": [
+    "SIEM & Analytics"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 80,
+  "support_version": ">= 6.7.17",
+  "subscription_link": "https://www.sumologic.com/solutions/cloud-siem/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/sumologic-intel",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-sumologic-intel",
+  "container_type": "STREAM"
+}

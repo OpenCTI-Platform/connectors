@@ -6,7 +6,7 @@ import pytest
 from connector.src.custom.mappers.gti_reports.gti_report_to_stix_identity import (
     GTIReportToSTIXIdentity,
 )
-from connector.src.custom.models.gti_reports.gti_report_model import (
+from connector.src.custom.models.gti.gti_report_model import (
     GTIReportData,
     Links,
     ReportModel,
@@ -107,6 +107,7 @@ def report_with_special_characters_in_author() -> GTIReportData:
     )
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_identity_with_author(
     report_with_author, mock_organization, mock_tlp_marking
 ):
@@ -129,6 +130,7 @@ def test_gti_report_to_stix_identity_with_author(
     )
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_identity_with_short_author(
     report_with_short_author, mock_organization, mock_tlp_marking
 ):
@@ -148,6 +150,7 @@ def test_gti_report_to_stix_identity_with_short_author(
     _then_stix_identity_uses_default_author(identity)
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_identity_without_author(
     report_without_author, mock_organization, mock_tlp_marking
 ):
@@ -167,6 +170,7 @@ def test_gti_report_to_stix_identity_without_author(
     _then_stix_identity_uses_default_author(identity)
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_identity_with_empty_author(
     report_with_empty_author, mock_organization, mock_tlp_marking
 ):
@@ -186,6 +190,7 @@ def test_gti_report_to_stix_identity_with_empty_author(
     _then_stix_identity_uses_default_author(identity)
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_identity_without_attributes(
     report_without_attributes, mock_organization, mock_tlp_marking
 ):
@@ -202,6 +207,7 @@ def test_gti_report_to_stix_identity_without_attributes(
     _when_convert_to_stix_raises_error(mapper, ValueError, "Invalid report attributes")
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_identity_with_long_author_name(
     report_with_long_author_name, mock_organization, mock_tlp_marking
 ):
@@ -221,6 +227,7 @@ def test_gti_report_to_stix_identity_with_long_author_name(
     _then_stix_identity_preserves_long_author_name(identity)
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_identity_with_special_characters(
     report_with_special_characters_in_author, mock_organization, mock_tlp_marking
 ):
@@ -240,6 +247,7 @@ def test_gti_report_to_stix_identity_with_special_characters(
     _then_stix_identity_preserves_special_characters(identity)
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_identity_without_tlp_marking(
     report_with_author, mock_organization
 ):
@@ -259,6 +267,7 @@ def test_gti_report_to_stix_identity_without_tlp_marking(
     _then_stix_identity_has_correct_properties(identity, mock_organization)
 
 
+@pytest.mark.order(1)
 def test_gti_report_identity_mapper_initialization(
     report_with_author, mock_organization, mock_tlp_marking
 ):
@@ -278,6 +287,7 @@ def test_gti_report_identity_mapper_initialization(
     assert mapper.organization == mock_organization  # noqa: S101
 
 
+@pytest.mark.order(1)
 def test_author_length_validation_edge_cases(mock_organization, mock_tlp_marking):
     """Test author length validation with edge cases."""
     # GIVEN: A GTI report with 2-character author name (just below minimum threshold)

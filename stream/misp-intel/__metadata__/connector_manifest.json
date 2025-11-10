@@ -1,0 +1,21 @@
+{
+  "title": "MISP Intel",
+  "slug": "misp-intel",
+  "description": "The MISP Intel connector enables synchronization between OpenCTI and MISP (Malware Information Sharing Platform) instances. It streams data from OpenCTI to MISP in real-time, automatically converting OpenCTI containers (reports, groupings, cases) and their associated STIX objects into MISP events. The connector supports flexible configuration options including distribution levels, threat levels, automatic publishing, and custom tagging. It maintains relationships between entities and supports organization-specific settings, making it ideal for organizations that use both OpenCTI and MISP for threat intelligence management and need to keep both platforms synchronized.",
+  "short_description": "Real-time streaming connector that exports OpenCTI containers and their content to MISP events, enabling bidirectional threat intelligence synchronization.",
+  "logo": "stream/misp-intel/__metadata__/logo.png",
+  "use_cases": [
+    "Threat Intelligence"
+  ],
+  "verified": true,
+  "last_verified_date": "2025-01-01",
+  "playbook_supported": false,
+  "max_confidence_level": 100,
+  "support_version": ">= 6.8.0",
+  "subscription_link": "https://www.misp-project.org/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/misp-intel",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-misp-intel",
+  "container_type": "STREAM"
+}

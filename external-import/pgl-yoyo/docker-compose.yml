@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  pgl-yoyo-connector:
+    image: opencti/connector-pgl-yoyo:latest
+    container_name: pgl-yoyo-connector
+    restart: unless-stopped
+    environment:
+      # OpenCTI connection — can also be provided in mounted config.yml
+      OPENCTI_URL: "http://opencti:8080"
+      OPENCTI_TOKEN: "__OPENCTI_API_KEY__"
+
+      # Unique connector id (UUID v4). REQUIRED for connector registration
+      CONNECTOR_ID: "00000000-0000-4000-8000-000000000000"
+
+      # Standard connector runtime variables
+      CONNECTOR_NAME: "PGL Yoyo Ad Server Blocklist"
+      CONNECTOR_SCOPE: "observable"
+      CONNECTOR_CONFIDENCE_LEVEL: "50"
+      CONNECTOR_UPDATE_EXISTING: "true"
+      CONNECTOR_RUN_AND_TERMINATE: "false"
+      CONNECTOR_DURATION_PERIOD: "43200"
+      CONNECT_LOG_LEVEL: "info"
+
+      # PGL-specific behavior flags
+      PGL_BUNDLE_MODE: "true"
+      PGL_REPORT_PER_RUN: "true"
+      PGL_IDENTITY_NAME: "Peter Lowe (PGL Blocklist)"
+      PGL_IDENTITY_CLASS: "organization"
+      PGL_IDENTITY_DESCRIPTION: "Curated ad server & tracking blocklist maintained by Peter G. Lowe (yoyo.org)."
+
+      # Optional: override feeds via environment with a JSON/YAML blob if your
+      # deployment system supports it. Typically you will mount a `config.yml`
+      # with the `pgl.feeds` list instead of using env var overrides.
+
+    # If you need persistent configuration, uncomment and mount files
+    # under the `volumes` key. Example:
+    # volumes:
+    #   - ./config.yml:/opt/connector/config.yml:ro
+
+    # Uncomment these lines if you need to run the connector on a schedule
+    # using the platform's scheduler or process manager. For development you
+    # can also map the project root to the container and run `python -m src`.
+    # command: ["python", "-m", "pgl_yoyo.pgl_connector"]
+

@@ -1,15 +1,17 @@
 """Converts a GTI report's targeted regions to STIX Location objects."""
 
-from typing import List, Optional
-
-from connector.src.custom.models.gti_reports.gti_report_model import (
+from connector.src.custom.models.gti.gti_report_model import (
     GTIReportData,
     TargetedRegion,
 )
 from connector.src.stix.octi.models.location_model import OctiLocationModel
 from connector.src.stix.v21.models.ovs.region_ov_enums import RegionOV
 from connector.src.utils.converters.generic_converter_config import BaseMapper
-from stix2.v21 import Identity, Location, MarkingDefinition  # type: ignore
+from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
+    OrganizationAuthor,
+    TLPMarking,
+)
+from stix2.v21 import Location  # type: ignore
 
 
 class GTIReportToSTIXLocation(BaseMapper):
@@ -18,29 +20,29 @@ class GTIReportToSTIXLocation(BaseMapper):
     def __init__(
         self,
         report: GTIReportData,
-        organization: Identity,
-        tlp_marking: MarkingDefinition,
+        organization: OrganizationAuthor,
+        tlp_marking: TLPMarking,
     ):
         """Initialize the GTIReportToSTIXLocation object.
 
         Args:
             report (GTIReportData): The GTI report data to convert.
-            organization (Identity): The organization identity object.
-            tlp_marking (MarkingDefinition): The TLP marking definition.
+            organization (OrganizationAuthor): The organization identity object.
+            tlp_marking (TLPMarking): The TLP marking definition.
 
         """
         self.report = report
         self.organization = organization
         self.tlp_marking = tlp_marking
 
-    def to_stix(self) -> List[Location]:
+    def to_stix(self) -> list[Location]:
         """Convert the GTI report targeted regions to STIX Location objects.
 
         Returns:
-            List[Location]: The list of STIX Location objects.
+            list[Location]: The list of STIX Location objects.
 
         """
-        result: List[Location] = []
+        result: list[Location] = []
 
         if not hasattr(self.report, "attributes") or not self.report.attributes:
             raise ValueError("Invalid report attributes")
@@ -56,14 +58,14 @@ class GTIReportToSTIXLocation(BaseMapper):
 
         return result
 
-    def _process_region(self, region_data: TargetedRegion) -> Optional[Location]:
+    def _process_region(self, region_data: TargetedRegion) -> Location | None:
         """Process a targeted region entry and convert to appropriate Location type.
 
         Args:
             region_data (TargetedRegion): The targeted region data to process.
 
         Returns:
-            Optional[Location]: The STIX Location object, or None if no valid location found.
+                Location | None: The STIX Location object, or None if no valid location found.
 
         """
         location = None
@@ -76,7 +78,7 @@ class GTIReportToSTIXLocation(BaseMapper):
 
         return location
 
-    def _create_country(self, region_data: TargetedRegion) -> Optional[Location]:
+    def _create_country(self, region_data: TargetedRegion) -> Location | None:
         """Create a LocationCountry object.
 
         Args:
@@ -106,7 +108,7 @@ class GTIReportToSTIXLocation(BaseMapper):
 
     def _create_region(
         self, region_data: TargetedRegion, is_sub_region: bool
-    ) -> Optional[Location]:
+    ) -> Location | None:
         """Create a LocationRegion object.
 
         Args:
@@ -121,10 +123,8 @@ class GTIReportToSTIXLocation(BaseMapper):
         if not region_name:
             return None
 
-        # Normalize the region name for comparison
         normalized_name = region_name.lower().replace(" ", "-")
 
-        # Check if the normalized name exists in the predefined RegionOV values
         predefined_values = [member.value for member in RegionOV]
         if normalized_name not in predefined_values:
             return None

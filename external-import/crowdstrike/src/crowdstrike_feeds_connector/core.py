@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike connector core module."""
+
 import os
 import sys
 import time
@@ -169,6 +170,8 @@ class CrowdStrike:
                 indicator_unwanted_labels_str
             )
 
+        no_file_trigger_import = self.config.no_file_trigger_import
+
         author = self._create_author()
 
         # Create OpenCTI connector helper.
@@ -181,11 +184,27 @@ class CrowdStrike:
         importers: List[BaseImporter] = []
 
         if self._CONFIG_SCOPE_ACTOR in scopes:
+            actor_indicator_config = {
+                "default_latest_timestamp": actor_start_timestamp,
+                "create_observables": create_observables,
+                "create_indicators": create_indicators,
+                "exclude_types": indicator_exclude_types,
+                "default_x_opencti_score": default_x_opencti_score,
+                "indicator_low_score": indicator_low_score,
+                "indicator_low_score_labels": set(indicator_low_score_labels),
+                "indicator_medium_score": indicator_medium_score,
+                "indicator_medium_score_labels": set(indicator_medium_score_labels),
+                "indicator_high_score": indicator_high_score,
+                "indicator_high_score_labels": set(indicator_high_score_labels),
+                "indicator_unwanted_labels": set(indicator_unwanted_labels),
+            }
+
             actor_importer = ActorImporter(
                 self.helper,
                 author,
                 actor_start_timestamp,
                 tlp_marking,
+                actor_indicator_config,
             )
 
             importers.append(actor_importer)
@@ -216,6 +235,7 @@ class CrowdStrike:
                 report_type,
                 report_guess_malware,
                 indicator_config,
+                no_file_trigger_import,
             )
 
             importers.append(report_importer)
@@ -239,6 +259,7 @@ class CrowdStrike:
                 indicator_high_score=indicator_high_score,
                 indicator_high_score_labels=set(indicator_high_score_labels),
                 indicator_unwanted_labels=set(indicator_unwanted_labels),
+                no_file_trigger_import=no_file_trigger_import,
             )
 
             indicator_importer = IndicatorImporter(indicator_importer_config)
@@ -251,6 +272,7 @@ class CrowdStrike:
                 tlp_marking,
                 report_status,
                 report_type,
+                no_file_trigger_import,
             )
 
             importers.append(yara_master_importer)
@@ -262,6 +284,7 @@ class CrowdStrike:
                 tlp_marking,
                 report_status,
                 report_type,
+                no_file_trigger_import,
             )
 
             importers.append(snort_master_importer)

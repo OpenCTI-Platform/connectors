@@ -1,12 +1,16 @@
 """Converts a GTI report into STIX relationship objects."""
 
-from datetime import datetime
-from typing import Any, List, Optional
+from datetime import datetime, timezone
+from typing import Any
 
-from connector.src.custom.models.gti_reports.gti_report_model import GTIReportData
+from connector.src.custom.models.gti.gti_report_model import GTIReportData
 from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
 from connector.src.stix.v21.models.sros.relationship_model import RelationshipModel
-from stix2.v21 import Identity, MarkingDefinition, Relationship  # type: ignore
+from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
+    OrganizationAuthor,
+    TLPMarking,
+)
+from stix2.v21 import Relationship  # type: ignore
 
 
 class GTIReportRelationship:
@@ -15,22 +19,26 @@ class GTIReportRelationship:
     def __init__(
         self,
         report: GTIReportData,
-        organization: Identity,
-        tlp_marking: MarkingDefinition,
+        organization: OrganizationAuthor,
+        tlp_marking: TLPMarking,
         report_id: str,
     ):
         """Initialize the GTIReportRelationship object.
 
         Args:
             report (GTIReportData): The GTI report data to convert.
-            organization (Identity): The organization identity object.
-            tlp_marking (MarkingDefinition): The TLP marking definition.
+            organization (OrganizationAuthor): The organization identity object.
+            tlp_marking (TLPMarking): The TLP marking definition.
             report_id (str): The STIX ID of the report object.
 
         """
         if hasattr(report, "attributes") and report.attributes is not None:
-            created = datetime.fromtimestamp(report.attributes.creation_date)
-            modified = datetime.fromtimestamp(report.attributes.last_modification_date)
+            created = datetime.fromtimestamp(
+                report.attributes.creation_date, tz=timezone.utc
+            )
+            modified = datetime.fromtimestamp(
+                report.attributes.last_modification_date, tz=timezone.utc
+            )
         else:
             raise ValueError("Invalid report data")
 
@@ -46,16 +54,16 @@ class GTIReportRelationship:
         self,
         relationship_type: str,
         target_ref: str,
-        target_name: Optional[str] = None,
-        description: Optional[str] = None,
+        target_name: str | None = None,
+        description: str | None = None,
     ) -> RelationshipModel:
         """Create a generic relationship from report to any target entity.
 
         Args:
             relationship_type (str): The type of relationship (e.g., 'targets', 'indicates').
             target_ref (str): The ID of the target entity.
-            target_name (Optional[str]): The name of the target entity, for description purposes.
-            description (Optional[str]): Custom description for the relationship.
+            target_name (str | None): The name of the target entity, for description purposes.
+            description (str | None): Custom description for the relationship.
 
         Returns:
             Relationship: The STIX relationship object.
@@ -80,15 +88,15 @@ class GTIReportRelationship:
         )
 
     @staticmethod
-    def to_stix(**kwargs: Any) -> List[Relationship]:
+    def to_stix(**kwargs: Any) -> list[Relationship]:
         """Convert the GTI report into STIX relationship objects.
 
         Args:
             **kwargs: Additional arguments passed to the method.
 
         Returns:
-            List[Relationship]: The list of STIX relationship objects.
+            list[Relationship]: The list of STIX relationship objects.
 
         """
-        result: List[Relationship] = []
+        result: list[Relationship] = []
         return result

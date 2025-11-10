@@ -1,7 +1,5 @@
 """The module defines the ArtifactModel class, which represents a STIX 2.1 Artifact object."""
 
-from typing import Dict, Optional
-
 from connector.src.stix.v21.models.ovs.encryption_algorithm_ov_enums import (
     EncryptionAlgorithmOV,
 )
@@ -16,27 +14,27 @@ from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
 class ArtifactModel(BaseSCOModel):
     """Model representing an Artifact in STIX 2.1 format."""
 
-    mime_type: Optional[str] = Field(
+    mime_type: str | None = Field(
         default=None,
         description="IANA media type of the artifact. SHOULD follow the IANA media type registry format if possible.",
     )
-    payload_bin: Optional[bytes] = Field(
+    payload_bin: bytes | None = Field(
         default=None,
         description="Base64-encoded binary data of the artifact. MUST NOT be used if 'url' is present.",
     )
-    url: Optional[str] = Field(
+    url: str | None = Field(
         default=None,
         description="URL to the artifact content. MUST NOT be used if 'payload_bin' is present.",
     )
-    hashes: Optional[Dict[str, str]] = Field(
+    hashes: dict[str, str] | None = Field(
         default=None,
-        description="Dictionary of hashes for the artifact. MUST be present if 'url' is used. Keys MUST come from hash-algorithm-ov.",
+        description="dictionary of hashes for the artifact. MUST be present if 'url' is used. Keys MUST come from hash-algorithm-ov.",
     )
-    encryption_algorithm: Optional[EncryptionAlgorithmOV] = Field(
+    encryption_algorithm: EncryptionAlgorithmOV | None = Field(
         default=None,
         description="Encryption algorithm used on the payload or URL content. MUST come from encryption-algorithm-enum.",
     )
-    decryption_key: Optional[str] = Field(
+    decryption_key: str | None = Field(
         default=None,
         description="Decryption key for encrypted content. MUST NOT be present unless 'encryption_algorithm' is set.",
     )

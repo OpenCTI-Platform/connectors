@@ -1,6 +1,6 @@
 """Exception for errors when fetching IP addresses from Google Threat Intelligence API."""
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 from connector.src.custom.exceptions.fetch_errors.gti_api_error import GTIApiError
 
@@ -11,9 +11,9 @@ class GTIIPFetchError(GTIApiError):
     def __init__(
         self,
         message: str,
-        endpoint: Optional[str] = None,
-        status_code: Optional[int] = None,
-        details: Optional[Dict[str, Any]] = None,
+        endpoint: str | None = None,
+        status_code: str | None = None,
+        details: dict[str, Any] | None = None,
     ):
         """Initialize the exception.
 
@@ -24,5 +24,13 @@ class GTIIPFetchError(GTIApiError):
             details: Additional details about the error
 
         """
-        error_msg = f"Error fetching IP addresses: {message}"
+        error_msg = "Error fetching IP addresses: {message}"
         super().__init__(error_msg, status_code, endpoint, details)
+
+        # Add structured data for logging
+        if hasattr(self, "structured_data"):
+            pass  # structured_data will be inherited from parent GTIApiError
+        else:
+            self.structured_data = {
+                "original_message": message,
+            }

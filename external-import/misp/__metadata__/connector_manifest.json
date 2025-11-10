@@ -1,0 +1,21 @@
+{
+  "title": "MISP",
+  "slug": "misp",
+  "description": "The MISP connector imports threat intelligence from MISP (Malware Information Sharing Platform) instances into OpenCTI. It enables organizations to leverage existing MISP threat intelligence feeds, events, attributes, objects, and galaxies within the OpenCTI platform. The connector supports incremental imports, custom filtering by tags, organizations, and event types, and maintains full traceability between MISP and OpenCTI entities.",
+  "short_description": "Import threat intelligence events, indicators, and observables from MISP instances.",
+  "logo": "external-import/misp/__metadata__/logo.png",
+  "use_cases": [
+    "Open Source Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": "2025-01-01",
+  "playbook_supported": false,
+  "max_confidence_level": 55,
+  "support_version": ">= 6.5.1",
+  "subscription_link": "https://www.misp-project.org",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/misp",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-misp",
+  "container_type": "EXTERNAL_IMPORT"
+}

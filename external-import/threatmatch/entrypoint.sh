@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-threatmatch
 
 # Start the connector
-python3 threatmatch.py
+python3 main.py

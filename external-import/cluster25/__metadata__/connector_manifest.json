@@ -1,0 +1,19 @@
+{
+  "title": "Cluster25",
+  "slug": "cluster25",
+  "description": "The OpenCTI Cluster25 connector can be used to import indicators from the C25 platform into OpenCTI.It uses che current V1 public APIs to get a valid token and import the supported indicators.In the current implementation, the connector is able to import indicators only.With future releases, it would be possible to import observables, threat actors and various contents as well.\nNote: in order to use the connector, you need a valid pair of CLIENT_ID and CLIENT_SECRET provided by the C25 team.All the results are implicitly filtered by the user's TLP.",
+  "short_description": "The OpenCTI Cluster25 connector can be used to import indicators from the C25 platform into OpenCTI.It uses che current V1 public APIs to get a valid token and import the supported indicators.In the current implementation, the connector is able to import indicators only.With future releases, it would be possible to import observables, threat actors and various contents as well.\nNote: in order to use the connector, you need a valid pair of CLIENT_ID and CLIENT_SECRET provided by the C25 team.All the results are implicitly filtered by the user's TLP.",
+  "logo": "external-import/cluster25/__metadata__/logo.png",
+  "use_cases": [],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/cluster25",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-cluster25",
+  "container_type": "EXTERNAL_IMPORT"
+}

@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-export-report-pdf
 
 # Launch the worker
-python3 export-report-pdf.py
+python3 main.py

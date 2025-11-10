@@ -1,6 +1,6 @@
 """Test module for GenericConverterConfig functionality."""
 
-from typing import Any, Optional, Tuple
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -29,8 +29,8 @@ class MockMapper(BaseMapper):
     def __init__(
         self,
         input_data: Any,
-        organization: Optional[str] = None,
-        tlp_marking: Optional[str] = None,
+        organization: str | None = None,
+        tlp_marking: str | None = None,
     ):
         """Initialize the mock mapper."""
         self.input_data = input_data
@@ -76,8 +76,8 @@ class CustomError(Exception):
     def __init__(
         self,
         message: str,
-        entity_id: Optional[str] = None,
-        entity_name: Optional[str] = None,
+        entity_id: str | None = None,
+        entity_name: str | None = None,
     ):
         """Initialize the custom error."""
         super().__init__(message)
@@ -735,7 +735,7 @@ def test_validate_output_data_skip_when_disabled() -> None:
 
 def _when_mapper_created(
     config: GenericConverterConfig, input_data: Any, **kwargs: Any
-) -> Tuple[Any, Any]:
+) -> tuple[Any, Any]:
     """Create mapper and capture result and exception."""
     try:
         mapper = config.create_mapper(input_data, **kwargs)
@@ -747,8 +747,8 @@ def _when_mapper_created(
 def _when_exception_created(
     config: GenericConverterConfig,
     message: str,
-    entity_id: Optional[str] = None,
-    entity_name: Optional[str] = None,
+    entity_id: str | None = None,
+    entity_name: str | None = None,
 ) -> Any:
     """Create exception using config's exception factory."""
     return config.create_exception(message, entity_id, entity_name)
@@ -761,14 +761,14 @@ def _when_entity_id_extracted(config: GenericConverterConfig, input_data: Any) -
 
 def _when_entity_name_extracted(
     config: GenericConverterConfig, input_data: Any
-) -> Optional[str]:
+) -> str | None:
     """Extract entity name from input data."""
     return config.get_entity_name(input_data)
 
 
 def _when_input_validated(
     config: GenericConverterConfig, input_data: Any
-) -> Optional[Exception]:
+) -> Exception | None:
     """Validate input data and capture exception."""
     try:
         config.validate_input_data(input_data)
@@ -779,7 +779,7 @@ def _when_input_validated(
 
 def _when_output_validated(
     config: GenericConverterConfig, output_data: Any
-) -> Optional[Exception]:
+) -> Exception | None:
     """Validate output data and capture exception."""
     try:
         config.validate_output_data(output_data)
@@ -904,23 +904,23 @@ def _then_entity_id_correct(entity_id: str, expected: str) -> None:
     assert entity_id == expected  # noqa: S101
 
 
-def _then_entity_name_correct(entity_name: Optional[str], expected: str) -> None:
+def _then_entity_name_correct(entity_name: str | None, expected: str) -> None:
     """Assert that entity name extraction was correct."""
     assert entity_name == expected  # noqa: S101
 
 
-def _then_entity_name_none(entity_name: Optional[str]) -> None:
+def _then_entity_name_none(entity_name: str | None) -> None:
     """Assert that entity name is None."""
     assert entity_name is None  # noqa: S101
 
 
-def _then_validation_successful(exception: Optional[Exception]) -> None:
+def _then_validation_successful(exception: Exception | None) -> None:
     """Assert that validation passed without exception."""
     assert exception is None  # noqa: S101
 
 
 def _then_validation_failed(
-    exception: Optional[Exception], expected_exception_type: type
+    exception: Exception | None, expected_exception_type: type
 ) -> None:
     """Assert that validation failed with expected exception."""
     assert exception is not None  # noqa: S101

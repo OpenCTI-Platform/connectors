@@ -1,6 +1,6 @@
 """Test module for GenericFetcher functionality."""
 
-from typing import Any, Dict, Generator, List, Optional, Sequence, Tuple, Union
+from typing import Any, Generator, Sequence
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
@@ -64,7 +64,7 @@ class WrappedResponse(BaseModel):
 class UserFetchError(Exception):
     """Custom exception for user fetching."""
 
-    def __init__(self, message: str, endpoint: Optional[str] = None):
+    def __init__(self, message: str, endpoint: str | None = None):
         """Initialize UserFetchError."""
         super().__init__(message)
         self.endpoint = endpoint
@@ -212,7 +212,7 @@ def save_to_file_fetcher(
     save_to_file_config: GenericFetcherConfig,
     mock_api_client: AsyncMock,
     mock_logger: MagicMock,
-    mock_save_to_file: Dict[str, Any],
+    mock_save_to_file: dict[str, Any],
 ) -> GenericFetcher:
     """Fixture for fetcher with save_to_file enabled."""
     return GenericFetcher(
@@ -388,7 +388,7 @@ async def test_fetch_multiple_partial_success(
         UserModel(id="789", name="Bob", email="bob@example.com"),
     ]
 
-    def side_effect(*args: Any, **kwargs: Any) -> Optional[UserModel]:
+    def side_effect(*args: Any, **kwargs: Any) -> UserModel | None:
         url = args[0] if len(args) > 0 else kwargs.get("url", "")
         if "123" in url:
             return responses[0]
@@ -425,7 +425,7 @@ async def test_fetch_multiple_with_errors(
     _then_api_called_multiple_times(mock_api_client, 3)
 
 
-# Scenario: List fetching
+# Scenario: list fetching
 
 
 @pytest.mark.asyncio
@@ -598,7 +598,7 @@ def test_header_merging_config_overrides_base(
 # --- GIVEN: Setup conditions ---
 
 
-def _given_api_returns_data(mock_client: AsyncMock, data: Dict[str, Any]) -> None:
+def _given_api_returns_data(mock_client: AsyncMock, data: dict[str, Any]) -> None:
     """Set up mock API client to return specific data."""
     mock_client.call_api.return_value = data
 
@@ -615,13 +615,13 @@ def _given_api_returns_multiple_models(
     mock_client.call_api.side_effect = models
 
 
-def _given_api_returns_list(mock_client: AsyncMock, items: List[Any]) -> None:
+def _given_api_returns_list(mock_client: AsyncMock, items: list[Any]) -> None:
     """Set up mock API client to return a list of items."""
     mock_client.call_api.return_value = items
 
 
 def _given_api_returns_wrapped_data(
-    mock_client: AsyncMock, wrapped_response: Union[Dict[str, Any], BaseModel]
+    mock_client: AsyncMock, wrapped_response: dict[str, Any] | BaseModel
 ) -> None:
     """Set up mock API client to return wrapped response."""
     mock_client.call_api.return_value = wrapped_response
@@ -647,7 +647,7 @@ def _given_api_returns_error(mock_client: AsyncMock, error: Exception) -> None:
 
 async def _when_fetch_single_called(
     fetcher: GenericFetcher, **kwargs: Any
-) -> Tuple[Any, Optional[Exception]]:
+) -> tuple[Any, Exception | None]:
     """Call fetch_single and capture result and exception."""
     try:
         result = await fetcher.fetch_single(**kwargs)
@@ -657,8 +657,8 @@ async def _when_fetch_single_called(
 
 
 async def _when_fetch_multiple_called(
-    fetcher: GenericFetcher, entity_ids: List[str], **kwargs: Any
-) -> Tuple[Optional[List[Any]], Optional[Exception]]:
+    fetcher: GenericFetcher, entity_ids: list[str], **kwargs: Any
+) -> tuple[list[Any] | None, Exception | None]:
     """Call fetch_multiple and capture result and exception."""
     try:
         result = await fetcher.fetch_multiple(entity_ids, **kwargs)
@@ -669,7 +669,7 @@ async def _when_fetch_multiple_called(
 
 async def _when_fetch_list_called(
     fetcher: GenericFetcher, **kwargs: Any
-) -> Tuple[Optional[List[Any]], Optional[Exception]]:
+) -> tuple[list[Any] | None, Exception | None]:
     """Call fetch_list and capture result and exception."""
     try:
         result = await fetcher.fetch_list(**kwargs)
@@ -681,7 +681,7 @@ async def _when_fetch_list_called(
 # --- THEN: Verify the expected outcomes ---
 
 
-def _then_fetch_successful(result: Any, expected_data: Dict[str, Any]) -> None:
+def _then_fetch_successful(result: Any, expected_data: dict[str, Any]) -> None:
     """Assert that fetch was successful and returned expected data."""
     assert result is not None  # noqa: S101
     assert result == expected_data  # noqa: S101
@@ -711,7 +711,7 @@ def _then_fetch_returns_none(result: Any) -> None:
 
 
 def _then_fetch_failed_with_network_error(
-    exception: Optional[Exception], expected_message: str
+    exception: Exception | None, expected_message: str
 ) -> None:
     """Assert that fetch failed with network error."""
     assert exception is not None  # noqa: S101
@@ -721,7 +721,7 @@ def _then_fetch_failed_with_network_error(
 
 
 def _then_fetch_failed_with_general_error(
-    exception: Optional[Exception], expected_message: str
+    exception: Exception | None, expected_message: str
 ) -> None:
     """Assert that fetch failed with general error."""
     assert exception is not None  # noqa: S101
@@ -730,7 +730,7 @@ def _then_fetch_failed_with_general_error(
 
 
 def _then_fetch_failed_with_param_error(
-    exception: Optional[Exception], expected_param: str
+    exception: Exception | None, expected_param: str
 ) -> None:
     """Assert that fetch failed with parameter error."""
     assert exception is not None  # noqa: S101
@@ -739,7 +739,7 @@ def _then_fetch_failed_with_param_error(
 
 
 def _then_fetch_multiple_successful(
-    results: Optional[List[Any]], expected_count: int
+    results: list[Any] | None, expected_count: int
 ) -> None:
     """Assert that multiple fetch was successful."""
     assert results is not None  # noqa: S101
@@ -747,22 +747,20 @@ def _then_fetch_multiple_successful(
 
 
 def _then_fetch_multiple_partial_success(
-    results: Optional[List[Any]], expected_count: int
+    results: list[Any] | None, expected_count: int
 ) -> None:
     """Assert that multiple fetch had partial success."""
     assert results is not None  # noqa: S101
     assert len(results) == expected_count  # noqa: S101
 
 
-def _then_fetch_list_successful(
-    results: Optional[List[Any]], expected_count: int
-) -> None:
+def _then_fetch_list_successful(results: list[Any] | None, expected_count: int) -> None:
     """Assert that list fetch was successful."""
     assert results is not None  # noqa: S101
     assert len(results) == expected_count  # noqa: S101
 
 
-def _then_fetch_list_empty(results: Optional[List[Any]]) -> None:
+def _then_fetch_list_empty(results: list[Any] | None) -> None:
     """Assert that list fetch returned empty list."""
     assert results is not None  # noqa: S101
     assert len(results) == 0  # noqa: S101
@@ -783,7 +781,7 @@ def _then_api_called_multiple_times(
 
 
 def _then_headers_merged_correctly(
-    fetcher: GenericFetcher, expected_headers: Dict[str, str]
+    fetcher: GenericFetcher, expected_headers: dict[str, str]
 ) -> None:
     """Assert that headers were merged correctly."""
     assert fetcher.headers == expected_headers  # noqa: S101
@@ -822,7 +820,7 @@ async def test_save_to_file_disabled_by_default(
 async def test_save_to_file_creates_debug_directory(
     save_to_file_fetcher: GenericFetcher,
     mock_api_client: AsyncMock,
-    mock_save_to_file: Dict[str, Any],
+    mock_save_to_file: dict[str, Any],
 ) -> None:
     """Test that debug directory is created when save_to_file is enabled."""
     # Given: A fetcher with save_to_file enabled
@@ -843,7 +841,7 @@ async def test_save_to_file_creates_debug_directory(
 async def test_save_to_file_saves_raw_response(
     save_to_file_fetcher: GenericFetcher,
     mock_api_client: AsyncMock,
-    mock_save_to_file: Dict[str, Any],
+    mock_save_to_file: dict[str, Any],
 ) -> None:
     """Test that raw response is saved to file when save_to_file is enabled."""
     # Given: A fetcher with save_to_file enabled
@@ -864,7 +862,7 @@ async def test_save_to_file_saves_raw_response(
 async def test_save_to_file_generates_correct_filename(
     save_to_file_fetcher: GenericFetcher,
     mock_api_client: AsyncMock,
-    mock_save_to_file: Dict[str, Any],
+    mock_save_to_file: dict[str, Any],
 ) -> None:
     """Test that correct filename is generated when saving to file."""
     # Given: A fetcher with save_to_file enabled
@@ -916,7 +914,7 @@ async def test_save_to_file_avoids_duplicates(
 async def test_save_to_file_handles_pydantic_models(
     mock_api_client: AsyncMock,
     mock_logger: MagicMock,
-    mock_save_to_file: Dict[str, Any],
+    mock_save_to_file: dict[str, Any],
 ) -> None:
     """Test that Pydantic models are properly serialized when saving to file."""
     # Given: A fetcher configured with response model and save_to_file enabled
@@ -946,7 +944,7 @@ async def test_save_to_file_handles_pydantic_models(
 async def test_save_to_file_includes_request_info(
     save_to_file_fetcher: GenericFetcher,
     mock_api_client: AsyncMock,
-    mock_save_to_file: Dict[str, Any],
+    mock_save_to_file: dict[str, Any],
 ) -> None:
     """Test that request info is included in saved file."""
     # Given: A fetcher with save_to_file enabled
@@ -996,7 +994,7 @@ async def test_save_to_file_works_with_all_fetch_methods(
     save_to_file_list_config: GenericFetcherConfig,
     mock_api_client: AsyncMock,
     mock_logger: MagicMock,
-    mock_save_to_file: Dict[str, Any],
+    mock_save_to_file: dict[str, Any],
 ) -> None:
     """Test that save_to_file works with all fetch methods."""
     # Given: Multiple fetchers with save_to_file enabled
@@ -1048,7 +1046,7 @@ async def test_save_to_file_with_query_parameters(
     save_to_file_list_config: GenericFetcherConfig,
     mock_api_client: AsyncMock,
     mock_logger: MagicMock,
-    mock_save_to_file: Dict[str, Any],
+    mock_save_to_file: dict[str, Any],
 ) -> None:
     """Test that query parameters are included in saved request info."""
     # Given: A list fetcher with save_to_file enabled

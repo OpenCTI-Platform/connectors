@@ -1,6 +1,6 @@
 """Composite mapper that handles report to locations, identity, and report conversion in one step."""
 
-from typing import Any, List
+from typing import Any
 
 from connector.src.custom.mappers.gti_reports.gti_report_to_stix_identity import (
     GTIReportToSTIXIdentity,
@@ -14,9 +14,12 @@ from connector.src.custom.mappers.gti_reports.gti_report_to_stix_report import (
 from connector.src.custom.mappers.gti_reports.gti_report_to_stix_sector import (
     GTIReportToSTIXSector,
 )
-from connector.src.custom.models.gti_reports.gti_report_model import GTIReportData
+from connector.src.custom.models.gti.gti_report_model import GTIReportData
 from connector.src.utils.converters.generic_converter_config import BaseMapper
-from stix2.v21 import Identity, MarkingDefinition  # type: ignore
+from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
+    OrganizationAuthor,
+    TLPMarking,
+)
 
 
 class GTIReportToSTIXComposite(BaseMapper):
@@ -25,8 +28,8 @@ class GTIReportToSTIXComposite(BaseMapper):
     def __init__(
         self,
         report: GTIReportData,
-        organization: Identity,
-        tlp_marking: MarkingDefinition,
+        organization: OrganizationAuthor,
+        tlp_marking: TLPMarking,
     ) -> None:
         """Initialize the composite mapper.
 
@@ -40,11 +43,11 @@ class GTIReportToSTIXComposite(BaseMapper):
         self.organization = organization
         self.tlp_marking = tlp_marking
 
-    def to_stix(self) -> List[Any]:
+    def to_stix(self) -> list[Any]:
         """Convert the GTI report to a list of STIX objects (locations, sectors, identity, report).
 
         Returns:
-            List of STIX objects in order: [locations..., sectors..., identity, report]
+            list of STIX objects in order: [locations..., sectors..., identity, report]
 
         """
         all_entities = []

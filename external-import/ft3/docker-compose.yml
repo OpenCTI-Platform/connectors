@@ -1,0 +1,10 @@
+services:
+  connector-ft3:
+    image: opencti/connector-ft3:rolling
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+#      - FT3_INTERVAL=7 # In days
+#      - FT3_TACTICS_URL=https://raw.githubusercontent.com/stripe/ft3/refs/heads/master/FT3_Tactics.json
+#      - FT3_TECHNIQUES_URL=https://raw.githubusercontent.com/stripe/ft3/refs/heads/master/FT3_Techniques.json
+#    restart: always

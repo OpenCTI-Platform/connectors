@@ -1,7 +1,5 @@
 """Exception for pagination-related errors when fetching data from Google Threat Intelligence."""
 
-from typing import Optional
-
 from connector.src.custom.exceptions.fetch_errors.gti_api_error import GTIApiError
 
 
@@ -11,10 +9,10 @@ class GTIPaginationError(GTIApiError):
     def __init__(
         self,
         message: str,
-        endpoint: Optional[str] = None,
-        page: Optional[int] = None,
-        page_size: Optional[int] = None,
-        status_code: Optional[int] = None,
+        endpoint: str | None = None,
+        page: str | None = None,
+        page_size: str | None = None,
+        status_code: str | None = None,
     ):
         """Initialize the exception.
 
@@ -26,18 +24,22 @@ class GTIPaginationError(GTIApiError):
             status_code: HTTP status code, if available
 
         """
-        pagination_details = []
-        if page is not None:
-            pagination_details.append(f"page={page}")
-        if page_size is not None:
-            pagination_details.append(f"size={page_size}")
-
-        pagination_info = ""
-        if pagination_details:
-            pagination_info = f" with {', '.join(pagination_details)}"
-
-        error_msg = f"Pagination error{pagination_info}: {message}"
+        error_msg = "Pagination error: {message}"
 
         super().__init__(error_msg, status_code, endpoint)
         self.page = page
         self.page_size = page_size
+
+        if hasattr(self, "structured_data"):
+            if page is not None:
+                self.structured_data["page"] = page
+            if page_size is not None:
+                self.structured_data["page_size"] = page_size
+        else:
+            self.structured_data = {
+                "original_message": message,
+            }
+            if page is not None:
+                self.structured_data["page"] = page
+            if page_size is not None:
+                self.structured_data["page_size"] = page_size

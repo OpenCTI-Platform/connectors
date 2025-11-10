@@ -1,0 +1,21 @@
+{
+  "title": "Cisco SMA",
+  "slug": "cisco-sma",
+  "description": "This connector imports data from the CISCO SMA database.\nThe connector does not retrieve historical data. It retrieves the day's IOCs on a daily basis. For this reason, there is no reason to set the \u201cinterval\u201d variable to a value other than \u201c24\u201d. Setting more would cause IOCs to be missed, setting less would simply reimport IOCs already retrieved.\nThe connector creates the following OpenCTI entities:",
+  "short_description": "This connector imports data from the CISCO SMA database.\nThe connector does not retrieve historical data. It retrieves the day's IOCs on a daily basis. For this reason, there is no reason to set the \u201cinterval\u201d variable to a value other than \u201c24\u201d. Setting more would cause IOCs to be missed, setting less would simply reimport IOCs already retrieved.\nThe connector creates the following OpenCTI entities:",
+  "logo": "external-import/cisco-sma/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.2.8",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/cisco-sma",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-cisco-sma",
+  "container_type": "EXTERNAL_IMPORT"
+}

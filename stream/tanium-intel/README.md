@@ -93,6 +93,7 @@ Below are the parameters you'll need to set for the connector:
 | No hashes in intels      | no_hashes_in_intels  | `TANIUM_INTEL_NO_HASHES_IN_INTELS`  | True    | Yes       | Do not insert hashes in intel documents.                                                                                 |
 | Auto on-demand scan      | auto_ondemand_scan   | `TANIUM_INTEL_AUTO_ONDEMAND_SCAN`   | True    | No        | Trigger a quickscan for each inserted intel document in Tanium.                                                          |
 | Tanium computer groups   | computer_groups      | `TANIUM_INTEL_COMPUTER_GROUPS`      | `1`     | No        | A list of computer groups separated by `,`, which will be the targets of the automatic quickscan the automatic quickscan |
+| Deploy Intel             | deploy_intel         | `TANIUM_INTEL_DEPLOY_INTEL`         | True    | No        | Deploy the intel in Tanium.                                                                                              |
 
 ## Deployment
 

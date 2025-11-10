@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/flashpoint_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Flashpoint",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "flashpoint"
+      ],
+      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "FLASHPOINT_API_KEY": {
+      "description": "The API key to connect to Flashpoint.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "FLASHPOINT_IMPORT_START_DATE": {
+      "description": "The date from which to start importing data.",
+      "format": "date-time",
+      "type": "string"
+    },
+    "FLASHPOINT_IMPORT_REPORTS": {
+      "default": true,
+      "description": "Whether to import reports from Flashpoint or not.",
+      "type": "boolean"
+    },
+    "FLASHPOINT_INDICATORS_IN_REPORTS": {
+      "default": false,
+      "description": "Whether to include indicators in the reports imported from MispFeed or not.",
+      "type": "boolean"
+    },
+    "FLASHPOINT_GUESS_RELATIONSHIPS_FROM_REPORTS": {
+      "default": false,
+      "description": "Whether to guess relationships between entities or not.",
+      "type": "boolean"
+    },
+    "FLASHPOINT_IMPORT_INDICATORS": {
+      "default": true,
+      "description": "WHether to import indicators of compromise (IoCs) or not.",
+      "type": "boolean"
+    },
+    "FLASHPOINT_IMPORT_ALERTS": {
+      "default": true,
+      "description": "Whether to import alert data from Flashpoint or not.",
+      "type": "boolean"
+    },
+    "FLASHPOINT_ALERT_CREATE_RELATED_ENTITIES": {
+      "default": false,
+      "description": "Whether to create alert related Channel entity and Media-Content observable or not.",
+      "type": "boolean"
+    },
+    "FLASHPOINT_IMPORT_COMMUNITIES": {
+      "default": false,
+      "description": "Whether to import community data or not.",
+      "type": "boolean"
+    },
+    "FLASHPOINT_COMMUNITIES_QUERIES": {
+      "default": [
+        "cybersecurity",
+        "cyberattack"
+      ],
+      "description": "List of community queries to execute.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "FLASHPOINT_IMPORT_CCM_ALERTS": {
+      "default": false,
+      "description": "Whether to import Compromised Credentials Monitoring alerts or not.",
+      "type": "boolean"
+    },
+    "FLASHPOINT_FRESH_CCM_ALERTS_ONLY": {
+      "default": true,
+      "description": "Whether to import only fresh Compromised Credentials Monitoring alerts or all of them.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "FLASHPOINT_API_KEY"
+  ],
+  "additionalProperties": false
+}

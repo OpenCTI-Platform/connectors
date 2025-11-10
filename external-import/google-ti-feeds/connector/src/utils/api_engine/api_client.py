@@ -1,7 +1,7 @@
 """API Client will orchestrate API calls."""
 
 import logging
-from typing import TYPE_CHECKING, Any, Dict, Optional, Type
+from typing import TYPE_CHECKING, Any, Optional
 
 from pydantic import BaseModel
 
@@ -34,26 +34,26 @@ class ApiClient:
         self,
         url: str,
         method: str = "GET",
-        headers: Optional[Dict[str, Any]] = None,
-        params: Optional[Dict[str, Any]] = None,
-        data: Optional[Dict[str, Any]] = None,
-        json_payload: Optional[Dict[str, Any]] = None,
-        response_key: Optional[str] = None,
-        model: Optional[Type[BaseModel]] = None,
-        timeout: Optional[float] = None,
+        headers: dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
+        data: dict[str, Any] | None = None,
+        json_payload: dict[str, Any] | None = None,
+        response_key: str | None = None,
+        model: type[BaseModel] | None = None,
+        timeout: float | None = None,
     ) -> Any:
         """Call the API using the provided strategy.
 
         Args:
             url (str): The URL to call.
             method (str): The HTTP method to use.
-            headers (Optional[Dict[str, Any]]): The headers to include in the request.
-            params (Optional[Dict[str, Any]]): The query parameters to include in the request.
-            data (Optional[Dict[str, Any]]): The data to include in the request.
-            json_payload (Optional[Dict[str, Any]]): The JSON data to include in the request.
-            response_key (Optional[str]): The key to extract from the response.
-            model (Optional[Type[BaseModel]]): The model to deserialize the response into.
-            timeout (Optional[float]): The timeout for the request.
+            headers (dict[str, Any] | None): The headers to include in the request.
+            params (dict[str, Any] | None): The query parameters to include in the request.
+            data (dict[str, Any] | None): The data to include in the request.
+            json_payload (dict[str, Any] | None): The JSON data to include in the request.
+            response_key (str | None): The key to extract from the response.
+            model (type[BaseModel] | None): The model to deserialize the response into.
+            timeout (float | None): The timeout for the request.
 
         Returns:
             Any: The response from the API.
@@ -63,8 +63,14 @@ class ApiClient:
 
         """
         self._logger.debug(
-            f"{LOG_PREFIX} Preparing to call API: {method} {url} (Model: {model.__name__ if model else 'No'}, "
-            f"ResponseKey: {response_key}, Timeout: {timeout})"
+            f"{LOG_PREFIX} Preparing to call API",
+            {
+                "method": method,
+                "url": url,
+                "model": model.__name__ if model else None,
+                "response_key": response_key,
+                "timeout": timeout,
+            },
         )
         try:
             api_request = ApiRequestModel(
@@ -79,7 +85,10 @@ class ApiClient:
                 timeout=timeout,
             )
             response = await self.strategy.execute(api_request)
-            self._logger.debug(f"{LOG_PREFIX} API call to {method} {url} successful.")
+            self._logger.debug(
+                f"{LOG_PREFIX} API call successful",
+                {"method": method, "url": url},
+            )
             return response
         except (
             ApiTimeoutError,
@@ -95,17 +104,33 @@ class ApiClient:
                 else "Known API error"
             )
 
-            self._logger.error(
-                f"{LOG_PREFIX} {error_prefix} during call_api for {method} {url}: {error_type} - {known_api_err}",
+            self._logger.warning(
+                f"{LOG_PREFIX} {error_prefix} during call_api",
+                {
+                    "method": method,
+                    "url": url,
+                    "error_type": error_type,
+                    "error": str(known_api_err),
+                },
             )
             raise known_api_err
         except ApiError as api_err:
-            self._logger.error(
-                f"{LOG_PREFIX} API error during call_api for {method} {url}: {api_err}",
+            self._logger.warning(
+                f"{LOG_PREFIX} API error during call_api",
+                {
+                    "method": method,
+                    "url": url,
+                    "error": str(api_err),
+                },
             )
             raise api_err
         except Exception as e:
-            self._logger.error(
-                f"{LOG_PREFIX} Unexpected failure in call_api for {method} {url}: {e}",
+            self._logger.warning(
+                f"{LOG_PREFIX} Unexpected failure in call_api",
+                {
+                    "method": method,
+                    "url": url,
+                    "error": str(e),
+                },
             )
             raise ApiError(f"Failed to call API {method} {url}: {e}") from e

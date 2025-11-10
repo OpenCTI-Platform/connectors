@@ -38,6 +38,7 @@ class IndicatorImporterConfig(NamedTuple):
     indicator_high_score: int
     indicator_high_score_labels: Set[str]
     indicator_unwanted_labels: Set[str]
+    no_file_trigger_import: bool
 
 
 class IndicatorImporter(BaseImporter):
@@ -71,12 +72,13 @@ class IndicatorImporter(BaseImporter):
         self.indicator_high_score_labels = config.indicator_high_score_labels
         self.indicator_unwanted_labels = config.indicator_unwanted_labels
         self.next_page: Optional[str] = None
+        self.no_file_trigger_import = config.no_file_trigger_import
 
         if not (self.create_observables or self.create_indicators):
             msg = "'create_observables' and 'create_indicators' false at the same time"
             raise ValueError(msg)
 
-        self.report_fetcher = ReportFetcher(config.helper)
+        self.report_fetcher = ReportFetcher(config.helper, self.no_file_trigger_import)
 
     def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Run importer."""
@@ -203,7 +205,7 @@ class IndicatorImporter(BaseImporter):
 
         indicator_bundle = self._create_indicator_bundle(indicator)
         if indicator_bundle is None:
-            self._error("Discarding indicator {0} bundle", indicator["id"])
+            self._warning("Discarding indicator {0} bundle", indicator["id"])
             return False
 
         # with open(f"indicator_bundle_{indicator_bundle['id']}.json", "w") as f:
@@ -236,7 +238,15 @@ class IndicatorImporter(BaseImporter):
                 indicator_unwanted_labels=self.indicator_unwanted_labels,
             )
 
-            bundle_builder = IndicatorBundleBuilder(self.helper, bundle_builder_config)
+            try:
+                bundle_builder = IndicatorBundleBuilder(
+                    self.helper, bundle_builder_config
+                )
+            except Exception as err:
+                self.helper.connector_logger.warning(
+                    f"Unable to process indicator value: {indicator['indicator']}, error: {err}"
+                )
+                return None
             indicator_bundle_built = bundle_builder.build()
             if indicator_bundle_built:
                 return indicator_bundle_built.get("indicator_bundle")

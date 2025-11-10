@@ -1,0 +1,22 @@
+{
+  "title": "MWDB",
+  "slug": "mwdb",
+  "description": "MWDB is an opensource malware collector and databases. https://mwdb.readthedocs.io/en/latest/user-guide/1-Introduction-to-MWDB.html.\nThis connector ingests malware feeds in order to import Observables and Indicator related to malware and their configurations.\nThis connector was built using the TAXII2 connector for OpenCTI as a base.",
+  "short_description": "MWDB is an opensource malware collector and databases. https://mwdb.readthedocs.io/en/latest/user-guide/1-Introduction-to-MWDB.html.\nThis connector ingests malware feeds in order to import Observables and Indicator related to malware and their configurations.\nThis connector was built using the TAXII2 connector for OpenCTI as a base.",
+  "logo": "external-import/mwdb/__metadata__/logo.png",
+  "use_cases": [
+    "Open Source Threat Intel",
+    "Malware Analysis"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.0",
+  "subscription_link": "",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/mwdb",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-mwdb",
+  "container_type": "EXTERNAL_IMPORT"
+}

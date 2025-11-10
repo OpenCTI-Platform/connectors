@@ -89,13 +89,12 @@ all_users = await fetcher.fetch_list()
 
 ```python
 from pydantic import BaseModel
-from typing import List, Optional
 
 # Define response models
 class User(BaseModel):
-    id: str
-    name: str
-    email: Optional[str] = None
+id: str
+name: str
+email: str | None = None
 
 class UserResponse(BaseModel):
     data: User
@@ -178,7 +177,7 @@ fetcher = factory.create_fetcher_by_name(
 )
 ```
 
-### Fetching Lists of Entities
+### Fetching lists of Entities
 
 ```python
 # Configure for list endpoint

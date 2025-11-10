@@ -1,6 +1,6 @@
 """The module defines the LocationModel class, which represents a STIX 2.1 Location object."""
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 import pycti  # type: ignore  # Missing library stubs
 from connector.src.stix.v21.models.ovs.region_ov_enums import RegionOV
@@ -15,58 +15,58 @@ from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
 class LocationModel(BaseSDOModel):
     """Model representing a Location in STIX 2.1 format."""
 
-    name: Optional[str] = Field(
+    name: str | None = Field(
         default=None, description="A name used to identify the Location."
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
         default=None, description="A textual description of the Location."
     )
 
-    latitude: Optional[float] = Field(
+    latitude: float | None = Field(
         default=None,
         description="Latitude in decimal degrees. Must be between -90.0 and 90.0. Required if longitude is present.",
         ge=-90.0,
         le=90.0,
     )
-    longitude: Optional[float] = Field(
+    longitude: float | None = Field(
         default=None,
         description="Longitude in decimal degrees. Must be between -180.0 and 180.0. Required if latitude is present.",
         ge=-180.0,
         le=180.0,
     )
-    precision: Optional[float] = Field(
+    precision: float | None = Field(
         default=None,
         description="Precision in meters. If present, latitude and longitude MUST also be present.",
     )
 
-    region: Optional[RegionOV] = Field(
+    region: RegionOV | None = Field(
         default=None, description="Region for this location (from region-ov)."
     )
-    country: Optional[str] = Field(
+    country: str | None = Field(
         default=None, description="Country code in ISO 3166-1 ALPHA-2 format."
     )
-    administrative_area: Optional[str] = Field(
+    administrative_area: str | None = Field(
         default=None, description="Sub-national area (state, province, etc)."
     )
-    city: Optional[str] = Field(
+    city: str | None = Field(
         default=None, description="The city that this Location describes."
     )
-    street_address: Optional[str] = Field(
+    street_address: str | None = Field(
         default=None, description="The full street address for the Location."
     )
-    postal_code: Optional[str] = Field(
+    postal_code: str | None = Field(
         default=None, description="Postal code for the Location."
     )
 
     @model_validator(mode="before")
     @classmethod
-    def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+    def generate_id(cls, data: dict[str, Any]) -> dict[str, Any]:
         """Generate ID regardless of whether one is provided."""
         data["id"] = LocationModel._generate_id(data=data)
         return data
 
     @classmethod
-    def _generate_id(cls, data: Dict[str, Any]) -> Any:
+    def _generate_id(cls, data: dict[str, Any]) -> Any:
         """Generate ID regardless of whether one is provided."""
         if isinstance(data, dict) and "name" in data:
             name = data.get("name", None)

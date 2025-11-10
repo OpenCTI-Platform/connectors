@@ -36,6 +36,13 @@ class URLHausRecentPayloads:
             default="https://urlhaus-api.abuse.ch/v1/",
         )
 
+        self.api_key = get_config_variable(
+            "URLHAUS_RECENT_PAYLOADS_API_KEY",
+            ["urlhaus_recent_payloads", "api_key"],
+            config,
+            default="",
+        )
+
         self.cooldown_seconds = get_config_variable(
             "URLHAUS_RECENT_PAYLOADS_COOLDOWN_SECONDS",
             ["urlhaus_recent_payloads", "cooldown_seconds"],
@@ -245,6 +252,13 @@ class URLHausRecentPayloads:
                 self.helper.log_info("Connector stop")
                 sys.exit(0)
 
+            except requests.exceptions.HTTPError as err:
+                if "403" in str(err):
+                    msg = "403 Forbidden: Invalid API key. Please verify that your API credentials are correct"
+                    self.helper.connector_logger.error(msg)
+                else:
+                    raise err
+
             except Exception as e:
                 self.helper.log_error(str(e))
 
@@ -264,8 +278,8 @@ class URLHausRecentPayloads:
         """
 
         url = self.api_url + "payloads/recent/"
-        resp = requests.get(url)
-
+        resp = requests.get(url, headers={"Auth-Key": self.api_key})
+        resp.raise_for_status()
         # Handle the response data
 
         recent_payloads_list = resp.json()
@@ -279,7 +293,7 @@ class URLHausRecentPayloads:
         returns: a bytes object containing the contents of the file
         """
 
-        resp = requests.get(download_url)
+        resp = requests.get(download_url, headers={"Auth-Key": self.api_key})
         return resp.content
 
     def artifact_exists_opencti(self, sha256):
