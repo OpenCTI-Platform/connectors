@@ -54,6 +54,9 @@ class BaseRFConnector:
         self.risk_as_score = self.config.recorded_future.risk_as_score
         self.risk_threshold = self.config.recorded_future.risk_threshold
         self.risk_list_threshold = self.config.recorded_future.risk_list_threshold
+        self.analyst_notes_guess_relationships = (
+            self.config.recorded_future.analyst_notes_guess_relationships
+        )
 
         self.rfapi = RFClient(
             self.rf_token,
@@ -192,6 +195,7 @@ class RFConnector:
                 self.RF.rf_TA_to_intrusion_set,
                 self.RF.risk_as_score,
                 self.RF.risk_threshold,
+                self.RF.analyst_notes_guess_relationships,
             )
             self.analyst_notes.start()
         else:

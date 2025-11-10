@@ -76,6 +76,10 @@ class _ConfigLoaderRecordedFuture(ConfigBaseSettings):
         default=60,
         description="Minimum risk score threshold (0-100) for importing entities.",
     )
+    analyst_notes_guess_relationships: bool = Field(
+        default=False,
+        description="Enable or disable the automatic guessing of relationships between entities when processing analyst notes.",
+    )
 
     # Risk List configuration
     pull_risk_list: bool = Field(
@@ -129,20 +133,20 @@ class _ConfigLoaderPlaybookAlert(ConfigBaseSettings):
         default=False,
         description="Whether to enable fetching Recorded Future playbook alerts.",
     )
-    severity_threshold_domain_abuse: Literal[
-        "Informational", "Low", "Medium", "High", "Critical"
-    ] = Field(
-        default="Informational",
-        description="Minimum severity threshold for domain abuse playbook alerts.",
+    severity_threshold_domain_abuse: Literal["Informational", "Moderate", "High"] = (
+        Field(
+            default="Informational",
+            description="Minimum severity threshold for domain abuse playbook alerts.",
+        )
     )
     severity_threshold_identity_novel_exposures: Literal[
-        "Informational", "Low", "Medium", "High", "Critical"
+        "Informational", "Moderate", "High"
     ] = Field(
         default="Informational",
         description="Minimum severity threshold for identity novel exposures playbook alerts.",
     )
     severity_threshold_code_repo_leakage: Literal[
-        "Informational", "Low", "Medium", "High", "Critical"
+        "Informational", "Moderate", "High"
     ] = Field(
         default="Informational",
         description="Minimum severity threshold for code repository leakage playbook alerts.",

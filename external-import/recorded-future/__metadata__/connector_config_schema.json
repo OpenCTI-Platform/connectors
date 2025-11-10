@@ -213,10 +213,8 @@
       "description": "Minimum severity threshold for domain abuse playbook alerts.",
       "enum": [
         "Informational",
-        "Low",
-        "Medium",
-        "High",
-        "Critical"
+        "Moderate",
+        "High"
       ],
       "type": "string"
     },
@@ -225,10 +223,8 @@
       "description": "Minimum severity threshold for identity novel exposures playbook alerts.",
       "enum": [
         "Informational",
-        "Low",
-        "Medium",
-        "High",
-        "Critical"
+        "Moderate",
+        "High"
       ],
       "type": "string"
     },
@@ -237,10 +233,8 @@
       "description": "Minimum severity threshold for code repository leakage playbook alerts.",
       "enum": [
         "Informational",
-        "Low",
-        "Medium",
-        "High",
-        "Critical"
+        "Moderate",
+        "High"
       ],
       "type": "string"
     },

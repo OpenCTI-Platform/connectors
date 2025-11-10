@@ -1,17 +1,19 @@
-FROM python:3.13-slim 
+FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=STREAM
 
-# Create working directory
-WORKDIR /opt/connector-sentinelone-intel
+# Copy the connector
+COPY src /opt/sentinelone-intel
 
-COPY src /opt/connector-sentinelone-intel
+# Install Python modules
+# hadolint ignore=DL3003
+RUN apk update && apk upgrade && \
+    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 
-# Install dependencies
-RUN apt-get update && apt-get install -y git build-essential libmagic-dev libffi-dev libxml2-dev libxslt-dev inotify-tools procps && \
+RUN cd /opt/sentinelone-intel && \
     pip3 install --no-cache-dir -r requirements.txt && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+    apk del git build-base
 
-
-COPY entrypoint.sh /entrypoint.sh
+# Expose and entrypoint
+COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]

@@ -35,7 +35,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | ALERT_DEFAULT_OPENCTI_SEVERITY | `string` |  | `low` `medium` `high` `critical` | `"low"` | Default severity level for alerts imported into OpenCTI. |
 | ALERT_PRIORITY_ALERTS_ONLY | `boolean` |  | boolean | `false` | Whether to import only high-priority alerts. |
 | PLAYBOOK_ALERT_ENABLE | `boolean` |  | boolean | `false` | Whether to enable fetching Recorded Future playbook alerts. |
-| PLAYBOOK_ALERT_SEVERITY_THRESHOLD_DOMAIN_ABUSE | `string` |  | `Informational` `Low` `Medium` `High` `Critical` | `"Informational"` | Minimum severity threshold for domain abuse playbook alerts. |
-| PLAYBOOK_ALERT_SEVERITY_THRESHOLD_IDENTITY_NOVEL_EXPOSURES | `string` |  | `Informational` `Low` `Medium` `High` `Critical` | `"Informational"` | Minimum severity threshold for identity novel exposures playbook alerts. |
-| PLAYBOOK_ALERT_SEVERITY_THRESHOLD_CODE_REPO_LEAKAGE | `string` |  | `Informational` `Low` `Medium` `High` `Critical` | `"Informational"` | Minimum severity threshold for code repository leakage playbook alerts. |
+| PLAYBOOK_ALERT_SEVERITY_THRESHOLD_DOMAIN_ABUSE | `string` |  | `Informational` `Moderate` `High` | `"Informational"` | Minimum severity threshold for domain abuse playbook alerts. |
+| PLAYBOOK_ALERT_SEVERITY_THRESHOLD_IDENTITY_NOVEL_EXPOSURES | `string` |  | `Informational` `Moderate` `High` | `"Informational"` | Minimum severity threshold for identity novel exposures playbook alerts. |
+| PLAYBOOK_ALERT_SEVERITY_THRESHOLD_CODE_REPO_LEAKAGE | `string` |  | `Informational` `Moderate` `High` | `"Informational"` | Minimum severity threshold for code repository leakage playbook alerts. |
 | PLAYBOOK_ALERT_DEBUG | `boolean` |  | boolean | `false` | Whether to enable debug logging for playbook alerts. |

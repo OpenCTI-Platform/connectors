@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/sparta_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The OpenCTI platform URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Aerospace SPARTA",
+      "description": "Name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "attack-pattern",
+        "course-of-action",
+        "indicator",
+        "identity"
+      ],
+      "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_TYPE": {
+      "default": "EXTERNAL_IMPORT",
+      "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "Determines the verbosity of the logs.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT5H",
+      "description": "Duration between two scheduled runs of the connector (ISO 8601 format).",
+      "format": "duration",
+      "type": "string"
+    },
+    "SPARTA_BASE_URL": {
+      "default": "https://sparta.aerospace.org/download/STIX?f=latest",
+      "description": "SPARTA base url used for retrieving SPARTA STIX",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}

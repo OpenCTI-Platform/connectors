@@ -333,7 +333,7 @@ class AttributeConverter:
                 )
             case "windows-scheduled-task":
                 observables.append(
-                    observable=pycti.CustomObservableText(
+                    pycti.CustomObservableText(
                         value=attribute.value,
                         object_marking_refs=markings,
                         custom_properties=custom_properties,
@@ -405,7 +405,7 @@ class AttributeConverter:
     def create_indicator(
         self,
         attribute: ExtendedAttributeItem,
-        observables: stix2.v21._Observable,
+        observables: list[stix2.v21._Observable],
         score: int,
         labels: list[str],
         author: stix2.Identity,
@@ -416,7 +416,12 @@ class AttributeConverter:
             return None
 
         # ! Be sure that the first observable is the main one in create_observables method
-        octi_main_observable_type = OCTI_MAIN_OBSERVABLE_TYPES[observables[0]["type"]]
+        octi_main_observable_type = OCTI_MAIN_OBSERVABLE_TYPES.get(
+            observables[0]["type"], None
+        )
+
+        if not octi_main_observable_type:
+            return None
 
         if attribute.type in ["yara", "sigma", "pcre", "snort", "suricata"]:
             # Use MISP IOCs as-is
