@@ -1,0 +1,4 @@
+pycti
+urllib3
+stix2
+GitPython
