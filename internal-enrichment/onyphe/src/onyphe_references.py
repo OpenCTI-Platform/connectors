@@ -1,5 +1,3 @@
-import re
-
 SUMMARYS = [
     ("ip.dest", 20),
     ("ip.organization", 20),

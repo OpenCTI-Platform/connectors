@@ -66,7 +66,7 @@ class Onyphe:
         """Return data from specified category using Search API and the provided data as the OQL filter."""
         url_path = f"search/?q={oql}"
         return self._request(path=url_path)
-    
+
     def count(self, oql: str):
         """Return number of results using Search API and the provided data as the OQL filter."""
         url_path = f"search/?q={oql}"
@@ -74,11 +74,11 @@ class Onyphe:
             "page": 1,
             "size": 1,
         }
-        results = self._request(path=url_path,query_params=queryargs)
+        results = self._request(path=url_path, query_params=queryargs)
         if "total" in results:
             return results["total"]
         else:
-            raise OtherError(f'Error: Can\'t parse total from API results')
+            raise OtherError("Error: Can't parse total from API results")
 
 
 class APIError(Exception):

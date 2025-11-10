@@ -24,13 +24,13 @@ from onyphe_references import (
     SUMMARYS,
 )
 
+
 class ONYPHEConnector:
     # def __init__(self):
-    
+
     def _safe_get(self, d, key, empty=(None, "", {}, [])):
         value = d.get(key)
         return value if value not in empty else None
-
 
     def _get_nested_values(self, data, path):
         keys = path.split(".")
@@ -42,7 +42,7 @@ class ONYPHEConnector:
                 return None
 
         return current
-    
+
     def __init__(self, config: ConfigConnector, helper: OpenCTIConnectorHelper):
         """
         Initialize the Connector with necessary configurations
@@ -61,7 +61,6 @@ class ONYPHEConnector:
 
         self.onyphe_client = Onyphe(config.api_key, config.base_url)
         self.onyphe_category = "ctiscan"
-        
 
         # ONYPHE Identity
         self.onyphe_identity = self.helper.api.identity.create(
@@ -71,11 +70,9 @@ class ONYPHEConnector:
         )
 
     def _pattern_type_create(self, pattern_type="onyphe"):
-        
+
         VOCAB_KEY = "pattern_type_ov"
         try:
-            # Step 1: Read vocabulary
-            #vocab = self.helper.api.vocabulary.read(filters=[{"key": "key", "values": [VOCAB_KEY]}])
             self.vocabulary_list = []
             existing_vocabulary = self.helper.api.vocabulary.list(
                 **{
@@ -91,13 +88,15 @@ class ONYPHEConnector:
                     }
                 }
             )
-            
+
             if not existing_vocabulary:
                 raise ValueError(f"Vocabulary {VOCAB_KEY} not found.")
             else:
                 existing_names = [v["name"] for v in existing_vocabulary]
                 if pattern_type in existing_names:
-                    self.helper.log_info(f"'{pattern_type}' already exists in '{VOCAB_KEY}'")
+                    self.helper.log_info(
+                        f"'{pattern_type}' already exists in '{VOCAB_KEY}'"
+                    )
                 else:
                     self.helper.api.vocabulary.create(
                         name=pattern_type,
@@ -105,9 +104,11 @@ class ONYPHEConnector:
                         category=VOCAB_KEY,
                     )
                     self.helper.log_info(f"Added new pattern_type: {pattern_type}")
-                
+
         except Exception as e:
-            return self.helper.log_error(f"Error occurred checking pattern_type taxonomies: {str(e)}")
+            return self.helper.log_error(
+                f"Error occurred checking pattern_type taxonomies: {str(e)}"
+            )
 
     def _get_x509_from_onyphe(self, cert):
         self.helper.log_debug(f"Get x509 from ONYPHE : {cert}")
@@ -212,8 +213,8 @@ class ONYPHEConnector:
 
         services_desc = "Services:\n"
         for ojson in response:
-            raw_text = self._get_nested_values(ojson,"app.data.text")
-            if (raw_text):
+            raw_text = self._get_nested_values(ojson, "app.data.text")
+            if raw_text:
                 if not isinstance(raw_text, str):
                     continue  # Skip if somehow not a string
                 if self.config.import_full_data:
@@ -442,7 +443,7 @@ class ONYPHEConnector:
                 )
 
             self.stix_objects.append(observable)
-            #always put IP address on left of relationship
+            # always put IP address on left of relationship
             if observable["type"] in ["ipv4-addr", "ipv6-addr"]:
                 source_id = observable["id"]
                 target_id = self.stix_entity["id"]
@@ -479,7 +480,7 @@ class ONYPHEConnector:
 
         self._process_observable(
             values_dict=org_dict,
-            entity_type="identity", 
+            entity_type="identity",
             observable_class=None,
             relationship_type="related-to",
             processor_func=identity_processor,
@@ -701,7 +702,9 @@ class ONYPHEConnector:
                 "validity_not_before": self._safe_get(
                     self.stix_entity, "validity_not_before"
                 ),
-                "validity_not_after": self._safe_get(self.stix_entity, "validity_not_after"),
+                "validity_not_after": self._safe_get(
+                    self.stix_entity, "validity_not_after"
+                ),
                 "subject": self._safe_get(self.stix_entity, "subject"),
                 "serial_number": self._safe_get(self.stix_entity, "serial_number"),
                 "hashes": self._safe_get(self.stix_entity, "hashes"),
@@ -791,7 +794,6 @@ class ONYPHEConnector:
             return uniq_bundles_objects
         return self.helper.stix2_create_bundle(uniq_bundles_objects)
 
-    
     def _process_message(self, data: Dict):
         # OpenCTI entity information retrieval
         stix_objects = data["stix_objects"]
@@ -847,7 +849,7 @@ class ONYPHEConnector:
                 count = self.onyphe_client.count(oql)
                 if count > self.config.pivot_threshold:
                     return "Sent 0 bundles for import. Results over pivot threshold."
-                
+
                 response = self.onyphe_client.search_oql(oql)
 
                 # Generate a stix bundle
@@ -891,7 +893,6 @@ class ONYPHEConnector:
                 count = self.onyphe_client.count(oql)
                 if count > self.config.pivot_threshold:
                     return "Sent 0 bundles for import. Results over pivot threshold."
-
 
                 response = self.onyphe_client.search_oql(oql)
 
@@ -960,8 +961,11 @@ class ONYPHEConnector:
                 raise ValueError(f"ONYPHE API Error : {str(e)}")
             except Exception as e:
                 return self.helper.log_error(f"Unexpected Error occurred: {str(e)}")
-        
-        elif stix_entity["type"] == "indicator" and stix_entity["pattern_type"] == self.config.pattern_type:
+
+        elif (
+            stix_entity["type"] == "indicator"
+            and stix_entity["pattern_type"] == self.config.pattern_type
+        ):
             if "x_opencti_score" in stix_entity:
                 score = stix_entity["x_opencti_score"]
             else:
@@ -983,7 +987,7 @@ class ONYPHEConnector:
                 threats.append(indicates_stix_entity)
 
             ctifilter = stix_entity["pattern"]
-            
+
             try:
                 bundle_objects = []
                 number_processed = 1
@@ -991,7 +995,7 @@ class ONYPHEConnector:
                 if not "category:" in ctifilter:
                     ctifilter = f"category:{self.onyphe_category} " + ctifilter
 
-                #TODO : Check to see if user has passed category and time functions
+                # TODO : Check to see if user has passed category and time functions
                 if self.config.import_search_results:
                     # Get full ONYPHE API Response
                     oql = f"{ctifilter} -since:{self.config.time_since}"
@@ -1075,9 +1079,7 @@ class ONYPHEConnector:
                         target_id = bundle_object["id"]
                         if bundle_object["type"] not in ["indicator", "relationship"]:
                             for threat in threats:
-                                if target_id != threat[
-                                    "id"
-                                ]:
+                                if target_id != threat["id"]:
                                     rel = self._generate_stix_relationship(
                                         target_id, "related-to", threat["id"]
                                     )
