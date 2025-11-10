@@ -1,7 +1,7 @@
 #!/bin/sh
 
-# Go to the directory in the container
-cd /opt/connector-sentinelone-intel
+# Go to the right directory
+cd /opt/sentinelone-intel
 
-# Launch the connector
+# Launch the worker
 python3 main.py
