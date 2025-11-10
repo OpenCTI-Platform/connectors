@@ -1,7 +1,5 @@
 """Exception for errors when converting GTI reports to STIX reports."""
 
-from typing import Optional
-
 from connector.src.custom.exceptions.convert_errors.gti_entity_conversion_error import (
     GTIEntityConversionError,
 )
@@ -13,8 +11,8 @@ class GTIReportConversionError(GTIEntityConversionError):
     def __init__(
         self,
         message: str,
-        report_id: Optional[str] = None,
-        processing_stage: Optional[str] = None,
+        report_id: str | None = None,
+        processing_stage: str | None = None,
     ):
         """Initialize the exception.
 
@@ -27,5 +25,11 @@ class GTIReportConversionError(GTIEntityConversionError):
         super().__init__(message, report_id, "Report")
         self.processing_stage = processing_stage
 
-        if processing_stage:
-            self.args = (f"{self.args[0]} (stage: {processing_stage})",)
+        # Add structured data for logging
+        if hasattr(self, "structured_data"):
+            if processing_stage:
+                self.structured_data["processing_stage"] = processing_stage
+        else:
+            self.structured_data = {}
+            if processing_stage:
+                self.structured_data["processing_stage"] = processing_stage

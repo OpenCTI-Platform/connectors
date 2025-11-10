@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/misp-intel_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The OpenCTI platform URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "MISP Intel",
+      "description": "Name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "misp"
+      ],
+      "description": "The scope or type of data the connector is processing.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_TYPE": {
+      "default": "STREAM",
+      "description": "Should always be set to STREAM for this connector.",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "info",
+      "description": "Determines the verbosity of the logs.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_CONFIDENCE_LEVEL": {
+      "default": 80,
+      "description": "The default confidence level for created entities (0-100).",
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "CONNECTOR_LIVE_STREAM_ID": {
+      "default": "live",
+      "description": "The ID of the live stream to listen to.",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_LISTEN_DELETE": {
+      "default": true,
+      "description": "Listen to delete events in the stream.",
+      "type": "boolean"
+    },
+    "CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES": {
+      "default": false,
+      "description": "Do not auto-resolve dependencies.",
+      "type": "boolean"
+    },
+    "CONNECTOR_CONTAINER_TYPES": {
+      "default": [
+        "report",
+        "grouping",
+        "case-incident",
+        "case-rfi",
+        "case-rft"
+      ],
+      "description": "List of container types to process.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "MISP_URL": {
+      "description": "MISP instance URL (e.g., https://misp.example.com).",
+      "type": "string"
+    },
+    "MISP_API_KEY": {
+      "description": "MISP API key for authentication.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "MISP_SSL_VERIFY": {
+      "default": true,
+      "description": "Verify SSL certificates when connecting to MISP.",
+      "type": "boolean"
+    },
+    "MISP_OWNER_ORG": {
+      "default": null,
+      "description": "Organization that will own the events in MISP",
+      "type": "string"
+    },
+    "MISP_DISTRIBUTION_LEVEL": {
+      "default": 1,
+      "description": "Distribution level for MISP events: 0: Your organisation only, 1: This community only, 2: Connected communities, 3: All communities",
+      "maximum": 3,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "MISP_THREAT_LEVEL": {
+      "default": 2,
+      "description": "Threat level for MISP events: 1: High, 2: Medium, 3: Low, 4: Undefined",
+      "maximum": 4,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "MISP_PUBLISH_ON_CREATE": {
+      "default": false,
+      "description": "Automatically publish events when created.",
+      "type": "boolean"
+    },
+    "MISP_PUBLISH_ON_UPDATE": {
+      "default": false,
+      "description": "Automatically publish events when updated.",
+      "type": "boolean"
+    },
+    "MISP_TAG_OPENCTI": {
+      "default": true,
+      "description": "Add OpenCTI-specific tags to MISP events.",
+      "type": "boolean"
+    },
+    "MISP_TAG_PREFIX": {
+      "default": "opencti:",
+      "description": "Prefix for OpenCTI tags in MISP.",
+      "type": "string"
+    },
+    "MISP_HARD_DELETE": {
+      "default": true,
+      "description": "Perform hard deletion of MISP events (permanent deletion without blocklisting). If False, deleted events are added to the blocklist to prevent re-importation. If True, events are permanently deleted and can be re-imported later.",
+      "type": "boolean"
+    },
+    "PROXY_HTTP": {
+      "default": null,
+      "description": "HTTP proxy URL (e.g., http://proxy:8080).",
+      "minLength": 0,
+      "type": "string"
+    },
+    "PROXY_HTTPS": {
+      "default": null,
+      "description": "HTTPS proxy URL (e.g., http://proxy:8080).",
+      "minLength": 0,
+      "type": "string"
+    },
+    "PROXY_NO_PROXY": {
+      "default": "localhost,127.0.0.1",
+      "description": "Comma-separated list of hosts to bypass proxy.",
+      "minLength": 0,
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "MISP_URL",
+    "MISP_API_KEY"
+  ],
+  "additionalProperties": true
+}

@@ -13,13 +13,22 @@ jobs:
           name: Build {{top_dir}}/{{sub_dir}}
           command: |
             echo "Processing {{top_dir}}/{{sub_dir}}"
+            set -x
             cd {{top_dir}}/{{sub_dir}}
             docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
             CIRCLE_TAG=${CIRCLE_TAG:-latest}
             docker buildx create --use --name builder-connector-{{sub_dir}}
             docker buildx inspect builder-connector-{{sub_dir}} --bootstrap
-            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-            echo "$GHCR_PASS" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+            if !  echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin ; then
+              echo "First attempt to log to docker hub failed ,retrying... in 60s"
+              sleep 60
+              echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            fi
+            if !  echo "$GHCR_PASS" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin ; then
+              echo "First attempt to log to ghcr.io failed , retrying... in 60s"
+              sleep 60
+              echo "$GHCR_PASS" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+            fi
             {% set image_key = top_dir ~ '_' ~ sub_dir -%}
 
             {% if param['images'][image_key] is defined -%}
@@ -31,10 +40,14 @@ jobs:
             {% if pycti.replace -%}
                 {% if "prerelease" in tags %}
             find . -name requirements.txt -exec sed "s|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/client-python@$CIRCLE_BRANCH|" -i {} \;
-            find . -name pyproject.toml -exec sed "s|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/client-python@$CIRCLE_BRANCH|" -i {} \;
+            find . -name pyproject.toml -exec sed "s|pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/client-python@$CIRCLE_BRANCH\",|" -i {} \;
+            find . -name requirements.txt -exec sed "s|^connectors-sdk.*$|connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@$CIRCLE_BRANCH#subdirectory=connectors-sdk|" -i {} \;
+            find . -name pyproject.toml -exec sed "s|connectors-sdk.*$|connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@$CIRCLE_BRANCH#subdirectory=connectors-sdk\",|" -i {} \;
                 {% elif "rolling" in tags %}
             find . -name requirements.txt -exec sed "s|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/client-python@master|" -i {} \;
-            find . -name pyproject.toml -exec sed "s|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/client-python@master|" -i {} \;
+            find . -name pyproject.toml -exec sed "s|pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/client-python@master\",|" -i {} \;
+            find . -name requirements.txt -exec sed "s|^connectors-sdk.*$|connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk|" -i {} \;
+            find . -name pyproject.toml -exec sed "s|connectors-sdk.*$|connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk\",|" -i {} \;
                 {% endif %}
             {% endif -%}
             docker buildx build . \

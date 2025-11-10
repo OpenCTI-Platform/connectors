@@ -1,106 +1,61 @@
-"""GTI feed connector configuration—defines environment-based settings and validators."""
+"""GTI feed connector configuration—defines environment-based settings and validators.
 
-from typing import ClassVar, List
+This module combines all GTI configuration classes from the specialized modules
+into a single GTIConfig class that inherits from all entity-specific configurations.
+"""
 
-from connector.src.custom.exceptions.gti_configuration_error import (
-    GTIConfigurationError,
+from connector.src.custom.configs.campaign.gti_config_campaign import (
+    GTICampaignConfig,
 )
-from connector.src.octi.interfaces.base_config import BaseConfig
-from pydantic import field_validator
-from pydantic_settings import SettingsConfigDict
-
-ALLOWED_REPORT_TYPES = [
-    "All",
-    "Actor Profile",
-    "Country Profile",
-    "Cyber Physical Security Roundup",
-    "Event Coverage/Implication",
-    "Industry Reporting",
-    "Malware Profile",
-    "Net Assessment",
-    "Network Activity Reports",
-    "News Analysis",
-    "OSINT Article",
-    "Patch Report",
-    "Strategic Perspective",
-    "TTP Deep Dive",
-    "Threat Activity Alert",
-    "Threat Activity Report",
-    "Trends and Forecasting",
-    "Weekly Vulnerability Exploitation Report",
-]
-
-ALLOWED_ORIGINS = [
-    "All",
-    "partner",
-    "crowdsourced",
-    "google threat intelligence",
-]
+from connector.src.custom.configs.malware.gti_config_malware import GTIMalwareConfig
+from connector.src.custom.configs.report.gti_config_report import GTIReportConfig
+from connector.src.custom.configs.threat_actor.gti_config_threat_actor import (
+    GTIThreatActorConfig,
+)
+from connector.src.custom.configs.vulnerability.gti_config_vulnerability import (
+    GTIVulnerabilityConfig,
+)
 
 
-class GTIConfig(BaseConfig):
-    """Configuration for the GTI part of the connector."""
+class GTIConfig(
+    GTIReportConfig,
+    GTIThreatActorConfig,
+    GTIMalwareConfig,
+    GTIVulnerabilityConfig,
+    GTICampaignConfig,
+):
+    """Unified configuration for the Google Threat Intelligence (GTI) connector.
 
-    yaml_section: ClassVar[str] = "gti"
-    model_config = SettingsConfigDict(env_prefix="gti_")
+    This class combines all entity-specific configurations through multiple inheritance,
+    providing a unified configuration interface for the entire GTI connector. It includes
+    settings for:
 
-    api_key: str
-    import_start_date: str = "P1D"
-    api_url: str = "https://www.virustotal.com/api/v3"
-    import_reports: bool = True
-    report_types: List[str] | str = "All"
-    origins: List[str] | str = "All"
+    - Report imports (from GTIReportConfig)
+    - Threat actor imports (from GTIThreatActorConfig)
+    - Malware family imports (from GTIMalwareConfig)
+    - Vulnerability imports (from GTIVulnerabilityConfig)
+    - Campaign imports (from GTICampaignConfig)
+    - Base GTI API settings (from GTIBaseConfig via inheritance)
 
-    @field_validator("report_types", mode="before")
-    @classmethod
-    def split_and_validate(cls, v: str) -> List[str]:
-        """Split and validate a comma-separated string into a list and validate its contents."""
-        try:
-            parts = None
+    The configuration supports both YAML file-based and environment variable-based
+    configuration, with environment variables taking precedence. All GTI-specific
+    environment variables should be prefixed with 'gti_'.
 
-            if isinstance(v, str):
-                parts = [item.strip() for item in v.split(",") if item.strip()]
+    Examples
+    --------
+    Basic usage with environment variables:
+        export gti_api_key="your-api-key"
+        export gti_import_reports=true
+        export gti_report_types="Actor Profile,Malware Profile"
 
-            if not parts:
-                raise GTIConfigurationError(
-                    "At least one report type must be specified."
-                )
+    YAML configuration:
+        gti:
+          api_key: "your-api-key"
+          import_reports: true
+          report_types: "Actor Profile,Malware Profile"
+          import_threat_actors: false
+          import_malware_families: false
 
-            invalid = set(parts) - set(ALLOWED_REPORT_TYPES)
-            if invalid:
-                raise GTIConfigurationError(
-                    f"Invalid report types: {', '.join(invalid)}. "
-                    f"Allowed values: {', '.join(ALLOWED_REPORT_TYPES)}."
-                )
-            return parts
-        except GTIConfigurationError:
-            raise
-        except Exception as e:
-            raise GTIConfigurationError(
-                f"Failed to validate report types: {str(e)}"
-            ) from e
+    """
 
-    @field_validator("origins", mode="before")
-    @classmethod
-    def split_and_validate_origins(cls, v: str) -> List[str]:
-        """Split and validate a comma-separated string into a list and validate its contents."""
-        try:
-            parts = None
-
-            if isinstance(v, str):
-                parts = [item.strip() for item in v.split(",") if item.strip()]
-
-            if not parts:
-                raise GTIConfigurationError("At least one origin must be specified.")
-
-            invalid = set(parts) - set(ALLOWED_ORIGINS)
-            if invalid:
-                raise GTIConfigurationError(
-                    f"Invalid origins: {', '.join(invalid)}. "
-                    f"Allowed values: {', '.join(ALLOWED_ORIGINS)}."
-                )
-            return parts
-        except GTIConfigurationError:
-            raise
-        except Exception as e:
-            raise GTIConfigurationError(f"Failed to validate origins: {str(e)}") from e
+    pass

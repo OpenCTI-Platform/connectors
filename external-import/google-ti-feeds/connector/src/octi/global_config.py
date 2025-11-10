@@ -1,6 +1,6 @@
 """Handles the global configuration for the connector."""
 
-from typing import TYPE_CHECKING, Any, Dict, Type
+from typing import TYPE_CHECKING, Any
 
 from connector.src.octi.configs.connector_config import ConnectorConfig
 from connector.src.octi.configs.octi_config import OctiConfig
@@ -16,7 +16,7 @@ class GlobalConfig:
 
     def __init__(self) -> None:
         """Initialize the global configuration."""
-        self.instanciate_configs: Dict[str, Any] = {}
+        self.instanciate_configs: dict[str, Any] = {}
         try:
             self.octi_config = OctiConfig()
         except ValidationError as e:
@@ -49,13 +49,13 @@ class GlobalConfig:
 
         self.to_dict()
 
-    def add_config_class(self, config_class: Type["BaseConfig"]) -> None:
+    def add_config_class(self, config_class: type["BaseConfig"]) -> None:
         """Add a configuration class to the global configuration."""
         try:
             config_instance = config_class()
         except ValidationError as e:
             raise ConfigurationError(
-                f"Error loading the {config_class.__name__} configuration",
+                "Error loading configuration",
                 errors=e.errors,
             ) from e
         self.instanciate_configs.update(
@@ -69,19 +69,20 @@ class GlobalConfig:
 
         self.to_dict()
 
-    def get_config_class(self, config_class: Type["BaseConfig"]) -> Any:
+    def get_config_class(self, config_class: type["BaseConfig"]) -> Any:
         """Get a configuration class from the global configuration."""
         config_name = config_class.yaml_section.lower()
         if config_name in self.instanciate_configs:
             return self.instanciate_configs[config_name][1]
         else:
             raise ConfigurationError(
-                f"Configuration class {config_name} not found in global configuration."
+                "Configuration class not found in global configuration",
+                errors={"config_name": config_name},
             )
 
-    def to_dict(self) -> Dict[str, Dict[str, Any]]:
+    def to_dict(self) -> dict[str, dict[str, Any]]:
         """Convert the configuration to a dictionary."""
-        dicc: Dict[str, Dict[str, Any]] = {}
+        dicc: dict[str, dict[str, Any]] = {}
         for config_name, tuples in self.instanciate_configs.items():
             dicc[config_name] = {}
             for key, value in tuples[0].items():

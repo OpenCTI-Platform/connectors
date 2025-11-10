@@ -6,7 +6,7 @@ configurable mapper classes.
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from connector.src.utils.converters.generic_converter_config import (
     GenericConverterConfig,
@@ -21,7 +21,7 @@ class GenericConverter:
     def __init__(
         self,
         config: GenericConverterConfig,
-        logger: Optional[logging.Logger] = None,
+        logger: logging.Logger | None = None,
     ):
         """Initialize the generic converter.
 
@@ -33,10 +33,10 @@ class GenericConverter:
         self.config = config
         self.logger = logger or logging.getLogger(__name__)
 
-        self.converted_objects: List[Any] = []
-        self.object_id_map: Dict[str, str] = {}
+        self.converted_objects: list[Any] = []
+        self.object_id_map: dict[str, str] = {}
 
-    def convert_single(self, input_data: Any, **mapper_kwargs: Any) -> Optional[Any]:
+    def convert_single(self, input_data: Any, **mapper_kwargs: Any) -> Any | None:
         """Convert a single entity to STIX format.
 
         Args:
@@ -81,7 +81,12 @@ class GenericConverter:
             self._track_conversion(entity_id, final_output)
 
             self.logger.debug(
-                f"{LOG_PREFIX} Successfully converted {self.config.entity_type} {entity_id} to STIX format"
+                "Successfully converted to STIX format",
+                {
+                    "prefix": LOG_PREFIX,
+                    "entity_type": self.config.entity_type,
+                    "entity_id": entity_id,
+                },
             )
             return final_output
 
@@ -90,24 +95,29 @@ class GenericConverter:
             return None
 
     def convert_multiple(
-        self, input_data_list: List[Any], **mapper_kwargs: Any
-    ) -> List[Any]:
+        self, input_data_list: list[Any], **mapper_kwargs: Any
+    ) -> list[Any]:
         """Convert multiple entities to STIX format.
 
         Args:
-            input_data_list: List of input data to convert
+            input_data_list: list of input data to convert
             **mapper_kwargs: Additional parameters to pass to mappers
 
         Returns:
-            List of STIX objects (successful conversions only)
+            list of STIX objects (successful conversions only)
 
         """
-        converted_objects: List[Any] = []
+        converted_objects: list[Any] = []
 
         self._log_conversion_start(self.config.display_name, count=len(input_data_list))
 
         self.logger.debug(
-            f"{LOG_PREFIX} Starting conversion of {len(input_data_list)} {self.config.entity_type} entities"
+            "Starting conversion of entities",
+            {
+                "prefix": LOG_PREFIX,
+                "count": len(input_data_list),
+                "entity_type": self.config.entity_type,
+            },
         )
 
         for idx, input_data in enumerate(input_data_list):
@@ -119,20 +129,46 @@ class GenericConverter:
                     if isinstance(result, list):
                         converted_objects.extend(result)
                         self.logger.debug(
-                            f"{LOG_PREFIX} Successfully converted {self.config.entity_type} #{idx + 1}/{len(input_data_list)}: {entity_id} (produced {len(result)} objects)"
+                            "Successfully converted entity (produced multiple objects)",
+                            {
+                                "prefix": LOG_PREFIX,
+                                "entity_type": self.config.entity_type,
+                                "index": idx + 1,
+                                "total": len(input_data_list),
+                                "entity_id": entity_id,
+                                "objects_produced": len(result),
+                            },
                         )
                     else:
                         converted_objects.append(result)
                         self.logger.debug(
-                            f"{LOG_PREFIX} Successfully converted {self.config.entity_type} #{idx + 1}/{len(input_data_list)}: {entity_id}"
+                            "Successfully converted entity",
+                            {
+                                "prefix": LOG_PREFIX,
+                                "entity_type": self.config.entity_type,
+                                "index": idx + 1,
+                                "total": len(input_data_list),
+                                "entity_id": entity_id,
+                            },
                         )
                 else:
                     self.logger.debug(
-                        f"{LOG_PREFIX} No output produced for {self.config.display_name_singular} {entity_id}"
+                        "No output produced for entity",
+                        {
+                            "prefix": LOG_PREFIX,
+                            "display_name": self.config.display_name_singular,
+                            "entity_id": entity_id,
+                        },
                     )
             except Exception as e:
                 self.logger.warning(
-                    f"{LOG_PREFIX} Failed to convert {self.config.display_name_singular} {entity_id}: {str(e)}"
+                    "Failed to convert entity",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "display_name": self.config.display_name_singular,
+                        "entity_id": entity_id,
+                        "error": str(e),
+                    },
                 )
                 continue
 
@@ -140,16 +176,16 @@ class GenericConverter:
         return converted_objects
 
     def convert_batch(
-        self, input_batches: Dict[str, List[Any]], **mapper_kwargs: Any
-    ) -> Dict[str, List[Any]]:
+        self, input_batches: dict[str, list[Any]], **mapper_kwargs: Any
+    ) -> dict[str, list[Any]]:
         """Convert batches of different entity types to STIX format.
 
         Args:
-            input_batches: Dictionary mapping entity type names to lists of input data
+            input_batches: dictionary mapping entity type names to lists of input data
             **mapper_kwargs: Additional parameters to pass to mappers
 
         Returns:
-            Dictionary mapping entity type names to lists of converted STIX objects
+            dictionary mapping entity type names to lists of converted STIX objects
 
         """
         converted_batches = {}
@@ -157,33 +193,39 @@ class GenericConverter:
         for entity_type, input_list in input_batches.items():
             if input_list:
                 self.logger.info(
-                    f"{LOG_PREFIX} Converting batch of {len(input_list)} {entity_type}"
+                    "Converting batch",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "count": len(input_list),
+                        "entity_type": entity_type,
+                    },
                 )
                 converted_batches[entity_type] = self.convert_multiple(
                     input_list, **mapper_kwargs
                 )
             else:
                 self.logger.debug(
-                    f"{LOG_PREFIX} Skipping empty batch for {entity_type}"
+                    "Skipping empty batch",
+                    {"prefix": LOG_PREFIX, "entity_type": entity_type},
                 )
                 converted_batches[entity_type] = []
 
         return converted_batches
 
-    def get_converted_objects(self) -> List[Any]:
+    def get_converted_objects(self) -> list[Any]:
         """Get all converted STIX objects.
 
         Returns:
-            List of all converted STIX objects
+            list of all converted STIX objects
 
         """
         return self.converted_objects.copy()
 
-    def get_object_id_map(self) -> Dict[str, str]:
+    def get_object_id_map(self) -> dict[str, str]:
         """Get mapping of original entity IDs to STIX object IDs.
 
         Returns:
-            Dictionary mapping original IDs to STIX IDs
+            dictionary mapping original IDs to STIX IDs
 
         """
         return self.object_id_map.copy()
@@ -228,7 +270,12 @@ class GenericConverter:
             except Exception as e:
                 entity_id = self.config.get_entity_id(input_data)
                 self.logger.warning(
-                    f"{LOG_PREFIX} Preprocessing failed for {entity_id}: {str(e)}"
+                    "Preprocessing failed",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "entity_id": entity_id,
+                        "error": str(e),
+                    },
                 )
                 return input_data
         return input_data
@@ -247,7 +294,10 @@ class GenericConverter:
             try:
                 return self.config.postprocessing_function(output_data)
             except Exception as e:
-                self.logger.warning(f"{LOG_PREFIX} Postprocessing failed: {str(e)}")
+                self.logger.warning(
+                    "Postprocessing failed",
+                    {"prefix": LOG_PREFIX, "error": str(e)},
+                )
                 return output_data
         return output_data
 
@@ -269,14 +319,14 @@ class GenericConverter:
                 self.object_id_map[entity_id] = stix_output.id
 
     def _handle_conversion_error(
-        self, error: Exception, entity_id: str, entity_name: Optional[str]
+        self, error: Exception, entity_id: str, entity_name: str | None
     ) -> None:
         """Handle conversion errors with proper exception wrapping.
 
         Args:
             error: The original error
             entity_id: Entity ID for context
-            entity_name: Optional entity name for context
+            entity_name: Entity name for context | None
 
         Raises:
             Configured exception class: Wrapped error with additional context
@@ -288,7 +338,13 @@ class GenericConverter:
             error_msg = f"Error converting {self.config.display_name_singular} {entity_id}: {str(error)}"
 
         self.logger.error(
-            f"{LOG_PREFIX} Conversion failed for {self.config.entity_type} {entity_id}: {str(error)}"
+            "Conversion failed",
+            {
+                "prefix": LOG_PREFIX,
+                "entity_type": self.config.entity_type,
+                "entity_id": entity_id,
+                "error": str(error),
+            },
         )
 
         exception = self.config.create_exception(error_msg, entity_id, entity_name)
@@ -297,9 +353,9 @@ class GenericConverter:
     def _log_conversion_start(
         self,
         entity_type: str,
-        entity_id: Optional[str] = None,
-        entity_name: Optional[str] = None,
-        count: Optional[int] = None,
+        entity_id: str | None = None,
+        entity_name: str | None = None,
+        count: int | None = None,
     ) -> None:
         """Log the start of a conversion operation.
 
@@ -312,23 +368,40 @@ class GenericConverter:
         """
         if entity_id and entity_name:
             self.logger.debug(
-                f"{LOG_PREFIX} Converting {entity_type} '{entity_name}' ({entity_id}) to STIX format..."
+                "Converting entity to STIX format",
+                {
+                    "prefix": LOG_PREFIX,
+                    "entity_type": entity_type,
+                    "entity_name": entity_name,
+                    "entity_id": entity_id,
+                },
             )
         elif entity_id:
             self.logger.debug(
-                f"{LOG_PREFIX} Converting {entity_type} {entity_id} to STIX format..."
+                "Converting entity to STIX format",
+                {
+                    "prefix": LOG_PREFIX,
+                    "entity_type": entity_type,
+                    "entity_id": entity_id,
+                },
             )
         elif count:
             self.logger.debug(
-                f"{LOG_PREFIX} Converting {count} {entity_type} to STIX format..."
+                "Converting entities to STIX format",
+                {
+                    "prefix": LOG_PREFIX,
+                    "count": count,
+                    "entity_type": entity_type,
+                },
             )
         else:
             self.logger.debug(
-                f"{LOG_PREFIX} Converting {entity_type} to STIX format..."
+                "Converting entities to STIX format",
+                {"prefix": LOG_PREFIX, "entity_type": entity_type},
             )
 
     def _log_conversion_result(
-        self, entity_type: str, result_count: Optional[int] = None
+        self, entity_type: str, result_count: int | None = None
     ) -> None:
         """Log the result of a conversion operation.
 
@@ -339,7 +412,15 @@ class GenericConverter:
         """
         if result_count is not None and result_count > 0:
             self.logger.info(
-                f"{LOG_PREFIX} Converted {result_count} {entity_type} to STIX format"
+                "Converted entities to STIX format",
+                {
+                    "prefix": LOG_PREFIX,
+                    "count": result_count,
+                    "entity_type": entity_type,
+                },
             )
         else:
-            self.logger.debug(f"{LOG_PREFIX} No {entity_type} converted to STIX format")
+            self.logger.debug(
+                "No entities converted to STIX format",
+                {"prefix": LOG_PREFIX, "entity_type": entity_type},
+            )

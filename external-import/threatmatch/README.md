@@ -1,29 +1,149 @@
-# OpenCTI ThreatMatch Connector
+# 🔗 OpenCTI ThreatMatch Connector
 
-## Installation
+| Status            | Date       | Comment |
+|-------------------|------------|---------|
+| Filigran Verified | 2025-08-18 | -       |
 
-The ThreatMatch connector is a standalone Python process that must have access to the OpenCTI platform and the RabbitMQ. RabbitMQ credentials and connection parameters are provided by the API directly, as configured in the platform settings.
+The **ThreatMatch Connector** imports ThreatMatch intelligence (alerts, profiles, IOCs, reports) into OpenCTI. It
+authenticates to the ThreatMatch Developer Platform, fetches items since the last successful run (or a configured
+relative start date on first run), and maps them to STIX 2.1 objects and relationships in OpenCTI.
 
-Enabling this connector could be done by launching the Python process directly after providing the correct configuration in the `config.yml` file or within a Docker with the image `opencti/connector-threatmatch:latest`. We provide an example of [`docker-compose.yml`](docker-compose.yml) file that could be used independently or integrated to the global `docker-compose.yml` file of OpenCTI.
+---
 
-If you are using it independently, remember that the connector will try to connect to the RabbitMQ on the port configured in the OpenCTI platform.
+## 📖 Table of Contents
 
-## Configuration
+- [🧩 Introduction](#-introduction)
+- [⚙️ Requirements](#-requirements)
+- [🔧 Configuration](#-configuration)
+    - [OpenCTI configuration](#opencti-configuration)
+    - [Base connector configuration](#base-connector-configuration)
+    - [ThreatMatch configuration](#threatmatch-configuration)
+- [🚀 Deployment](#-deployment)
+    - [Docker](#docker)
+    - [Manual (venv)](#manual-venv)
+- [📌 Usage](#-usage)
+- [⚙️ Connector behavior](#-connector-behavior)
+- [🛟 Troubleshooting](#-troubleshooting)
 
-| Parameter                         | Docker envvar                     | Mandatory    | Description                                                                                         |
-| --------------------------------- | --------------------------------- | ------------ | --------------------------------------------------------------------------------------------------- |
-| `opencti_url`                     | `OPENCTI_URL`                     | Yes          | The URL of the OpenCTI platform.                                                                    |
-| `opencti_token`                   | `OPENCTI_TOKEN`                   | Yes          | The default admin token configured in the OpenCTI platform parameters file.                         |
-| `connector_id`                    | `CONNECTOR_ID`                    | Yes          | A valid arbitrary `UUIDv4` that must be unique for this connector.                                  |
-| `connector_name`                  | `CONNECTOR_NAME`                  | Yes          | The name of the connector, can be just "ThreatMatch"                                                |
-| `connector_scope`                 | `CONNECTOR_SCOPE`                 | Yes          | Must be `threatmatch`, not used in this connector.                                                  |
-| `connector_update_existing_data`  | `CONNECTOR_UPDATE_EXISTING_DATA`  | Yes          | If an entity already exists, update its attributes with information provided by this connector.     |
-| `connector_log_level`             | `CONNECTOR_LOG_LEVEL`             | Yes          | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).       |
-| `threatmatch_url`                 | `THREATMATCH_URL`                 | Yes          | The ThreatMatch URL.                                                                                |
-| `threatmatch_client_id`           | `THREATMATCH_CLIENT_ID`           | Yes          | The ThreatMatch client ID.                                                                          |
-| `threatmatch_client_secret`       | `THREATMATCH_CLIENT_SECRET`       | Yes          | The ThreatMatch client secret.                                                                      |
-| `threatmatch_interval`            | `THREATMATCH_INTERVAL`            | No           | An interval (in minutes) for data gathering from ThreatMatch                                        |
-| `threatmatch_import_from_date`    | `THREATMATCH_IMPORT_FROM_DATE`    | No           | A date formatted `YYYY-MM-DD HH:MM` to import elements only from this date                          |
-| `threatmatch_import_profiles`     | `THREATMATCH_IMPORT_PROFILES`     | No           | A boolean (`True` or `False`), import profiles collection from ThreatMatch.                         |
-| `threatmatch_import_alerts`       | `THREATMATCH_IMPORT_ALERTS`       | No           | A boolean (`True` or `False`), import alerts collection from ThreatMatch.                           |
-| `threatmatch_import_iocs`      | `THREATMATCH_IMPORT_IOCS`      | No           | A boolean (`True` or `False`), import iocs collection from ThreatMatch                           |
+---
+
+## 🧩 Introduction
+
+This connector periodically pulls ThreatMatch data and ingest it into OpenCTI. You can enable/disable specific
+datasets (profiles, alerts, IOCs) and set a default TLP for items missing markings.
+
+---
+
+## ⚙️ Requirements
+
+- Network egress to the ThreatMatch API (`THREATMATCH_URL`)
+- ThreatMatch **Client Credentials** (client id/secret)
+
+---
+
+## 🔧 Configuration
+
+Configuration can be provided via a `config.yml` file, or **environment variables**.
+
+### OpenCTI configuration
+
+| Parameter     | `config.yml` | Environment variable | Required | Description                                 |
+|---------------|--------------|----------------------|----------|---------------------------------------------|
+| OpenCTI URL   | `url`        | `OPENCTI_URL`        | ✅        | Base URL of your OpenCTI instance.          |
+| OpenCTI Token | `token`      | `OPENCTI_TOKEN`      | ✅        | Platform token (typically the admin token). |
+
+### Base connector configuration
+
+| Parameter                 | `config.yml`      | Environment variable        | Required | Default     | Description                                         |
+|---------------------------|-------------------|-----------------------------|----------|-------------|-----------------------------------------------------|
+| Connector ID              | `id`              | `CONNECTOR_ID`              | ✅        | ❌           | Unique `UUIDv4` for this connector instance.        |
+| Connector Name            | `name`            | `CONNECTOR_NAME`            | ❌        | ThreatMatch | Display name of the connector.                      |
+| Connector Scope           | `scope`           | `CONNECTOR_SCOPE`           | ❌        | threatmatch | Scope/type handled by this connector.               |
+| Connector Log Level       | `log_level`       | `CONNECTOR_LOG_LEVEL`       | ❌        | error       | One of `debug`, `info`, `warn`, `error`.            |
+| Connector Duration Period | `duration_period` | `CONNECTOR_DURATION_PERIOD` | ❌        | `P1D`       | Polling frequency (ISO‑8601 duration, e.g., `P1D`). |
+
+### ThreatMatch configuration
+
+| Parameter                       | `config.yml`                                | Environment variable                         | Required | Default / Example            | Description                                                                                           |
+|---------------------------------|---------------------------------------------|----------------------------------------------|----------|------------------------------|-------------------------------------------------------------------------------------------------------|
+| ThreatMatch Client ID           | `threatmatch.client_id`                     | `THREATMATCH_CLIENT_ID`                      | ✅        |                              | OAuth2 client id (Client Credentials).                                                                |
+| ThreatMatch Client Secret       | `threatmatch.client_secret`                 | `THREATMATCH_CLIENT_SECRET`                  | ✅        |                              | OAuth2 client secret.                                                                                 |
+| ThreatMatch URL                 | `threatmatch.url`                           | `THREATMATCH_URL`                            | ❌        | `https://eu.threatmatch.com` | Base URL of the ThreatMatch API.                                                                      |
+| Relative Import Start Date      | `threatmatch.import_from_date`              | `THREATMATCH_IMPORT_FROM_DATE`               | ❌        | `P30D`                       | **Relative** ISO‑8601 duration (e.g., `P30D`) to set the first import window. Used only on first run. |
+| Import Profiles                 | `threatmatch.import_profiles`               | `THREATMATCH_IMPORT_PROFILES`                | ❌        | `true`                       | Import ThreatMatch *profiles* dataset.                                                                |
+| Import Alerts                   | `threatmatch.import_alerts`                 | `THREATMATCH_IMPORT_ALERTS`                  | ❌        | `true`                       | Import ThreatMatch *alerts* dataset.                                                                  |
+| Import IOCs                     | `threatmatch.import_iocs`                   | `THREATMATCH_IMPORT_IOCS`                    | ❌        | `true`                       | Import ThreatMatch *IOCs* dataset.                                                                    |
+| Default TLP                     | `threatmatch.tlp_level`                     | `THREATMATCH_TLP_LEVEL`                      | ❌        | `amber`                      | TLP if missing on source objects. One of `clear`, `white`, `green`, `amber`, `amber+strict`, `red`.   |
+| Threat actors as intrusion sets | `threatmatch.threat_actor_as_intrusion_set` | `THREATMATCH_THREAT_ACTOR_AS_INSTRUSION_SET` | ❌        | `true`                       | Map ThreatMatch `threat-actor` to STIX `intrusion-set`.                                               |
+
+> **Note**: Set `CONNECTOR_LOG_LEVEL=debug` to see detailed fetch/mapping logs during troubleshooting.
+
+---
+
+## 🚀 Deployment
+
+### Docker
+
+```bash
+# Build
+docker build -t opencti/connector-threatmatch:latest .
+
+# Or pull (when published)
+# docker pull opencti/connector-threatmatch:latest
+```
+
+### Manual (venv)
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+
+# Minimal runtime deps
+pip install -r src/requirements.txt
+# For tests
+# pip install -r tests/test-requirements.txt
+
+# Provide configuration via config.yml or environment
+python3 src/main.py
+```
+
+Configuration lookup order:
+
+1. `config.yml`
+3. Environment variables
+4. Built‑in defaults
+
+---
+
+## 📌 Usage
+
+On each run (or according to `CONNECTOR_DURATION_PERIOD`):
+
+- Authenticate to the ThreatMatch API using client credentials.
+- Determine the **import window**:
+    - First run: from `THREATMATCH_IMPORT_FROM_DATE` (relative duration) to *now*.
+    - Subsequent runs: from the **last successful run** to *now*.
+- Fetch the enabled datasets (profiles, alerts, IOCs) with pagination.
+- Map and upsert to OpenCTI as STIX 2.1 SDOs/SROs (e.g., `report`, `indicator`, `malware`, `intrusion-set`,
+  `relationship`).
+- Apply TLP markings (defaulting to `THREATMATCH_TLP_LEVEL` when missing).
+
+---
+
+## ⚙️ Connector behavior
+
+- **Idempotent upserts**: objects are deduplicated by external references and natural keys where possible.
+- **Stateful**: the connector stores the last run timestamp and resumes from there.
+- **No destructive actions**: it does not delete/update items outside its scope.
+- **Error handling**: on 401 responses, the connector **refreshes the token and retries once**; other HTTP errors are
+  logged and surfaced.
+
+---
+
+## 🛟 Troubleshooting
+
+- **401 Unauthorized**: Verify client id/secret and that the token endpoint is reachable from the connector container.
+- **import_from_date**: Having a relative date too far in the past (e.g., `P365D`) will lead to performance issues
+  due to large data volumes. Use a more recent date if possible (e.g., `P30D`).
+
+---

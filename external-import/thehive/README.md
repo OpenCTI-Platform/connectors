@@ -28,6 +28,7 @@ Setting up TheHive Connector is straightforward. The following table provides de
 | `thehive.alert_status_mapping`  | `THEHIVE_ALERT_STATUS_MAPPING`| No        | Status mapping for alerts. e.g., `hive_status_1:opencti_status_id_2,hive_status_2:opencti_status_id_2`                                            |
 | `thehive.user_mapping`          | `THEHIVE_USER_MAPPING`        | No        | Mapping of TheHive assignees to OpenCTI users. e.g., `user@contoso.com:opencti_user_id,user2@contoso.com:opencti_user_id_2`                 |
 | `thehive.interval`              | `THEHIVE_INTERVAL`            | Yes       | Frequency of running the connector in minutes.                  |
+| `thehive.case_tag_whitelist`    | `THEHIVE_CASE_TAG_WHITELIST`  | No        | Whitelist to accept only case with configurated TAGS (if not empty)           |
 
 ## Supported Indicator Field Names
 The following is a list of indicator Field Names supported by this integration and the prescribed value types. Indicators of this field name will be imported into OpenCTI as the STIX object defined. Please ensure that the field names are receiving standardized values to avoid potential import errors (e.g., and IP is an IP).

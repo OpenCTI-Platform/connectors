@@ -1,7 +1,5 @@
 """Exception for errors when parsing responses from Google Threat Intelligence API."""
 
-from typing import Optional
-
 from connector.src.custom.exceptions.gti_fetching_error import GTIFetchingError
 
 
@@ -11,9 +9,9 @@ class GTIParsingError(GTIFetchingError):
     def __init__(
         self,
         message: str,
-        endpoint: Optional[str] = None,
-        entity_type: Optional[str] = None,
-        data_sample: Optional[str] = None,
+        endpoint: str | None = None,
+        entity_type: str | None = None,
+        data_sample: str | None = None,
     ):
         """Initialize the exception.
 
@@ -24,13 +22,14 @@ class GTIParsingError(GTIFetchingError):
             data_sample: Sample of the data that failed to parse (truncated if large)
 
         """
-        error_msg = f"Error parsing response: {message}"
         if entity_type and endpoint:
-            error_msg = f"Error parsing {entity_type} data from {endpoint}: {message}"
+            error_msg = "Error parsing entity data from endpoint: {message}"
         elif entity_type:
-            error_msg = f"Error parsing {entity_type} data: {message}"
+            error_msg = "Error parsing entity data: {message}"
         elif endpoint:
-            error_msg = f"Error parsing response from {endpoint}: {message}"
+            error_msg = "Error parsing response from endpoint: {message}"
+        else:
+            error_msg = f"Error parsing response: {message}"
 
         super().__init__(error_msg)
         self.endpoint = endpoint
@@ -43,3 +42,14 @@ class GTIParsingError(GTIFetchingError):
                 self.data_sample = data_sample
         else:
             self.data_sample = ""
+
+        # Add structured data for logging
+        self.structured_data = {
+            "original_message": message,
+        }
+        if endpoint:
+            self.structured_data["endpoint"] = endpoint
+        if entity_type:
+            self.structured_data["entity_type"] = entity_type
+        if self.data_sample:
+            self.structured_data["data_sample"] = self.data_sample

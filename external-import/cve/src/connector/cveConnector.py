@@ -3,8 +3,12 @@ import time
 from datetime import datetime, timedelta
 
 from pycti import OpenCTIConnectorHelper  # type: ignore
-from services import CVEConverter  # type: ignore
-from services.utils import MAX_AUTHORIZED, ConfigCVE  # type: ignore
+from src import ConfigLoader
+from src.services import CVEConverter  # type: ignore
+from src.services.utils import (  # type: ignore
+    MAX_AUTHORIZED,
+    convert_hours_to_seconds,
+)
 
 
 class CVEConnector:
@@ -14,15 +18,18 @@ class CVEConnector:
         """
 
         # Load configuration file and connection helper
-        self.config = ConfigCVE()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
-        self.converter = CVEConverter(self.helper)
+        # Instantiate the connector helper from config
+        self.config = ConfigLoader()
+        self.helper = OpenCTIConnectorHelper(config=self.config.model_dump_pycti())
+
+        self.interval = convert_hours_to_seconds(self.config.cve.interval)
+        self.converter = CVEConverter(self.helper, self.config)
 
     def run(self) -> None:
         """
         Main execution loop procedure for CVE connector
         """
-        self.helper.log_info("[CONNECTOR] Fetching datasets...")
+        self.helper.connector_logger.info("[CONNECTOR] Fetching datasets...")
         get_run_and_terminate = getattr(self.helper, "get_run_and_terminate", None)
         if callable(get_run_and_terminate) and self.helper.get_run_and_terminate():
             self.process_data()
@@ -47,7 +54,7 @@ class CVEConnector:
         )
 
         info_msg = f"[CONNECTOR] New work '{work_id}' initiated..."
-        self.helper.log_info(info_msg)
+        self.helper.connector_logger.info(info_msg)
 
         return work_id
 
@@ -61,12 +68,12 @@ class CVEConnector:
             f"[CONNECTOR] Connector successfully run, storing last_run as "
             f"{datetime.utcfromtimestamp(current_time).strftime('%Y-%m-%d %H:%M:%S')}"
         )
-        self.helper.log_info(msg)
+        self.helper.connector_logger.info(msg)
         self.helper.api.work.to_processed(work_id, msg)
         self.helper.set_state({"last_run": current_time})
 
-        interval_in_hours = round(self.config.interval / 60 / 60, 2)
-        self.helper.log_info(
+        interval_in_hours = round(self.interval / 60 / 60, 2)
+        self.helper.connector_logger.info(
             "[CONNECTOR] Last_run stored, next run in: "
             + str(interval_in_hours)
             + " hours"
@@ -78,13 +85,13 @@ class CVEConnector:
         :param now: Current date in datetime
         :param work_id: Work id in string
         """
-        if self.config.max_date_range > MAX_AUTHORIZED:
+        if self.config.cve.max_date_range > MAX_AUTHORIZED:
             error_msg = "The max_date_range cannot exceed {} days".format(
                 MAX_AUTHORIZED
             )
             raise Exception(error_msg)
 
-        date_range = timedelta(days=self.config.max_date_range)
+        date_range = timedelta(days=self.config.cve.max_date_range)
         start_date = now - date_range
 
         cve_params = self._update_cve_params(start_date, now)
@@ -125,11 +132,11 @@ class CVEConnector:
                     f"[CONNECTOR] Connector retrieve CVE history for year {year}, "
                     f"{days_in_year} days left"
                 )
-                self.helper.log_info(info_msg)
+                self.helper.connector_logger.info(info_msg)
 
                 """
                 If retrieve history for this year and days_in_year left are less than 120 days
-                Retrieve CVEs from the rest of days                         
+                Retrieve CVEs from the rest of days
                 """
                 if year == end_date.year and days_in_year < MAX_AUTHORIZED:
                     end_date_current_year = start_date_current_year + timedelta(
@@ -168,7 +175,7 @@ class CVEConnector:
                     days_in_year = 0
 
             info_msg = f"[CONNECTOR] Importing CVE history for year {year} finished"
-            self.helper.log_info(info_msg)
+            self.helper.connector_logger.info(info_msg)
 
     def _maintain_data(self, now: datetime, last_run: float, work_id: str) -> None:
         """
@@ -177,7 +184,9 @@ class CVEConnector:
         :param last_run: Last run date in float
         :param work_id: Work id in str
         """
-        self.helper.log_info("[CONNECTOR] Getting the last CVEs since the last run...")
+        self.helper.connector_logger.info(
+            "[CONNECTOR] Getting the last CVEs since the last run..."
+        )
 
         last_run_ts = datetime.utcfromtimestamp(last_run)
 
@@ -194,8 +203,8 @@ class CVEConnector:
         :return: Dict of CVE params
         """
         return {
-            "lastModStartDate": start_date.isoformat(),
-            "lastModEndDate": end_date.isoformat(),
+            "lastModStartDate": start_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "lastModEndDate": end_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
 
     def process_data(self) -> None:
@@ -213,11 +222,11 @@ class CVEConnector:
                 msg = "[CONNECTOR] Connector last run: " + datetime.utcfromtimestamp(
                     last_run
                 ).strftime("%Y-%m-%d %H:%M:%S")
-                self.helper.log_info(msg)
+                self.helper.connector_logger.info(msg)
             else:
                 last_run = None
                 msg = "[CONNECTOR] Connector has never run..."
-                self.helper.log_info(msg)
+                self.helper.connector_logger.info(msg)
 
             """
             ======================================================
@@ -239,8 +248,8 @@ class CVEConnector:
                 If the connector never runs and user wants to pull CVE history
                 =================================================================
                 """
-                if self.config.pull_history:
-                    start_date = datetime(self.config.history_start_year, 1, 1)
+                if self.config.cve.pull_history:
+                    start_date = datetime(self.config.cve.history_start_year, 1, 1)
                     end_date = now
                     self._import_history(start_date, end_date, work_id)
                 else:
@@ -256,8 +265,8 @@ class CVEConnector:
                 """
             elif (
                 last_run is not None
-                and self.config.maintain_data
-                and (current_time - last_run) >= int(self.config.interval)
+                and self.config.cve.maintain_data
+                and (current_time - last_run) >= int(self.interval)
             ):
                 # Initiate work_id to track the job
                 work_id = self._initiate_work(current_time)
@@ -265,9 +274,9 @@ class CVEConnector:
                 self.update_connector_state(current_time, work_id)
 
             else:
-                new_interval = self.config.interval - (current_time - last_run)
+                new_interval = self.interval - (current_time - last_run)
                 new_interval_in_hours = round(new_interval / 60 / 60, 2)
-                self.helper.log_info(
+                self.helper.connector_logger.info(
                     "[CONNECTOR] Connector will not run, next run in: "
                     + str(new_interval_in_hours)
                     + " hours"
@@ -277,8 +286,8 @@ class CVEConnector:
 
         except (KeyboardInterrupt, SystemExit):
             msg = "[CONNECTOR] Connector stop..."
-            self.helper.log_info(msg)
+            self.helper.connector_logger.info(msg)
             sys.exit(0)
         except Exception as e:
             error_msg = f"[CONNECTOR] Error while processing data: {str(e)}"
-            self.helper.log_error(error_msg)
+            self.helper.connector_logger.error(error_msg, meta={"error": str(e)})

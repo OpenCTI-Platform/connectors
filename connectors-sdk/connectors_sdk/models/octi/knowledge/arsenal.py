@@ -1,1 +1,0 @@
-"""Offer arsenal OpenCTI entities."""

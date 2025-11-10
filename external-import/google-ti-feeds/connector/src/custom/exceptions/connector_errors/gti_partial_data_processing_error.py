@@ -1,6 +1,6 @@
 """Exception for errors when processing partial data after interruption."""
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 from connector.src.custom.exceptions.connector_errors.gti_work_processing_error import (
     GTIWorkProcessingError,
@@ -13,10 +13,10 @@ class GTIPartialDataProcessingError(GTIWorkProcessingError):
     def __init__(
         self,
         message: str,
-        work_id: Optional[str] = None,
-        interruption_type: Optional[str] = None,
-        reports_count: Optional[int] = None,
-        details: Optional[Dict[str, Any]] = None,
+        work_id: str | None = None,
+        interruption_type: str | None = None,
+        reports_count: int | None = None,
+        details: dict[str, Any] | None = None,
     ):
         """Initialize the exception.
 
@@ -28,15 +28,28 @@ class GTIPartialDataProcessingError(GTIWorkProcessingError):
             details: Additional details about the error
 
         """
-        error_msg = f"Error processing partial data: {message}"
         if interruption_type:
-            error_msg = (
-                f"Error processing partial data after {interruption_type}: {message}"
-            )
-
-        if reports_count is not None:
-            error_msg += f" ({reports_count} reports were fetched)"
+            error_msg = "Error processing partial data after interruption: {message}"
+        else:
+            error_msg = f"Error processing partial data: {message}"
 
         super().__init__(error_msg, work_id, reports_count, details)
         self.interruption_type = interruption_type
         self.reports_count = reports_count
+
+        # Add structured data for logging
+        structured_details = details or {}
+        if interruption_type:
+            structured_details.update(
+                {
+                    "interruption_type": interruption_type,
+                    "original_message": message,
+                }
+            )
+        if reports_count is not None:
+            structured_details.update(
+                {
+                    "reports_count": reports_count,
+                }
+            )
+        self.details = structured_details

@@ -1,7 +1,6 @@
 """The module defines the WindowsRegistryKeyModel class, which represents a STIX 2.1 Windows Registry Key object."""
 
 from datetime import datetime
-from typing import List, Optional
 
 from connector.src.stix.v21.models.ovs.windows_registry_datatype_ov_enums import (
     WindowsRegistryDatatypeOV,
@@ -17,14 +16,14 @@ from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
 class WindowsRegistryValueModel(BaseModel):
     """Model representing a Windows Registry Value."""
 
-    name: Optional[str] = Field(
+    name: str | None = Field(
         default=None,
         description="Name of the registry value. Use empty string for default value.",
     )
-    data: Optional[str] = Field(
+    data: str | None = Field(
         default=None, description="String data stored in the registry value."
     )
-    data_type: Optional[WindowsRegistryDatatypeOV] = Field(
+    data_type: WindowsRegistryDatatypeOV | None = Field(
         default=None,
         description="The data type of the registry value (e.g., REG_SZ, REG_DWORD).",
     )
@@ -44,24 +43,24 @@ class WindowsRegistryValueModel(BaseModel):
 class WindowsRegistryKeyModel(BaseSCOModel):
     """Model representing a Windows Registry Key in STIX 2.1 format."""
 
-    key: Optional[str] = Field(
+    key: str | None = Field(
         default=None,
         description="Full registry key path including hive (e.g., HKEY_LOCAL_MACHINE\\System\\Foo).",
     )
-    values: Optional[List[WindowsRegistryValueModel]] = Field(
+    values: list[WindowsRegistryValueModel] | None = Field(
         default=None,
-        description="List of values found under the registry key. Each must include name, data, and data_type.",
+        description="list of values found under the registry key. Each must include name, data, and data_type.",
     )
 
-    modified_time: Optional[datetime] = Field(
+    modified_time: datetime | None = Field(
         default=None,
         description="Timestamp when the registry key was last modified.",
     )
-    creator_user_ref: Optional[str] = Field(
+    creator_user_ref: str | None = Field(
         default=None,
         description="Reference to the user-account object that created this key.",
     )
-    number_of_subkeys: Optional[int] = Field(
+    number_of_subkeys: int | None = Field(
         default=None, ge=0, description="Number of subkeys under this key."
     )
 

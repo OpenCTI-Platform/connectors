@@ -1,6 +1,5 @@
 """Conftest file for Pytest fixtures."""
 
-import logging
 import sys
 import types
 from typing import TYPE_CHECKING, Any
@@ -62,7 +61,7 @@ def disable_config_yml() -> Any:
 @fixture(autouse=True)
 def mock_opencti_api_client() -> Any:
     """Fixture to mock OpenCTI API calls and clean up after."""
-    mock_api = patch("requests.Session.post")
+    mock_api = patch("requests.Session")
     mock_healthcheck = patch(
         "pycti.api.opencti_api_client.OpenCTIApiClient.health_check"
     )
@@ -80,12 +79,29 @@ def mock_opencti_api_client() -> Any:
 
 
 @fixture(autouse=True)
-def patch_logger_error(monkeypatch):
-    """Patch to drop the meta for testing purposes."""
+def patch_logger_for_tests(monkeypatch):
+    """Patch logger methods to format logs with dictionary data for tests."""
+    import logging
+
+    def create_enhanced_log_method(original_method):
+        def enhanced_log(self, msg, *args, **kwargs):
+            if args and len(args) == 1 and isinstance(args[0], dict):
+                log_dict = args[0]
+                formatted_msg = f"{msg} - {log_dict}"
+                return original_method(self, formatted_msg)
+            else:
+                return original_method(self, msg, *args, **kwargs)
+
+        return enhanced_log
+
+    orig_info = logging.Logger.info
+    orig_debug = logging.Logger.debug
+    orig_warning = logging.Logger.warning
     orig_error = logging.Logger.error
 
-    def fake_error(self, msg, *args, **kwargs):
-        kwargs.pop("meta", None)
-        return orig_error(self, msg, *args, **kwargs)
-
-    monkeypatch.setattr(logging.Logger, "error", fake_error)
+    monkeypatch.setattr(logging.Logger, "info", create_enhanced_log_method(orig_info))
+    monkeypatch.setattr(logging.Logger, "debug", create_enhanced_log_method(orig_debug))
+    monkeypatch.setattr(
+        logging.Logger, "warning", create_enhanced_log_method(orig_warning)
+    )
+    monkeypatch.setattr(logging.Logger, "error", create_enhanced_log_method(orig_error))
