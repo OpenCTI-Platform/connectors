@@ -61,6 +61,7 @@ class ONYPHEConnector:
 
         self.onyphe_client = Onyphe(config.api_key, config.base_url)
         self.onyphe_category = "ctiscan"
+        
 
         # ONYPHE Identity
         self.onyphe_identity = self.helper.api.identity.create(
@@ -441,6 +442,7 @@ class ONYPHEConnector:
                 )
 
             self.stix_objects.append(observable)
+            #always put IP address on left of relationship
             if observable["type"] in ["ipv4-addr", "ipv6-addr"]:
                 source_id = observable["id"]
                 target_id = self.stix_entity["id"]
@@ -710,8 +712,6 @@ class ONYPHEConnector:
             stix_observable = stix2.X509Certificate(
                 **{k: v for k, v in x509_args.items() if v is not None}
             )
-
-        # Handle other standard types
         elif entity_type in type_class_map:
             stix_class = type_class_map[entity_type]
             stix_observable = stix_class(
@@ -815,6 +815,10 @@ class ONYPHEConnector:
                 ctifilter += f"ip.dest:{ip_value}"
                 oql = f"category:{self.onyphe_category} {ctifilter} -since:{self.config.time_since}"
 
+                count = self.onyphe_client.count(oql)
+                if count > self.config.pivot_threshold:
+                    return "Sent 0 bundles for import. Results over pivot threshold."
+
                 response = self.onyphe_client.search_oql(oql)
 
                 # Generate a stix bundle
@@ -840,6 +844,10 @@ class ONYPHEConnector:
                 ctifilter += f"( ?dns.hostname:{hostname_value} ?cert.hostname:{hostname_value}) "
                 oql = f"category:{self.onyphe_category} {ctifilter} -since:{self.config.time_since}"
 
+                count = self.onyphe_client.count(oql)
+                if count > self.config.pivot_threshold:
+                    return "Sent 0 bundles for import. Results over pivot threshold."
+                
                 response = self.onyphe_client.search_oql(oql)
 
                 # Generate a stix bundle
@@ -880,6 +888,11 @@ class ONYPHEConnector:
                 ctifilter += f"cert.fingerprint.{hash_filter}:{hash_value} "
                 oql = f"category:{self.onyphe_category} {ctifilter} -since:{self.config.time_since}"
 
+                count = self.onyphe_client.count(oql)
+                if count > self.config.pivot_threshold:
+                    return "Sent 0 bundles for import. Results over pivot threshold."
+
+
                 response = self.onyphe_client.search_oql(oql)
 
                 # Generate a stix bundle
@@ -903,36 +916,33 @@ class ONYPHEConnector:
             self.helper.log_info(f"Processing text observable: {text_value}")
             labels = stix_entity.get("x_opencti_labels", [])
 
-            allowed_pivots = [
-                pivot.strip().lower() for pivot in self.config.text_pivots.split(",")
-            ]
-
             self.helper.log_debug(f"Labels found on entity: {labels}")
             self.helper.log_debug(f"Pivot map values: {list(PIVOT_MAP.values())}")
 
-            # Text observable requires a label specifying the analytical pivot type, for example "ja4t-md5"
+            # Text observable requires a label specifying the analytical pivot type, for example "ja3s-md5"
             onyphe_field = next(
                 (
                     field
                     for field, label_value in PIVOT_MAP.items()
-                    if label_value.lower() in allowed_pivots
-                    and any(
+                    if any(
                         label.strip().lower() == label_value.lower() for label in labels
                     )
                 ),
                 None,
             )
             if onyphe_field is None:
-                self.helper.log_debug(
-                    "No matching or authorised analytical pivot label found."
-                )
-                return "No matching or authorised label for analytical pivot."
+                self.helper.log_debug("No matching pivot label found.")
+                return "No matching pivot label found."
 
             try:
                 # Get ONYPHE ctiscan API Response
                 ctifilter = ""
                 ctifilter += f"{onyphe_field}:{text_value}"
                 oql = f"category:{self.onyphe_category} {ctifilter} -since:{self.config.time_since}"
+
+                count = self.onyphe_client.count(oql)
+                if count > self.config.pivot_threshold:
+                    return "Sent 0 bundles for import. Results over pivot threshold."
 
                 response = self.onyphe_client.search_oql(oql)
 
@@ -951,7 +961,7 @@ class ONYPHEConnector:
             except Exception as e:
                 return self.helper.log_error(f"Unexpected Error occurred: {str(e)}")
         
-        elif stix_entity["type"] == "indicator" and stix_entity["pattern_type"] == "onyphe":
+        elif stix_entity["type"] == "indicator" and stix_entity["pattern_type"] == self.config.pattern_type:
             if "x_opencti_score" in stix_entity:
                 score = stix_entity["x_opencti_score"]
             else:
@@ -995,7 +1005,7 @@ class ONYPHEConnector:
                 response = self.onyphe_client.search_oql(oql)
                 self.helper.log_debug(f"Got response: {response}")
                 results = response["results"]
-                number_processed = response["count"]
+                number_processed = response["total"]
 
                 # Build summary note
                 self.helper.log_debug("Building summary")

@@ -3,26 +3,26 @@ import re
 SUMMARYS = [
     ("ip.dest", 20),
     ("ip.organization", 20),
+    ("ip.asn", 20),
+    ("ip.country", 20),
     ("cert.hostname", 20),
-    ("cert.fingerprint.sha256", 20),
+    ("cert.domain", 20),
     ("dns.hostname", 20),
     ("tcp.dest", 20),
     ("app.protocol", 20),
-    ("ip.asn", 20),
-    ("ip.country", 20),
     ("component.text", 20),
 ]
 
 SUMMARY_TITLES = {
     "ip.dest": "Top 20 IP addresses identified",
     "ip.organization": "Top 20 Organizations",
+    "ip.asn": "Top 20 Autonomous Systems",
+    "ip.country": "Top 20 Countries",
     "cert.hostname": "Top 20 TLS Cert Hostnames",
-    "cert.fingerprint.sha256": "Top 20 TLS Cert Fingerprints",
+    "cert.domain": "Top 20 TLS Cert Domains",
     "dns.hostname": "Top 20 DNS Hostnames",
     "tcp.dest": "Top 20 TCP Ports",
     "app.protocol": "Top 20 Protocols",
-    "ip.asn": "Top 20 Autonomous Systems",
-    "ip.country": "Top 20 Countries",
     "component.text": "Top 20 Technologies",
 }
 
@@ -38,6 +38,8 @@ ANALYTICAL_PIVOTS = [
     ("hhhash.fingerprint.md5", "hhhash-md5"),
     ("ja4t.fingerprint.sha256", "ja4t-sha256"),
     ("ja4t.fingerprint.md5", "ja4t-md5"),
+    ("ja3s.fingerprint.md5", "ja3s-md5"),
+    ("ja4s.fingerprint.md5", "ja4s-md5"),
     ("hassh.fingerprint.md5", "hassh-md5"),
     ("favicon.data.md5", "favicon-md5"),
     ("favicon.data.sha256", "favicon-sha256"),
