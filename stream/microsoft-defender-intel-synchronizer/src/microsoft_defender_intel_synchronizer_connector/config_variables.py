@@ -1,9 +1,18 @@
 import json
 import os
 from pathlib import Path
+from typing import Any, List, TypedDict
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
+
+
+class CollectionPolicy(TypedDict, total=False):
+    action: str
+    expire_time: int
+    recommended_actions: str
+    educate_url: str
+    rbac_group_names: List[str]
 
 
 class ConfigConnector:
@@ -61,7 +70,7 @@ class ConfigConnector:
             "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_LOGIN_URL",
             ["microsoft_defender_intel_synchronizer", "login_url"],
             self.load,
-            default="https://login.microsoft.com",
+            default="https://login.microsoftonline.com",
         )
         self.base_url = get_config_variable(
             "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_BASE_URL",
@@ -94,17 +103,27 @@ class ConfigConnector:
             self.load,
             default=False,
         )
-        self.taxii_collections = get_config_variable(
+        raw_collections = get_config_variable(
             "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_TAXII_COLLECTIONS",
             ["microsoft_defender_intel_synchronizer", "taxii_collections"],
             self.load,
-        ).split(",")
+        )
+        self.taxii_collections, self.taxii_overrides = self._parse_taxii_collections(
+            raw_collections
+        )
         self.interval = get_config_variable(
             "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_INTERVAL",
             ["microsoft_defender_intel_synchronizer", "interval"],
             self.load,
             isNumber=True,
             default=300,
+        )
+        # Update-only-owned toggle (default true)
+        self.update_only_owned = get_config_variable(
+            "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_UPDATE_ONLY_OWNED",
+            ["microsoft_defender_intel_synchronizer", "update_only_owned"],
+            self.load,
+            default=True,
         )
         self.recommended_actions = get_config_variable(
             "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_RECOMMENDED_ACTIONS",
@@ -123,14 +142,14 @@ class ConfigConnector:
                 self.rbac_group_names = json.loads(rbac_group_names_raw)
                 if not isinstance(self.rbac_group_names, list):
                     raise ValueError
-            except (json.JSONDecodeError, ValueError):
+            except (json.JSONDecodeError, ValueError) as exc:
                 self.helper.connector_logger.error(
-                    "Error: rbac_group_names is not a valid JSON array."
+                    "Error: MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_RBAC_GROUP_NAMES is not a valid JSON array."
                     " Connector will terminate."
                 )
                 raise RuntimeError(
-                    "Invalid configuration: rbac_group_names must be a JSON array."
-                )
+                    "Invalid configuration: MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_RBAC_GROUP_NAMES must be a JSON array."
+                ) from exc
         elif isinstance(rbac_group_names_raw, list):
             self.rbac_group_names = rbac_group_names_raw
         else:
@@ -141,3 +160,126 @@ class ConfigConnector:
             self.load,
             default="",
         )
+
+    def _parse_taxii_collections(
+        self, raw: Any
+    ) -> tuple[list[str], dict[str, CollectionPolicy]]:
+        """
+        Accepts:
+          - CSV string: "id1,id2"
+          - JSON string list: '["id1","id2"]'
+          - Python list: ["id1","id2"]
+          - JSON/Python map: {"id1": {...}, "id2": null, "id3": {...}}
+          - Shorthand null/true/false/"" are treated as "present but use defaults"
+        Returns: (ordered_list_of_collection_ids, overrides_map)
+        """
+        KNOWN = {
+            "action",
+            "expire_time",
+            "recommended_actions",
+            "educate_url",
+            "rbac_group_names",
+        }
+
+        # 1) Normalize Python objects (dict/list) passed directly from YAML loader
+        if isinstance(raw, dict):
+            # raw is already the object map
+            data = raw
+            order: list[str] = []
+            overrides: dict[str, CollectionPolicy] = {}
+            for k, v in data.items():
+                order.append(str(k))
+                # shorthand values -> empty policy (use defaults)
+                if v is None or v is True or v is False or v == "":
+                    overrides[str(k)] = {}
+                    continue
+                if isinstance(v, dict):
+                    pol: CollectionPolicy = {}
+                    for fk in KNOWN:
+                        if fk in v and v[fk] is not None:
+                            pol[fk] = v[fk]
+                    if "expire_time" in pol:
+                        pol["expire_time"] = int(pol["expire_time"])
+                    if (
+                        "rbac_group_names" in pol
+                        and pol["rbac_group_names"] is not None
+                    ):
+                        pol["rbac_group_names"] = [
+                            str(x) for x in pol["rbac_group_names"]
+                        ]
+                    overrides[str(k)] = pol
+                else:
+                    overrides[str(k)] = {}
+            return order, overrides
+
+        if isinstance(raw, list):
+            # raw is already the list form
+            return [str(x) for x in raw], {}
+
+        # 2) Handle string inputs (CSV or JSON)
+        s = raw or ""
+        if not isinstance(s, str):
+            # Unexpected type - be defensive: try stringifying, but prefer CSV fallback
+            try:
+                s = json.dumps(s)
+            except Exception:
+                s = str(s)
+
+        s = s.strip()
+        if not s:
+            return [], {}
+
+        # If it starts with { or [ treat as JSON
+        if s[0] in "{[":
+            try:
+                data = json.loads(s)
+            except Exception:
+                # Malformed JSON; fall back to CSV parsing to be tolerant
+                ids = [x.strip() for x in s.split(",") if x.strip()]
+                return ids, {}
+
+            if isinstance(data, dict):
+                order: list[str] = []
+                overrides: dict[str, CollectionPolicy] = {}
+                for k, v in data.items():
+                    order.append(str(k))
+                    if v is None or v is True or v is False or v == "":
+                        overrides[str(k)] = {}
+                        continue
+                    if isinstance(v, dict):
+                        pol: CollectionPolicy = {}
+                        for fk in KNOWN:
+                            if fk in v and v[fk] is not None:
+                                pol[fk] = v[fk]
+                        if "expire_time" in pol:
+                            pol["expire_time"] = int(pol["expire_time"])
+                        if (
+                            "rbac_group_names" in pol
+                            and pol["rbac_group_names"] is not None
+                        ):
+                            pol["rbac_group_names"] = [
+                                str(x) for x in pol["rbac_group_names"]
+                            ]
+                        overrides[str(k)] = pol
+                    else:
+                        overrides[str(k)] = {}
+                return order, overrides
+
+            if isinstance(data, list):
+                return [str(x) for x in data], {}
+
+        # CSV fallback
+        ids = [x.strip() for x in s.split(",") if x.strip()]
+        return ids, {}
+
+    def used_rbac_groups(self) -> list[str]:
+        """
+        Compute the full set of RBAC group names used, both global and per-collection
+        :return: Sorted list of unique RBAC group names
+        """
+        out = self.rbac_group_names.copy()
+        for pol in self.taxii_overrides.values():
+            for name in pol.get("rbac_group_names", []) or []:
+                if name not in out:
+                    out.append(name)
+        return sorted(out)
