@@ -1,0 +1,19 @@
+{
+  "title": "Restore Files",
+  "slug": "restore-files",
+  "description": "This connector allows organizations to restore their OpenCTI data from a specific folder.",
+  "short_description": "This connector allows organizations to restore their OpenCTI data from a specific folder.",
+  "logo": null,
+  "use_cases": [],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/restore-files",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-restore-files",
+  "container_type": "EXTERNAL_IMPORT"
+}

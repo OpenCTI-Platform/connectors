@@ -1,15 +1,18 @@
 """Module to test the OpenCTI connector configuration loading and instantiation."""
 
 from os import environ as os_environ
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import patch
 from uuid import uuid4
 
+import isodate
 import pytest
 from connector.src.octi.connector import Connector
 from connector.src.octi.exceptions.configuration_error import ConfigurationError
 from connector.src.octi.global_config import GlobalConfig
 from pycti import OpenCTIConnectorHelper  # type: ignore
+from pydantic import HttpUrl
+
 from tests.conftest import mock_env_vars
 
 # =====================
@@ -20,7 +23,7 @@ from tests.conftest import mock_env_vars
 @pytest.fixture(
     params=[
         {
-            "opencti_url": "http://localhost:8080",
+            "opencti_url": "http://fake:8080/",
             "opencti_token": f"{uuid4()}",
             "connector_id": f"{uuid4()}",
         }
@@ -73,7 +76,7 @@ def all_optional_config(request) -> dict[str, str]:  # type: ignore
         {"connector_log_level": "error"},
         {"connector_name": "Google Threat Intel Feeds"},
         {
-            "connector_scope": "report,location,identity,attack_pattern,domain,file,ipv4,ipv6,malware,sector,intrusion_set,url,vulnerability"
+            "connector_scope": "report,location,identity,attack_pattern,domain,file,ipv4,ipv6,malware,sector,intrusion_set,url,vulnerability,campaign"
         },
         {"connector_queue_threshold": "500"},
         {"connector_tlp_level": "AMBER+STRICT"},
@@ -92,6 +95,7 @@ def all_defaulted_config(request) -> dict[str, str]:  # type: ignore
         {"log_level": "debug"},
         {"log_level": "error"},
         {"log_level": "warn"},
+        {"log_level": "warning"},
     ]
 )
 def valid_log_level_config(request) -> dict[str, str]:  # type: ignore
@@ -137,8 +141,9 @@ def invalid_connector_type_config(request) -> dict[str, str]:  # type: ignore
 
 
 # Scenario: Create a connector with the minimum required configuration.
+@pytest.mark.order(0)
 def test_connector_config_min_required(  # type: ignore
-    capfd, min_required_config: Dict[str, str]
+    capfd, min_required_config: dict[str, str]
 ) -> None:
     """Test for the connector with the minimum required configuration."""
     # Given a minimum required configuration are provided
@@ -152,6 +157,7 @@ def test_connector_config_min_required(  # type: ignore
 
 
 # Scenario: Create a connector with all optional configuration.
+@pytest.mark.order(0)
 def test_connector_config_all_optional(  # type: ignore
     capfd, min_required_config, all_optional_config
 ) -> None:
@@ -166,7 +172,10 @@ def test_connector_config_all_optional(  # type: ignore
 
 
 # Scenario: Ensure that all defaulted values are set correctly.
-def test_connector_config_all_defaulted(capfd, min_required_config, all_defaulted_config) -> None:  # type: ignore
+@pytest.mark.order(0)
+def test_connector_config_all_defaulted(
+    capfd, min_required_config, all_defaulted_config
+) -> None:  # type: ignore
     """Test for the connector to check all the defaulted values."""
     # Given a minimum required configuration
     mock_env = _given_setup_env_vars(min_required_config)
@@ -178,6 +187,7 @@ def test_connector_config_all_defaulted(capfd, min_required_config, all_defaulte
 
 
 # Scenario: Test for the connector with all valid log level values.
+@pytest.mark.order(0)
 def test_connector_config_valid_log_level(  # type: ignore
     capfd, min_required_config, valid_log_level_config
 ) -> None:
@@ -192,6 +202,7 @@ def test_connector_config_valid_log_level(  # type: ignore
 
 
 # Scenario: Test for the connector for invalid log level values.
+@pytest.mark.order(0)
 def test_connector_config_invalid_log_level(  # type: ignore
     min_required_config, invalid_log_level_config
 ) -> None:
@@ -206,6 +217,7 @@ def test_connector_config_invalid_log_level(  # type: ignore
 
 
 # Scenario: Test for the connector with all valid connector type values.
+@pytest.mark.order(0)
 def test_connector_config_valid_connector_type(  # type: ignore
     capfd, min_required_config, valid_connector_type_config
 ) -> None:
@@ -220,6 +232,7 @@ def test_connector_config_valid_connector_type(  # type: ignore
 
 
 # Scenario: Test for the connector for invalid connector type values.
+@pytest.mark.order(0)
 def test_connector_config_invalid_connector_type(  # type: ignore
     min_required_config, invalid_connector_type_config
 ) -> None:
@@ -270,14 +283,21 @@ def _then_connector_created_successfully(capfd, mock_env, connector, data) -> No
     for key, value in data.items():
         if key.startswith("OPENCTI_"):
             config_key = key[len("OPENCTI_") :].lower()
-            assert (  # noqa: S101
-                getattr(connector._config.octi_config, config_key)
-            ) == value
+            attr = getattr(connector._config.octi_config, config_key)
+            if isinstance(attr, HttpUrl):
+                assert attr.encoded_string() == value  # noqa: S101
+            else:
+                assert attr == value  # noqa: S101
         elif key.startswith("CONNECTOR_"):
             config_key = key[len("CONNECTOR_") :].lower()
-            assert (  # noqa: S101
-                str(getattr(connector._config.connector_config, config_key)) == value
-            )
+            attr = getattr(connector._config.connector_config, config_key)
+            if config_key == "duration_period":
+                assert attr == isodate.parse_duration(value)  # noqa: S101
+            else:
+                if isinstance(attr, HttpUrl):
+                    assert attr.encoded_string() == value  # noqa: S101
+                else:
+                    assert str(attr) == value  # noqa: S101
 
     log_records = capfd.readouterr()
     if connector._config.connector_config.log_level in ["info", "debug"]:

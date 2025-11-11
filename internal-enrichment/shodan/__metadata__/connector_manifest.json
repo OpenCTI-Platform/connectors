@@ -1,0 +1,21 @@
+{
+  "title": "Shodan",
+  "slug": "shodan",
+  "description": "Shodan is a metadata search engine that scans the internet for connected devices (like servers, routers, webcams). It gathers information such as open ports, SSL certificates, and banners.\n\nThis connector enriches IPv4 observables and indicators with 'shodan' pattern_type exclusively, with no support for other scopes. \n\nWhen processing an observable, the connector enriches it with Shodan identity information including the organization and its relationships, domain names and their relationships, hostnames and their relationships, autonomous systems and their relationships, X509 certificates and their relationships, geographic location data (city and country) with relationships, vulnerability information and relationships, while also updating the observable with comprehensive descriptions, relevant labels, and external references. \n\nFor indicators using the 'Shodan' pattern_type, the connector provides enrichment through faceted notes that retrieve the total number of search results for the query, presenting aggregated data across multiple dimensions including global statistics, the top 20 organizations, top 20 domains, top 20 ports, top 20 autonomous systems, and top 20 countries.",
+  "short_description": "Shodan is a metadata search engine that scans the internet for connected devices (like servers, routers, webcams). It gathers information such as open ports, SSL certificates, and banners.",
+  "logo": "internal-enrichment/shodan/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 75,
+  "support_version": ">=5.6.1",
+  "subscription_link": "https://www.shodan.io",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/shodan",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-shodan",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

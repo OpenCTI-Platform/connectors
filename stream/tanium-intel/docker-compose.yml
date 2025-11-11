@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-tanium-intel:
-    image: opencti/connector-tanium-intel:6.7.4
+    image: opencti/connector-tanium-intel:rolling
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -20,4 +20,5 @@ services:
       - TANIUM_INTEL_NO_HASHES_IN_INTELS=true
       - TANIUM_INTEL_AUTO_ONDEMAND_SCAN=true # trigger a quick scan when an intel document is imported
       - TANIUM_INTEL_COMPUTER_GROUPS=1 # computer groups targeted by the auto on-demand scan (separated by ,)
+      - TANIUM_INTEL_DEPLOY_INTEL=true
     restart: always

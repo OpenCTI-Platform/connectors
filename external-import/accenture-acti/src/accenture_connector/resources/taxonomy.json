@@ -1,0 +1,13 @@
+{
+  "France": {
+    "topic": null,
+    "vertical": null,
+    "industry-group": null,
+    "industry": null,
+    "region": "Europe",
+    "opencti_region": "Europe",
+    "opencti_industry": null,
+    "opencti_country": "France",
+    "opencti_attack_pattern": null
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "title": "MITRE ATT&CK",
+  "slug": "mitre",
+  "description": "MITRE ATT&CK is a globally-accessible knowledge base of adversary tactics and techniques based on real-world observations. The ATT&CK knowledge base is used as a foundation for the development of specific threat models and methodologies in the private sector, in government, and in the cybersecurity product and service community. The integration of MITRE ATT&CK with OpenCTI allows for the ingestion of data from MITRE datasets, facilitating the pre-population of your OpenCTI instance. This includes importing information on tools, malware, campaigns, intrusion sets, attack patterns, courses of action, alongside MITRE-specific frameworks such as x-mitre-matrix, x-mitre-tactic, x-mitre-collection, x-mitre-data-source, and x-mitre-data-component. The connector supports the ingestion of data from MITRE Enterprise, MITRE Mobile, and MITRE ICS matrices.",
+  "short_description": "MITRE ATT&CK is a globally-accessible knowledge base of adversary tactics and techniques based on real-world observations. The ATT&CK knowledge base is used as a foundation for the development of specific threat models and methodologies in the private sector, in government, and in the cybersecurity product and service community.",
+  "logo": "external-import/mitre/__metadata__/logo.png",
+  "use_cases": [
+    "Open Source Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": "2025-01-01",
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">= 6.7.0",
+  "subscription_link": "https://www.mitre.org/who-we-are/work-with-us",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/mitre",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-mitre",
+  "container_type": "EXTERNAL_IMPORT"
+}

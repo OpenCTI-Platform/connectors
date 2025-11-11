@@ -1,22 +1,24 @@
 import time
 from datetime import datetime, timedelta
-from typing import Union
 
 import schedule
 from feedly.opencti_connector.connector import FeedlyConnector
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper
 from pytz import utc
 
 STATE_VERSION = 1
 
 
 class FeedlyRunner:
-    def __init__(self, helper: OpenCTIConnectorHelper):
+    def __init__(self, helper: OpenCTIConnectorHelper, config):
         self.helper = helper
-        self.interval_in_minutes: int = self.get_param("interval", True)
-        self.connector = FeedlyConnector(self.get_param("api_key", False), self.helper)
-        self.stream_ids = self.get_param("stream_ids", False).split(",")
-        self.days_to_back_fill: int = self.get_param("days_to_back_fill", True)
+        self.config = config
+        self.interval_in_minutes: int = self.config.feedly.interval
+        self.connector = FeedlyConnector(
+            self.config.feedly.api_key.get_secret_value(), self.helper
+        )
+        self.stream_ids = self.config.feedly.stream_ids
+        self.days_to_back_fill: int = self.config.feedly.days_to_back_fill
 
     def run(self):
         self.helper.log_info("Starting Feedly connector")
@@ -59,17 +61,6 @@ class FeedlyRunner:
             self.helper.api.work.to_processed(
                 self.helper.work_id, error_message, in_error=True
             )
-
-    def get_param(
-        self, param_name: str, is_number: bool, default_value: str = None
-    ) -> Union[int, str]:
-        return get_config_variable(
-            f"FEEDLY_{param_name.upper()}",
-            ["feedly", param_name.lower()],
-            self.helper.config,
-            is_number,
-            default_value,
-        )
 
     def _get_state(self) -> dict:
         state = self.helper.get_state()

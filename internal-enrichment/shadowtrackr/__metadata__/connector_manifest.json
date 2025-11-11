@@ -1,0 +1,21 @@
+{
+  "title": "Shadowtrackr",
+  "slug": "shadowtrackr",
+  "description": "This internal enrichment connector lowers the score for IP addresses that are false positives, and changes the valid until date for sources that are known to change function regularly, like CDNs, Clouds and VPNs.\nIf a newly ingested IP address is a CDN, Cloud or VPN it might still be a valid,ongoing attack that you'll want to detect or block. But chances are very high that the same IP is used for something different, legitimate purpose the next day. For this reason, this connector limits the valid to period instead oflowering the score. Notice that this check is done in context, together with the information on the false positive estimate: a GMail server will be detected as a cloud server, but gets a lowered score immediately. You don't want to blockGMail just because you got one spammy email.\nThe score reduction is based on the false positive estimate produced by theShadowTrackr API. Likewise, the CDN, Cloud and VPN information comes from the ShadowTrackr API. You'll need an API key to access the API.\nThe connector works for the following OpenCTI observable types:",
+  "short_description": "This internal enrichment connector lowers the score for IP addresses that are false positives, and changes the valid until date for sources that are known to change function regularly, like CDNs, Clouds and VPNs.\nIf a newly ingested IP address is a CDN, Cloud or VPN it might still be a valid,ongoing attack that you'll want to detect or block. But chances are very high that the same IP is used for something different, legitimate purpose the next day. For this reason, this connector limits the valid to period instead oflowering the score. Notice that this check is done in context, together with the information on the false positive estimate: a GMail server will be detected as a cloud server, but gets a lowered score immediately. You don't want to blockGMail just because you got one spammy email.\nThe score reduction is based on the false positive estimate produced by theShadowTrackr API. Likewise, the CDN, Cloud and VPN information comes from the ShadowTrackr API. You'll need an API key to access the API.\nThe connector works for the following OpenCTI observable types:",
+  "logo": "internal-enrichment/shadowtrackr/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 50,
+  "support_version": ">=6.3.2",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/shadowtrackr",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-shadowtrackr",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

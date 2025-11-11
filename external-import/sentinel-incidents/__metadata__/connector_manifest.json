@@ -1,0 +1,19 @@
+{
+  "title": "Sentinel Incidents (Deprecated)",
+  "slug": "sentinel-incidents",
+  "description": "This connector is deprecated. A mistake has been made as this connector actually pulls incident from Defender and not Sentinel.\nPlease use:\nThis connector will be removed in OpenCTI 6.6.0.",
+  "short_description": "This connector is deprecated. A mistake has been made as this connector actually pulls incident from Defender and not Sentinel.\nPlease use:\nThis connector will be removed in OpenCTI 6.6.0.",
+  "logo": null,
+  "use_cases": [],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/sentinel-incidents",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-sentinel-incidents",
+  "container_type": "EXTERNAL_IMPORT"
+}

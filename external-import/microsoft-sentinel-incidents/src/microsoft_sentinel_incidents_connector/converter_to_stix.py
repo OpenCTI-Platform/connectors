@@ -74,9 +74,14 @@ class ConverterToStix:
 
     @handle_stix2_error
     def create_incident(self, alert: dict) -> stix2.Incident | None:
+        return_key = "\n"
+
         def _get_remediation(remediation_steps: str | None) -> str:
             try:
-                return f"  \n{'  \n'.join(json.loads(remediation_steps) if remediation_steps else [])}"
+                steps = "  \n".join(
+                    json.loads(remediation_steps) if remediation_steps else []
+                )
+                return f"  {return_key}{steps}"
             except json.JSONDecodeError:
                 self.helper.connector_logger.warning(
                     "Error while decoding remediation steps, RemediationSteps must be a valid JSON list:"
@@ -85,21 +90,22 @@ class ConverterToStix:
                 return "  \n"
 
         incident_name = alert.get("DisplayName")
-        incident_created_at = format_datetime(alert.get("TimeGenerated"))
+        incident_created_at = format_datetime(alert.get("StartTime"))
         incident_modified_at = format_datetime(alert.get("EndTime"))
         incident_labels = [alert.get("AlertType")] if alert.get("AlertType") else None
+        remediation = _get_remediation(alert.get("RemediationSteps"))
         incident_description = (
-            f"**Display Name**: {alert.get('DisplayName')}  \n"
-            f"**Alert ID**: {alert.get('SystemAlertId')}  \n"
-            f"**Status**: {alert.get('Status')}  \n"
-            f"**Severity**: {alert.get('AlertSeverity')}  \n"
-            f"**Alert Type**: {alert.get('AlertType')}  \n"
-            f"**Start Time (UTC)**: {alert.get('StartTime')}  \n"
-            f"**End Time (UTC)**: {alert.get('EndTime')}  \n"
-            f"**Time Generated (UTC)**: {alert.get('TimeGenerated')}  \n"
-            f"**Tactics**: {alert.get('Tactics')}  \n"
-            f"**Description**: {alert.get('Description')}  \n"
-            f"**Remediation**:{_get_remediation(alert.get("RemediationSteps"))}"
+            f"**Display Name**: {alert.get('DisplayName')}  {return_key}"
+            f"**Alert ID**: {alert.get('SystemAlertId')}  {return_key}"
+            f"**Status**: {alert.get('Status')}  {return_key}"
+            f"**Severity**: {alert.get('AlertSeverity')}  {return_key}"
+            f"**Alert Type**: {alert.get('AlertType')}  {return_key}"
+            f"**Start Time (UTC)**: {alert.get('StartTime')}  {return_key}"
+            f"**End Time (UTC)**: {alert.get('EndTime')}  {return_key}"
+            f"**Time Generated (UTC)**: {alert.get('TimeGenerated')}  {return_key}"
+            f"**Tactics**: {alert.get('Tactics')}  {return_key}"
+            f"**Description**: {alert.get('Description')}  {return_key}"
+            f"**Remediation**: {remediation}"
         )
         stix_incident = stix2.Incident(
             id=Incident.generate_id(incident_name, incident_created_at),
@@ -197,14 +203,16 @@ class ConverterToStix:
         :param evidence: Evidence to create User Account from
         :return: User Account in STIX 2.1 format
         """
-        user_account = stix2.UserAccount(
-            account_login=evidence.get("Name"),
-            object_marking_refs=[self.tlp_marking],
-            custom_properties={
-                "created_by_ref": self.author["id"],
-            },
-        )
-        return user_account
+        if evidence.get("Name"):
+            # stix2 lib does not check fields constraints (at least one field must be provided)
+            user_account = stix2.UserAccount(
+                account_login=evidence.get("Name"),
+                object_marking_refs=[self.tlp_marking],
+                custom_properties={
+                    "created_by_ref": self.author["id"],
+                },
+            )
+            return user_account
 
     @handle_stix2_error
     def create_evidence_ipv4(self, evidence: dict) -> stix2.IPv4Address | None:
@@ -326,7 +334,7 @@ class ConverterToStix:
             return None
 
     @handle_stix2_error
-    def create_evidence_identity_system(self, evidence: dict) -> stix2.Identity:
+    def create_evidence_identity_system(self, evidence: dict) -> stix2.Identity | None:
         """
         Create STIX 2.1 Identity System object
         :param evidence: Evidence to create Identity system from

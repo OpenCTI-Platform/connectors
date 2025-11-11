@@ -16,8 +16,7 @@ from pycti import (
     OpenCTIStix2,
     StixCoreRelationship,
 )
-
-from .indicator_config import IndicatorConfig
+from virustotal.models.configs.virustotal_configs import IndicatorConfig
 
 
 class VirusTotalBuilder:

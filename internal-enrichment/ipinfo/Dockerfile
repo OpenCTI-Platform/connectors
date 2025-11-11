@@ -1,17 +1,15 @@
 FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
 
-# Copy the worker
-COPY src /opt/opencti-connector-ipinfo
+# Copy the connector
+COPY src /opt/connector/src
+WORKDIR /opt/connector
 
 # Install Python modules
 # hadolint ignore=DL3003
 RUN apk --no-cache add git build-base libmagic libffi-dev && \
-    cd /opt/opencti-connector-ipinfo && \
-    pip3 install --no-cache-dir -r requirements.txt && \
+    cd /opt/connector/src && \
+    pip3 install --no-cache-dir -r /opt/connector/src/requirements.txt && \
     apk del git build-base
 
-# Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+CMD ["python", "-m", "src"]

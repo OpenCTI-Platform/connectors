@@ -1,0 +1,22 @@
+version: '3'
+services:
+  connector-sparta:
+    image: opencti/connector-sparta:rolling
+    environment:
+      # OpenCTI parameters - REQUIRED
+      - OPENCTI_URL=CHANGEME
+      - OPENCTI_TOKEN=CHANGEME
+
+      # Connector's definition parameters - REQUIRED
+      - CONNECTOR_ID=CHANGEME
+
+      # Connector's definition parameters - OPTIONAL
+      # - CONNECTOR_NAME=Aerospace SPARTA
+      # - CONNECTOR_SCOPE=["attack-pattern", "course-of-action", "indicator", "identity"]
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_DURATION_PERIOD=PT5H
+      
+      # SPARTA definition parameters - OPTIONAL
+      # - SPARTA_BASE_URL=https://sparta.aerospace.org/download/STIX?f=latest
+
+    restart: always

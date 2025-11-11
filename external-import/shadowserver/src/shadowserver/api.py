@@ -3,16 +3,15 @@ import hmac
 import json
 import logging
 from json import JSONDecodeError
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urljoin
 
 import requests
 from pycti import OpenCTIConnectorHelper
 from requests.exceptions import RequestException
-
-from .constants import BASE_URL, LIMIT, TIMEOUT, TLP_MAP
-from .stix_transform import ShadowserverStixTransformation
-from .utils import validate_date_format, validate_marking_refs
+from shadowserver.constants import BASE_URL, LIMIT, TIMEOUT, TLP_MAP
+from shadowserver.stix_transform import ShadowserverStixTransformation
+from shadowserver.utils import validate_date_format
 
 LOGGER = logging.getLogger(__name__)
 
@@ -22,7 +21,7 @@ class ShadowserverAPI:
     This class interacts with the Shadowserver API to retrieve and process reports.
     """
 
-    def __init__(self, api_key: str, api_secret: str, marking_refs: str = "TLP:WHITE"):
+    def __init__(self, api_key: str, api_secret: str, marking_refs: str):
         """
         Initializes a new instance of the API class.
 
@@ -37,10 +36,7 @@ class ShadowserverAPI:
         self.base_url = BASE_URL
         self.api_key = api_key
         self.api_secret = api_secret
-        if validate_marking_refs(marking_refs):
-            self.marking_refs = TLP_MAP[marking_refs]
-        else:
-            raise ValueError(f"Invalid marking references: {marking_refs}")
+        self.marking_refs = TLP_MAP[marking_refs]
         self.session = requests.Session()
 
     def _generate_hmac(self, request: dict) -> Tuple[bytes, str]:
@@ -153,7 +149,7 @@ class ShadowserverAPI:
         limit: int = LIMIT,
         incident: dict = {},
         labels: List[str] = ["Shadowserver"],
-    ) -> Optional[Dict]:
+    ) -> list[Any]:
         """
         Retrieves a STIX report based on the specified report parameters.
 
@@ -164,7 +160,7 @@ class ShadowserverAPI:
             labels (list, optional): Labels to apply to the STIX objects. Defaults to ['Shadowserver'].
 
         Returns:
-            dict or None: The retrieved STIX report in dictionary format, or None if an error occurred.
+            list: A list of STIX objects.
         """
         if not report.get("id") or not report.get("report"):
             raise ValueError(f"Invalid report: {report}")
@@ -188,4 +184,4 @@ class ShadowserverAPI:
             )
             return stix_transformation.get_stix_objects()
         else:
-            return None
+            return []

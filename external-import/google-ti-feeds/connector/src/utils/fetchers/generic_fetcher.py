@@ -8,7 +8,7 @@ import hashlib
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from connector.src.utils.api_engine.api_client import ApiClient
 from connector.src.utils.api_engine.exceptions.api_network_error import ApiNetworkError
@@ -24,9 +24,9 @@ class GenericFetcher:
         self,
         config: GenericFetcherConfig,
         api_client: ApiClient,
-        base_headers: Optional[Dict[str, str]] = None,
-        base_url: Optional[str] = None,
-        logger: Optional[logging.Logger] = None,
+        base_headers: dict[str, str] | None = None,
+        base_url: str | None = None,
+        logger: logging.Logger | None = None,
     ):
         """Initialize the generic fetcher.
 
@@ -49,7 +49,7 @@ class GenericFetcher:
         if config.headers:
             self.headers.update(config.headers)
 
-    async def fetch_single(self, **endpoint_params: Any) -> Optional[Any]:
+    async def fetch_single(self, **endpoint_params: Any) -> Any | None:
         """Fetch a single entity from the configured endpoint.
 
         Args:
@@ -72,39 +72,54 @@ class GenericFetcher:
 
         if response is not None:
             self.logger.debug(
-                f"{LOG_PREFIX} Successfully fetched {self.config.entity_type} data for {entity_id}"
+                "Successfully fetched entity data",
+                {
+                    "prefix": LOG_PREFIX,
+                    "entity_type": self.config.entity_type,
+                    "entity_id": entity_id,
+                },
             )
             return response
         else:
             self.logger.debug(
-                f"{LOG_PREFIX} No data returned for {self.config.display_name_singular} {entity_id}"
+                "No data returned for entity",
+                {
+                    "prefix": LOG_PREFIX,
+                    "display_name": self.config.display_name_singular,
+                    "entity_id": entity_id,
+                },
             )
             return None
 
     async def fetch_multiple(
-        self, entity_ids: List[str], **endpoint_params: Any
-    ) -> List[Any]:
+        self, entity_ids: list[str], **endpoint_params: Any
+    ) -> list[Any]:
         """Fetch multiple entities by their IDs.
 
         Args:
-            entity_ids: List of entity IDs to fetch
+            entity_ids: list of entity IDs to fetch
             **endpoint_params: Additional parameters for endpoint formatting and query parameters
 
         Returns:
-            List of entity objects (successful fetches only)
+            list of entity objects (successful fetches only)
 
         Raises:
             Configured exception class: If there's a critical error
 
         """
-        entities: List[Any] = []
+        entities: list[Any] = []
 
         self._log_fetch_start(
             self.config.display_name, "multiple", count=len(entity_ids)
         )
 
         self.logger.debug(
-            f"{LOG_PREFIX} Starting sequential API requests for {len(entity_ids)} {self.config.entity_type} entities"
+            "Starting sequential API requests",
+            {
+                "prefix": LOG_PREFIX,
+                "count": len(entity_ids),
+                "entity_type": self.config.entity_type,
+            },
         )
 
         for idx, entity_id in enumerate(entity_ids):
@@ -114,30 +129,48 @@ class GenericFetcher:
 
                 if result is not None:
                     self.logger.debug(
-                        f"{LOG_PREFIX} Successfully fetched {self.config.entity_type} #{idx + 1}/{len(entity_ids)}: {entity_id}"
+                        "Successfully fetched entity",
+                        {
+                            "prefix": LOG_PREFIX,
+                            "entity_type": self.config.entity_type,
+                            "index": idx + 1,
+                            "total": len(entity_ids),
+                            "entity_id": entity_id,
+                        },
                     )
                     entities.append(result)
                 else:
                     self.logger.debug(
-                        f"{LOG_PREFIX} No data returned for {self.config.display_name_singular} {entity_id}"
+                        "No data returned for entity",
+                        {
+                            "prefix": LOG_PREFIX,
+                            "display_name": self.config.display_name_singular,
+                            "entity_id": entity_id,
+                        },
                     )
             except Exception as e:
                 self.logger.warning(
-                    f"{LOG_PREFIX} Failed to fetch {self.config.display_name_singular} {entity_id}: {str(e)}"
+                    "Failed to fetch entity",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "display_name": self.config.display_name_singular,
+                        "entity_id": entity_id,
+                        "error": str(e),
+                    },
                 )
                 continue
 
         self._log_fetch_result(self.config.display_name, len(entities))
         return entities
 
-    async def fetch_list(self, **endpoint_params: Any) -> List[Any]:
+    async def fetch_list(self, **endpoint_params: Any) -> list[Any]:
         """Fetch a list of entities from the endpoint.
 
         Args:
             **endpoint_params: Parameters to substitute in the endpoint URL and query parameters
 
         Returns:
-            List of entities
+            list of entities
 
         Raises:
             Configured exception class: If there's an error fetching the list
@@ -153,11 +186,12 @@ class GenericFetcher:
             return entities
         else:
             self.logger.debug(
-                f"{LOG_PREFIX} No data returned for {self.config.display_name}"
+                "No data returned",
+                {"prefix": LOG_PREFIX, "display_name": self.config.display_name},
             )
             return []
 
-    async def fetch_full_response(self, **endpoint_params: Any) -> Optional[Any]:
+    async def fetch_full_response(self, **endpoint_params: Any) -> Any | None:
         """Fetch the complete response model from the endpoint.
 
         This method returns the full response model (with proper deserialization),
@@ -199,12 +233,13 @@ class GenericFetcher:
             return response
         else:
             self.logger.debug(
-                f"{LOG_PREFIX} No data returned for {self.config.display_name}"
+                "No data returned",
+                {"prefix": LOG_PREFIX, "display_name": self.config.display_name},
             )
             return None
 
     def _handle_api_error(
-        self, net_err: ApiNetworkError, endpoint: str, entity_id: Optional[str] = None
+        self, net_err: ApiNetworkError, endpoint: str, entity_id: str | None = None
     ) -> None:
         """Handle API network errors.
 
@@ -220,21 +255,34 @@ class GenericFetcher:
         if entity_id:
             error_msg = f"Network error fetching {self.config.display_name_singular} {entity_id}: {str(net_err)}"
             self.logger.warning(
-                f"{LOG_PREFIX} Network error at {endpoint} for {self.config.entity_type} {entity_id}: {str(net_err)}"
+                "Network error at endpoint",
+                {
+                    "prefix": LOG_PREFIX,
+                    "endpoint": endpoint,
+                    "entity_type": self.config.entity_type,
+                    "entity_id": entity_id,
+                    "error": str(net_err),
+                },
             )
         else:
             error_msg = (
                 f"Network error fetching {self.config.display_name}: {str(net_err)}"
             )
             self.logger.warning(
-                f"{LOG_PREFIX} Network error at {endpoint} for {self.config.entity_type}: {str(net_err)}"
+                "Network error at endpoint",
+                {
+                    "prefix": LOG_PREFIX,
+                    "endpoint": endpoint,
+                    "entity_type": self.config.entity_type,
+                    "error": str(net_err),
+                },
             )
 
         exception = self.config.create_exception(error_msg, endpoint=endpoint)
         raise exception from net_err
 
     def _handle_general_error(
-        self, e: Exception, endpoint: str, entity_id: Optional[str] = None
+        self, e: Exception, endpoint: str, entity_id: str | None = None
     ) -> None:
         """Handle general exceptions.
 
@@ -249,13 +297,26 @@ class GenericFetcher:
         """
         if entity_id:
             error_msg = f"Error fetching {self.config.display_name_singular} {entity_id}: {str(e)}"
-            self.logger.error(
-                f"{LOG_PREFIX} Failed to fetch {self.config.entity_type} {entity_id} from {endpoint}: {str(e)}"
+            self.logger.warning(
+                "Failed to fetch entity",
+                {
+                    "prefix": LOG_PREFIX,
+                    "entity_type": self.config.entity_type,
+                    "entity_id": entity_id,
+                    "endpoint": endpoint,
+                    "error": str(e),
+                },
             )
         else:
             error_msg = f"Error fetching {self.config.display_name}: {str(e)}"
-            self.logger.error(
-                f"{LOG_PREFIX} Failed to fetch {self.config.entity_type} from {endpoint}: {str(e)}"
+            self.logger.warning(
+                "Failed to fetch entity",
+                {
+                    "prefix": LOG_PREFIX,
+                    "entity_type": self.config.entity_type,
+                    "endpoint": endpoint,
+                    "error": str(e),
+                },
             )
 
         exception = self.config.create_exception(error_msg, endpoint=endpoint)
@@ -263,9 +324,9 @@ class GenericFetcher:
 
     def _log_fetch_start(
         self,
-        entity_type: Optional[str],
-        entity_id: Optional[str],
-        count: Optional[int] = None,
+        entity_type: str | None,
+        entity_id: str | None,
+        count: int | None = None,
     ) -> None:
         """Log the start of a fetch operation.
 
@@ -276,18 +337,30 @@ class GenericFetcher:
 
         """
         if entity_id:
-            self.logger.debug(f"{LOG_PREFIX} Fetching {entity_type} {entity_id}...")
+            self.logger.debug(
+                "Fetching entity",
+                {
+                    "prefix": LOG_PREFIX,
+                    "entity_type": entity_type,
+                    "entity_id": entity_id,
+                },
+            )
         elif count:
-            self.logger.debug(f"{LOG_PREFIX} Fetching {count} {entity_type}...")
+            self.logger.debug(
+                "Fetching entities",
+                {"prefix": LOG_PREFIX, "entity_type": entity_type, "count": count},
+            )
         else:
-            self.logger.debug(f"{LOG_PREFIX} Fetching {entity_type}...")
+            self.logger.debug(
+                "Fetching entities", {"prefix": LOG_PREFIX, "entity_type": entity_type}
+            )
 
     async def _make_api_call(
         self,
-        endpoint_params: Dict[str, Any],
-        entity_id: Optional[str] = None,
+        endpoint_params: dict[str, Any],
+        entity_id: str | None = None,
         use_raw_response: bool = False,
-    ) -> Optional[Any]:
+    ) -> Any | None:
         """Make the actual API call with error handling.
 
         Args:
@@ -316,13 +389,21 @@ class GenericFetcher:
                 endpoint = full_endpoint
 
         except ValueError as e:
-            error_msg = f"{LOG_PREFIX} Invalid endpoint parameters for {self.config.display_name}: {str(e)}"
-            self.logger.error(error_msg)
+            error_msg = (
+                f"Invalid endpoint parameters for {self.config.display_name}: {str(e)}"
+            )
+            self.logger.warning(error_msg, {"prefix": LOG_PREFIX})
             raise self.config.create_exception(error_msg) from e
 
         try:
             self.logger.debug(
-                f"{LOG_PREFIX} Fetching {self.config.entity_type} from {endpoint} with query params: {query_params}"
+                "Fetching entity from endpoint",
+                {
+                    "prefix": LOG_PREFIX,
+                    "entity_type": self.config.entity_type,
+                    "endpoint": endpoint,
+                    "query_params": query_params,
+                },
             )
 
             response = await self.api_client.call_api(
@@ -351,7 +432,7 @@ class GenericFetcher:
         self,
         response: Any,
         endpoint: str,
-        query_params: Optional[Dict[str, Any]] = None,
+        query_params: dict[str, Any] | None = None,
     ) -> None:
         """Save the raw response to a file for debugging/testing purposes.
 
@@ -394,19 +475,31 @@ class GenericFetcher:
                     json.dump(file_content, f, indent=2, default=str)
 
                 self.logger.debug(
-                    f"{LOG_PREFIX} Saved response debug file: {file_path} for {self.config.entity_type} from {endpoint}"
+                    "Saved response debug file",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "file_path": str(file_path),
+                        "entity_type": self.config.entity_type,
+                        "endpoint": endpoint,
+                    },
                 )
             else:
                 self.logger.debug(
-                    f"{LOG_PREFIX} Debug file already exists: {file_path} for {self.config.entity_type}"
+                    "Debug file already exists",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "file_path": str(file_path),
+                        "entity_type": self.config.entity_type,
+                    },
                 )
 
         except Exception as e:
             self.logger.warning(
-                f"{LOG_PREFIX} Failed to save debug response file: {str(e)}"
+                "Failed to save debug response file",
+                {"prefix": LOG_PREFIX, "error": str(e)},
             )
 
-    def _log_fetch_result(self, entity_type: Optional[str], count: int = 1) -> None:
+    def _log_fetch_result(self, entity_type: str | None, count: int = 1) -> None:
         """Log the result of a fetch operation.
 
         Args:
@@ -415,6 +508,11 @@ class GenericFetcher:
 
         """
         if count > 0:
-            self.logger.info(f"{LOG_PREFIX} Fetched {count} {entity_type}")
+            self.logger.info(
+                "Fetched entities",
+                {"prefix": LOG_PREFIX, "count": count, "entity_type": entity_type},
+            )
         else:
-            self.logger.debug(f"{LOG_PREFIX} No {entity_type} found")
+            self.logger.debug(
+                "No entities found", {"prefix": LOG_PREFIX, "entity_type": entity_type}
+            )

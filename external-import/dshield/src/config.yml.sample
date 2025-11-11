@@ -1,0 +1,15 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'DShield'
+  scope: 'dshield'
+  log_level: 'info'
+  duration_period: 'PT1D' # Interval given for scheduler process in ISO-8601 format
+
+dshield:
+  api_base_url: 'https://feeds.dshield.org/block.txt' # alternative: https://isc.sans.edu/block.txt
+  tlp_level: 'ChangeMe' # available va lues are: clear, white, green, amber, amber+strict, red - Default: 'clear'

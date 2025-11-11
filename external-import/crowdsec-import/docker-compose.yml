@@ -1,0 +1,77 @@
+version: '3'
+services:
+  connector-crowdsec-import:
+    image: opencti/connector-crowdsec-import:6.7.4
+    environment:
+      # Connector's generic execution parameters
+      - OPENCTI_URL=http://opencti:8080 # OpenCTI API URL
+      - OPENCTI_TOKEN=ChangeMe # Add OpenCTI API token here
+      # Connector's definition parameters REQUIRED
+      - CONNECTOR_ID=ChangeMe # Add CrowdSec connector ID (any valid UUID v4)
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
+      - CONNECTOR_NAME=CrowdSec Import
+      - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr # MIME type or Stix Object
+      - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=ChangeMe # ISO8601 format in String, start with 'P...' for Period
+
+      # Connector's definition parameters OPTIONAL
+      # - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo, Float accepted
+      # - CONNECTOR_RUN_AND_TERMINATE=False # Default False, True run connector once
+      # - CONNECTOR_SEND_TO_QUEUE=True # Default True
+      # - CONNECTOR_SEND_TO_DIRECTORY=False # Default False
+      # - CONNECTOR_SEND_TO_DIRECTORY_PATH=CHANGEME # if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path
+      # - CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7 # Default 7, in days
+
+      # CrowdSec Connector's custom execution parameters REQUIRED
+      - CROWDSEC_KEY=ChangeMe # Add CrowdSec's CTI API Key
+      
+      # CrowdSec Connector's custom execution parameters OPTIONAL
+      # - CROWDSEC_IMPORT_QUERY=behaviors.label:"SSH Bruteforce" # Lucene Query to filter CrowdSec data for import
+      # - CROWDSEC_IMPORT_QUERY_SINCE=24 # Range in hours of fetched CrowdSec data. Default is 24 hours.
+      # - CROWDSEC_ENRICHMENT_THRESHOLD_PER_IMPORT=2000 # Maximum number of IP addresses to enrich in one import
+      # - CROWDSEC_MAX_TLP=TLP:AMBER # Do not send any data to CrowdSec if the TLP of the observable is greater than this
+      # - CROWDSEC_TLP_LEVEL=amber # TLP for created STIX objects (clear, white, green, amber, amber+strict, red)
+      # - CROWDSEC_CREATE_NOTE=true # Enable/disable creation of a note in observable for each enrichment
+      # - CROWDSEC_CREATE_SIGHTING=true # Enable/disable creation of a sighting of observable related to CrowdSec organization
+      # - CROWDSEC_VULNERABILITY_CREATE_FROM_CVE=true # Create vulnerability from CVE
+      # - CROWDSEC_MIN_DELAY_BETWEEN_ENRICHMENTS=86400 # Minimum delay (in seconds) between two CrowdSec enrichments
+      # - CROWDSEC_LAST_ENRICHMENT_DATE_IN_DESCRIPTION=true # Enable/disable saving the last CrowdSec enrichment date in observable description
+      # - CROWDSEC_CREATE_TARGETED_COUNTRIES_SIGHTINGS=false # Enable/disable creation of a sighting of observable related to a targeted country
+      # - CROWDSEC_INDICATOR_CREATE_FROM=malicious,suspicious,known # List of reputations to create indicators from (malicious, suspicious, known, safe) separated by comma
+      # - CROWDSEC_ATTACK_PATTERN_CREATE_FROM_MITRE=true # Create attack patterns from MITRE techniques
+      
+      # Label Configuration
+      # - CROWDSEC_LABELS_SCENARIO_NAME=true # Enable/disable labels creation based on CTI scenario's name
+      # - CROWDSEC_LABELS_SCENARIO_LABEL=false # Enable/disable labels creation based on CTI scenario's label
+      # - CROWDSEC_LABELS_CVE=true # Enable/Disable CTI cve name based labels
+      # - CROWDSEC_LABELS_MITRE=true # Enable/Disable CTI mitre technique based labels
+      # - CROWDSEC_LABELS_BEHAVIOR=false # Enable/Disable CTI behavior based labels
+      # - CROWDSEC_LABELS_REPUTATION=true # Enable/Disable CTI reputation based labels
+      
+      # Label Colors
+      # - CROWDSEC_LABELS_SCENARIO_COLOR=#2E2A14 # Color of scenario based labels
+      # - CROWDSEC_LABELS_CVE_COLOR=#800080 # Color of cve based labels
+      # - CROWDSEC_LABELS_MITRE_COLOR=#000080 # Color of mitre technique based labels
+      # - CROWDSEC_LABELS_BEHAVIOR_COLOR=#808000 # Color of behavior based labels
+      # - CROWDSEC_LABELS_REPUTATION_MALICIOUS_COLOR=#FF0000 # Color of malicious reputation label
+      # - CROWDSEC_LABELS_REPUTATION_SUSPICIOUS_COLOR=#FFA500 # Color of suspicious reputation label
+      # - CROWDSEC_LABELS_REPUTATION_KNOWN_COLOR=#808080 # Color of known reputation label
+      # - CROWDSEC_LABELS_REPUTATION_SAFE_COLOR=#00BFFF # Color of safe reputation label
+
+      # Add proxy parameters below if needed
+      # - HTTP_PROXY=CHANGEME
+      # - HTTPS_PROXY=CHANGEME
+      # - NO_PROXY=CHANGEME
+    restart: always
+    # networks:
+    #   - docker_default
+
+# If you add it to your OpenCTI docker-compose, add depends_on: - opencti
+
+
+# networks:
+#   default:
+#     external: true
+#     name: docker_default

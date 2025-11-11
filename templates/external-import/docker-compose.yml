@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-template:
-    image: opencti/connector-template:6.2.4
+    image: opencti/connector-template:rolling
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost
@@ -17,7 +17,7 @@ services:
       # - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo, Float accepted
       # - CONNECTOR_RUN_AND_TERMINATE=False # Default False, True run connector once
       # - CONNECTOR_SEND_TO_QUEUE=True # Default True
-      # - CONNECTOR_SEND_TO_DIRECTORY=False # Default False 
+      # - CONNECTOR_SEND_TO_DIRECTORY=False # Default False
       # - CONNECTOR_SEND_TO_DIRECTORY_PATH=CHANGEME # if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path
       # - CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7 # Default 7, in days
 

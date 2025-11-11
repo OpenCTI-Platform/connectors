@@ -1,0 +1,21 @@
+{
+  "title": "Import File YARA",
+  "slug": "import-file-yara",
+  "description": "This connector ingests YARA rules into OpenCTI, converting them into Indicators. \nAs YARA files can contain one or multiple YARA rules, the connector can operate in two modes:\n1. Single Indicator Mode: Combines all YARA rules contained in the .yar file into one STIX Indicator. (Split Rules option: False).\n2. Split Indicator Mode: Creates individual STIX Indicators for each YARA rule contained in the .yar file. (1 flag per YARA rule) (Split Rules option: True).",
+  "short_description": "This connector ingests YARA rules into OpenCTI, converting them into Indicators.",
+  "logo": "internal-import-file/import-file-yara/__metadata__/logo.png",
+  "use_cases": [
+    "Threat Intelligence"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.5.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-import-file/import-file-yara",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-import-file-yara",
+  "container_type": "INTERNAL_IMPORT_FILE"
+}

@@ -1,7 +1,5 @@
 """Exception for errors when converting GTI attack techniques to STIX attack patterns."""
 
-from typing import Optional
-
 from connector.src.custom.exceptions.convert_errors.gti_entity_conversion_error import (
     GTIEntityConversionError,
 )
@@ -13,9 +11,9 @@ class GTITechniqueConversionError(GTIEntityConversionError):
     def __init__(
         self,
         message: str,
-        technique_id: Optional[str] = None,
-        technique_name: Optional[str] = None,
-        mitre_id: Optional[str] = None,
+        technique_id: str | None = None,
+        technique_name: str | None = None,
+        mitre_id: str | None = None,
     ):
         """Initialize the exception.
 
@@ -30,11 +28,15 @@ class GTITechniqueConversionError(GTIEntityConversionError):
         self.technique_name = technique_name
         self.mitre_id = mitre_id
 
-        details = []
-        if technique_name:
-            details.append(f"name: {technique_name}")
-        if mitre_id:
-            details.append(f"MITRE ID: {mitre_id}")
-
-        if details and not self.args[0].endswith(f"({', '.join(details)})"):
-            self.args = (f"{self.args[0]} ({', '.join(details)})",)
+        # Add structured data for logging
+        if hasattr(self, "structured_data"):
+            if technique_name:
+                self.structured_data["technique_name"] = technique_name
+            if mitre_id:
+                self.structured_data["mitre_id"] = mitre_id
+        else:
+            self.structured_data = {}
+            if technique_name:
+                self.structured_data["technique_name"] = technique_name
+            if mitre_id:
+                self.structured_data["mitre_id"] = mitre_id

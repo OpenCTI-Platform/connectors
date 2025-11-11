@@ -63,6 +63,10 @@ variables**.
 
 Priority: **YAML → .env → environment → defaults**.
 
+### Configuration variables
+
+Find all the configuration variables available here: [Connector Configurations](./__metadata__)
+
 ### Microsoft Graph API
 
 Microsoft Graph is the gateway to data and intelligence in Microsoft cloud services like Microsoft Entra and Microsoft

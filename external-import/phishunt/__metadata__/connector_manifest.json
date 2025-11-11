@@ -1,0 +1,22 @@
+{
+  "title": "Phishunt",
+  "slug": "phishunt",
+  "description": "Phishunt is a service dedicated to tracking and analyzing phishing threats. By collecting and disseminating information on phishing attacks, Phishunt helps organizations detect and mitigate potential email-based threats, safeguarding sensitive information and preventing financial loss resulting from such attacks.\n\nThe integration of Phishunt with OpenCTI allows for the automated import of phishing-related threat intelligence into the platform, enriching it with up-to-date data on phishing campaigns and tactics. This integration empowers security teams to more effectively identify and respond to phishing threats, enhancing their email security measures and reducing the risk of falling victim to phishing scams.",
+  "short_description": "Phishunt tracks and analyzes phishing threats, helping organizations detect and mitigate email-based attacks. Integration with OpenCTI automates the import of up-to-date phishing intelligence, enhancing the ability to identify and respond to phishing threats.",
+  "logo": "external-import/phishunt/__metadata__/logo.png",
+  "use_cases": [
+    "Open Source Threat Intel",
+    "Phishing"
+  ],
+  "verified": true,
+  "last_verified_date": "2025-06-13",
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">= 6.5.1",
+  "subscription_link": "",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/phishunt",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-phishunt",
+  "container_type": "EXTERNAL_IMPORT"
+}

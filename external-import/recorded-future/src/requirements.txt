@@ -4,6 +4,8 @@ datefinder
 idna
 pika
 pycti
+pydantic>=2.10, <3
+pydantic-settings>=2.0
 python-dateutil
 pytz
 PyYAML
@@ -15,4 +17,5 @@ sseclient
 stix2
 stix2-patterns
 urllib3
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.8.10#subdirectory=connectors-sdk
 
