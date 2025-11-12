@@ -1,6 +1,6 @@
 services:
   connector-mitre:
-    image: opencti/connector-mitre:rolling
+    image: opencti/connector-mitre:6.8.11
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
