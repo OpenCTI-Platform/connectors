@@ -147,6 +147,11 @@
       "exclusiveMinimum": 0,
       "type": "integer"
     },
+    "RECORDED_FUTURE_ANALYST_NOTES_GUESS_RELATIONSHIPS": {
+      "default": false,
+      "description": "Enable or disable the automatic guessing of relationships between entities when processing analyst notes.",
+      "type": "boolean"
+    },
     "RECORDED_FUTURE_PULL_RISK_LIST": {
       "default": false,
       "description": "Whether to import Recorded Future risk lists.",
