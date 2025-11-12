@@ -1,0 +1,13 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+#connector:
+  #id: 'ChangeMe'
+  #name:  'Tagger'
+  #scope: 'report,malware,tool'
+  #auto: true
+  #log_level: 'info'
+
+#tagger:
+#  definitions: 'ChangeMe'
