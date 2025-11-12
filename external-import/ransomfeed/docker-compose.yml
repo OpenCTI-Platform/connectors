@@ -1,0 +1,22 @@
+version: '3'
+services:
+  connector-ransomfeed:
+    build: .
+    image: opencti/connector-ransomfeed:latest
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ransomfeed-connector
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=RansomFeed
+      - CONNECTOR_SCOPE=ransomfeed
+      - CONNECTOR_CONFIDENCE_LEVEL=70
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT1H
+      - RANSOMFEED_API_URL=https://api.ransomfeed.it
+      - RANSOMFEED_TLP_LEVEL=white
+      - RANSOMFEED_CREATE_INDICATORS=true
+    restart: always
+    depends_on:
+      - opencti
+
