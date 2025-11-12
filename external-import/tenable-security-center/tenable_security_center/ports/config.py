@@ -90,7 +90,9 @@ class ConfigLoaderConnectorPort(ABC):
 
     @property
     @abstractmethod
-    def _type(self) -> Literal[
+    def _type(
+        self,
+    ) -> Literal[
         "EXTERNAL_IMPORT",
         "INTERNAL_ENRICHMENT",
         "INTERNAL_EXPORT_FILE",
@@ -100,7 +102,9 @@ class ConfigLoaderConnectorPort(ABC):
 
     @property
     @_make_error_handler("Unable to retrieve connector type in config")
-    def type(self) -> Literal[
+    def type(
+        self,
+    ) -> Literal[
         "EXTERNAL_IMPORT",
         "INTERNAL_ENRICHMENT",
         "INTERNAL_EXPORT_FILE",

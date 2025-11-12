@@ -54,7 +54,6 @@ BLOCK_OBJ = {
 
 
 class CofenseIntel(CofenseIntegration):
-
     def _get_labels(self, mrti: MalwareThreatReport) -> list:
         labels = []
 
@@ -108,7 +107,6 @@ class CofenseIntel(CofenseIntegration):
     def _get_observable_from_executable_set(
         self, executable: Any, author_id: str, threat_id: int, mrti_labels: list
     ) -> Any:
-
         labels = [f"related-{x}" for x in mrti_labels]
         labels.append(f"family:{executable.malware_family}")
 
@@ -279,7 +277,6 @@ if __name__ == "__main__":
                 if last_run is None or (
                     (timestamp - last_run) > (int(interval_sec) - 1)
                 ):
-
                     position, init_date = get_position()
                     connector = CFIntelSync(
                         CF_USER=user_token,

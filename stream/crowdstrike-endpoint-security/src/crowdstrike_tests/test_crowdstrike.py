@@ -9,7 +9,6 @@ from .common_fixtures import (  # noqa: F401 # pylint:disable=unused-import
 
 @pytest.mark.usefixtures("stream_event", "setup_config", "api_response")
 class TestCrowdstrikeConnector(object):
-
     domain_pattern = "[domain-name:value = 'siestakeying.com']"
     ipv4_pattern = "[ipv4-addr:value = '188.143.233.116']"
     ipv6_pattern = "[ipv6-addr:value = '2a02:2f01:7504:5000:0:0:7429:4782']"

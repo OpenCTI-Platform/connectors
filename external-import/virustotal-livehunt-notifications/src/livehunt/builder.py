@@ -89,7 +89,6 @@ class LivehuntBuilder:
         files_iterator = self.client.iterator(url, params=params)
 
         for vtobj in files_iterator:
-
             if self.delete_notification:
                 self.delete_livehunt_notification(vtobj.id)
 

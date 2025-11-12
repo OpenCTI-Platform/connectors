@@ -28,7 +28,6 @@ def process(connector, campaign):
     items = [stix_campaign]
 
     for actor in utils.sanitizer("actors", campaign_details, []):
-
         # Extract dates when it exists from Mandiant timeline of a Campaign
         observed_actor_dates = extract_observed_actor_dates(campaign_details, actor)
         actor["first_seen"] = observed_actor_dates["first_observed"]

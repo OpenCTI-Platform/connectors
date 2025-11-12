@@ -54,7 +54,6 @@ class ConnectorClient:
                  that can be sent using `requests.Session`.
         """
         try:
-
             request = requests.Request("GET", f"{self.base_url}{path}", params=params)
             return self.session.prepare_request(request)
 

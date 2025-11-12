@@ -10,7 +10,6 @@ from .converter_to_stix import ConverterToStix
 
 
 class ConnectorWiz:
-
     def __init__(self, config: ConfigConnector, helper: OpenCTIConnectorHelper):
         """
         Initialize the Connector with necessary configurations
@@ -34,7 +33,6 @@ class ConnectorWiz:
 
         stix_objects = []
         for entity in entities:
-
             # Filter entities
             if "modified" in entity and state is not None:
                 entity_modified = datetime.datetime.fromisoformat(entity["modified"])

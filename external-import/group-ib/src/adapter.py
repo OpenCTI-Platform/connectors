@@ -18,7 +18,6 @@ from stix2.patterns import HashConstant
 
 
 class DataToSTIXAdapter:
-
     def __init__(self, mitre_mapper, collection, tlp_color, helper, is_ioc=False):
         # type: (dict, str, str, Any, bool) -> None
 
@@ -383,7 +382,6 @@ class DataToSTIXAdapter:
                                 _ro.c_type,
                             )
                 else:
-
                     if (
                         is_ioc
                         and main_obj.stix_indicator
@@ -582,7 +580,6 @@ class DataToSTIXAdapter:
                             f"Processing list of malware names: {_name}"
                         )
                         for n in _name:
-
                             malware = ds.Malware(
                                 name=n,
                                 aliases=_malware_aliases,
@@ -799,7 +796,6 @@ class DataToSTIXAdapter:
         event_mitre_matrix = self._generate_mitre_matrix(_events)
 
         for k, v in event_mitre_matrix.items():
-
             kill_chain_phases = self.generate_kill_chain_phases(v["kill_chain_phases"])
 
             if k:

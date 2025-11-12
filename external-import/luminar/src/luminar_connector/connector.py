@@ -698,7 +698,6 @@ class ConnectorLuminar:
                                 custom_properties=custom_prop,
                             )
                         elif stix_property == "size":
-
                             open_cti_observable = File(
                                 size=value,
                                 custom_properties=custom_prop,

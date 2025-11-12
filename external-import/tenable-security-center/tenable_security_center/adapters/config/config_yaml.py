@@ -85,7 +85,9 @@ class _ConfigLoaderConnectorConfigYaml(
         )
 
     @property
-    def _type(self) -> Literal[
+    def _type(
+        self,
+    ) -> Literal[
         "EXTERNAL_IMPORT",
         "INTERNAL_ENRICHMENT",
         "INTERNAL_EXPORT_FILE",

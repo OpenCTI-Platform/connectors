@@ -7,7 +7,6 @@ from secops_siem_services import ConfigConnector, CTIConverter, SecOpsEntitiesCl
 
 
 class SecOpsSIEMConnector:
-
     def __init__(self):
         """
         Initialize the Connector with necessary configurations

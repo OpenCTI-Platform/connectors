@@ -8,7 +8,6 @@ from .utils import SUPPORTED_COLLECTIONS
 
 
 class ConfigConnector:
-
     def __init__(self):
         """
         Initialize the connector with necessary configurations

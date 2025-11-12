@@ -484,7 +484,6 @@ class Note(BaseModel):
         ] = DEFAULT_MARKING_DEFINITIONS,
         external_references=None,
     ):
-
         self.abstract = abstract
         self.content = content
         self.objects_refs = object_refs

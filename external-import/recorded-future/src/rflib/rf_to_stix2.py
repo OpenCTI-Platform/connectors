@@ -1228,7 +1228,6 @@ class StixNote:
         """
         event_objects = []
         for event_capability in event_attr["capabilities"]:
-
             # Get or create capability (AttackPattern or Malware)
             capability_name = event_capability["name"]
             capability_obj = [
@@ -1274,7 +1273,6 @@ class StixNote:
                 event_attr = event["attributes"]
 
                 if event_attr.get("adversary"):
-
                     # Retrieve adversary in self.objects depending on adversary name in event
                     # self.objects contains all IntrusionSet, Malware, Identity, AttackPattern et ThreatActor linked to note
                     event_adversary = event_attr["adversary"][0]["name"]

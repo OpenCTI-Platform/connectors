@@ -64,7 +64,6 @@ class UrlscanClient:
         :return: None
         """
         try:
-
             response = self.session.get(self.constants.USER_QUOTA)
             response.raise_for_status()
 
@@ -94,7 +93,6 @@ class UrlscanClient:
                 pass
 
         except requests.exceptions.HTTPError as http_err:
-
             error_response = http_err.response
             error_content = json.loads(error_response.content)
             error_msg = "[API-ERROR] Error while fetching user quota: "
@@ -135,7 +133,6 @@ class UrlscanClient:
                     response.status_code == 404
                     and json_response["message"] == "Scan is not finished yet"
                 ):
-
                     for i in range(max_retries):
                         # error 404 -> https://urlscan.io/docs/api/ between 10s - 30s
                         time.sleep(retry_delay)

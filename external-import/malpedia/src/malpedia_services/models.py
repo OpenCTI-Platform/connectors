@@ -8,7 +8,6 @@ from pydantic.v1 import BaseModel
 
 
 class MalpediaModels:
-
     @staticmethod
     def create_family_model():
         class Family(BaseModel):

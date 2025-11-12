@@ -7,7 +7,6 @@ NUM_INDICATORS_PER_PAGE = 16
 
 
 class IndicatorHandler:
-
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
@@ -66,7 +65,6 @@ class IndicatorHandler:
         all_indicators = []
 
         while True:
-
             # Retrieve Indicator Bundles at the current offset. Note that the API responds with most to least recent.
             params = {"offset": num_indicators, "date[from]": last_run_timestamp}
             response = self._request_data(indicators_url, params)

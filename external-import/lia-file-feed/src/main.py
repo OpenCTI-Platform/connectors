@@ -57,7 +57,6 @@ class LIAFileFeed:
         )
 
     def get_feed_data(self):
-
         headers = {"Authorization": self.api_key}
         response = requests.get(self.api_url, headers=headers)
 
@@ -74,7 +73,6 @@ class LIAFileFeed:
             return None
 
     def process_data(self, data):
-
         stix_objects = []
         relationships = []
 
@@ -218,9 +216,7 @@ class LIAFileFeed:
             )
 
     def run_collection(self):
-
         try:
-
             # Get the current timestamp and check
             timestamp = int(time.time())
             current_state = self.helper.get_state()

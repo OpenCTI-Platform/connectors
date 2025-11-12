@@ -23,7 +23,6 @@ class ServiceNowConfig:
             ConfigLoader: A model containing the validated configuration.
         """
         try:
-
             load_settings = ConfigLoader()
             return load_settings
 

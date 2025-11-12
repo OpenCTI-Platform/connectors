@@ -21,7 +21,6 @@ class CustomConnector(SafeBrowsingConnector):
         super().__init__()
 
     def _process_message(self, data):
-
         self.helper.log_info("Not Implemented")
         raise NotImplementedError("Method not implemented")
 

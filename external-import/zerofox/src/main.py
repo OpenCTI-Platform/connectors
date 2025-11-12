@@ -107,7 +107,6 @@ class ZeroFoxConnector:
         collector_name: str,
         collector: Collector,
     ):
-
         self.helper.log_debug(f"Collector name: {collector_name}")
         self.helper.log_debug(f"Last run: {last_run}")
         self.helper.log_debug(f"Current time: {current_time}")

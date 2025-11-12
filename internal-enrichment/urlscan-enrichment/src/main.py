@@ -183,7 +183,6 @@ class UrlscanConnector:
 
             if len(reorganized_data) > 0:
                 for data_stat in reorganized_data:
-
                     # Generate obs_ipv4 or obs_ipv6
                     stix_obs_ip = self.converter.generate_stix_ip(data_stat)
                     for obs_ip in stix_obs_ip:
@@ -196,7 +195,6 @@ class UrlscanConnector:
                     self.stix_objects.extend(stix_obs_asn)
 
                     if data_stat["domains"][0] in stix_entity["value"]:
-
                         if self.config.create_indicator:
                             stix_indicator = (
                                 self.converter.upsert_stix_indicator_with_relationship(
@@ -235,7 +233,6 @@ class UrlscanConnector:
                             self.stix_objects.append(observable_to_ip)
 
                     else:
-
                         # Generate obs_hostname
                         stix_obs_hostname = (
                             self.converter.generate_stix_hostname_with_relationship(
@@ -266,7 +263,6 @@ class UrlscanConnector:
         return stix2_bundle
 
     def _process_message(self, data: Dict) -> str:
-
         # OpenCTI entity information retrieval
         stix_entity = data["stix_entity"]
         opencti_entity = data["enrichment_entity"]
@@ -277,7 +273,6 @@ class UrlscanConnector:
         entity_type = stix_entity["type"].lower()
 
         if entity_type in scopes:
-
             is_valid_max_tlp = self.extract_and_check_markings(opencti_entity)
             if not is_valid_max_tlp:
                 raise ValueError(
@@ -302,7 +297,6 @@ class UrlscanConnector:
                     or stix_entity_type == "domain-name"
                     or stix_entity_type == "hostname"
                 ):
-
                     # Check Urlscan User Quota API Response
                     self.client.check_urlscan_user_quota(self.config.visibility)
 
@@ -334,7 +328,6 @@ class UrlscanConnector:
                     )
 
                 elif entity_type in self.constants.ENTITY_TYPE_MAP_SEARCH_API:
-
                     json_search = {}
                     # Generate a stix bundle
                     stix_bundle = self._generate_stix_bundle(
@@ -356,7 +349,6 @@ class UrlscanConnector:
             except Exception as e:
                 raise ValueError(str(e))
         else:
-
             return self.helper.connector_logger.info(
                 "[INFO] The trigger does not concern the initial scope found in the config connector, "
                 "maybe choose a more specific filter in the playbook",

@@ -275,7 +275,6 @@ class Fortinet:
         return identity
 
     def create_stix_bundle(self):
-
         identity = self.create_fortinet_org()
 
         stix_objects = [identity, self.fortinet_marking]
@@ -300,7 +299,6 @@ class Fortinet:
         return bundle
 
     def opencti_bundle(self, work_id):
-
         # Check that there is the file from the previous day to compare and identify the new indicators to ingest
         if os.path.isfile("fortinet_ioc_old.json"):
             self.get_fortinet_data_request()

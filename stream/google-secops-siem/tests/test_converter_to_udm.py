@@ -8,7 +8,6 @@ from .common_fixtures import (  # noqa: F401 pylint:disable=unused-import
 
 @pytest.mark.usefixtures("setup_config", "event_data_samples")
 class TestCTIConverterChronicle(object):
-
     fake_opencti_ioc_id = "52dfd627-a875-4c05-bb21-12302ed66220"
     fake_opencti_ioc_no_id = None
 

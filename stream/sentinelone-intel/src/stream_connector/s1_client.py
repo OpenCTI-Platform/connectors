@@ -16,7 +16,6 @@ REQUEST_TIMEOUT = (10, 30)
 
 
 class SentinelOneClient:
-
     def __init__(self, logger: logging.Logger, config: ConfigConnector):
         self.logger = logger
         self.config = config

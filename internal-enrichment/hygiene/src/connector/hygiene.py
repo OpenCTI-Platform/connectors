@@ -16,7 +16,6 @@ from src.connector.models import ConfigLoader
 
 class HygieneConnector:
     def __init__(self, config: ConfigLoader, helper: OpenCTIConnectorHelper):
-
         self.config = config
         self.helper = helper
 

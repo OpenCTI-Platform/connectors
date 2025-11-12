@@ -106,7 +106,6 @@ class Infoblox:
             ioc_types = ["ip", "url", "host"]
             infoblox_result = []
             for ioc_type in ioc_types:
-
                 url = f"{self.infoblox_url}?type={ioc_type}&period={self.infoblox_interval}h&profile=IID&dga=false&up=true&rlimit={self.infoblox_ioc_limit}"
                 response = requests.get(
                     url, headers=headers, verify=True, timeout=(80000, 80000)

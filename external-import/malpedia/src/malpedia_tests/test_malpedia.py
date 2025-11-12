@@ -7,7 +7,6 @@ from malpedia_services.client import MalpediaClient
 
 @pytest.mark.usefixtures("setup_config")
 class TestMalpediaClient:
-
     @pytest.fixture(scope="class")
     def mock_helper(self):
         return Mock()
@@ -140,6 +139,5 @@ class TestMalpediaClient:
 
     def test_current_version(self, malpedia_client):
         with patch.object(malpedia_client, "query", return_value={"version": 10}):
-
             result = malpedia_client.current_version()
             assert result == 10

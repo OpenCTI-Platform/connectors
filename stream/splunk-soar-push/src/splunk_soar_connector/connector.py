@@ -507,9 +507,12 @@ class SplunkSoarConnector:
             try:
                 # Get item from queue with timeout to check stop signal
                 try:
-                    event_type, entity_data, entity_id, is_incident = (
-                        self.work_queue.get(timeout=1)
-                    )
+                    (
+                        event_type,
+                        entity_data,
+                        entity_id,
+                        is_incident,
+                    ) = self.work_queue.get(timeout=1)
                 except queue.Empty:
                     continue
 

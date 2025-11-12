@@ -261,10 +261,11 @@ class EntityProcessor:
                 timestamp = convert_timestamp_to_iso_format(entity_result.timestamp)
 
                 # Create STIX objects
-                stix_objects, object_refs = (
-                    self.object_creator.create_objects_for_entity(
-                        entity_result, timestamp
-                    )
+                (
+                    stix_objects,
+                    object_refs,
+                ) = self.object_creator.create_objects_for_entity(
+                    entity_result, timestamp
                 )
 
                 batch_objects.extend(stix_objects)

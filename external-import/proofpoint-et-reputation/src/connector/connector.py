@@ -22,7 +22,6 @@ class ReputationEntity(Enum):
 
 
 class ProofpointEtReputationConnector:
-
     def __init__(self):
         """
         Initialize the connector with the required configurations.
@@ -130,7 +129,6 @@ class ProofpointEtReputationConnector:
             None
         """
         with ThreadPoolExecutor(max_workers=2) as executor:
-
             tasks = {
                 executor.submit(
                     self.client.proofpoint_get_ips_reputation, ReputationEntity.IP.value

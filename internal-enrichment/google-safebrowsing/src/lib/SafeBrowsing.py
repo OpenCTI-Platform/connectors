@@ -30,7 +30,6 @@ class SafeBrowsingConnector:
             self.update_existing_data = "false"
 
     def google_safe_browsing(self, observable):
-
         self.helper.log_info(
             f"Checking domain {observable['value']} against Google Safe Browsing"
         )
@@ -69,7 +68,6 @@ class SafeBrowsingConnector:
         )
         if response.status_code == 200:
             if response.json():
-
                 if observable.get("x_opencti_description") is None:
                     existing_description = ""
                 else:
@@ -83,7 +81,6 @@ class SafeBrowsingConnector:
 
                 observable_description = f"Domain flagged by Safe Browsing \n + Threat Type: {first_output.get('threatType')} \n + Platform Type: {first_output.get('platformType')} \n + Threat Entry Type: {first_output.get('threatEntryType')} \n \n"
                 if observable["entity_type"] == "Domain-Name":
-
                     new_domain_object = DomainName(
                         id=observable["standard_id"],
                         value=observable["value"],

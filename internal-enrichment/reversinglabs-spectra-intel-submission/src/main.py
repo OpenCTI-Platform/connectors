@@ -33,7 +33,6 @@ SLEEP_INTERVAL = 250
 
 
 class ReversingLabsSpectraIntelConnector(InternalEnrichmentConnector):
-
     def __init__(self):
         super().__init__()
         self._get_config_variables()
@@ -45,7 +44,6 @@ class ReversingLabsSpectraIntelConnector(InternalEnrichmentConnector):
         )
 
     def _get_config_variables(self):
-
         self.helper.log_info(
             f"{self.helper.connect_name}: Reading configuration env variables!"
         )
@@ -473,7 +471,6 @@ class ReversingLabsSpectraIntelConnector(InternalEnrichmentConnector):
         return rl_response
 
     def _upload_file_to_spectra_sandbox(self, file_uri, is_archive, sample_name):
-
         try:
             file_content = self.helper.api.fetch_opencti_file(file_uri, binary=True)
 
@@ -486,7 +483,6 @@ class ReversingLabsSpectraIntelConnector(InternalEnrichmentConnector):
 
             # Submit File for analysis
             if is_archive == False:
-
                 file = open(sample_name, "wb")
                 file.write(file_content)
                 file.close()

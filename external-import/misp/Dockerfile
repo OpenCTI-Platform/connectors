@@ -1,17 +1,19 @@
-FROM python:3.12-alpine
+FROM python:3.12-slim
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
-# Copy the connector
+# Instala dependencias del sistema
+RUN apt-get update && apt-get install -y \
+    git build-essential libmagic-dev libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copia el código fuente del conector
 COPY src /opt/opencti-connector-misp
 
-# Install Python modules
-# hadolint ignore=DL3003
-RUN apk --no-cache add git build-base libmagic libffi-dev && \
-    cd /opt/opencti-connector-misp && \
-    pip3 install --no-cache-dir -r requirements.txt && \
-    apk del git build-base
+# Instala dependencias de Python
+WORKDIR /opt/opencti-connector-misp
+RUN pip install --no-cache-dir --trusted-host pypi.org --trusted-host files.pythonhosted.org -r requirements.txt
 
-# Expose and entrypoint
+# Copia y configura el entrypoint
 COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]

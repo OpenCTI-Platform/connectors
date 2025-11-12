@@ -11,7 +11,6 @@ class DateTimeFormat(Enum):
 
 
 class Utils:
-
     @staticmethod
     def get_now(now_format: DateTimeFormat = None) -> datetime | str | int | dict:
         """Utility method: Get the current date and time in various formats.

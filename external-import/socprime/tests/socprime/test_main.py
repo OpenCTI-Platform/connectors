@@ -11,7 +11,6 @@ def test_main(
     mocked_mitre_attack_requests: Mock,
     mocked_tdm_api_client_requests: Mock,
 ) -> None:
-
     with pytest.raises(SystemExit):
         # Have to set the environment variable to simulate the run and terminate mode
         # and avoid the infinite loop in the connector

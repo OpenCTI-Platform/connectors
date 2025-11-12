@@ -7,7 +7,6 @@ import requests
 
 
 class UrlscanUtils:
-
     @staticmethod
     def prepare_file_png(data: dict) -> dict | None:
         """
@@ -28,7 +27,6 @@ class UrlscanUtils:
 
         response = requests.get(data_screenshot)
         if response.status_code == 200:
-
             with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp_file:
                 temp_file.write(response.content)
                 temp_file_path = temp_file.name

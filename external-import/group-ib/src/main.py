@@ -150,26 +150,29 @@ class CustomConnector(ExternalImportConnector):
         stix_threat_actor_location_list = None
 
         if flag_instrusion_set_instead_of_threat_actor:
-            stix_intrusion_set, stix_intrusion_set_location_list = (
-                report_adapter.generate_stix_intrusion_set(
-                    obj=json_threat_actor_obj,
-                    related_objects=[
-                        stix_attack_pattern_list,
-                        stix_malware_list,
-                        stix_vulnerability_list,
-                    ],
-                    json_date_obj=json_date_obj,
-                )
+            (
+                stix_intrusion_set,
+                stix_intrusion_set_location_list,
+            ) = report_adapter.generate_stix_intrusion_set(
+                obj=json_threat_actor_obj,
+                related_objects=[
+                    stix_attack_pattern_list,
+                    stix_malware_list,
+                    stix_vulnerability_list,
+                ],
+                json_date_obj=json_date_obj,
             )
-            stix_domain_list, stix_url_list, stix_ip_list = (
-                report_adapter.generate_stix_network(
-                    obj=json_network_obj,
-                    related_objects=[stix_intrusion_set],
-                    json_date_obj=json_date_obj,
-                    domain_is_ioc=domain_is_ioc,
-                    url_is_ioc=url_is_ioc,
-                    ip_is_ioc=ip_is_ioc,
-                )
+            (
+                stix_domain_list,
+                stix_url_list,
+                stix_ip_list,
+            ) = report_adapter.generate_stix_network(
+                obj=json_network_obj,
+                related_objects=[stix_intrusion_set],
+                json_date_obj=json_date_obj,
+                domain_is_ioc=domain_is_ioc,
+                url_is_ioc=url_is_ioc,
+                ip_is_ioc=ip_is_ioc,
             )
             stix_file_list = report_adapter.generate_stix_file(
                 obj=json_file_obj,
@@ -178,26 +181,29 @@ class CustomConnector(ExternalImportConnector):
                 file_is_ioc=file_is_ioc,
             )
         else:
-            stix_threat_actor, stix_threat_actor_location_list = (
-                report_adapter.generate_stix_threat_actor(
-                    obj=json_threat_actor_obj,
-                    related_objects=[
-                        stix_attack_pattern_list,
-                        stix_malware_list,
-                        stix_vulnerability_list,
-                    ],
-                    json_date_obj=json_date_obj,
-                )
+            (
+                stix_threat_actor,
+                stix_threat_actor_location_list,
+            ) = report_adapter.generate_stix_threat_actor(
+                obj=json_threat_actor_obj,
+                related_objects=[
+                    stix_attack_pattern_list,
+                    stix_malware_list,
+                    stix_vulnerability_list,
+                ],
+                json_date_obj=json_date_obj,
             )
-            stix_domain_list, stix_url_list, stix_ip_list = (
-                report_adapter.generate_stix_network(
-                    obj=json_network_obj,
-                    related_objects=[stix_threat_actor],
-                    json_date_obj=json_date_obj,
-                    domain_is_ioc=domain_is_ioc,
-                    url_is_ioc=url_is_ioc,
-                    ip_is_ioc=ip_is_ioc,
-                )
+            (
+                stix_domain_list,
+                stix_url_list,
+                stix_ip_list,
+            ) = report_adapter.generate_stix_network(
+                obj=json_network_obj,
+                related_objects=[stix_threat_actor],
+                json_date_obj=json_date_obj,
+                domain_is_ioc=domain_is_ioc,
+                url_is_ioc=url_is_ioc,
+                ip_is_ioc=ip_is_ioc,
             )
             stix_file_list = report_adapter.generate_stix_file(
                 obj=json_file_obj,

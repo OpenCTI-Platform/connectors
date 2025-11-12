@@ -24,7 +24,6 @@ from .utils import Timestamp
 
 class Mandiant:
     def __init__(self, config: ConfigLoader, helper: OpenCTIConnectorHelper):
-
         self.config = config
         self.helper = helper
 
@@ -172,7 +171,6 @@ class Mandiant:
         )
 
         if self.config.mandiant.weekly_vulnerability_exploitation_report:
-
             self.mandiant_report_types["Weekly Vulnerability Exploitation Report"] = (
                 self.config.mandiant.weekly_vulnerability_exploitation_report_type
             )
@@ -765,7 +763,6 @@ class Mandiant:
             bundles_objects = []
 
             if "reports" in collection:
-
                 new_batch_reports = []
                 batch_report_size = BATCH_REPORT_SIZE
 

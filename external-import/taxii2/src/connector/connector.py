@@ -12,7 +12,6 @@ from .process_objects import ProcessObjects
 
 
 class Connector:
-
     def __init__(self):
         """
         Initialize the Connector with necessary configurations

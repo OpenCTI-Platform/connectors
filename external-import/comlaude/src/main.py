@@ -436,7 +436,6 @@ class ComlaudeConnector:
 
 
 if __name__ == "__main__":
-
     try:
         connector = ComlaudeConnector()
         connector.run()

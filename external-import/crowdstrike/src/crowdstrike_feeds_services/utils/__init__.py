@@ -920,7 +920,6 @@ def create_regions_and_countries_from_entities(
 def create_file_from_download(
     download, report_name: str, no_file_trigger_import: bool
 ) -> Mapping[str, Union[str, bool]]:
-
     converted_report_pdf = BytesIO(download)
 
     filename = report_name.lower().replace(" ", "-") + ".pdf"
