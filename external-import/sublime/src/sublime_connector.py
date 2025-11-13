@@ -6,14 +6,19 @@ Simplified implementation following OpenCTI connector patterns
 import json
 import os
 import time
-import uuid
 from datetime import datetime, timedelta, timezone
 
 import isodate
 import requests
 import stix2
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import (
+    Identity,
+    Incident,
+    Indicator,
+    OpenCTIConnectorHelper,
+    get_config_variable,
+)
 
 
 class SublimeConnector:
@@ -227,7 +232,7 @@ class SublimeConnector:
 
         # Create Sublime Identity for STIX objects
         self.sublime_identity = stix2.Identity(
-            id=self._make_deterministic_id("identity", "sublime-security-organization"),
+            id=Identity.generate_id(name="Sublime", identity_class="organization"),
             name="Sublime",
             identity_class="organization",
             description="Email Security Platform",
@@ -253,17 +258,6 @@ class SublimeConnector:
                 self.api_base_url,
             )
         )
-
-    def _make_deterministic_id(self, stix_type, unique_value):
-        """Generate deterministic UUIDs for STIX values"""
-        safe_stix_type = str(stix_type or "unknown")
-        safe_unique_value = str(unique_value or "unknown")
-
-        namespace = uuid.uuid5(uuid.NAMESPACE_DNS, "sublime-security-opencti")
-        deterministic_uuid = uuid.uuid5(
-            namespace, "{}:{}".format(safe_stix_type, safe_unique_value)
-        )
-        return "{}--{}".format(safe_stix_type, deterministic_uuid)
 
     def _get_last_timestamp(self):
         """
@@ -703,7 +697,6 @@ class SublimeConnector:
         if sender_email:
             sender_email = self._sanitize_email(sender_email)
             sender = stix2.EmailAddress(
-                id=self._make_deterministic_id("email-addr", sender_email),
                 value=sender_email,
             )
         recipients = self._extract_recipients(MDM)
@@ -736,9 +729,6 @@ class SublimeConnector:
 
         group_id = message_group.get("id", "unknown")
         email_data = {
-            "id": self._make_deterministic_id(
-                "email-message", "{}:primary".format(group_id)
-            ),
             "subject": subject,
             "is_multipart": False,
             "body": body_text or "Email content processed by Sublime",
@@ -776,7 +766,6 @@ class SublimeConnector:
             if preview.get("sender_email_address"):
                 sender_email = self._sanitize_email(preview["sender_email_address"])
                 sender = stix2.EmailAddress(
-                    id=self._make_deterministic_id("email-addr", sender_email),
                     value=sender_email,
                 )
                 all_objects.append(sender)
@@ -786,7 +775,6 @@ class SublimeConnector:
                 if recipient_addr:
                     recipient_addr = self._sanitize_email(recipient_addr)
                     recipient = stix2.EmailAddress(
-                        id=self._make_deterministic_id("email-addr", recipient_addr),
                         value=recipient_addr,
                     )
                     recipients.append(recipient)
@@ -797,16 +785,12 @@ class SublimeConnector:
             for hash_value in attachment_hashes:
                 if hash_value:
                     file_obj = stix2.File(
-                        id=self._make_deterministic_id("file", hash_value),
                         hashes={"SHA-256": hash_value},
                     )
                     all_objects.append(file_obj)
 
             # Simplified EmailMessage - minimal fields only
             email_data = {
-                "id": self._make_deterministic_id(
-                    "email-message", "{}:preview:{}".format(group_id, i)
-                ),
                 "subject": str(preview.get("subject") or "Unknown Subject"),
                 "is_multipart": False,
                 "body": "Email preview processed by Sublime",
@@ -909,11 +893,15 @@ class SublimeConnector:
 
         incident_description = self._create_description(message_group)
 
+        # Get created timestamp from message group metadata
+        created_timestamp = message_group.get("_meta", {}).get("created_at")
+
         # Create Event Incident with deterministic ID
         incident = stix2.Incident(
-            id=self._make_deterministic_id("incident", group_id),
+            id=Incident.generate_id(incident_name, created_timestamp),
             name=incident_name,
             description=incident_description,
+            created=created_timestamp,
             created_by_ref=self.sublime_identity.id,
             object_marking_refs=[stix2.TLP_AMBER],
             confidence=self.confidence_level,
@@ -1238,7 +1226,7 @@ class SublimeConnector:
 
         # Create indicator with proper metadata
         indicator = stix2.Indicator(
-            id=self._make_deterministic_id("indicator", pattern),
+            id=Indicator.generate_id(pattern),
             pattern=pattern,
             pattern_type="stix",
             labels=["malicious-activity"],
@@ -1356,9 +1344,7 @@ class SublimeConnector:
             if email:
                 email = self._sanitize_email(email)
                 recipients.append(
-                    stix2.EmailAddress(
-                        id=self._make_deterministic_id("email-addr", email), value=email
-                    )
+                    stix2.EmailAddress(value=email)
                 )
         return recipients
 
@@ -1381,7 +1367,7 @@ class SublimeConnector:
                     scheme = self._lookup_MDM_value(link, "href_url.scheme") or "http"
                     url = "{}://{}".format(scheme, url)
                 urls.append(
-                    stix2.URL(id=self._make_deterministic_id("url", url), value=url)
+                    stix2.URL(value=url)
                 )
         return urls
 
@@ -1405,7 +1391,6 @@ class SublimeConnector:
                 seen.add(domain.lower())
                 domains.append(
                     stix2.DomainName(
-                        id=self._make_deterministic_id("domain-name", domain.lower()),
                         value=domain,
                     )
                 )
@@ -1429,9 +1414,8 @@ class SublimeConnector:
             ip = ip_info.get("ip")
             if ip:
                 ip_class = stix2.IPv6Address if ":" in ip else stix2.IPv4Address
-                ip_type = "ipv6-addr" if ":" in ip else "ipv4-addr"
                 ips.append(
-                    ip_class(id=self._make_deterministic_id(ip_type, ip), value=ip)
+                    ip_class(value=ip)
                 )
         return ips
 
