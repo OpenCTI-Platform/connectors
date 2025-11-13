@@ -1711,48 +1711,18 @@ class SublimeConnector:
 
     def run(self):
         """
-        Main connector loop.
+        Run the main process using OpenCTI scheduler.
+
+        Automatically handles:
+        - Interval scheduling (PT3M = every 3 minutes)
+        - Queue threshold checking (prevents run if queue > 500MB)
+        - Graceful shutdown on KeyboardInterrupt
+        - Run-and-terminate mode
         """
-        while True:
-            try:
-                # Check if it's time to run
-                timestamp = int(time.time())
-                current_state = self.helper.get_state()
-
-                if current_state and "last_run" in current_state:
-                    last_run = current_state["last_run"]
-                    time_diff = timestamp - last_run
-
-                    if time_diff < self.poll_interval:
-                        next_run = self.poll_interval - time_diff
-                        self.helper.log_info(
-                            "[*] Next run in {} seconds".format(next_run)
-                        )
-                        time.sleep(next_run)
-                        continue
-
-                # Process messages using batch processing
-                self._process_messages()
-
-                # Update last run timestamp
-                current_state = self.helper.get_state() or {}
-                current_state["last_run"] = timestamp
-                self.helper.set_state(current_state)
-
-            except (KeyboardInterrupt, SystemExit):
-                self.helper.log_info("[*] Connector stopping...")
-                break
-            except Exception as e:
-                self.helper.log_error("[!] Connector error: {}".format(e))
-
-                if self.helper.connect_run_and_terminate:
-                    break
-
-                # Error occurred. Wait 10 mins before retrying
-                time.sleep(10 * 60)
-
-        self.helper.log_info("[*] Connector stopped")
-
+        self.helper.schedule_iso(
+            message_callback=self._process_messages,
+            duration_period=self.helper.connect_duration_period,
+        )
 
 if __name__ == "__main__":
     connector = SublimeConnector()
