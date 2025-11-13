@@ -1,6 +1,6 @@
 """API Request Model."""
 
-from typing import Any, Dict, Optional, Type
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -12,10 +12,10 @@ class ApiRequestModel(BaseRequestModel):
 
     url: str
     method: str = "GET"
-    headers: Optional[Dict[str, Any]] = None
-    params: Optional[Dict[str, Any]] = None
-    data: Optional[Dict[str, Any]] = None
-    json_payload: Optional[Dict[str, Any]] = None
-    response_key: Optional[str] = None
-    model: Optional[Type[BaseModel]] = None
-    timeout: Optional[int] = None
+    headers: dict[str, Any] | None = None
+    params: dict[str, Any] | None = None
+    data: dict[str, Any] | None = None
+    json_payload: dict[str, Any] | None = None
+    response_key: str | None = None
+    model: type[BaseModel] | None = None
+    timeout: int | None = None

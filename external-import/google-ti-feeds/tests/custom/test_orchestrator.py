@@ -4,10 +4,11 @@ import json
 import logging
 from datetime import timedelta
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 from pydantic import HttpUrl
+from pydantic.types import SecretStr
 
 # =====================
 # Test Fakes
@@ -19,9 +20,9 @@ class FakeWorkManager:
 
     def __init__(self) -> None:
         """Initialize the FakeWorkManager."""
-        self.updated_state: Dict[str, Any] = {}
+        self.updated_state: dict[str, Any] = {}
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """Get the current state of the FakeWorkManager."""
         return {}
 
@@ -58,7 +59,7 @@ class DummyConfig:
 
     def __init__(
         self,
-        api_key: str,
+        api_key: SecretStr,
         report_import_start_date: timedelta,
         api_url: HttpUrl,
         import_reports: bool,
@@ -81,9 +82,9 @@ class DummyConfig:
         self.import_campaigns = True
         self.report_types = report_types
         self.report_origins = report_origins
-        self.threat_actor_origins = ["All"]
-        self.malware_family_origins = ["All"]
-        self.vulnerability_origins = ["All"]
+        self.threat_actor_origins = "All"
+        self.malware_family_origins = "All"
+        self.vulnerability_origins = "All"
         self.tlp_level = tlp_level
         self.vulnerability_get_related_softwares = True
 
@@ -176,7 +177,7 @@ def patch_perform_single_attempt(monkeypatch: Any) -> Any:
 def gti_config() -> DummyConfig:
     """Fixture for GTI configuration."""
     return DummyConfig(
-        api_key="fake-key",
+        api_key=SecretStr("fake-key"),
         report_import_start_date=timedelta(days=1),
         api_url=HttpUrl("https://fake-gti.api"),
         import_reports=True,
@@ -215,20 +216,20 @@ def expected_report_log_messages() -> list[str]:
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 33, 'entity_type': 'malware families'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 53, 'entity_type': 'threat actors'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 50, 'entity_type': 'vulnerabilities'}",
-        "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 33, 'entity_type': 'Campaigns'}",
+        "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 31, 'entity_type': 'Campaigns'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 3, 'entity_type': 'domains'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 3, 'entity_type': 'files'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 3, 'entity_type': 'URLs'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 3, 'entity_type': 'IP addresses'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 1, 'entity_type': 'attack techniques'}",
-        "Converted to STIX entities - {'prefix': '[OrchestratorReport]', 'current': 1, 'total': 1, 'entities_count': 197, 'entities_summary': 'identity: 48, report: 1, malware: 1, relationship: 87, location: 23, intrusion-set: 1, vulnerability: 1, software: 24, note: 1, campaign: 1, domain-name: 1, indicator: 4, file: 1, url: 1, ipv4-addr: 1, attack-pattern: 1'}",
-        "Adding items to batch processor - {'prefix': '[GenericBatchProcessor]', 'count': 197, 'display_name': 'STIX objects'}",
-        "Successfully added items - {'prefix': '[GenericBatchProcessor]', 'added_count': 197, 'total_count': 197, 'display_name': 'STIX objects'}",
-        "Flushing remaining items - {'prefix': '[GenericBatchProcessor]', 'count': 199, 'display_name': 'STIX objects'}",
-        "Processing batch - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'batch_size': 199, 'display_name': 'STIX objects', 'total_processed': 199}",
+        "Converted to STIX entities - {'prefix': '[OrchestratorReport]', 'current': 1, 'total': 1, 'entities_count': 195, 'entities_summary': 'identity: 48, report: 1, malware: 1, relationship: 85, location: 23, intrusion-set: 1, vulnerability: 1, software: 24, note: 1, campaign: 1, domain-name: 1, indicator: 4, file: 1, url: 1, ipv4-addr: 1, attack-pattern: 1'}",
+        "Adding items to batch processor - {'prefix': '[GenericBatchProcessor]', 'count': 195, 'display_name': 'STIX objects'}",
+        "Successfully added items - {'prefix': '[GenericBatchProcessor]', 'added_count': 195, 'total_count': 195, 'display_name': 'STIX objects'}",
+        "Flushing remaining items - {'prefix': '[GenericBatchProcessor]', 'count': 197, 'display_name': 'STIX objects'}",
+        "Processing batch - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'batch_size': 197, 'display_name': 'STIX objects', 'total_processed': 197}",
         "Sent batch to OpenCTI - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1}",
-        "Batch completed successfully - {'prefix': '[GenericBatchProcessor]', 'work_id': None, 'total_count': 199, 'type_summary': 'identity: 49, marking-definition: 1, report: 1, malware: 1, relationship: 87, location: 23, intrusion-set: 1, vulnerability: 1, software: 24, note: 1, campaign: 1, domain-name: 1, indicator: 4, file: 1, url: 1, ipv4-addr: 1, attack-pattern: 1'}",
-        "Successfully processed batch #1. Total STIX objects sent: 199 - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'total_items_sent': 199}",
+        "Batch completed successfully - {'prefix': '[GenericBatchProcessor]', 'work_id': None, 'total_count': 197, 'type_summary': 'identity: 49, marking-definition: 1, report: 1, malware: 1, relationship: 85, location: 23, intrusion-set: 1, vulnerability: 1, software: 24, note: 1, campaign: 1, domain-name: 1, indicator: 4, file: 1, url: 1, ipv4-addr: 1, attack-pattern: 1'}",
+        "Successfully processed batch #1. Total STIX objects sent: 197 - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'total_items_sent': 197}",
         "State update: Setting next_cursor_date - {'prefix': '[GenericBatchProcessor]', 'latest_date': '2024-07-11T20:05:01+00:00'}",
     ]
 
@@ -241,26 +242,23 @@ def expected_threat_actor_log_messages() -> list[str]:
         "Fetched 1 malware_families relationships from API - {'prefix': '[BaseFetcher]'}",
         "Fetched 1 attack_techniques relationships from API - {'prefix': '[BaseFetcher]'}",
         "Fetched 1 vulnerabilities relationships from API - {'prefix': '[BaseFetcher]'}",
-        "Fetched 1 campaigns relationships from API - {'prefix': '[BaseFetcher]'}",
-        "Found relationships - {'prefix': '[OrchestratorThreatActor]', 'current': 1, 'total': 1, 'relationships': 'malware_families: 1, attack_techniques: 1, vulnerabilities: 1, campaigns: 1'}",
+        "Found relationships - {'prefix': '[OrchestratorThreatActor]', 'current': 1, 'total': 1, 'relationships': 'malware_families: 1, attack_techniques: 1, vulnerabilities: 1'}",
         "Using ID-only approach for attack techniques (quota optimization) - {'prefix': '[OrchestratorThreatActor]', 'attack_technique_count': 1}",
-        "Fetching details for subentities - {'prefix': '[FetcherShared]', 'total_to_fetch': 3}",
+        "Fetching details for subentities - {'prefix': '[FetcherShared]', 'total_to_fetch': 2}",
         "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'malware families'}",
         "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'vulnerabilities'}",
-        "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'campaigns'}",
-        "Fetched details - {'prefix': '[FetcherShared]', 'summary': 'malware_families: 1, vulnerabilities: 1, campaigns: 1'}",
+        "Fetched details - {'prefix': '[FetcherShared]', 'summary': 'malware_families: 1, vulnerabilities: 1'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 34, 'entity_type': 'malware families'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 51, 'entity_type': 'vulnerabilities'}",
-        "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 34, 'entity_type': 'Campaigns'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 2, 'entity_type': 'attack techniques'}",
-        "Converted to STIX entities - {'prefix': '[OrchestratorThreatActor]', 'current': 1, 'total': 1, 'entities_count': 174, 'entities_summary': 'location: 23, identity: 34, intrusion-set: 1, relationship: 87, malware: 1, vulnerability: 1, software: 24, note: 1, campaign: 1, attack-pattern: 1'}",
-        "Adding items to batch processor - {'prefix': '[GenericBatchProcessor]', 'count': 174, 'display_name': 'STIX objects'}",
-        "Successfully added items - {'prefix': '[GenericBatchProcessor]', 'added_count': 174, 'total_count': 174, 'display_name': 'STIX objects'}",
-        "Flushing remaining items - {'prefix': '[GenericBatchProcessor]', 'count': 176, 'display_name': 'STIX objects'}",
-        "Processing batch - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'batch_size': 176, 'display_name': 'STIX objects', 'total_processed': 176}",
+        "Converted to STIX entities - {'prefix': '[OrchestratorThreatActor]', 'current': 1, 'total': 1, 'entities_count': 140, 'entities_summary': 'location: 17, identity: 25, intrusion-set: 1, relationship: 69, malware: 1, vulnerability: 1, software: 24, note: 1, attack-pattern: 1'}",
+        "Adding items to batch processor - {'prefix': '[GenericBatchProcessor]', 'count': 140, 'display_name': 'STIX objects'}",
+        "Successfully added items - {'prefix': '[GenericBatchProcessor]', 'added_count': 140, 'total_count': 140, 'display_name': 'STIX objects'}",
+        "Flushing remaining items - {'prefix': '[GenericBatchProcessor]', 'count': 142, 'display_name': 'STIX objects'}",
+        "Processing batch - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'batch_size': 142, 'display_name': 'STIX objects', 'total_processed': 142}",
         "Sent batch to OpenCTI - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1}",
-        "Batch completed successfully - {'prefix': '[GenericBatchProcessor]', 'work_id': None, 'total_count': 176, 'type_summary': 'identity: 35, marking-definition: 1, location: 23, intrusion-set: 1, relationship: 87, malware: 1, vulnerability: 1, software: 24, note: 1, campaign: 1, attack-pattern: 1'}",
-        "Successfully processed batch #1. Total STIX objects sent: 176 - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'total_items_sent': 176}",
+        "Batch completed successfully - {'prefix': '[GenericBatchProcessor]', 'work_id': None, 'total_count': 142, 'type_summary': 'identity: 26, marking-definition: 1, location: 17, intrusion-set: 1, relationship: 69, malware: 1, vulnerability: 1, software: 24, note: 1, attack-pattern: 1'}",
+        "Successfully processed batch #1. Total STIX objects sent: 142 - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'total_items_sent': 142}",
         "State update: Setting next_cursor_date - {'prefix': '[GenericBatchProcessor]', 'latest_date': '2025-06-03T03:03:32+00:00'}",
     ]
 
@@ -273,26 +271,23 @@ def expected_malware_family_log_messages() -> list[str]:
         "Fetched 1 threat_actors relationships from API - {'prefix': '[BaseFetcher]'}",
         "Fetched 1 attack_techniques relationships from API - {'prefix': '[BaseFetcher]'}",
         "Fetched 1 vulnerabilities relationships from API - {'prefix': '[BaseFetcher]'}",
-        "Fetched 1 campaigns relationships from API - {'prefix': '[BaseFetcher]'}",
-        "Found relationships - {'prefix': '[OrchestratorMalware]', 'current': 1, 'total': 1, 'relationships': 'threat_actors: 1, attack_techniques: 1, vulnerabilities: 1, campaigns: 1'}",
+        "Found relationships - {'prefix': '[OrchestratorMalware]', 'current': 1, 'total': 1, 'relationships': 'threat_actors: 1, attack_techniques: 1, vulnerabilities: 1'}",
         "Using ID-only approach for attack techniques (quota optimization) - {'prefix': '[OrchestratorMalware]', 'attack_technique_count': 1}",
-        "Fetching details for subentities - {'prefix': '[FetcherShared]', 'total_to_fetch': 3}",
+        "Fetching details for subentities - {'prefix': '[FetcherShared]', 'total_to_fetch': 2}",
         "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'threat actors'}",
         "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'vulnerabilities'}",
-        "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'campaigns'}",
-        "Fetched details - {'prefix': '[FetcherShared]', 'summary': 'threat_actors: 1, vulnerabilities: 1, campaigns: 1'}",
+        "Fetched details - {'prefix': '[FetcherShared]', 'summary': 'threat_actors: 1, vulnerabilities: 1'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 54, 'entity_type': 'threat actors'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 51, 'entity_type': 'vulnerabilities'}",
-        "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 34, 'entity_type': 'Campaigns'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 2, 'entity_type': 'attack techniques'}",
-        "Converted to STIX entities - {'prefix': '[OrchestratorMalware]', 'current': 1, 'total': 1, 'entities_count': 174, 'entities_summary': 'identity: 34, malware: 1, relationship: 87, location: 23, intrusion-set: 1, vulnerability: 1, software: 24, note: 1, campaign: 1, attack-pattern: 1'}",
-        "Adding items to batch processor - {'prefix': '[GenericBatchProcessor]', 'count': 174, 'display_name': 'STIX objects'}",
-        "Successfully added items - {'prefix': '[GenericBatchProcessor]', 'added_count': 174, 'total_count': 174, 'display_name': 'STIX objects'}",
-        "Flushing remaining items - {'prefix': '[GenericBatchProcessor]', 'count': 176, 'display_name': 'STIX objects'}",
-        "Processing batch - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'batch_size': 176, 'display_name': 'STIX objects', 'total_processed': 176}",
+        "Converted to STIX entities - {'prefix': '[OrchestratorMalware]', 'current': 1, 'total': 1, 'entities_count': 140, 'entities_summary': 'identity: 25, malware: 1, relationship: 69, location: 17, intrusion-set: 1, vulnerability: 1, software: 24, note: 1, attack-pattern: 1'}",
+        "Adding items to batch processor - {'prefix': '[GenericBatchProcessor]', 'count': 140, 'display_name': 'STIX objects'}",
+        "Successfully added items - {'prefix': '[GenericBatchProcessor]', 'added_count': 140, 'total_count': 140, 'display_name': 'STIX objects'}",
+        "Flushing remaining items - {'prefix': '[GenericBatchProcessor]', 'count': 142, 'display_name': 'STIX objects'}",
+        "Processing batch - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'batch_size': 142, 'display_name': 'STIX objects', 'total_processed': 142}",
         "Sent batch to OpenCTI - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1}",
-        "Batch completed successfully - {'prefix': '[GenericBatchProcessor]', 'work_id': None, 'total_count': 176, 'type_summary': 'identity: 35, marking-definition: 1, malware: 1, relationship: 87, location: 23, intrusion-set: 1, vulnerability: 1, software: 24, note: 1, campaign: 1, attack-pattern: 1'}",
-        "Successfully processed batch #1. Total STIX objects sent: 176 - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'total_items_sent': 176}",
+        "Batch completed successfully - {'prefix': '[GenericBatchProcessor]', 'work_id': None, 'total_count': 142, 'type_summary': 'identity: 26, marking-definition: 1, malware: 1, relationship: 69, location: 17, intrusion-set: 1, vulnerability: 1, software: 24, note: 1, attack-pattern: 1'}",
+        "Successfully processed batch #1. Total STIX objects sent: 142 - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'total_items_sent': 142}",
         "State update: Setting next_cursor_date - {'prefix': '[GenericBatchProcessor]', 'latest_date': '2025-05-09T17:11:12+00:00'}",
     ]
 
@@ -305,26 +300,23 @@ def expected_vulnerability_log_messages_no_software() -> list[str]:
         "Fetched 1 malware_families relationships from API - {'prefix': '[BaseFetcher]'}",
         "Fetched 1 attack_techniques relationships from API - {'prefix': '[BaseFetcher]'}",
         "Fetched 1 threat_actors relationships from API - {'prefix': '[BaseFetcher]'}",
-        "Fetched 1 campaigns relationships from API - {'prefix': '[BaseFetcher]'}",
-        "Found relationships - {'prefix': '[OrchestratorVulnerability]', 'current': 1, 'total': 1, 'relationships': 'malware_families: 1, attack_techniques: 1, threat_actors: 1, campaigns: 1'}",
+        "Found relationships - {'prefix': '[OrchestratorVulnerability]', 'current': 1, 'total': 1, 'relationships': 'malware_families: 1, attack_techniques: 1, threat_actors: 1'}",
         "Using ID-only approach for attack techniques (quota optimization) - {'prefix': '[OrchestratorVulnerability]', 'attack_technique_count': 1}",
-        "Fetching details for subentities - {'prefix': '[FetcherShared]', 'total_to_fetch': 3}",
+        "Fetching details for subentities - {'prefix': '[FetcherShared]', 'total_to_fetch': 2}",
         "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'malware families'}",
         "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'threat actors'}",
-        "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'campaigns'}",
-        "Fetched details - {'prefix': '[FetcherShared]', 'summary': 'malware_families: 1, threat_actors: 1, campaigns: 1'}",
+        "Fetched details - {'prefix': '[FetcherShared]', 'summary': 'malware_families: 1, threat_actors: 1'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 34, 'entity_type': 'malware families'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 54, 'entity_type': 'threat actors'}",
-        "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 34, 'entity_type': 'Campaigns'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 2, 'entity_type': 'attack techniques'}",
-        "Converted to STIX entities - {'prefix': '[OrchestratorVulnerability]', 'current': 1, 'total': 1, 'entities_count': 126, 'entities_summary': 'vulnerability: 1, note: 1, identity: 34, malware: 1, relationship: 63, location: 23, intrusion-set: 1, campaign: 1, attack-pattern: 1'}",
-        "Adding items to batch processor - {'prefix': '[GenericBatchProcessor]', 'count': 126, 'display_name': 'STIX objects'}",
-        "Successfully added items - {'prefix': '[GenericBatchProcessor]', 'added_count': 126, 'total_count': 126, 'display_name': 'STIX objects'}",
-        "Flushing remaining items - {'prefix': '[GenericBatchProcessor]', 'count': 128, 'display_name': 'STIX objects'}",
-        "Processing batch - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'batch_size': 128, 'display_name': 'STIX objects', 'total_processed': 128}",
+        "Converted to STIX entities - {'prefix': '[OrchestratorVulnerability]', 'current': 1, 'total': 1, 'entities_count': 92, 'entities_summary': 'vulnerability: 1, note: 1, identity: 25, malware: 1, relationship: 45, location: 17, intrusion-set: 1, attack-pattern: 1'}",
+        "Adding items to batch processor - {'prefix': '[GenericBatchProcessor]', 'count': 92, 'display_name': 'STIX objects'}",
+        "Successfully added items - {'prefix': '[GenericBatchProcessor]', 'added_count': 92, 'total_count': 92, 'display_name': 'STIX objects'}",
+        "Flushing remaining items - {'prefix': '[GenericBatchProcessor]', 'count': 94, 'display_name': 'STIX objects'}",
+        "Processing batch - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'batch_size': 94, 'display_name': 'STIX objects', 'total_processed': 94}",
         "Sent batch to OpenCTI - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1}",
-        "Batch completed successfully - {'prefix': '[GenericBatchProcessor]', 'work_id': None, 'total_count': 128, 'type_summary': 'identity: 35, marking-definition: 1, vulnerability: 1, note: 1, malware: 1, relationship: 63, location: 23, intrusion-set: 1, campaign: 1, attack-pattern: 1'}",
-        "Successfully processed batch #1. Total STIX objects sent: 128 - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'total_items_sent': 128}",
+        "Batch completed successfully - {'prefix': '[GenericBatchProcessor]', 'work_id': None, 'total_count': 94, 'type_summary': 'identity: 26, marking-definition: 1, vulnerability: 1, note: 1, malware: 1, relationship: 45, location: 17, intrusion-set: 1, attack-pattern: 1'}",
+        "Successfully processed batch #1. Total STIX objects sent: 94 - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'total_items_sent': 94}",
         "State update: Setting next_cursor_date - {'prefix': '[GenericBatchProcessor]', 'latest_date': '2025-06-25T08:22:55+00:00'}",
     ]
 
@@ -337,26 +329,23 @@ def expected_vulnerability_log_messages() -> list[str]:
         "Fetched 1 malware_families relationships from API - {'prefix': '[BaseFetcher]'}",
         "Fetched 1 attack_techniques relationships from API - {'prefix': '[BaseFetcher]'}",
         "Fetched 1 threat_actors relationships from API - {'prefix': '[BaseFetcher]'}",
-        "Fetched 1 campaigns relationships from API - {'prefix': '[BaseFetcher]'}",
-        "Found relationships - {'prefix': '[OrchestratorVulnerability]', 'current': 1, 'total': 1, 'relationships': 'malware_families: 1, attack_techniques: 1, threat_actors: 1, campaigns: 1'}",
+        "Found relationships - {'prefix': '[OrchestratorVulnerability]', 'current': 1, 'total': 1, 'relationships': 'malware_families: 1, attack_techniques: 1, threat_actors: 1'}",
         "Using ID-only approach for attack techniques (quota optimization) - {'prefix': '[OrchestratorVulnerability]', 'attack_technique_count': 1}",
-        "Fetching details for subentities - {'prefix': '[FetcherShared]', 'total_to_fetch': 3}",
+        "Fetching details for subentities - {'prefix': '[FetcherShared]', 'total_to_fetch': 2}",
         "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'malware families'}",
         "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'threat actors'}",
-        "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'campaigns'}",
-        "Fetched details - {'prefix': '[FetcherShared]', 'summary': 'malware_families: 1, threat_actors: 1, campaigns: 1'}",
+        "Fetched details - {'prefix': '[FetcherShared]', 'summary': 'malware_families: 1, threat_actors: 1'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 34, 'entity_type': 'malware families'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 54, 'entity_type': 'threat actors'}",
-        "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 34, 'entity_type': 'Campaigns'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 2, 'entity_type': 'attack techniques'}",
-        "Converted to STIX entities - {'prefix': '[OrchestratorVulnerability]', 'current': 1, 'total': 1, 'entities_count': 174, 'entities_summary': 'vulnerability: 1, software: 24, note: 1, relationship: 87, identity: 34, malware: 1, location: 23, intrusion-set: 1, campaign: 1, attack-pattern: 1'}",
-        "Adding items to batch processor - {'prefix': '[GenericBatchProcessor]', 'count': 174, 'display_name': 'STIX objects'}",
-        "Successfully added items - {'prefix': '[GenericBatchProcessor]', 'added_count': 174, 'total_count': 174, 'display_name': 'STIX objects'}",
-        "Flushing remaining items - {'prefix': '[GenericBatchProcessor]', 'count': 176, 'display_name': 'STIX objects'}",
-        "Processing batch - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'batch_size': 176, 'display_name': 'STIX objects', 'total_processed': 176}",
+        "Converted to STIX entities - {'prefix': '[OrchestratorVulnerability]', 'current': 1, 'total': 1, 'entities_count': 140, 'entities_summary': 'vulnerability: 1, software: 24, note: 1, relationship: 69, identity: 25, malware: 1, location: 17, intrusion-set: 1, attack-pattern: 1'}",
+        "Adding items to batch processor - {'prefix': '[GenericBatchProcessor]', 'count': 140, 'display_name': 'STIX objects'}",
+        "Successfully added items - {'prefix': '[GenericBatchProcessor]', 'added_count': 140, 'total_count': 140, 'display_name': 'STIX objects'}",
+        "Flushing remaining items - {'prefix': '[GenericBatchProcessor]', 'count': 142, 'display_name': 'STIX objects'}",
+        "Processing batch - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'batch_size': 142, 'display_name': 'STIX objects', 'total_processed': 142}",
         "Sent batch to OpenCTI - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1}",
-        "Batch completed successfully - {'prefix': '[GenericBatchProcessor]', 'work_id': None, 'total_count': 176, 'type_summary': 'identity: 35, marking-definition: 1, vulnerability: 1, software: 24, note: 1, relationship: 87, malware: 1, location: 23, intrusion-set: 1, campaign: 1, attack-pattern: 1'}",
-        "Successfully processed batch #1. Total STIX objects sent: 176 - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'total_items_sent': 176}",
+        "Batch completed successfully - {'prefix': '[GenericBatchProcessor]', 'work_id': None, 'total_count': 142, 'type_summary': 'identity: 26, marking-definition: 1, vulnerability: 1, software: 24, note: 1, relationship: 69, malware: 1, location: 17, intrusion-set: 1, attack-pattern: 1'}",
+        "Successfully processed batch #1. Total STIX objects sent: 142 - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'total_items_sent': 142}",
         "State update: Setting next_cursor_date - {'prefix': '[GenericBatchProcessor]', 'latest_date': '2025-06-25T08:22:55+00:00'}",
     ]
 
@@ -365,7 +354,7 @@ def expected_vulnerability_log_messages() -> list[str]:
 def expected_campaign_log_messages() -> list[str]:
     """Fixture for expected log messages in campaign orchestration."""
     return [
-        "Fetched 1 campaigns from API page 1/6 (total of 237 items) - {'prefix': '[FetcherCampaign]'}",
+        "Fetched 1 campaigns from API (total of 1 items) - {'prefix': '[FetcherCampaign]'}",
         "Fetched 1 malware_families relationships from API - {'prefix': '[BaseFetcher]'}",
         "Fetched 1 attack_techniques relationships from API - {'prefix': '[BaseFetcher]'}",
         "Fetched 1 vulnerabilities relationships from API - {'prefix': '[BaseFetcher]'}",
@@ -381,14 +370,14 @@ def expected_campaign_log_messages() -> list[str]:
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 51, 'entity_type': 'vulnerabilities'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 54, 'entity_type': 'threat actors'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 2, 'entity_type': 'attack techniques'}",
-        "Converted to STIX entities - {'prefix': '[OrchestratorCampaign]', 'current': 1, 'total': 1, 'entities_count': 174, 'entities_summary': 'location: 23, identity: 34, campaign: 1, relationship: 87, malware: 1, vulnerability: 1, software: 24, note: 1, intrusion-set: 1, attack-pattern: 1'}",
-        "Adding items to batch processor - {'prefix': '[GenericBatchProcessor]', 'count': 174, 'display_name': 'STIX objects'}",
-        "Successfully added items - {'prefix': '[GenericBatchProcessor]', 'added_count': 174, 'total_count': 174, 'display_name': 'STIX objects'}",
-        "Flushing remaining items - {'prefix': '[GenericBatchProcessor]', 'count': 176, 'display_name': 'STIX objects'}",
-        "Processing batch - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'batch_size': 176, 'display_name': 'STIX objects', 'total_processed': 176}",
+        "Converted to STIX entities - {'prefix': '[OrchestratorCampaign]', 'current': 1, 'total': 1, 'entities_count': 172, 'entities_summary': 'location: 23, identity: 34, campaign: 1, relationship: 85, malware: 1, vulnerability: 1, software: 24, note: 1, intrusion-set: 1, attack-pattern: 1'}",
+        "Adding items to batch processor - {'prefix': '[GenericBatchProcessor]', 'count': 172, 'display_name': 'STIX objects'}",
+        "Successfully added items - {'prefix': '[GenericBatchProcessor]', 'added_count': 172, 'total_count': 172, 'display_name': 'STIX objects'}",
+        "Flushing remaining items - {'prefix': '[GenericBatchProcessor]', 'count': 174, 'display_name': 'STIX objects'}",
+        "Processing batch - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'batch_size': 174, 'display_name': 'STIX objects', 'total_processed': 174}",
         "Sent batch to OpenCTI - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1}",
-        "Batch completed successfully - {'prefix': '[GenericBatchProcessor]', 'work_id': None, 'total_count': 176, 'type_summary': 'identity: 35, marking-definition: 1, location: 23, campaign: 1, relationship: 87, malware: 1, vulnerability: 1, software: 24, note: 1, intrusion-set: 1, attack-pattern: 1'}",
-        "Successfully processed batch #1. Total STIX objects sent: 176 - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'total_items_sent': 176}",
+        "Batch completed successfully - {'prefix': '[GenericBatchProcessor]', 'work_id': None, 'total_count': 174, 'type_summary': 'identity: 35, marking-definition: 1, location: 23, campaign: 1, relationship: 85, malware: 1, vulnerability: 1, software: 24, note: 1, intrusion-set: 1, attack-pattern: 1'}",
+        "Successfully processed batch #1. Total STIX objects sent: 174 - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'total_items_sent': 174}",
         "State update: Setting next_cursor_date - {'prefix': '[GenericBatchProcessor]', 'latest_date': '2025-07-30T22:01:05+00:00'}",
     ]
 
@@ -505,7 +494,7 @@ async def test_full_orchestration_vulnerabilities(
 
 # Scenario: Full orchestration workflow processes campaigns and entities successfully
 @pytest.mark.asyncio
-@pytest.mark.order(5)
+@pytest.mark.order(2)
 async def test_full_orchestration_campaigns(
     caplog: Any, gti_config: DummyConfig, expected_campaign_log_messages: list[str]
 ) -> None:
@@ -637,7 +626,7 @@ def _then_orchestration_completed_successfully(
 # =====================
 
 
-def _load_debug_responses(debug_folder: Path) -> Dict[str, Any]:
+def _load_debug_responses(debug_folder: Path) -> dict[str, Any]:
     """Load all debug response files and return as dictionary."""
     response_types = [
         "main_reports",

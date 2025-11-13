@@ -1,7 +1,7 @@
 """Base orchestrator class with common functionality."""
 
 import logging
-from typing import Any, Dict, List
+from typing import Any
 
 from connector.src.custom.client_api.client_api import ClientAPI
 from connector.src.custom.configs import GTIConfig
@@ -38,7 +38,7 @@ class BaseOrchestrator:
 
     def _log_relationships_summary(
         self,
-        subentities_ids: Dict[str, Any],
+        subentities_ids: dict[str, Any],
         current_idx: int,
         total: int,
         entity_type: str,
@@ -46,7 +46,7 @@ class BaseOrchestrator:
         """Log summary of relationships found.
 
         Args:
-            subentities_ids: Dictionary of subentity IDs
+            subentities_ids: dictionary of subentity IDs
             current_idx: Current index in processing
             total: Total number of entities
             entity_type: Type of entity being processed
@@ -65,18 +65,18 @@ class BaseOrchestrator:
             )
 
     def _log_entities_summary(
-        self, all_entities: List[Any], current_idx: int, total: int, entity_type: str
+        self, all_entities: list[Any], current_idx: int, total: int, entity_type: str
     ) -> None:
         """Log summary of converted entities.
 
         Args:
-            all_entities: List of all converted entities
+            all_entities: list of all converted entities
             current_idx: Current index in processing
             total: Total number of entities
             entity_type: Type of entity being processed
 
         """
-        entity_types: Dict[str, int] = {}
+        entity_types: dict[str, int] = {}
         for entity in all_entities:
             entity_type_attr = getattr(entity, "type", None)
             if entity_type_attr:
@@ -96,18 +96,18 @@ class BaseOrchestrator:
         )
 
     def _check_batch_size_and_flush(
-        self, batch_processor: Any, all_entities: List[Any]
+        self, batch_processor: Any, all_entities: list[Any]
     ) -> None:
         """Check if batch needs to be flushed and flush if necessary.
 
         Args:
             batch_processor: The batch processor to check
-            all_entities: List of entities to be added
+            all_entities: list of entities to be added
 
         """
         if (
             batch_processor.get_current_batch_size() + len(all_entities)
-        ) >= batch_processor.config.batch_size:
+        ) >= batch_processor.config.batch_size * 2:
             self.logger.info(
                 "Need to Flush before adding next items to preserve consistency of the bundle",
                 {"prefix": LOG_PREFIX},
@@ -115,13 +115,13 @@ class BaseOrchestrator:
             batch_processor.flush()
 
     def _add_entities_to_batch(
-        self, batch_processor: Any, all_entities: List[Any], converter: Any
+        self, batch_processor: Any, all_entities: list[Any], converter: Any
     ) -> None:
         """Add entities to the batch processor.
 
         Args:
             batch_processor: The batch processor to add entities to
-            all_entities: List of entities to add
+            all_entities: list of entities to add
             converter: The converter instance to use for organization and tlp_marking
 
         """

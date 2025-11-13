@@ -3,18 +3,18 @@
   "slug": "recorded-future",
   "description": "Recorded Future is a cybersecurity company that specializes in providing real-time threat intelligence to help organizations anticipate, identify, and mitigate cyber threats. By aggregating and analyzing data from diverse sources, Recorded Future can identify patterns, trends, and indicators of compromise (IoCs) that help organizations understand and mitigate cyber threats more effectively.\n\nThis connector imports Recorded Future Analyst Notes, the Risk Lists (IP, URL, Domain Name and Hash), Malware and Threat Actors from Threats Maps, converts to STIX2 and imports them into OpenCTI at regular intervals.\n\nHave a look at this connector and its extensive configuration to precisely select the data you need to import based on your use case.",
   "short_description": "Recorded Future is a cybersecurity company that specializes in providing real-time threat intelligence to help organizations anticipate, identify, and mitigate cyber threats.",
-  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "logo": "external-import/recorded-future/__metadata__/logo.png",
   "use_cases": [
     "Commercial Threat Intel"
   ],
   "verified": true,
-  "last_verified_date": "",
+  "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 55,
   "support_version": ">= 6.5.1",
   "subscription_link": "https://www.recordedfuture.com/get-started",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/recorded-future",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-recorded-future",
   "container_type": "EXTERNAL_IMPORT"

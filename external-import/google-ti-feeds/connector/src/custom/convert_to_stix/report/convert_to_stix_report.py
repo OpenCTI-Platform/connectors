@@ -1,7 +1,7 @@
 """Report-specific converter for fetching and processing report data."""
 
 import logging
-from typing import Any, List
+from typing import Any
 
 from connector.src.custom.configs import (
     GTIConfig,
@@ -18,14 +18,14 @@ class ConvertToSTIXReport(BaseConvertToSTIX):
         """Initialize Report Converter."""
         super().__init__(config, logger, tlp_level)
 
-    def convert_report_to_stix(self, report_data: Any) -> List[Any]:
+    def convert_report_to_stix(self, report_data: Any) -> list[Any]:
         """Convert report to location, identity, and report STIX objects.
 
         Args:
             report_data: GTIReportData object from fetcher
 
         Returns:
-            List of STIX entities (location, identity, report)
+            list of STIX entities (location, identity, report)
 
         """
         try:

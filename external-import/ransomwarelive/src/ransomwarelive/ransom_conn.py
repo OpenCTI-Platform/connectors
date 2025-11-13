@@ -271,20 +271,12 @@ class RansomwareAPIConnector:
 
         # Create domain object
         if domain_name:
-            domain, relation_victim_domain, ip_object, relation_domain_ip = (
-                self.converter_to_stix.process_domain(
-                    domain_name=domain_name, victim=victim
-                )
+            domain, relation_victim_domain = self.converter_to_stix.process_domain(
+                domain_name=domain_name, victim=victim
             )
 
             bundle_objects.append(domain)
             bundle_objects.append(relation_victim_domain)
-
-            if ip_object and ip_object.get("id"):
-                bundle_objects.append(ip_object)
-                bundle_objects.append(relation_domain_ip)
-                report.get("object_refs").append(ip_object.get("id"))
-                report.get("object_refs").append(relation_domain_ip.get("id"))
 
             report.get("object_refs").append(domain.get("id"))
             report.get("object_refs").append(relation_victim_domain.get("id"))
@@ -322,6 +314,8 @@ class RansomwareAPIConnector:
                 report.get("object_refs").append(location.get("id"))
                 report.get("object_refs").append(relation_intrusion_location.get("id"))
                 report.get("object_refs").append(location_relation.get("id"))
+
+        bundle_objects.append(report)
 
         self.helper.connector_logger.info(
             "Sending STIX objects to collect_intelligence.",

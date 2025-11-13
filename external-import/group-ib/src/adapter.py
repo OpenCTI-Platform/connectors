@@ -14,6 +14,7 @@ import ipaddress
 from datetime import datetime, timedelta
 
 import data_to_stix2 as ds
+from config import ConfigConnector
 from stix2.patterns import HashConstant
 
 
@@ -29,10 +30,48 @@ class DataToSTIXAdapter:
         self.tlp_color = tlp_color
         self.is_ioc = is_ioc
         self.helper.connector_logger.info("Initializing DataToSTIXAdapter")
-        self.author = ds.BaseEntity("", "", "white").author
+        _dummy = ds.BaseEntity("", "", "white")
+        self.author = _dummy.author
+        self.statement_marking = _dummy.statement_marking
+        self.tlp_white = _dummy.tlp
         self.helper.connector_logger.info(
             f"DataToSTIXAdapter initialized with collection: {collection}, tlp_color: {tlp_color}, is_ioc: {is_ioc}"
         )
+
+    def _log_tlp_applied(self, ds_obj, sdo_type, name=None):
+        # type: (Any, str, Optional[str]) -> None
+        tlp_str = self._resolve_tlp_color(sdo_type)
+        try:
+            bundle_json = ds_obj.bundle().serialize(pretty=True)
+        except Exception:
+            try:
+                bundle_json = str(ds_obj.bundle())
+            except Exception:
+                bundle_json = repr(ds_obj)
+        obj_name = name or getattr(ds_obj, "name", None) or "<no-name>"
+        self.helper.connector_logger.info(
+            f"TLP '{tlp_str}' applied to object type='{sdo_type}', name='{obj_name}'. Full object (bundle):\n{bundle_json}"
+        )
+
+    def _resolve_tlp_color(self, sdo_type):
+        # type: (str) -> str
+        """Resolve TLP for SDO with normalization.
+
+        Rules:
+        - If API provided a supported TLP (self.tlp_color), return it (normalized to lower()).
+        - Else, return default from ConfigConnector.DEFAULT_TLP_BY_SDO for given sdo_type.
+        - For other types return 'amber'.
+        """
+        try:
+            incoming = str(self.tlp_color).lower() if self.tlp_color else None
+        except Exception:
+            incoming = None
+
+        if incoming in ConfigConnector.STIX_TLP_MAP:
+            return incoming
+
+        default_map = getattr(ConfigConnector, "DEFAULT_TLP_BY_SDO", {})
+        return default_map.get(sdo_type, "amber")
 
     @staticmethod
     def is_ipv4(ipv4):
@@ -579,18 +618,20 @@ class DataToSTIXAdapter:
                             f"Processing list of malware names: {_name}"
                         )
                         for n in _name:
+
                             malware = ds.Malware(
                                 name=n,
                                 aliases=_malware_aliases,
                                 # last_seen=_date_updated,
                                 c_type=_type,
                                 malware_types=_malware_types or [],
-                                tlp_color="red",
+                                tlp_color=self._resolve_tlp_color(_type),
                                 labels=[self.collection],
                             )
                             malware.set_description(_description)
                             malware.generate_external_references(_portal_links)
                             malware.generate_stix_objects()
+                            self._log_tlp_applied(malware, _type, n)
                             self.helper.connector_logger.debug(
                                 f"Generated STIX malware object for name: {n}"
                             )
@@ -603,12 +644,13 @@ class DataToSTIXAdapter:
                             # last_seen=_date_updated,
                             c_type=_type,
                             malware_types=_malware_types,
-                            tlp_color="red",
+                            tlp_color=self._resolve_tlp_color(_type),
                             labels=[self.collection],
                         )
                         malware.set_description(_description)
                         malware.generate_external_references(_portal_links)
                         malware.generate_stix_objects()
+                        self._log_tlp_applied(malware, _type, _name)
                         self.helper.connector_logger.debug(
                             f"Generated STIX malware object for name: {_name}"
                         )
@@ -629,12 +671,13 @@ class DataToSTIXAdapter:
                     # last_seen=_date_updated,
                     c_type=_type,
                     malware_types=_malware_types,
-                    tlp_color="red",
+                    tlp_color=self._resolve_tlp_color(_type),
                     labels=[self.collection],
                 )
                 malware.set_description(_description)
                 malware.generate_external_references(_portal_links)
                 malware.generate_stix_objects()
+                self._log_tlp_applied(malware, _type, _name)
                 self.helper.connector_logger.debug(
                     f"Generated STIX malware object for name: {_name}"
                 )
@@ -860,7 +903,7 @@ class DataToSTIXAdapter:
                 name=_threat_actor_name,
                 c_type=_type,
                 global_label=_global_label,
-                tlp_color="red",
+                tlp_color=self._resolve_tlp_color(_type),
                 labels=[self.collection],
                 aliases=_threat_actor_aliases,
                 # first_seen=_date_first_seen,
@@ -871,6 +914,7 @@ class DataToSTIXAdapter:
             threat_actor.set_description(_threat_actor_description)
             threat_actor.generate_external_references(_portal_link)
             threat_actor.generate_stix_objects()
+            self._log_tlp_applied(threat_actor, _type, _threat_actor_name)
             self.helper.connector_logger.debug(
                 f"Generated STIX threat actor object for name: {_threat_actor_name}"
             )
@@ -972,7 +1016,7 @@ class DataToSTIXAdapter:
                 name=_intrusion_set_name,
                 c_type=_type,
                 global_label=_global_label,
-                tlp_color="red",
+                tlp_color=self._resolve_tlp_color(_type),
                 labels=[self.collection],
                 aliases=_intrusion_set_aliases,
                 # first_seen=_date_first_seen,
@@ -983,6 +1027,7 @@ class DataToSTIXAdapter:
             intrusion_set.set_description(_intrusion_set_description)
             intrusion_set.generate_external_references(_portal_link)
             intrusion_set.generate_stix_objects()
+            self._log_tlp_applied(intrusion_set, _type, _intrusion_set_name)
             self.helper.connector_logger.debug(
                 f"Generated STIX intrusion set object for name: {_intrusion_set_name}"
             )

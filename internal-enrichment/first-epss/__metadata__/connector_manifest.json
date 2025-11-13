@@ -3,13 +3,13 @@
   "slug": "first-epss",
   "description": "FIRST's Exploit Prediction Scoring System (EPSS) is an open model designed to predict the likelihood of a vulnerability being exploited in the wild. By providing a score for each vulnerability, EPSS helps organizations prioritize vulnerability management efforts based on the potential risk and impact. \n\nThe integration of FIRST EPSS with OpenCTI enables the automatic enrichment of vulnerabilities with EPSS information provided by FIRST (the global Forum of Incident Response and Security Teams). The integration enriches vulnerabilities with EPSS score and percentile.",
   "short_description": "FIRST's Exploit Prediction Scoring System (EPSS) predicts the likelihood of a vulnerability being exploited, helping prioritize vulnerability management. Integration with OpenCTI adds exploit probability scores, enhancing risk-based remediation efforts.",
-  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "logo": "internal-enrichment/first-epss/__metadata__/logo.png",
   "use_cases": [
     "Vulnerability Management",
     "Enrichment & Analysis"
   ],
   "verified": true,
-  "last_verified_date": "",
+  "last_verified_date": null,
   "playbook_supported": true,
   "max_confidence_level": 50,
   "support_version": ">= 6.5.1",

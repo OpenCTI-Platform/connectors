@@ -39,11 +39,17 @@ jobs:
 
             {% if pycti.replace -%}
                 {% if "prerelease" in tags %}
-            find . -name requirements.txt -exec sed "s|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/client-python@$CIRCLE_BRANCH|" -i {} \;
-            find . -name pyproject.toml -exec sed "s|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/client-python@$CIRCLE_BRANCH|" -i {} \;
+                git+https://github.com/OpenCTI-Platform/opencti.git@master#subdirectory=client-python
+
+            find . -name requirements.txt -exec sed "s|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/opencti.git@$CIRCLE_BRANCH#subdirectory=client-python|" -i {} \;
+            find . -name pyproject.toml -exec sed "s|pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/opencti.git@$CIRCLE_BRANCH#subdirectory=client-python\",|" -i {} \;
+            find . -name requirements.txt -exec sed "s|^connectors-sdk.*$|connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@$CIRCLE_BRANCH#subdirectory=connectors-sdk|" -i {} \;
+            find . -name pyproject.toml -exec sed "s|connectors-sdk.*$|connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@$CIRCLE_BRANCH#subdirectory=connectors-sdk\",|" -i {} \;
                 {% elif "rolling" in tags %}
-            find . -name requirements.txt -exec sed "s|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/client-python@master|" -i {} \;
-            find . -name pyproject.toml -exec sed "s|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/client-python@master|" -i {} \;
+            find . -name requirements.txt -exec sed "s|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/opencti.git@master#subdirectory=client-python|" -i {} \;
+            find . -name pyproject.toml -exec sed "s|pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/opencti.git@master#subdirectory=client-python\",|" -i {} \;
+            find . -name requirements.txt -exec sed "s|^connectors-sdk.*$|connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk|" -i {} \;
+            find . -name pyproject.toml -exec sed "s|connectors-sdk.*$|connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk\",|" -i {} \;
                 {% endif %}
             {% endif -%}
             docker buildx build . \

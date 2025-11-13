@@ -290,6 +290,25 @@ class OrangeCyberDefense:
             config,
             default=False,
         )
+        self.ocd_ignore_unscored_indicators = get_config_variable(
+            "OCD_IGNORE_UNSCORED_INDICATORS",
+            ["ocd", "ignore_unscored_indicators"],
+            config,
+            default=True,
+        )
+        self.ocd_ignore_whitelisted_indicators = get_config_variable(
+            "OCD_IGNORE_WHITELISTED_INDICATORS",
+            ["ocd", "ignore_whitelisted_indicators"],
+            config,
+            default=True,
+        )
+        self.ocd_fallback_score = get_config_variable(
+            "OCD_FALLBACK_SCORE",
+            ["ocd", "fallback_score"],
+            config,
+            isNumber=True,
+            default=0,
+        )
 
         # Init variables
         self.identity = self.helper.api.identity.create(
@@ -304,7 +323,8 @@ class OrangeCyberDefense:
             x_opencti_order=99,
             x_opencti_color="#ff7900",
         )
-        self.datalake_instance = Datalake(longterm_token=self.ocd_datalake_token)
+        if self.ocd_import_datalake or self.ocd_import_threat_library:
+            self.datalake_instance = Datalake(longterm_token=self.ocd_datalake_token)
         self.cache = {}
 
     def _generate_indicator_note(self, indicator_object):
@@ -350,6 +370,16 @@ class OrangeCyberDefense:
             scores = list(object["x_datalake_score"].values())
             if len(scores) > 0:
                 object["x_opencti_score"] = max(scores)
+                if (
+                    object["x_opencti_score"] == 0
+                    and self.ocd_ignore_whitelisted_indicators
+                ):
+                    return None
+            else:
+                if self.ocd_ignore_unscored_indicators:
+                    return None
+                else:
+                    object["x_opencti_score"] = self.ocd_fallback_score
         if (
             "x_datalake_atom_type" in object
             and object["x_datalake_atom_type"] in atom_types_mapping
@@ -438,10 +468,12 @@ class OrangeCyberDefense:
             # Parse the result
             for object in data["objects"]:
                 processed_object = self._process_object(object)
-                objects.append(processed_object)
+                if processed_object is None:
+                    continue
                 if processed_object["type"] == "indicator":
                     stix2_note = self._generate_indicator_note(processed_object)
                     objects.append(stix2_note)
+                objects.append(processed_object)
             offset += limit
 
         # we remove duplicates, after processing because processing may affect id
@@ -608,15 +640,19 @@ class OrangeCyberDefense:
         # Getting the iocs object from the report
         self.helper.log_info("Getting iocs from Datalake...")
         if report["datalake_url"]:
-            hashkey = extract_datalake_query_hash(report["datalake_url"]["url"])
-            if hashkey:
-                report_iocs = self._get_report_iocs(
-                    datalake_query_hash=hashkey,
-                )
+            if self.ocd_import_datalake or self.ocd_import_threat_library:
+                hashkey = extract_datalake_query_hash(report["datalake_url"]["url"])
+                if hashkey:
+                    report_iocs = self._get_report_iocs(
+                        datalake_query_hash=hashkey,
+                    )
+                else:
+                    self.helper.log_info(
+                        f"No hashkey found in datalake url: {report['datalake_url']['url']}"
+                    )
+                    report_iocs = []
             else:
-                self.helper.log_info(
-                    f"No hashkey found in datalake url: {report['datalake_url']['url']}"
-                )
+                self.helper.log_info("Skipping because datalake is not configured")
                 report_iocs = []
         else:
             self.helper.log_info("No datalake url found")
@@ -626,7 +662,7 @@ class OrangeCyberDefense:
         # Getting the report entities
         self.helper.log_info("Getting report entities...")
         tags = set(report["tags"]) | set(report["advisory_tags"])
-        if tags:
+        if (self.ocd_import_datalake or self.ocd_import_threat_library) and tags:
             report_entities = self._get_report_entities(tags)
         else:
             report_entities = []
@@ -668,9 +704,9 @@ class OrangeCyberDefense:
                 x["id"] for x in report_iocs if x["type"] == "indicator"
             ]  # ids from "indicator" iocs
             + [x["id"] for x in report_entities]  # ids from threat entities
-            + [  # ids from threat entities relations
+            + [
                 x["id"] for x in report_relationships
-            ]
+            ]  # ids from threat entities relations
         )
 
         report_stix = stix2.Report(
@@ -811,6 +847,8 @@ class OrangeCyberDefense:
             objects = []
             for object in iter_stix_bs_results(zip_file_path):
                 processed_object = self._process_object(object)
+                if processed_object is None:
+                    continue
                 if processed_object["type"] == "indicator":
                     if not "labels" in processed_object:
                         processed_object["labels"] = []

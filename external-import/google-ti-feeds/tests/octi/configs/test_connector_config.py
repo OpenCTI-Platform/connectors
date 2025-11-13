@@ -1,7 +1,7 @@
 """Module to test the OpenCTI connector configuration loading and instantiation."""
 
 from os import environ as os_environ
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -12,6 +12,7 @@ from connector.src.octi.exceptions.configuration_error import ConfigurationError
 from connector.src.octi.global_config import GlobalConfig
 from pycti import OpenCTIConnectorHelper  # type: ignore
 from pydantic import HttpUrl
+
 from tests.conftest import mock_env_vars
 
 # =====================
@@ -142,7 +143,7 @@ def invalid_connector_type_config(request) -> dict[str, str]:  # type: ignore
 # Scenario: Create a connector with the minimum required configuration.
 @pytest.mark.order(0)
 def test_connector_config_min_required(  # type: ignore
-    capfd, min_required_config: Dict[str, str]
+    capfd, min_required_config: dict[str, str]
 ) -> None:
     """Test for the connector with the minimum required configuration."""
     # Given a minimum required configuration are provided

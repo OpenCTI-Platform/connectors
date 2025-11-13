@@ -1,7 +1,6 @@
-version: "3"
 services:
   connector-recordedfuture-enrichment:
-    image: opencti/connector-recordedfuture-enrichment:6.7.20
+    image: opencti/connector-recordedfuture-enrichment:rolling
     environment:
       - OPENCTI_URL=http://opencti:4000
       - OPENCTI_TOKEN=CHANGME
@@ -13,5 +12,5 @@ services:
       - RECORDED_FUTURE_TOKEN=CHANGEME
       - RECORDED_FUTURE_INFO_MAX_TLP=TLP:AMBER
       - RECORDED_FUTURE_CREATE_INDICATOR_THRESHOLD=0
-      - RECORDED_FUTURE_VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS=aiInsights,risk
+      - RECORDED_FUTURE_VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS=aiInsights,cpe,risk
     restart: always

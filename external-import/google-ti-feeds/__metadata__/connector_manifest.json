@@ -3,7 +3,7 @@
   "slug": "google-ti-feeds",
   "description": "Google Threat Intelligence provides unparalleled visibility into threats, enabling the delivery of detailed and timely intelligence to security teams worldwide. By protecting billions of users, detecting millions of phishing attempts, and dedicating extensive resources to incident investigation, Google has a comprehensive view of the threat landscape, ensuring that critical organizations, including yours, remain secure.\n\nThe integration of Google Threat Intelligence with OpenCTI enables the ingestion of threat data from the Google Threat Intel API directly into the OpenCTI platform. The connector imports key data types such as reports, locations, sectors, malware, intrusion sets, attack patterns, vulnerabilities, and raw IOCs, providing structured intelligence in a comprehensible format within OpenCTI.",
   "short_description": "Google Threat Intelligence provides unparalleled visibility into threats, enabling the delivery of detailed and timely intelligence to security teams worldwide.",
-  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "logo": "external-import/google-ti-feeds/__metadata__/logo.png",
   "use_cases": [
     "Commercial Threat Intel"
   ],
@@ -14,7 +14,7 @@
   "support_version": ">= 6.5.1",
   "subscription_link": "",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/google-ti-feeds",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-google-ti-feeds",
   "container_type": "EXTERNAL_IMPORT"

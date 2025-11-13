@@ -1,0 +1,21 @@
+{
+  "title": "Citalid",
+  "slug": "citalid",
+  "description": "The OpenCTI Citalid connector allows you to import latest Citalid CTI dataset. The connector leverages the Citalid API to retrieve the latest dataset in stix bundle format.\nDisclaimer You will need to have access to Citalid API. To learn more about our product you can book a demo on https://citalid.com/book-a-demo/.",
+  "short_description": "The OpenCTI Citalid connector allows you to import latest Citalid CTI dataset. The connector leverages the Citalid API to retrieve the latest dataset in stix bundle format.\nDisclaimer You will need to have access to Citalid API. To learn more about our product you can book a demo on https://citalid.com/book-a-demo/.",
+  "logo": "external-import/citalid/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=5.5.4",
+  "subscription_link": "https://citalid.com/book-a-demo/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/citalid",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-citalid",
+  "container_type": "EXTERNAL_IMPORT"
+}

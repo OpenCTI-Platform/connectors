@@ -1,0 +1,21 @@
+{
+  "title": "RiskIQ Passive Total",
+  "slug": "riskiq-passive-total",
+  "description": "Information coming soon",
+  "short_description": "Information coming soon",
+  "logo": "internal-enrichment/riskiq-passive-total/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 50,
+  "support_version": ">=6.4.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/riskiq-passive-total",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-riskiq-passive-total",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

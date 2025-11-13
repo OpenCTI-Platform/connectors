@@ -1,7 +1,7 @@
 """The module contains the OctiCampaignModel class, which represents an OpenCTI Campaign."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from connector.src.stix.v21.models.sdos.campaign_model import CampaignModel
 
@@ -14,16 +14,16 @@ class OctiCampaignModel:
         name: str,
         organization_id: str,
         marking_ids: list[str],
-        description: Optional[str] = None,
-        created: Optional[datetime] = None,
-        modified: Optional[datetime] = None,
-        first_seen: Optional[datetime] = None,
-        last_seen: Optional[datetime] = None,
-        objective: Optional[str] = None,
-        aliases: Optional[List[str]] = None,
-        labels: Optional[List[str]] = None,
-        external_references: Optional[List[Dict[str, Any]]] = None,
-        custom_properties: Optional[Dict[str, Any]] = None,
+        description: str | None = None,
+        created: datetime | None = None,
+        modified: datetime | None = None,
+        first_seen: datetime | None = None,
+        last_seen: datetime | None = None,
+        objective: str | None = None,
+        aliases: list[str] | None = None,
+        labels: list[str] | None = None,
+        external_references: list[dict[str, Any]] | None = None,
+        custom_properties: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> CampaignModel:
         """Create a Campaign model.
@@ -31,7 +31,7 @@ class OctiCampaignModel:
         Args:
             name: The name of the campaign
             organization_id: The ID of the organization that created this campaign
-            marking_ids: List of marking definition IDs to apply to the campaign
+            marking_ids: list of marking definition IDs to apply to the campaign
             description: Description of the campaign
             created: Time the campaign was created
             modified: Time the campaign was last modified

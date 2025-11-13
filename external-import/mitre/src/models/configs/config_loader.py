@@ -26,7 +26,7 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
         description="A unique UUIDv4 identifier for this connector instance.",
     )
     name: str = Field(
-        default="Mitre Att&ck",
+        default="MITRE ATT&CK",
         description="Name of the connector.",
     )
     scope: ListFromString = Field(

@@ -1,0 +1,21 @@
+{
+  "title": "Export ATT&CK Navigator TTPs File",
+  "slug": "export-ttps-file-navigator",
+  "description": "This connector allows exporting in the MITRE ATT&CK\u00ae format TTPs associated to STIX domain objects (SDOs) present in OpenCTI.This connector export files according to version 4.5 of MITRE ATT&CK\u00ae layer model (see: https://github.com/mitre-attack/attack-navigator/blob/master/layers/LAYERFORMATv4_5.md).",
+  "short_description": "This connector allows exporting in the MITRE ATT&CK\u00ae format TTPs associated to STIX domain objects (SDOs) present in OpenCTI.This connector export files according to version 4.5 of MITRE ATT&CK\u00ae layer model (see: https://github.com/mitre-attack/attack-navigator/blob/master/layers/LAYERFORMATv4_5.md).",
+  "logo": "internal-export-file/export-ttps-file-navigator/__metadata__/logo.png",
+  "use_cases": [
+    "Threat Intelligence"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=5.12.10",
+  "subscription_link": "https://mitre-attack.github.io/attack-navigator",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-export-file/export-ttps-file-navigator",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-export-ttps-file-navigator",
+  "container_type": "INTERNAL_EXPORT_FILE"
+}

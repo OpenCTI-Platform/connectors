@@ -3,12 +3,12 @@
   "slug": "mitre-atlas",
   "description": "MITRE ATLAS is a globally accessible, living knowledge base of adversary tactics and techniques against AI-enabled systems based on real-world attack observations and realistic demonstrations from AI red teams and security groups. The ATLAS knowledge base is used as a foundation for the development of specific threat models and methodologies focused on securing machine learning systems in the private sector, in government, and in the AI security community. The integration of MITRE ATLAS with OpenCTI allows for the ingestion of data from MITRE ATLAS datasets, facilitating the pre-population of your OpenCTI instance with AI-specific threat intelligence. This includes importing information on AI attack techniques, case studies, adversary tactics, mitigations, and vulnerabilities specific to machine learning systems, alongside ATLAS-specific frameworks such as tactics targeting ML model inference, training manipulation, and data poisoning. The connector supports the ingestion of adversarial machine learning techniques and procedures that help organizations understand and defend against threats to their AI systems.",
   "short_description": "MITRE ATLAS is a globally accessible, living knowledge base of adversary tactics and techniques against AI-enabled systems based on real-world attack observations and realistic demonstrations from AI red teams and security groups.",
-  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "logo": "external-import/mitre-atlas/__metadata__/logo.png",
   "use_cases": [
     "Open Source Threat Intel"
   ],
   "verified": true,
-  "last_verified_date": "",
+  "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 75,
   "support_version": ">= 6.0.7",
