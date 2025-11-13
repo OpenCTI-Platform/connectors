@@ -15,7 +15,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_TYPE | `string` |  | string | `"EXTERNAL_IMPORT"` | Should always be set to EXTERNAL_IMPORT for this connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | Determines the verbosity of the logs. |
 | RECORDED_FUTURE_INITIAL_LOOKBACK | `integer` |  | `0 < x ` | `240` | Initial lookback period in hours when first running the connector. |
-| RECORDED_FUTURE_TLP | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` | `"red"` | Default Traffic Light Protocol (TLP) marking for imported data. |
+| RECORDED_FUTURE_TLP | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` | `"amber+strict"` | Default Traffic Light Protocol (TLP) marking for imported data. |
 | RECORDED_FUTURE_INTERVAL | `integer` |  | `0 < x ` | `1` | Polling interval in hours for fetching Recorded Future data. |
 | RECORDED_FUTURE_PULL_ANALYST_NOTES | `boolean` |  | boolean | `true` | Whether to import Recorded Future analyst notes. |
 | RECORDED_FUTURE_LAST_PUBLISHED_NOTES | `integer` |  | `0 < x ` | `24` | Time window in hours for fetching recently published analyst notes. |
