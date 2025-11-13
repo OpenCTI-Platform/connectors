@@ -71,7 +71,7 @@
       "type": "integer"
     },
     "RECORDED_FUTURE_TLP": {
-      "default": "red",
+      "default": "amber+strict",
       "description": "Default Traffic Light Protocol (TLP) marking for imported data.",
       "enum": [
         "clear",
