@@ -48,12 +48,12 @@ Required environment variables in `docker-compose.yml`:
       - SUBLIME_URL=https://platform.sublime.security
       - SUBLIME_TOKEN=ChangeMe
       - SUBLIME_INCIDENT_TYPE=phishing  # STIX incident type
-      - SUBLIME_INCIDENT_PREFIX=Sublime Alert - 
+      - SUBLIME_INCIDENT_PREFIX=Sublime Incident - 
       - SUBLIME_CASE_PREFIX=Case - 
       - SUBLIME_AUTO_CREATE_CASES=false  # Automatically create cases for incidents
       - SUBLIME_VERDICTS=malicious  # Multiple verdicts can comma-separated like: malicious,suspicious
       - SUBLIME_SET_PRIORITY=true  # Enable priority mapping from attack score verdict
-      - SUBLIME_SET_SEVERITY=true  # Enable severity mapping from attack score verdict
+      - SUBLIME_SET_SEVERITY=false  # Enable severity mapping from attack score verdict
       - SUBLIME_CONFIDENCE_LEVEL=80 # 0-100 confidence score
       - SUBLIME_FIRST_RUN_DURATION=PT8H  # Duration for initial data fetch in ISO 8601 format (P14D = 14 days, PT1H = 1 hour)
       - SUBLIME_FORCE_HISTORICAL=false  # Force historical fetch by overriding existing state

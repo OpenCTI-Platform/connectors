@@ -14,7 +14,7 @@ services:
       - SUBLIME_URL=https://platform.sublime.security
       - SUBLIME_TOKEN=ChangeMe
       - SUBLIME_INCIDENT_TYPE=phishing  # STIX incident type
-      - SUBLIME_INCIDENT_PREFIX=Sublime Alert - 
+      - SUBLIME_INCIDENT_PREFIX=Sublime Incident - 
       - SUBLIME_CASE_PREFIX=Sublime - 
       - SUBLIME_AUTO_CREATE_CASES=false  # Automatically create cases for incidents
       - SUBLIME_VERDICTS=malicious  # Multiple verdicts can comma-separated like: malicious,suspicious
