@@ -66,6 +66,7 @@ class ThreatMap(threading.Thread):
                 )
 
                 if entities_mapped_with_links is not None:
+
                     total_mapped_entities = len(entities_mapped_ids)
 
                     for entity_with_links in entities_mapped_with_links:

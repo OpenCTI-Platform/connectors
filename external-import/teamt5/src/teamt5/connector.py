@@ -11,6 +11,7 @@ from .reports import ReportHandler
 
 
 class TeamT5Connector:
+
     def __init__(self, config: ConfigConnector, helper: OpenCTIConnectorHelper):
         """
         Initialise the Connector.

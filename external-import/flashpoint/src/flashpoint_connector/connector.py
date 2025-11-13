@@ -12,6 +12,7 @@ from .misp_converter_to_stix import MISPConverterToStix
 
 
 class FlashpointConnector:
+
     def __init__(self, config: ConfigLoader, helper: OpenCTIConnectorHelper):
         """
         Initialize the Connector with necessary configurations

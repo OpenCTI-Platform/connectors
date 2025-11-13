@@ -5,6 +5,7 @@ from .rf_to_stix2 import StixNote
 
 
 class AnalystNote(threading.Thread):
+
     def __init__(
         self,
         helper,

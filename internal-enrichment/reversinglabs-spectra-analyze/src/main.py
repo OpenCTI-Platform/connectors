@@ -65,6 +65,7 @@ def handle_spectra_errors(func):
 
 
 class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
+
     def __init__(self):
         super().__init__()
         self._get_config_variables()
@@ -76,6 +77,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         )
 
     def _get_config_variables(self):
+
         self.helper.connector_logger.info(
             f"{self.helper.connect_name}: Reading configuration env variables!"
         )
@@ -1368,6 +1370,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         if (results["classification"] == "malicious") or (
             results["classification"] == "suspicious"
         ):
+
             self.helper.connector_logger.info(
                 f"{self.helper.connect_name}: Create STIX objects for malicious sample results!"
             )
@@ -1463,6 +1466,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
 
             # Integrate classification analysis results with OpenCTI
             if "results" not in analysis_result:
+
                 results = self._process_file_classification_results(
                     stix_objects, stix_entity, opencti_entity, analysis_result
                 )

@@ -210,12 +210,9 @@ class ReportImporter:
         parsed = self._dedupe_parsed(parsed)
 
         # Step 3: Parse and build STIX entities / observables, and map text to STIX id (for relationship linking)
-        (
-            observables,
-            entities,
-            uuid_to_stix,
-            uuid_to_text,
-        ) = self._process_parsing_results(parsed, entity)
+        observables, entities, uuid_to_stix, uuid_to_text = (
+            self._process_parsing_results(parsed, entity)
+        )
         predicted_rels = parsed.get("relations", [])
 
         # Step 4: Build the STIX bundle (attach to context or wrap in a new report) + send bundle
@@ -694,6 +691,7 @@ class ReportImporter:
         # 2. Relationships predicted by the ML model
         # Create relationships predicted by the ML model
         for rel in predicted_rels:
+
             rel_type = rel.get("type")
 
             src_id = uuid_to_stix.get(rel.get("from_id"))

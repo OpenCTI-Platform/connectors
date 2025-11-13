@@ -139,6 +139,7 @@ class ConverterToStix:
         labels,
         external_references,
     ) -> stix2.File:
+
         hashes_mapping = {
             "md5Hex": "MD5",
             "sha1Hex": "SHA-1",

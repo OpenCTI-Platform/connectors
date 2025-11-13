@@ -152,6 +152,7 @@ class SekoiaConnector(object):
             yield items[i : i + chunk_size]
 
     def _run(self, cursor, work_id):
+
         current_time = f"{datetime.now(timezone.utc).isoformat()}"
         current_cursor = base64.b64encode(current_time.encode("utf-8")).decode("utf-8")
 
@@ -181,10 +182,9 @@ class SekoiaConnector(object):
 
         if self.import_ioc_relationships:
             # Retrieve all related object to IOC and relationship
-            [
-                all_related_objects,
-                all_relationships,
-            ] = self._retrieve_related_objects_and_relationships(items)
+            [all_related_objects, all_relationships] = (
+                self._retrieve_related_objects_and_relationships(items)
+            )
 
             if self.import_source_list:
                 all_related_objects = self._add_sources_to_items(all_related_objects)
@@ -528,6 +528,7 @@ class SekoiaConnector(object):
     def _add_sources_to_items(self, items: List[Dict]):
         object_list = []
         for item in items:
+
             labels = []
             for source in self._retrieve_by_ids(
                 item.get("x_inthreat_sources_refs", []), self.get_object_url

@@ -9,6 +9,7 @@ class DateTimeFormat(Enum):
 
 
 class Utils:
+
     @staticmethod
     def get_now(now_format: DateTimeFormat = None) -> datetime | str | int | dict:
         """

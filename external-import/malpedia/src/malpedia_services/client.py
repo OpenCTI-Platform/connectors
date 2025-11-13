@@ -97,6 +97,7 @@ class MalpediaClient:
     def query(self, url_path: str) -> Any:
         url = urljoin(URLS_MAPPING["default_api_url"], url_path)
         try:
+
             max_retries = 3
             retry_delay = 65  # in second
 

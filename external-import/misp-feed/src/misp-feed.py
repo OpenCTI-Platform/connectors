@@ -1356,6 +1356,7 @@ class MispFeed:
 
             # Create relationship between MISP attribute (indicator or observable) and MISP object (observable)
             if object_observable is not None:
+
                 indicator_id = indicator.get("id") if indicator else None
                 observable_id = observable.get("id") if observable else None
                 source_id = object_observable.get("id")

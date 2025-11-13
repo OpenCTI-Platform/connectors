@@ -329,6 +329,7 @@ class OrangeCyberDefense:
         return (score // 10) * 10
 
     def _process_object(self, object):
+
         dict_label_to_object_marking_refs = {
             "tlp:clear": [stix2.TLP_WHITE.get("id")],
             "tlp:white": [stix2.TLP_WHITE.get("id")],
@@ -775,6 +776,7 @@ class OrangeCyberDefense:
         }
 
         for query in self.ocd_datalake_queries:
+
             try:
                 adv_search = self.datalake_instance.AdvancedSearch.advanced_search_from_query_hash(
                     query["query_hash"], limit=0

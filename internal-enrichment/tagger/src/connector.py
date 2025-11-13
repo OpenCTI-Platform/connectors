@@ -70,6 +70,7 @@ class TaggerConnector:
                             enrichment_entity["entity_type"].lower()
                             in CONTAINER_TYPE_LIST
                         ):
+
                             # Handles the case where the attribute is the list of objects
                             if attribute.lower() == "objects-type":
                                 for obj in attr:
@@ -87,6 +88,7 @@ class TaggerConnector:
 
                             elif attribute.lower() == "objects-name":
                                 for obj in attr:
+
                                     name = obj.get(
                                         "name", obj.get("observable_value", None)
                                     )

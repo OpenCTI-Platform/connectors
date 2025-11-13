@@ -27,6 +27,7 @@ class ConversionError(Exception):
 
 
 class _CommonUtils:
+
     @staticmethod
     def _sanitize(message):
         # type: (str) -> str
@@ -137,6 +138,7 @@ class _CommonUtils:
 
 
 class BaseEntity(_CommonUtils):
+
     def __init__(self, name, c_type, tlp_color):
         self.name = name
         self.c_type = c_type

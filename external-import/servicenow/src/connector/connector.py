@@ -148,6 +148,7 @@ class ConnectorServicenow:
     def _handling_errors_tenacity(
         self, results: list, task_names: list | str = None
     ) -> list:
+
         classified_results = []
 
         new_results = (
@@ -212,6 +213,7 @@ class ConnectorServicenow:
         return classified_results
 
     async def _handling_collection_sir(self, result_security_incidents) -> list:
+
         # For each security incident response, we need to make two separate api calls, one to retrieve the tasks
         # and the other to retrieve the observables.
         security_incident_futures = [
@@ -320,6 +322,7 @@ class ConnectorServicenow:
             List | None
         """
         try:
+
             self.helper.connector_logger.info(
                 "[CONNECTOR] Start the collection of information from ServiceNow.",
             )
@@ -393,6 +396,7 @@ class ConnectorServicenow:
         models_name: type[TaskResponse | ObservableResponse | SecurityIncidentResponse],
         child_method_name: str | None = None,
     ) -> dict | None:
+
         if not isinstance(parent_data, dict):
             return None
 
@@ -630,6 +634,7 @@ class ConnectorServicenow:
             observable_value = getattr(observable, "value", None)
 
             if observable and observable_type in observables_make_mapping:
+
                 # Prepare all the labels for the observable.
                 prepared_labels_observable = self._handling_labels(
                     entity=observable,
@@ -869,6 +874,7 @@ class ConnectorServicenow:
                 # Make Tasks object -> CustomObjectTask
                 all_tasks = getattr(security_incident_object, "get_tasks", None)
                 if all_tasks:
+
                     task_all_objects = [custom_case_incident]
                     for task in all_tasks:
                         sit_number = getattr(task, "number", None)

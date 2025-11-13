@@ -258,11 +258,10 @@ class CofenseThreatHQ:
             for report, report_malware_details, report_pdf in report_details_futures:
                 reports_combined = {"report": report}
 
-                (
-                    collected_report_malware_details,
-                    collected_report_pdf,
-                ) = await asyncio.gather(
-                    report_malware_details, report_pdf, return_exceptions=True
+                collected_report_malware_details, collected_report_pdf = (
+                    await asyncio.gather(
+                        report_malware_details, report_pdf, return_exceptions=True
+                    )
                 )
 
                 report_malware_details = self._handle_errors_tenacity(
@@ -392,6 +391,7 @@ class CofenseThreatHQ:
 
                 # Creates Email message (Subject) linked to the report
                 if "subjectSet" in report_malware_details:
+
                     # Global labels report :
                     labels_to_extract_from_malware_details = {
                         "malwareFamilySet": "familyName",
@@ -425,6 +425,7 @@ class CofenseThreatHQ:
                 if "executableSet" in report_malware_details:
                     files = report_malware_details.get("executableSet", [])
                     for file in files:
+
                         file_severity_level = file.get("severityLevel")
                         if (
                             file_severity_level

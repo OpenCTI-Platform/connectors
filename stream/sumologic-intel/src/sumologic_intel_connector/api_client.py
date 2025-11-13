@@ -12,6 +12,7 @@ from .config_loader import ConfigConnector
 
 
 class SumologicClient:
+
     def __init__(self, helper: OpenCTIConnectorHelper, config: ConfigConnector):
         self.helper = helper
         self.config = config
@@ -181,6 +182,7 @@ class SumologicClient:
 
         # Implement retry logic
         for attempt in range(total):
+
             response = self.session.request(method=method, url=url, json=body)
             if response.status_code in retry_status_forcelist:
                 # Implement backoff

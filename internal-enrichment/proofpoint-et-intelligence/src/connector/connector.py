@@ -457,6 +457,7 @@ class ProofpointEtIntelligenceConnector:
             }
 
             for task_name, results in collected_intelligence.items():
+
                 if task_name not in task_models:
                     continue
 

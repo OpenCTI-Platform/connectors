@@ -355,6 +355,7 @@ class MandiantReport:
 
         for bundle_obj in self.bundle["objects"]:
             if "software" in bundle_obj["type"]:
+
                 # recreate Software STIX object with new generated ID
                 software = stix2.Software(
                     name=bundle_obj["name"],
@@ -502,6 +503,7 @@ class MandiantReport:
             ]
 
         if len(vulnerabilities) > 0:
+
             if self.connector.vulnerability_max_cpe_relationship and len(
                 softwares
             ) < int(self.connector.vulnerability_max_cpe_relationship):

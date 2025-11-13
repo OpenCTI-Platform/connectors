@@ -79,6 +79,7 @@ class SentinelIntelConnector:
             )
 
             if parsed_observables:
+
                 # Iterate over the parsed observables
                 for observable in parsed_observables:
                     observable_data = {}

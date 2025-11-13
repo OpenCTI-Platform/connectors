@@ -89,9 +89,7 @@ class ConfigLoaderConnectorPort(ABC):
 
     @property
     @_make_error_handler("Unable to retrieve connector type in config")
-    def type(
-        self,
-    ) -> Literal[
+    def type(self) -> Literal[
         "EXTERNAL_IMPORT",
         "INTERNAL_ENRICHMENT",
         "INTERNAL_EXPORT_FILE",
@@ -360,9 +358,7 @@ class ConfigLoaderTAPPort(ABC):
 
     @property
     @abstractmethod
-    def _events_type(
-        self,
-    ) -> Optional[
+    def _events_type(self) -> Optional[
         Literal[
             "all",
             "issues",
@@ -375,9 +371,7 @@ class ConfigLoaderTAPPort(ABC):
 
     @property
     @_make_error_handler("Unable to retrieve events type in config")
-    def events_type(
-        self,
-    ) -> Optional[
+    def events_type(self) -> Optional[
         Literal[
             "all",
             "issues",

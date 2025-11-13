@@ -249,6 +249,7 @@ class UrlscanConverter:
         """
         all_ips = []
         for ip in data_stat["ips"]:
+
             if ip is None:
                 continue
 

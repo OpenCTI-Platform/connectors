@@ -175,16 +175,15 @@ class RansomwareAPIConnector:
 
         # Creating Intrusion Set object
         intrusion_set_name = item.get("group")
-        (
-            intrusion_set,
-            relation_victim_intrusion,
-        ) = self.converter_to_stix.process_intrusion_set(
-            intrusion_set_name=intrusion_set_name,
-            group_data=group_data,
-            group_name_lockbit=item.get("lockbit3"),
-            victim=victim,
-            attack_date_iso=attack_date_iso,
-            discovered_iso=discovered_iso,
+        intrusion_set, relation_victim_intrusion = (
+            self.converter_to_stix.process_intrusion_set(
+                intrusion_set_name=intrusion_set_name,
+                group_data=group_data,
+                group_name_lockbit=item.get("lockbit3"),
+                victim=victim,
+                attack_date_iso=attack_date_iso,
+                discovered_iso=discovered_iso,
+            )
         )
         bundle_objects.append(intrusion_set)
         bundle_objects.append(relation_victim_intrusion)

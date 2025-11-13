@@ -126,6 +126,7 @@ class TestShadowserverAPI:
             )
 
     def test_all_fixture_types(self, shadow_server_api, mocker):
+
         self.api_helper = MagicMock(spec=OpenCTIConnectorHelper)
         self.api_helper.connector_logger = MagicMock()
         self.api_helper.connector_logger.debug = MagicMock()

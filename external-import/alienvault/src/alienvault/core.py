@@ -313,6 +313,7 @@ class AlienVault:
         return cls._CONFIG_REPORT_STATUS_MAPPING[report_status.lower()]
 
     def run(self):
+
         if self.duration_period:
             self.helper.schedule_iso(
                 message_callback=self.process_message,

@@ -102,6 +102,7 @@ class Connector:
         self._logger.debug("[CONNECTOR] Connector current state", {"state": state})
 
         def _set_acquisition_date(state_key: str) -> datetime:
+
             if state_key not in [CAMPAIGN_STATE_KEY, EVENT_STATE_KEY]:
                 # check for the scatterbrained developer
                 raise ValueError(f"Invalid state key: {state_key}")

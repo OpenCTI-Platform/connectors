@@ -2,6 +2,7 @@ import requests
 
 
 class ConnectorClient:
+
     def __init__(self, helper, config) -> None:
         """
         Initialises the the ConnectorClient.

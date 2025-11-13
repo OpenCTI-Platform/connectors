@@ -39,6 +39,7 @@ class CrowdstrikeClient:
         :return: List of resources or None
         """
         try:
+
             cs_filter = f'value:"{ioc_value}"+created_by:"{self.config.client_id}"'
 
             response = self.cs.indicator_search(filter=cs_filter)
@@ -270,6 +271,7 @@ class CrowdstrikeClient:
 
         # If IOC exists, update the IOC into Crowdstrike
         if ioc_cs is not None and len(ioc_cs) != 0:
+
             # In case of permanent_delete is False
             # Update data with label TO_DELETE for Crowdstrike
             if self.config.permanent_delete is False:

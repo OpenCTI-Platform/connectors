@@ -167,6 +167,7 @@ class SecOpsEntitiesClient:
 
         # Implement retry logic
         for attempt in range(total):
+
             body = {"inline_source": {"entities": entities, "log_type": "OPENCTI"}}
             response = self.chronicle_http_session.request(
                 method="POST", url=self.url, json=body
@@ -220,6 +221,7 @@ class SecOpsEntitiesClient:
             Errors are logged using `self.helper.connector_logger` with appropriate log levels and error details.
         """
         try:
+
             response = self._send_request(
                 entities=entities, retry_status_forcelist=[429]
             )

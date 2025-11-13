@@ -7,6 +7,7 @@ VENDOR_NAME = "FILIGRAN"
 
 
 class CTIConverter:
+
     def __init__(self, helper, config):
         """
         Init CTI Converter.
@@ -134,8 +135,10 @@ class CTIConverter:
         )
 
         if parsed_observables:
+
             # Iterate over the parsed observables
             for observable in parsed_observables:
+
                 entity_metadata = self.generate_entity_metadata(indicator)
                 entity_details = self.generate_entity_details(
                     observable, entity_metadata

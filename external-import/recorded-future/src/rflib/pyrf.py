@@ -308,6 +308,7 @@ class RecordedFutureApiClient:
 
                     # If the response contains data and contains the counts field, extract priority rules
                     if data.get("counts"):
+
                         if data["counts"]["total"] == 0:
                             alert_count = 0
                             from_api = 1

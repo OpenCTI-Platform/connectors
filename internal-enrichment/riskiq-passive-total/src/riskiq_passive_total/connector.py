@@ -99,6 +99,7 @@ class RiskIQPassiveTotalConnector:
             return []
 
         for result in enrichment_observable.get("results", []):
+
             first_seen_date = datetime.fromisoformat(
                 result.get("firstSeen").replace(" ", "T")
             )

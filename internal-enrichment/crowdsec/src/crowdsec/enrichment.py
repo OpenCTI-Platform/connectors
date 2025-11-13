@@ -161,6 +161,7 @@ class CrowdSecEnrichment:
         self.builder.add_to_bundle([stix_observable])
         # Handle reputation
         if reputation in self.indicator_create_from:
+
             pattern = (
                 f"[ipv4-addr:value = '{ip}']"
                 if ip_version == 4

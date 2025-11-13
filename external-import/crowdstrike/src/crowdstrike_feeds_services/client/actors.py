@@ -2,6 +2,7 @@ from .base_api import BaseCrowdstrikeClient
 
 
 class ActorsAPI(BaseCrowdstrikeClient):
+
     def __init__(self, helper):
         super().__init__(helper)
 

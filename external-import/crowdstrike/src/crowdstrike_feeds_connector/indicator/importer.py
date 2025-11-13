@@ -94,6 +94,7 @@ class IndicatorImporter(BaseImporter):
 
         indicator_batch = self._fetch_indicators(fetch_timestamp)
         if indicator_batch:
+
             latest_batch_updated_datetime = self._process_indicators(indicator_batch)
 
             if latest_batch_updated_datetime is not None and (

@@ -106,6 +106,7 @@ class Phishunt:
             with urllib.request.urlopen(
                 url=url, context=ssl.create_default_context()
             ) as fp:
+
                 for count, line in enumerate(fp, 1):
                     count += 1
                     if count <= 3:

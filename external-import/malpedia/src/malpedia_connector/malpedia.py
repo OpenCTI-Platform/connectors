@@ -168,6 +168,7 @@ class MalpediaConnector:
         self.helper.metric.state("idle")
 
     def _run_malpedia_process(self):
+
         # Generate Malpedia Identity (Organization)
         malpedia_identity = self.converter.generate_malpedia_stix_identity()
         self.stix_objects.append(malpedia_identity)
@@ -419,8 +420,10 @@ class MalpediaConnector:
     def _generate_samples_associated_with_malware(
         self, samples: list, malware_id: str
     ) -> None:
+
         for sample in samples:
             if "sha256" in sample and sample["sha256"] is not None:
+
                 # Sanity check the hash value
                 if sample["sha256"] == "" or len(sample["sha256"]) != 64:
                     continue
@@ -530,6 +533,7 @@ class MalpediaConnector:
                 # Generate Relationship
                 ######################################################
                 if self.config.create_indicators and self.config.create_observables:
+
                     # Generate Relationship : Indicator -> "based-on" -> Observable
                     indicator_to_observable = self.converter.generate_stix_relationship(
                         stix_indicator_id, "based-on", stix_observable_id
@@ -547,6 +551,7 @@ class MalpediaConnector:
     def _generate_intrusion_set_associated_with_malware(
         self, data_family, malware_id: str
     ) -> None:
+
         for actor in data_family.attribution:
             self.helper.connector_logger.info(
                 "[INTRUSION-SET] Generate intrusion set...",
@@ -580,6 +585,7 @@ class MalpediaConnector:
                 continue
 
             if self.config.import_intrusion_sets:
+
                 try:
                     if (
                         "description" in actor_json
@@ -596,6 +602,7 @@ class MalpediaConnector:
                         "cfr-type-of-incident" in actor_json["meta"]
                         and len(actor_json["meta"]["cfr-type-of-incident"]) > 0
                     ):
+
                         actor_type_of_incident = actor_json["meta"][
                             "cfr-type-of-incident"
                         ]

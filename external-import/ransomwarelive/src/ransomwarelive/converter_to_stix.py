@@ -324,6 +324,7 @@ class ConverterToStix:
         external_references = []
 
         for field in ["screenshot", "website", "post_url"]:
+
             if item.get(field):
                 external_reference = self.create_external_reference(
                     url=item[field],

@@ -4,6 +4,7 @@ from .base_api import BaseCrowdstrikeClient
 
 
 class RulesAPI(BaseCrowdstrikeClient):
+
     def __init__(self, helper):
         super().__init__(helper)
 

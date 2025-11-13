@@ -5,6 +5,7 @@ from teamt5 import TeamT5Connector
 from teamt5.config_loader import ConfigConnector
 
 if __name__ == "__main__":
+
     try:
         config = ConfigConnector()
         helper = OpenCTIConnectorHelper(config=config.load)

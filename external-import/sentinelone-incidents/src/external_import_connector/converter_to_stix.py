@@ -10,6 +10,7 @@ from pycti import (
 
 
 class ConverterToStix:
+
     def __init__(self, helper):
         self.helper = helper
         self.author = self._create_author()

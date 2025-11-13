@@ -94,6 +94,7 @@ class HatchingTriageSandboxConnector:
     def _process_overview_report(
         self, observable, overview_dict, sample_id, entity_type
     ):
+
         bundle_objects = []
 
         # Create external reference
@@ -522,6 +523,7 @@ class HatchingTriageSandboxConnector:
         return sample_id
 
     def _submit_sample(self, url=None, file_name=None, file_content=None):
+
         sample_json = None
 
         if file_content is not None:

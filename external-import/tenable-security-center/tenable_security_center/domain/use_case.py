@@ -186,6 +186,7 @@ class ConverterToStix:
     def _vulnerabilities_from_cve(
         self, cve: "CVEPort", severity_fallback: Optional[str] = None
     ) -> tuple[Vulnerability, list[Software]]:
+
         vulnerability = self._make_vulnerability(
             name=cve.name,
             description=cve.description,
@@ -292,6 +293,7 @@ class ConverterToStix:
                     vulnerabilities = [self._vulnerability_from_finding(finding)]
 
                 for vulnerability, software_s in vulnerabilities:
+
                     bundle.append(vulnerability)
                     bundle.extend(software_s)
 

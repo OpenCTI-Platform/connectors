@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 
 
 class ConnectorClient(BaseClient):
+
     def __init__(
         self,
         tenant_id: str,

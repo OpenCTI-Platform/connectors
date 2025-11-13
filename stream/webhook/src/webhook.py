@@ -117,6 +117,7 @@ class WebhookConnector:
 
     def _consume(self):
         while True:
+
             msg = self.queue.get()
             payload = json.loads(msg.data)["data"]
             id = OpenCTIConnectorHelper.get_attribute_in_extension("id", payload)
@@ -155,6 +156,7 @@ def check_helper(helper: OpenCTIConnectorHelper) -> None:
 
 
 if __name__ == "__main__":
+
     # load and check config
     config = load_config_file()
 
