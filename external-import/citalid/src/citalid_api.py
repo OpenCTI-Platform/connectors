@@ -1,8 +1,6 @@
 import base64
 import urllib.parse
 import requests
-import logging
-import json
 
 
 class Client:
@@ -58,25 +56,3 @@ class Client:
             raise Exception(
                 f"{res.status_code} error for url {res.url}: {res.content[:100]}"
             )
-
-
-def main():
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s %(message)s",
-        datefmt="%m/%d/%Y %H:%M:%S",
-    )
-
-    api_client = Client(
-        "https://staging.citalid.com"
-    )
-    api_client.login("peter.joachym@citalid.com", "XrtS7RF3QyP?36MY")
-    version = api_client.list_versions()
-    data = api_client.download_version(version_id="20250924.0.0")
-
-    print(json.dumps(version, indent=2, ensure_ascii=False))
-    print(data)
-
-
-if __name__ == "__main__":
-    main()

@@ -120,13 +120,13 @@ class Citalid:
                         )
                         self.helper.log_info(message)
 
-            message = "Storing last_run as " + str(now)
-            self.helper.log_info(message)
-            state = {
-                "last_loaded_bundle_id": last_loaded_bundle_id,
-                "last_run": str(now),
-            }
-            self.helper.set_state(state)
+                    message = "Storing last_run as " + str(now)
+                    self.helper.log_info(message)
+                    state = {
+                        "last_loaded_bundle_id": last_loaded_bundle_id,
+                        "last_run": str(now),
+                    }
+                    self.helper.set_state(state)
 
             message = "Connector successfully run"
             self.helper.log_info(message)
