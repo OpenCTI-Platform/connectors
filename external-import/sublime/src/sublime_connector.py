@@ -40,15 +40,7 @@ class SublimeConnector:
             try:
                 with open(config_file_path, "r", encoding="utf-8") as config_file:
                     config_dict = yaml.safe_load(config_file)
-                self.helper.log_info(
-                    "[*] Loaded configuration from {}".format(config_file_path)
-                )
             except Exception as e:
-                self.helper.log_warning(
-                    "[*] Failed to load config.yml: {}. Default values may be used.".format(
-                        e
-                    )
-                )
                 config_dict = {}
 
         # Initialize configuration for OpenCTI connector pattern
