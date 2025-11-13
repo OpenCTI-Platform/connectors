@@ -107,7 +107,7 @@ class ReportImporter:
             .get("id", "")
         )
 
-        # Cache OpenCTI “allowed relationship” matrix
+        # Cache OpenCTI "allowed relationship" matrix
         # Loading this mapping costs one GraphQL call at startup,
         # and subsequent lookups are constant time in Python dict.
         self.allowed_relations = load_allowed_relations(self.helper)
@@ -121,7 +121,7 @@ class ReportImporter:
         return cleaned if len(cleaned) >= 2 else None
 
     def _process_message(self, data: dict) -> str:
-        """Entry point when a new message arrives on the connector’s queue.
+        """Entry point when a new message arrives on the connector's queue.
 
         Args:
             data (dict): Payload from OpenCTI
@@ -583,7 +583,7 @@ class ReportImporter:
         relationships: list[stix2.Relationship] = []  # accumulate all relationships
 
         # Build relationships defined by the connector's own rules
-        # 1. Add relationships that stem from the contextual “entity”
+        # 1. Add relationships that stem from the contextual "entity"
         if entity is not None:
             entity_stix_bundle = (
                 self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
@@ -621,7 +621,7 @@ class ReportImporter:
                     entity_stix.get("object_refs", []) + observables_ids
                 )
 
-            # Other entities: create “related-to” relationships
+            # Other entities: create "related-to" relationships
             else:
                 for observable in observables:
                     relationships.append(

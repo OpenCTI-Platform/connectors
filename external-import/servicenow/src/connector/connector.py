@@ -683,7 +683,7 @@ class ConnectorServicenow:
     ) -> list[str]:
         """
         This method manages the labels for the different entities handled by the connector. A special feature is that
-        it deliberately filters out “unknown” values.
+        it deliberately filters out "unknown" values.
 
         Args:
             entity (TaskResponse | ObservableResponse | SecurityIncidentResponse): The data object from which labels
