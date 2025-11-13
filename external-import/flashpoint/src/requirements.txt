@@ -1,4 +1,4 @@
-pycti==6.8.6
+pycti==6.8.11
 validators==0.35.0
 dateparser==1.2.2
 requests==2.32.5

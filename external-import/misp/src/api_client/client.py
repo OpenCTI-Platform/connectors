@@ -68,6 +68,8 @@ class MISPClient:
         keyword: str,
         included_tags: list,
         excluded_tags: list,
+        included_org_creators: list,
+        excluded_org_creators: list,
         enforce_warning_list: bool,
         with_attachments: bool,
         limit: int = 10,
@@ -85,6 +87,11 @@ class MISPClient:
                     not_parameters=excluded_tags,
                 )
 
+                org_creators_query = self._client.build_complex_query(
+                    or_parameters=included_org_creators,
+                    not_parameters=excluded_org_creators,
+                )
+
                 # MISP API doesn't provide a way to sort the results.
                 # Events are always returned sorted by Event.id ASC,
                 # which is **NOT** equivalent to sorted by Event.date (creation date) ASC
@@ -93,7 +100,8 @@ class MISPClient:
                     return_format="json",
                     value=keyword,
                     searchall=True if keyword else None,
-                    tags=tags_query,
+                    tags=tags_query or None,
+                    org=org_creators_query or None,
                     enforce_warninglist=enforce_warning_list,
                     with_attachments=with_attachments,
                     limit=limit,

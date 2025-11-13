@@ -969,6 +969,7 @@ class StixNote:
         ta_to_intrusion_set=False,
         risk_as_score=False,
         risk_threshold=None,
+        analyst_notes_guess_relationships=False,
     ):
         self.author = self._create_author()
         self.name = None
@@ -987,6 +988,7 @@ class StixNote:
         self.tlp = stix2.TLP_RED
         self.rfapi = rfapi
         self.attachments = None
+        self.analyst_notes_guess_relationships = analyst_notes_guess_relationships
 
     @staticmethod
     def _create_author():
@@ -1016,6 +1018,15 @@ class StixNote:
         self.published = attr["published"]
         self.external_references = self._generate_external_references(
             attr.get("validation_urls", [])
+        )
+
+        # added an external reference to point the analyst note on the RF portal
+        self.external_references.append(
+            {
+                "source_name": "Recorded Future",
+                "url": "https://app.recordedfuture.com/portal/research/record/"
+                + note["id"],
+            }
         )
         self.report_types = self._create_report_types(attr.get("topic", []))
         self.labels = [topic["name"] for topic in attr.get("topic", [])]
@@ -1300,7 +1311,7 @@ class StixNote:
 
         if event_objects:
             self.objects.extend(event_objects)
-        else:
+        elif self.analyst_notes_guess_relationships:
             self.create_relations()
 
     def _create_report_types(self, topics):

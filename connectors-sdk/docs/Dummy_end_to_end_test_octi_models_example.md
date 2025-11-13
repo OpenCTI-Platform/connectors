@@ -10,19 +10,18 @@ import traceback
 from typing import TYPE_CHECKING
 
 import pycti
-from connectors_sdk.models.octi import (
+from connectors_sdk.models import (
     ExternalReference,
     Indicator,
     IPV4Address,
     Organization,
     OrganizationAuthor,
     TLPMarking,
-    based_on,
-    related_to,
 )
+from connectors_sdk.models.octi import based_on, related_to
 
 if TYPE_CHECKING:
-    from connectors_sdk.models.octi import BaseEntity
+    from connectors_sdk.models import BaseObject
 
 
 class ConnectorExample:
@@ -49,7 +48,7 @@ class ConnectorExample:
     def work(self) -> None:
         """Define the connector work."""
         try:
-            octi_models: list[BaseEntity] = []  # results holder
+            octi_models: list[BaseObject] = []  # results holder
 
             # TLP Marking
             tlp_marking = TLPMarking(level="amber+strict")

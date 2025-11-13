@@ -147,6 +147,11 @@
       "exclusiveMinimum": 0,
       "type": "integer"
     },
+    "RECORDED_FUTURE_ANALYST_NOTES_GUESS_RELATIONSHIPS": {
+      "default": false,
+      "description": "Enable or disable the automatic guessing of relationships between entities when processing analyst notes.",
+      "type": "boolean"
+    },
     "RECORDED_FUTURE_PULL_RISK_LIST": {
       "default": false,
       "description": "Whether to import Recorded Future risk lists.",
@@ -213,10 +218,8 @@
       "description": "Minimum severity threshold for domain abuse playbook alerts.",
       "enum": [
         "Informational",
-        "Low",
-        "Medium",
-        "High",
-        "Critical"
+        "Moderate",
+        "High"
       ],
       "type": "string"
     },
@@ -225,10 +228,8 @@
       "description": "Minimum severity threshold for identity novel exposures playbook alerts.",
       "enum": [
         "Informational",
-        "Low",
-        "Medium",
-        "High",
-        "Critical"
+        "Moderate",
+        "High"
       ],
       "type": "string"
     },
@@ -237,10 +238,8 @@
       "description": "Minimum severity threshold for code repository leakage playbook alerts.",
       "enum": [
         "Informational",
-        "Low",
-        "Medium",
-        "High",
-        "Critical"
+        "Moderate",
+        "High"
       ],
       "type": "string"
     },

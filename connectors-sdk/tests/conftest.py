@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from connectors_sdk.models.octi import (
+from connectors_sdk.models import (
     AssociatedFile,
     ExternalReference,
     OrganizationAuthor,
@@ -18,7 +18,7 @@ from connectors_sdk.models.octi import (
 
 
 @pytest.fixture
-def fake_valid_organization_author():
+def fake_valid_organization_author() -> OrganizationAuthor:
     """Fixture to create a fake valid OrganizationAuthor."""
     return OrganizationAuthor(name="Example Corp")
 
