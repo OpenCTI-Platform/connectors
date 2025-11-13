@@ -2,7 +2,7 @@ version: "3"
 services:
   connector-sublime:
     build: .
-    container_name: sublime-connector
+    container_name: opencti/connector-sublime:rolling
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
