@@ -81,9 +81,7 @@ class Citalid:
             )
 
             self.helper.log_info("Connecting to customer sub domain ...")
-            api_client = citalid_api.Client(
-                self.citalid_customer_sub_domain_url
-            )
+            api_client = citalid_api.Client(self.citalid_customer_sub_domain_url)
             api_client.login(self.citalid_user, self.citalid_password)
 
             self.helper.log_info("Fetching bundle versions info ...")
