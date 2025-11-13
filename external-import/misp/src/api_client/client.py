@@ -11,6 +11,7 @@ from requests.adapters import HTTPAdapter, Retry
 class MISPClientError(Exception):
     """Custom exception for MISP client errors."""
 
+
 class MISPClient:
     """Wrapper of PyMISP client."""
 
@@ -59,7 +60,7 @@ class MISPClient:
         elif isinstance(obj, list):
             for it in obj:
                 self._sanitize_user_id_in_tags(it)
-                
+
     def search_events(
         self,
         date_field_filter: str,
