@@ -11,5 +11,5 @@ services:
 #      - CONNECTOR_SCOPE=report,malware,tool
 #      - CONNECTOR_AUTO=true
 #      - CONNECTOR_LOG_LEVEL=error
-#      - TAGGER_DEFINITIONS='[{"scopes":["Report","Tool"],"rules":[{"label":"cloud","search":"[Cc]loud","attributes":["name","description"]},{"label":"mobile","search":"mobile|android|apk","flags":["IGNORECASE"],"attributes":["name","description"]}]},{"scopes":["Malware"],"rules":[{"label":"windows","search":"registry|regkey","flags":["IGNORECASE"],"attributes":["description"]}]}]'
+#      - TAGGER_DEFINITIONS=[{"scopes":["Report","Tool"],"rules":[{"label":"cloud","search":"[Cc]loud","attributes":["name","description"]},{"label":"mobile","search":"mobile|android|apk","flags":["IGNORECASE"],"attributes":["name","description"]}]},{"scopes":["Malware"],"rules":[{"label":"windows","search":"registry|regkey","flags":["IGNORECASE"],"attributes":["description"]}]}]
     restart: always
