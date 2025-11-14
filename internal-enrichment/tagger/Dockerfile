@@ -1,5 +1,4 @@
 FROM python:3.12-alpine
-ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
 
 # Copy the worker
 COPY src /opt/opencti-connector-tagger
