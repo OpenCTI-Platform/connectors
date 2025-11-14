@@ -323,6 +323,7 @@ class ReportImporter(BaseImporter):
         )
         return bundle_builder.build()
 
+    # MVP2
     def _guess_malwares_from_tags(self, tags: List) -> Mapping[str, str]:
         if not self.guess_malware:
             return {}
