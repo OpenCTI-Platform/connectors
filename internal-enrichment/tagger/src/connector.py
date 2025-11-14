@@ -2,7 +2,7 @@ import re
 from typing import Dict
 
 from pycti import OpenCTIConnectorHelper
-from src import ConfigLoader
+from settings import ConfigLoader
 
 CONTAINER_TYPE_LIST = ["report", "grouping", "case-incident", "case-rfi", "case-rft"]
 
