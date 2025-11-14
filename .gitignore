@@ -18,3 +18,5 @@ black
 .env
 .pytest_cache
 external-import/loaderinsightagency
+external-import/sekoia/.devcontainer/*
+stream/sekoia-intel/.devcontainer/*
