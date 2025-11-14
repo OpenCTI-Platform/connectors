@@ -42,10 +42,10 @@ class _ConfigLoaderRecordedFuture(ConfigBaseSettings):
         description="Time window in hours for fetching recently published analyst notes.",
     )
     topic: Optional[ListFromString] = Field(
-        default=["VTrvnW", "g1KBGl", "ZjnoP0", "aDKkpk", "TXSFt5", "UrMRnT", "TXSFt3"],
+        default=["VTrvnW", "g1KBGI", "ZjnoP0", "aDKkpk", "TXSFt5", "UrMRnT", "TXSFt3"],
         description=(
             "Comma-separated list of topic IDs to filter analyst notes. "
-            "Examples: VTrvnW (Yara Rule), g1KBGl (Sigma Rule), ZjnoP0 (Snort Rule), "
+            "Examples: VTrvnW (Yara Rule), g1KBGI (Sigma Rule), ZjnoP0 (Snort Rule), "
             "aDKkpk (TTP Instance), TXSFt5 (Validated Intelligence Event), "
             "UrMRnT (Informational), TXSFt3 (Threat Lead)."
         ),
