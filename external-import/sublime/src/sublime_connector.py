@@ -3,22 +3,14 @@ Sublime Security OpenCTI Connector
 Simplified implementation following OpenCTI connector patterns
 """
 
+import isodate
 import json
 import os
-import time
-from datetime import datetime, timedelta, timezone
-
-import isodate
+import pycti
 import requests
 import stix2
 import yaml
-from pycti import (
-    Identity,
-    Incident,
-    Indicator,
-    OpenCTIConnectorHelper,
-    get_config_variable,
-)
+from datetime import datetime, timedelta, timezone
 
 
 class SublimeConnector:
@@ -45,38 +37,38 @@ class SublimeConnector:
             try:
                 with open(config_file_path, "r", encoding="utf-8") as config_file:
                     config_dict = yaml.safe_load(config_file)
-            except Exception as e:
+            except Exception:
                 config_dict = {}
 
         # Initialize configuration for OpenCTI connector pattern
         config = {
             "opencti": {
-                "url": get_config_variable(
+                "url": pycti.get_config_variable(
                     "OPENCTI_URL", ["opencti", "url"], config_dict, False
                 ),
-                "token": get_config_variable(
+                "token": pycti.get_config_variable(
                     "OPENCTI_TOKEN", ["opencti", "token"], config_dict, False
                 ),
             },
             "connector": {
-                "id": get_config_variable(
+                "id": pycti.get_config_variable(
                     "CONNECTOR_ID", ["connector", "id"], config_dict, False
                 ),
                 "type": "EXTERNAL_IMPORT",
-                "name": get_config_variable(
+                "name": pycti.get_config_variable(
                     "CONNECTOR_NAME", ["connector", "name"], config_dict, False
                 ),
-                "scope": get_config_variable(
+                "scope": pycti.get_config_variable(
                     "CONNECTOR_SCOPE", ["connector", "scope"], config_dict, False
                 ),
-                "log_level": get_config_variable(
+                "log_level": pycti.get_config_variable(
                     "CONNECTOR_LOG_LEVEL",
                     ["connector", "log_level"],
                     config_dict,
                     False,
                     "info",
                 ),
-                "duration_period": get_config_variable(
+                "duration_period": pycti.get_config_variable(
                     "CONNECTOR_DURATION_PERIOD",
                     ["connector", "duration_period"],
                     config_dict,
@@ -99,13 +91,13 @@ class SublimeConnector:
             raise ValueError("CONNECTOR_SCOPE environment variable is required")
 
         # Initialize OpenCTI helper
-        self.helper = OpenCTIConnectorHelper(config)
+        self.helper = pycti.OpenCTIConnectorHelper(config)
 
         # Get Sublime specific config from environment variables or config.yml
-        self.api_token = get_config_variable(
+        self.api_token = pycti.get_config_variable(
             "SUBLIME_TOKEN", ["sublime", "token"], config_dict, False
         )
-        self.api_base_url = get_config_variable(
+        self.api_base_url = pycti.get_config_variable(
             "SUBLIME_URL",
             ["sublime", "url"],
             config_dict,
@@ -114,21 +106,21 @@ class SublimeConnector:
         )
 
         # Configurable naming and case creation. Making double sure we get data in them
-        self.incident_name_prefix = get_config_variable(
+        self.incident_name_prefix = pycti.get_config_variable(
             "SUBLIME_INCIDENT_PREFIX",
             ["sublime", "incident_prefix"],
             config_dict,
             False,
             "Sublime Incident - ",
         )
-        self.case_name_prefix = get_config_variable(
+        self.case_name_prefix = pycti.get_config_variable(
             "SUBLIME_CASE_PREFIX",
             ["sublime", "case_prefix"],
             config_dict,
             False,
             "Case - ",
         )
-        self.auto_create_cases = get_config_variable(
+        self.auto_create_cases = pycti.get_config_variable(
             "SUBLIME_AUTO_CREATE_CASES",
             ["sublime", "auto_create_cases"],
             config_dict,
@@ -136,7 +128,7 @@ class SublimeConnector:
             False,
         )
 
-        verdicts_config = get_config_variable(
+        verdicts_config = pycti.get_config_variable(
             "SUBLIME_VERDICTS", ["sublime", "verdicts"], config_dict, False, "malicious"
         )
         self.verdicts = [
@@ -144,7 +136,7 @@ class SublimeConnector:
         ]
 
         self.confidence_level = int(
-            get_config_variable(
+            pycti.get_config_variable(
                 "SUBLIME_CONFIDENCE_LEVEL",
                 ["sublime", "confidence_level"],
                 config_dict,
@@ -152,7 +144,7 @@ class SublimeConnector:
                 80,
             )
         )
-        self.incident_type = get_config_variable(
+        self.incident_type = pycti.get_config_variable(
             "SUBLIME_INCIDENT_TYPE",
             ["sublime", "incident_type"],
             config_dict,
@@ -160,14 +152,14 @@ class SublimeConnector:
             "phishing",
         )
 
-        self.first_run_duration = get_config_variable(
+        self.first_run_duration = pycti.get_config_variable(
             "SUBLIME_FIRST_RUN_DURATION",
             ["sublime", "first_run_duration"],
             config_dict,
             False,
             "PT8H",
         )
-        self.force_historical = get_config_variable(
+        self.force_historical = pycti.get_config_variable(
             "SUBLIME_FORCE_HISTORICAL",
             ["sublime", "force_historical"],
             config_dict,
@@ -175,14 +167,14 @@ class SublimeConnector:
             False,
         )
 
-        self.set_priority = get_config_variable(
+        self.set_priority = pycti.get_config_variable(
             "SUBLIME_SET_PRIORITY",
             ["sublime", "set_priority"],
             config_dict,
             False,
             True,
         )
-        self.set_severity = get_config_variable(
+        self.set_severity = pycti.get_config_variable(
             "SUBLIME_SET_SEVERITY",
             ["sublime", "set_severity"],
             config_dict,
@@ -191,7 +183,7 @@ class SublimeConnector:
         )
 
         self.batch_size = int(
-            get_config_variable(
+            pycti.get_config_variable(
                 "SUBLIME_BATCH_SIZE",
                 ["sublime", "batch_size"],
                 config_dict,
@@ -232,7 +224,9 @@ class SublimeConnector:
 
         # Create Sublime Identity for STIX objects
         self.sublime_identity = stix2.Identity(
-            id=Identity.generate_id(name="Sublime", identity_class="organization"),
+            id=pycti.Identity.generate_id(
+                name="Sublime", identity_class="organization"
+            ),
             name="Sublime",
             identity_class="organization",
             description="Email Security Platform",
@@ -625,7 +619,6 @@ class SublimeConnector:
             tuple: (list of STIX objects ready for bundling, incident object)
         """
         objects = [self.sublime_identity]
-        group_id = message_group.get("id", "unknown")
         previews = message_group.get("previews", [])
 
         # Create detailed email from MDM
@@ -638,7 +631,7 @@ class SublimeConnector:
         objects.extend(additional_emails)  # Add any additional EmailMessage objects
 
         # Create basic emails from previews of other emails in group
-        preview_emails = self._create_preview_emails(previews, group_id)
+        preview_emails = self._create_preview_emails(previews)
         objects.extend(preview_emails)
 
         # Create group event Incident
@@ -727,7 +720,6 @@ class SublimeConnector:
         if not subject or subject.strip() == "":
             subject = "Email processed by Sublime"
 
-        group_id = message_group.get("id", "unknown")
         email_data = {
             "subject": subject,
             "is_multipart": False,
@@ -743,13 +735,12 @@ class SublimeConnector:
         email = stix2.EmailMessage(**email_data)
         return email, observables, []  # No additional emails in single email case
 
-    def _create_preview_emails(self, previews, group_id):
+    def _create_preview_emails(self, previews):
         """
         Creates simplified EmailMessage objects
 
         Args:
             previews (list): List of preview email dictionaries
-            group_id (str): Group ID for deterministic ID generation
 
         Returns:
             list: List of STIX objects (EmailMessage, EmailAddress, File)
@@ -898,7 +889,7 @@ class SublimeConnector:
 
         # Create Event Incident with deterministic ID
         incident = stix2.Incident(
-            id=Incident.generate_id(incident_name, created_timestamp),
+            id=pycti.Incident.generate_id(incident_name, created_timestamp),
             name=incident_name,
             description=incident_description,
             created=created_timestamp,
@@ -1226,7 +1217,7 @@ class SublimeConnector:
 
         # Create indicator with proper metadata
         indicator = stix2.Indicator(
-            id=Indicator.generate_id(pattern),
+            id=pycti.Indicator.generate_id(pattern),
             pattern=pattern,
             pattern_type="stix",
             labels=["malicious-activity"],
@@ -1343,9 +1334,7 @@ class SublimeConnector:
             email = self._lookup_MDM_value(recipient, "email.email")
             if email:
                 email = self._sanitize_email(email)
-                recipients.append(
-                    stix2.EmailAddress(value=email)
-                )
+                recipients.append(stix2.EmailAddress(value=email))
         return recipients
 
     def _extract_urls(self, MDM):
@@ -1366,9 +1355,7 @@ class SublimeConnector:
                 if "://" not in url:
                     scheme = self._lookup_MDM_value(link, "href_url.scheme") or "http"
                     url = "{}://{}".format(scheme, url)
-                urls.append(
-                    stix2.URL(value=url)
-                )
+                urls.append(stix2.URL(value=url))
         return urls
 
     def _extract_domains(self, MDM):
@@ -1414,9 +1401,7 @@ class SublimeConnector:
             ip = ip_info.get("ip")
             if ip:
                 ip_class = stix2.IPv6Address if ":" in ip else stix2.IPv4Address
-                ips.append(
-                    ip_class(value=ip)
-                )
+                ips.append(ip_class(value=ip))
         return ips
 
     def _process_message_batch(self, messages, work_id):
@@ -1707,6 +1692,7 @@ class SublimeConnector:
             message_callback=self._process_messages,
             duration_period=self.helper.connect_duration_period,
         )
+
 
 if __name__ == "__main__":
     connector = SublimeConnector()
