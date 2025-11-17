@@ -21,6 +21,8 @@ connector creates a relationship between the Artifact and Indicator.
 | `connector_id`                       | `CONNECTOR_ID`                      | Yes          | A valid arbitrary `UUIDv4` that must be unique for this connector.                                                                                         |
 | `connector_name`                     | `CONNECTOR_NAME`                    | Yes          | Set to "YARA"
 | `connector_scope`                    | `CONNECTOR_SCOPE`                   | Yes          | Supported scope: Artifact
-| `connector_auto`                    | `CONNECTOR_AUTO`                   | Yes          | Enable or disable auto-enrichment
+| `connector_auto`                     | `CONNECTOR_AUTO`                    | Yes          | Enable or disable auto-enrichment
 | `connector_confidence_level`         | `CONNECTOR_CONFIDENCE_LEVEL`        | Yes          | The default confidence level for created relationships (a number between 1 and 100).                                                                             |
 | `connector_log_level`                | `CONNECTOR_LOG_LEVEL`               | Yes          | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                              |
+| `propagate_malware`                  | `YARA_PROPOGATE_MALWARE_RELATIONSHIP`| No         | If a matching Yara Indicator entity has an 'indicates' Malware relationship, then a 'related-to' Relationship is created between the matching Artifact and Malware.                                                              |
+| `propagate_labels`                   | `YARA_PROPOGATE_LABELS`             | No             | If a matching Yara indicator entity has any labels, they are added to matching Artifacts.                                                             |

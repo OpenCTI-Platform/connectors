@@ -28,6 +28,12 @@ class YaraConnector:
         self.octi_api_url = get_config_variable(
             "OPENCTI_URL", ["opencti", "url"], config
         )
+        self.propagate_malware = get_config_variable(
+            "YARA_PROPAGATE_MALWARE_RELATIONSHIP", ["connector", "propagate_malware"], config, default=False
+        )
+        self.propagate_labels = get_config_variable(
+            "YARA_PROPAGATE_LABELS", ["connector", "propagate_labels"], config, default=False
+        )
 
     def _get_artifact_contents(self, artifact) -> list[bytes]:
         """
@@ -118,6 +124,41 @@ class YaraConnector:
                         description="YARA rule matched for this Artifact",
                     )
                     bundle_objects.append(relationship)
+                    if self.propagate_labels:
+                        try:
+                            full_indicator=self.helper.api.indicator.list(
+                                filters={
+                                    "mode": "and",
+                                    "filters": [{"key": "id", "values": [indicator["id"]]}],
+                                    "filterGroups": [],
+                                },
+                            )
+                            for label in full_indicator[0]["objectLabelIds"]:
+                                self.helper.api.stix_cyber_observable.add_label(id=artifact["id"], label_id=label)
+                        except Exception as e:
+                            self.helper.log_error(f"Error finding/adding matching labels - {e}")
+                    if self.propagate_malware:
+                        try:
+                            malware = self.helper.api.stix_core_relationship.list(fromId=indicator["id"], toTypes='Malware')
+                            if malware:
+                                self.helper.log_info(f"Adding Relationship {artifact['standard_id']} related-to {malware['stanard_id']}")
+                        except Exception as e:
+                            self.helper.log_error(f"Error finding malware - {e}")
+                        try:
+                            if malware:
+                                mal_relationship = Relationship(
+                                        id=StixCoreRelationship.generate_id(
+                                            "related_id", artifact["standard_id"], malware[0]['to']['standard_id']
+                                        ),
+                                        relationship_type="related-to",
+                                        source_ref=artifact["standard_id"],
+                                        target_ref=malware[0]['to']['standard_id'],
+                                        description="YARA rule created relationship to malware",
+                                )
+                                bundle_objects.append(mal_relationship)
+                        except Exception as e:
+                            self.helper.log_error(f"Error adding malware relationship - {e}")
+    
                     self.helper.log_debug(
                         f"Created Relationship from Artifact to YARA Indicator {indicator['name']}"
                     )
