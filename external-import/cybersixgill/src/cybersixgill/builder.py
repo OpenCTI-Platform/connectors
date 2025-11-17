@@ -5,6 +5,8 @@ from datetime import datetime
 from typing import List, Mapping, NamedTuple, Optional
 
 import stix2
+from stix2.v21 import _DomainObject, _Observable  # type: ignore
+
 from cybersixgill.utils import (
     OBSERVATION_FACTORY_DOMAIN_NAME,
     OBSERVATION_FACTORY_FILE_MD5,
@@ -21,7 +23,6 @@ from cybersixgill.utils import (
     create_indicator,
     create_organization,
 )
-from stix2.v21 import _DomainObject, _Observable  # type: ignore
 
 log = logging.getLogger(__name__)
 

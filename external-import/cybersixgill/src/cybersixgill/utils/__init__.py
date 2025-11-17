@@ -4,6 +4,9 @@ from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Mapping, NamedTuple, Optional
 
 import stix2
+from pycti import Identity, Indicator, StixCoreRelationship
+from stix2.v21 import _DomainObject, _Observable  # type: ignore
+
 from cybersixgill.utils.constants import (
     DEFAULT_X_OPENCTI_SCORE,
     X_OPENCTI_MAIN_OBSERVABLE_TYPE,
@@ -33,8 +36,6 @@ from cybersixgill.utils.observables import (
     create_observable_ipv6_address,
     create_observable_url,
 )
-from pycti import Identity, Indicator, StixCoreRelationship
-from stix2.v21 import _DomainObject, _Observable  # type: ignore
 
 
 class ObservationFactory(NamedTuple):
