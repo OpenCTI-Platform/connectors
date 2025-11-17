@@ -549,6 +549,10 @@ class FlashpointConnector:
                 "Getting current state and update it with last run of the connector",
                 {"current_datetime": now_iso},
             )
+
+            # need to retrieve the current state as it can be updated in the 'import_indicators' function
+            current_state = self._get_state()
+
             current_state["last_run"] = now_iso
             self._set_state(current_state)
 

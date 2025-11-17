@@ -72,7 +72,9 @@ class Mitre:
             self.config.mitre.ics_attack_file_url,
             self.config.mitre.capec_file_url,
         ]
-        self.mitre_urls = list(filter(lambda url: url is not False, urls))
+        self.mitre_urls = list(
+            filter(lambda url: url is not None and url.lower() != "false", urls)
+        )
         self.interval = days_to_seconds(self.mitre_interval)
 
     def retrieve_data(self, url: str) -> Optional[dict]:
