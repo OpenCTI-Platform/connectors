@@ -18,6 +18,9 @@ class ConnectorClient:
         # Add user_api_key if provided
         if self.config.user_api_key:
             headers["x-user-api-key"] = self.config.user_api_key
+        if self.config.organization_code:
+            headers["x-organization-code"] = self.config.organization_code
+
 
         self.session.headers.update(headers)
 

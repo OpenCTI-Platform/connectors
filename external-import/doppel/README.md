@@ -67,8 +67,9 @@ There are a number of configuration options, which are set either in `docker-com
 |-------------------------|--------------------------------|----------------------------------|---------|-----------|---------------------------------------|
 | API base URL            | doppel.api_base_url            | `DOPPEL_API_BASE_URL`            | https://api.doppel.com/v1        | Yes       | Doppel API base URL                   |
 | API key                 | doppel.api_key                 | `DOPPEL_API_KEY`                 |         | Yes       | Doppel API key                        |
-| User API key                 | doppel.user_api_key                 | `DOPPEL_USER_API_KEY`                 |         | No      | Doppel User API key                        |
-| Alerts endpoint         | doppel.alerts_endpoint         | `DOPPEL_ALERTS_ENDPOINT`         | /alerts        | Yes       | API endpoint for fetching alerts      |
+| User API key                 | doppel.user_api_key       | `DOPPEL_USER_API_KEY`            |         | No        | Doppel User API key                   |
+| Organization Code       | doppel.organization_code       | `DOPPEL_ORGANIZATION_CODE`       |         | No        | Organization Code for Doppel API Keys |
+| Alerts endpoint         | doppel.alerts_endpoint         | `DOPPEL_ALERTS_ENDPOINT`         | /alerts | Yes       | API endpoint for fetching alerts      |
 | Historical polling days | doppel.historical_polling_days | `DOPPEL_HISTORICAL_POLLING_DAYS` | 30      | No        | Days of data to fetch on first run    |
 | Max retries             | doppel.max_retries             | `DOPPEL_MAX_RETRIES`             | 3       | No        | Retry attempts on API errors          |
 | Retry delay (seconds)   | doppel.retry_delay             | `DOPPEL_RETRY_DELAY`             | 30      | No        | Delay between retry attempts          |

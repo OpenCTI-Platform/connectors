@@ -106,7 +106,10 @@ class DoppelConnector:
         :return: None
         """
         self.helper.connector_logger.info("[DoppelConnector] Starting scheduler")
-        self.helper.schedule_iso(
-            message_callback=self.process_message,
-            duration_period=self.config.duration_period,
-        )
+        # self.helper.schedule_iso(
+        #     message_callback=self.process_message,
+        #     duration_period=self.config.duration_period,
+        # )
+        self.helper.connector_logger.info("[DoppelConnector] Running once manually for debug")
+        # self.process_message()
+
