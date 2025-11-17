@@ -1,14 +1,17 @@
 import warnings
 from typing import Literal
 
-from connectors_sdk import BaseConnectorSettings, BaseExternalImportConnectorConfig
+from connectors_sdk import (
+    BaseConfigModel,
+    BaseConnectorSettings,
+    BaseExternalImportConnectorConfig,
+)
 from external_import_connector.constants import ConfigKeys
 from pycti import get_config_variable
 from pydantic import Field, model_validator
-from pydantic_settings import BaseSettings
 
 
-class APIConfig(BaseSettings):
+class ConnectorHuntIoConfig(BaseConfigModel):
     api_base_url: str = Field(description="API base URL", default_factory=str)
     api_key: str = Field(description="API key", default_factory=str)
     tlp_level: Literal["white", "clear", "green", "amber", "amber+strict", "red"] = (
@@ -50,10 +53,12 @@ class APIConfig(BaseSettings):
         return data
 
 
-class ConfigConnector(BaseConnectorSettings):
+class ConfigLoader(BaseConnectorSettings):
     """Handles connector configuration loading and validation."""
 
     connector: BaseExternalImportConnectorConfig = Field(
         default_factory=BaseExternalImportConnectorConfig
     )
-    connector_hunt_io: APIConfig = Field(default_factory=APIConfig)
+    connector_hunt_io: ConnectorHuntIoConfig = Field(
+        default_factory=ConnectorHuntIoConfig
+    )

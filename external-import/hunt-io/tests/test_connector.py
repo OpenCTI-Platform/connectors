@@ -6,8 +6,13 @@ from connectors_sdk import ConfigValidationError
 from external_import_connector import ConnectorHuntIo
 from external_import_connector.constants import ExternalReferences
 
+NUMS_OF_CREATED_STIX_OBJECTS = 7
+NUMS_OF_CREATED_RELATIONSHIPS = 4
+NUMS_OF_CREATED_MARKINGS = 1
+NUMS_OF_CREATED_IDENTITIES = 1
 
-def has_key_value(dicts, key, value) -> bool:
+
+def list_has_key_value(dicts, key, value) -> bool:
     return any(isinstance(d, dict) and key in d and d[key] == value for d in dicts)
 
 
@@ -30,15 +35,19 @@ def test_should_run_connector(correct_config, api_response_mock):
     connector.helper.send_stix2_bundle = capture_sent_bundle
     connector.process_message()
 
-    nums_of_entities = 7 * len(api_response_mock) + 2  # Entities + Identity + Marking
-    nums_of_relationships = 4 * len(api_response_mock)
+    nums_of_entities = (
+        (NUMS_OF_CREATED_STIX_OBJECTS * len(api_response_mock))
+        + NUMS_OF_CREATED_MARKINGS
+        + NUMS_OF_CREATED_IDENTITIES
+    )
+    nums_of_relationships = NUMS_OF_CREATED_RELATIONSHIPS * len(api_response_mock)
 
     for item in api_response_mock:
-        assert has_key_value(sent_bundle["objects"], "value", item.ip)
-        assert has_key_value(sent_bundle["objects"], "value", item.hostname)
-        assert has_key_value(sent_bundle["objects"], "dst_port", item.port)
-        assert has_key_value(sent_bundle["objects"], "name", item.scan_uri)
-        assert has_key_value(sent_bundle["objects"], "name", item.malware.name)
+        assert list_has_key_value(sent_bundle["objects"], "value", item.ip)
+        assert list_has_key_value(sent_bundle["objects"], "value", item.hostname)
+        assert list_has_key_value(sent_bundle["objects"], "dst_port", item.port)
+        assert list_has_key_value(sent_bundle["objects"], "name", item.scan_uri)
+        assert list_has_key_value(sent_bundle["objects"], "name", item.malware.name)
 
     assert len(sent_bundle["objects"]) == nums_of_entities + nums_of_relationships
 
@@ -87,7 +96,9 @@ def test_should_send_identity(correct_config, api_response_mock):
             count += 1
             assert item["created_by_ref"] == identity_id
 
-    assert count == len(sent_bundle["objects"]) - 2
+    assert count == len(sent_bundle["objects"]) - (
+        NUMS_OF_CREATED_MARKINGS + NUMS_OF_CREATED_IDENTITIES
+    )
 
 
 def test_should_add_external_references_to_organization_only(
@@ -155,7 +166,9 @@ def test_should_send_tpl_markings(correct_config, api_response_mock):
             count += 1
             assert marking_definition_id in item["object_marking_refs"]
 
-    assert count == len(sent_bundle["objects"]) - 2
+    assert count == len(sent_bundle["objects"]) - (
+        NUMS_OF_CREATED_MARKINGS + NUMS_OF_CREATED_IDENTITIES
+    )
 
 
 def test_should_not_initiate_work_if_payload_is_empty(
