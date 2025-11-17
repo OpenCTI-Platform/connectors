@@ -6,7 +6,7 @@ connector:
   type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'
   name: 'Hunt IO'
-  scope: 'Hunt IO'
+  scope: 'ipv4-addr,ipv6-addr,vulnerability,domain,url,StixFile'
   log_level: 'info'
   duration_period: 'PT5M' # Interval given for scheduler process in ISO-8601 format
   #============================================#
