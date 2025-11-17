@@ -3,15 +3,16 @@
 
 from typing import Any, List, Mapping, NamedTuple, Optional
 
+from pycti import CustomObservableHostname
+from stix2 import DomainName  # type: ignore
+from stix2 import URL, File, Identity, IPv4Address, IPv6Address, MarkingDefinition
+
 from cybersixgill.utils.constants import (
     DEFAULT_X_OPENCTI_SCORE,
     X_OPENCTI_CREATED_BY_REF,
     X_OPENCTI_LABELS,
     X_OPENCTI_SCORE,
 )
-from pycti import CustomObservableHostname
-from stix2 import DomainName  # type: ignore
-from stix2 import URL, File, Identity, IPv4Address, IPv6Address, MarkingDefinition
 
 
 def _get_default_custom_properties(
