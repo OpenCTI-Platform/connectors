@@ -35,7 +35,7 @@ The OpenCTI FIRST EPSS enrichment connector can be used to enrich CVE vulnerabil
 
 ### Requirements
 
-- OpenCTI Platform >= 6.8.11
+- OpenCTI Platform >= 6.8.12
 
 ## Configuration variables
 
