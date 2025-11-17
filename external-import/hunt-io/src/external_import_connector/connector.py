@@ -4,7 +4,6 @@ from typing import List, Optional
 
 from external_import_connector.batch_manager import BatchManager
 from external_import_connector.client_api import ConnectorClient
-from external_import_connector.config_variables import ConfigConnector
 from external_import_connector.constants import (
     DateTimeFormats,
     LoggingPrefixes,
@@ -13,6 +12,7 @@ from external_import_connector.constants import (
 from external_import_connector.converter_to_stix import ConverterToStix
 from external_import_connector.entity_processor import EntityProcessor
 from external_import_connector.models import C2
+from external_import_connector.settings import ConfigLoader
 from pycti import OpenCTIConnectorHelper
 
 
@@ -175,7 +175,7 @@ class ConnectorHuntIo:
     def __init__(self):
         """Initialize the Connector with necessary configurations."""
         # Load configuration and setup helper
-        self.config = ConfigConnector()
+        self.config = ConfigLoader()
         self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
 
         # Initialize components following dependency injection pattern
@@ -268,9 +268,6 @@ class ConnectorHuntIo:
             )
             current_state = self.helper.get_state()
             current_state_datetime = now.strftime(DateTimeFormats.STANDARD_FORMAT)
-            last_run_datetime = datetime.fromtimestamp(
-                 current_timestamp, tz=timezone.utc
-             ).strftime(DateTimeFormats.STANDARD_FORMAT)
             if current_state:
                 current_state[StateKeys.LAST_RUN] = current_state_datetime
             else:
@@ -282,13 +279,6 @@ class ConnectorHuntIo:
                 current_state[StateKeys.LAST_RUN_WITH_INGESTED_DATA] = (
                     current_state_datetime
                 )
-                message = (
-                    f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                    + str(last_run_datetime)
-                )
-
-                self.helper.connector_logger.info(message)
-                self.helper.api.work.to_processed(work_id, message)
 
             self.helper.set_state(current_state)
 
@@ -305,6 +295,19 @@ class ConnectorHuntIo:
             self.helper.connector_logger.error(str(err))
             # Mark processing as complete even on error
             self.state_manager.update_processing_state(False)
+        finally:
+            if entities:
+                last_run_datetime = datetime.fromtimestamp(
+                    current_timestamp, tz=timezone.utc
+                ).strftime(DateTimeFormats.STANDARD_FORMAT)
+
+                message = (
+                    f"{self.helper.connect_name} connector successfully run, storing last_run as "
+                    + str(last_run_datetime)
+                )
+
+                self.helper.connector_logger.info(message)
+                self.helper.api.work.to_processed(work_id, message)
 
     def run(self) -> None:
         """
