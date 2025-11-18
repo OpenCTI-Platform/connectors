@@ -88,11 +88,11 @@ class ConverterToStix:
     
     def _is_takedown_state(self, queue_state):
         """Check if alert is in takedown state"""
-        return queue_state and queue_state.lower() in ["actioned", "taken down", "taken_down"]
+        return queue_state and queue_state.lower() in ["actioned", "taken_down"]
 
     def _is_reverted_state(self, queue_state):
         """Check if alert is reverted from takedown"""
-        return queue_state and queue_state.lower() in ["unresolved", "needs_review", "doppel_review"]
+        return queue_state and queue_state.lower() in ["archived", "needs_confirmation", "doppel_review", "monitoring"]
 
     def _build_labels(self, alert):
         """
@@ -296,6 +296,13 @@ class ConverterToStix:
         domain_name = root_domain.get("domain", "")
         ip_address = root_domain.get("ip_address", "")
         
+        # Parse timestamps once for indicator/note reuse
+        created_at = parse_iso_datetime(alert["created_at"]) if alert.get("created_at") else None
+        modified = parse_iso_datetime(alert.get("last_activity")) if alert.get("last_activity") else None
+        note_timestamp = modified or created_at or datetime.utcnow()
+        note_content = "Alert is Actioned" if queue_state and queue_state.lower() == "actioned" else "Moved to Takedown"
+        note_body = f"Alert {alert_id} has been {queue_state}"
+
         # Find existing indicators for this alert
         existing_indicators = self._find_indicators_by_alert_id(alert_id, domain_name=domain_name, ip_address=ip_address)
         
@@ -372,6 +379,28 @@ class ConverterToStix:
                             {"alert_id": alert_id, "indicator_id": indicator.get("id"), "observable_id": observable_internal_id, "error": str(e)}
                         )
             
+            # Always record note when takedown/actioned occurs
+            note_refs = []
+            indicator_ref = indicator.get("standard_id") or indicator.get("id")
+            if indicator_ref:
+                note_refs.append(indicator_ref)
+            if primary_observable_id:
+                note_refs.append(primary_observable_id)
+
+            if note_refs:
+                note = Note(
+                    abstract=note_content,
+                    content=note_body,
+                    spec_version="2.1",
+                    created=note_timestamp,
+                    modified=note_timestamp,
+                    created_by_ref=self.author.id,
+                    object_refs=note_refs,
+                    object_marking_refs=[self.tlp_marking.id],
+                    allow_custom=True
+                )
+                stix_objects.append(note)
+
             return  # Indicator already exists and is active
         
         # Create new Indicator (domain_name and ip_address already extracted above)
@@ -384,10 +413,6 @@ class ConverterToStix:
             name = ip_address
         else:
             return
-        
-        # Parse timestamps
-        created_at = parse_iso_datetime(alert["created_at"]) if alert.get("created_at") else None
-        modified = parse_iso_datetime(alert.get("last_activity")) if alert.get("last_activity") else None
         
         labels_dict, labels_flat = self._build_labels(alert)
         
@@ -460,16 +485,19 @@ class ConverterToStix:
                 {"alert_id": alert_id, "domain_id": domain_observable_id, "ip_id": ip_observable_id}
             )
         
-        # Add note
-        note_content = "Alert is Actioned" if queue_state.lower() == "actioned" else "Moved to Takedown"
+        # Add note referencing both indicator and observable when possible
+        note_refs = [indicator.id]
+        if primary_observable_id:
+            note_refs.append(primary_observable_id)
+
         note = Note(
             abstract=note_content,
-            content=f"Alert {alert_id} has been {queue_state}",
+            content=note_body,
             spec_version="2.1",
             created=modified or created_at,
             modified=modified or created_at,
             created_by_ref=self.author.id,
-            object_refs=[primary_observable_id],
+            object_refs=note_refs,
             object_marking_refs=[self.tlp_marking.id],
             allow_custom=True
         )
@@ -518,12 +546,16 @@ class ConverterToStix:
         # Parse timestamps
         modified = parse_iso_datetime(alert.get("last_activity")) if alert.get("last_activity") else datetime.utcnow()
         
+        revoked_indicator_refs = []
         for existing_indicator in active_indicators:
             indicator_id = existing_indicator.get("id")
             self.helper.log_info(
                 f"[DoppelConverter] Revoking indicator",
                 {"alert_id": alert_id, "indicator_id": indicator_id}
             )
+            indicator_standard_id = existing_indicator.get("standard_id") or indicator_id
+            if indicator_standard_id:
+                revoked_indicator_refs.append(indicator_standard_id)
             
             # Use OpenCTI API to revoke the indicator
             try:
@@ -551,7 +583,11 @@ class ConverterToStix:
         
         # Add reversion note to observable
         primary_observable_id = domain_observable_id or ip_observable_id
+        note_refs = revoked_indicator_refs[:]
         if primary_observable_id:
+            note_refs.append(primary_observable_id)
+
+        if note_refs:
             reversion_note = Note(
                 abstract="Moved from taken down back to unresolved",
                 content=f"Alert {alert_id} has been reverted from takedown state to {queue_state}",
@@ -559,7 +595,7 @@ class ConverterToStix:
                 created=modified,
                 modified=modified,
                 created_by_ref=self.author.id,
-                object_refs=[primary_observable_id],
+                object_refs=note_refs,
                 object_marking_refs=[self.tlp_marking.id],
                 allow_custom=True
             )
@@ -614,21 +650,9 @@ class ConverterToStix:
                     {
                         "alert_id": alert_id,
                         "previous_state": previous_queue_state,
-                        "current_state": current_queue_state
+                        "current_state": current_queue_state,
                     }
                 )
-                
-                # Parse timestamps
-                # created_at = (
-                #     parse_iso_datetime(alert["created_at"])
-                #     if alert.get("created_at")
-                #     else None
-                # )
-                # modified = (
-                #     parse_iso_datetime(alert.get("last_activity"))
-                #     if alert.get("last_activity")
-                #     else None
-                # )
 
                 # Extract entity_content data
                 entity_content = alert.get("entity_content", {})
@@ -671,9 +695,9 @@ class ConverterToStix:
                 # Handle score
                 raw_score = alert.get("score")
                 try:
-                    score = int(float(raw_score)) if raw_score is not None else 50
+                    score = int(float(raw_score)) if raw_score is not None else 0
                 except (ValueError, TypeError):
-                    score = 50
+                    score = 0
                 
                 description_parts = []
                 if alert.get("brand"):
