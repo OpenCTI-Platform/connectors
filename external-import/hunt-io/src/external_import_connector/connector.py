@@ -12,7 +12,6 @@ from external_import_connector.constants import (
 from external_import_connector.converter_to_stix import ConverterToStix
 from external_import_connector.entity_processor import EntityProcessor
 from external_import_connector.models import C2
-from external_import_connector.settings import ConfigLoader
 from pycti import OpenCTIConnectorHelper
 
 
@@ -172,11 +171,11 @@ class ConnectorHuntIo:
     clear separation of concerns.
     """
 
-    def __init__(self):
+    def __init__(self, config: dict, helper: OpenCTIConnectorHelper):
         """Initialize the Connector with necessary configurations."""
         # Load configuration and setup helper
-        self.config = ConfigLoader()
-        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
+        self.config = config
+        self.helper = helper
 
         # Initialize components following dependency injection pattern
         self.client = ConnectorClient(self.helper, self.config)
