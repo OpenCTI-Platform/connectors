@@ -94,6 +94,84 @@ class ConverterToStix:
         """Check if alert is reverted from takedown"""
         return queue_state and queue_state.lower() in ["unresolved", "needs_review", "doppel_review"]
 
+    def _build_labels(self, alert):
+        """
+        Build labels for observables/indicators with semantic prefixes
+        Returns dict with categorized labels and flat list
+        """
+        labels_dict = {
+            "queue_state": None,
+            "entity_state": None,
+            "severity": None,
+            "platform": None,
+            "brand": None,
+            "tags": [],
+        }
+
+        if alert.get("queue_state"):
+            labels_dict["queue_state"] = f"queue:{alert['queue_state']}"
+        if alert.get("entity_state"):
+            labels_dict["entity_state"] = f"entity:{alert['entity_state']}"
+        if alert.get("severity"):
+            labels_dict["severity"] = f"severity:{alert['severity']}"
+        if alert.get("platform"):
+            labels_dict["platform"] = f"platform:{alert['platform']}"
+        if alert.get("brand"):
+            labels_dict["brand"] = f"brand:{alert['brand']}"
+
+        tags = alert.get("tags", [])
+        if tags:
+            labels_dict["tags"] = tags
+
+        labels_flat = [v for v in labels_dict.values() if v and isinstance(v, str)]
+        labels_flat.extend(labels_dict["tags"])
+
+        return labels_dict, labels_flat
+
+    def _update_observable_labels(self, observable_id, new_labels_dict, old_state=None):
+        """
+        Update labels on existing observable, removing old state labels
+        """
+        try:
+            observable = self.helper.api.stix_cyber_observable.read(id=observable_id)
+            if not observable:
+                return
+
+            current_labels = observable.get("objectLabel", [])
+
+            if old_state:
+                old_queue_state = old_state.get("queue_state")
+                if old_queue_state:
+                    old_label = f"queue:{old_queue_state}"
+                    for label in current_labels:
+                        if label.get("value") == old_label:
+                            self.helper.api.label.delete(id=label.get("id"))
+                            self.helper.log_info(
+                                "[DoppelConverter] Removed old queue label",
+                                {"observable_id": observable_id, "old_label": old_label},
+                            )
+
+            for category, label_value in new_labels_dict.items():
+                if label_value and isinstance(label_value, str):
+                    label = self.helper.api.label.create(value=label_value)
+                    self.helper.api.stix_cyber_observable.add_label(
+                        id=observable_id,
+                        label_id=label["id"],
+                    )
+
+            for tag in new_labels_dict.get("tags", []):
+                label = self.helper.api.label.create(value=tag)
+                self.helper.api.stix_cyber_observable.add_label(
+                    id=observable_id,
+                    label_id=label["id"],
+                )
+
+        except Exception as e:
+            self.helper.log_error(
+                f"[DoppelConverter] Error updating observable labels: {str(e)}",
+                {"observable_id": observable_id},
+            )
+
     def _find_observable_by_value(self, value, obs_type="Domain-Name"):
         """
         Find existing observable in OpenCTI by value
@@ -129,24 +207,58 @@ class ConverterToStix:
             )
             return None
 
-    def _find_indicators_by_alert_id(self, alert_id):
+    def _find_indicators_by_alert_id(self, alert_id, domain_name=None, ip_address=None):
         """
         Find indicators by alert_id stored in external_id
         :param alert_id: Doppel alert ID
+        :param domain_name: Optional domain name to search by pattern
+        :param ip_address: Optional IP address to search by pattern
         :return: List of indicator objects
         """
         try:
-            # Search by external reference external_id
+            # First try searching by custom property (may not work if not indexed)
             filters = {
                 "mode": "and",
                 "filters": [
                     {"key": "entity_type", "values": ["Indicator"]},
-                    {"key": "x_opencti_workflow_id", "values": [alert_id]}  # Using workflow_id as custom field
+                    {"key": "x_opencti_workflow_id", "values": [alert_id]}
                 ],
                 "filterGroups": []
             }
             
             indicators = self.helper.api.indicator.list(filters=filters)
+            
+            # If not found and we have domain/IP, search by pattern
+            if (not indicators or len(indicators) == 0) and (domain_name or ip_address):
+                search_value = domain_name or ip_address
+                self.helper.log_info(
+                    f"[DoppelConverter] No indicators found by workflow_id, trying pattern search",
+                    {"alert_id": alert_id, "search_value": search_value}
+                )
+                
+                # Search by indicator name (which is the domain/IP)
+                filters = {
+                    "mode": "and",
+                    "filters": [
+                        {"key": "entity_type", "values": ["Indicator"]},
+                        {"key": "name", "values": [search_value]}
+                    ],
+                    "filterGroups": []
+                }
+                
+                indicators = self.helper.api.indicator.list(filters=filters)
+                
+                # Filter results to only include indicators with matching external_id
+                if indicators:
+                    filtered_indicators = []
+                    for ind in indicators:
+                        # Check external references for matching alert_id
+                        ext_refs = ind.get("externalReferences", []) or []
+                        for ext_ref in ext_refs:
+                            if ext_ref.get("external_id") == alert_id:
+                                filtered_indicators.append(ind)
+                                break
+                    indicators = filtered_indicators
             
             self.helper.log_info(
                 f"[DoppelConverter] Found {len(indicators) if indicators else 0} indicators for alert",
@@ -178,20 +290,30 @@ class ConverterToStix:
             {"alert_id": alert_id, "queue_state": queue_state}
         )
         
+        # Extract domain/IP for search
+        entity_content = alert.get("entity_content", {})
+        root_domain = entity_content.get("root_domain", {})
+        domain_name = root_domain.get("domain", "")
+        ip_address = root_domain.get("ip_address", "")
+        
         # Find existing indicators for this alert
-        existing_indicators = self._find_indicators_by_alert_id(alert_id)
+        existing_indicators = self._find_indicators_by_alert_id(alert_id, domain_name=domain_name, ip_address=ip_address)
         
         # Filter for active (non-revoked) indicators
         active_indicators = [ind for ind in existing_indicators if not ind.get("revoked", False)]
         
+        # Get primary observable ID for relationship
+        primary_observable_id = domain_observable_id or ip_observable_id
+        
         if active_indicators:
             # Un-revoke if previously revoked
             indicator = active_indicators[0]
+            indicator_id = indicator.get("standard_id") or indicator.get("id")
             
             if indicator.get("revoked"):
                 self.helper.log_info(
                     f"[DoppelConverter] Un-revoking indicator after re-takedown",
-                    {"alert_id": alert_id, "indicator_id": indicator.get("id")}
+                    {"alert_id": alert_id, "indicator_id": indicator_id}
                 )
                 
                 # Update to revoked=false
@@ -209,14 +331,50 @@ class ConverterToStix:
                             label_id=label.get("id")
                         )
             
+            # Ensure relationship exists even if indicator already exists
+            if primary_observable_id:
+                # Get the observable's internal ID if we have standard_id
+                observable_internal_id = primary_observable_id
+                if primary_observable_id.startswith("domain-name--") or primary_observable_id.startswith("ipv4-addr--"):
+                    # It's a standard_id, try to get internal ID from existing observable
+                    if domain_observable_id and domain_observable_id == primary_observable_id:
+                        existing_domain = self._find_observable_by_value(domain_name, "Domain-Name") if domain_name else None
+                        if existing_domain:
+                            observable_internal_id = existing_domain.get("id")
+                    elif ip_observable_id and ip_observable_id == primary_observable_id:
+                        existing_ip = self._find_observable_by_value(ip_address, "IPv4-Addr") if ip_address else None
+                        if existing_ip:
+                            observable_internal_id = existing_ip.get("id")
+                
+                # Use OpenCTI API to create relationship for existing objects
+                try:
+                    self.helper.api.stix_core_relationship.create(
+                        fromId=indicator.get("id"),  # Use OpenCTI internal ID
+                        toId=observable_internal_id,  # Use internal ID
+                        relationship_type="based-on"
+                    )
+                    self.helper.log_info(
+                        f"[DoppelConverter] Created based-on relationship via API for existing indicator",
+                        {"alert_id": alert_id, "indicator_id": indicator.get("id"), "observable_id": observable_internal_id}
+                    )
+                except Exception as e:
+                    # If relationship already exists, API will error - that's okay
+                    error_str = str(e).lower()
+                    if "already exists" in error_str or "duplicate" in error_str or "unique constraint" in error_str:
+                        self.helper.log_info(
+                            f"[DoppelConverter] Relationship already exists",
+                            {"alert_id": alert_id, "indicator_id": indicator.get("id"), "observable_id": observable_internal_id}
+                        )
+                    else:
+                        # Log the error but don't fail - relationship might still be created
+                        self.helper.log_warning(
+                            f"[DoppelConverter] Error creating relationship via API (may still exist)",
+                            {"alert_id": alert_id, "indicator_id": indicator.get("id"), "observable_id": observable_internal_id, "error": str(e)}
+                        )
+            
             return  # Indicator already exists and is active
         
-        # Create new Indicator
-        entity_content = alert.get("entity_content", {})
-        root_domain = entity_content.get("root_domain", {})
-        domain_name = root_domain.get("domain", "")
-        ip_address = root_domain.get("ip_address", "")
-        
+        # Create new Indicator (domain_name and ip_address already extracted above)
         # Build pattern
         if domain_name:
             pattern = f"[domain-name:value = '{domain_name}']"
@@ -231,18 +389,7 @@ class ConverterToStix:
         created_at = parse_iso_datetime(alert["created_at"]) if alert.get("created_at") else None
         modified = parse_iso_datetime(alert.get("last_activity")) if alert.get("last_activity") else None
         
-        # Build labels
-        labels = []
-        if alert.get("queue_state"):
-            labels.append(alert["queue_state"])
-        if alert.get("entity_state"):
-            labels.append(alert["entity_state"])
-        if alert.get("severity"):
-            labels.append(alert["severity"])
-        if alert.get("platform"):
-            labels.append(alert["platform"])
-        if alert.get("brand"):
-            labels.append(alert["brand"])
+        labels_dict, labels_flat = self._build_labels(alert)
         
         # Build audit logs
         audit_logs = alert.get("audit_logs", [])
@@ -278,7 +425,7 @@ class ConverterToStix:
             modified=modified,
             created_by_ref=self.author.id,
             object_marking_refs=[self.tlp_marking.id],
-            labels=labels if labels else None,
+            labels=labels_flat or None,
             external_references=external_references if external_references else None,
             valid_from=created_at,
             custom_properties={
@@ -289,7 +436,6 @@ class ConverterToStix:
         stix_objects.append(indicator)
         
         # Create based-on relationship to primary observable
-        primary_observable_id = domain_observable_id or ip_observable_id
         if primary_observable_id:
             based_on_rel = StixCoreRelationship(
                 relationship_type="based-on",
@@ -303,6 +449,16 @@ class ConverterToStix:
                 allow_custom=True
             )
             stix_objects.append(based_on_rel)
+            
+            self.helper.log_info(
+                f"[DoppelConverter] Created based-on relationship for new indicator",
+                {"alert_id": alert_id, "indicator_id": indicator.id, "observable_id": primary_observable_id}
+            )
+        else:
+            self.helper.log_warning(
+                f"[DoppelConverter] No observable ID available for relationship",
+                {"alert_id": alert_id, "domain_id": domain_observable_id, "ip_id": ip_observable_id}
+            )
         
         # Add note
         note_content = "Alert is Actioned" if queue_state.lower() == "actioned" else "Moved to Takedown"
@@ -340,8 +496,14 @@ class ConverterToStix:
             {"alert_id": alert_id, "queue_state": queue_state}
         )
         
+        # Extract domain/IP for search
+        entity_content = alert.get("entity_content", {})
+        root_domain = entity_content.get("root_domain", {})
+        domain_name = root_domain.get("domain", "")
+        ip_address = root_domain.get("ip_address", "")
+        
         # Find existing indicators for this alert
-        existing_indicators = self._find_indicators_by_alert_id(alert_id)
+        existing_indicators = self._find_indicators_by_alert_id(alert_id, domain_name=domain_name, ip_address=ip_address)
         
         # Filter for active (non-revoked) indicators
         active_indicators = [ind for ind in existing_indicators if not ind.get("revoked", False)]
@@ -357,31 +519,35 @@ class ConverterToStix:
         modified = parse_iso_datetime(alert.get("last_activity")) if alert.get("last_activity") else datetime.utcnow()
         
         for existing_indicator in active_indicators:
+            indicator_id = existing_indicator.get("id")
             self.helper.log_info(
                 f"[DoppelConverter] Revoking indicator",
-                {"alert_id": alert_id, "indicator_id": existing_indicator.get("id")}
+                {"alert_id": alert_id, "indicator_id": indicator_id}
             )
             
-            # Create new version with revoked=true
-            revoked_indicator = Indicator(
-                id=existing_indicator.get("standard_id"),
-                pattern=existing_indicator.get("pattern"),
-                pattern_type=existing_indicator.get("pattern_type", "stix"),
-                spec_version="2.1",
-                name=existing_indicator.get("name"),
-                created=parse_iso_datetime(existing_indicator.get("created")),
-                modified=modified,
-                created_by_ref=self.author.id,
-                revoked=True,
-                labels=(existing_indicator.get("labels", []) or []) + ["revoked-false-positive"],
-                object_marking_refs=[self.tlp_marking.id],
-                valid_from=parse_iso_datetime(existing_indicator.get("valid_from")) if existing_indicator.get("valid_from") else None,
-                custom_properties={
-                    "x_opencti_workflow_id": alert_id
-                },
-                allow_custom=True
-            )
-            stix_objects.append(revoked_indicator)
+            # Use OpenCTI API to revoke the indicator
+            try:
+                self.helper.api.stix_domain_object.update_field(
+                    id=indicator_id,
+                    input={"key": "revoked", "value": True}
+                )
+                
+                # Add revoked-false-positive label
+                label = self.helper.api.label.create(value="revoked-false-positive")
+                self.helper.api.stix_domain_object.add_label(
+                    id=indicator_id,
+                    label_id=label["id"]
+                )
+                
+                self.helper.log_info(
+                    f"[DoppelConverter] Successfully revoked indicator via API",
+                    {"alert_id": alert_id, "indicator_id": indicator_id}
+                )
+            except Exception as e:
+                self.helper.log_error(
+                    f"[DoppelConverter] Error revoking indicator via API: {str(e)}",
+                    {"alert_id": alert_id, "indicator_id": indicator_id}
+                )
         
         # Add reversion note to observable
         primary_observable_id = domain_observable_id or ip_observable_id
@@ -477,23 +643,7 @@ class ConverterToStix:
                 mx_records = root_domain.get("mx_records", [])
                 nameservers = root_domain.get("nameservers", [])
 
-                # Build labels
-                labels = []
-                if alert.get("queue_state"):
-                    labels.append(alert["queue_state"])
-                if alert.get("entity_state"):
-                    labels.append(alert["entity_state"])
-                if alert.get("severity"):
-                    labels.append(alert["severity"])
-                if alert.get("platform"):
-                    labels.append(alert["platform"])
-                if alert.get("brand"):
-                    labels.append(alert["brand"])
-                
-                # Add tags
-                tags = alert.get("tags", [])
-                if tags:
-                    labels.extend(tags)
+                labels_dict, labels_flat = self._build_labels(alert)
                 
                 # Format audit logs
                 audit_logs = alert.get("audit_logs", [])
@@ -525,37 +675,38 @@ class ConverterToStix:
                 except (ValueError, TypeError):
                     score = 50
                 
-                # Build Doppel extension
-                doppel_extension = {
-                    "extension_type": "property-extension"
-                }
-                
+                description_parts = []
                 if alert.get("brand"):
-                    doppel_extension["brand"] = alert.get("brand")
+                    description_parts.append(f"**Brand**: {alert.get('brand')}")
                 if alert.get("product"):
-                    doppel_extension["product"] = alert.get("product")
+                    description_parts.append(f"**Product**: {alert.get('product')}")
                 if alert.get("notes"):
-                    doppel_extension["notes"] = alert.get("notes")
-                if alert.get("screenshot_url"):
-                    doppel_extension["screenshot_url"] = alert.get("screenshot_url")
+                    description_parts.append(f"**Notes**: {alert.get('notes')}")
                 if alert.get("uploaded_by"):
-                    doppel_extension["uploaded_by"] = alert.get("uploaded_by")
-                if raw_score is not None:
-                    doppel_extension["score"] = score
+                    description_parts.append(f"**Uploaded By**: {alert.get('uploaded_by')}")
+                if alert.get("screenshot_url"):
+                    description_parts.append(f"**Screenshot**: {alert.get('screenshot_url')}")
                 if alert.get("message"):
-                    doppel_extension["content"] = alert.get("message")
+                    description_parts.append(f"**Message**: {alert.get('message')}")
                 if country_code:
-                    doppel_extension["country_code"] = country_code
+                    description_parts.append(f"**Country**: {country_code}")
                 if registrar:
-                    doppel_extension["registrar"] = registrar
+                    description_parts.append(f"**Registrar**: {registrar}")
                 if hosting_provider:
-                    doppel_extension["hosting_provider"] = hosting_provider
+                    description_parts.append(f"**Hosting Provider**: {hosting_provider}")
                 if contact_email:
-                    doppel_extension["contact_email"] = contact_email
+                    description_parts.append(f"**Contact Email**: {contact_email}")
                 if mx_records:
-                    doppel_extension["mx_records"] = mx_records
+                    description_parts.append(f"**MX Records**: {', '.join(mx_records)}")
                 if nameservers:
-                    doppel_extension["nameservers"] = nameservers
+                    description_parts.append(f"**Nameservers**: {', '.join(nameservers)}")
+
+                x_opencti_description = "\n".join(description_parts) if description_parts else None
+                custom_properties = {}
+                if x_opencti_description:
+                    custom_properties["x_opencti_description"] = x_opencti_description
+                custom_properties["x_opencti_created_by_ref"] = self.author.id
+                custom_properties["x_opencti_score"] = score
                 
                 domain_observable_id = None
                 ip_observable_id = None
@@ -570,11 +721,9 @@ class ConverterToStix:
                         value=domain_name,
                         spec_version="2.1",
                         object_marking_refs=[self.tlp_marking.id],
-                        labels=labels if labels else None,
+                        labels=labels_flat or None,
                         external_references=external_references if external_references else None,
-                        extensions={
-                            "x-metron-doppel-ext": doppel_extension
-                        },
+                        custom_properties=custom_properties,
                         allow_custom=True,
                     )
                     stix_objects.append(domain_observable)
@@ -586,6 +735,11 @@ class ConverterToStix:
                     )
                 elif existing_domain:
                     domain_observable_id = existing_domain.get("standard_id")
+                    self._update_observable_labels(
+                        domain_observable_id,
+                        labels_dict,
+                        old_state=state.get(alert_id),
+                    )
                     
                     self.helper.log_info(
                         "[DoppelConverter] Using existing domain observable",
@@ -598,7 +752,8 @@ class ConverterToStix:
                         value=ip_address,
                         spec_version="2.1",
                         object_marking_refs=[self.tlp_marking.id],
-                        labels=labels if labels else None,
+                        labels=labels_flat or None,
+                        custom_properties=custom_properties,
                         allow_custom=True
                     )
                     stix_objects.append(ip_observable)
@@ -623,6 +778,11 @@ class ConverterToStix:
                         stix_objects.append(relationship)
                 elif existing_ip:
                     ip_observable_id = existing_ip.get("standard_id")
+                    self._update_observable_labels(
+                        ip_observable_id,
+                        labels_dict,
+                        old_state=state.get(alert_id),
+                    )
                     
                     self.helper.log_info(
                         "[DoppelConverter] Using existing IP observable",
@@ -634,13 +794,46 @@ class ConverterToStix:
                 was_takedown = self._is_takedown_state(previous_queue_state) if previous_queue_state else False
                 is_reverted = self._is_reverted_state(current_queue_state)
                 
+                self.helper.log_info(
+                    "[DoppelConverter] State transition analysis",
+                    {
+                        "alert_id": alert_id,
+                        "previous_state": previous_queue_state,
+                        "current_state": current_queue_state,
+                        "was_takedown": was_takedown,
+                        "is_takedown_now": is_takedown_now,
+                        "is_reverted": is_reverted
+                    }
+                )
+                
                 # Transition: TO_TAKEDOWN (needs_review → taken_down)
                 if is_takedown_now and not was_takedown:
+                    self.helper.log_info(
+                        "[DoppelConverter] Transition detected: TO_TAKEDOWN",
+                        {"alert_id": alert_id, "from": previous_queue_state, "to": current_queue_state}
+                    )
                     self._process_takedown(alert, domain_observable_id, ip_observable_id, stix_objects)
                 
-                # Transition: REVERSION (taken_down → unresolved)
+                # Transition: REVERSION (taken_down → unresolved/doppel_review)
                 elif was_takedown and not is_takedown_now:
+                    self.helper.log_info(
+                        "[DoppelConverter] Transition detected: REVERSION",
+                        {"alert_id": alert_id, "from": previous_queue_state, "to": current_queue_state}
+                    )
                     self._process_reversion(alert, domain_observable_id, ip_observable_id, stix_objects)
+                
+                # Handle case where previous_state is null but we have an active indicator in reverted state
+                elif previous_queue_state is None and is_reverted and not is_takedown_now:
+                    # Check if there's an active indicator for this alert (domain_name and ip_address already extracted above)
+                    existing_indicators = self._find_indicators_by_alert_id(alert_id, domain_name=domain_name, ip_address=ip_address)
+                    active_indicators = [ind for ind in existing_indicators if not ind.get("revoked", False)]
+                    
+                    if active_indicators:
+                        self.helper.log_info(
+                            "[DoppelConverter] Transition detected: REVERSION (no previous state, but active indicator found)",
+                            {"alert_id": alert_id, "from": previous_queue_state, "to": current_queue_state, "active_indicators_count": len(active_indicators)}
+                        )
+                        self._process_reversion(alert, domain_observable_id, ip_observable_id, stix_objects)
                 
                 # Case Creation
                 if domain_observable_id or ip_observable_id:
