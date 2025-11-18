@@ -1,0 +1,39 @@
+services:
+  connector-assemblyline:
+    image: assemblyline-connector:latest
+    container_name: connector-assemblyline
+    environment:
+      # ===========================
+      # OpenCTI Configuration
+      # ===========================
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=your-opencti-token
+      
+      # ===========================
+      # Connector Configuration
+      # ===========================
+      - CONNECTOR_ID=your-uuid-v4-here
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      - CONNECTOR_NAME=AssemblyLine
+      - CONNECTOR_SCOPE=Artifact
+      - CONNECTOR_AUTO=true
+      - CONNECTOR_CONFIDENCE_LEVEL=85
+      - CONNECTOR_LOG_LEVEL=info
+      
+      # ===========================
+      # AssemblyLine Configuration
+      # ===========================
+      - ASSEMBLYLINE_URL=https://your-assemblyline-instance.com
+      - ASSEMBLYLINE_USER=your-username
+      - ASSEMBLYLINE_APIKEY=your-api-key
+      - ASSEMBLYLINE_VERIFY_SSL=true
+      - ASSEMBLYLINE_SUBMISSION_PROFILE=default
+      - ASSEMBLYLINE_TIMEOUT=600
+      - ASSEMBLYLINE_FORCE_RESUBMIT=false
+      - ASSEMBLYLINE_MAX_FILE_SIZE_MB=10
+      - ASSEMBLYLINE_INCLUDE_SUSPICIOUS=false
+      - ASSEMBLYLINE_CREATE_ATTACK_PATTERNS=true
+      
+    restart: unless-stopped
+    depends_on:
+      - opencti
