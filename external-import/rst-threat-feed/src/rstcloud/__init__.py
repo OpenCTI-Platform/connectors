@@ -204,7 +204,9 @@ def feed_converter(
                     > 0
                 ):
                     description = f"{description}\n\nRelated IPs:"
-                    description = f'{description}\n- A Records: {ioc_raw["resolved"]["ip"]["a"]}'
+                    description = (
+                        f'{description}\n- A Records: {ioc_raw["resolved"]["ip"]["a"]}'
+                    )
                     description = f'{description}\n- Alias Records: {ioc_raw["resolved"]["ip"]["alias"]}'
                     description = f'{description}\n- CNAME Records: {ioc_raw["resolved"]["ip"]["cname"]}'
             if ioc_raw.get("geo"):

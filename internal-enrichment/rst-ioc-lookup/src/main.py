@@ -293,7 +293,11 @@ class RSTIocLookupConnector:
                 raise ValueError("Unsupported description update action")
 
             external_references = list()
-            src_reports = resp["src"]["report"] if isinstance(resp["src"]["report"], list) else resp["src"]["report"].split(",")
+            src_reports = (
+                resp["src"]["report"]
+                if isinstance(resp["src"]["report"], list)
+                else resp["src"]["report"].split(",")
+            )
             for ref in src_reports:
                 ref_name = urlparse(ref).netloc
                 if ref_name.strip() == "":
@@ -359,7 +363,11 @@ class RSTIocLookupConnector:
             )
 
             external_references = list()
-            src_reports = resp["src"]["report"] if isinstance(resp["src"]["report"], list) else resp["src"]["report"].split(",")
+            src_reports = (
+                resp["src"]["report"]
+                if isinstance(resp["src"]["report"], list)
+                else resp["src"]["report"].split(",")
+            )
             for ref in src_reports:
                 ref_name = urlparse(ref).netloc
                 if ref_name.strip() == "":
