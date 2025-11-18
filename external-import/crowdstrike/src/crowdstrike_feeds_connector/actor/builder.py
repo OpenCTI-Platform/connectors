@@ -5,6 +5,7 @@ import logging
 from typing import List, Optional, Tuple
 
 from crowdstrike_feeds_services.utils import (
+    create_authored_by_relationships,
     create_external_reference,
     create_intrusion_set,
     create_originates_from_relationships,
@@ -16,13 +17,14 @@ from crowdstrike_feeds_services.utils import (
     remove_html_tags,
     timestamp_to_datetime,
 )
-from stix2 import Identity  # type: ignore
 from stix2 import (
     AttackPattern,
     Bundle,
     ExternalReference,
+    Identity,  # type: ignore
     IntrusionSet,
     Location,
+    Malware,
     MarkingDefinition,
     Relationship,
 )
@@ -54,6 +56,8 @@ class ActorBundleBuilder:
         object_markings: List[MarkingDefinition],
         confidence_level: int,
         attack_patterns: Optional[List] = None,
+        related_indicators: Optional[List] = None,
+        malware: Optional[List] = None,
     ) -> None:
         """Initialize actor bundle builder."""
         self.actor = actor
@@ -62,6 +66,8 @@ class ActorBundleBuilder:
         self.object_markings = object_markings
         self.confidence_level = confidence_level
         self.attack_patterns = attack_patterns or []
+        self.related_indicators = related_indicators or []
+        self.malware = malware or []
 
         first_seen = timestamp_to_datetime(self.actor["first_activity_date"])
         last_seen = timestamp_to_datetime(self.actor["last_activity_date"])
@@ -250,6 +256,43 @@ class ActorBundleBuilder:
             stop_time=self.last_seen,
         )
 
+    def _get_malware(self) -> List[Malware]:
+        """Get Malware entities."""
+        return self.malware
+
+    def _get_malware_by_field(self, field_name: str) -> List[Malware]:
+        """Get Malware entities filtered by the specified threat field."""
+        threats = self.actor.get(field_name)
+        if not threats:
+            return []
+
+        family_names = set()
+        family_names.update(
+            threat.get("family_name") for threat in threats if threat.get("family_name")
+        )
+
+        return [malware for malware in self.malware if malware.name in family_names]
+
+    def _get_uses_malware(self) -> List[Malware]:
+        """Get Malware entities that are used (from uses_threats field)."""
+        return self._get_malware_by_field("uses_threats")
+
+    def _get_develops_malware(self) -> List[Malware]:
+        """Get Malware entities that are developed (from develops_threats field)."""
+        return self._get_malware_by_field("develops_threats")
+
+    def _create_authored_by_relationships(
+        self, sources: List[_DomainObject], targets: List[_DomainObject]
+    ) -> List[Relationship]:
+        """Create 'authored-by' relationships between Malware and IntrusionSet."""
+        return create_authored_by_relationships(
+            self.author,
+            sources,
+            targets,
+            self.confidence_level,
+            self.object_markings,
+        )
+
     def build(self) -> Bundle:
         """Build actor bundle."""
         # Create bundle with author.
@@ -317,6 +360,26 @@ class ActorBundleBuilder:
         )
         bundle_objects.extend(intrusion_sets_use_attack_patterns)
 
-        # MVP4
+        # Add malware entities to bundle
+        all_malware = self._get_malware()
+        bundle_objects.extend(all_malware)
+
+        # Get specific malware lists for relationship creation
+        uses_malware = self._get_uses_malware()
+        develops_malware = self._get_develops_malware()
+
+        # Create uses relationships between intrusion sets and used malware
+        if uses_malware:
+            intrusion_sets_use_malware = self._create_uses_relationships(
+                intrusion_sets, uses_malware
+            )
+            bundle_objects.extend(intrusion_sets_use_malware)
+
+        # Create authored-by relationships between developed malware and intrusion sets
+        if develops_malware:
+            malware_authored_by_intrusion_sets = self._create_authored_by_relationships(
+                develops_malware, intrusion_sets
+            )
+            bundle_objects.extend(malware_authored_by_intrusion_sets)
 
         return Bundle(objects=bundle_objects, allow_custom=True)
