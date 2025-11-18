@@ -44,7 +44,6 @@ class LivehuntBuilder:
         livehunt_label_prefix: str,
         livehunt_tag_prefix: str,
         enable_label_enrichment: bool,
-        get_malware_config: bool
     ) -> None:
         """Initialize Virustotal builder."""
         self.client = client
@@ -69,7 +68,6 @@ class LivehuntBuilder:
         self.livehunt_label_prefix = livehunt_label_prefix
         self.livehunt_tag_prefix = livehunt_tag_prefix
         self.enable_label_enrichment = enable_label_enrichment
-        self.get_malware_config = get_malware_config
 
     def process(self, start_date: str, timestamp: int):
         # Work id will only be set and instantiated if there are bundles to send.
@@ -163,9 +161,6 @@ class LivehuntBuilder:
                         incident_id,
                         file_id,
                     )
-            
-            if self.get_malware_config:
-                pass
 
             if len(self.bundle) > 0:
                 if work_id is None:
