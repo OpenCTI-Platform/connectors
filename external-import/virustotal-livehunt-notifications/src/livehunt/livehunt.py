@@ -179,6 +179,13 @@ class VirustotalLivehuntNotifications:
             default=True,
         )
 
+        get_malware_config = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_GET_MALWARE_CONFIG",
+            ["virustotal_livehunt_notifications", "get_malware_config"],
+            config,
+            default=False,
+        )
+
         self.builder = LivehuntBuilder(
             client,
             self.helper,
@@ -201,6 +208,7 @@ class VirustotalLivehuntNotifications:
             livehunt_label_prefix,
             livehunt_tag_prefix,
             enable_label_enrichment,
+            get_malware_config,
         )
 
     @staticmethod
