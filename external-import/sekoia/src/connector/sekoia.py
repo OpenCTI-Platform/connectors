@@ -296,6 +296,8 @@ class SekoiaConnector(object):
                 item["x_opencti_main_observable_type"] = (
                     OpenCTIStix2Utils.stix_observable_opencti_type(stix_type)
                 )
+                if item.get("revoked") is not None and item.get("revoked") is True:
+                    item["valid_until"] = item.get("modified")
 
     def _retrieve_references(
         self, items: List[Dict], current_depth: int = 0
