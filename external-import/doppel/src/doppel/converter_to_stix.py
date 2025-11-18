@@ -109,9 +109,9 @@ class ConverterToStix:
         }
 
         if alert.get("queue_state"):
-            labels_dict["queue_state"] = f"queue:{alert['queue_state']}"
+            labels_dict["queue_state"] = f"queue_state:{alert['queue_state']}"
         if alert.get("entity_state"):
-            labels_dict["entity_state"] = f"entity:{alert['entity_state']}"
+            labels_dict["entity_state"] = f"entity_state:{alert['entity_state']}"
         if alert.get("severity"):
             labels_dict["severity"] = f"severity:{alert['severity']}"
         if alert.get("platform"):
@@ -445,7 +445,7 @@ class ConverterToStix:
             pattern_type="stix",
             spec_version="2.1",
             name=name,
-            description=f"Product: {alert.get('product', 'unknown')}\nSource: {alert.get('source', 'unknown')}\nAudit Logs:\n{audit_log_text}",
+            description=f"Product: {alert.get('product', 'unknown')}\nSource: {alert.get('source', 'unknown')}\nAudit Logs: {audit_log_text}",
             created=created_at,
             modified=modified,
             created_by_ref=self.author.id,
@@ -701,29 +701,29 @@ class ConverterToStix:
                 
                 description_parts = []
                 if alert.get("brand"):
-                    description_parts.append(f"**Brand**: {alert.get('brand')}")
+                    description_parts.append(f"**Brand**: {alert.get('brand')}\n")
                 if alert.get("product"):
-                    description_parts.append(f"**Product**: {alert.get('product')}")
+                    description_parts.append(f"**Product**: {alert.get('product')}\n")
                 if alert.get("notes"):
-                    description_parts.append(f"**Notes**: {alert.get('notes')}")
+                    description_parts.append(f"**Notes**: {alert.get('notes')}\n")
                 if alert.get("uploaded_by"):
-                    description_parts.append(f"**Uploaded By**: {alert.get('uploaded_by')}")
+                    description_parts.append(f"**Uploaded By**: {alert.get('uploaded_by')}\n")
                 if alert.get("screenshot_url"):
-                    description_parts.append(f"**Screenshot**: {alert.get('screenshot_url')}")
+                    description_parts.append(f"**Screenshot**: {alert.get('screenshot_url')}\n")
                 if alert.get("message"):
-                    description_parts.append(f"**Message**: {alert.get('message')}")
+                    description_parts.append(f"**Message**: {alert.get('message')}\n")
                 if country_code:
-                    description_parts.append(f"**Country**: {country_code}")
+                    description_parts.append(f"**Country**: {country_code}\n")
                 if registrar:
-                    description_parts.append(f"**Registrar**: {registrar}")
+                    description_parts.append(f"**Registrar**: {registrar}\n")
                 if hosting_provider:
-                    description_parts.append(f"**Hosting Provider**: {hosting_provider}")
+                    description_parts.append(f"**Hosting Provider**: {hosting_provider}\n")
                 if contact_email:
-                    description_parts.append(f"**Contact Email**: {contact_email}")
+                    description_parts.append(f"**Contact Email**: {contact_email}\n")
                 if mx_records:
-                    description_parts.append(f"**MX Records**: {', '.join(mx_records)}")
+                    description_parts.append(f"**MX Records**: {', '.join(mx_records)}\n")
                 if nameservers:
-                    description_parts.append(f"**Nameservers**: {', '.join(nameservers)}")
+                    description_parts.append(f"**Nameservers**: {', '.join(nameservers)}\n")
 
                 x_opencti_description = "\n".join(description_parts) if description_parts else None
                 custom_properties = {}
