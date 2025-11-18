@@ -5,6 +5,7 @@ import pycti
 import stix2
 from external_import_connector.constants import (
     AuthorInfo,
+    ExternalReferences,
     InfrastructureTypes,
 )
 from external_import_connector.exceptions import InvalidTlpLevelError
@@ -41,7 +42,17 @@ class ConverterToStix:
             name=AuthorInfo.NAME,
             description=AuthorInfo.DESCRIPTION,
             tpl_marking=self.tlp_marking.id,
+            external_references=self.create_external_references(),
         ).stix2_object
+
+    @staticmethod
+    def create_external_references() -> list[stix2.ExternalReference]:
+        external_reference = stix2.ExternalReference(
+            source_name=ExternalReferences.SOURCE_NAME,
+            url=ExternalReferences.URL,
+            description=ExternalReferences.DESCRIPTION,
+        )
+        return [external_reference]
 
     @staticmethod
     def create_tlp_marking(
