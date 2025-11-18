@@ -1,6 +1,8 @@
 """AioHttpClient class for making HTTP requests using aiohttp."""
 
 import logging
+import os
+import ssl
 from asyncio import TimeoutError
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -11,6 +13,7 @@ from aiohttp import (
     ClientTimeout,
     ServerConnectionError,
     ServerDisconnectedError,
+    TCPConnector,
 )
 
 from .exceptions.api_error import ApiError
@@ -121,8 +124,19 @@ class AioHttpClient(BaseHttpClient):
                 "has_json": json_payload is not None,
             },
         )
+
+        # Check if SSL verification should be disabled for proxy testing
+        connector = None
+        if os.environ.get("HTTPS_PROXY_REJECT_UNAUTHORIZED", "").lower() == "false":
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            connector = TCPConnector(ssl=ssl_context)
+
         try:
-            async with ClientSession(timeout=actual_timeout, trust_env=True) as session:
+            async with ClientSession(
+                timeout=actual_timeout, connector=connector, trust_env=True
+            ) as session:
                 async with session.request(
                     method=method,
                     url=url,
