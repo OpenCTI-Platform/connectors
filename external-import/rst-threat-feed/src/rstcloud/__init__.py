@@ -185,17 +185,17 @@ def feed_converter(
                 and ioc_raw.get("resolved").get("whois").get("havedata") == "true"
             ):
                 description = f'{description}\n\nWhois Registrar: {ioc_raw["resolved"]["whois"]["registrar"]}'
-                description = f'{description}\n--- Registrant: {ioc_raw["resolved"]["whois"]["registrant"]}'
+                description = f'{description}\n- Registrant: {ioc_raw["resolved"]["whois"]["registrant"]}'
                 if ioc_raw["resolved"]["whois"]["age"] > 0:
                     description = (
-                        f'{description}\n--- Age: {ioc_raw["resolved"]["whois"]["age"]}'
+                        f'{description}\n- Age: {ioc_raw["resolved"]["whois"]["age"]}'
                     )
                 if ioc_raw["resolved"]["whois"]["created"] != "1970-01-01 00:00:00":
-                    description = f'{description}\n--- Created: {ioc_raw["resolved"]["whois"]["created"]}'
+                    description = f'{description}\n- Created: {ioc_raw["resolved"]["whois"]["created"]}'
                 if ioc_raw["resolved"]["whois"]["updated"] != "1970-01-01 00:00:00":
-                    description = f'{description}\n--- Updated: {ioc_raw["resolved"]["whois"]["updated"]}'
+                    description = f'{description}\n- Updated: {ioc_raw["resolved"]["whois"]["updated"]}'
                 if ioc_raw["resolved"]["whois"]["expires"] != "1970-01-01 00:00:00":
-                    description = f'{description}\n--- Expires: {ioc_raw["resolved"]["whois"]["expires"]}'
+                    description = f'{description}\n- Expires: {ioc_raw["resolved"]["whois"]["expires"]}'
             if ioc_raw.get("resolved") and ioc_raw.get("resolved").get("ip"):
                 if (
                     len(ioc_raw["resolved"]["ip"]["a"])
@@ -204,9 +204,9 @@ def feed_converter(
                     > 0
                 ):
                     description = f"{description}\n\nRelated IPs:"
-                    description = f'{description}\n--- A Records: {ioc_raw["resolved"]["ip"]["a"]}'
-                    description = f'{description}\n--- Alias Records: {ioc_raw["resolved"]["ip"]["alias"]}'
-                    description = f'{description}\n--- CNAME Records: {ioc_raw["resolved"]["ip"]["cname"]}'
+                    description = f'{description}\n- A Records: {ioc_raw["resolved"]["ip"]["a"]}'
+                    description = f'{description}\n- Alias Records: {ioc_raw["resolved"]["ip"]["alias"]}'
+                    description = f'{description}\n- CNAME Records: {ioc_raw["resolved"]["ip"]["cname"]}'
             if ioc_raw.get("geo"):
                 description = f"{description}\n"
                 if ioc_raw.get("geo").get("city"):
