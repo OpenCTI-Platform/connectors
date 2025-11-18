@@ -355,6 +355,10 @@ class _MISPConfig(_ConfigBaseModel):
         description="Whether to apply labels from MISP events to OpenCTI observables on top of MISP Attribute labels or not.",
         default=False,
     )
+    search_limit: int = Field(
+        description="A limit parameter for query results.",
+        default=10,
+    )
 
 
 class ConfigLoader(BaseSettings):

@@ -193,6 +193,7 @@ class Misp:
                 excluded_org_creators=self.config.misp.import_creator_orgs_not,
                 enforce_warning_list=self.config.misp.enforce_warning_list,
                 with_attachments=self.config.misp.import_with_attachments,
+                limit=self.config.misp.search_limit,
             )
 
             processed_events_count = 0
