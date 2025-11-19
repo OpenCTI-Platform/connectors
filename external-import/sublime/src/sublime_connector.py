@@ -195,20 +195,6 @@ class SublimeConnector:
         if not self.api_token:
             raise ValueError("SUBLIME_TOKEN environment variable is required")
 
-        # Interval pause between polling in seconds
-        duration_period = config["connector"]["duration_period"]
-        try:
-            duration_obj = isodate.parse_duration(duration_period)
-            self.poll_interval = int(duration_obj.total_seconds())
-
-        except (isodate.ISO8601Error, ValueError) as e:
-            self.helper.log_warning(
-                '[!] Invalid duration format "{}": {}. Using default 5 minutes'.format(
-                    duration_period, e
-                )
-            )
-            self.poll_interval = 300  # 5 minutes default
-
         # Value for if to update an existing bundle.
         # Currently set to False as placeholder for potental future feature
         self.update_existing_data = False
@@ -240,7 +226,7 @@ class SublimeConnector:
                 self.verdicts,
                 self.confidence_level,
                 self.incident_type,
-                duration_period,
+                self.helper.connect_duration_period,
                 self.first_run_duration,
                 self.force_historical,
                 self.incident_name_prefix,
@@ -257,10 +243,8 @@ class SublimeConnector:
         """
         Get the last processed timestamp from OpenCTI connector state.
 
-        On first run (no existing state), fetches data from first_run_duration ago.
-        Subsequent runs are delta-based from the last processed timestamp.
-
-        If force_historical is enabled, ignores existing state once and then disables itself.
+        If force_historical is enabled, always uses first_run_duration (ignores state).
+        Otherwise, uses state if exists, or first_run_duration on first run.
 
         Returns:
             str: ISO 8601 timestamp string of last processed message,
@@ -268,18 +252,8 @@ class SublimeConnector:
         """
         current_state = self.helper.get_state() or {}
 
-        # Check for force historical ingest flag
-        # A bit of logic here as OpenCTI will store these flags. This can prevent future historical ingest
-        # So we clear the flag if it's enabled in config
-        if self.force_historical:
-            self.helper.log_info(
-                "[*] Force historical mode enabled - clearing previous state"
-            )
-            current_state.pop("force_historical_used", None)
-            current_state.pop("last_timestamp", None)
-            current_state["force_historical_used"] = True
-            self.helper.set_state(current_state)
-        elif current_state and "last_timestamp" in current_state:
+        # If force_historical is disabled, use state if it exists
+        if not self.force_historical and current_state and "last_timestamp" in current_state:
             return current_state["last_timestamp"]
 
         # First run or forced historical: use configured duration for initial data fetch
@@ -451,9 +425,17 @@ class SublimeConnector:
 
         full_url = "{}/messages/groups/{}".format(api_url, group_id)
 
-        self.helper.log_debug("Fetching group: {}".format(group_id))
+        # Request MDM data
+        params = {"include_mdm": "true"}
 
-        response = self.session.get(full_url, timeout=30)
+        self.helper.log_debug("Fetching group: {}".format(group_id))
+        self.helper.log_debug("DEBUG: URL: {}".format(full_url))
+        self.helper.log_debug("DEBUG: Headers: {}".format({k: v[:20]+'...' if k == 'Authorization' else v for k, v in self.session.headers.items()}))
+
+        response = self.session.get(full_url, params=params, timeout=30)
+
+        self.helper.log_debug("DEBUG: Response status: {}".format(response.status_code))
+        self.helper.log_debug("DEBUG: Response body: {}".format(response.text[:500]))
 
         if not response.ok:
             self.helper.log_warning(
@@ -463,7 +445,13 @@ class SublimeConnector:
             )
             return None
 
-        return response.json()
+        data = response.json()
+
+        # Map API field name to code expectation (data_model -> MDM)
+        if "data_model" in data and "MDM" not in data:
+            data["MDM"] = data["data_model"]
+
+        return data
 
     def _fetch_messages(self, since_timestamp):
         """
@@ -780,14 +768,9 @@ class SublimeConnector:
                     )
                     all_objects.append(file_obj)
 
-            # Simplified EmailMessage - minimal fields only
-            email_data = {
-                "subject": str(preview.get("subject") or "Unknown Subject"),
-                "is_multipart": False,
-                "body": "Email preview processed by Sublime",
-            }
-            email = stix2.EmailMessage(**email_data)
-            all_objects.append(email)
+            # Note: Not creating preview EmailMessage objects to avoid noise
+            # Preview emails don't have full body/URL data, only the MDM email has complete data
+            # We extract sender/recipient EmailAddresses and File attachments above
 
         return all_objects
 
@@ -884,8 +867,8 @@ class SublimeConnector:
 
         incident_description = self._create_description(message_group)
 
-        # Get created timestamp from message group metadata
-        created_timestamp = message_group.get("_meta", {}).get("created_at")
+        # Get created timestamp from message group (use last_created_at for most recent activity)
+        created_timestamp = message_group.get("last_created_at") or message_group.get("first_created_at")
 
         # Create Event Incident with deterministic ID
         incident = stix2.Incident(
@@ -984,9 +967,13 @@ class SublimeConnector:
             email_plural = "Email" if email_count == 1 else "Emails"
             recipient_plural = "Recipient" if recipient_count == 1 else "Recipients"
 
+            # Include group ID to ensure each message group creates separate incident
+            group_id_short = message_group.get("id", "unknown")[:8]
+
             if email_count == 0:
-                incident_name = "{} {} Sent {} to {} {}. {}".format(
+                incident_name = "{} [{}] {} Sent {} to {} {}. {}".format(
                     self.incident_name_prefix,
+                    group_id_short,
                     sender_email,
                     email_plural,
                     recipient_count,
@@ -997,8 +984,9 @@ class SublimeConnector:
                 count_display = (
                     "{}".format(email_count) if preview_count > 0 else str(email_count)
                 )
-                incident_name = "{} {} Sent {} {} to {} {}. {}".format(
+                incident_name = "{} [{}] {} Sent {} {} to {} {}. {}".format(
                     self.incident_name_prefix,
+                    group_id_short,
                     sender_email,
                     count_display,
                     email_plural,
@@ -1538,15 +1526,15 @@ class SublimeConnector:
 
                 processed_count += 1
 
-                # Track latest timestamp
-                msg_timestamp = message.get("_meta", {}).get("created_at")
+                # Track latest timestamp (use last_created_at for most recent activity in group)
+                msg_timestamp = message.get("last_created_at") or message.get("first_created_at")
                 if msg_timestamp and (
                     not latest_timestamp or msg_timestamp > latest_timestamp
                 ):
                     latest_timestamp = msg_timestamp
 
             except Exception as e:
-                canonical_id = message.get("_meta", {}).get("canonical_id", "unknown")
+                canonical_id = message.get("id", "unknown")
                 self.helper.log_error(
                     "[!] Failed to process message {}: {}".format(canonical_id, e)
                 )
