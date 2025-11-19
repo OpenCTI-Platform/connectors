@@ -11,7 +11,7 @@ import plyara
 import plyara.utils
 import stix2
 import vt
-from pycti import Incident, Indicator, OpenCTIConnectorHelper, StixCoreRelationship
+from pycti import Incident, Indicator, Note, OpenCTIConnectorHelper, StixCoreRelationship
 
 logging.getLogger("plyara").setLevel(logging.ERROR)
 
@@ -165,7 +165,7 @@ class LivehuntBuilder:
                     )
 
             if self.get_malware_config:
-                pass
+                self.extract_malware_config(vtobj, file_id)
 
             if len(self.bundle) > 0:
                 if work_id is None:
@@ -548,6 +548,104 @@ class LivehuntBuilder:
 
         return labels
 
+    def extract_malware_config(self, vtobj, file_id: Optional[str] = None):
+        """Extract malware config from the file object and creates observables and notes."""
+        if hasattr(vtobj, "malware_config") and vtobj.malware_config is not None:
+            try:
+                raw_config = f"""```\n{
+                                    json.dumps(
+                                        vtobj.malware_config, indent=2
+                                    )}\n```"""
+            except TypeError as e:
+                raise ValueError("Failed to serialize malware config") from e
+            note_obj_refs = []
+            if file_id is not None:
+                note_obj_refs.append(file_id)
+            families = vtobj.malware_config.get("families", None)
+            if families is not None:
+                for family in families:
+                    configs = family.get("configs", None)
+                    if configs is not None:
+                        for config in configs:
+                            net_info = family.get("net_info", None)
+                            if net_info is not None:
+                                connections = net_info.get("connections", None)
+                                if connections is not None:
+                                    for connection in connections:
+                                        host = connection.get("host", None)
+                                        url = connection.get("url", None)
+                                        if host is not None:
+                                            domain_observable = stix2.DomainName(
+                                                id=self._generate_observable_id(host, "domain-name"),
+                                                value=host,
+                                                description=f"Extracted from malware config of family {family.get('family', 'unknown')}",
+                                                object_marking_refs=[],
+                                                custom_properties={
+                                                    "created_by_ref": self.author[
+                                                        "standard_id"
+                                                    ],
+                                                },
+                                            )
+                                            note_obj_refs.append(domain_observable.id)
+                                            self.bundle.append(domain_observable)
+                                            if file_id is not None:
+                                                relationship = stix2.Relationship(
+                                                    id=StixCoreRelationship.generate_id(
+                                                        "related-to",
+                                                        file_id,
+                                                        domain_observable["id"],
+                                                    ),
+                                                    relationship_type="related-to",
+                                                    created_by_ref=self.author[
+                                                        "standard_id"
+                                                    ],
+                                                    source_ref=file_id,
+                                                    target_ref=domain_observable["id"],
+                                                    allow_custom=True,
+                                                )
+                                                self.bundle.append(relationship)
+                                        if url is not None:
+                                            url_observable = stix2.URL(
+                                                id=self._generate_observable_id(url, "url"),
+                                                value=url,
+                                                description=f"Extracted from malware config of family {family.get('family', 'unknown')}",
+                                                object_marking_refs=[],
+                                                custom_properties={
+                                                    "created_by_ref": self.author[
+                                                        "standard_id"
+                                                    ],
+                                                },
+                                            )
+                                            note_obj_refs.append(url_observable.id)
+                                            self.bundle.append(url_observable)
+                                            if file_id is not None:
+                                                relationship = stix2.Relationship(
+                                                    id=StixCoreRelationship.generate_id(
+                                                        "related-to",
+                                                        file_id,
+                                                        url_observable["id"],
+                                                    ),
+                                                    relationship_type="related-to",
+                                                    created_by_ref=self.author[
+                                                        "standard_id"
+                                                    ],
+                                                    source_ref=file_id,
+                                                    target_ref=url_observable["id"],
+                                                    allow_custom=True,
+                                                )
+                                                self.bundle.append(relationship)
+            #Adding config note
+            note = stix2.Note(
+                id=Note.generate_id(None, raw_config),
+                abstract="Malware configuration extracted from VirusTotal",
+                content=raw_config,
+                object_refs=note_obj_refs,
+                created_by_ref=self.author["standard_id"],
+                allow_custom=True,
+            )
+            self.bundle.append(note)
+        return None
+
     @staticmethod
     def _normalize_label(label: str) -> str:
         """Based on livehunt's label normalization"""
@@ -583,3 +681,10 @@ class LivehuntBuilder:
                 "Cannot compute score. VirusTotal may have no record of the observable"
             ) from e
         return vt_score
+
+    @staticmethod
+    def _generate_observable_id(value, obs_type):
+        data = {"value": value}
+        data = canonicalize(data, utf8=False)
+        id = str(uuid.uuid5(uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7"), data))
+        return obs_type + "--" + id
