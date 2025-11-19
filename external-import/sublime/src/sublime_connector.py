@@ -199,6 +199,9 @@ class SublimeConnector:
         # Currently set to False as placeholder for potental future feature
         self.update_existing_data = False
 
+        # Track first run of this connector session (not persisted)
+        self._first_run_completed = False
+
         self.session = requests.Session()
         self.session.headers.update(
             {
@@ -252,8 +255,11 @@ class SublimeConnector:
         """
         current_state = self.helper.get_state() or {}
 
-        # If force_historical is disabled, use state if it exists
-        if not self.force_historical and current_state and "last_timestamp" in current_state:
+        # If force_historical is enabled and this is the first run, ignore state
+        # After first run, use state for incremental polling
+        use_state = (not self.force_historical or self._first_run_completed)
+
+        if use_state and current_state and "last_timestamp" in current_state:
             return current_state["last_timestamp"]
 
         # First run or forced historical: use configured duration for initial data fetch
@@ -434,7 +440,6 @@ class SublimeConnector:
 
         response = self.session.get(full_url, params=params, timeout=30)
 
-        self.helper.log_debug("DEBUG: Response status: {}".format(response.status_code))
         self.helper.log_debug("DEBUG: Response body: {}".format(response.text[:500]))
 
         if not response.ok:
@@ -1598,6 +1603,10 @@ class SublimeConnector:
         # Get last processed timestamp
         since_timestamp = self._get_last_timestamp()
         self.helper.log_debug("Fetching messages since {}".format(since_timestamp))
+
+        # Mark first run as completed after getting timestamp
+        if not self._first_run_completed:
+            self._first_run_completed = True
 
         work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id, "Sublime Import"
