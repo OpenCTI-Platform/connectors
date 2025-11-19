@@ -13,6 +13,7 @@ from external_import_connector.models import C2, C2ScanResult
 from external_import_connector.utils import convert_timestamp_to_iso_format
 from pycti import ObservedData as PyCTIObservedData
 from pycti import OpenCTIConnectorHelper
+from pydantic import AwareDatetime
 
 
 class EntityMetadata:
@@ -48,7 +49,7 @@ class STIXObjectCreator:
         self.converter = converter
 
     def create_objects_for_entity(
-        self, entity_result: C2ScanResult, timestamp: str
+        self, entity_result: C2ScanResult, timestamp: AwareDatetime
     ) -> Tuple[List, List]:
         """
         Create all STIX objects for a single entity.
@@ -79,9 +80,9 @@ class STIXObjectCreator:
 
             # Collect objects for observed data
             observed_data_refs = [
-                obj.stix2_object
+                obj.to_stix2_object()
                 for obj in [ipv4_object, domain_object, network_traffic_object]
-                if obj and obj.stix2_object
+                if obj and obj.to_stix2_object
             ]
 
             # Create observed data if we have references
@@ -93,13 +94,13 @@ class STIXObjectCreator:
                     last_observed=timestamp,
                     number_observed=1,
                     object_refs=observed_data_refs,
-                    created_by_ref=self.converter.author,
+                    created_by_ref=self.converter.author.id,
                     object_marking_refs=[self.converter.tlp_marking.id],
                 )
 
             # Collect all STIX objects
             stix_objects = [
-                obj.stix2_object if hasattr(obj, "stix2_object") else obj
+                obj.to_stix2_object() if hasattr(obj, "to_stix2_object") else obj
                 for obj in [
                     ipv4_object,
                     domain_object,
@@ -111,9 +112,9 @@ class STIXObjectCreator:
                 ]
                 if obj
                 and (
-                    hasattr(obj, "stix2_object")
-                    and obj.stix2_object
-                    or not hasattr(obj, "stix2_object")
+                    hasattr(obj, "to_stix2_object")
+                    and obj.to_stix2_object
+                    or not hasattr(obj, "to_stix2_object")
                 )
             ]
 
@@ -228,8 +229,8 @@ class EntityProcessor:
             f"{total_batches} object-creation batches"
         )
 
-        all_objects.append(self.converter.author)
-        all_objects.append(self.converter.tlp_marking)
+        all_objects.append(self.converter.author.to_stix2_object())
+        all_objects.append(self.converter.tlp_marking.to_stix2_object())
 
         for batch_idx in range(0, len(entities), batch_size):
             batch = entities[batch_idx : batch_idx + batch_size]

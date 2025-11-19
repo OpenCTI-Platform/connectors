@@ -1,24 +1,28 @@
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Optional
 
-import pycti
 import stix2
+from connectors_sdk.models import (
+    DomainName,
+    ExternalReference,
+    Indicator,
+    Malware,
+    OrganizationAuthor,
+    TLPMarking,
+)
+from connectors_sdk.models.enums import MalwareType, TLPLevel
+from connectors_sdk.models.ipv4_address import IPV4Address
 from external_import_connector.constants import (
     AuthorInfo,
     ExternalReferences,
     InfrastructureTypes,
 )
-from external_import_connector.exceptions import InvalidTlpLevelError
 from external_import_connector.models import (
-    URL,
-    Author,
-    DomainName,
     Infrastructure,
-    IPv4Address,
-    Malware,
     NetworkTraffic,
     Relationship,
 )
+from pydantic import AwareDatetime
 
 
 class ConverterToStix:
@@ -38,26 +42,26 @@ class ConverterToStix:
 
     def create_author(self) -> stix2.Identity:
         """Create Author identity object."""
-        return Author(
+        return OrganizationAuthor(
             name=AuthorInfo.NAME,
             description=AuthorInfo.DESCRIPTION,
-            tpl_marking=self.tlp_marking.id,
+            markings=[self.tlp_marking],
             external_references=self.create_external_references(),
-        ).stix2_object
+        )
 
     @staticmethod
     def create_external_references() -> list[stix2.ExternalReference]:
-        external_reference = stix2.ExternalReference(
+        external_reference = ExternalReference(
             source_name=ExternalReferences.SOURCE_NAME,
             url=ExternalReferences.URL,
             description=ExternalReferences.DESCRIPTION,
         )
-        return [external_reference]
+        return [external_reference.to_stix2_object()]
 
     @staticmethod
     def create_tlp_marking(
-        tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"],
-    ) -> stix2.MarkingDefinition:
+        tlp_level: TLPLevel,
+    ) -> TLPMarking:
         """Get the appropriate TLP marking definition for the given level.
 
         Args:
@@ -65,81 +69,62 @@ class ConverterToStix:
 
         Returns:
             STIX2 MarkingDefinition object
-
-        Raises:
-            InvalidTlpLevelError: If the TLP level is not recognized
         """
-        tlp_mappings = {
-            "white": stix2.TLP_WHITE,
-            "clear": stix2.TLP_WHITE,
-            "green": stix2.TLP_GREEN,
-            "amber": stix2.TLP_AMBER,
-            "red": stix2.TLP_RED,
-        }
-
-        if tlp_level in tlp_mappings:
-            return tlp_mappings[tlp_level]
-
-        if tlp_level == "amber+strict":
-            return stix2.MarkingDefinition(
-                id=pycti.MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
-                definition_type="statement",
-                definition={"statement": "custom"},
-                custom_properties={
-                    "x_opencti_definition_type": "TLP",
-                    "x_opencti_definition": "TLP:AMBER+STRICT",
-                },
-            )
-
-        raise InvalidTlpLevelError(f"Invalid TLP level: {tlp_level}")
+        return TLPMarking(
+            level=tlp_level,
+        )
 
     def create_c2_infrastructure(
         self,
         name: str,
         infrastructure_types: str = InfrastructureTypes.COMMAND_AND_CONTROL,
-        created: Optional[datetime] = None,
+        created: Optional[AwareDatetime] = None,
     ) -> Infrastructure:
         """Creates a Command and Control (C2) infrastructure object."""
         infrastructure = Infrastructure(
             name=name,
             infrastructure_types=infrastructure_types,
-            author=self.author["id"],
+            author=self.author.id,
             tpl_marking=self.tlp_marking.id,
             created=created,
         )
         return infrastructure
 
-    def create_ipv4_observable(self, ip: str) -> IPv4Address:
+    def create_ipv4_observable(self, ip: str) -> IPV4Address:
         """
         Creates an IPv4 address observable.
         """
-        ipv4 = IPv4Address(
+        ipv4 = IPV4Address(
             value=ip,
-            author=self.author.id,
-            tpl_marking=self.tlp_marking.id,
+            author=self.author,
+            markings=[self.tlp_marking],
         )
         return ipv4
 
     def create_domain_observable(self, hostname: str) -> DomainName:
         """
-        Creates an domain name observable.
+        Creates a domain name observable.
         """
         domain = DomainName(
-            hostname,
-            author=self.author.id,
-            tpl_marking=self.tlp_marking.id,
+            value=hostname,
+            author=self.author,
+            markings=[self.tlp_marking],
         )
         return domain
 
-    def create_url_indicator(self, scan_uri: str, timestamp: datetime) -> URL:
+    def create_url_indicator(
+        self, scan_uri: str, timestamp: AwareDatetime
+    ) -> Indicator:
         """
-        Creates an URL indicator.
+        Creates a URL indicator.
         """
-        indicator = URL(
-            scan_uri=scan_uri,
+        indicator = Indicator(
+            name=scan_uri,
             valid_from=timestamp,
-            author_id=self.author["id"],
-            tpl_marking=self.tlp_marking.id,
+            author=self.author,
+            markings=[self.tlp_marking],
+            pattern=f"[url:value = '{scan_uri}']",
+            pattern_type="stix",
         )
         return indicator
 
@@ -150,10 +135,15 @@ class ConverterToStix:
         Creates a malware object.
         """
         malware = Malware(
-            malware_name=malware_name,
-            malware_subsystem=malware_subsystem,
-            author=self.author.id,
-            tpl_marking=self.tlp_marking.id,
+            name=malware_name,
+            types=(
+                [MalwareType(malware_subsystem)]
+                if malware_subsystem
+                else [MalwareType("unknown")]
+            ),
+            author=self.author,
+            markings=[self.tlp_marking],
+            is_family=False,
         )
         return malware
 
@@ -187,7 +177,7 @@ class ConverterToStix:
             created=created,
             source_id=source_id,
             target_id=target_id,
-            author=self.author["id"],
+            author=self.author.id,
             confidence=confidence,
             tpl_marking=self.tlp_marking.id,
         )
