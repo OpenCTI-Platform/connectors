@@ -208,7 +208,7 @@ class Indicator(RFStixEntity):
                 for element in rf_related_entities:
                     if element["type"]["name"] in handled_related_entities_types:
                         for rf_related_element in element["entities"]:
-                            type_ = rf_related_element["type"]
+                            type_ = element["type"]["name"]
                             name_ = rf_related_element["name"]
                             related_element = ENTITY_TYPE_MAPPER[type_](
                                 name_, type_, self.author, tlp
