@@ -118,7 +118,7 @@ def convert_stix_bundle_to_misp_event(
                 "Successfully converted STIX bundle to MISP event",
                 {
                     "event_uuid": event_data.get("uuid", "N/A"),
-                    "attributes_count": len(event_data.get("attributes", [])),
+                    "attributes_count": len(event_data.get("Attribute", [])),
                     "objects_count": len(event_data.get("Object", [])),
                     "tags_count": len(event_data.get("Tag", [])),
                 },

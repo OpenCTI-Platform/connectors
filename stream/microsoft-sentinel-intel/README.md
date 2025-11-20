@@ -37,7 +37,7 @@ Another interesting link:
 
 ### Requirements
 
-- OpenCTI Platform >= 6.8.10
+- OpenCTI Platform >= 6.8.13
 
 ### Configuration variables
 
