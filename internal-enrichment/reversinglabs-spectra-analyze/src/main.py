@@ -1,4 +1,5 @@
 # Standard library imports
+import hashlib
 import json
 import os
 import textwrap
@@ -201,7 +202,6 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         self.opencti_entity = opencti_entity
         self.hash = hash
         self.hash_type = hash_type
-        analysis_report = {}
 
         if stix_entity["x_opencti_type"] == "Artifact":
             sample_name = self.opencti_entity["importFiles"][0]["name"]
@@ -216,7 +216,6 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             analysis_report = json.loads(analysis_response) if analysis_response else {}
 
         elif stix_entity["x_opencti_type"] == "StixFile":
-            sample_name = self.opencti_entity["observable_value"]
             response = self.a1000client.get_detailed_report_v2(
                 sample_hashes=self.hash, retry=False
             )
@@ -1415,17 +1414,22 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         if opencti_type in FILE_SAMPLE:
             # Extract hash type and value from entity {[md5], [sha1], [sha256]}
             hashes = opencti_entity.get("hashes")
+            hash_value = None
+            hash_type = None
+
             for ent_hash in hashes:
-                if not (
-                    (ent_hash["algorithm"] == "MD5")
-                    or (ent_hash["algorithm"] == "SHA-512")
-                ):
-                    hash = ent_hash["hash"]
+                if ent_hash["algorithm"] not in ("MD5", "SHA-512"):
+                    hash_value = ent_hash["hash"]
                     hash_type = ent_hash["algorithm"]
+
+            if hash_value is None:
+                self.helper.connector_logger.warning(
+                    f"{self.helper.connect_name}: No supported hash found for analysis (skipping MD5/SHA-512)."
+                )
 
             # Submit File sample for analysis
             analysis_result = self._submit_file_for_analysis(
-                stix_entity, opencti_entity, hash, hash_type
+                stix_entity, opencti_entity, hash_value, hash_type
             )
 
             # Integrate file analysis results with OpenCTI
@@ -1454,29 +1458,29 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                 url_sample,
             )
 
-            # Get file classification
-            analysis_result = self._submit_file_for_classification(
-                stix_entity, opencti_entity, hash
-            )
-
             if not analysis_result:
                 self.helper.connector_logger.info(
                     f"{self.helper.connect_name}: There is no analysis result for provided sample!"
                 )
 
-            # Integrate classification analysis results with OpenCTI
-            if "results" not in analysis_result:
+            hash_value = hashlib.sha1(url_sample.encode()).hexdigest()
 
-                results = self._process_file_classification_results(
-                    stix_objects, stix_entity, opencti_entity, analysis_result
-                )
+            # Get file classification
+            classification_result = self._submit_file_for_classification(
+                stix_entity, opencti_entity, hash_value
+            )
 
-                self._process_malicious(stix_objects, stix_entity, results)
-
-            if not analysis_result:
+            if not classification_result:
                 raise ValueError(
                     f"{self.helper.connect_name}: Provided sample does not exist on the appliance. Try to upload it first and re-run!"
                 )
+
+            # Integrate classification analysis results with OpenCTI
+            results = self._process_file_classification_results(
+                stix_objects, stix_entity, opencti_entity, classification_result
+            )
+
+            self._process_malicious(stix_objects, stix_entity, results)
 
             # Integrate analysis results with OpenCTI
             results = self._process_url_analysis_result(
