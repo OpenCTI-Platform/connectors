@@ -1310,8 +1310,9 @@ class StixNote:
             if event.get("type") == "CyberAttack" and event.get("attributes"):
                 event_attr = event["attributes"]
 
-                if (event_attr.get("adversary") and
-                        event_attr["adversary"][0]["type"] in ["Organization", "Person"]):
+                if event_attr.get("adversary") and event_attr["adversary"][0][
+                    "type"
+                ] in ["Organization", "Person"]:
 
                     # Retrieve adversary in self.objects depending on adversary name in event
                     # self.objects contains all IntrusionSet, Malware, Identity, AttackPattern et ThreatActor linked to note
