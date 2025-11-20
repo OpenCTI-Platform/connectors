@@ -1,8 +1,8 @@
 # Scout Search Connector Internal Enrichment Connector
 
-| Type               | Status      | OpenCTI Version | Deployment          |
-|--------------------|-------------|------------------|---------------------|
-| Internal Enrichment | ✅ Supported | ≥ 6.7.16         | Docker / Manual     |
+| Type                | Status       | OpenCTI Version  | Deployment      |
+|---------------------|--------------|------------------|-----------------|
+| Internal Enrichment | ✅ Supported | ≥ 6.7.16         | Docker / Manual |
 
 > **⚠️ EARLY ACCESS VERSION**
 >
@@ -19,15 +19,16 @@ This connector queries the Scout API endpoints in real-time and transforms the r
 ## 🧬 Supported Observable Types
 
 | Observable Type |
-|------------------|
-| Text     | 
+|-----------------|
+| Text            |
+
 ---
 
 ## 🔗 API Endpoints Used
 
-| Method | Endpoint                               | Description                                  |
-|--------|----------------------------------------|----------------------------------------------|
-| GET    | `/search?query={query}&days={days}`               | Used for Text Enrichment                   |
+| Method | Endpoint                            | Description              |
+|--------|-------------------------------------|--------------------------|
+| GET    | `/search?query={query}&days={days}` | Used for Text Enrichment |
 
 ---
 
@@ -48,30 +49,31 @@ This connector supports two configuration methods:
 
 ### OpenCTI Environment Variables
 
-| Variable       | Description               | Required |
-|----------------|---------------------------|----------|
-| `OPENCTI_URL`  | OpenCTI platform URL      | ✅       |
-| `OPENCTI_TOKEN`| OpenCTI platform token    | ✅       |
+| Variable        | Description            | Required  |
+|-----------------|------------------------|-----------|
+| `OPENCTI_URL`   | OpenCTI platform URL   | ✅        |
+| `OPENCTI_TOKEN` | OpenCTI platform token | ✅        |
 
 ### Connector Base Environment Variables
 
-| Variable                    | Description                               | Required | Example                       |
-|-----------------------------|-------------------------------------------|----------|-------------------------------|
-| `CONNECTOR_ID`              | Unique connector instance ID              | ✅       | pure-signal-scout-connector   |
-| `CONNECTOR_TYPE`           | Always set to `INTERNAL_ENRICHMENT`       | ✅       | INTERNAL_ENRICHMENT           |
-| `CONNECTOR_NAME`           | Display name in OpenCTI UI                | ✅       | Scout Search Connector             |
-| `CONNECTOR_SCOPE`          | Supported observable types                | ✅       | Text |
-| `CONNECTOR_CONFIDENCE_LEVEL`| Confidence score (0–100)                 | ✅       | 100                           |
-| `CONNECTOR_LOG_LEVEL`      | Logging level (`debug`, `info`, `error`) | ✅       | error                         |
+| Variable                     | Description                              | Required  | Example                    |
+|------------------------------|------------------------------------------|-----------|----------------------------|
+| `CONNECTOR_ID`               | Unique connector instance ID             | ✅        | pure-signal-scout-connector|
+| `CONNECTOR_TYPE`             | Always set to `INTERNAL_ENRICHMENT`      | ✅        | INTERNAL_ENRICHMENT        |
+| `CONNECTOR_NAME`             | Display name in OpenCTI UI               | ✅        | Scout Search Connector     |
+| `CONNECTOR_SCOPE`            | Supported observable types               | ✅        | Text                       |
+| `CONNECTOR_CONFIDENCE_LEVEL` | Confidence score (0–100)                 | ✅        | 100                        |
+| `CONNECTOR_LOG_LEVEL`        | Logging level (`debug`, `info`, `error`) | ✅        | error                      |
 
 ### Scout API Environment Variables
 
-| Variable                     | Description                                | Required | Example                               |
-|------------------------------|--------------------------------------------|----------|---------------------------------------|
-| `PURE_SIGNAL_SCOUT_API_URL`  | Base URL of the Scout API                  | ✅       | https://taxii.cymru.com/api/scout     |
-| `PURE_SIGNAL_SCOUT_API_TOKEN`| Bearer token for the Scout API            | ✅       | (Set securely)                        |
-| `PURE_SIGNAL_SCOUT_MAX_TLP`  | Max TLP level to return in enrichment     | ✅       | TLP:AMBER                             |
-| `PURE_SIGNAL_SCOUT_SEARCH_INTERVAL`  | Search interval in days     | ✅       | 1                             |
+| Variable                            | Description                           | Required  | Example                                 |
+|-------------------------------------|---------------------------------------|-----------|------------------------------------------|
+| `PURE_SIGNAL_SCOUT_API_URL`         | Base URL of the Scout API             | ✅        | <https://taxii.cymru.com/api/scout>     |
+| `PURE_SIGNAL_SCOUT_API_TOKEN`       | Bearer token for the Scout API        | ✅        | (Set securely)                          |
+| `PURE_SIGNAL_SCOUT_MAX_TLP`         | Max TLP level to return in enrichment | ✅        | TLP:AMBER                               |
+| `PURE_SIGNAL_SCOUT_SEARCH_INTERVAL` | Search interval in days               | ✅        | 1                                       |
+
 ---
 
 ## 🚀 Deployment
@@ -87,6 +89,7 @@ cp .env.sample .env
 ```
 
 Edit `.env` and set your actual values:
+
 - `OPENCTI_URL` - Your OpenCTI instance URL
 - `OPENCTI_TOKEN` - Your OpenCTI API token
 - `PURE_SIGNAL_SCOUT_API_TOKEN` - Your Scout API token
@@ -118,15 +121,16 @@ make docker-up
 
 ---
 
-
 ## ⚙️ Behavior
 
-### Routing Logic:
-| Observable Type | API Endpoint Used |
-|-----------------|-------------------|
-| Text | `/search?query={query}&days={days}` |
+### Routing Logic
 
-### Processing:
+| Observable Type | API Endpoint Used                   |
+|-----------------|-------------------------------------|
+| Text            | `/search?query={query}&days={days}` |
+
+### Processing
+
 - Responses are returned as STIX 2.1 bundles (no transformation required)
 - No bundle validation needed
 - **Rate Limiting**: Respects 1 request per second
@@ -135,4 +139,4 @@ make docker-up
 
 Default logging level: error
 
-For detailed logs, set CONNECTOR_LOG_LEVEL=debug
+For detailed logs, set `CONNECTOR_LOG_LEVEL=debug`
