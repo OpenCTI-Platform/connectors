@@ -750,6 +750,10 @@ class Malware(RFStixEntity):
 class Vulnerability(RFStixEntity):
     """Converts a CyberVulnerability to a Vulnerability SDO"""
 
+    def __init__(self, name, _type, author=None, tlp=None, display_name=None):
+        super().__init__(name, _type, author, tlp)
+        self.display_name = display_name
+
     # TODO: add vuln descriptions
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
@@ -1243,22 +1247,27 @@ class StixNote:
     def create_adversary_capabilities_relations(self, adversary, event_attr):
         """
         Create relation between adversary and capabilities
-        Adversary (Intrusion Set) -> Uses -> "capabilities" data in event (Attack Pattern / Malware)
+        Adversary (Intrusion Set) -> Uses -> "capabilities" data in event (Attack Pattern / Malware /Vulnerability)
         """
         event_objects = []
         for event_capability in event_attr["capabilities"]:
 
-            # Get or create capability (AttackPattern or Malware)
+            # Get or create capability (AttackPattern or Malware or Vulnerability)
             capability_name = event_capability["name"]
+            capability_type = event_capability["type"]
             capability_obj = [
                 obj for obj in self.objects if obj.get("name") == capability_name
             ]
             if len(capability_obj) > 0:
                 capability = capability_obj[0]
             else:
-                capability_type = event_capability["type"]
                 if capability_type == "Malware":
                     capability_obj = Malware(
+                        name=capability_name,
+                        _type=capability_type,
+                    )
+                elif capability_type == "CyberVulnerability":
+                    capability_obj = Vulnerability(
                         name=capability_name,
                         _type=capability_type,
                     )
@@ -1272,13 +1281,22 @@ class StixNote:
                 event_objects.append(capability)
 
             # Create relation adversary-capability
-            event_objects.append(
-                self._create_rel(
-                    from_id=adversary.id,
-                    to_id=capability.id,
-                    relation="uses",
+            if capability_type == "CyberVulnerability":
+                event_objects.append(
+                    self._create_rel(
+                        from_id=adversary.id,
+                        to_id=capability.id,
+                        relation="targets",
+                    )
                 )
-            )
+            else:
+                event_objects.append(
+                    self._create_rel(
+                        from_id=adversary.id,
+                        to_id=capability.id,
+                        relation="uses",
+                    )
+                )
 
         return event_objects
 
@@ -1292,7 +1310,8 @@ class StixNote:
             if event.get("type") == "CyberAttack" and event.get("attributes"):
                 event_attr = event["attributes"]
 
-                if event_attr.get("adversary"):
+                if (event_attr.get("adversary") and
+                        event_attr["adversary"][0]["type"] in ["Organization", "Person"]):
 
                     # Retrieve adversary in self.objects depending on adversary name in event
                     # self.objects contains all IntrusionSet, Malware, Identity, AttackPattern et ThreatActor linked to note
