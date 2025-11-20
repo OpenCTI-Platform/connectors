@@ -257,7 +257,7 @@ class SublimeConnector:
 
         # If force_historical is enabled and this is the first run, ignore state
         # After first run, use state for incremental polling
-        use_state = (not self.force_historical or self._first_run_completed)
+        use_state = not self.force_historical or self._first_run_completed
 
         if use_state and current_state and "last_timestamp" in current_state:
             return current_state["last_timestamp"]
@@ -705,12 +705,17 @@ class SublimeConnector:
         # Use first subject if exists and not empty, otherwise default
         # This should likely never occur, but just being safe.
         subjects = message_group.get("subjects", [])
-        subject = subjects[0] if subjects and subjects[0] and subjects[0].strip() else "Subject unknown. Email processed by Sublime Security."
+        subject = (
+            subjects[0]
+            if subjects and subjects[0] and subjects[0].strip()
+            else "Subject unknown. Email processed by Sublime Security."
+        )
 
         email_data = {
             "subject": subject,
             "is_multipart": False,
-            "body": body_text or "Email content not provided due to Sublime Security access controls.",
+            "body": body_text
+            or "Email content not provided due to Sublime Security access controls.",
         }
 
         if sender:
@@ -867,7 +872,9 @@ class SublimeConnector:
         incident_description = self._create_description(message_group)
 
         # Get created timestamp from message group (use last_created_at for most recent activity)
-        created_timestamp = message_group.get("last_created_at") or message_group.get("first_created_at")
+        created_timestamp = message_group.get("last_created_at") or message_group.get(
+            "first_created_at"
+        )
 
         # Create Event Incident with deterministic ID
         incident = stix2.Incident(
@@ -1526,7 +1533,9 @@ class SublimeConnector:
                 processed_count += 1
 
                 # Track latest timestamp (use last_created_at for most recent activity in group)
-                msg_timestamp = message.get("last_created_at") or message.get("first_created_at")
+                msg_timestamp = message.get("last_created_at") or message.get(
+                    "first_created_at"
+                )
                 if msg_timestamp and (
                     not latest_timestamp or msg_timestamp > latest_timestamp
                 ):
