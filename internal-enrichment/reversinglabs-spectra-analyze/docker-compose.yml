@@ -1,4 +1,3 @@
-version: '3'
 services:
   connector-reversinglabs-spectra-analyze:
     image: opencti/connector-reversinglabs-spectra-analyze:rolling
