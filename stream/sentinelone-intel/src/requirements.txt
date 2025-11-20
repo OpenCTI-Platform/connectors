@@ -1,1 +1,2 @@
-pycti
+pycti==6.8.13
+pyyaml==6.0.2

@@ -1,6 +1,6 @@
 services:
-  connector-pure-signal-scout:
-    image: opencti/connector-pure-signal-scout:rolling
+  connector-team-cymru-scout:
+    image: opencti/connector-team-cymru-scout:rolling
     environment:
       - OPENCTI_URL=${OPENCTI_URL:-http://opencti:8080}
       - OPENCTI_TOKEN=${OPENCTI_TOKEN:-}
