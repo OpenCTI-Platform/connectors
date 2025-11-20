@@ -98,3 +98,6 @@ class ConfigCrowdstrike:
 
         self.interval_sec = self.config.crowdstrike.interval_sec
         self.no_file_trigger_import = self.config.crowdstrike.no_file_trigger_import
+        self.vulnerability_start_timestamp = (
+            self.config.crowdstrike.vulnerability_start_timestamp
+        )
