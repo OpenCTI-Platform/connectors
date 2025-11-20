@@ -22,9 +22,19 @@ from typing import (
 
 import stix2
 from lxml.html import fromstring
-from pycti import AttackPattern, Identity, Indicator, IntrusionSet, Location, Malware
+from pycti import (
+    AttackPattern,
+    Identity,
+    Indicator,
+    IntrusionSet,
+    Location,
+    Malware,
+)
 from pycti import Report as PyCTIReport
-from pycti import StixCoreRelationship, Vulnerability
+from pycti import (
+    StixCoreRelationship,
+    Vulnerability,
+)
 from pycti.utils.constants import LocationTypes
 from stix2.v21 import _DomainObject, _Observable, _RelationshipObject
 
@@ -351,7 +361,7 @@ def create_vulnerability(
     confidence: Optional[int] = None,
     external_references: Optional[List[stix2.ExternalReference]] = None,
     object_markings: Optional[List[stix2.MarkingDefinition]] = None,
-    custom_properties: Optional[Dict[str, Any]] = None,
+    custom_properties: Optional[Dict[str, Any]] = {},
 ) -> stix2.Vulnerability:
     """Create a vulnerability."""
     return stix2.Vulnerability(
