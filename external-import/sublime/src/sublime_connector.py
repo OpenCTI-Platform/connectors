@@ -389,12 +389,13 @@ class SublimeConnector:
         self.helper.log_debug(
             "API request: {} with {} parameters".format(full_url, len(params))
         )
+
         response = self.session.get(full_url, params=params, timeout=30)
 
         if not response.ok:
             self.helper.log_error(
                 "[!] API request failed - Status: {}, Response: {}".format(
-                    response.status_code, response.text[:500]
+                    response.status_code, response.text
                 )
             )
             raise Exception(
@@ -431,21 +432,16 @@ class SublimeConnector:
 
         full_url = "{}/messages/groups/{}".format(api_url, group_id)
 
-        # Request MDM data
-        params = {"include_mdm": "true"}
-
         self.helper.log_debug("Fetching group: {}".format(group_id))
-        self.helper.log_debug("DEBUG: URL: {}".format(full_url))
-        self.helper.log_debug("DEBUG: Headers: {}".format({k: v[:20]+'...' if k == 'Authorization' else v for k, v in self.session.headers.items()}))
 
-        response = self.session.get(full_url, params=params, timeout=30)
+        response = self.session.get(full_url, timeout=30)
 
-        self.helper.log_debug("DEBUG: Response body: {}".format(response.text[:500]))
+        self.helper.log_debug("DEBUG: Response body: {}".format(response.text))
 
         if not response.ok:
             self.helper.log_warning(
                 "[!] Failed to fetch group {}: {} {}".format(
-                    group_id, response.status_code, response.text[:200]
+                    group_id, response.status_code, response.text
                 )
             )
             return None
@@ -569,7 +565,7 @@ class SublimeConnector:
             return False
 
         # Check for subjects
-        if "subjects" not in message_group or not message_group.get("subjects"):
+        if not message_group.get("subjects"):
             self.helper.log_warning("[!] Message group missing subjects")
             return False
 
@@ -706,17 +702,15 @@ class SublimeConnector:
             html_text = self._lookup_MDM_value(MDM, "body.html.raw")
             body_text = html_text
 
-        # Get actual subject from message group
+        # Use first subject if exists and not empty, otherwise default
+        # This should likely never occur, but just being safe.
         subjects = message_group.get("subjects", [])
-        subject = subjects[0] if subjects else "Email processed by Sublime"
-
-        if not subject or subject.strip() == "":
-            subject = "Email processed by Sublime"
+        subject = subjects[0] if subjects and subjects[0] and subjects[0].strip() else "Subject unknown. Email processed by Sublime Security."
 
         email_data = {
             "subject": subject,
             "is_multipart": False,
-            "body": body_text or "Email content processed by Sublime",
+            "body": body_text or "Email content not provided due to Sublime Security access controls.",
         }
 
         if sender:
