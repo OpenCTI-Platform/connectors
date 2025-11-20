@@ -2,6 +2,7 @@
 """Livehunt builder module."""
 import datetime
 import io
+import ipaddress
 import json
 import logging
 import re
@@ -586,32 +587,57 @@ class LivehuntBuilder:
                                         host = connection.get("host", None)
                                         url = connection.get("url", None)
                                         if host is not None:
-                                            domain_observable = stix2.DomainName(
-                                                id=self._generate_observable_id(host, "domain-name"),
-                                                value=host,
-                                                description=f"Extracted from malware config of family {family.get('family', 'unknown')}",
-                                                object_marking_refs=[self.tlp],
-                                                custom_properties={
-                                                    "created_by_ref": self.author[
-                                                        "standard_id"
-                                                    ],
-                                                },
-                                            )
-                                            note_obj_refs.append(domain_observable.id)
-                                            self.bundle.append(domain_observable)
+                                            if self._ip_version(host) == 4:
+                                                host_observable = stix2.IPv4(
+                                                    id=self._generate_observable_id(host, "ipv4-addr"),
+                                                    value=host,
+                                                    description=f"Extracted from malware config of family {family.get('family', 'unknown')}",
+                                                    object_marking_refs=[self.tlp],
+                                                    custom_properties={
+                                                        "created_by_ref": self.author[
+                                                            "standard_id"
+                                                        ],
+                                                    },
+                                                )
+                                            elif self._ip_version(host) == 6:
+                                                host_observable = stix2.IPv6(
+                                                    id=self._generate_observable_id(host, "ipv6-addr"),
+                                                    value=host,
+                                                    description=f"Extracted from malware config of family {family.get('family', 'unknown')}",
+                                                    object_marking_refs=[self.tlp],
+                                                    custom_properties={
+                                                        "created_by_ref": self.author[
+                                                            "standard_id"
+                                                        ],
+                                                    },
+                                                )
+                                            else:
+                                                host_observable = stix2.DomainName(
+                                                    id=self._generate_observable_id(host, "domain-name"),
+                                                    value=host,
+                                                    description=f"Extracted from malware config of family {family.get('family', 'unknown')}",
+                                                    object_marking_refs=[self.tlp],
+                                                    custom_properties={
+                                                        "created_by_ref": self.author[
+                                                            "standard_id"
+                                                        ],
+                                                    },
+                                                )
+                                            note_obj_refs.append(host_observable.id)
+                                            self.bundle.append(host_observable)
                                             if file_id is not None:
                                                 relationship = stix2.Relationship(
                                                     id=StixCoreRelationship.generate_id(
                                                         "related-to",
                                                         file_id,
-                                                        domain_observable["id"],
+                                                        host_observable["id"],
                                                     ),
                                                     relationship_type="related-to",
                                                     created_by_ref=self.author[
                                                         "standard_id"
                                                     ],
                                                     source_ref=file_id,
-                                                    target_ref=domain_observable["id"],
+                                                    target_ref=host_observable["id"],
                                                     allow_custom=True,
                                                     object_marking_refs=[self.tlp],
                                                 )
@@ -717,3 +743,11 @@ class LivehuntBuilder:
         else:
             result = stix2.TLP_GREEN
         return result
+    
+    @staticmethod
+    def _ip_version(address: str) -> Optional[int]:
+        try:
+            ip = ipaddress.ip_address(address)
+            return ip.version
+        except ValueError:
+            return None
