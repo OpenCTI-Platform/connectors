@@ -1,0 +1,16 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+#  id: 'ChangeMe'
+#  type: 'INTERNAL_ENRICHMENT'
+#  name: 'Kaspersky Enrichment'
+#  scope: 'StixFile,IPv4-Addr,Domain-Name,Hostname,Url'
+#  log_level: 'error'
+#  auto: true # Enable/disable auto-enrichment of observables
+
+kaspersky:
+#  api_base_url: 'https://tip.kaspersky.com'
+  api_key: 'ChangeMe'
+#  max_tlp: "TLP:AMBER" # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED

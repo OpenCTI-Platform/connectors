@@ -1,0 +1,20 @@
+services:
+  connector-kaspersky:
+    image: opencti/connector-kaspersky:rolling
+    environment:
+      # Connector's generic execution parameters
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      # Connector's definition parameters REQUIRED
+      - CONNECTOR_ID=CHANGEME
+      # - CONNECTOR_NAME=Kaspersky Enrichment
+      # - CONNECTOR_SCOPE=StixFile,IPv4-Addr,Domain-Name,Hostname,Url
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_AUTO=true
+
+      # Connector's custom execution parameters
+      # - CONNECTOR_KASPERSKY_API_BASE_URL=https://tip.kaspersky.com
+      - CONNECTOR_KASPERSKY_API_KEY=CHANGEME
+      # - CONNECTOR_MAX_TLP=TLP:CLEAR # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
+
+    restart: always
