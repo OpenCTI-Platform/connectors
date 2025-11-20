@@ -1,5 +1,5 @@
 services:
-  team-cymru-scout-search-connector:
+  connector-team-cymru-scout-search:
     image: opencti/connector-team-cymru-scout-search:rolling
     environment:
       - OPENCTI_URL=${OPENCTI_URL:-http://opencti:8080}
