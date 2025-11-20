@@ -11,7 +11,7 @@ from abc import ABC
 from copy import deepcopy
 from datetime import timedelta
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
 import __main__
 from connectors_sdk.core.pydantic import ListFromString
@@ -21,6 +21,7 @@ from pydantic import (
     ConfigDict,
     Field,
     HttpUrl,
+    ModelWrapValidatorHandler,
     ValidationError,
     create_model,
     model_validator,
@@ -224,15 +225,31 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
         except ValidationError as e:
             raise ConfigValidationError("Error validating configuration.") from e
 
-    @model_validator(mode="before")
+    @model_validator(mode="wrap")
     @classmethod
-    def _load_config_dict(cls, _: Any) -> dict[str, Any]:
-        # Re-define a SettingsLoader model with fields defined in BaseConnectorSettings
+    def _load_config_dict(
+        cls, _data: Any, handler: ModelWrapValidatorHandler[Self]
+    ) -> Self:
+        """Load raw config dict based on fields names.
+
+        Args:
+            _data (Any): Raw data input (ignored as the data comes from env/config vars parsing)
+            handler (ModelWrapValidatorHandler[Self]): Callable validating given data according to the model
+
+        Notes:
+            - This method is a `model_validator`, i.e. it's internally executed by pydantic during model validation
+            - The mode (`"wrap"`) guarantees that this validator is always executed _before_ the validators defined in child class
+            - See `_SettingsLoader.build_loader_from_model` for further details about env/config vars parsing implementation
+
+        References:
+            https://github.com/pydantic/pydantic/issues/8277 [consulted on 2025-11-19]
+        """
+        # Re-define a SettingsLoader model (pydantic-settings) with fields defined in BaseConnectorSettings
         settings_loader = _SettingsLoader.build_loader_from_model(cls)
 
-        # Get config dict to send for validation
+        # Get config/env vars as dict to send for validation
         config_dict: dict[str, Any] = settings_loader().model_dump()
-        return config_dict
+        return handler(config_dict)
 
     def to_helper_config(self) -> dict[str, Any]:
         """Convert model into a valid dict for `pycti.OpenCTIConnectorHelper`."""

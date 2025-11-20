@@ -1,8 +1,8 @@
-import json
 import re
 from typing import Dict
 
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper
+from settings import ConfigLoader
 
 CONTAINER_TYPE_LIST = ["report", "grouping", "case-incident", "case-rfi", "case-rft"]
 
@@ -22,8 +22,8 @@ def load_re_flags(rule):
 
 class TaggerConnector:
     def __init__(self):
-        self.helper = OpenCTIConnectorHelper({})
-        self.definitions = json.loads(get_config_variable("TAGGER_DEFINITIONS", []))
+        self.config = ConfigLoader()
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
 
     def start(self):
         self.helper.listen(message_callback=self._process_message)
@@ -31,15 +31,15 @@ class TaggerConnector:
     def _process_message(self, data: Dict) -> str:
         enrichment_entity = data["enrichment_entity"]
 
-        for definition in self.definitions:
-            for scope in definition["scopes"]:
+        for definition in self.config.tagger.definitions:
+            for scope in definition.scopes:
                 entity_type = scope.lower()
 
                 #  Check if enrichment entity is supported
                 if enrichment_entity["entity_type"].lower() != entity_type:
                     continue
 
-                for rule in definition["rules"]:
+                for rule in definition.rules:
                     flags = load_re_flags(rule)
 
                     for attribute in rule["attributes"]:

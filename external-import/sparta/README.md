@@ -18,9 +18,9 @@ Table of Contents
 
 ## Status Filigran
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
+| Status            | Date       | Comment |
+|-------------------|------------|---------|
+| Filigran Verified | 2025-11-07 | -       |
 
 ## Introduction
 
@@ -38,41 +38,7 @@ A variety of configuration options are available, and the connector will load th
 
 A `docker-compose.yml` file is also available to simplify Docker-based deployments and supports passing environment variables through directly via the system environment.
 
-### OpenCTI environment variables
-
-Below are the parameters you'll need to set for OpenCTI:
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-Below are the parameters you'll need to set for running the connector properly:
-
-| Parameter `Connector`       | config.yml                    | Docker environment variable             | Default            | Mandatory | Description                                                                                      |
-|-----------------------------|-------------------------------|-----------------------------------------|--------------------|-----------|--------------------------------------------------------------------------------------------------|
-| ID                          | `id`                          | `CONNECTOR_ID`                          | /                  | Yes       | A unique `UUIDv4` identifier for this connector instance.                                        |
-| Type                        | `type`                        | `CONNECTOR_TYPE`                        | `EXTERNAL_IMPORT`  | No        | Should always be set to `EXTERNAL_IMPORT` for this connector.                                    |
-| Name                        | `name`                        | `CONNECTOR_NAME`                        | `Aerospace SPARTA` | No        | Name of the connector.                                                                           |
-| Scope                       | `scope`                       | `CONNECTOR_SCOPE`                       | `["attack-pattern", "course-of-action", "indicator", "identity"]` | No        | The scope or type of data the connector is importing, either a MIME type or Stix Object.         |
-| Log level                   | `log_level`                   | `CONNECTOR_LOG_LEVEL`                   | `info`             | No        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.           |
-| Duration period             | `duration_period`             | `CONNECTOR_DURATION_PERIOD`             | `PT5H`             | No        | Determines the time interval between each launch of the connector in ISO 8601, ex: `PT5H`.       |
-| Queue threshold             | `queue_threshold`             | `CONNECTOR_QUEUE_THRESHOLD`             | `500`              | No        | Used to determine the limit (RabbitMQ) in MB at which the connector must go into buffering mode. |
-| Run and terminate           | `run_and_terminate`           | `CONNECTOR_RUN_AND_TERMINATE`           | `False`            | No        | Launch the connector once if set to `True`.                                                      |
-| Send to queue               | `send_to_queue`               | `CONNECTOR_SEND_TO_QUEUE`               | `True`             | No        | If set to `True`, the connector will send data to the queue.                                     |
-| Send to directory           | `send_to_directory`           | `CONNECTOR_SEND_TO_DIRECTORY`           | `False`            | No        | If set to `True`, the connector will send data to a directory.                                   |
-| Send to directory path      | `send_to_directory_path`      | `CONNECTOR_SEND_TO_DIRECTORY_PATH`      | `None`             | No        | The path to the directory where data will be sent if `CONNECTOR_SEND_TO_DIRECTORY` is `True`.    |
-| Send to directory retention | `send_to_directory_retention` | `CONNECTOR_SEND_TO_DIRECTORY_RETENTION` | `7`                | No        | The number of days to retain data in the directory.                                              |
-
-### Connector extra parameters environment variables
-
-Below are the parameters you'll need to set for the connector:
-
-| Parameter `Aerospace SPARTA`     | config.yml                          | Docker environment variable                          | Default                           | Mandatory | Description                                                                                                                                                         |
-|----------------------------------|-------------------------------------|------------------------------------------------------|-----------------------------------|-----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Api base url                     | `base_url`                      | `SPARTA_BASE_URL`                      | `https://sparta.aerospace.org/download/STIX?f=latest` | No        | SPARTA base url used for retrieving SPARTA STIX Bundle.                                                                                                               |
+Find all the configuration variables available (default/required) here: [Connector Configurations](./__metadata__)
 
 ## Deployment
 

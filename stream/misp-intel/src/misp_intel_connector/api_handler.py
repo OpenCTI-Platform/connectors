@@ -122,13 +122,13 @@ class MispApiHandler:
             if "date" in event_data:
                 misp_event.date = event_data["date"]
 
-            if "tags" in event_data:
-                for tag in event_data["tags"]:
+            if "Tag" in event_data:
+                for tag in event_data["Tag"]:
                     misp_event.add_tag(tag)
 
             # Add attributes
-            if "attributes" in event_data:
-                for attr_data in event_data["attributes"]:
+            if "Attribute" in event_data:
+                for attr_data in event_data["Attribute"]:
                     attr = MISPAttribute()
                     attr.type = attr_data.get("type")
                     attr.value = attr_data.get("value")
@@ -142,8 +142,8 @@ class MispApiHandler:
                     misp_event.add_attribute(**attr.to_dict())
 
             # Add objects
-            if "objects" in event_data:
-                for obj_data in event_data["objects"]:
+            if "Object" in event_data:
+                for obj_data in event_data["Object"]:
                     misp_obj = MISPObject(name=obj_data.get("name"))
                     misp_obj.comment = obj_data.get("comment", "")
                     misp_obj.distribution = obj_data.get(
@@ -151,7 +151,7 @@ class MispApiHandler:
                     )
 
                     # Add object attributes
-                    for obj_attr in obj_data.get("attributes", []):
+                    for obj_attr in obj_data.get("Attribute", []):
                         misp_obj.add_attribute(
                             object_relation=obj_attr.get("object_relation"),
                             simple_value=obj_attr.get("value"),
@@ -231,19 +231,28 @@ class MispApiHandler:
                 existing_event.date = event_data["date"]
 
             # Clear existing attributes and objects to replace with new ones
+            # Note: We need to delete objects individually from MISP
+            for obj in existing_event.objects:
+                try:
+                    # Delete each object from MISP
+                    self.misp.delete_object(obj)
+                except:
+                    pass  # Object might already be deleted
+
+            # Now clear the lists
             existing_event.attributes = []
             existing_event.objects = []
 
             # Add new tags (keeping existing ones)
-            if "tags" in event_data:
+            if "Tag" in event_data:
                 existing_tags = {tag.name for tag in existing_event.tags}
-                for tag in event_data["tags"]:
-                    if tag not in existing_tags:
+                for tag in event_data["Tag"]:
+                    if tag.name not in existing_tags:
                         existing_event.add_tag(tag)
 
             # Add new attributes
-            if "attributes" in event_data:
-                for attr_data in event_data["attributes"]:
+            if "Attribute" in event_data:
+                for attr_data in event_data["Attribute"]:
                     existing_event.add_attribute(
                         type=attr_data.get("type"),
                         value=attr_data.get("value"),
@@ -256,8 +265,8 @@ class MispApiHandler:
                     )
 
             # Add new objects
-            if "objects" in event_data:
-                for obj_data in event_data["objects"]:
+            if "Object" in event_data:
+                for obj_data in event_data["Object"]:
                     misp_obj = MISPObject(name=obj_data.get("name"))
                     misp_obj.comment = obj_data.get("comment", "")
                     misp_obj.distribution = obj_data.get(
@@ -265,7 +274,7 @@ class MispApiHandler:
                     )
 
                     # Add object attributes
-                    for obj_attr in obj_data.get("attributes", []):
+                    for obj_attr in obj_data.get("Attribute", []):
                         misp_obj.add_attribute(
                             object_relation=obj_attr.get("object_relation"),
                             simple_value=obj_attr.get("value"),
@@ -315,7 +324,9 @@ class MispApiHandler:
         try:
             # Delete the event
             # The 'hard' parameter prevents the UUID from being added to the blocklist
-            response = self.misp.delete_event(event_uuid, hard=hard)
+            response = self.misp.delete_event(event_uuid)
+            if hard:
+                self.misp.delete_event_blocklist(event_uuid)
 
             if isinstance(response, dict):
                 if response.get("saved", False) or response.get("success", False):

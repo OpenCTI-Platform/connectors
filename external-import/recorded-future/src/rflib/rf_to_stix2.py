@@ -24,6 +24,14 @@ TLP_MAP = {
     "white": stix2.TLP_WHITE,
     "green": stix2.TLP_GREEN,
     "amber": stix2.TLP_AMBER,
+    "amber+strict": stix2.MarkingDefinition(
+        id=pycti.MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+        definition_type="statement",
+        definition={"statement": "custom"},
+        allow_custom=True,
+        x_opencti_definition_type="TLP",
+        x_opencti_definition="TLP:AMBER+STRICT",
+    ),
     "red": stix2.TLP_RED,
 }
 
@@ -37,7 +45,7 @@ class ConversionError(Exception):
 class RFStixEntity:
     """Parent class"""
 
-    def __init__(self, name, _type, author=None, tlp="red", first_seen=None):
+    def __init__(self, name, _type, author=None, tlp="amber+strict", first_seen=None):
         self.name = name
         self.type = _type
         self.author = author or self._create_author()
@@ -200,7 +208,7 @@ class Indicator(RFStixEntity):
                 for element in rf_related_entities:
                     if element["type"]["name"] in handled_related_entities_types:
                         for rf_related_element in element["entities"]:
-                            type_ = rf_related_element["type"]
+                            type_ = element["type"]["name"]
                             name_ = rf_related_element["name"]
                             related_element = ENTITY_TYPE_MAPPER[type_](
                                 name_, type_, self.author, tlp
@@ -985,7 +993,7 @@ class StixNote:
         self.ta_to_intrusion_set = ta_to_intrusion_set
         self.risk_as_score = risk_as_score
         self.risk_threshold = risk_threshold
-        self.tlp = stix2.TLP_RED
+        self.tlp = TLP_MAP["amber+strict"]
         self.rfapi = rfapi
         self.attachments = None
         self.analyst_notes_guess_relationships = analyst_notes_guess_relationships
