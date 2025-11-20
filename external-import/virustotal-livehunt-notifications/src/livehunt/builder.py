@@ -2,9 +2,11 @@
 """Livehunt builder module."""
 import datetime
 import io
+import json
 import logging
 import re
 from typing import List, Optional
+import uuid
 
 import magic
 import plyara
@@ -12,6 +14,7 @@ import plyara.utils
 import stix2
 import vt
 from pycti import Incident, Indicator, Note, OpenCTIConnectorHelper, StixCoreRelationship
+from stix2.canonicalization.Canonicalize import canonicalize
 
 logging.getLogger("plyara").setLevel(logging.ERROR)
 
@@ -587,7 +590,7 @@ class LivehuntBuilder:
                                                 id=self._generate_observable_id(host, "domain-name"),
                                                 value=host,
                                                 description=f"Extracted from malware config of family {family.get('family', 'unknown')}",
-                                                object_marking_refs=[self.tlp]
+                                                object_marking_refs=[self.tlp],
                                                 custom_properties={
                                                     "created_by_ref": self.author[
                                                         "standard_id"
@@ -701,7 +704,7 @@ class LivehuntBuilder:
         return obs_type + "--" + id
     
     @staticmethod
-    def _get_tlp(tlp_str):
+    def _get_tlp(tlp_string):
         result = ""
         if tlp_string == "WHITE" or tlp_string == "CLEAR":
             result = stix2.TLP_WHITE
