@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from uuid import uuid5, NAMESPACE_URL
 
 from doppel.utils import parse_iso_datetime
 from pycti import Identity as PyCTIIdentity
@@ -120,92 +121,121 @@ class ConverterToStix:
             labels_dict["brand"] = f"brand:{alert['brand']}"
 
         tags = alert.get("tags", [])
+
         if tags:
-            labels_dict["tags"] = tags
+            labels_dict["tags"] = [tag.get("name") for tag in tags if "name" in tag]
 
         labels_flat = [v for v in labels_dict.values() if v and isinstance(v, str)]
         labels_flat.extend(labels_dict["tags"])
 
-        return labels_dict, labels_flat
-
-    def _update_observable_labels(self, observable_id, new_labels_dict, old_state=None):
+        return labels_flat
+    
+    def _build_description(self, alert):
         """
-        Update labels on existing observable, removing old state labels
+        Build description field from alert data
+        :param alert: Doppel alert
+        :return: Description string
         """
-        try:
-            observable = self.helper.api.stix_cyber_observable.read(id=observable_id)
-            if not observable:
-                return
 
-            current_labels = observable.get("objectLabel", [])
-
-            if old_state:
-                old_queue_state = old_state.get("queue_state")
-                if old_queue_state:
-                    old_label = f"queue:{old_queue_state}"
-                    for label in current_labels:
-                        if label.get("value") == old_label:
-                            self.helper.api.label.delete(id=label.get("id"))
-                            self.helper.log_info(
-                                "[DoppelConverter] Removed old queue label",
-                                {"observable_id": observable_id, "old_label": old_label},
-                            )
-
-            for category, label_value in new_labels_dict.items():
-                if label_value and isinstance(label_value, str):
-                    label = self.helper.api.label.create(value=label_value)
-                    self.helper.api.stix_cyber_observable.add_label(
-                        id=observable_id,
-                        label_id=label["id"],
-                    )
-
-            for tag in new_labels_dict.get("tags", []):
-                label = self.helper.api.label.create(value=tag)
-                self.helper.api.stix_cyber_observable.add_label(
-                    id=observable_id,
-                    label_id=label["id"],
-                )
-
-        except Exception as e:
-            self.helper.log_error(
-                f"[DoppelConverter] Error updating observable labels: {str(e)}",
-                {"observable_id": observable_id},
+        # Extract entity_content data
+        entity_content = alert.get("entity_content", {})
+        root_domain = entity_content.get("root_domain", {})
+        
+        country_code = root_domain.get("country_code")
+        registrar = root_domain.get("registrar")
+        hosting_provider = root_domain.get("hosting_provider")
+        contact_email = root_domain.get("contact_email")
+        mx_records = root_domain.get("mx_records", [])
+        nameservers = root_domain.get("nameservers", [])
+        
+        description_parts = []
+        if alert.get("brand"):
+            description_parts.append(f"**Brand**: {alert.get('brand')}\n")
+        if alert.get("product"):
+            description_parts.append(f"**Product**: {alert.get('product')}\n")
+        if alert.get("notes"):
+            description_parts.append(f"**Notes**: {alert.get('notes')}\n")
+        if alert.get("uploaded_by"):
+            description_parts.append(f"**Uploaded By**: {alert.get('uploaded_by')}\n")
+        if alert.get("screenshot_url"):
+            description_parts.append(f"**Screenshot URL**: {alert.get('screenshot_url')}\n")
+        if alert.get("message"):
+            description_parts.append(f"**Message**: {alert.get('message')}\n")
+        if alert.get("source"):
+            description_parts.append(f"**Source**: {alert.get('source')}\n")
+        if alert.get("assignee"):
+            description_parts.append(f"**Assignee**: {alert.get('assignee')}\n")
+        if country_code:
+            description_parts.append(f"**Country**: {country_code}\n")
+        if registrar:
+            description_parts.append(f"**Registrar**: {registrar}\n")
+        if hosting_provider:
+            description_parts.append(f"**Hosting Provider**: {hosting_provider}\n")
+        if contact_email:
+            description_parts.append(f"**Contact Email**: {contact_email}\n")
+        if mx_records:
+            formatted_mx = [
+                f"{mx.get('exchange')} (pref: {mx.get('preference')})" for mx in mx_records
+            ]
+            description_parts.append(f"**MX Records**: {', '.join(formatted_mx)}\n")
+        if nameservers:
+            ns_text = ", ".join(
+                [ns if isinstance(ns, str) else ns.get("host") for ns in nameservers]
             )
+            description_parts.append(f"**Nameservers**: {ns_text}\n")
 
-    def _find_observable_by_value(self, value, obs_type="Domain-Name"):
+        return "\n".join(description_parts) if description_parts else ""
+    
+    def _build_external_references(self, alert):
         """
-        Find existing observable in OpenCTI by value
-        :param value: Observable value (domain or IP)
-        :param obs_type: Type (Domain-Name or IPv4-Addr)
-        :return: Observable object or None
+        Build external references for observables/indicators
+        :param alert: Doppel alert
+        :return: List of external reference dicts
         """
-        try:
-            filters = {
-                "mode": "and",
-                "filters": [
-                    {"key": "entity_type", "values": [obs_type]},
-                    {"key": "value", "values": [value]}
-                ],
-                "filterGroups": []
+        external_references = []
+        audit_logs = alert.get("audit_logs", [])
+        audit_log_text = "\n".join(
+            [
+                f"{log.get('timestamp', '')}: {log.get('type', '')} - {log.get('value', '')} (by {log.get('changed_by', '')})"
+                for log in audit_logs
+            ]
+        ) if audit_logs else ""
+        
+        if alert.get("doppel_link") or alert.get("id"):
+            external_ref = {
+                "source_name": alert.get("source", "Doppel"),
             }
-            
-            observables = self.helper.api.stix_cyber_observable.list(filters=filters)
-            
-            if observables and len(observables) > 0:
-                self.helper.log_info(
-                    f"[DoppelConverter] Found existing {obs_type}",
-                    {"value": value, "id": observables[0].get("id")}
-                )
-                return observables[0]
-            
-            return None
-            
-        except Exception as e:
-            self.helper.log_error(
-                f"[DoppelConverter] Error finding observable: {str(e)}",
-                {"value": value, "type": obs_type}
-            )
-            return None
+            if alert.get("doppel_link"):
+                external_ref["url"] = alert.get("doppel_link")
+            if alert.get("id"):
+                external_ref["external_id"] = alert.get("id")
+            if audit_log_text:
+                external_ref["description"] = audit_log_text
+            external_references.append(external_ref)
+        
+        return external_references
+    
+    def _build_custom_properties(self, alert):
+        """
+        Build custom properties for observables/indicators
+        :param alert: Doppel alert
+        :return: Dict of custom properties
+        """
+        custom_properties = {}
+        raw_score = alert.get("score")
+        try:
+            score = int(float(raw_score)) if raw_score is not None else 0
+        except (ValueError, TypeError):
+            score = 0
+        custom_properties["x_opencti_created_by_ref"] = self.author.id
+        custom_properties["x_opencti_score"] = score
+        custom_properties["x_opencti_workflow_id"] = alert.get("id")  # Store alert_id for lookup
+
+        x_opencti_description = self._build_description(alert)
+        if x_opencti_description:
+            custom_properties["x_opencti_description"] = x_opencti_description
+
+        return custom_properties
 
     def _find_indicators_by_alert_id(self, alert_id, domain_name=None, ip_address=None):
         """
@@ -276,7 +306,7 @@ class ConverterToStix:
     
     def _process_takedown(self, alert, domain_observable_id, ip_observable_id, stix_objects):
         """
-        Process takedown workflow: Create/update Indicator
+        Process takedown workflow: Create Indicator (based-on Observable)
         :param alert: Doppel alert
         :param domain_observable_id: Domain observable ID
         :param ip_observable_id: IP observable ID (optional)
@@ -290,10 +320,10 @@ class ConverterToStix:
             {"alert_id": alert_id, "queue_state": queue_state}
         )
         
-        # Extract domain/IP for search
+        # Extract domain/IP
         entity_content = alert.get("entity_content", {})
         root_domain = entity_content.get("root_domain", {})
-        domain_name = root_domain.get("domain", "")
+        domain_name = root_domain.get("domain", "") or alert.get("entity") # Fallback to entity field for non-domain alerts
         ip_address = root_domain.get("ip_address", "")
         
         # Parse timestamps once for indicator/note reuse
@@ -328,56 +358,6 @@ class ConverterToStix:
                     id=indicator.get("id"),
                     input={"key": "revoked", "value": False}
                 )
-                
-                # Remove false-positive label
-                labels = indicator.get("objectLabel", [])
-                for label in labels:
-                    if label.get("value") == "revoked-false-positive":
-                        self.helper.api.stix_domain_object.remove_label(
-                            id=indicator.get("id"),
-                            label_id=label.get("id")
-                        )
-            
-            # Ensure relationship exists even if indicator already exists
-            if primary_observable_id:
-                # Get the observable's internal ID if we have standard_id
-                observable_internal_id = primary_observable_id
-                if primary_observable_id.startswith("domain-name--") or primary_observable_id.startswith("ipv4-addr--"):
-                    # It's a standard_id, try to get internal ID from existing observable
-                    if domain_observable_id and domain_observable_id == primary_observable_id:
-                        existing_domain = self._find_observable_by_value(domain_name, "Domain-Name") if domain_name else None
-                        if existing_domain:
-                            observable_internal_id = existing_domain.get("id")
-                    elif ip_observable_id and ip_observable_id == primary_observable_id:
-                        existing_ip = self._find_observable_by_value(ip_address, "IPv4-Addr") if ip_address else None
-                        if existing_ip:
-                            observable_internal_id = existing_ip.get("id")
-                
-                # Use OpenCTI API to create relationship for existing objects
-                try:
-                    self.helper.api.stix_core_relationship.create(
-                        fromId=indicator.get("id"),  # Use OpenCTI internal ID
-                        toId=observable_internal_id,  # Use internal ID
-                        relationship_type="based-on"
-                    )
-                    self.helper.log_info(
-                        f"[DoppelConverter] Created based-on relationship via API for existing indicator",
-                        {"alert_id": alert_id, "indicator_id": indicator.get("id"), "observable_id": observable_internal_id}
-                    )
-                except Exception as e:
-                    # If relationship already exists, API will error - that's okay
-                    error_str = str(e).lower()
-                    if "already exists" in error_str or "duplicate" in error_str or "unique constraint" in error_str:
-                        self.helper.log_info(
-                            f"[DoppelConverter] Relationship already exists",
-                            {"alert_id": alert_id, "indicator_id": indicator.get("id"), "observable_id": observable_internal_id}
-                        )
-                    else:
-                        # Log the error but don't fail - relationship might still be created
-                        self.helper.log_warning(
-                            f"[DoppelConverter] Error creating relationship via API (may still exist)",
-                            {"alert_id": alert_id, "indicator_id": indicator.get("id"), "observable_id": observable_internal_id, "error": str(e)}
-                        )
             
             # Always record note when takedown/actioned occurs
             note_refs = []
@@ -414,38 +394,22 @@ class ConverterToStix:
         else:
             return
         
-        labels_dict, labels_flat = self._build_labels(alert)
-        
-        # Build audit logs
-        audit_logs = alert.get("audit_logs", [])
-        audit_log_text = "\n".join(
-            [
-                f"{log.get('timestamp', '')}: {log.get('type', '')} - {log.get('value', '')} (by {log.get('changed_by', '')})"
-                for log in audit_logs
-            ]
-        ) if audit_logs else ""
+        # Build labels
+        labels_flat = self._build_labels(alert)
         
         # Build external references
-        external_references = []
-        if alert.get("doppel_link") or alert.get("id"):
-            external_ref = {
-                "source_name": alert.get("source", "Doppel"),
-            }
-            if alert.get("doppel_link"):
-                external_ref["url"] = alert.get("doppel_link")
-            if alert.get("id"):
-                external_ref["external_id"] = alert.get("id")
-            if audit_log_text:
-                external_ref["description"] = audit_log_text
-            external_references.append(external_ref)
-        
+        external_references = self._build_external_references(alert)
+    
+        # Build custom properties
+        custom_properties = self._build_custom_properties(alert)
+
         # Create Indicator
         indicator = Indicator(
             pattern=pattern,
             pattern_type="stix",
             spec_version="2.1",
             name=name,
-            description=f"Product: {alert.get('product', 'unknown')}\nSource: {alert.get('source', 'unknown')}\nAudit Logs: {audit_log_text}",
+            description=self._build_description(alert),
             created=created_at,
             modified=modified,
             created_by_ref=self.author.id,
@@ -453,9 +417,7 @@ class ConverterToStix:
             labels=labels_flat or None,
             external_references=external_references if external_references else None,
             valid_from=created_at,
-            custom_properties={
-                "x_opencti_workflow_id": alert_id  # Store alert_id for lookup
-            },
+            custom_properties=custom_properties,
             allow_custom=True
         )
         stix_objects.append(indicator)
@@ -527,7 +489,7 @@ class ConverterToStix:
         # Extract domain/IP for search
         entity_content = alert.get("entity_content", {})
         root_domain = entity_content.get("root_domain", {})
-        domain_name = root_domain.get("domain", "")
+        domain_name = root_domain.get("domain", "") or alert.get("entity") # Fallback to entity field for non-domain alerts
         ip_address = root_domain.get("ip_address", "")
         
         # Find existing indicators for this alert
@@ -615,16 +577,18 @@ class ConverterToStix:
         WORKFLOW:
         1. Get previous state from helper.get_state()
         2. For each alert:
-           - Check if Observable exists in OpenCTI
-           - Detect state transitions (compare previous vs current queue_state)
+           - Create Observables for domain and IP
+           - Detect state transitions and process accordingly:
+             * TO_TAKEDOWN: Create Indicator (based-on Observable)
+             * REVERSION: Revoke Indicator (revoked=true, add label)
            - Create/update Observables, Indicators, Relationships, Notes
         3. Save updated state with helper.set_state()
         
         STATE TRANSITIONS:
-        - None → needs_review: Create Observable
-        - needs_review → taken_down: Create Indicator (based-on Observable)
-        - taken_down → unresolved: Revoke Indicator (revoked=true, add label)
-        - unresolved → taken_down: Un-revoke Indicator (revoked=false, remove label)
+        - None → doppel_review: Create Observable
+        - doppel_review → actioned/taken_down: Create Indicator (based-on Observable)
+        - actioned/taken_down → unresolved: Revoke Indicator (revoked=true, add label)
+        - unresolved → actioned/taken_down: Un-revoke Indicator (revoked=false, remove label)
         
         :param alerts: List of Doppel alert dictionaries
         :return: stix2 bundle json
@@ -654,93 +618,26 @@ class ConverterToStix:
                     }
                 )
 
-                # Extract entity_content data
+                # Extract required fields
                 entity_content = alert.get("entity_content", {})
                 root_domain = entity_content.get("root_domain", {})
-                
-                domain_name = root_domain.get("domain", "")
+                domain_name = root_domain.get("domain", "") or alert.get("entity") # Fallback to entity field for non-domain alerts
                 ip_address = root_domain.get("ip_address", "")
-                country_code = root_domain.get("country_code")
-                registrar = root_domain.get("registrar")
-                hosting_provider = root_domain.get("hosting_provider")
-                contact_email = root_domain.get("contact_email")
-                mx_records = root_domain.get("mx_records", [])
-                nameservers = root_domain.get("nameservers", [])
 
-                labels_dict, labels_flat = self._build_labels(alert)
-                
-                # Format audit logs
-                audit_logs = alert.get("audit_logs", [])
-                audit_log_text = "\n".join(
-                    [
-                        f"{log.get('timestamp', '')}: {log.get('type', '')} - {log.get('value', '')} (by {log.get('changed_by', '')})"
-                        for log in audit_logs
-                    ]
-                ) if audit_logs else ""
+                # Build labels
+                labels_flat = self._build_labels(alert)
                 
                 # Build external references
-                external_references = []
-                if alert.get("doppel_link") or alert.get("id"):
-                    external_ref = {
-                        "source_name": alert.get("source", "Doppel"),
-                    }
-                    if alert.get("doppel_link"):
-                        external_ref["url"] = alert.get("doppel_link")
-                    if alert.get("id"):
-                        external_ref["external_id"] = alert.get("id")
-                    if audit_log_text:
-                        external_ref["description"] = audit_log_text
-                    external_references.append(external_ref)
+                external_references = self._build_external_references(alert)
                 
-                # Handle score
-                raw_score = alert.get("score")
-                try:
-                    score = int(float(raw_score)) if raw_score is not None else 0
-                except (ValueError, TypeError):
-                    score = 0
-                
-                description_parts = []
-                if alert.get("brand"):
-                    description_parts.append(f"**Brand**: {alert.get('brand')}\n")
-                if alert.get("product"):
-                    description_parts.append(f"**Product**: {alert.get('product')}\n")
-                if alert.get("notes"):
-                    description_parts.append(f"**Notes**: {alert.get('notes')}\n")
-                if alert.get("uploaded_by"):
-                    description_parts.append(f"**Uploaded By**: {alert.get('uploaded_by')}\n")
-                if alert.get("screenshot_url"):
-                    description_parts.append(f"**Screenshot**: {alert.get('screenshot_url')}\n")
-                if alert.get("message"):
-                    description_parts.append(f"**Message**: {alert.get('message')}\n")
-                if country_code:
-                    description_parts.append(f"**Country**: {country_code}\n")
-                if registrar:
-                    description_parts.append(f"**Registrar**: {registrar}\n")
-                if hosting_provider:
-                    description_parts.append(f"**Hosting Provider**: {hosting_provider}\n")
-                if contact_email:
-                    description_parts.append(f"**Contact Email**: {contact_email}\n")
-                if mx_records:
-                    description_parts.append(f"**MX Records**: {', '.join(mx_records)}\n")
-                if nameservers:
-                    description_parts.append(f"**Nameservers**: {', '.join(nameservers)}\n")
-
-                x_opencti_description = "\n".join(description_parts) if description_parts else None
-                custom_properties = {}
-                if x_opencti_description:
-                    custom_properties["x_opencti_description"] = x_opencti_description
-                custom_properties["x_opencti_created_by_ref"] = self.author.id
-                custom_properties["x_opencti_score"] = score
+                # Build custom properties
+                custom_properties = self._build_custom_properties(alert)
                 
                 domain_observable_id = None
                 ip_observable_id = None
                 
-                # Check if observables exist
-                existing_domain = self._find_observable_by_value(domain_name, "Domain-Name") if domain_name else None
-                existing_ip = self._find_observable_by_value(ip_address, "IPv4-Addr") if ip_address else None
-                
                 # Create or reference Domain Observable
-                if domain_name and not existing_domain:
+                if domain_name:
                     domain_observable = DomainName(
                         value=domain_name,
                         spec_version="2.1",
@@ -757,26 +654,15 @@ class ConverterToStix:
                         "[DoppelConverter] Created new domain observable",
                         {"alert_id": alert_id, "domain": domain_name}
                     )
-                elif existing_domain:
-                    domain_observable_id = existing_domain.get("standard_id")
-                    self._update_observable_labels(
-                        domain_observable_id,
-                        labels_dict,
-                        old_state=state.get(alert_id),
-                    )
-                    
-                    self.helper.log_info(
-                        "[DoppelConverter] Using existing domain observable",
-                        {"alert_id": alert_id, "domain": domain_name, "id": domain_observable_id}
-                    )
                 
                 # Create or reference IP Observable
-                if ip_address and not existing_ip:
+                if ip_address:
                     ip_observable = IPv4Address(
                         value=ip_address,
                         spec_version="2.1",
                         object_marking_refs=[self.tlp_marking.id],
                         labels=labels_flat or None,
+                        external_references=external_references if external_references else None,
                         custom_properties=custom_properties,
                         allow_custom=True
                     )
@@ -800,18 +686,6 @@ class ConverterToStix:
                             allow_custom=True
                         )
                         stix_objects.append(relationship)
-                elif existing_ip:
-                    ip_observable_id = existing_ip.get("standard_id")
-                    self._update_observable_labels(
-                        ip_observable_id,
-                        labels_dict,
-                        old_state=state.get(alert_id),
-                    )
-                    
-                    self.helper.log_info(
-                        "[DoppelConverter] Using existing IP observable",
-                        {"alert_id": alert_id, "ip": ip_address, "id": ip_observable_id}
-                    )
                 
                 # DETECT STATE TRANSITIONS
                 is_takedown_now = self._is_takedown_state(current_queue_state)
@@ -846,19 +720,6 @@ class ConverterToStix:
                     )
                     self._process_reversion(alert, domain_observable_id, ip_observable_id, stix_objects)
                 
-                # Handle case where previous_state is null but we have an active indicator in reverted state
-                elif previous_queue_state is None and is_reverted and not is_takedown_now:
-                    # Check if there's an active indicator for this alert (domain_name and ip_address already extracted above)
-                    existing_indicators = self._find_indicators_by_alert_id(alert_id, domain_name=domain_name, ip_address=ip_address)
-                    active_indicators = [ind for ind in existing_indicators if not ind.get("revoked", False)]
-                    
-                    if active_indicators:
-                        self.helper.log_info(
-                            "[DoppelConverter] Transition detected: REVERSION (no previous state, but active indicator found)",
-                            {"alert_id": alert_id, "from": previous_queue_state, "to": current_queue_state, "active_indicators_count": len(active_indicators)}
-                        )
-                        self._process_reversion(alert, domain_observable_id, ip_observable_id, stix_objects)
-                
                 # Case Creation
                 if domain_observable_id or ip_observable_id:
                     case_refs = []
@@ -868,20 +729,39 @@ class ConverterToStix:
                         case_refs.append(ip_observable_id)
                     
                     takedown_type = "brand-abuse" if alert.get("platform") != "domains" else "phishing"
-                    priority = self._calculate_priority(raw_score)
+                    score = alert.get("score")
+                    priority = self._calculate_priority(score)
+
+                    case_id = f"grouping--{uuid5(NAMESPACE_URL, f'doppel-case-{alert_id}')}"
+                    case_labels = self._build_labels(alert)
+                    case_labels.append(f"priority:{priority}")
                     
                     case = Grouping(
+                        id=case_id,
                         name=f"Case for Alert {alert_id}",
                         context="suspicious-activity",
                         object_refs=case_refs,
                         spec_version="2.1",
                         created_by_ref=self.author.id,
-                        description=f"Alert ID: {alert_id}\nTakedown Type: {takedown_type}\nSeverity: {alert.get('severity', 'unknown')}\nPriority: {priority}\nQueue State: {current_queue_state}",
-                        labels=[f"priority:{priority}", f"severity:{alert.get('severity', 'unknown')}", f"queue_state:{current_queue_state}"],
+                        external_references=external_references if external_references else None,
+                        description=self._build_description(alert) + "\n\n" + \
+                                    f"**Takedown Type**: {takedown_type}\n\n",
+                        labels=case_labels or None,
                         object_marking_refs=[self.tlp_marking.id],
                         allow_custom=True
                     )
                     stix_objects.append(case)
+
+                    related_to = StixCoreRelationship(
+                        relationship_type="related-to",
+                        source_ref=case.id,
+                        target_ref=domain_observable_id or ip_observable_id,
+                        spec_version="2.1",
+                        created_by_ref=self.author.id,
+                        object_marking_refs=[self.tlp_marking.id],
+                        allow_custom=True
+                    )
+                    stix_objects.append(related_to)
                 
                 # Update state for this alert
                 state[alert_id] = {
