@@ -237,9 +237,20 @@ class ActorImporter(BaseImporter):
                             "indicator_unwanted_labels"
                         ],
                     )
-                    bundle_builder = IndicatorBundleBuilder(
-                        self.helper, bundle_builder_config
-                    )
+                    # Check if the indicator type is supported
+                    if indicator.get("type") not in IndicatorBundleBuilder._INDICATOR_TYPE_TO_OBSERVATION_FACTORY:
+                        self.helper.connector_logger.warning(
+                            (
+                                "[WARNING] The construction of the indicator has been skipped in the actor because "
+                                "the indicator type is not supported."
+                            ),
+                            {
+                                "indicator_id": indicator.get("id"),
+                                "indicator_type": indicator.get("type"),
+                            },
+                        )
+                        continue
+                    bundle_builder = IndicatorBundleBuilder(self.helper, bundle_builder_config)
                     indicator_bundle_built = bundle_builder.build()
                     if indicator_bundle_built:
                         indicator_with_related_entities = indicator_bundle_built[
