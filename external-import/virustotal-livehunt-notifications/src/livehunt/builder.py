@@ -45,6 +45,7 @@ class LivehuntBuilder:
         livehunt_tag_prefix: str,
         enable_label_enrichment: bool,
         get_malware_config: bool,
+        tlp: str,
     ) -> None:
         """Initialize Virustotal builder."""
         self.client = client
@@ -70,6 +71,7 @@ class LivehuntBuilder:
         self.livehunt_tag_prefix = livehunt_tag_prefix
         self.enable_label_enrichment = enable_label_enrichment
         self.get_malware_config = get_malware_config
+        self.tlp=self._get_tlp(tlp)
 
     def process(self, start_date: str, timestamp: int):
         # Work id will only be set and instantiated if there are bundles to send.
@@ -229,6 +231,7 @@ class LivehuntBuilder:
             labels=self.retrieve_labels(vtobj),
             external_references=[external_reference],
             allow_custom=True,
+            object_marking_refs=[self.tlp],
         )
         self.helper.connector_logger.debug(f"Adding alert: {incident}")
         self.bundle.append(incident)
@@ -334,6 +337,7 @@ class LivehuntBuilder:
             },
             allow_custom=True,
             labels=labels,
+            object_marking_refs=[self.tlp],
         )
         self.bundle.append(file)
         # Link to the incident if any.
@@ -349,6 +353,7 @@ class LivehuntBuilder:
                 source_ref=incident_id,
                 target_ref=file["id"],
                 allow_custom=True,
+                object_marking_refs=[self.tlp],
             )
             self.bundle.append(relationship)
         return file["id"]
@@ -437,6 +442,7 @@ class LivehuntBuilder:
                         source_ref=incident_id,
                         target_ref=indicator["id"],
                         allow_custom=True,
+                        object_marking_refs=[self.tlp],
                     )
                     self.bundle.append(relationship)
 
@@ -452,6 +458,7 @@ class LivehuntBuilder:
                         source_ref=file_id,
                         target_ref=indicator["id"],
                         allow_custom=True,
+                        object_marking_refs=[self.tlp],
                     )
                     self.bundle.append(relationship)
 
@@ -551,6 +558,7 @@ class LivehuntBuilder:
     def extract_malware_config(self, vtobj, file_id: Optional[str] = None):
         """Extract malware config from the file object and creates observables and notes."""
         if hasattr(vtobj, "malware_config") and vtobj.malware_config is not None:
+            raw_config = ""
             try:
                 raw_config = f"""```\n{
                                     json.dumps(
@@ -579,7 +587,7 @@ class LivehuntBuilder:
                                                 id=self._generate_observable_id(host, "domain-name"),
                                                 value=host,
                                                 description=f"Extracted from malware config of family {family.get('family', 'unknown')}",
-                                                object_marking_refs=[],
+                                                object_marking_refs=[self.tlp]
                                                 custom_properties={
                                                     "created_by_ref": self.author[
                                                         "standard_id"
@@ -602,6 +610,7 @@ class LivehuntBuilder:
                                                     source_ref=file_id,
                                                     target_ref=domain_observable["id"],
                                                     allow_custom=True,
+                                                    object_marking_refs=[self.tlp],
                                                 )
                                                 self.bundle.append(relationship)
                                         if url is not None:
@@ -609,7 +618,7 @@ class LivehuntBuilder:
                                                 id=self._generate_observable_id(url, "url"),
                                                 value=url,
                                                 description=f"Extracted from malware config of family {family.get('family', 'unknown')}",
-                                                object_marking_refs=[],
+                                                object_marking_refs=[self.tlp],
                                                 custom_properties={
                                                     "created_by_ref": self.author[
                                                         "standard_id"
@@ -632,6 +641,7 @@ class LivehuntBuilder:
                                                     source_ref=file_id,
                                                     target_ref=url_observable["id"],
                                                     allow_custom=True,
+                                                    object_marking_refs=[self.tlp],
                                                 )
                                                 self.bundle.append(relationship)
             #Adding config note
@@ -642,6 +652,7 @@ class LivehuntBuilder:
                 object_refs=note_obj_refs,
                 created_by_ref=self.author["standard_id"],
                 allow_custom=True,
+                object_marking_refs=[self.tlp],
             )
             self.bundle.append(note)
         return None
@@ -688,3 +699,18 @@ class LivehuntBuilder:
         data = canonicalize(data, utf8=False)
         id = str(uuid.uuid5(uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7"), data))
         return obs_type + "--" + id
+    
+    @staticmethod
+    def _get_tlp(tlp_str):
+        result = ""
+        if tlp_string == "WHITE" or tlp_string == "CLEAR":
+            result = stix2.TLP_WHITE
+        elif tlp_string == "GREEN":
+            result = stix2.TLP_GREEN
+        elif tlp_string == "AMBER":
+            result = stix2.TLP_AMBER
+        elif tlp_string == "AMBER_STRICT":
+            result = "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37"
+        else:
+            result = stix2.TLP_GREEN
+        return result
