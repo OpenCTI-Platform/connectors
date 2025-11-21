@@ -50,6 +50,7 @@ class LivehuntBuilder:
         enable_label_enrichment: bool,
         get_malware_config: bool,
         tlp: str,
+        indicators: bool,
     ) -> None:
         """Initialize Virustotal builder."""
         self.client = client
@@ -76,6 +77,7 @@ class LivehuntBuilder:
         self.enable_label_enrichment = enable_label_enrichment
         self.get_malware_config = get_malware_config
         self.tlp=self._get_tlp(tlp)
+        self.indicators = indicators
 
     def process(self, start_date: str, timestamp: int):
         # Work id will only be set and instantiated if there are bundles to send.
@@ -364,6 +366,57 @@ class LivehuntBuilder:
                 object_marking_refs=[self.tlp],
             )
             self.bundle.append(relationship)
+        # Create indicator for the file if needed
+        if self.indicators:
+            indicator = stix2.Indicator(
+                id=Indicator.generate_id(f"file:hashes.'SHA-256' = '{vtobj.sha256}'"),
+                created_by_ref=self.author["standard_id"],
+                name=file_name,
+                description=f"File with SHA256 {vtobj.sha256} observed in VirusTotal Livehunt Notifications.",
+                pattern=f"[file:hashes.'SHA-256' = '{vtobj.sha256}']",
+                pattern_type="stix",
+                valid_from=self.helper.api.stix2.format_date(
+                    datetime.datetime.utcnow()
+                ),
+                custom_properties={
+                    "x_opencti_main_observable_type": "StixFile",
+                },
+                allow_custom=True,
+                object_marking_refs=[self.tlp],
+            )
+            self.helper.connector_logger.debug(
+                f"[VirusTotal Livehunt Notifications] file indicator created: {indicator}"
+            )
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "based-on",
+                    indicator["id"],
+                    file["id"],
+                ),
+                relationship_type="based-on",
+                created_by_ref=self.author["standard_id"],
+                source_ref=indicator["id"],
+                target_ref=file["id"],
+                allow_custom=True,
+                object_marking_refs=[self.tlp],
+            )
+            self.bundle.append(indicator)
+            self.bundle.append(relationship)
+            if incident_id is not None:
+                relationship = stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to",
+                        incident_id,
+                        indicator["id"],
+                    ),
+                    relationship_type="related-to",
+                    created_by_ref=self.author["standard_id"],
+                    source_ref=incident_id,
+                    target_ref=indicator["id"],
+                    allow_custom=True,
+                    object_marking_refs=[self.tlp],
+                )
+                self.bundle.append(relationship)
         return file["id"]
 
     def create_rule(
@@ -630,6 +683,41 @@ class LivehuntBuilder:
                                                 self.helper.connector_logger.debug(f"Created Domain Name observable: {host_observable}")
                                             note_obj_refs.append(host_observable.id)
                                             self.bundle.append(host_observable)
+                                            if self.indicators:
+                                                indicator = stix2.Indicator(
+                                                    id=Indicator.generate_id(f"{host_observable.type}:value = '{host}'"),
+                                                    created_by_ref=self.author["standard_id"],
+                                                    name=f"Malware config extracted observable {host}",
+                                                    description=f"Observable {host} extracted from malware config of family {family.get('family', 'unknown')}",
+                                                    pattern=f"[{host_observable.type}:value = '{host}']",
+                                                    pattern_type="stix",
+                                                    valid_from=self.helper.api.stix2.format_date(
+                                                        datetime.datetime.utcnow()
+                                                    ),
+                                                    custom_properties={
+                                                        "x_opencti_main_observable_type": host_observable.type,
+                                                    },
+                                                    allow_custom=True,
+                                                    object_marking_refs=[self.tlp],
+                                                )
+                                                self.helper.connector_logger.debug(f"[VirusTotal Livehunt Notifications] malware config indicator created: {indicator}")
+                                                relationship = stix2.Relationship(
+                                                    id=StixCoreRelationship.generate_id(
+                                                        "based-on",
+                                                        indicator["id"],
+                                                        host_observable["id"],
+                                                    ),
+                                                    relationship_type="based-on",
+                                                    created_by_ref=self.author[
+                                                        "standard_id"
+                                                    ],
+                                                    source_ref=indicator["id"],
+                                                    target_ref=host_observable["id"],
+                                                    allow_custom=True,
+                                                    object_marking_refs=[self.tlp],
+                                                )
+                                                self.bundle.append(indicator)
+                                                self.bundle.append(relationship)
                                             if file_id is not None:
                                                 relationship = stix2.Relationship(
                                                     id=StixCoreRelationship.generate_id(
@@ -661,6 +749,41 @@ class LivehuntBuilder:
                                             )
                                             note_obj_refs.append(url_observable.id)
                                             self.bundle.append(url_observable)
+                                            if self.indicators:
+                                                indicator = stix2.Indicator(
+                                                    id=Indicator.generate_id(f"url:value = '{url}'"),
+                                                    created_by_ref=self.author["standard_id"],
+                                                    name=f"Malware config extracted observable {url}",
+                                                    description=f"Observable {url} extracted from malware config of family {family.get('family', 'unknown')}",
+                                                    pattern=f"[url:value = '{url}']",
+                                                    pattern_type="stix",
+                                                    valid_from=self.helper.api.stix2.format_date(
+                                                        datetime.datetime.utcnow()
+                                                    ),
+                                                    custom_properties={
+                                                        "x_opencti_main_observable_type": "URL",
+                                                    },
+                                                    allow_custom=True,
+                                                    object_marking_refs=[self.tlp],
+                                                )
+                                                self.helper.connector_logger.debug(f"[VirusTotal Livehunt Notifications] malware config indicator created: {indicator}")
+                                                relationship = stix2.Relationship(
+                                                    id=StixCoreRelationship.generate_id(
+                                                        "based-on",
+                                                        indicator["id"],
+                                                        url_observable["id"],
+                                                    ),
+                                                    relationship_type="based-on",
+                                                    created_by_ref=self.author[
+                                                        "standard_id"
+                                                    ],
+                                                    source_ref=indicator["id"],
+                                                    target_ref=url_observable["id"],
+                                                    allow_custom=True,
+                                                    object_marking_refs=[self.tlp],
+                                                )
+                                                self.bundle.append(indicator)
+                                                self.bundle.append(relationship)
                                             if file_id is not None:
                                                 relationship = stix2.Relationship(
                                                     id=StixCoreRelationship.generate_id(

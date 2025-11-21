@@ -24,5 +24,6 @@ services:
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_FILTER_WITH_TAG="mytag" # Filter livehunt notifications with this tag
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_GET_MALWARE_CONFIG=False # Set to true to add config data of malware files like IPs and domains, if present
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_TLP=GREEN # Set the TLP level for created entities, e.g. WHITE, GREEN, AMBER, AMBER_STRICT or RED. Default is GREEN. 
+      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_INDICATORS=True # Set to true to create indicators linked to the alerts
 
     restart: always

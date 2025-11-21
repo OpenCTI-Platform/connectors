@@ -192,7 +192,13 @@ class VirustotalLivehuntNotifications:
             config,
             default="GREEN",
         )
-
+        
+        indicators = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_INDICATORS",
+            ["virustotal_livehunt_notifications", "indicators"],
+            config,
+            default=True,
+        )
 
         self.builder = LivehuntBuilder(
             client,
@@ -217,7 +223,8 @@ class VirustotalLivehuntNotifications:
             livehunt_tag_prefix,
             enable_label_enrichment,
             get_malware_config,
-            tlp
+            tlp,
+            indicators
         )
 
     @staticmethod
