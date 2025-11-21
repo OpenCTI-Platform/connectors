@@ -54,8 +54,9 @@ Below are the parameters you'll need to set for CrowdStrike Connector:
 | TLP                           | `tlp`                           | `CROWDSTRIKE_TLP`                           | `amber+strict`                | No        | /                                                                    | The TLP marking used for the imported objects in the OpenCTI.                                                      |
 | Create Observables            | `create_observables`            | `CROWDSTRIKE_CREATE_OBSERVABLES`            | /                             | Yes       | `true`                                                               | If true then observables will be created from the CrowdStrike indicators.                                          |
 | Create Indicators             | `create_indicators`             | `CROWDSTRIKE_CREATE_INDICATORS`             | /                             | Yes       | `true`                                                               | If true then indicators will be created from the CrowdStrike indicators.                                           |
-| Scopes                        | `scopes`                        | `CROWDSTRIKE_SCOPES`                        | /                             | Yes       | `actor,report,indicator,yara_master,snort_suricata_master`           | The scopes defines what data will be imported from the CrowdStrike.                                                |
+| Scopes                        | `scopes`                        | `CROWDSTRIKE_SCOPES`                        | /                             | Yes       | `actor,report,indicator,vulnerability,yara_master,snort_suricata_master`   | The scopes defines what data will be imported from the CrowdStrike.                                                |
 | Actor Start Timestamp         | `actor_start_timestamp`         | `CROWDSTRIKE_ACTOR_START_TIMESTAMP`         | /                             | Yes       | `0`                                                                  | The Actors created after this timestamp will be imported. Timestamp in UNIX Epoch time, UTC.                       |
+| Vulnerability Start Timestamp | `vulnerability_start_timestamp` | `CROWDSTRIKE_VULNERABILITY_START_TIMESTAMP` | 30 days ago                   | No        | `0`                                                                  | The Vulnerabilities updated after this timestamp will be imported. Timestamp in UNIX Epoch time, UTC. Default is 30 days ago. |
 | Report Start Timestamp        | `report_start_timestamp`        | `CROWDSTRIKE_REPORT_START_TIMESTAMP`        | /                             | Yes       | `0`                                                                  | The Reports created after this timestamp will be imported. Timestamp in UNIX Epoch time, UTC.                      |
 | Report Status                 | `report_status`                 | `CROWDSTRIKE_REPORT_STATUS`                 | /                             | Yes       | `New`                                                                | The status of imported reports in the OpenCTI.                                                                     |
 | Report Include Types          | `report_include_types`          | `CROWDSTRIKE_REPORT_INCLUDE_TYPES`          | /                             | Yes       | `notice,tipper,intelligence report,periodic report`                  | The types of Reports included in the import. The types are defined by the CrowdStrike.                             |
@@ -73,7 +74,7 @@ Below are the parameters you'll need to set for CrowdStrike Connector:
 | Indicator Unwanted Labels     | `indicator_unwanted_labels`     | `CROWDSTRIKE_INDICATOR_UNWANTED_LABELS`     | /                             | No        | /                                                                    | Indicators to be excluded from import based on the labels affixed to them.                                         |
 | Trigger file import           | `no_file_trigger_import`        | `CROWDSTRIKE_NO_FILE_TRIGGER_IMPORT`        | `true`                        | No        | /                                                                    | Specify whether the file can trigger its import by other document import connectors or not.                        |
 
-**Note**: It is not recommended to use the default value `0` for configuration parameters `report_start_timestamp` and `indicator_start_timestamp` because of the large data volumes.
+**Note**: It is not recommended to use the default value `0` for configuration parameters `report_start_timestamp`, `indicator_start_timestamp`, and `vulnerability_start_timestamp` because of the large data volumes.
 
 ## Known Issues and Workarounds for Crowdstrike Connector Scopes
 
@@ -83,6 +84,7 @@ The Crowdstrike connector offers multiple scopes for data ingestion:
 - **actor**
 - **report**
 - **indicator**
+- **vulnerability**
 - **yara_master**
 
 When the `yara_master` scope is enabled simultaneously with other scopes (i.e., `actor`, `report`, and `indicator`), ingestion speed can significantly slow down. Additionally, due to the large volume of data (about 13GB) in `yara_master` and lack of pagination, the connector state may not update accurately.
@@ -96,7 +98,7 @@ The `yara_master` scope imports a high volume of data. Since pagination is not a
 To address this issue, set up two separate Crowdstrike connectors, each dedicated to specific scopes:
 
 1. **Primary Connector**:
-   - Scopes: `actor`, `report`, and `indicator`
+   - Scopes: `actor`, `report`, `indicator`, and `vulnerability`
    - This connector will handle the main threat intelligence data without `yara_master` data, ensuring timely ingestion and accurate updates.
 
 2. **Secondary Connector**:
