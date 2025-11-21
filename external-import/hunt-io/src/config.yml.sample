@@ -19,6 +19,6 @@ connector:
   #send_to_directory_path: 'ChangeMe'
   #send_to_directory_retention: 7
 
-connector_hunt_io:
+hunt_io:
   api_base_url: 'https://api.hunt.io/v1/feeds/c2'
   api_key: 'ChangeMe'
