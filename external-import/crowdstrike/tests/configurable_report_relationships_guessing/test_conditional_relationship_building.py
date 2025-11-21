@@ -277,7 +277,6 @@ def _when_system_processes_report_data(
         report_status=0,
         report_type="threat-report",
         confidence_level=80,
-        guessed_malwares={},
         related_indicators=related_indicators,
         report_guess_relations=config.crowdstrike.report_guess_relations,
     )
@@ -303,7 +302,6 @@ def _when_system_builds_report_with_config(
         report_status=0,
         report_type="threat-report",
         confidence_level=80,
-        guessed_malwares={},
         related_indicators=related_indicators,
         report_guess_relations=config.crowdstrike.report_guess_relations,
     )
