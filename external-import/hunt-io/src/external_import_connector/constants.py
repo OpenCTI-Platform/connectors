@@ -103,14 +103,6 @@ class LoggingPrefixes:
     DEBUG = "[DEBUG]"
 
 
-# Configuration Keys
-class ConfigKeys:
-    """Configuration key constants."""
-
-    API_BASE_URL = "CONNECTOR_HUNT_UI_API_BASE_URL"
-    API_KEY = "CONNECTOR_HUNT_UI_API_KEY"
-
-
 # State Keys
 class StateKeys:
     """State dictionary keys."""
