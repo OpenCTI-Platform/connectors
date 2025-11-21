@@ -593,7 +593,7 @@ class LivehuntBuilder:
                                         if host is not None:
                                             self.helper.connector_logger.debug(f"Found host: {host}")
                                             if self._ip_version(host) == 4:
-                                                host_observable = stix2.IPv4(
+                                                host_observable = stix2.IPv4Address(
                                                     value=host,
                                                     description=f"Extracted from malware config of family {family.get('family', 'unknown')}",
                                                     object_marking_refs=[self.tlp],
@@ -605,7 +605,7 @@ class LivehuntBuilder:
                                                 )
                                                 self.helper.connector_logger.debug(f"Created IPv4 observable: {host_observable}")
                                             elif self._ip_version(host) == 6:
-                                                host_observable = stix2.IPv6(
+                                                host_observable = stix2.IPv6Address(
                                                     value=host,
                                                     description=f"Extracted from malware config of family {family.get('family', 'unknown')}",
                                                     object_marking_refs=[self.tlp],
