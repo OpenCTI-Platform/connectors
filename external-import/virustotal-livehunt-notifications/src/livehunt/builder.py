@@ -329,7 +329,7 @@ class LivehuntBuilder:
 
         file = stix2.File(
             type="file",
-            name=file_name
+            name=file_name,
             description=description,
             hashes={
                 "MD5": vtobj.md5,
