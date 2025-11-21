@@ -333,6 +333,10 @@ class _MISPConfig(_ConfigBaseModel):
         description="List of threat levels to filter MISP events to import, **including** only events with these threat levels.",
         default=[],
     )
+    threat_level_score_mapping: str = Field(
+        description="Mapping MISP threat levels to OpenCTI scores, e.g. '1:90;2:60;3:30;4:50'",
+        default="1:90;2:60;3:30;4:50",
+    )
     import_only_published: bool = Field(
         description="Whether to only import published MISP events or not.",
     )
