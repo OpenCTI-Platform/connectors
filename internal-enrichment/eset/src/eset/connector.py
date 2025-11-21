@@ -113,9 +113,7 @@ class EsetConnector:
             response.raise_for_status()
             content = response.content
 
-        custom_properties = report_object.get("custom_properties", {})
-        files = custom_properties.get("x_opencti_files", [])
-        custom_properties["x_opencti_files"] = files
+        files = report_object.get("x_opencti_files", [])
 
         files.append(
             {
@@ -125,7 +123,7 @@ class EsetConnector:
             }
         )
 
-        report_object["custom_properties"] = custom_properties
+        report_object["x_opencti_files"] = files
 
     # noinspection PyMethodMayBeStatic
     def has_attachment(self, import_files: list, attachment_name: str) -> bool:
