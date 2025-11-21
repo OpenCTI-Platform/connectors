@@ -289,4 +289,6 @@ class ActorBundleBuilder:
         # Add related indicators and their entities to bundle
         bundle_objects.extend(self.related_indicators)
 
+        # MVP4
+
         return Bundle(objects=bundle_objects, allow_custom=True)
