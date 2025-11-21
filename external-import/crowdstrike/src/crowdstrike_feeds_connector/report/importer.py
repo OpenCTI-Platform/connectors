@@ -312,6 +312,48 @@ class ReportImporter(BaseImporter):
         )
         return bundle_builder.build()
 
+    # MVP2
+    def _guess_malwares_from_tags(self, tags: List) -> Mapping[str, str]:
+        if not self.guess_malware:
+            return {}
+
+        malwares = {}
+        for tag in tags:
+            name = tag["value"]
+            if name is None or not name:
+                continue
+
+            guess = self.malware_guess_cache.get(name)
+            if guess is None:
+                guess = self._GUESS_NOT_A_MALWARE
+
+                standard_id = self._fetch_malware_standard_id_by_name(name)
+                if standard_id is not None:
+                    guess = standard_id
+
+                self.malware_guess_cache[name] = guess
+
+            if guess == self._GUESS_NOT_A_MALWARE:
+                self._info("Tag '{0}' does not reference malware", name)
+            else:
+                self._info("Tag '{0}' references malware '{1}'", name, guess)
+                malwares[name] = guess
+        return malwares
+
+    def _fetch_malware_standard_id_by_name(self, name: str) -> Optional[str]:
+        filters_list = [
+            self._create_filter("name", name),
+            self._create_filter("aliases", name),
+        ]
+        for _filter in filters_list:
+            malwares = self.helper.api.malware.list(filters=_filter)
+            if malwares:
+                if len(malwares) > 1:
+                    self._info("More then one malware for '{0}'", name)
+                malware = malwares[0]
+                return malware["standard_id"]
+        return None
+
     @staticmethod
     def _create_filter(key: str, value: str):
         return {
