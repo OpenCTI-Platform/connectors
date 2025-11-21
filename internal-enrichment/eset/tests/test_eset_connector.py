@@ -121,15 +121,13 @@ class TestEsetConnector(object):
                     self.connector.helper.send_stix2_bundle.call_args.args[0]
                 )["objects"]:
                     if o["type"] == "report":
-                        assert o["custom_properties"] == {
-                            "x_opencti_files": [
-                                {
-                                    "name": "AS-2024-0005 Report.pdf",
-                                    "data": "VEhJUyBJUyBNT0NLIFJFUE9SVA==",
-                                    "mime_type": "application/octet-pdf",
-                                }
-                            ]
-                        }
+                        assert o["x_opencti_files"] == [
+                            {
+                                "name": "AS-2024-0005 Report.pdf",
+                                "data": "VEhJUyBJUyBNT0NLIFJFUE9SVA==",
+                                "mime_type": "application/octet-pdf",
+                            }
+                        ]
                         break
                 else:
                     assert False, "Report not found in sent bundle"
