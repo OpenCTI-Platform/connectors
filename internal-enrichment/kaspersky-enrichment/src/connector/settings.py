@@ -1,9 +1,12 @@
 from typing import Annotated, Literal
 
-from connectors_sdk import BaseConnectorSettings, BaseInternalEnrichmentConnectorConfig
+from connectors_sdk import (
+    BaseConfigModel,
+    BaseConnectorSettings,
+    BaseInternalEnrichmentConnectorConfig,
+)
 from connectors_sdk.core.pydantic import ListFromString
 from pydantic import Field, HttpUrl, PlainSerializer, SecretStr
-from pydantic_settings import BaseSettings
 
 TLPToLower = Annotated[
     Literal[
@@ -18,7 +21,7 @@ TLPToLower = Annotated[
 ]
 
 
-class ConnectorConfig(BaseInternalEnrichmentConnectorConfig):
+class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     """
     Override the `BaseConnectorConfig` to add connector specific configuration parameters and/or defaults.
     """
@@ -28,7 +31,7 @@ class ConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         description="A unique UUIDv4 identifier for this connector instance.",
     )
     name: str = Field(
-        default="Kaspersky",
+        default="Kaspersky Enrichment",
         description="Name of the connector.",
     )
     scope: ListFromString = Field(
@@ -41,7 +44,7 @@ class ConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     )
 
 
-class KasperskyConfig(BaseSettings):
+class KasperskyConfig(BaseConfigModel):
     """
     Define config vars specific to Kaspersky connector.
     """
@@ -63,10 +66,12 @@ class KasperskyConfig(BaseSettings):
     )
 
 
-class ConfigLoader(BaseConnectorSettings):
+class ConnectorSettings(BaseConnectorSettings):
     """
     Override `BaseConnectorSettings` to include additional configuration parameters specific to the connector.
     """
 
-    connector: ConnectorConfig = Field(default_factory=ConnectorConfig)
+    connector: InternalEnrichmentConnectorConfig = Field(
+        default_factory=InternalEnrichmentConnectorConfig
+    )
     kaspersky: KasperskyConfig = Field(default_factory=KasperskyConfig)

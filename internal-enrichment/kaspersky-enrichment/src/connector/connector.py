@@ -1,35 +1,30 @@
+from kaspersky_client import KasperskyClient
 from pycti import OpenCTIConnectorHelper
 
-from .client_api import ConnectorClient
 from .converter_to_stix import ConverterToStix
-from .settings import ConfigLoader
+from .settings import ConnectorSettings
 
 
-class ConnectorKaspersky:
+class KasperskyConnector:
     """
-    Specifications of the internal enrichment connector
+    Specifications of the internal enrichment connector:
 
-    This class encapsulates the main actions, expected to be run by any internal enrichment connector.
-    Note that the attributes defined below will be complemented per each connector type.
-    This type of connector aim to enrich a data (Observables) created or modified in the OpenCTI core platform.
-    It will create a STIX bundle and send it in a RabbitMQ queue.
+    This class encapsulates the main actions, expected to be run by any connector of type `INTERNAL_ENRICHMENT`.
+    This type of connector aim to enrich entities (e.g. vulnerabilities, indicators, observables ...) created or modified on OpenCTI.
+    It will create a STIX bundle and send it on OpenCTI.
     The STIX bundle in the queue will be processed by the workers.
     This type of connector uses the basic methods of the helper.
-    Ingesting a bundle allow the connector to be compatible with the playbook automation feature.
-
+    To be compatible with the "playbook automation" feature, this connector MUST always send back a STIX bundle containing the entity to enrich.
 
     ---
 
-    Attributes
-        - `config (ConfigLoader())`:
-            Initialize the connector with necessary configuration environment variables
-
-        - `helper (OpenCTIConnectorHelper(config))`:
-            This is the helper to use.
-            ALL connectors have to instantiate the connector helper with configurations.
-            Doing this will do a lot of operations behind the scene.
-
-        - `converter_to_stix (ConnectorConverter(helper))`:
+    Attributes:
+        config (ConnectorSettings):
+            Store the connector's configuration. It defines how to connector will behave.
+        helper (OpenCTIConnectorHelper):
+            Handle the connection and the requests between the connector, OpenCTI and the workers.
+            _All connectors MUST use the connector helper with connector's configuration._
+        converter_to_stix (ConnectorConverter):
             Provide methods for converting various types of input data into STIX 2.1 objects.
 
     ---
@@ -41,16 +36,28 @@ class ConnectorKaspersky:
 
     """
 
-    def __init__(self, config: ConfigLoader, helper: OpenCTIConnectorHelper):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """
-        Initialize the Connector with necessary configurations
-        """
+        Initialize `TemplateConnector` with its configuration.
 
-        # Load configuration file and connection helper
+        Args:
+            config (ConnectorSettings): Configuration of the connector
+            helper (OpenCTIConnectorHelper): Helper to manage connection and requests to OpenCTI
+        """
         self.config = config
         self.helper = helper
-        self.client = ConnectorClient(self.helper, self.config)
-        self.converter_to_stix = ConverterToStix(self.helper)
+
+        self.client = KasperskyClient(
+            self.helper,
+            base_url=self.config.template.api_base_url,
+            api_key=self.config.template.api_key,
+            # Pass any arguments necessary to the client
+        )
+        self.converter_to_stix = ConverterToStix(
+            self.helper,
+            tlp_level="clear",
+            # Pass any arguments necessary to the converter
+        )
 
         # Define variables
         self.author = None
@@ -115,7 +122,7 @@ class ConnectorKaspersky:
                     self.tlp = marking_definition["definition"]
 
         valid_max_tlp = self.helper.check_max_tlp(
-            self.tlp, self.config.kaspersky.max_tlp
+            self.tlp, self.config.template.max_tlp_level
         )
 
         if not valid_max_tlp:

@@ -1,16 +1,26 @@
 import requests
+from pycti import OpenCTIConnectorHelper
 
 
-class ConnectorClient:
-    def __init__(self, helper, config):
+class KasperskyClient:
+    def __init__(
+        self, helper: OpenCTIConnectorHelper, base_url: str | object, api_key: str
+    ):
         """
-        Initialize the client with necessary configurations
+        Initialize the client with necessary configuration.
+        For log purpose, the connector's helper CAN be injected.
+        Other arguments CAN be added (e.g. `api_key`) if necessary.
+
+        Args:
+            helper (OpenCTIConnectorHelper): The helper of the connector. Used for logs.
+            base_url (str): The external API base URL.
+            api_key (str): The API key to authenticate the connector to the external API.
         """
         self.helper = helper
-        self.config = config
 
+        self.base_url = base_url
         # Define headers in session and update when needed
-        headers = {"Bearer": self.config.kaspersky.api_key}
+        headers = {"Bearer": api_key}
         self.session = requests.Session()
         self.session.headers.update(headers)
 
@@ -48,7 +58,7 @@ class ConnectorClient:
             # ===========================
 
             # EXAMPLE
-            # response = self._request_data(self.config.kaspersky.api_base_url, params=params)
+            # response = self._request_data(self.config.api_base_url, params=params)
 
             # return response.json()
             # ===========================

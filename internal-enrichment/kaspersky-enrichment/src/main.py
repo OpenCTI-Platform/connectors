@@ -1,6 +1,6 @@
 import traceback
 
-from kaspersky_enrichment import ConfigLoader, ConnectorKaspersky
+from connector import ConnectorSettings, KasperskyConnector
 from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
@@ -14,13 +14,14 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        config = ConfigLoader()
-        # playbook_compatible=True only if a bundle is sent !
+        settings = ConnectorSettings()
+
         helper = OpenCTIConnectorHelper(
-            config=config.to_helper_config(), playbook_compatible=True
+            config=settings.to_helper_config(),
+            playbook_compatible=True,  # ! `playbook_compatible=True` only if a bundle is sent
         )
 
-        connector = ConnectorKaspersky(config=config, helper=helper)
+        connector = KasperskyConnector(config=settings, helper=helper)
         connector.run()
     except Exception:
         traceback.print_exc()
