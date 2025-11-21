@@ -6,8 +6,6 @@ from connectors_sdk import (
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
 )
-from external_import_connector.constants import ConfigKeys
-from pycti import get_config_variable
 from pydantic import Field, model_validator
 
 
@@ -18,40 +16,6 @@ class ConnectorHuntIoConfig(BaseConfigModel):
         Field(description="TLP level", default="amber")
     )
 
-    @model_validator(mode="before")
-    @classmethod
-    def migrate_deprecated_configs(cls, data: dict) -> dict:
-        deprecated_configs = [
-            {
-                "key": ConfigKeys.API_BASE_URL,
-                "yaml_path": ["connector_hunt_io", "api_base_url"],
-                "field_name": "api_base_url",
-                "old_name": ConfigKeys.API_BASE_URL,
-                "new_name": "CONNECTOR_HUNT_IO_API_BASE_URL",
-            },
-            {
-                "key": ConfigKeys.API_KEY,
-                "yaml_path": ["connector_hunt_io", "api_key"],
-                "field_name": "api_key",
-                "old_name": ConfigKeys.API_BASE_URL,
-                "new_name": "CONNECTOR_HUNT_IO_API_KEY",
-            },
-        ]
-
-        for config in deprecated_configs:
-            value = get_config_variable(config["key"], config["yaml_path"])
-            if value:
-                warnings.warn(
-                    message=f"Env var '{config['old_name']}' is deprecated. "
-                    f"Use '{config['new_name']}' instead.",
-                    category=DeprecationWarning,
-                )
-                data[config["field_name"]] = (
-                    data.get(config["field_name"], None) or value
-                )
-
-        return data
-
 
 class ConfigLoader(BaseConnectorSettings):
     """Handles connector configuration loading and validation."""
@@ -59,6 +23,24 @@ class ConfigLoader(BaseConnectorSettings):
     connector: BaseExternalImportConnectorConfig = Field(
         default_factory=BaseExternalImportConnectorConfig
     )
-    connector_hunt_io: ConnectorHuntIoConfig = Field(
-        default_factory=ConnectorHuntIoConfig
+    hunt_io: ConnectorHuntIoConfig = Field(
+        default_factory=ConnectorHuntIoConfig,
+        validation_alias="connector_hunt_ui",
     )
+
+    @model_validator(mode="after")
+    @classmethod
+    def migrate_deprecated_connector_hunt_ui(cls, data) -> dict:
+        """
+        Env vars prefixed by `CONNECTOR_HUNT_UI` is deprecated.
+        This is a workaround to keep the old config working while we migrate to `HUNT_IO` prefix.
+        """
+        if (
+            "hunt_ui_api_key" in data.connector.model_fields_set
+            or "hunt_ui_api_base_url" in data.connector.model_fields_set
+        ):
+            warnings.warn(
+                message="Env vars prefixed by 'CONNECTOR_HUNT_UI' is deprecated. Use 'HUNT_IO' prefix instead.",
+                category=DeprecationWarning,
+            )
+        return data

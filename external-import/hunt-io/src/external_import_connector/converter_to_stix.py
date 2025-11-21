@@ -36,7 +36,7 @@ class ConverterToStix:
     def __init__(self, helper):
         self.helper = helper
         self.tlp_marking = self.create_tlp_marking(
-            self.helper.config["connector_hunt_io"]["tlp_level"]
+            self.helper.config["hunt_io"]["tlp_level"]
         )
         self.author = self.create_author()
 

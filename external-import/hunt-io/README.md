@@ -60,11 +60,11 @@ There are a number of configuration options, which are set either in `docker-com
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter    | config.yml   | Docker environment variable      | Default | Mandatory | Description                                                                                                                |
-|--------------|--------------|----------------------------------|---------|-----------|----------------------------------------------------------------------------------------------------------------------------|
-| API base URL | api_base_url | `CONNECTOR_HUNT_IO_API_BASE_URL` |         | Yes       |                                                                                                                            |
-| API key      | api_key      | `CONNECTOR_HUNT_IO_API_KEY`      |         | Yes       |                                                                                                                            |
-| TLP level    | tlp_level    | `CONNECTOR_HUNT_IO_TLP_LEVEL`    | amber   | No        | The Traffic Light Protocol level for data being ingested. Valid values: `white`, `green`, `amber`, `amber+strict`, `red`.  |
+| Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description                                                                                                               |
+|--------------|--------------|-----------------------------|---------|-----------|---------------------------------------------------------------------------------------------------------------------------|
+| API base URL | api_base_url | `HUNT_IO_API_BASE_URL`      |         | Yes       |                                                                                                                           |
+| API key      | api_key      | `HUNT_IO_API_KEY`           |         | Yes       |                                                                                                                           |
+| TLP level    | tlp_level    | `HUNT_IO_TLP_LEVEL`         | amber   | No        | The Traffic Light Protocol level for data being ingested. Valid values: `white`, `green`, `amber`, `amber+strict`, `red`. |
 
 ## Deployment
 

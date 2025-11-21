@@ -24,8 +24,8 @@ def correct_config():
             "CONNECTOR_LOG_LEVEL": "error",
             "CONNECTOR_SCOPE": "scope",
             "CONNECTOR_DURATION_PERIOD": "PT5M",
-            "CONNECTOR_HUNT_IO_API_BASE_URL": "http://api",
-            "CONNECTOR_HUNT_IO_API_KEY": "api_key_value",
+            "HUNT_IO_API_BASE_URL": "http://api",
+            "HUNT_IO_API_KEY": "api_key_value",
         },
     ):
         yield
@@ -44,8 +44,8 @@ def deprecated_config():
             "CONNECTOR_LOG_LEVEL": "error",
             "CONNECTOR_SCOPE": "scope",
             "CONNECTOR_DURATION_PERIOD": "PT5M",
-            "CONNECTOR_HUNT_UI_API_BASE_URL": "http://api",
-            "CONNECTOR_HUNT_UI_API_KEY": "api_key_value",
+            "CONNECTOR_HUNT_UI_API_BASE_URL": "http://aaa-api",
+            "CONNECTOR_HUNT_UI_API_KEY": "aaa_api_key_value",
         },
     ):
         yield
