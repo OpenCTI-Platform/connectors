@@ -300,11 +300,15 @@ class LivehuntBuilder:
             "Virustotal Analysis",
         )
 
-        ## Add the additional name
+        ## Add the names
+        file_name=f'{vtobj.meaningful_name if hasattr(vtobj, "meaningful_name") else "unknown"}',
         x_opencti_additional_names = []
-        for name in vtobj.names:
-            if name != vtobj.meaningful_name:
-                x_opencti_additional_names.append(name)
+        if hasattr(vtobj, "names"):
+            for name in vtobj.names:
+                if file_name == "unknown":
+                    file_name = name
+                elif hasattr(vtobj, "meaningful_name") and name != vtobj.meaningful_name:
+                    x_opencti_additional_names.append(name)
 
         ## Build a description using the last analysis data from av
         description = ""
@@ -325,7 +329,7 @@ class LivehuntBuilder:
 
         file = stix2.File(
             type="file",
-            name=f'{vtobj.meaningful_name if hasattr(vtobj, "meaningful_name") else "unknown"}',
+            name=file_name
             description=description,
             hashes={
                 "MD5": vtobj.md5,
