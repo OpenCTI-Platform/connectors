@@ -35,7 +35,7 @@ class YaraConnector:
         contents in binary format for further processing.
 
         :param artifact: Dictionary containing all the information in the OpenCTI artefact, potentially with an
-                         ‘importFiles’ key and a list of files to be retrieved.
+                         'importFiles' key and a list of files to be retrieved.
         :return: List of the binary contents of the files associated with the artefact, returns an empty list `[]`
                  if no files are associated.
         """

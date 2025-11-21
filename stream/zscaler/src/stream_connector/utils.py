@@ -47,7 +47,7 @@ def handle_rate_limit(request_func, retry_delay, *args, **kwargs):
 
 def sanitize_payload(payload, keys_to_mask=None):
     """
-    Replaces sensitive values in a dictionary with ‘***MASKED***’.
+    Replaces sensitive values in a dictionary with '***MASKED***'.
     :param payload: dictionary to be cleaned
     :param keys_to_mask: list of keys to be masked
     :return: cleaned dictionary

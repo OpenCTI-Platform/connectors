@@ -65,7 +65,7 @@ services:
       - JOE_SANDBOX_DOTNET_TRACING=false
       # Starts the Sample with normal user privileges
       - JOE_SANDBOX_START_AS_NORMAL_USER=false
-      # Change the analyzer’s system date (helpful for date-aware samples), format is: YYYY-MM-DD
+      # Change the analyzer's system date (helpful for date-aware samples), format is: YYYY-MM-DD
       - JOE_SANDBOX_SYSTEM_DATE=
       # Changes the language and locale of the analysis machine
       - JOE_SANDBOX_LANGUAGE_AND_LOCALE=

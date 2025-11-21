@@ -114,8 +114,8 @@ class SentinelIncidentsConnector:
                     )
                     stix_objects.append(stix_relationship_attack_pattern)
 
-            # This mapping is used for the priority of evidences because ‘processEvidence’ often includes information
-            # from ‘fileEvidence’ and ‘fileEvidence’ usually includes information from ‘fileHashEvidence’.
+            # This mapping is used for the priority of evidences because 'processEvidence' often includes information
+            # from 'fileEvidence' and 'fileEvidence' usually includes information from 'fileHashEvidence'.
             priority_evidence_files = {
                 "#microsoft.graph.security.processEvidence": 1,
                 "#microsoft.graph.security.fileEvidence": 2,

@@ -40,7 +40,7 @@ class IncidentConnector:
         logging.addLevelName(logging.INFO, "[+]")
         logging.addLevelName(logging.WARNING, "[?]")
         logging.addLevelName(logging.ERROR, "[!]")
-        logging.addLevelName(logging.CRITICAL, "[⚠️]")
+        logging.addLevelName(logging.CRITICAL, "[!]")
 
     def process_message(self) -> None:
         """

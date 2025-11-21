@@ -609,7 +609,7 @@ class VirusTotalBuilder:
                 )
             if attributes_content:
                 content = "## Attributes Info\n\n"
-                content += "Any falsy value will be replaced by ‘N/A’\n"
+                content += "Any falsy value will be replaced by 'N/A'\n"
                 content += "| Attributes |      |\n"
                 content += "|--------|----------|\n"
                 content += attributes_content

@@ -286,7 +286,7 @@ class JoeSandboxConnector:
             "dotnet-tracing": self._dotnet_tracing,  # Enable .NET tracing (two analyses are performed)
             "email-notification": self._email_notification,  # Send an email notification once the analysis completes.
             "start-as-normal-user": self._start_as_normal_user,  # Starts the Sample with normal user privileges
-            "system-date": self._system_date,  # Change the analyzer’s system date (helpful for date-aware samples), format is: YYYY-MM-DD
+            "system-date": self._system_date,  # Change the analyzer's system date (helpful for date-aware samples), format is: YYYY-MM-DD
             "language-and-locale": self._language_and_locale,  # Changes the language and locale of the analysis machine
             "archive-no-unpack": self._archive_no_unpack,  # Do not unpack archives (zip, 7z etc) containing multiple files.
             "hypervisor-based-inspection": self._hypervisor_based_inspection,  # Enable Hypervisor based Inspection
