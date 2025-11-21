@@ -1,0 +1,228 @@
+{
+  "status_code": 200,
+  "headers": {
+    "Server": "nginx",
+    "Date": "Fri, 31 Oct 2025 10:20:23 GMT",
+    "Content-Type": "application/json",
+    "Transfer-Encoding": "chunked",
+    "Connection": "keep-alive",
+    "Content-Encoding": "gzip",
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+    "X-Cs-Region": "us-2",
+    "X-Cs-Traceid": "12345678-abcd-1234-5678-123456789012",
+    "X-Ratelimit-Limit": "6000",
+    "X-Ratelimit-Remaining": "5997"
+  },
+  "body": {
+    "meta": {
+      "query_time": 0.094967535,
+      "pagination": {
+        "offset": 0,
+        "limit": 1,
+        "total": 1
+      },
+      "powered_by": "msa-api",
+      "trace_id": "12345678-abcd-1234-5678-123456789012"
+    },
+    "resources": [
+      {
+        "id": 123456,
+        "name": "SCION SPIDER",
+        "slug": "scion-spider",
+        "url": "https://test.example.com/intelligence/actors/scion-spider/",
+        "thumbnail": {
+          "url": "https://test.example.com/assets/scion_spider_thumb.png"
+        },
+        "image": {
+          "url": "https://test.example.com/assets/scion_spider_icon.png"
+        },
+        "description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.",
+        "short_description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. This is a test threat actor for validating the connector functionality.",
+        "rich_text_description": "<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p><p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p><p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p><h3>Test Tooling Summary</h3><p>The table below summarizes the test tools developed by this test actor.</p><table><tr><th>Tool Name</th><th>Type</th><th>First Observed</th></tr><tr><td><em>TestRansomware</em></td><td>Ransomware</td><td>January 2020</td></tr><tr><td><em>TestStealer</em></td><td>Information Stealer</td><td>March 2020</td></tr></table>",
+        "animal_classifier": "SPIDER",
+        "created_date": 1577836800,
+        "last_modified_date": 1640995200,
+        "first_activity_date": 1577836800,
+        "last_activity_date": 1640995200,
+        "active": true,
+        "status": "Active",
+        "actor_type": "ecrime",
+        "capability": {
+          "id": 247,
+          "slug": "above-average",
+          "value": "Above average"
+        },
+        "ecrime_kill_chain": {
+          "attribution": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Attribution is based on test indicators and mock operational patterns observed in sample campaigns.",
+          "crimes": "Test crime activity alpha\nMock criminal behavior beta\nSample illegal action gamma\nFake unauthorized access delta\nArtificial data theft epsilon",
+          "customers": "Test Intelligence has observed TEST BEAR and MOCK PANDA deploy TestRansomware during intrusions. SAMPLE LYNX has likely been an affiliate of this test actor.",
+          "marketing": "Lorem ipsum dolor sit amet, the test actor advertises their mock services on sample forums and maintains a test affiliate portal.",
+          "services_offered": "Test actor offers access to their mock platform, including TestRansomware builders, sample disclosure services, and test negotiation platforms.",
+          "services_used": "Test actor has posted on sample forums seeking access to mock tools and test credential harvesting utilities. The group has purchased test access from various mock brokers.",
+          "technical_tradecraft": "Lorem ipsum dolor sit amet. The test malware uses sample encryption with mock key protection. Includes test obfuscation, sample privilege escalation, and mock process termination. Creates test persistence entries and attempts sample deletion operations. Avoids test encryption on mock configured systems.",
+          "victims": "Lorem ipsum dolor sit amet. Test targeting with a focus on sample organizations in mock regions. Primary test targets include sample sectors alpha, beta, and gamma.",
+          "exploitation": "CVE-TEST-0001, CVE-TEST-0002, CVE-TEST-0003, CVE-TEST-0004",
+          "rich_text_attribution": "<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Attribution is based on test indicators and mock operational patterns observed in sample campaigns.</p>",
+          "rich_text_crimes": "<ul><li>Test crime activity alpha</li><li>Mock criminal behavior beta</li><li>Sample illegal action gamma</li><li>Fake unauthorized access delta</li><li>Artificial data theft epsilon</li></ul>",
+          "rich_text_customers": "<p>Test Intelligence has observed TEST BEAR and MOCK PANDA deploy <em>TestRansomware</em> during intrusions. SAMPLE LYNX has likely been an affiliate of this test actor.</p>",
+          "rich_text_marketing": "<p>Lorem ipsum dolor sit amet, the test actor advertises their mock services on sample forums and maintains a test affiliate portal.</p>",
+          "rich_text_monetization": "<ul><li>Test payments using Mock Coin (MC) and Sample Token (ST)</li><li>Development and rental of <em>TestRansomware</em> to test affiliates</li><li>Sample commission-based revenue sharing with mock affiliates</li></ul>",
+          "rich_text_services_offered": "<p>Test actor offers access to their mock platform, including <em>TestRansomware</em> builders, sample disclosure services, and test negotiation platforms.</p>",
+          "rich_text_services_used": "<ul><li>Test actor has posted on sample forums seeking access to mock tools and test credential harvesting utilities</li><li>The group has purchased test access from various mock brokers</li></ul>",
+          "rich_text_technical_tradecraft": "<p><strong>TestRansomware</strong></p><ul><li>Uses sample encryption with mock key protection</li><li>Test string obfuscation to hinder analysis</li><li>Mock privilege escalation capabilities</li><li>Sample process termination features</li><li>Test registry persistence entries</li><li>Deletes mock shadow copies</li><li>Avoids encryption on test configured systems</li></ul>",
+          "rich_text_victims": "<p>Lorem ipsum dolor sit amet. Test targeting with a focus on sample organizations in mock regions. Primary test targets include sample sectors alpha, beta, and gamma.</p>",
+          "rich_text_exploitation": "<p>CVE-TEST-0001, CVE-TEST-0002, CVE-TEST-0003, CVE-TEST-0004</p>"
+        },
+        "known_as": "TestRansomware Group, MockCrime, TestCriminal",
+        "motivations": [
+          {
+            "id": 354,
+            "slug": "criminal",
+            "value": "Criminal"
+          }
+        ],
+        "objectives": [
+          {
+            "id": 1000036,
+            "slug": "financialgain",
+            "value": "FinancialGain"
+          }
+        ],
+        "capabilities": [
+          {
+            "id": 1000009,
+            "slug": "informationstealer",
+            "value": "InformationStealer"
+          },
+          {
+            "id": 559,
+            "slug": "ransomware",
+            "value": "Ransomware"
+          }
+        ],
+        "notify_users": false,
+        "origins": [
+          {
+            "id": 5001,
+            "slug": "test-region-alpha",
+            "value": "Test Region Alpha"
+          },
+          {
+            "id": 5002,
+            "slug": "mock-continent",
+            "value": "Mock Continent"
+          }
+        ],
+        "target_countries": [
+          {
+            "id": 4001,
+            "slug": "xx",
+            "value": "Test Country"
+          },
+          {
+            "id": 4002,
+            "slug": "yy",
+            "value": "Sample Nation"
+          },
+          {
+            "id": 4003,
+            "slug": "zz",
+            "value": "Mock State"
+          },
+          {
+            "id": 4004,
+            "slug": "aa",
+            "value": "Fake Country"
+          },
+          {
+            "id": 4005,
+            "slug": "bb",
+            "value": "Example Land"
+          },
+          {
+            "id": 4006,
+            "slug": "cc",
+            "value": "Test Territory"
+          }
+        ],
+        "target_regions": [
+          {
+            "id": 6001,
+            "slug": "test-region-1",
+            "value": "Test Region 1"
+          },
+          {
+            "id": 6002,
+            "slug": "mock-area-2",
+            "value": "Mock Area 2"
+          },
+          {
+            "id": 6003,
+            "slug": "sample-zone-3",
+            "value": "Sample Zone 3"
+          },
+          {
+            "id": 6004,
+            "slug": "fake-district-4",
+            "value": "Fake District 4"
+          }
+        ],
+        "target_industries": [
+          {
+            "id": 3001,
+            "slug": "test-sector-alpha",
+            "value": "Test Sector Alpha"
+          },
+          {
+            "id": 3002,
+            "slug": "mock-industry-beta",
+            "value": "Mock Industry Beta"
+          },
+          {
+            "id": 3003,
+            "slug": "sample-vertical-gamma",
+            "value": "Sample Vertical Gamma"
+          },
+          {
+            "id": 3004,
+            "slug": "fake-business-delta",
+            "value": "Fake Business Delta"
+          },
+          {
+            "id": 3005,
+            "slug": "test-commerce-epsilon",
+            "value": "Test Commerce Epsilon"
+          },
+          {
+            "id": 3006,
+            "slug": "mock-enterprise-zeta",
+            "value": "Mock Enterprise Zeta"
+          }
+        ],
+        "uses_threats": [
+          {
+            "family_name": "TestRansomware"
+          },
+          {
+            "family_name": "TestStealer"
+          },
+          {
+            "family_name": "TestBuilder"
+          }
+        ],
+        "develops_threats": [
+          {
+            "family_name": "TestRansomware"
+          },
+          {
+            "family_name": "TestStealer"
+          },
+          {
+            "family_name": "TestBuilder"
+          }
+        ]
+      }
+    ],
+    "errors": []
+  }
+}
