@@ -583,7 +583,7 @@ class LivehuntBuilder:
                     configs = family.get("configs", None)
                     if configs is not None:
                         for config in configs:
-                            net_info = family.get("net_info", None)
+                            net_info = config.get("net_info", None)
                             if net_info is not None:
                                 connections = net_info.get("connections", None)
                                 if connections is not None:
