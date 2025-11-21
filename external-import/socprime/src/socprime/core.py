@@ -416,7 +416,7 @@ class SocprimeConnector:
             type="identity",
             name="SOC Prime",
             identity_class="organization",
-            description="SOC Prime operates the world’s largest and most advanced Platform for collaborative cyber defense. "
+            description="SOC Prime operates the world's largest and most advanced Platform for collaborative cyber defense. "
             + "The SOC Prime Platform integration with OpenCTI provides the latest detections within Sigma rules.",
             contact_information="support@socprime.com",
             external_references=[

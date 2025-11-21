@@ -33,7 +33,7 @@ def load_allowed_relations(
 
 def stix_lookup_type(obj: dict[str, object] | None) -> str:
     """Given a STIX object dict from pycti, return the key used
-    in OpenCTI’s schemaRelationsTypesMapping.
+    in OpenCTI's schemaRelationsTypesMapping.
 
     - For identity objects, prefer x_opencti_identity_type over identity_class.
     - For location objects, use x_opencti_location_type.

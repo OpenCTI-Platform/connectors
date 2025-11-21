@@ -9,7 +9,7 @@ The connector uses weasyprint under the hood for report generation, where the `r
 
 #### Windows limitation
 
-If you’re having trouble starting the connector saying that a library of type “cairo” or something is missing, you need to download and install this on your computer:
+If you’re having trouble starting the connector saying that a library of type "cairo" or something is missing, you need to download and install this on your computer:
 
 https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases/tag/2022-01-04
 

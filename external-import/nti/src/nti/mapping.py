@@ -131,8 +131,7 @@ THREAT_TYPE = {
     8030101: "Tor entry",
     8030102: "Tor middle",
     8030103: "Tor exit",
-    "-1": "Other",
-    # 补充修改的反诈
+    "-1": "Other",  # Supplementary and revised anti-fraud
     804: "Fraud",
     80401: "Impersonation fraud",
     80402: "Gambling fraud",
@@ -175,7 +174,7 @@ THREAT_TYPE = {
     804010201: "Fake China Mobile website",
     804010202: "Fake China Unicom website",
     804010203: "Fake China Telecom website",
-    804010204: "Other fake operators‘ websites",
+    804010204: "Other fake operators' websites",
     804010301: "Fake Apple login page",
     804010302: "Fake QQ Security Center",
     804010303: "Fake WeChat Security Center",
@@ -201,7 +200,7 @@ THREAT_TYPE = {
     804020101: "Comprehensive gambling",
     804020102: "Single gambling (such as lottery)",
     804020103: "Pornographic gambling",
-    804020104: "Gambling website’s transit platform",
+    804020104: "Gambling website's transit platform",
     804020199: "Other gambling",
     804030101: "Nude chat",
     804030199: "Other pornographic services",
