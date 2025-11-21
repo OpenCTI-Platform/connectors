@@ -716,6 +716,28 @@ def create_originates_from_relationships(
     )
 
 
+def create_authored_by_relationships(
+    created_by: stix2.Identity,
+    sources: List[_DomainObject],
+    targets: List[_DomainObject],
+    confidence: int,
+    object_markings: List[stix2.MarkingDefinition],
+    start_time: Optional[datetime] = None,
+    stop_time: Optional[datetime] = None,
+) -> List[stix2.Relationship]:
+    """Create 'authored-by' relationships."""
+    return create_relationships(
+        "authored-by",
+        created_by,
+        sources,
+        targets,
+        confidence,
+        object_markings,
+        start_time=start_time,
+        stop_time=stop_time,
+    )
+
+
 def create_based_on_relationships(
     created_by: stix2.Identity,
     sources: List[_DomainObject],
@@ -740,7 +762,7 @@ def create_object_refs(
         _RelationshipObject,
         List[_RelationshipObject],
         List[_DomainObject],
-    ]
+    ],
 ) -> List[Union[_DomainObject, _RelationshipObject]]:
     """Create object references."""
     object_refs = []
@@ -756,7 +778,7 @@ def create_tag(entity, source_name: str, color: str) -> Mapping[str, str]:
     """Create a tag."""
     value = entity["value"]
     if value is None:
-        value = f'NO_VALUE_{entity["id"]}'
+        value = f"NO_VALUE_{entity['id']}"
 
     return {"tag_type": source_name, "value": value, "color": color}
 
