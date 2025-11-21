@@ -1,14 +1,16 @@
 """Converts a GTI report's targeted industries to STIX Identity objects as sectors."""
 
-from typing import List, Optional
-
-from connector.src.custom.models.gti_reports.gti_report_model import (
+from connector.src.custom.models.gti.gti_report_model import (
     GTIReportData,
     TargetedIndustry,
 )
 from connector.src.stix.octi.models.identity_sector_model import OctiIdentitySectorModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
-from stix2.v21 import Identity, MarkingDefinition  # type: ignore
+from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
+    OrganizationAuthor,
+    TLPMarking,
+)
+from stix2.v21 import Identity  # type: ignore
 
 
 class GTIReportToSTIXSector(BaseMapper):
@@ -17,29 +19,29 @@ class GTIReportToSTIXSector(BaseMapper):
     def __init__(
         self,
         report: GTIReportData,
-        organization: Identity,
-        tlp_marking: MarkingDefinition,
+        organization: OrganizationAuthor,
+        tlp_marking: TLPMarking,
     ):
         """Initialize the GTIReportToSTIXSector object.
 
         Args:
             report (GTIReportData): The GTI report data to convert.
-            organization (Identity): The organization identity object.
-            tlp_marking (MarkingDefinition): The TLP marking definition.
+            organization (OrganizationAuthor): The organization identity object.
+            tlp_marking (TLPMarking): The TLP marking definition.
 
         """
         self.report = report
         self.organization = organization
         self.tlp_marking = tlp_marking
 
-    def to_stix(self) -> List[Identity]:
+    def to_stix(self) -> list[Identity]:
         """Convert the GTI report targeted industries to STIX Identity objects.
 
         Returns:
-            List[Identity]: The list of STIX Identity objects representing sectors.
+            list[Identity]: The list of STIX Identity objects representing sectors.
 
         """
-        result: List[Identity] = []
+        result: list[Identity] = []
         if not hasattr(self.report, "attributes") or not self.report.attributes:
             raise ValueError("Invalid report attributes")
 
@@ -54,14 +56,14 @@ class GTIReportToSTIXSector(BaseMapper):
 
         return result
 
-    def _process_industry(self, industry_data: TargetedIndustry) -> Optional[Identity]:
+    def _process_industry(self, industry_data: TargetedIndustry) -> Identity | None:
         """Process a targeted industry entry and convert to a sector Identity.
 
         Args:
             industry_data (TargetedIndustry): The targeted industry data to process.
 
         Returns:
-            Optional[Identity]: The STIX Identity object, or None if no valid industry group found.
+                Identity | None: The STIX Identity object, or None if no valid industry group found.
 
         """
         if not industry_data.industry_group:

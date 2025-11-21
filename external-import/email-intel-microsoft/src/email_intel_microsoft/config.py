@@ -4,13 +4,16 @@ from typing import Literal
 
 from base_connector.config import BaseConnectorSettings, ConnectorConfig, ListFromString
 from base_connector.enums import LogLevelType
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, SecretStr
 from pydantic_settings import SettingsConfigDict
 
 _FILE_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
 class _ConnectorConfig(ConnectorConfig):
+    id: str = Field(
+        default="email-intel-microsoft--5d44401f-0b96-4169-a657-61b49176fc62"
+    )
     name: str = Field(default="Email Intel Microsoft")
     scope: ListFromString = Field(default=["email-intel-microsoft"])
     duration_period: datetime.timedelta = Field(default=datetime.timedelta(hours=1))
@@ -27,7 +30,7 @@ class _EmailIntelMicrosoftConfig(BaseModel):
 
     tenant_id: str
     client_id: str
-    client_secret: str
+    client_secret: SecretStr
     email: EmailStr
     mailbox: str = Field(default="INBOX")
     attachments_mime_types: ListFromString = Field(

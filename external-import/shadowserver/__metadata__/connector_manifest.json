@@ -1,0 +1,21 @@
+{
+  "title": "Shadowserver",
+  "slug": "shadowserver",
+  "description": "The integration uses Shadowserver reports API to query the available Shadowserver reports and transform them into STIX objects making them available within OpenCTI. All available reports are downloaded and an Artifact object is created with the original file. STIX Note objects are added to both the Report and the CustomObjectCaseIncident with a mark-down rendition of each finding from the report.\nAPI and report references from The Shadowserver Foundation\nThe integration creates the following types of Stix objects and relationships between them.\nOn the initial run, the integration defaults to the last 30-days of reports. Every run after that, it provides an update for the last 3-days.",
+  "short_description": "The integration uses Shadowserver reports API to query the available Shadowserver reports and transform them into STIX objects making them available within OpenCTI. All available reports are downloaded and an Artifact object is created with the original file. STIX Note objects are added to both the Report and the CustomObjectCaseIncident with a mark-down rendition of each finding from the report.\nAPI and report references from The Shadowserver Foundation\nThe integration creates the following types of Stix objects and relationships between them.\nOn the initial run, the integration defaults to the last 30-days of reports. Every run after that, it provides an update for the last 3-days.",
+  "logo": "external-import/shadowserver/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": "2025-04-30",
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.2.0",
+  "subscription_link": "https://www.shadowserver.org",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/shadowserver",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-shadowserver",
+  "container_type": "EXTERNAL_IMPORT"
+}

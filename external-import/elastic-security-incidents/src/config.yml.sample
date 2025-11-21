@@ -1,0 +1,21 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe' # Valid UUIDv4
+  name: 'Elastic Security Incidents'
+  scope: 'elastic-security-incidents'
+  log_level: 'info'
+  duration_period: 'PT30M' # ISO-8601 duration (30 minutes)
+
+elastic_security:
+  url: 'https://localhost:9200' # Elasticsearch URL (for alerts) or Kibana URL (for cases)
+  api_key: 'ChangeMe' # Elasticsearch API Key
+  verify_ssl: true # Verify SSL certificates
+  import_start_date: '2024-01-01T00:00:00Z' # Initial import start date (ISO-8601)
+  import_alerts: true # Import security alerts
+  import_cases: false # Import security cases (requires Kibana URL - set to true only if using Kibana)
+  alert_statuses: '' # Alert statuses to import (comma-separated, leave empty to import all)
+  alert_rule_tags: '' # Alert rules tags to import (comma-separated, leave empty to import all)
+  case_statuses: '' # Case statuses to import (comma-separated, leave empty to import all)

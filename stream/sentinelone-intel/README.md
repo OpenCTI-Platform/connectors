@@ -1,73 +1,49 @@
 # OpenCTI SentinelOne Intel Stream Connector
 
-This connector works autonomously to allow Indicators created within the attached OpenCTI instance to be synchronised to a SentinelOne account. The connector simply pushes Indicators as they are created within OpenCTI. This covers the majority of use cases, such as Indicators created in consumption of a MISP feed, manual creation, etc.
+The SentinelOne Intel Stream Connector is a standalone Python process that monitors the creation of STIX Indicators in OpenCTI and automatically creates them in a SentinelOne Instance. 
 
-<br>
+Table of Contents
 
-**Note:** 
-<strong>This software is provided as a community-driven project and is not officially supported by SentinelOne. It is offered on an "as-is" basis, without warranties or guarantees, either express or implied. Users are encouraged to thoroughly test and validate the software before deploying it in their environments. While community contributions and feedback are welcome, SentinelOne does not provide formal technical support, maintenance, or updates for this project.</strong>
+- [OpenCTI SentinelOne Intel Stream Connector](#opencti-sentinelone-intel-stream-connector)
+    - [Introduction](#introduction)
+    - [Installation](#installation)
+        - [Requirements](#requirements)
+        - [SentinelOne Setup](#sentinelone-setup)
+        - [OpenCTI Setup](#opencti-setup)
+    - [Configuration variables](#configuration-variables)
+        - [OpenCTI environment variables](#opencti-environment-variables)
+        - [Base connector environment variables](#base-connector-environment-variables)
+        - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
+    - [Deployment](#deployment)
+        - [Docker Deployment](#docker-deployment)
+        - [Manual Deployment](#manual-deployment)
+    - [Usage](#usage)
+    - [Behavior](#behavior)
+    - [Debugging](#debugging)
+    - [Additional information](#additional-information)
 
-<br>
+## Introduction
 
+The SentinelOne Intel Stream Connector enables real-time synchronization of threat intelligence indicators from OpenCTI to SentinelOne's threat intelligence platform as Indicators of compromise. Upon the creation of Indicators within the OpenCTI platform, the connector automatically evaluates their STIX patterns and pushes compatible indicators to a SentinelOne Instance. 
 
+SentinelOne supports the following Indicator of Compromise (IOC) types:
+- **File Hashes**: SHA256, SHA1, MD5
+- **Network Indicators**: URLs, Domain names, IPv4 addresses
 
+As such, the connector supports Indicators with **single-element** patterns corresponding to the above STIX SCOs. 
 
+## Installation
 
+### Requirements
 
-## Connector Features and Notes
+- **OpenCTI Platform** >= 6.7.11
+- **Python** 3.x (for manual deployment)
+- **SentinelOne** management console access with API permissions
+- **Docker** (for Docker deployment)
 
-<br>
+### SentinelOne Setup
 
-- Optional logging that will provide you with the UUIDs SentinelOne generates for Indicators upon a successful bundle pushing can be enabled by setting the `LOG_S1_RESPONSE` variable in the docker-compose file to `true`. This feature will allow you to confirm the presence of Indicators in your SentinelOne instance.
-
-- Real-time monitoring capabilities with basic statistics are available at the `info` log level, allowing you to see how many Indicators have been pushed in the current session.
-
-- Detailed troubleshooting information is also available at `debug` log level in case of Error.
-
-<br>
-
-#### This version of the connector:
-- only supports STIX patterns.
-- only allows for pushing to SentinelOne accounts.
-
-<br>
-
-#### SentinelOne will only accept Indicators of the following types:
-- SHA-256 File Hash
-- SHA-1 File Hash
-- MD5 File Hash
-- IPV4 Address
-- URL
-- DNS Domain Name
-        
-
-
-
-
-<br>
-
-## Implementation
-After appending the container to your compose file, you will need to create a new user in your OpenCTI instance and retrieve some information for your SentinelOne Account in order to interface with it.
-
-If you don't want to use the default stream, you will also need to create your own.
-
-<br>
-
-### Retrieving Your Account ID
-
-![Account ID In S1](doc/account_id.png)
-
-
-- Click on the settings icon at the bottom of the left panel on the console. 
-- From the `Settings` menu, select `ACCOUNTS` and click on the account you seek to use in the below list.
-- You will now be in the `Sentinels` menu. From here, select `ACCOUNT INFO` (you may need to scroll to the right on smaller monitors to see it).
-- Underneath your account name you will see your account ID in the field `ACCOUNT ID`
-
-
-
-<br>
-
-### Generating an API Key
+#### Generating an API Key
 
 ![Generating An API Token In S1](doc/api_generation.png)
 
@@ -78,10 +54,104 @@ If you don't want to use the default stream, you will also need to create your o
 
 <br>
 
-### Determining Your SentinelOne URL
+#### Determining Your SentinelOne URL
 Your SentinelOne URL is simply the first component of the URL you use to access the console.
 
 When configuring the connector, do not include the terminating `/`. For example, for the above image, you would input `https://mysentinelone.instance.net`
+
+
+
+## Configuration variables
+
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
+in `config.yml` (for manual deployment).
+
+### OpenCTI environment variables
+
+Below are the parameters you'll need to set for OpenCTI:
+
+| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
+|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
+| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
+| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+
+### Base connector environment variables
+
+Below are the parameters you'll need to set for running the connector properly:
+
+| Parameter                             | config.yml                  | Docker environment variable             | Default                            | Mandatory | Description                                                                                                                                            |
+|---------------------------------------|-----------------------------|-----------------------------------------|------------------------------------|-----------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Connector ID                          | id                          | `CONNECTOR_ID`                          | /                                  | Yes       | A unique `UUIDv4` identifier for this connector instance.                                                                                              |
+| Connector Type                        | type                        | `CONNECTOR_TYPE`                        | STREAM                             | Yes       | Should always be set to `STREAM` for this connector.                                                                                                   |
+| Connector Name                        | name                        | `CONNECTOR_NAME`                        | SentinelOne Intel Stream Connector | Yes       | Name of the connector.                                                                                                                                 |
+| Connector Scope                       | scope                       | `CONNECTOR_SCOPE`                       | all                                | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object.                                                               |
+| Log Level                             | log_level                   | `CONNECTOR_LOG_LEVEL`                   | info                               | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.                                                                 |
+| Connector Live Stream ID              | live_stream_id              | `CONNECTOR_LIVE_STREAM_ID`              | live                               | Yes       | ID of the live stream created in the OpenCTI UI                                                                                                        |
+| Connector Live Stream Listen Delete   | live_stream_listen_delete   | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | true                               | Yes       | Listen to all delete events concerning the entity, depending on the filter set for the OpenCTI stream.                                                 |
+| Connector Live Stream No dependencies | live_stream_no_dependencies | `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES` | true                               | Yes       | Always set to `True` unless you are synchronizing 2 OpenCTI platforms and you want to get an entity and all context (relationships and related entity) |
+
+### Connector extra parameters environment variables
+
+Below are the parameters you'll need to set for the connector:
+
+> **Note:** At least one scope ID (Account, Site, or Group) must be configured. Account ID and Site ID cannot be used together.
+
+| Parameter    | config.yml | Docker environment variable    | Mandatory | Description                                                                                      |
+|--------------|------------|--------------------------------|-----------|--------------------------------------------------------------------------------------------------| 
+| API URL      | url        | `SENTINELONE_INTEL_URL`        | Yes       | The base URL of your SentinelOne management console (e.g., https://your-console.sentinelone.net) |
+| API Key      | api_key    | `SENTINELONE_INTEL_API_KEY`    | Yes       | SentinelOne API token for authentication                                                         |
+| Account ID   | account_id | `SENTINELONE_INTEL_ACCOUNT_ID` | No        | SentinelOne Account ID for scoping indicators (at least one ID required)                         |
+| Site ID      | site_id    | `SENTINELONE_INTEL_SITE_ID`    | No        | SentinelOne Site ID for scoping indicators (cannot be used with Account ID)                      |
+| Group ID     | group_id   | `SENTINELONE_INTEL_GROUP_ID`   | No        | SentinelOne Group ID for scoping indicators                                                      |
+
+## Deployment
+
+### Docker Deployment
+
+Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
+version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
+sometimes the OpenCTI SDK fails to initialize.
+
+Build a Docker Image using the provided `Dockerfile`.
+
+Example:
+
+```shell
+docker build . -t opencti/connector-sentinelone-intel:latest
+```
+
+Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
+environment. Then, start the docker container with the provided docker-compose.yml
+
+```shell
+docker compose up -d
+# -d for detached
+```
+
+### Manual Deployment
+
+Create a file `config.yml` based on the provided `config.yml.sample`.
+
+Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
+you environment.
+
+Install the required python dependencies (preferably in a virtual environment):
+
+```shell
+pip3 install -r requirements.txt
+```
+
+Then, start the connector from sentinelone-intel/src:
+
+```shell
+python3 main.py
+```
+
+## Usage
+
+After Installation, the connector should require minimal interaction to use, and should update automatically at a
+regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
+
 
 <br>
 
@@ -90,128 +160,46 @@ It is best practice to create a new user under the `Connectors` group and to use
 
 ![Generating A User In OpenCTI](doc/user_creation.png)
 
-
 - Locate the gear (Settings) icon on the left menu and click `Security`.
 - On the menu on the right click on the `Users` option. 
 - Click the blue `+` icon at the bottom of the list
 - Enter `[C] S1 Indicator Connector`. **Note:** you can name this whatever you'd like, but you should include `[C]` at the start regardless.
 - Enter the required information and ensure that under the `Groups` field `Connectors` is this selected option. 
 
-
 <br>
 
-
-### Creating a dedicated Stream (optional)
-
+### Creating a Dedicated Stream
 
 - To create a dedicated stream for this connector head to `Data sharing` -> `Live streams` in the OpenCTI platform.
 
 ![Creating a Stream in OpenCTI](doc/stream_creation.png)
 
-- Give the stream a name so that it can be identified
-- Optional filters can be applied to determine what kind of data goes into the connector. It is recommended to not set any filters as to allow SentinelOne to consume all types it can.
-- Copy the streams ID to be you used in your environment variables. 
-
-
-<br>
-
-## Configuration
-
-The following are required parameters that are necessary for your connector to function.
-
-
-
-### OpenCTI Parameters
-##### OpenCTI Instance URL
-- The URL of your OpenCTI instance within its internal network.
-- Example: `http://opencti:8080`
-- Environment Variable: `OPENCTI_URL`
-- Config.yml: `url`
-
-##### OpenCTI User Token
-- The token of the user specifically created for this Connector, under the `Connectors` group.
-- Example: `11111111-2222-3333-4444-555555555555`
-- Environment Variable: `OPENCTI_TOKEN`
-- Config.yml: `token`
+- Provide the stream with a relevant name so that it can be easily identified. 
+- Optional filters can be applied to determine which OpenCTI events the connector receivies. One should certainly set the following as to ensure that the stream only handles Indicators with STIX patterns
+  - **Entity Type**: Set to `Indicator`
+  - **Pattern Type**: Set to `stix`
+- Further filters based on your needs (e.g., specific labels or creators)
+- From here, the stream's ID can be utilised as the value of the `CONNECTOR_LIVE_STREAM_ID` variable.
 
 <br>
 
-### Connector Parameters
 
-##### Connector ID
-- Unique UUIDv4 identifier for the connector.
-- Example: `11111111-2222-3333-4444-555555555555`
-- Environment Variable: `CONNECTOR_ID`
-- Config.yml: `id`
 
-##### Connector Name
-- The Connector's name as it will appear in OpenCTI.
-- Example: `SentinelOne Indicator Export Stream`
-- Environment Variable: `CONNECTOR_NAME`
-- Config.yml: `name`
+## Behavior
 
-##### Connector Scope
-- The scope applied to the connector.
-- Example: `all`
-- Environment Variable: `CONNECTOR_SCOPE`
-- Config.yml: `scope`
+The connector simply consumes the assigned stream, filtering for events where Indicators that use STIX patterns are found. The connector will determine if the Indicator's pattern is of a format SentinelOne can accept and will enact the required processing in order to push it to a SentinelOne instance as such. 
 
-##### Connector Log Level
-- The level of logs/outputs presented. `info` is recommended.
-- Example: `info`
-- Environment Variable: `CONNECTOR_LOG_LEVEL`
-- Config.yml: `log_level`
+Based on the IOC types SentinelOne supports, the connector can only process Indicators from OpenCTI whose pattern references the following STIX Cyber Observable Objects (SCOs):
+- **File Hashes**: SHA256, SHA1, MD5
+- **Network Indicators**: URLs, Domain names, IPv4 addresses
 
-##### Connector Live Stream ID
-- The id of the stream to listen into, the default `live` is okay to use.
-- Example: `live`
-- Environment Variable: `CONNECTOR_LIVE_STREAM_ID`
-- Config.yml: `live_stream_id`
+Alongside this, the connector is only able to consume basic **single-expression** STIX patterns (e.g., file:hashes.'SHA-256' = '<hash>').
 
-##### Connector Live Stream Listen Delete
-- Whether or not the connector will delete REDIS events after processing them.
-- Example: `true`
-- Environment Variable: `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`
-- Config.yml: `live_stream_listen_delete`
- 
-##### Connector Live Stream No Dependencies
-- Determines whether the stream will require dependency on other entities.
-- Example: `true`
-- Environment Variable: `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES`
-- Config.yml: `live_stream_no_dependencies`
+Compound patterns containing logical operators (AND, OR, FOLLOWEDBY, etc.) or multiple observables are **not supported** and will thus be ignored.
 
-<br>
 
-### SentinelOne Parameters
+## Debugging
 
-##### SentinelOne URL
-- The SentinelOne URL used to access the console. **NOTE:** The URL should not end with a `/`.
-- Example: `https://usea1-purple.sentinelone.net`
-- Environment Variable: `S1_URL`
-- Config.yml: `url`
-
-##### SentinelOne API Key
-- The API key for your SentinelOne account (JWT). **NOTE:** Should not include `APIToken`.
-- Example: `eyJraWQiO...`
-- Environment Variable: `S1_API_KEY`
-- Config.yml: `api_key`
-
-##### SentinelOne Account ID
-- The ID of your SentinelOne Account.
-- Example: `1234567890123456789`
-- Environment Variable: `S1_ACCOUNT_ID`
-- Config.yml: `account_id`
-
-##### Maximum API Attempts
-- The maximum number of times the connector will retry push attempts when they fail. `5` is recommended as failures almost only ever occur due to the API rate limits Exponential backoffs are implemented alongside this to handle the rate limits.
-- Example: `5`
-- Environment Variable: `MAX_API_ATTEMPTS`
-- Config.yml: `max_api_attempts`
-
-##### Log SentinelOne Response
-- Enabling this will log a list of UUIDs of the IOCs SentinelOne created for each bundle, allowing you to check/confirm their presence in your instance.
-- Example: `true`
-- Environment Variable: `LOG_S1_RESPONSE`
-- Config.yml: `log_s1_response`
-
-<br>
+The connector can be debugged by setting the appropiate log level.
+Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
+e., `self.helper.connector_logger.error("An error message")`.

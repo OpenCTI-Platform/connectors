@@ -1,4 +1,5 @@
 import datetime
+import json
 import os
 from pathlib import Path
 
@@ -68,6 +69,30 @@ class ConfigConnector:
             self.load,
             required=True,
         )
+        self.acti_s3_bucket_name = get_config_variable(
+            "ACCENTURE_ACTI_S3_BUCKET_NAME",
+            ["accenture_acti", "s3_bucket_name"],
+            self.load,
+            required=True,
+        )
+        self.acti_s3_bucket_region = get_config_variable(
+            "ACCENTURE_ACTI_S3_BUCKET_REGION",
+            ["accenture_acti", "s3_bucket_region"],
+            self.load,
+            required=True,
+        )
+        self.acti_s3_bucket_access_key = get_config_variable(
+            "ACCENTURE_ACTI_S3_BUCKET_ACCESS_KEY",
+            ["accenture_acti", "s3_bucket_access_key"],
+            self.load,
+            required=True,
+        )
+        self.acti_s3_bucket_secret_key = get_config_variable(
+            "ACCENTURE_ACTI_S3_BUCKET_SECRET_KEY",
+            ["accenture_acti", "s3_bucket_secret_key"],
+            self.load,
+            required=True,
+        )
         self.tlp_level = get_config_variable(
             "ACCENTURE_ACTI_CLIENT_TLP_LEVEL",
             ["accenture_acti", "tlp_level"],
@@ -80,6 +105,13 @@ class ConfigConnector:
             self.load,
             default=datetime.timedelta(days=30),
         )
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        mapping_path = os.path.join(current_dir, "resources", "taxonomy.json")
+        if os.path.exists(mapping_path):
+            with open(mapping_path, "r", encoding="utf-8") as f:
+                self.mapping = json.load(f)
+        else:
+            self.mapping = {}
         if type(self.relative_import_start_date) == str:
             self.relative_import_start_date = isodate.parse_duration(
                 self.relative_import_start_date

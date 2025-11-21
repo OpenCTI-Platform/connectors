@@ -1,0 +1,21 @@
+{
+  "title": "Red Flag Domains",
+  "slug": "red-flag-domains",
+  "description": "Red Flag Domains are lists of very recently registered probably malicious domain names in french TLDs. More details can be found\u00a0\u201dhttps://red.flag.domains/\u201d.\n\nThe OpenCTI Red Flag Domain Connector facilitates the import of domain names from the Red Flag Domains platform into OpenCTI. ",
+  "short_description": "Red Flag Domains are lists of very recently registered probably malicious domain names in french TLDs.",
+  "logo": "external-import/red-flag-domains/__metadata__/logo.png",
+  "use_cases": [
+    "Open Source Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 55,
+  "support_version": ">= 6.5.1",
+  "subscription_link": "https://red.flag.domains",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/red-flag-domains",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-red-flag-domains",
+  "container_type": "EXTERNAL_IMPORT"
+}

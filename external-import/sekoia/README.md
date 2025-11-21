@@ -1,12 +1,27 @@
 # Sekoia CTI Connector
 
+## Status Filigran
+
+| Status            | Date | Comment |
+|-------------------|------|---------|
+| Filigran Verified | -    | -       |
+
 ## Objective
 Collect Sekoia.io CTI data in an existing OpenCTI instance for any operational purpose (such as CTI aggregation, dissemination, hunting...).
 
 ## Prerequisites
 - An operational OpenCTI on-prem instance with administrator privileges or an OpenCTI Saas version
-- An active Sekoia CTI subscription (Sekoia Intelligence) : https://www.sekoia.io/en/product/cti/. If you want to test Sekoia CTI please contact : contact@sekoia.io 
+- An active Sekoia CTI subscription (Sekoia Intelligence) : https://www.sekoia.io/en/product/cti/. If you want to test Sekoia CTI please contact : contact@sekoia.io
 - [Creating a Sekoia.io API KEY](https://docs.sekoia.io/getting_started/manage_api_keys/) with the "View intelligence" premission (at least)
+
+## Requirements
+- pycti==6.7.17
+- pydantic>=2.10, <3
+- pydantic-settings==2.10.1
+- python-dateutil==2.9.0.post0
+
+## Configuration variables environment
+Find all the configuration variables available (default/required) here: [Connector Configurations](./__metadata__)
 
 ## OpenCTI on-prem version configuration
 
@@ -14,7 +29,7 @@ Collect Sekoia.io CTI data in an existing OpenCTI instance for any operational p
 
 ```
 connector-sekoia:
-    image: opencti/connector-sekoia:latest
+    image: opencti/connector-sekoia:6.8.13
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
@@ -78,13 +93,13 @@ On this page, you can find the following information:
 2. Navigate the Sekoia Intelligence Feed
 Here are the elements of the Sekoia feed that can be found on OpenCTI after export:
 
-| **OpenCTI**    | 	**Sekoia.io** |
-|----------------|----------------|
-| Reports        | Threat-reports |
-| Observables    | Sightings      |
-| Malwares	      | Malwares       |
-| Intrusion Set	 | Intrusion-sets |
-| Indicators	    | Indicators     |
+| **OpenCTI**   | **Sekoia.io**  |
+|---------------|----------------|
+| Reports       | Threat-reports |
+| Observables   | Sightings      |
+| Malwares      | Malwares       |
+| Intrusion Set | Intrusion-sets |
+| Indicators    | Indicators     |
 
 ## Known behavior
 

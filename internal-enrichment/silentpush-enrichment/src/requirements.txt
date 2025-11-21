@@ -1,6 +1,6 @@
-pycti==6.5.3
+pycti==6.8.13
 pyyaml~=6.0.2
 requests~=2.32.3
 validators==0.33.0
-tldextract==5.0.0
-pre-commit==2.21.0
+tldextract==5.3.0
+pre-commit==4.3.0

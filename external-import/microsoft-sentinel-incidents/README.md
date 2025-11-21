@@ -15,9 +15,7 @@ Table of Contents
         - [Docker Deployment](#docker-deployment)
         - [Manual Deployment](#manual-deployment)
     - [Usage](#usage)
-    - [Behavior](#behavior)
     - [Debugging](#debugging)
-    - [Additional information](#additional-information)
 
 ## Introduction
 
@@ -85,15 +83,16 @@ Below are the parameters you'll need to set for running the connector properly:
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter         | config.yml `microsoft_sentinel_incidents` | Docker environment variable                      | Default                                                  | Mandatory | Description                                                                                                            |
-|-------------------|-------------------------------------------|--------------------------------------------------|----------------------------------------------------------|-----------|------------------------------------------------------------------------------------------------------------------------|
-| Tenant ID         | `tenant_id`                               | `MICROSOFT_SENTINEL_INCIDENTS_TENANT_ID`         |                                                          | Yes       | Your Azure App Tenant ID, see the screenshot to help you find this information.                                        |
-| Client ID         | `client_id`                               | `MICROSOFT_SENTINEL_INCIDENTS_CLIENT_ID`         |                                                          | Yes       | Your Azure App Client ID, see the screenshot to help you find this information.                                        |
-| Client Secret     | `client_secret`                           | `MICROSOFT_SENTINEL_INCIDENTS_CLIENT_SECRET`     |                                                          | Yes       | Your Azure App Client secret, See the screenshot to help you find this information.                                    |
-| Subscription ID   | `subscription_id`                         | `MICROSOFT_SENTINEL_INCIDENTS_SUBSCRIPTION_ID`   |                                                          | Yes       | Your Microsoft Sentinel workspace ID.                                                                                  |
-| Resource Group    | `resource_group`                          | `MICROSOFT_SENTINEL_INCIDENTS_RESOURCE_GROUP`    |                                                          | Yes       | Your Microsoft Sentinel workspace ID.                                                                                  |
-| Workspace ID      | `workspace_id`                            | `MICROSOFT_SENTINEL_INCIDENTS_WORKSPACE_ID`      |                                                          | Yes       | Your Microsoft Sentinel workspace ID.                                                                                  |
-| Import start date | `import_start_date`                       | `MICROSOFT_SENTINEL_INCIDENTS_IMPORT_START_DATE` | `2020-01-01T00:00:00Z`                                   | No        | Import starting date (in YYYY-MM-DD format or YYYY-MM-DDTHH:MM:SSZ format) - used only if connector's state is not set |
+| Parameter              | config.yml `microsoft_sentinel_incidents` | Docker environment variable                      | Default                | Mandatory | Description                                                                                                            |
+|------------------------|-------------------------------------------|--------------------------------------------------|------------------------|-----------|------------------------------------------------------------------------------------------------------------------------|
+| Tenant ID              | `tenant_id`                               | `MICROSOFT_SENTINEL_INCIDENTS_TENANT_ID`         |                        | Yes       | Your Azure App Tenant ID, see the screenshot to help you find this information.                                        |
+| Client ID              | `client_id`                               | `MICROSOFT_SENTINEL_INCIDENTS_CLIENT_ID`         |                        | Yes       | Your Azure App Client ID, see the screenshot to help you find this information.                                        |
+| Client Secret          | `client_secret`                           | `MICROSOFT_SENTINEL_INCIDENTS_CLIENT_SECRET`     |                        | Yes       | Your Azure App Client secret, See the screenshot to help you find this information.                                    |
+| Subscription ID        | `subscription_id`                         | `MICROSOFT_SENTINEL_INCIDENTS_SUBSCRIPTION_ID`   |                        | Yes       | Your Microsoft Sentinel subscription ID.                                                                               |
+| Resource Group         | `resource_group`                          | `MICROSOFT_SENTINEL_INCIDENTS_RESOURCE_GROUP`    |                        | Yes       | Your Microsoft Sentinel resource group.                                                                                |
+| Workspace ID           | `workspace_id`                            | `MICROSOFT_SENTINEL_INCIDENTS_WORKSPACE_ID`      |                        | Yes       | Your Microsoft Sentinel workspace ID.                                                                                  |
+| Import start date      | `import_start_date`                       | `MICROSOFT_SENTINEL_INCIDENTS_IMPORT_START_DATE` | `2020-01-01T00:00:00Z` | No        | Import starting date (in YYYY-MM-DD format or YYYY-MM-DDTHH:MM:SSZ format) - used only if connector's state is not set. |
+| Incident filter labels | `filter_labels`                           | `MICROSOFT_SENTINEL_INCIDENTS_FILTER_LABELS`     |                        | No        | Only incidents containing these specified labels will be retrieved and ingested (comma separated values).            |
 
 ## Deployment
 
@@ -153,7 +152,7 @@ download of data by re-running the connector.
 
 ## Debugging
 
-The connector can be debugged by setting the appropiate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
-e., `self.helper.connector_logger.error("An error message")`.
+The connector can be debugged by setting the appropriate log level.
+Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`,
+i.e., `self.helper.connector_logger.error("An error message")`.
 

@@ -1,9 +1,8 @@
 """Converts a GTI report to a STIX report object."""
 
 from datetime import datetime, timezone
-from typing import List, Tuple
 
-from connector.src.custom.models.gti_reports.gti_report_model import (
+from connector.src.custom.models.gti.gti_report_model import (
     GTIReportData,
     ReportModel,
 )
@@ -13,7 +12,12 @@ from connector.src.stix.v21.models.cdts.external_reference_model import (
 )
 from connector.src.stix.v21.models.ovs.report_type_ov_enums import ReportTypeOV
 from connector.src.utils.converters.generic_converter_config import BaseMapper
-from stix2.v21 import Identity, MarkingDefinition, Report  # type: ignore
+from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
+    OrganizationAuthor,
+    TLPMarking,
+)
+from markdown import markdown  # type: ignore[import-untyped]
+from stix2.v21 import Report  # type: ignore
 
 
 class GTIReportToSTIXReport(BaseMapper):
@@ -22,15 +26,15 @@ class GTIReportToSTIXReport(BaseMapper):
     def __init__(
         self,
         report: GTIReportData,
-        organization: Identity,
-        tlp_marking: MarkingDefinition,
+        organization: OrganizationAuthor,
+        tlp_marking: TLPMarking,
     ) -> None:
         """Initialize the GTIReportToSTIXReport object.
 
         Args:
             report (GTIReportData): The GTI report data to convert.
-            organization (Identity): The organization identity object.
-            tlp_marking (MarkingDefinition): The TLP marking definition.
+            organization (OrganizationAuthor): The organization identity object.
+            tlp_marking (TLPMarking): The TLP marking definition.
 
         """
         self.report = report
@@ -63,6 +67,10 @@ class GTIReportToSTIXReport(BaseMapper):
             if hasattr(self, "author_identity") and self.author_identity
             else self.organization.id
         )
+        if hasattr(attributes, "content") and attributes.content is not None:
+            html_content = markdown(attributes.content)
+        else:
+            html_content = ""
 
         report = OctiReportModel.create(
             name=name,
@@ -78,12 +86,12 @@ class GTIReportToSTIXReport(BaseMapper):
             external_references=[
                 ref.model_dump(exclude_none=True) for ref in external_references
             ],
-            content=attributes.content,
+            content=html_content,
         )
 
         return report
 
-    def add_author_identity(self, author_identity: Identity) -> None:
+    def add_author_identity(self, author_identity: OrganizationAuthor) -> None:
         """Add or update the author identity for the report.
 
         Args:
@@ -93,7 +101,7 @@ class GTIReportToSTIXReport(BaseMapper):
         self.author_identity = author_identity
 
     @staticmethod
-    def _get_timestamps(attributes: ReportModel) -> Tuple[datetime, datetime]:
+    def _get_timestamps(attributes: ReportModel) -> tuple[datetime, datetime]:
         """Extract creation and modification timestamps from attributes.
 
         Args:
@@ -111,7 +119,7 @@ class GTIReportToSTIXReport(BaseMapper):
         return created, modified
 
     @staticmethod
-    def _extract_labels(attributes: ReportModel) -> List[str]:
+    def _extract_labels(attributes: ReportModel) -> list[str]:
         """Extract labels from report attributes.
 
         Args:
@@ -134,7 +142,7 @@ class GTIReportToSTIXReport(BaseMapper):
 
     def _build_external_references(
         self, attributes: ReportModel
-    ) -> List[ExternalReferenceModel]:
+    ) -> list[ExternalReferenceModel]:
         """Build external references from report attributes.
 
         Args:
@@ -153,12 +161,13 @@ class GTIReportToSTIXReport(BaseMapper):
             )
             external_references.append(external_reference)
 
-        if self.report.id:
-            external_reference = ExternalReferenceModel(
-                source_name="Google Threat Intelligence Platform",
-                description="Google Threat Intelligence Report Link",
-                url=f"https://www.virustotal.com/gui/collection/{self.report.id}",
-            )
+        if self.report.id and self.report.attributes:
+            if hasattr(self.report.attributes, "name") and self.report.attributes.name:
+                external_reference = ExternalReferenceModel(
+                    source_name=f"[GTI] Report {self.report.attributes.name}",
+                    description="Google Threat Intelligence Report Link",
+                    url=f"https://www.virustotal.com/gui/collection/{self.report.id}",
+                )
             external_references.append(external_reference)
         return external_references
 
@@ -178,7 +187,7 @@ class GTIReportToSTIXReport(BaseMapper):
         return ReportTypeOV(attributes.report_type)
 
     @staticmethod
-    def add_object_refs(objects_to_add: List[str], existing_report: Report) -> Report:
+    def add_object_refs(objects_to_add: list[str], existing_report: Report) -> Report:
         """Add object references to an existing STIX report while preserving all report data.
 
         Args:

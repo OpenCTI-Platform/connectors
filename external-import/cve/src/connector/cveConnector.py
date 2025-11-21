@@ -3,8 +3,12 @@ import time
 from datetime import datetime, timedelta
 
 from pycti import OpenCTIConnectorHelper  # type: ignore
-from services import CVEConverter  # type: ignore
-from services.utils import MAX_AUTHORIZED, ConfigCVE  # type: ignore
+from src import ConfigLoader
+from src.services import CVEConverter  # type: ignore
+from src.services.utils import (  # type: ignore
+    MAX_AUTHORIZED,
+    convert_hours_to_seconds,
+)
 
 
 class CVEConnector:
@@ -14,9 +18,12 @@ class CVEConnector:
         """
 
         # Load configuration file and connection helper
-        self.config = ConfigCVE()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
-        self.converter = CVEConverter(self.helper)
+        # Instantiate the connector helper from config
+        self.config = ConfigLoader()
+        self.helper = OpenCTIConnectorHelper(config=self.config.model_dump_pycti())
+
+        self.interval = convert_hours_to_seconds(self.config.cve.interval)
+        self.converter = CVEConverter(self.helper, self.config)
 
     def run(self) -> None:
         """
@@ -65,7 +72,7 @@ class CVEConnector:
         self.helper.api.work.to_processed(work_id, msg)
         self.helper.set_state({"last_run": current_time})
 
-        interval_in_hours = round(self.config.interval / 60 / 60, 2)
+        interval_in_hours = round(self.interval / 60 / 60, 2)
         self.helper.connector_logger.info(
             "[CONNECTOR] Last_run stored, next run in: "
             + str(interval_in_hours)
@@ -78,13 +85,13 @@ class CVEConnector:
         :param now: Current date in datetime
         :param work_id: Work id in string
         """
-        if self.config.max_date_range > MAX_AUTHORIZED:
+        if self.config.cve.max_date_range > MAX_AUTHORIZED:
             error_msg = "The max_date_range cannot exceed {} days".format(
                 MAX_AUTHORIZED
             )
             raise Exception(error_msg)
 
-        date_range = timedelta(days=self.config.max_date_range)
+        date_range = timedelta(days=self.config.cve.max_date_range)
         start_date = now - date_range
 
         cve_params = self._update_cve_params(start_date, now)
@@ -196,8 +203,8 @@ class CVEConnector:
         :return: Dict of CVE params
         """
         return {
-            "lastModStartDate": start_date.isoformat(),
-            "lastModEndDate": end_date.isoformat(),
+            "lastModStartDate": start_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "lastModEndDate": end_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
 
     def process_data(self) -> None:
@@ -241,8 +248,8 @@ class CVEConnector:
                 If the connector never runs and user wants to pull CVE history
                 =================================================================
                 """
-                if self.config.pull_history:
-                    start_date = datetime(self.config.history_start_year, 1, 1)
+                if self.config.cve.pull_history:
+                    start_date = datetime(self.config.cve.history_start_year, 1, 1)
                     end_date = now
                     self._import_history(start_date, end_date, work_id)
                 else:
@@ -258,8 +265,8 @@ class CVEConnector:
                 """
             elif (
                 last_run is not None
-                and self.config.maintain_data
-                and (current_time - last_run) >= int(self.config.interval)
+                and self.config.cve.maintain_data
+                and (current_time - last_run) >= int(self.interval)
             ):
                 # Initiate work_id to track the job
                 work_id = self._initiate_work(current_time)
@@ -267,7 +274,7 @@ class CVEConnector:
                 self.update_connector_state(current_time, work_id)
 
             else:
-                new_interval = self.config.interval - (current_time - last_run)
+                new_interval = self.interval - (current_time - last_run)
                 new_interval_in_hours = round(new_interval / 60 / 60, 2)
                 self.helper.connector_logger.info(
                     "[CONNECTOR] Connector will not run, next run in: "

@@ -1,5 +1,5 @@
-pycti==6.7.4
+pycti==6.8.13
 markdownify
 validators
-pandas==2.3.0
+pandas==2.3.3
 tabulate # Required for Pandas to Markdown

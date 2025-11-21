@@ -377,19 +377,26 @@ class HybridAnalysis:
                 elif hash["algorithm"] == "MD5":
                     values = {"hash": hash["hash"]}
             if values is not None:
-                r = requests.post(
+                r = requests.get(
                     self.api_url + "/search/hash",
                     headers=self.headers,
-                    data=values,
+                    params=values,
                 )
                 if r.status_code > 299:
                     raise ValueError(r.text)
                 result = r.json()
-        if len(result) > 0:
+        if len(result["reports"]) > 0:
             # One report is found
             self.helper.log_info("Already found in HA, attaching knowledge...")
+            r = requests.get(
+                self.api_url + f"/report/{result['reports'][0]['id']}/summary",
+                headers=self.headers,
+            )
+            if r.status_code > 299:
+                raise ValueError(r.text)
+            report = r.json()
             return self._send_knowledge(
-                stix_objects, stix_entity, opencti_entity, result[0]
+                stix_objects, stix_entity, opencti_entity, report
             )
         # If URL
         if opencti_entity["entity_type"] in ["Url", "Domain-Name", "Hostname"]:

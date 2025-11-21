@@ -310,6 +310,21 @@ extra_settings:
 ...
 ```
 
+Enable Group-IB statement marking by setting `enable_statement_marking: true` in extra settings. When enabled, the connector will attach a custom statement marking with text `Group-IB`.
+
+```yaml
+
+extra_settings:
+  enable_statement_marking: true
+...
+```
+
+Environment variable equivalent:
+
+```bash
+TI_API__EXTRA_SETTINGS__ENABLE_STATEMENT_MARKING=true
+```
+
 
 
 

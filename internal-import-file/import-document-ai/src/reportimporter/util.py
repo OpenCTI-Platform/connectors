@@ -1,22 +1,42 @@
-from typing import Dict, List
+import json
 
 import stix2
 from pycti import (
     AttackPattern,
+    Channel,
+    Identity,
     IntrusionSet,
     Location,
     Malware,
     ThreatActorGroup,
+    Tool,
     Vulnerability,
 )
+from pycti.utils.constants import CustomObjectChannel, IdentityTypes
 
 
 def create_stix_object(
-    category: str, value: str, object_markings: List[str], custom_properties: Dict
-):
+    category: str, value: str, object_markings: list[str], custom_properties: dict
+) -> dict | None:
+    """Create a STIX object based on the extracted entity's category and value.
+
+    This function dispatches to a factory function defined in `stix_object_mapping`.
+    If `category` is not found, returns None.
+
+    Args:
+        category (str): A string key indicating which STIX type to create.
+        value (str): The raw/textual value for that object (e.g. the malware name,
+            the individual’s name, an IPv4 string, etc.). Leading/trailing
+            whitespace and trailing commas will be trimmed.
+        object_markings (list[str]): List of OpenCTI marking-definition standard IDs to apply.
+        custom_properties (dict): Additional custom properties, usually containing keys such as
+            'created_by_ref', 'x_opencti_create_indicator', etc.
+
+    Returns:
+        dict | None: A newly created STIX2 object (for example, a `stix2.Malware` or
+            `stix2.Identity`). Returns None if the `category` is not supported.
     """
-    Create a STIX object based on the extracted entity's category and value.
-    """
+    # Trim whitespace and any trailing commas from the raw value
     value = value.strip().rstrip(",")
     stix_create_func = stix_object_mapping.get(category)
     # Return the corresponding STIX object or None if category is unsupported
@@ -130,8 +150,16 @@ stix_object_mapping = {
     "Country": lambda value, object_markings, custom_properties: stix2.Location(
         id=Location.generate_id(value, "Country"),
         name=value,
-        country="FR",  # TODO: Country code is required by STIX2!
+        country="",
         custom_properties={"x_opencti_location_type": "Country"} | custom_properties,
+        allow_custom=True,
+        object_markings=object_markings,
+    ),
+    "Region": lambda value, object_markings, custom_properties: stix2.Location(
+        id=Location.generate_id(value, "Region"),
+        name=value,
+        region="",
+        custom_properties={"x_opencti_location_type": "Region"} | custom_properties,
         allow_custom=True,
         object_markings=object_markings,
     ),
@@ -142,4 +170,167 @@ stix_object_mapping = {
         custom_properties=custom_properties,
         allow_custom=True,
     ),
+    "Sector": lambda value, object_markings, custom_properties: stix2.Identity(
+        id=Identity.generate_id(value, IdentityTypes.SECTOR.value),
+        name=value,
+        # STIX 2.1 allows for individual, group, organization, class, system, unknown
+        # “class” is used to represent a generic category (such as a sector)
+        identity_class="class",
+        object_markings=object_markings,
+        custom_properties={
+            **custom_properties,
+            "x_opencti_identity_type": IdentityTypes.SECTOR.value,
+        },
+        allow_custom=True,
+    ),
+    "Organization": lambda value, object_markings, custom_properties: stix2.Identity(
+        id=Identity.generate_id(value, IdentityTypes.ORGANIZATION.value),
+        name=value,
+        identity_class=IdentityTypes.ORGANIZATION.value.lower(),
+        object_markings=object_markings,
+        custom_properties=custom_properties,
+        allow_custom=True,
+    ),
+    "Individual": lambda value, object_markings, custom_properties: stix2.Identity(
+        id=Identity.generate_id(value, IdentityTypes.INDIVIDUAL.value),
+        name=value,
+        identity_class=IdentityTypes.INDIVIDUAL.value.lower(),
+        object_markings=object_markings,
+        custom_properties=custom_properties,
+        allow_custom=True,
+    ),
+    "Channel": lambda value, object_markings, custom_properties: CustomObjectChannel(
+        id=Channel.generate_id(name=value),  # for deduplication
+        name=value,
+        object_markings=object_markings,
+        custom_properties=custom_properties,
+        allow_custom=True,
+    ),
+    "Tool": lambda value, object_markings, custom_properties: stix2.Tool(
+        id=Tool.generate_id(value),
+        name=value,
+        object_markings=object_markings,
+        custom_properties=custom_properties,
+        allow_custom=True,
+    ),
 }
+
+
+def remove_all_relationships(bundle: stix2.Bundle) -> stix2.Bundle:
+    """Remove all relationship objects from a STIX bundle.
+
+    Args:
+        bundle (stix2.Bundle): The STIX bundle to process.
+
+    Returns:
+        stix2.Bundle: The processed STIX bundle without relationship objects.
+
+    Examples:
+        >>> import stix2
+        >>> identity = stix2.Identity(name="Example Org", identity_class="organization")
+        >>> malware = stix2.Malware(name="Example Malware", is_family=False)
+        >>> relationship = stix2.Relationship(
+        ...     source_ref=identity["id"],
+        ...     target_ref=malware["id"],
+        ...     relationship_type="uses",
+        ... )
+        >>> report = stix2.Report(
+        ...     name="Example Report",
+        ...     description="An example report containing relationships.",
+        ...     object_refs=[identity["id"], malware["id"], relationship["id"]],
+        ...     published="2024-10-01T12:00:00Z",
+        ... )
+        >>> bundle = stix2.Bundle(
+        ...     objects=[
+        ...         identity,
+        ...         malware,
+        ...         relationship,
+        ...         report,
+        ...     ],
+        ...     allow_custom=True,
+        ... )
+        >>> filtered_bundle = remove_all_relationships(bundle)
+    """
+    # remove relationships from the bundle
+    objects = [obj for obj in bundle["objects"] if obj.get("type") != "relationship"]
+    # remove all references to relationships in container objects
+    for i, obj in enumerate(objects):
+        if "object_refs" in obj:
+            # as we cannot reassign stix object properties,
+            # we use dict representation not to alter other properties
+            object_dict = json.loads(obj.serialize())
+            object_dict["object_refs"] = [
+                ref
+                for ref in obj["object_refs"]
+                if not ref.startswith("relationship--")
+            ]
+            obj = stix2.parse(object_dict, allow_custom=True)
+            objects[i] = obj
+    return stix2.Bundle(
+        objects=objects,
+        allow_custom=True,
+    )
+
+
+def compute_bundle_stats(bundle: stix2.Bundle) -> dict:
+    """Compute statistics about a STIX bundle.
+
+    Args:
+        bundle (stix2.Bundle): The STIX bundle to analyze.
+
+    Returns:
+        dict: A dictionary containing statistics about the bundle, including:
+            - observables: Count of observable objects in the bundle.
+            - entities: Count of entity objects in the bundle.
+            - relationships: Count of relationship objects in the bundle.
+            - reports: Count of report objects in the bundle.
+            - total_sent: Total number of objects sent for processing.
+
+    Examples:
+        >>> import stix2
+        >>> identity = stix2.Identity(name="Example Org", identity_class="organization")
+        >>> malware = stix2.Malware(name="Example Malware", is_family=False)
+        >>> relationship = stix2.Relationship(
+        ...     source_ref=identity["id"],
+        ...     target_ref=malware["id"],
+        ...     relationship_type="uses",
+        ... )
+        >>> ip = stix2.IPv4Address(value="127.0.0.1")
+        >>> report = stix2.Report(
+        ...     name="Example Report",
+        ...     description="An example report containing relationships.",
+        ...     object_refs=[identity["id"], malware["id"], relationship["id"], ip["id"]],
+        ...     published="2024-10-01T12:00:00Z",
+        ... )
+        >>> bundle = stix2.Bundle(
+        ...     objects=[
+        ...         identity,
+        ...         malware,
+        ...         relationship,
+        ...         ip,
+        ...         report,
+        ...     ],
+        ...     allow_custom=True,
+        ... )
+        >>> stats = compute_bundle_stats(bundle)
+
+    """
+    stats = {
+        "observables": 0,
+        "entities": 0,
+        "relationships": 0,
+        "reports": 0,
+        "total_sent": len(bundle.objects),
+    }
+    for obj in bundle["objects"]:
+        if isinstance(obj, stix2.Relationship):
+            stats["relationships"] += 1
+        elif isinstance(obj, stix2.v21._DomainObject):
+            if obj.type == "report":
+                stats["reports"] += 1
+            else:
+                stats["entities"] += 1
+
+        elif isinstance(obj, stix2.v21._Observable):
+            stats["observables"] += 1
+    return stats

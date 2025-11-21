@@ -38,7 +38,7 @@ class ConnectorClient:
             self.helper.connector_logger.error(error_msg, {"error": {str(err)}})
             raise Exception(error_msg)
 
-    def get_reports(self, since: str) -> any:
+    def get_reports(self, since: str, until: str) -> any:
         """
         :param since:
         :return:
@@ -46,7 +46,7 @@ class ConnectorClient:
         try:
             self._refresh_and_set_token()
             api_url = self.base_api_url + "/collections/acti/collections"
-            params = {"start_date": since}
+            params = {"start_date": since, "end_date": until}
             r = self.session.get(api_url, params=params)
             r.raise_for_status()
             response = r.json()
