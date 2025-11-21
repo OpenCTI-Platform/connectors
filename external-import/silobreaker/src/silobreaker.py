@@ -91,12 +91,12 @@ class Silobreaker:
                 verb = "POST"
                 urlSignature = verb + " " + url
                 message = urlSignature.encode() + body
-                hmac_sha1 = hmac.new(
+                hmac_sha512 = hmac.new(
                     self.silobreaker_api_shared.encode(),
                     message,
-                    digestmod=hashlib.sha1,
+                    digestmod=hashlib.sha512,
                 )
-                digest = base64.b64encode(hmac_sha1.digest())
+                digest = base64.b64encode(hmac_sha512.digest())
                 final_url = (
                     url
                     + ("&" if "?" in url else "?")
@@ -111,12 +111,12 @@ class Silobreaker:
             elif method == "DOWNLOAD":
                 verb = "GET"
                 message = verb + " " + url
-                hmac_sha1 = hmac.new(
+                hmac_sha512 = hmac.new(
                     self.silobreaker_api_shared.encode(),
                     message.encode(),
-                    digestmod=hashlib.sha1,
+                    digestmod=hashlib.sha512,
                 )
-                digest = base64.b64encode(hmac_sha1.digest())
+                digest = base64.b64encode(hmac_sha512.digest())
                 final_url = (
                     url
                     + ("&" if "?" in url else "?")
@@ -129,12 +129,12 @@ class Silobreaker:
             else:
                 verb = "GET"
                 message = verb + " " + url
-                hmac_sha1 = hmac.new(
+                hmac_sha512 = hmac.new(
                     self.silobreaker_api_shared.encode(),
                     message.encode(),
-                    digestmod=hashlib.sha1,
+                    digestmod=hashlib.sha512,
                 )
-                digest = base64.b64encode(hmac_sha1.digest())
+                digest = base64.b64encode(hmac_sha512.digest())
                 final_url = (
                     url
                     + ("&" if "?" in url else "?")
