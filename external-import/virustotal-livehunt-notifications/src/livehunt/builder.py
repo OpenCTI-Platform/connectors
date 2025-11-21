@@ -566,7 +566,7 @@ class LivehuntBuilder:
             try:
                 raw_config = f"""```\n{
                                     json.dumps(
-                                        vtobj.malware_config, indent=2
+                                        dict(vtobj.malware_config), indent=2
                                     )}\n```"""
             except TypeError as e:
                 raise ValueError("Failed to serialize malware config") from e
