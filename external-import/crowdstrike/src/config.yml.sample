@@ -25,6 +25,7 @@ crowdstrike:
   report_type: 'threat-report'
   report_target_industries: ''
   report_guess_malware: false                                       # Use report tags to guess malware
+  report_guess_relations: false                                     # Automatically guess and create relationships between entities in reports
   indicator_start_timestamp:                                        # Unix timestamp. Leave empty for default (30 days ago). 0 means ALL indicators!
   indicator_exclude_types: 'hash_ion,hash_md5,hash_sha1,password,username'
   default_x_opencti_score: 50
