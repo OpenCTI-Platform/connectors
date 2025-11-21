@@ -48,10 +48,10 @@ class ReportBundleBuilder:
         report_status: int,
         report_type: str,
         confidence_level: int,
-        guessed_malwares: Mapping[str, str],
         report_file: Optional[Mapping[str, str]] = None,
         related_indicators: Optional = None,
         report_guess_relations: bool = False,
+        malwares_from_field: Optional[List[dict]] = None,
     ) -> None:
         """Initialize report bundle builder."""
         self.report = report
@@ -62,9 +62,9 @@ class ReportBundleBuilder:
         self.report_status = report_status
         self.report_type = report_type
         self.report_file = report_file
-        self.guessed_malwares = guessed_malwares
         self.related_indicators = related_indicators
         self.report_guess_relations = report_guess_relations
+        self.malwares_from_field = malwares_from_field if malwares_from_field else []
 
         # Use report dates for start time and stop time.
         start_time = timestamp_to_datetime(self.report["created_date"])
@@ -80,19 +80,21 @@ class ReportBundleBuilder:
     def _create_malwares(self) -> List[Malware]:
         malwares = []
 
-        for name, malware_id in self.guessed_malwares.items():
-            logger.info("Creating guessed malware '%s' (%s)...", name, malware_id)
-
-            malware = self._create_malware(malware_id, name)
-            malwares.append(malware)
+        if self.malwares_from_field:
+            for malware_item in self.malwares_from_field:
+                family_name = malware_item.get("family_name")
+                if family_name:
+                    logger.info("Creating malware from field '%s'...", family_name)
+                    malware = self._create_malware(family_name, is_family=True)
+                    malwares.append(malware)
 
         return malwares
 
-    def _create_malware(self, malware_id: str, name: str) -> Malware:
+    def _create_malware(self, name: str, is_family: bool = False) -> Malware:
         return create_malware(
-            name,
-            malware_id=malware_id,
+            name=name,
             created_by=self.author,
+            is_family=is_family,
             confidence=self.confidence_level,
             object_markings=self.object_markings,
         )
