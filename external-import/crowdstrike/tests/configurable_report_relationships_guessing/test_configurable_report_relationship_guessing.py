@@ -210,7 +210,6 @@ def _when_system_imports_report_from_crowdstrike_api(
         report_status=0,
         report_type="threat-report",
         confidence_level=80,
-        guessed_malwares={},
         related_indicators=related_indicators,
         report_guess_relations=config.crowdstrike.report_guess_relations,
     )
