@@ -22,7 +22,7 @@ from typing import (
 
 import stix2
 from lxml.html import fromstring  # type: ignore
-from pycti import Identity, Indicator, IntrusionSet, Location, Malware
+from pycti import AttackPattern, Identity, Indicator, IntrusionSet, Location, Malware
 from pycti import Report as PyCTIReport
 from pycti import StixCoreRelationship, Vulnerability
 from pycti.utils.constants import LocationTypes  # type: ignore
@@ -242,6 +242,21 @@ def timestamp_to_datetime(timestamp: int) -> datetime:
     return datetime.fromtimestamp(timestamp, tz=timezone.utc)
 
 
+def flexible_timestamp_to_datetime(timestamp) -> datetime:
+    """Convert timestamp (string or int) to datetime (UTC).
+
+    Args:
+        timestamp: Either a Unix timestamp (int) or ISO format datetime string
+
+    Returns:
+        datetime object in UTC timezone
+    """
+    if isinstance(timestamp, str):
+        return datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+    else:
+        return datetime.fromtimestamp(timestamp, tz=timezone.utc)
+
+
 def datetime_utc_now() -> datetime:
     """Get current UTC datetime."""
     return datetime.now(timezone.utc)
@@ -354,6 +369,12 @@ def create_malware(
     kill_chain_phases: Optional[List[stix2.KillChainPhase]] = None,
     confidence: Optional[int] = None,
     object_markings: Optional[List[stix2.MarkingDefinition]] = None,
+    description: Optional[str] = None,
+    capabilities: Optional[List[str]] = None,
+    created: Optional[datetime] = None,
+    modified: Optional[datetime] = None,
+    external_references: Optional[List[stix2.ExternalReference]] = None,
+    malware_types: Optional[List[str]] = None,
 ) -> stix2.Malware:
     """Create a malware."""
     if malware_id is None:
@@ -368,6 +389,12 @@ def create_malware(
         kill_chain_phases=kill_chain_phases,
         confidence=confidence,
         object_marking_refs=object_markings,
+        description=description,
+        capabilities=capabilities,
+        created=created,
+        modified=modified,
+        external_references=external_references,
+        malware_types=malware_types,
     )
 
 
@@ -376,6 +403,33 @@ def create_kill_chain_phase(
 ) -> stix2.KillChainPhase:
     """Create a kill chain phase."""
     return stix2.KillChainPhase(kill_chain_name=kill_chain_name, phase_name=phase_name)
+
+
+def create_attack_pattern(
+    name: str,
+    mitre_id: str,
+    created_by: Optional[stix2.Identity] = None,
+    description: Optional[str] = None,
+    kill_chain_phases: Optional[List[stix2.KillChainPhase]] = None,
+    confidence: Optional[int] = None,
+    external_references: Optional[List[stix2.ExternalReference]] = None,
+    object_markings: Optional[List[stix2.MarkingDefinition]] = None,
+) -> stix2.AttackPattern:
+    """Create an attack pattern."""
+    attack_pattern_id = AttackPattern.generate_id(name, mitre_id)
+    custom_properties = {"x_mitre_id": mitre_id}
+
+    return stix2.AttackPattern(
+        id=attack_pattern_id,
+        name=name,
+        created_by_ref=created_by,
+        description=description,
+        kill_chain_phases=kill_chain_phases,
+        confidence=confidence,
+        external_references=external_references,
+        object_marking_refs=object_markings,
+        custom_properties=custom_properties,
+    )
 
 
 def create_intrusion_set(
@@ -480,7 +534,7 @@ def create_sector(name: str, created_by: stix2.Identity) -> stix2.Identity:
     return create_identity(
         name,
         created_by=created_by,
-        identity_class="class",
+        identity_class="sector",
     )
 
 
@@ -740,7 +794,7 @@ def create_object_refs(
         _RelationshipObject,
         List[_RelationshipObject],
         List[_DomainObject],
-    ]
+    ],
 ) -> List[Union[_DomainObject, _RelationshipObject]]:
     """Create object references."""
     object_refs = []
@@ -756,7 +810,7 @@ def create_tag(entity, source_name: str, color: str) -> Mapping[str, str]:
     """Create a tag."""
     value = entity["value"]
     if value is None:
-        value = f'NO_VALUE_{entity["id"]}'
+        value = f"NO_VALUE_{entity['id']}"
 
     return {"tag_type": source_name, "value": value, "color": color}
 
