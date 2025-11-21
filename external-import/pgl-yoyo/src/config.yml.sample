@@ -10,8 +10,6 @@ opencti:
   url: "http://opencti:8080"
   token: "__OPENCTI_API_KEY__"
 
-connector_type: EXTERNAL_IMPORT
-
 pgl:
   bundle_mode: true          # Build one STIX bundle per run (recommended)
   report_per_run: true       # Create a Report linking all objects in this run

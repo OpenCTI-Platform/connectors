@@ -20,7 +20,7 @@ taxii2:
   use_apikey: false
   apikey_key: ChangeMe
   apikey_value: ChangeMe
-  v2.1: true
+  v21: true
   collections: '*.*'
   initial_history: 24
   verify_ssl: true
