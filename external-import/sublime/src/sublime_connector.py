@@ -436,7 +436,8 @@ class SublimeConnector:
 
         response = self.session.get(full_url, timeout=30)
 
-        self.helper.log_debug("DEBUG: Response body: {}".format(response.text))
+        # Enable if you need in depth troubleshooting
+        # self.helper.log_debug("DEBUG: Response body: {}".format(response.text))
 
         if not response.ok:
             self.helper.log_warning(
@@ -1199,6 +1200,10 @@ class SublimeConnector:
             stix2.Indicator: STIX Indicator object, or None if type not supported
         """
         from pycti.utils.opencti_stix2_utils import OpenCTIStix2Utils
+
+        # Argument can be made to make Indicators out of files. For now, they will remain as simple observables.
+        if observable._type == "file":
+            return None
 
         # Use pycti utility to create STIX pattern
         pattern = OpenCTIStix2Utils.create_stix_pattern(
