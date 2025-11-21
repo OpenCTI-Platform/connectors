@@ -695,7 +695,7 @@ class LivehuntBuilder:
                                                         datetime.datetime.utcnow()
                                                     ),
                                                     custom_properties={
-                                                        "x_opencti_main_observable_type": host_observable.type,
+                                                        "x_opencti_main_observable_type": self._get_obs_type(host_observable.type),
                                                     },
                                                     allow_custom=True,
                                                     object_marking_refs=[self.tlp],
@@ -761,7 +761,7 @@ class LivehuntBuilder:
                                                         datetime.datetime.utcnow()
                                                     ),
                                                     custom_properties={
-                                                        "x_opencti_main_observable_type": "URL",
+                                                        "x_opencti_main_observable_type": "Url",
                                                     },
                                                     allow_custom=True,
                                                     object_marking_refs=[self.tlp],
@@ -872,3 +872,13 @@ class LivehuntBuilder:
             return ip.version
         except ValueError:
             return None
+
+    @staticmethod
+    def _get_obs_type(type:str) -> str:
+        mapping = {
+            "ipv4-addr": "IPv4-Addr",
+            "ipv6-addr": "IPv6-Addr",
+            "domain-name": "Domain-Name",
+            "url": "Url",
+        }
+        return mapping.get(type, "Unknown")
