@@ -1,12 +1,12 @@
 version: '3'
 services:
   connector-template:
-    image: opencti/connector-template:rolling
+    image: opencti/connector-template:rolling # 'template' being the name of connector's directory
     environment:
-      # Connector's generic execution parameters
+      # Generic parameters (connection with OpenCTI)
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=CHANGEME
-      # Connector's definition parameters REQUIRED
+      # Common parameters for connectors of type STREAM
       - CONNECTOR_ID=CHANGEME
       - CONNECTOR_NAME=CHANGEME
       - CONNECTOR_SCOPE=CHANGEME
@@ -14,10 +14,9 @@ services:
       - CONNECTOR_LIVE_STREAM_ID=live # ID of the live stream created in the OpenCTI UI
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
-
-      # Connector's custom execution parameters
-      - CONNECTOR_TEMPLATE_API_BASE_URL=CHANGEME
-      - CONNECTOR_TEMPLATE_API_KEY=CHANGEME
+      # Custom parameters for connector-template
+      - TEMPLATE_API_BASE_URL=CHANGEME
+      - TEMPLATE_API_KEY=CHANGEME
 
       # Add proxy parameters below if needed
       # - HTTP_PROXY=CHANGEME

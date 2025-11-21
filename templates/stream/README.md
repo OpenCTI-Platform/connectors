@@ -1,4 +1,4 @@
-# OpenCTI Stream Connector Template
+# OpenCTI Stream Template Connector
 
 <!--
 General description of the connector
@@ -11,21 +11,21 @@ General description of the connector
 
 Table of Contents
 
-- [OpenCTI Stream Connector Template](#opencti-stream-connector-template)
-    - [Introduction](#introduction)
-    - [Installation](#installation)
-        - [Requirements](#requirements)
-    - [Configuration variables](#configuration-variables)
-        - [OpenCTI environment variables](#opencti-environment-variables)
-        - [Base connector environment variables](#base-connector-environment-variables)
-        - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
-    - [Deployment](#deployment)
-        - [Docker Deployment](#docker-deployment)
-        - [Manual Deployment](#manual-deployment)
-    - [Usage](#usage)
-    - [Behavior](#behavior)
-    - [Debugging](#debugging)
-    - [Additional information](#additional-information)
+- [OpenCTI Stream Template Connector](#opencti-stream-connector-template)
+  - [Introduction](#introduction)
+  - [Installation](#installation)
+    - [Requirements](#requirements)
+  - [Configuration variables](#configuration-variables)
+    - [OpenCTI environment variables](#opencti-environment-variables)
+    - [Base connector environment variables](#base-connector-environment-variables)
+    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
+  - [Deployment](#deployment)
+    - [Docker Deployment](#docker-deployment)
+    - [Manual Deployment](#manual-deployment)
+  - [Usage](#usage)
+  - [Behavior](#behavior)
+  - [Debugging](#debugging)
+  - [Additional information](#additional-information)
 
 ## Introduction
 
@@ -45,7 +45,7 @@ in `config.yml` (for manual deployment).
 Below are the parameters you'll need to set for OpenCTI:
 
 | Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
+| ------------- | ---------- | --------------------------- | --------- | ---------------------------------------------------- |
 | OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
 | OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
 
@@ -54,7 +54,7 @@ Below are the parameters you'll need to set for OpenCTI:
 Below are the parameters you'll need to set for running the connector properly:
 
 | Parameter                             | config.yml                  | Docker environment variable             | Default         | Mandatory | Description                                                                                                                                            |
-|---------------------------------------|-----------------------------|-----------------------------------------|-----------------|-----------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ------------------------------------- | --------------------------- | --------------------------------------- | --------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Connector ID                          | id                          | `CONNECTOR_ID`                          | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                                                                              |
 | Connector Type                        | type                        | `CONNECTOR_TYPE`                        | EXTERNAL_IMPORT | Yes       | Should always be set to `STREAM` for this connector.                                                                                                   |
 | Connector Name                        | name                        | `CONNECTOR_NAME`                        |                 | Yes       | Name of the connector.                                                                                                                                 |
@@ -69,7 +69,7 @@ Below are the parameters you'll need to set for running the connector properly:
 Below are the parameters you'll need to set for the connector:
 
 | Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description |
-|--------------|--------------|-----------------------------|---------|-----------|-------------|
+| ------------ | ------------ | --------------------------- | ------- | --------- | ----------- |
 | API base URL | api_base_url |                             |         | Yes       |             |
 | API key      | api_key      |                             |         | Yes       |             |
 
