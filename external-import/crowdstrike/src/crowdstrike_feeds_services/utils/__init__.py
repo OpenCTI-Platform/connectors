@@ -347,7 +347,6 @@ def create_vulnerability(
 
 def create_malware(
     name: str,
-    malware_id: Optional[str] = None,
     created_by: Optional[stix2.Identity] = None,
     is_family: bool = False,
     aliases: Optional[List[str]] = None,
@@ -356,8 +355,7 @@ def create_malware(
     object_markings: Optional[List[stix2.MarkingDefinition]] = None,
 ) -> stix2.Malware:
     """Create a malware."""
-    if malware_id is None:
-        malware_id = Malware.generate_id(name)
+    malware_id = Malware.generate_id(name)
 
     return stix2.Malware(
         id=malware_id,
@@ -740,7 +738,7 @@ def create_object_refs(
         _RelationshipObject,
         List[_RelationshipObject],
         List[_DomainObject],
-    ]
+    ],
 ) -> List[Union[_DomainObject, _RelationshipObject]]:
     """Create object references."""
     object_refs = []
@@ -756,7 +754,7 @@ def create_tag(entity, source_name: str, color: str) -> Mapping[str, str]:
     """Create a tag."""
     value = entity["value"]
     if value is None:
-        value = f'NO_VALUE_{entity["id"]}'
+        value = f"NO_VALUE_{entity['id']}"
 
     return {"tag_type": source_name, "value": value, "color": color}
 
@@ -920,7 +918,6 @@ def create_regions_and_countries_from_entities(
 def create_file_from_download(
     download, report_name: str, no_file_trigger_import: bool
 ) -> Mapping[str, Union[str, bool]]:
-
     converted_report_pdf = BytesIO(download)
 
     filename = report_name.lower().replace(" ", "-") + ".pdf"
