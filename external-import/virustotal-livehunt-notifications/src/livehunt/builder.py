@@ -589,7 +589,6 @@ class LivehuntBuilder:
                                         if host is not None:
                                             if self._ip_version(host) == 4:
                                                 host_observable = stix2.IPv4(
-                                                    id=self._generate_observable_id(host, "ipv4-addr"),
                                                     value=host,
                                                     description=f"Extracted from malware config of family {family.get('family', 'unknown')}",
                                                     object_marking_refs=[self.tlp],
@@ -601,7 +600,6 @@ class LivehuntBuilder:
                                                 )
                                             elif self._ip_version(host) == 6:
                                                 host_observable = stix2.IPv6(
-                                                    id=self._generate_observable_id(host, "ipv6-addr"),
                                                     value=host,
                                                     description=f"Extracted from malware config of family {family.get('family', 'unknown')}",
                                                     object_marking_refs=[self.tlp],
@@ -613,7 +611,6 @@ class LivehuntBuilder:
                                                 )
                                             else:
                                                 host_observable = stix2.DomainName(
-                                                    id=self._generate_observable_id(host, "domain-name"),
                                                     value=host,
                                                     description=f"Extracted from malware config of family {family.get('family', 'unknown')}",
                                                     object_marking_refs=[self.tlp],
@@ -644,7 +641,6 @@ class LivehuntBuilder:
                                                 self.bundle.append(relationship)
                                         if url is not None:
                                             url_observable = stix2.URL(
-                                                id=self._generate_observable_id(url, "url"),
                                                 value=url,
                                                 description=f"Extracted from malware config of family {family.get('family', 'unknown')}",
                                                 object_marking_refs=[self.tlp],
@@ -722,13 +718,6 @@ class LivehuntBuilder:
             ) from e
         return vt_score
 
-    @staticmethod
-    def _generate_observable_id(value, obs_type):
-        data = {"value": value}
-        data = canonicalize(data, utf8=False)
-        id = str(uuid.uuid5(uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7"), data))
-        return obs_type + "--" + id
-    
     @staticmethod
     def _get_tlp(tlp_string):
         result = ""
