@@ -595,36 +595,36 @@ class LivehuntBuilder:
                                             if self._ip_version(host) == 4:
                                                 host_observable = stix2.IPv4Address(
                                                     value=host,
-                                                    description=f"Extracted from malware config of family {family.get('family', 'unknown')}",
                                                     object_marking_refs=[self.tlp],
                                                     custom_properties={
                                                         "created_by_ref": self.author[
                                                             "standard_id"
                                                         ],
+                                                        "x_opencti_description": f"Extracted from malware config of family {family.get('family', 'unknown')}",
                                                     },
                                                 )
                                                 self.helper.connector_logger.debug(f"Created IPv4 observable: {host_observable}")
                                             elif self._ip_version(host) == 6:
                                                 host_observable = stix2.IPv6Address(
                                                     value=host,
-                                                    description=f"Extracted from malware config of family {family.get('family', 'unknown')}",
                                                     object_marking_refs=[self.tlp],
                                                     custom_properties={
                                                         "created_by_ref": self.author[
                                                             "standard_id"
                                                         ],
+                                                        "x_opencti_description": f"Extracted from malware config of family {family.get('family', 'unknown')}",
                                                     },
                                                 )
                                                 self.helper.connector_logger.debug(f"Created IPv6 observable: {host_observable}")
                                             else:
                                                 host_observable = stix2.DomainName(
                                                     value=host,
-                                                    description=f"Extracted from malware config of family {family.get('family', 'unknown')}",
                                                     object_marking_refs=[self.tlp],
                                                     custom_properties={
                                                         "created_by_ref": self.author[
                                                             "standard_id"
                                                         ],
+                                                        "x_opencti_description": f"Extracted from malware config of family {family.get('family', 'unknown')}",
                                                     },
                                                 )
                                                 self.helper.connector_logger.debug(f"Created Domain Name observable: {host_observable}")
