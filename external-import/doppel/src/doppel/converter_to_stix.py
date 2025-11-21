@@ -720,6 +720,19 @@ class ConverterToStix:
                     )
                     self._process_reversion(alert, domain_observable_id, ip_observable_id, stix_objects)
                 
+                 # Handle case where previous_state is null but we have an active indicator in reverted state
+                elif previous_queue_state is None and is_reverted and not is_takedown_now:
+                    # Check if there's an active indicator for this alert (domain_name and ip_address already extracted above)
+                    existing_indicators = self._find_indicators_by_alert_id(alert_id, domain_name=domain_name, ip_address=ip_address)
+                    active_indicators = [ind for ind in existing_indicators if not ind.get("revoked", False)]
+                    
+                    if active_indicators:
+                        self.helper.log_info(
+                            "[DoppelConverter] Transition detected: REVERSION (no previous state, but active indicator found)",
+                            {"alert_id": alert_id, "from": previous_queue_state, "to": current_queue_state, "active_indicators_count": len(active_indicators)}
+                        )
+                        self._process_reversion(alert, domain_observable_id, ip_observable_id, stix_objects)
+                
                 # Case Creation
                 if domain_observable_id or ip_observable_id:
                     case_refs = []
