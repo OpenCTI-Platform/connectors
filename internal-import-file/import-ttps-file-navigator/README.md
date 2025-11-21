@@ -143,4 +143,4 @@ e., `self.helper.connector_logger.error("An error message")`.
 
 ## Additional information
 
-The connector uses the “plyara” library to parse and extract YARA rules.
+The connector uses the "plyara" library to parse and extract YARA rules.
