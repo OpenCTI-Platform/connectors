@@ -689,6 +689,7 @@ class SublimeConnector:
         observables.extend(self._extract_urls(MDM))
         observables.extend(self._extract_domains(MDM))
         observables.extend(self._extract_ips(MDM))
+        observables.extend(self._extract_attachments(MDM))
 
         # Build email message (STIX2: is_multipart requires body)
         body_text = self._lookup_MDM_value(MDM, "body.plain.raw")
@@ -1397,6 +1398,47 @@ class SublimeConnector:
                 ip_class = stix2.IPv6Address if ":" in ip else stix2.IPv4Address
                 ips.append(ip_class(value=ip))
         return ips
+
+    def _extract_attachments(self, MDM):
+        """
+        Extract file attachments with complete metadata.
+
+        Args:
+            MDM (dict): Message data model from Sublime API
+
+        Returns:
+            list: List of stix2.File objects
+        """
+        files = []
+        attachments = self._lookup_MDM_value(MDM, "attachments") or []
+
+        for attachment in attachments:
+            filename = attachment.get("file_name")
+            if not filename:
+                continue
+
+            sha256 = attachment.get("sha256")
+            if not sha256:
+                continue
+
+            hashes = {"SHA-256": sha256}
+
+            file_data = {
+                "name": filename,
+                "hashes": hashes,
+            }
+
+            if attachment.get("size"):
+                file_data["size"] = attachment.get("size")
+
+            # Only use MIME type if provided and not generic
+            mime_type = attachment.get("content_type")
+            if mime_type and mime_type != "application/octet-stream":
+                file_data["mime_type"] = mime_type
+
+            files.append(stix2.File(**file_data))
+
+        return files
 
     def _process_message_batch(self, messages, work_id):
         """
