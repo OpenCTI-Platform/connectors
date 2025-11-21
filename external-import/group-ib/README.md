@@ -396,7 +396,7 @@ The User must have appropriate rights.
 
 ```
 
-“%<Path_to_python.exe>%” “%<Path_to_python_script>%\main.py”  
+"%<Path_to_python.exe>%" "%<Path_to_python_script>%\main.py"  
 pause
 ```
 
