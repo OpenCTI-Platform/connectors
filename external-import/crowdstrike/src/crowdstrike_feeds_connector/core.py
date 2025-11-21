@@ -114,6 +114,7 @@ class CrowdStrike:
             )
 
         report_guess_malware = bool(self.config.report_guess_malware)
+        report_guess_relations = bool(self.config.report_guess_relations)
 
         indicator_start_timestamp = self.config.indicator_start_timestamp
         if is_timestamp_in_future(indicator_start_timestamp):
@@ -234,6 +235,7 @@ class CrowdStrike:
                 report_status,
                 report_type,
                 report_guess_malware,
+                report_guess_relations,
                 indicator_config,
                 no_file_trigger_import,
             )
@@ -288,6 +290,9 @@ class CrowdStrike:
             )
 
             importers.append(snort_master_importer)
+
+        # MVP 5
+        # MVP 6
 
         self.importers = importers
 

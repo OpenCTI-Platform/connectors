@@ -1,0 +1,193 @@
+{
+  "id": 9876543,
+  "name": "FAKE-REPORT-2024-001: Sample Security Report for Testing",
+  "slug": "fake-report-2024-001",
+  "type": {
+    "id": 101,
+    "slug": "test-report-type",
+    "name": "Test Report Type"
+  },
+  "sub_type": {
+    "id": 2001,
+    "slug": "weekly",
+    "name": "Weekly"
+  },
+  "url": "https://test.example.com/intelligence/reports/fake-report-2024-001",
+  "short_description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. This is a test report for validating the connector functionality. The report contains multiple entities including threat actors, malware, and indicators for testing relationship creation...",
+  "description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. This comprehensive test report covers various threat activities including:\n\n1. Test Threat Actor Activities\nLorem ipsum dolor sit amet, the TEST-ACTOR-01 group has been observed conducting campaigns against financial institutions.\n\n2. Malware Analysis\nUt enim ad minim veniam, the TESTWARE malware family has evolved with new capabilities.\n\n3. Infrastructure Observations\nQuis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.\n\nAnalytic Note: This is a fabricated report for testing purposes. All entities and relationships are fictional.",
+  "rich_text_description": "<div><h1>Test Report Content</h1><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p><h2>Section 1: Threat Actor Activity</h2><p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore.</p><h2>Section 2: Malware Analysis</h2><p>Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia.</p><h2>Section 3: Indicators</h2><p>Test indicators include: 192.0.2.1, 198.51.100.0/24, example[.]test</p></div>",
+  "created_date": 1704067200,
+  "last_modified_date": 1704153600,
+  "image": {
+    "url": "https://test.example.com/assets/test_report_image.png"
+  },
+  "thumbnail": {
+    "url": "https://test.example.com/assets/test_report_thumb.png"
+  },
+  "attachments": [
+    {
+      "id": 0,
+      "url": "https://test.example.com/assets/fake-report-2024-001.pdf"
+    }
+  ],
+  "actors": [
+    {
+      "id": 12345,
+      "name": "TEST BEAR",
+      "slug": "test-bear",
+      "animal_classifier": "BEAR",
+      "url": "https://test.example.com/intelligence/actors/test-bear/",
+      "thumbnail": {
+        "url": "https://test.example.com/assets/test_bear_thumb.jpg"
+      }
+    }
+  ],
+  "malware": [
+    {
+      "family_name": "TestRansomware",
+      "slug": "testransomware"
+    }
+  ],
+  "tags": [
+    {
+      "id": 2000001,
+      "slug": "test-tag-1",
+      "value": "TestTag1"
+    },
+    {
+      "id": 2000002,
+      "slug": "test-activity",
+      "value": "Test Activity"
+    },
+    {
+      "id": 2000003,
+      "slug": "sample-data",
+      "value": "Sample Data"
+    },
+    {
+      "id": 2000004,
+      "slug": "mock-campaign",
+      "value": "Mock Campaign"
+    },
+    {
+      "id": 2000005,
+      "slug": "ransomware",
+      "value": "Ransomware"
+    },
+    {
+      "id": 2000006,
+      "slug": "test-reconnaissance",
+      "value": "Test Reconnaissance"
+    },
+    {
+      "id": 2000007,
+      "slug": "data-exfiltration",
+      "value": "Data Exfiltration"
+    },
+    {
+      "id": 2000008,
+      "slug": "test-tradecraft",
+      "value": "Test Tradecraft"
+    },
+    {
+      "id": 2000009,
+      "slug": "mock-legal-issues",
+      "value": "Mock Legal Issues"
+    },
+    {
+      "id": 2000010,
+      "slug": "test-fraud",
+      "value": "Test Fraud"
+    },
+    {
+      "id": 2000011,
+      "slug": "fake-extortion",
+      "value": "Fake Extortion"
+    },
+    {
+      "id": 2000012,
+      "slug": "artificial-test",
+      "value": "Artificial Test"
+    }
+  ],
+  "target_industries": [
+    {
+      "id": 3001,
+      "slug": "financial",
+      "value": "Financial"
+    },
+    {
+      "id": 3002,
+      "slug": "technology",
+      "value": "Technology"
+    },
+    {
+      "id": 3003,
+      "slug": "healthcare",
+      "value": "Healthcare"
+    }
+  ],
+  "target_countries": [
+    {
+      "id": 4001,
+      "slug": "xx",
+      "value": "Test Country"
+    },
+    {
+      "id": 4002,
+      "slug": "test-region",
+      "value": "Test Region"
+    },
+    {
+      "id": 4003,
+      "slug": "yy",
+      "value": "Sample Nation"
+    },
+    {
+      "id": 4004,
+      "slug": "zz",
+      "value": "Mock State"
+    },
+    {
+      "id": 4005,
+      "slug": "aa",
+      "value": "Fake Country"
+    },
+    {
+      "id": 4006,
+      "slug": "bb",
+      "value": "Example Land"
+    },
+    {
+      "id": 4007,
+      "slug": "test-asia",
+      "value": "Test Asia"
+    },
+    {
+      "id": 4008,
+      "slug": "mock-americas",
+      "value": "Mock Americas"
+    },
+    {
+      "id": 4009,
+      "slug": "fake-europe",
+      "value": "Fake Europe"
+    },
+    {
+      "id": 4010,
+      "slug": "sample-africa",
+      "value": "Sample Africa"
+    },
+    {
+      "id": 4011,
+      "slug": "test-oceania",
+      "value": "Test Oceania"
+    },
+    {
+      "id": 4012,
+      "slug": "mock-region",
+      "value": "Mock Region"
+    }
+  ],
+  "motivations": []
+}

@@ -42,6 +42,7 @@ class ReportImporter(BaseImporter):
         report_status: int,
         report_type: str,
         guess_malware: bool,
+        report_guess_relations: bool,
         indicator_config: dict,
         no_file_trigger_import: bool,
     ) -> None:
@@ -55,6 +56,7 @@ class ReportImporter(BaseImporter):
         self.report_status = report_status
         self.report_type = report_type
         self.guess_malware = guess_malware
+        self.report_guess_relations = report_guess_relations
         self.indicators_api_cs = IndicatorsAPI(helper)
         self.indicator_config = indicator_config
         self.no_file_trigger_import = no_file_trigger_import
@@ -320,9 +322,11 @@ class ReportImporter(BaseImporter):
             guessed_malwares,
             report_file,
             related_indicators_with_related_entities,
+            self.report_guess_relations,
         )
         return bundle_builder.build()
 
+    # MVP2
     def _guess_malwares_from_tags(self, tags: List) -> Mapping[str, str]:
         if not self.guess_malware:
             return {}
