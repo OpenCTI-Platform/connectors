@@ -591,6 +591,7 @@ class LivehuntBuilder:
                                         host = connection.get("host", None)
                                         url = connection.get("url", None)
                                         if host is not None:
+                                            self.helper.connector_logger.debug(f"Found host: {host}")
                                             if self._ip_version(host) == 4:
                                                 host_observable = stix2.IPv4(
                                                     value=host,
@@ -602,6 +603,7 @@ class LivehuntBuilder:
                                                         ],
                                                     },
                                                 )
+                                                self.helper.connector_logger.debug(f"Created IPv4 observable: {host_observable}")
                                             elif self._ip_version(host) == 6:
                                                 host_observable = stix2.IPv6(
                                                     value=host,
@@ -613,6 +615,7 @@ class LivehuntBuilder:
                                                         ],
                                                     },
                                                 )
+                                                self.helper.connector_logger.debug(f"Created IPv6 observable: {host_observable}")
                                             else:
                                                 host_observable = stix2.DomainName(
                                                     value=host,
@@ -624,6 +627,7 @@ class LivehuntBuilder:
                                                         ],
                                                     },
                                                 )
+                                                self.helper.connector_logger.debug(f"Created Domain Name observable: {host_observable}")
                                             note_obj_refs.append(host_observable.id)
                                             self.bundle.append(host_observable)
                                             if file_id is not None:
@@ -642,6 +646,7 @@ class LivehuntBuilder:
                                                     allow_custom=True,
                                                     object_marking_refs=[self.tlp],
                                                 )
+                                                self.helper.connector_logger.debug(f"Created relationship between file {file_id} and host observable {host_observable['id']}")
                                                 self.bundle.append(relationship)
                                         if url is not None:
                                             url_observable = stix2.URL(
