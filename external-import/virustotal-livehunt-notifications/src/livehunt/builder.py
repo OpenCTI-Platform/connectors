@@ -651,12 +651,12 @@ class LivehuntBuilder:
                                         if url is not None:
                                             url_observable = stix2.URL(
                                                 value=url,
-                                                description=f"Extracted from malware config of family {family.get('family', 'unknown')}",
                                                 object_marking_refs=[self.tlp],
                                                 custom_properties={
                                                     "created_by_ref": self.author[
                                                         "standard_id"
                                                     ],
+                                                    "x_opencti_description": f"Extracted from malware config of family {family.get('family', 'unknown')}",
                                                 },
                                             )
                                             note_obj_refs.append(url_observable.id)
