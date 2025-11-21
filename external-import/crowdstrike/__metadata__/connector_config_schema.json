@@ -159,6 +159,11 @@
       "description": "Whether to use report tags to guess related malware.",
       "type": "boolean"
     },
+    "CROWDSTRIKE_REPORT_GUESS_RELATIONS": {
+      "default": false,
+      "description": "Whether to automatically guess and create relationships in reports.",
+      "type": "boolean"
+    },
     "CROWDSTRIKE_INDICATOR_START_TIMESTAMP": {
       "description": "Unix timestamp from which to start importing indicators. Default is 30 days ago. BEWARE: 0 means ALL indicators!",
       "type": "integer"
