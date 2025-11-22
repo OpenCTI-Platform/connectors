@@ -403,15 +403,7 @@ class SublimeConnector:
             )
 
         data = response.json()
-        group_ids = data.get("all_group_canonical_ids")
-
-        # Handle case where API returns None or doesn't include the field
-        if not group_ids:
-            self.helper.log_warning(
-                "[!] API response missing all_group_canonical_ids field"
-            )
-            self.helper.log_warning("[*] Response data: {}".format(data))
-            group_ids = []
+        group_ids = data.get("all_group_canonical_ids") or []
 
         self.helper.log_info("[*] Found {} flagged group IDs".format(len(group_ids)))
         return group_ids
@@ -975,13 +967,9 @@ class SublimeConnector:
             email_plural = "Email" if email_count == 1 else "Emails"
             recipient_plural = "Recipient" if recipient_count == 1 else "Recipients"
 
-            # Include group ID to ensure each message group creates separate incident
-            group_id_short = message_group.get("id", "unknown")[:8]
-
             if email_count == 0:
-                incident_name = "{} [{}] {} Sent {} to {} {}. {}".format(
+                incident_name = "{} {} Sent {} to {} {}. {}".format(
                     self.incident_name_prefix,
-                    group_id_short,
                     sender_email,
                     email_plural,
                     recipient_count,
@@ -992,9 +980,8 @@ class SublimeConnector:
                 count_display = (
                     "{}".format(email_count) if preview_count > 0 else str(email_count)
                 )
-                incident_name = "{} [{}] {} Sent {} {} to {} {}. {}".format(
+                incident_name = "{} {} Sent {} {} to {} {}. {}".format(
                     self.incident_name_prefix,
-                    group_id_short,
                     sender_email,
                     count_display,
                     email_plural,
