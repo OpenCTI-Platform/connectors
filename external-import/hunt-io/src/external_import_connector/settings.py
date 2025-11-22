@@ -25,22 +25,21 @@ class ConfigLoader(BaseConnectorSettings):
     )
     hunt_io: ConnectorHuntIoConfig = Field(
         default_factory=ConnectorHuntIoConfig,
-        validation_alias="connector_hunt_ui",
     )
 
-    @model_validator(mode="after")
+    @model_validator(mode="before")
     @classmethod
     def migrate_deprecated_connector_hunt_ui(cls, data) -> dict:
         """
         Env vars prefixed by `CONNECTOR_HUNT_UI` is deprecated.
         This is a workaround to keep the old config working while we migrate to `HUNT_IO` prefix.
         """
-        if (
-            "hunt_ui_api_key" in data.connector.model_fields_set
-            or "hunt_ui_api_base_url" in data.connector.model_fields_set
-        ):
-            warnings.warn(
-                message="Env vars prefixed by 'CONNECTOR_HUNT_UI' is deprecated. Use 'HUNT_IO' prefix instead.",
-                category=DeprecationWarning,
-            )
+        for key, value in data.get("connector", {}).items():
+            if key.startswith("hunt_ui_"):
+                data["hunt_io"][key[8:]] = value
+                warnings.warn(
+                    message="Env vars prefixed by 'CONNECTOR_HUNT_UI' is deprecated. Use 'HUNT_IO' prefix instead.",
+                    category=DeprecationWarning,
+                )
+
         return data
