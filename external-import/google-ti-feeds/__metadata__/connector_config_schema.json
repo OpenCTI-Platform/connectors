@@ -173,6 +173,11 @@
       },
       "type": "array"
     },
+    "GTI_ENABLE_MALWARE_ALIASES": {
+      "default": false,
+      "description": "Whether to enable importing malware family aliases from GTI",
+      "type": "boolean"
+    },
     "GTI_THREAT_ACTOR_IMPORT_START_DATE": {
       "default": "P1D",
       "description": "ISO 8601 duration string specifying how far back to import threat actors (e.g., P1D for 1 day, P7D for 7 days)",
@@ -198,6 +203,11 @@
         "type": "string"
       },
       "type": "array"
+    },
+    "GTI_ENABLE_THREAT_ACTOR_ALIASES": {
+      "default": false,
+      "description": "Whether to enable importing threat actor aliases from GTI",
+      "type": "boolean"
     },
     "GTI_REPORT_IMPORT_START_DATE": {
       "default": "P1D",
