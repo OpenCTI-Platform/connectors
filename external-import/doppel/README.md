@@ -104,7 +104,7 @@ docker build -t opencti/connector-doppel:latest .
       - DOPPEL_API_BASE_URL=https://api.doppel.com
       - DOPPEL_API_KEY=changeme
       - DOPPEL_USER_API_KEY=changeme
-      - DOPPEL_ORGANIZATION_CODE=changemes
+      - DOPPEL_ORGANIZATION_CODE=changeme
       - DOPPEL_ALERTS_ENDPOINT=/v1/alerts
       - DOPPEL_HISTORICAL_POLLING_DAYS=30
       - DOPPEL_MAX_RETRIES=3
