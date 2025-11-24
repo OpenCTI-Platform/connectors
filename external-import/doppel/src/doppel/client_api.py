@@ -21,7 +21,6 @@ class ConnectorClient:
         if self.config.organization_code:
             headers["x-organization-code"] = self.config.organization_code
 
-
         self.session.headers.update(headers)
 
     @retry(wait=wait_fixed(5), stop=stop_after_attempt(3))  # Default fallback values

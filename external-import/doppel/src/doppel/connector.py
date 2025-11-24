@@ -112,4 +112,3 @@ class DoppelConnector:
         )
         # self.helper.connector_logger.info("[DoppelConnector] Running once manually for debug")
         # self.process_message()
-

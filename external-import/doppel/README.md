@@ -1,7 +1,7 @@
 # OpenCTI Doppel Connector
 
 The Doppel connector integrates OpenCTI with the Doppel Threat Intelligence platform by ingesting alerts as STIX 2.1
-Indicators.
+Observables.
 
 | Status            | Date       | Comment |
 |-------------------|------------|---------|
@@ -28,8 +28,8 @@ Indicators.
 
 ## Introduction
 
-This connector fetches alerts from the Doppel API and imports them into OpenCTI as Indicators. Each alert is mapped to a
-STIX 2.1 Indicator object, enriched with metadata such as severity, entity state, platform, audit logs, etc.
+This connector fetches alerts from the Doppel API and imports them into OpenCTI as Observables. Each alert is mapped to a
+STIX 2.1 Observable object, enriched with metadata such as severity, entity state, platform, audit logs, etc.
 
 ## Installation
 
@@ -104,6 +104,7 @@ docker build -t opencti/connector-doppel:latest .
       - DOPPEL_API_BASE_URL=https://api.doppel.com
       - DOPPEL_API_KEY=changeme
       - DOPPEL_USER_API_KEY=changeme
+      - DOPPEL_ORGANIZATION_CODE=changemes
       - DOPPEL_ALERTS_ENDPOINT=/v1/alerts
       - DOPPEL_HISTORICAL_POLLING_DAYS=30
       - DOPPEL_MAX_RETRIES=3
@@ -147,7 +148,7 @@ download of data by re-running the connector.
 ## Behavior
 
 - Fetches alerts from Doppel API paginated by `last_activity_timestamp`
-- Converts each alert into a STIX 2.1 Indicator object
+- Converts each alert into a STIX 2.1 Observable object
 - Bundles and sends the STIX objects to OpenCTI
 - Includes platform, score, brand, audit logs, notes, etc. as `custom_properties`
 - On first run, fetches up to `HISTORICAL_POLLING_DAYS`; subsequent runs are delta-based
@@ -178,6 +179,6 @@ self.helper.connector_logger.debug("message")
 ## Additional information
 
 - This connector strictly follows OpenCTI's standard STIX schema.
-- Only `Indicator` objects are created (no ObservedData or Incidents).
-- Custom properties like `x_opencti_brand`, `x_mitre_platforms`, `x_opencti_source` are preserved.
+- Custom properties like `x_opencti_brand`, `x_opencti_source` are preserved.
+- When queue_state is actioned/taken_down, Observables are converted to STIX 2.1 Indicators.
 - Supports safe reprocessing with unique `indicator_id` generation to avoid duplication.
