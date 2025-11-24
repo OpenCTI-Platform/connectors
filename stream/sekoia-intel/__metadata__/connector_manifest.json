@@ -7,7 +7,7 @@
   "use_cases": [
     "Commercial Threat Intel"
   ],
-  "verified": true,
+  "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 70,
