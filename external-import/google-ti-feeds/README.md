@@ -26,6 +26,8 @@ Because the open-source data often uses **overlapping or conflicting aliases** f
  - This limitation affects the completeness of threat actor and malware entity relationships and may impact threat correlation capabilities.  
 Please be aware of this constraint when using the imported data for analysis and reporting.  
 
+> **NOTE:** The connector now provides configuration options `enable_malware_aliases` and `enable_threat_actor_aliases` (both default to `False`) that allow you to override this behavior and enable alias importing. However, **we strongly recommend keeping these disabled by default** as mentioned above. Enabling aliases is at your own discretion and responsibility.
+
 ---
 
 ## Quick start
@@ -112,6 +114,7 @@ Below are the optional parameters around the collection 'Threat Actors' you can 
 | Google Threat Intel Toggle Import Threat Actors     | `gti.import_threat_actors`           | `GTI_IMPORT_THREAT_ACTORS`           | False                      | No        | If set to `True`, the connector will import Threat Actors from Google Threat Intel.                                                                                                                           |
 | Google Threat Intel Threat Actors Import Start Date | `gti.threat_actor_import_start_date` | `GTI_THREAT_ACTOR_IMPORT_START_DATE` | P1D                        | No        | The start date for importing data from Google Threat Intel.                                                                                                                                                   |
 | Google Threat Intel Threat Actors  Origins          | `gti.threat_actor_origins`           | `GTI_THREAT_ACTOR_ORIGINS`           | google threat intelligence | No        | The origin of the Threat Actors to import from Google Threat Intel. Can be a string separated by comma for multiple values. Valid values are: `All`, `partner`, `crowdsourced`, `google threat intelligence`. |
+| Google Threat Intel Enable Threat Actor Aliases     | `gti.enable_threat_actor_aliases`    | `GTI_ENABLE_THREAT_ACTOR_ALIASES`    | False                      | No        | If set to `True`, the connector will import aliases for threat actors. |
 
 Below are the optional parameters around the collection 'Campaigns' you can set for Google Threat Intel:
 
@@ -128,6 +131,7 @@ Below are the optional parameters around the collection 'Malware Families' you c
 | Google Threat Intel Toggle Import Malware Families   | `gti.import_malware_families`          | `GTI_IMPORT_MALWARE_FAMILIES`          | `False`                    | `No`      | If set to `True`, the connector will import Malware Families from Google Threat Intel.                                                                                                                         |
 | Google Threat Intel Malware Family Import Start Date | `gti.malware_family_import_start_date` | `GTI_MALWARE_FAMILY_IMPORT_START_DATE` | `P1D`                      | `No`      | The start date for importing data from Google Threat Intel.                                                                                                                                                    | `P1D`
 | Google Threat Intel Malware Family Origins           | `gti.malware_family_origins`           | `GTI_MALWARE_FAMILY_ORIGINS`           | google threat intelligence | No        | The origin of the Malware Family to import from Google Threat Intel. Can be a string separated by comma for multiple values. Valid values are: `All`, `partner`, `crowdsourced`, `google threat intelligence`. |
+| Google Threat Intel Enable Malware Aliases           | `gti.enable_malware_aliases`           | `GTI_ENABLE_MALWARE_ALIASES`           | False                      | No        | If set to `True`, the connector will import aliases for malware families. |
 
 Below are the optional parameters around the collection 'Vulnerabilities' you can set for Google Threat Intel:
 
