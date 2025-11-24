@@ -8,11 +8,17 @@ import pytest
 
 from .factories import (
     AnalysisResponseFactory,
+    DomainResponseFactory,
+    DownloadedFilesResponseFactory,
     FileEnrichmentFactory,
     HashClassificationFactory,
+    Ipv4EnrichmentFactory,
     ReportIntelligenceResponseFactory,
+    ReportResponseFactory,
+    ResolutionResponseFactory,
     UploadDetailFactory,
     UrlEnrichmentFactory,
+    UrlsResponseFactory,
 )
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -196,3 +202,54 @@ def get_classification_v3_response():
         classification = HashClassificationFactory()
         mock_classification.return_value.text = json.dumps(asdict(classification))
         yield classification
+
+
+@pytest.fixture
+def ipv4_enrichment_message():
+    yield asdict(Ipv4EnrichmentFactory())
+
+
+@pytest.fixture
+def network_files_from_ip_aggregated_response():
+    with patch(
+        "ReversingLabs.SDK.a1000.A1000.network_files_from_ip_aggregated"
+    ) as mock_download:
+        downloaded_files = DownloadedFilesResponseFactory()
+        mock_download.return_value = asdict(downloaded_files)["downloaded_files"]
+        yield downloaded_files
+
+
+@pytest.fixture
+def network_ip_addr_report_response():
+    with patch("ReversingLabs.SDK.a1000.A1000.network_ip_addr_report") as mock_report:
+        report = ReportResponseFactory()
+        mock_report.return_value.json = lambda: asdict(report)
+        yield report
+
+
+@pytest.fixture
+def network_ip_to_domain_aggregated_response():
+    with patch(
+        "ReversingLabs.SDK.a1000.A1000.network_ip_to_domain_aggregated"
+    ) as mock_domain:
+        resolution = ResolutionResponseFactory()
+        mock_domain.return_value = asdict(resolution)["resolutions"]
+        yield resolution
+
+
+@pytest.fixture
+def network_domain_report_response():
+    with patch("ReversingLabs.SDK.a1000.A1000.network_domain_report") as mock_domain:
+        domain = DomainResponseFactory()
+        mock_domain.return_value.json = lambda: asdict(domain)
+        yield domain
+
+
+@pytest.fixture
+def network_urls_from_ip_aggregated_response():
+    with patch(
+        "ReversingLabs.SDK.a1000.A1000.network_urls_from_ip_aggregated"
+    ) as mock_domain:
+        urls = UrlsResponseFactory()
+        mock_domain.return_value = asdict(urls)["urls"]
+        yield urls

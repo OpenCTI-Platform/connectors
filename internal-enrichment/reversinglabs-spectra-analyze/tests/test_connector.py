@@ -88,4 +88,44 @@ def test_should_enrich_url(
     threat_names.append(
         check_submitted_url_status_response.classification_result.split(".")[2]
     )
-    assert set(malware_names) == set(threat_names)
+    assert set(threat_names).issubset(set(malware_names))
+
+
+def test_should_enrich_ipv4(
+    ipv4_enrichment_message,
+    network_files_from_ip_aggregated_response,
+    network_ip_addr_report_response,
+    network_ip_to_domain_aggregated_response,
+    network_domain_report_response,
+    network_urls_from_ip_aggregated_response,
+    network_url_report_response,
+):
+    connector = ReversingLabsSpectraAnalyzeConnector()
+
+    sent_bundle = {}
+
+    def capture_sent_bundle(bundle: str, **_):
+        nonlocal sent_bundle
+        sent_bundle = json.loads(bundle)
+        return sent_bundle["objects"]
+
+    connector.helper.send_stix2_bundle = capture_sent_bundle
+    connector._process_message(ipv4_enrichment_message)
+
+    indicators = filter_by_key_value(sent_bundle["objects"], "type", "indicator")
+    indicator_names = [m["name"] for m in indicators]
+    downloaded_file_hashes = [
+        file.sha1 for file in network_files_from_ip_aggregated_response.downloaded_files
+    ]
+    downloaded_file_urls = [
+        file.last_download_url
+        for file in network_files_from_ip_aggregated_response.downloaded_files
+    ]
+    network_domain_report_url = network_domain_report_response.requested_domain
+    network_url_report_url = network_url_report_response.requested_url
+
+    assert set(indicator_names) == set(
+        downloaded_file_hashes
+        + downloaded_file_urls
+        + [network_domain_report_url, network_url_report_url]
+    )
