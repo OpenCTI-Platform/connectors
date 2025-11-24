@@ -3,14 +3,15 @@ Sublime Security OpenCTI Connector
 Simplified implementation following OpenCTI connector patterns
 """
 
-import isodate
 import json
 import os
+from datetime import datetime, timedelta, timezone
+
+import isodate
 import pycti
 import requests
 import stix2
 import yaml
-from datetime import datetime, timedelta, timezone
 
 
 class SublimeConnector:
