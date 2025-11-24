@@ -12,9 +12,11 @@ import uuid
 import magic
 import plyara
 import plyara.utils
+import requests
 import stix2
 import vt
 from pycti import Incident, Indicator, Note, OpenCTIConnectorHelper, StixCoreRelationship
+from pycti.utils.constants import CustomObservableHostname
 from stix2.canonicalization.Canonicalize import canonicalize
 
 logging.getLogger("plyara").setLevel(logging.ERROR)
@@ -24,6 +26,7 @@ class LivehuntBuilder:
     """Virustotal Livehunt builder."""
 
     _SOURCE = "hunting_notification"
+    _DOMAIN_REGEX = re.compile(r"^(?=.{1,253}$)(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.[A-Za-z0-9-]{1,63})+$")
 
     def __init__(
         self,
@@ -83,7 +86,7 @@ class LivehuntBuilder:
         # Work id will only be set and instantiated if there are bundles to send.
         work_id = None
         url = "/ioc_stream"
-        filter = f"date:{start_date}+ source_type:hunting_ruleset"
+        filter = f"date:{start_date}+ source_type:hunting_ruleset limit:10" # TODO: erase limite when testing is done
         if self.tag is not None and self.tag != "":
             self.helper.connector_logger.debug(f"Setting up filter with tag {self.tag}")
             filter += f" notification_tag:{self.tag}"
@@ -371,7 +374,7 @@ class LivehuntBuilder:
             indicator = stix2.Indicator(
                 id=Indicator.generate_id(f"file:hashes.'SHA-256' = '{vtobj.sha256}'"),
                 created_by_ref=self.author["standard_id"],
-                name=file_name,
+                name=vtobj.sha256,
                 description=f"File with SHA256 {vtobj.sha256} observed in VirusTotal Livehunt Notifications.",
                 pattern=f"[file:hashes.'SHA-256' = '{vtobj.sha256}']",
                 pattern_type="stix",
@@ -669,7 +672,7 @@ class LivehuntBuilder:
                                                     },
                                                 )
                                                 self.helper.connector_logger.debug(f"Created IPv6 observable: {host_observable}")
-                                            else:
+                                            elif self._is_valid_domain_name(host):
                                                 host_observable = stix2.DomainName(
                                                     value=host,
                                                     object_marking_refs=[self.tlp],
@@ -681,13 +684,25 @@ class LivehuntBuilder:
                                                     },
                                                 )
                                                 self.helper.connector_logger.debug(f"Created Domain Name observable: {host_observable}")
+                                            else:
+                                                host_observable =CustomObservableHostname(
+                                                    value=host,
+                                                    object_marking_refs=[self.tlp],
+                                                    custom_properties={
+                                                        "created_by_ref": self.author[
+                                                            "standard_id"
+                                                        ],
+                                                        "x_opencti_description": f"Extracted from malware config of family {family.get('family', 'unknown')}",
+                                                    },
+                                                )
+                                                self.helper.connector_logger.debug(f"Created Custom Hostname observable: {host_observable}")
                                             note_obj_refs.append(host_observable.id)
                                             self.bundle.append(host_observable)
                                             if self.indicators:
                                                 indicator = stix2.Indicator(
                                                     id=Indicator.generate_id(f"{host_observable.type}:value = '{host}'"),
                                                     created_by_ref=self.author["standard_id"],
-                                                    name=f"Malware config extracted observable {host}",
+                                                    name=host,
                                                     description=f"Observable {host} extracted from malware config of family {family.get('family', 'unknown')}",
                                                     pattern=f"[{host_observable.type}:value = '{host}']",
                                                     pattern_type="stix",
@@ -753,7 +768,7 @@ class LivehuntBuilder:
                                                 indicator = stix2.Indicator(
                                                     id=Indicator.generate_id(f"url:value = '{url}'"),
                                                     created_by_ref=self.author["standard_id"],
-                                                    name=f"Malware config extracted observable {url}",
+                                                    name=url,
                                                     description=f"Observable {url} extracted from malware config of family {family.get('family', 'unknown')}",
                                                     pattern=f"[url:value = '{url}']",
                                                     pattern_type="stix",
@@ -813,6 +828,26 @@ class LivehuntBuilder:
             )
             self.bundle.append(note)
         return None
+
+    def _is_valid_domain_name(self, value: str) -> bool:
+        if LivehuntBuilder._DOMAIN_REGEX.match(value):
+            url = f"https://dns.google/resolve?name={value}&type=A"
+            try:
+                response = requests.get(url, timeout=5)
+                response.raise_for_status()
+                data = response.json()
+                if data.get("Status") == 0:
+                    return True
+                else:
+                    return False
+            except requests.RequestException as e:
+                self.helper.connector_logger.error(f"Error validating domain name {value}: {e}")
+                return False
+            except ValueError as e:
+                self.helper.connector_logger.error(f"Error parsing JSON response for domain name {value}: {e}")
+                return False
+        else:
+            return False
 
     @staticmethod
     def _normalize_label(label: str) -> str:
@@ -882,3 +917,4 @@ class LivehuntBuilder:
             "url": "Url",
         }
         return mapping.get(type, "Unknown")
+
