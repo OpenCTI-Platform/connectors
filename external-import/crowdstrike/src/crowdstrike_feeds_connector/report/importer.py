@@ -245,9 +245,22 @@ class ReportImporter(BaseImporter):
                             "indicator_unwanted_labels"
                         ],
                     )
-                    bundle_builder = IndicatorBundleBuilder(
-                        self.helper, bundle_builder_config
-                    )
+                    try:
+                        bundle_builder = IndicatorBundleBuilder(
+                            self.helper, bundle_builder_config
+                        )
+                    except TypeError as err:
+                        self.helper.connector_logger.warning(
+                            "Skipping unsupported indicator type for report.",
+                            {
+                                "report_name": report_name,
+                                "indicator_id": indicator.get("id"),
+                                "indicator_type": indicator.get("type"),
+                                "indicator_value": indicator.get("indicator"),
+                                "error": str(err),
+                            },
+                        )
+                        continue
                     indicator_bundle_built = bundle_builder.build()
                     if indicator_bundle_built:
                         indicator_with_related_entities = indicator_bundle_built[
