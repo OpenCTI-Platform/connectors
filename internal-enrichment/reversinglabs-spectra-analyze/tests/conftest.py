@@ -6,7 +6,14 @@ from unittest.mock import patch
 
 import pytest
 
-from .factories import FileEnrichmentFactory, ReportIntelligenceResponseFactory
+from .factories import (
+    AnalysisResponseFactory,
+    FileEnrichmentFactory,
+    HashClassificationFactory,
+    ReportIntelligenceResponseFactory,
+    UploadDetailFactory,
+    UrlEnrichmentFactory,
+)
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -136,3 +143,56 @@ def cyber_observable_add_label_mock():
 def label_create_mock():
     with patch("pycti.Label.create", return_value={"id": "label_id"}):
         yield
+
+
+@pytest.fixture
+def url_enrichment_message():
+    yield asdict(UrlEnrichmentFactory())
+
+
+@pytest.fixture
+def network_url_report_response():
+    with patch("ReversingLabs.SDK.a1000.A1000.network_url_report") as mock_analysis:
+        analysis = AnalysisResponseFactory()
+        mock_analysis.return_value.json = lambda: analysis.to_dict()
+        yield analysis
+
+
+@pytest.fixture
+def submit_url_for_analysis_response():
+    with patch("ReversingLabs.SDK.a1000.A1000.submit_url_for_analysis") as mock_submit:
+        detail = UploadDetailFactory()
+        mock_submit.return_value.text = json.dumps(
+            {
+                "code": 201,
+                "message": "Done.",
+                "detail": asdict(detail),
+            }
+        )
+        yield detail
+
+
+@pytest.fixture
+def check_submitted_url_status_response():
+    with patch(
+        "ReversingLabs.SDK.a1000.A1000.check_submitted_url_status"
+    ) as mock_status:
+        report = ReportIntelligenceResponseFactory()
+        mock_status.return_value.text = json.dumps(
+            {
+                "processing_status": "complete",
+                "message": "Processing complete.",
+                "report": asdict(report),
+            }
+        )
+        yield report
+
+
+@pytest.fixture
+def get_classification_v3_response():
+    with patch(
+        "ReversingLabs.SDK.a1000.A1000.get_classification_v3"
+    ) as mock_classification:
+        classification = HashClassificationFactory()
+        mock_classification.return_value.text = json.dumps(asdict(classification))
+        yield classification

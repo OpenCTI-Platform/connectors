@@ -346,6 +346,7 @@ class Analysis:
     last_analysis: AnalysisHistoryItem
     analysis_count: int
     statistics: ThirdPartyStatistics
+    top_threats: list[TopThreat]
 
 
 class AnalysisFactory(factory.Factory):
@@ -375,6 +376,7 @@ class AnalysisFactory(factory.Factory):
             total=len(o.analysis_history),
         )
     )
+    top_threats = factory.List([factory.SubFactory(TopThreatFactory) for _ in range(3)])
 
 
 @dataclass
@@ -632,7 +634,7 @@ class HashFactory(factory.Factory):
 
 
 @dataclass
-class EnrichmentEntity:
+class FileEnrichmentEntity:
     created_at: str
     creators: list[Creator]
     entity_type: str
@@ -670,9 +672,9 @@ class EnrichmentEntity:
     x_opencti_description: str | None = None
 
 
-class EnrichmentEntityFactory(factory.Factory):
+class FileEnrichmentEntityFactory(factory.Factory):
     class Meta:
-        model = EnrichmentEntity
+        model = FileEnrichmentEntity
 
     created_at = factory.Faker("iso8601")
     creators = factory.List([factory.SubFactory(CreatorFactory)])
@@ -757,7 +759,7 @@ class StixExternalReferenceFactory(factory.Factory):
 
 
 @dataclass
-class StixEntity:
+class StixFileEntity:
     id: str
     x_opencti_score: int
     name: str
@@ -769,9 +771,9 @@ class StixEntity:
     spec_version: str = "2.1"
 
 
-class StixEntityFactory(factory.Factory):
+class StixFileEntityFactory(factory.Factory):
     class Meta:
-        model = StixEntity
+        model = StixFileEntity
 
     id = factory.Faker("uuid4")
     x_opencti_score = factory.Faker("random_int", min=0, max=100)
@@ -791,9 +793,9 @@ class EnrichmentMessage:
     entity_id: str
     event_type: str
     entity_type: str
-    enrichment_entity: EnrichmentEntity
-    stix_entity: StixEntity
-    stix_objects: list[StixEntity]
+    enrichment_entity: FileEnrichmentEntity
+    stix_entity: StixFileEntity
+    stix_objects: list[StixFileEntity]
 
 
 class FileEnrichmentFactory(factory.Factory):
@@ -804,8 +806,123 @@ class FileEnrichmentFactory(factory.Factory):
     entity_id = factory.LazyAttribute(lambda o: f"file--{o.id}")
     entity_type = "StixFile"
     event_type = "INTERNAL_ENRICHMENT"
-    enrichment_entity = factory.SubFactory(EnrichmentEntityFactory)
+    enrichment_entity = factory.SubFactory(FileEnrichmentEntityFactory)
     stix_entity = factory.SubFactory(
-        StixEntityFactory, id=factory.SelfAttribute("..entity_id")
+        StixFileEntityFactory, id=factory.SelfAttribute("..entity_id")
+    )
+    stix_objects = factory.LazyAttribute(lambda o: [o.stix_entity])
+
+
+@dataclass
+class StixUrlEntity:
+    id: str
+    x_opencti_score: int
+    x_opencti_description: str
+    value: str
+    x_opencti_id: str
+    x_opencti_type: str
+    type: str
+    external_references: list[StixExternalReference]
+    x_opencti_labels: list[str]
+    spec_version: str = "2.1"
+
+
+class StixUrlEntityFactory(factory.Factory):
+    class Meta:
+        model = StixUrlEntity
+
+    id = factory.Faker("uuid4")
+    x_opencti_score = factory.Faker("random_int", min=0, max=100)
+    x_opencti_description = factory.Faker("sentence")
+    value = factory.Faker("uri")
+    x_opencti_id = factory.SelfAttribute("id")
+    x_opencti_type = "Url"
+    type = "url"
+    external_references = factory.List(
+        [factory.SubFactory(StixExternalReferenceFactory)]
+    )
+    x_opencti_labels = factory.List([factory.Faker("word")])
+
+
+@dataclass
+class UrlEnrichmentEntity:
+    created_at: str
+    creators: list[Creator]
+    entity_type: str
+    externalReferences: list[ExternalReference]
+    externalReferencesIds: list[str]
+    id: str
+    importFiles: list[ImportFile]
+    importFilesIds: list[str]
+    indicators: list[dict]
+    indicatorsIds: list[str]
+    objectLabel: list
+    objectLabelIds: list[str]
+    objectMarking: list
+    objectMarkingIds: list[str]
+    objectOrganization: list[str]
+    observable_value: str
+    parent_types: list[str]
+    spec_version: str
+    standard_id: str
+    updated_at: str
+    value: str
+    x_opencti_score: int
+    createdBy: dict = None
+    createdById: str | None = None
+    x_opencti_description: str | None = None
+
+
+class UrlEnrichmentEntityFactory(factory.Factory):
+    class Meta:
+        model = UrlEnrichmentEntity
+
+    created_at = factory.Faker("iso8601")
+    creators = factory.List([factory.SubFactory(CreatorFactory)])
+    entity_type = "Url"
+    externalReferences = factory.List([factory.SubFactory(ExternalReferenceFactory)])
+    externalReferencesIds = factory.LazyAttribute(
+        lambda o: [r.id for r in o.externalReferences]
+    )
+    id = factory.Faker("uuid4")
+    importFiles = []
+    importFilesIds = []
+    indicators = []
+    indicatorsIds = []
+    objectLabel = []
+    objectLabelIds = []
+    objectMarking = []
+    objectMarkingIds = factory.LazyAttribute(lambda o: [m.id for m in o.objectMarking])
+    objectOrganization = []
+    observable_value = factory.Faker("url")
+    parent_types = [
+        "Basic-Object",
+        "Stix-Object",
+        "Stix-Core-Object",
+        "Stix-Cyber-Observable",
+    ]
+    spec_version = "2.1"
+    standard_id = factory.LazyAttribute(lambda o: f"url--{o.id}")
+    updated_at = factory.Faker("iso8601")
+    value = factory.SelfAttribute("observable_value")
+    x_opencti_score = factory.Faker("random_int", min=0, max=100)
+    createdBy = None
+    createdById = factory.LazyAttribute(
+        lambda o: o.createdBy.x_opencti_id if o.createdBy else None
+    )
+    x_opencti_description = factory.Faker("sentence")
+
+
+class UrlEnrichmentFactory(factory.Factory):
+    class Meta:
+        model = EnrichmentMessage
+
+    id = factory.Faker("uuid4")
+    entity_id = factory.LazyAttribute(lambda o: f"url--{o.id}")
+    entity_type = "Url"
+    event_type = "INTERNAL_ENRICHMENT"
+    enrichment_entity = factory.SubFactory(UrlEnrichmentEntityFactory)
+    stix_entity = factory.SubFactory(
+        StixUrlEntityFactory, id=factory.SelfAttribute("..entity_id")
     )
     stix_objects = factory.LazyAttribute(lambda o: [o.stix_entity])
