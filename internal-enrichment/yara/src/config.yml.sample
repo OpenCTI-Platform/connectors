@@ -10,3 +10,5 @@ connector:
   auto: true # Enable/disable auto-enrichment of observables
   confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
+  propagate_malware: false # Add 'indicates' Malware relationships from Yara Indicators to matching Artifacts
+  propagate_labels: false # Add Labels from Yara Indicators to matching Artifacts

@@ -11,4 +11,6 @@ services:
       - CONNECTOR_AUTO=true
       - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
+      - YARA_PROPOGATE_MALWARE_RELATIONSHIP=false
+      - YARA_PROPOGATE_LABELS=false
     restart: always
