@@ -93,14 +93,13 @@ class LivehuntBuilder:
 
         params = {
             "descriptors_only": "False",
-            "filter": filter,
-            "limit": 10, # ERASE after tests
+            "filter": filter
         }
         self.helper.connector_logger.info(
             f"Url for notifications: {url} / params: {params}"
         )
 
-        files_iterator = self.client.iterator(url, params=params)
+        files_iterator = self.client.iterator(url, params=params, limit=10) # ERASE limit in production
 
         for vtobj in files_iterator:
 
