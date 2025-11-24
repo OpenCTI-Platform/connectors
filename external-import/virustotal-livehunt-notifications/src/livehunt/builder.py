@@ -86,7 +86,7 @@ class LivehuntBuilder:
         # Work id will only be set and instantiated if there are bundles to send.
         work_id = None
         url = "/ioc_stream"
-        filter = f"date:{start_date}+ source_type:hunting_ruleset limit:10" # TODO: erase limite when testing is done
+        filter = f"date:{start_date}+ source_type:hunting_ruleset" 
         if self.tag is not None and self.tag != "":
             self.helper.connector_logger.debug(f"Setting up filter with tag {self.tag}")
             filter += f" notification_tag:{self.tag}"
@@ -94,6 +94,7 @@ class LivehuntBuilder:
         params = {
             "descriptors_only": "False",
             "filter": filter,
+            "limit": 10, # ERASE after tests
         }
         self.helper.connector_logger.info(
             f"Url for notifications: {url} / params: {params}"
