@@ -914,6 +914,7 @@ class LivehuntBuilder:
             "ipv4-addr": "IPv4-Addr",
             "ipv6-addr": "IPv6-Addr",
             "domain-name": "Domain-Name",
+            "hostname": "Hostname",
             "url": "Url",
         }
         return mapping.get(type, "Unknown")
