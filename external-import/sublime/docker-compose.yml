@@ -3,7 +3,7 @@ services:
   connector-sublime:
     build: .
     image: opencti/connector-sublime:rolling
-    container: connector-sublime
+    container_name: connector-sublime
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
