@@ -926,3 +926,85 @@ class UrlEnrichmentFactory(factory.Factory):
         StixUrlEntityFactory, id=factory.SelfAttribute("..entity_id")
     )
     stix_objects = factory.LazyAttribute(lambda o: [o.stix_entity])
+
+
+@dataclass
+class StixIpv4Entity(StixUrlEntity):
+    pass
+
+
+class StixIpv4EntityFactory(factory.Factory):
+    class Meta:
+        model = StixIpv4Entity
+
+    id = factory.Faker("uuid4")
+    x_opencti_score = factory.Faker("random_int", min=0, max=100)
+    x_opencti_description = factory.Faker("sentence")
+    value = factory.Faker("ipv4")
+    x_opencti_id = factory.SelfAttribute("id")
+    x_opencti_type = "IPv4-Addr"
+    type = "ipv4-addr"
+    external_references = factory.List(
+        [factory.SubFactory(StixExternalReferenceFactory)]
+    )
+    x_opencti_labels = factory.List([factory.Faker("word")])
+
+
+@dataclass
+class Ipv4EnrichmentEntity(UrlEnrichmentEntity):
+    pass
+
+
+class Ipv4EnrichmentEntityFactory(factory.Factory):
+    class Meta:
+        model = Ipv4EnrichmentEntity
+
+    created_at = factory.Faker("iso8601")
+    creators = factory.List([factory.SubFactory(CreatorFactory)])
+    entity_type = "IPv4-Addr"
+    externalReferences = factory.List([factory.SubFactory(ExternalReferenceFactory)])
+    externalReferencesIds = factory.LazyAttribute(
+        lambda o: [r.id for r in o.externalReferences]
+    )
+    id = factory.Faker("uuid4")
+    importFiles = []
+    importFilesIds = []
+    indicators = []
+    indicatorsIds = []
+    objectLabel = []
+    objectLabelIds = []
+    objectMarking = []
+    objectMarkingIds = factory.LazyAttribute(lambda o: [m.id for m in o.objectMarking])
+    objectOrganization = []
+    observable_value = factory.Faker("ipv4")
+    parent_types = [
+        "Basic-Object",
+        "Stix-Object",
+        "Stix-Core-Object",
+        "Stix-Cyber-Observable",
+    ]
+    spec_version = "2.1"
+    standard_id = factory.LazyAttribute(lambda o: f"ipv4-addr--{o.id}")
+    updated_at = factory.Faker("iso8601")
+    value = factory.SelfAttribute("observable_value")
+    x_opencti_score = factory.Faker("random_int", min=0, max=100)
+    createdBy = None
+    createdById = factory.LazyAttribute(
+        lambda o: o.createdBy.x_opencti_id if o.createdBy else None
+    )
+    x_opencti_description = factory.Faker("sentence")
+
+
+class Ipv4EnrichmentFactory(factory.Factory):
+    class Meta:
+        model = EnrichmentMessage
+
+    id = factory.Faker("uuid4")
+    entity_id = factory.LazyAttribute(lambda o: f"ipv4-addr--{o.id}")
+    entity_type = "IPv4-Addr"
+    event_type = "INTERNAL_ENRICHMENT"
+    enrichment_entity = factory.SubFactory(Ipv4EnrichmentEntityFactory)
+    stix_entity = factory.SubFactory(
+        StixIpv4EntityFactory, id=factory.SelfAttribute("..entity_id")
+    )
+    stix_objects = factory.LazyAttribute(lambda o: [o.stix_entity])
