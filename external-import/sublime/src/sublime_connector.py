@@ -196,7 +196,7 @@ class SublimeConnector:
             raise ValueError("SUBLIME_TOKEN environment variable is required")
 
         # Value for if to update an existing bundle.
-        # Currently set to False as placeholder for potental future feature
+        # Currently set to False as placeholder for potential future feature
         self.update_existing_data = False
 
         # Track first run of this connector session (not persisted)
@@ -383,8 +383,8 @@ class SublimeConnector:
 
         full_url = "{}/messages/groups".format(api_url)
 
-        self.helper.log_info(
-            "[*] Fetch Time range: {} to {}".format(start_time, end_time)
+        self.helper.log_debug(
+            "Fetch time range: {} to {}".format(start_time, end_time)
         )
         self.helper.log_debug(
             "API request: {} with {} parameters".format(full_url, len(params))
@@ -404,8 +404,6 @@ class SublimeConnector:
 
         data = response.json()
         group_ids = data.get("all_group_canonical_ids") or []
-
-        self.helper.log_info("[*] Found {} flagged group IDs".format(len(group_ids)))
         return group_ids
 
     def _fetch_single_group(self, group_id):
@@ -490,16 +488,6 @@ class SublimeConnector:
                 batch_ids = group_ids[i : i + self.batch_size]
                 batch_messages = []
 
-                self.helper.log_info(
-                    "[*] Processing batch {}/{}: groups {} to {} ({} total)".format(
-                        (i // self.batch_size) + 1,
-                        (len(group_ids) + self.batch_size - 1) // self.batch_size,
-                        i + 1,
-                        min(i + self.batch_size, len(group_ids)),
-                        len(batch_ids),
-                    )
-                )
-
                 for group_id in batch_ids:
                     message_group = self._fetch_single_group(group_id)
                     if message_group:
@@ -527,8 +515,8 @@ class SublimeConnector:
                     yield batch_messages
 
             self.helper.log_info(
-                "[*] Completed fetching {} total message groups from {} flagged groups".format(
-                    total_fetched, len(group_ids)
+                "[*] Completed: {}/{} flagged groups matched verdicts {}".format(
+                    total_fetched, len(group_ids), self.verdicts
                 )
             )
 
@@ -1677,8 +1665,8 @@ class SublimeConnector:
                     current_state = self.helper.get_state() or {}
                     current_state["last_timestamp"] = global_latest_timestamp
                     self.helper.set_state(current_state)
-                    self.helper.log_info(
-                        "[*] Batch complete: {} processed this batch, {} total processed, state updated to {}".format(
+                    self.helper.log_debug(
+                        "Batch complete: {} processed this batch, {} total processed, state updated to {}".format(
                             batch_processed, total_processed, global_latest_timestamp
                         )
                     )
@@ -1690,15 +1678,8 @@ class SublimeConnector:
                 current_state = self.helper.get_state() or {}
                 current_state["last_timestamp"] = current_time
                 self.helper.set_state(current_state)
-                self.helper.log_info(
-                    "[*] No messages processed. Updated state to current time: {}".format(
-                        current_time
-                    )
-                )
 
-            completion_message = "Processed {} messages in batches".format(
-                total_processed
-            )
+            completion_message = "Processed {} messages".format(total_processed)
             self.helper.log_info("[*] {}".format(completion_message))
             self.helper.api.work.to_processed(work_id, completion_message)
 
