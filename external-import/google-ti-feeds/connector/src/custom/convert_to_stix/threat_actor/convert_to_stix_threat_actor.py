@@ -29,7 +29,15 @@ class ConvertToSTIXThreatActor(BaseConvertToSTIX):
 
         """
         try:
-            converter = self.converter_factory.create_converter_by_name("threat_actor")
+            additional_deps = {}
+            if hasattr(self.config, "enable_threat_actor_aliases"):
+                additional_deps["enable_threat_actor_aliases"] = (
+                    self.config.enable_threat_actor_aliases
+                )
+
+            converter = self.converter_factory.create_converter_by_name(
+                "threat_actor", additional_dependencies=additional_deps
+            )
             stix_entities = converter.convert_single(threat_actor_data)
 
             if not isinstance(stix_entities, list):
