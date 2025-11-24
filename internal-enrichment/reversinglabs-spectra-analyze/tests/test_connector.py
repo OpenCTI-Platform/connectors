@@ -129,3 +129,28 @@ def test_should_enrich_ipv4(
         + downloaded_file_urls
         + [network_domain_report_url, network_url_report_url]
     )
+
+
+def test_should_enrich_domain_name(
+    domain_name_enrichment_message,
+    network_domain_report_response,
+):
+    connector = ReversingLabsSpectraAnalyzeConnector()
+
+    sent_bundle = {}
+
+    def capture_sent_bundle(bundle: str, **_):
+        nonlocal sent_bundle
+        sent_bundle = json.loads(bundle)
+        return sent_bundle["objects"]
+
+    connector.helper.send_stix2_bundle = capture_sent_bundle
+    connector._process_message(domain_name_enrichment_message)
+
+    malwares = filter_by_key_value(sent_bundle["objects"], "type", "malware")
+    malware_names = [m["name"] for m in malwares]
+    threat_names = [
+        threat.threat_name.split(".")[2]
+        for threat in network_domain_report_response.top_threats
+    ]
+    assert set(threat_names).issubset(set(malware_names))
