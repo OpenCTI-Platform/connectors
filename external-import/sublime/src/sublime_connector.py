@@ -94,6 +94,15 @@ class SublimeConnector:
         # Initialize OpenCTI helper
         self.helper = pycti.OpenCTIConnectorHelper(config)
 
+        # Get connector duration period for scheduling
+        self.duration_period = pycti.get_config_variable(
+            "CONNECTOR_DURATION_PERIOD",
+            ["connector", "duration_period"],
+            config,
+            False,
+            "PT3M",
+        )
+
         # Get Sublime specific config from environment variables or config.yml
         self.api_token = pycti.get_config_variable(
             "SUBLIME_TOKEN", ["sublime", "token"], config_dict, False
@@ -230,7 +239,7 @@ class SublimeConnector:
                 self.verdicts,
                 self.confidence_level,
                 self.incident_type,
-                self.helper.connect_duration_period,
+                self.duration_period,
                 self.first_run_duration,
                 self.force_historical,
                 self.incident_name_prefix,
@@ -1703,7 +1712,7 @@ class SublimeConnector:
         """
         self.helper.schedule_iso(
             message_callback=self._process_messages,
-            duration_period=self.helper.connect_duration_period,
+            duration_period=self.duration_period,
         )
 
 
