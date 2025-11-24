@@ -8,6 +8,7 @@ import pytest
 
 from .factories import (
     AnalysisResponseFactory,
+    DomainNameEnrichmentFactory,
     DomainResponseFactory,
     DownloadedFilesResponseFactory,
     FileEnrichmentFactory,
@@ -253,3 +254,8 @@ def network_urls_from_ip_aggregated_response():
         urls = UrlsResponseFactory()
         mock_domain.return_value = asdict(urls)["urls"]
         yield urls
+
+
+@pytest.fixture
+def domain_name_enrichment_message():
+    yield asdict(DomainNameEnrichmentFactory())

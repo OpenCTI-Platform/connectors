@@ -1008,3 +1008,85 @@ class Ipv4EnrichmentFactory(factory.Factory):
         StixIpv4EntityFactory, id=factory.SelfAttribute("..entity_id")
     )
     stix_objects = factory.LazyAttribute(lambda o: [o.stix_entity])
+
+
+@dataclass
+class StixDomainNameEntity(StixUrlEntity):
+    pass
+
+
+class StixDomainNameEntityFactory(factory.Factory):
+    class Meta:
+        model = StixDomainNameEntity
+
+    id = factory.Faker("uuid4")
+    x_opencti_score = factory.Faker("random_int", min=0, max=100)
+    x_opencti_description = factory.Faker("sentence")
+    value = factory.Faker("domain_name")
+    x_opencti_id = factory.SelfAttribute("id")
+    x_opencti_type = "Domain-Name"
+    type = "domain-name"
+    external_references = factory.List(
+        [factory.SubFactory(StixExternalReferenceFactory)]
+    )
+    x_opencti_labels = factory.List([factory.Faker("word")])
+
+
+@dataclass
+class DomainNameEnrichmentEntity(UrlEnrichmentEntity):
+    pass
+
+
+class DomainNameEnrichmentEntityFactory(factory.Factory):
+    class Meta:
+        model = DomainNameEnrichmentEntity
+
+    created_at = factory.Faker("iso8601")
+    creators = factory.List([factory.SubFactory(CreatorFactory)])
+    entity_type = "Domain-Name"
+    externalReferences = factory.List([factory.SubFactory(ExternalReferenceFactory)])
+    externalReferencesIds = factory.LazyAttribute(
+        lambda o: [r.id for r in o.externalReferences]
+    )
+    id = factory.Faker("uuid4")
+    importFiles = []
+    importFilesIds = []
+    indicators = []
+    indicatorsIds = []
+    objectLabel = []
+    objectLabelIds = []
+    objectMarking = []
+    objectMarkingIds = factory.LazyAttribute(lambda o: [m.id for m in o.objectMarking])
+    objectOrganization = []
+    observable_value = factory.Faker("domain_name")
+    parent_types = [
+        "Basic-Object",
+        "Stix-Object",
+        "Stix-Core-Object",
+        "Stix-Cyber-Observable",
+    ]
+    spec_version = "2.1"
+    standard_id = factory.LazyAttribute(lambda o: f"domain-name--{o.id}")
+    updated_at = factory.Faker("iso8601")
+    value = factory.SelfAttribute("observable_value")
+    x_opencti_score = factory.Faker("random_int", min=0, max=100)
+    createdBy = None
+    createdById = factory.LazyAttribute(
+        lambda o: o.createdBy.x_opencti_id if o.createdBy else None
+    )
+    x_opencti_description = factory.Faker("sentence")
+
+
+class DomainNameEnrichmentFactory(factory.Factory):
+    class Meta:
+        model = EnrichmentMessage
+
+    id = factory.Faker("uuid4")
+    entity_id = factory.LazyAttribute(lambda o: f"domain-name--{o.id}")
+    entity_type = "Domain-Name"
+    event_type = "INTERNAL_ENRICHMENT"
+    enrichment_entity = factory.SubFactory(DomainNameEnrichmentEntityFactory)
+    stix_entity = factory.SubFactory(
+        StixDomainNameEntityFactory, id=factory.SelfAttribute("..entity_id")
+    )
+    stix_objects = factory.LazyAttribute(lambda o: [o.stix_entity])
