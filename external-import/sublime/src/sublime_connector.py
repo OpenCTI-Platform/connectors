@@ -344,7 +344,7 @@ class SublimeConnector:
                 "benign": "P4",  # Low priority
             }
         else:
-            # Severity mapping - confirmed to work with: critical, high, medium, low
+            # Severity mapping
             verdict_mapping = {
                 "malicious": "high",
                 "suspicious": "medium",
@@ -383,9 +383,7 @@ class SublimeConnector:
 
         full_url = "{}/messages/groups".format(api_url)
 
-        self.helper.log_debug(
-            "Fetch time range: {} to {}".format(start_time, end_time)
-        )
+        self.helper.log_debug("Fetch time range: {} to {}".format(start_time, end_time))
         self.helper.log_debug(
             "API request: {} with {} parameters".format(full_url, len(params))
         )
@@ -1574,18 +1572,23 @@ class SublimeConnector:
     def _get_existing_group_ids(self):
         """
         Get existing Sublime group IDs from OpenCTI incidents and cases.
-        Retrieve most recent 1000 (configurable) to build temp cache in memory.
-        Use this to get external references from each to ensure there's no duplicate incidents or cases.
+        Retrieve most recent N cases to build temp cache in memory.
+        Parse cache for external references from each case to ensure there's no duplicate incidents or cases.
 
         Returns:
             set: Set of existing group IDs
         """
+        num_cases_for_external_lookups = 1000
         existing_group_ids = set()
 
         try:
             # Get group IDs from incidents and cases using shared method
-            incidents = self.helper.api.incident.list(first=1000)
-            cases = self.helper.api.case_incident.list(first=1000)
+            incidents = self.helper.api.incident.list(
+                first=num_cases_for_external_lookups
+            )
+            cases = self.helper.api.case_incident.list(
+                first=num_cases_for_external_lookups
+            )
 
             # Extract group IDs from incidents
             for obj in incidents:
@@ -1695,13 +1698,7 @@ class SublimeConnector:
 
     def run(self):
         """
-        Run the main process using OpenCTI scheduler.
-
-        Automatically handles:
-        - Interval scheduling (PT3M = every 3 minutes)
-        - Queue threshold checking (prevents run if queue > 500MB)
-        - Graceful shutdown on KeyboardInterrupt
-        - Run-and-terminate mode
+        Run the main process using OpenCTI scheduler
         """
         self.helper.schedule_iso(
             message_callback=self._process_messages,
