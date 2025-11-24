@@ -9,6 +9,7 @@ connector:
   scope: 'misp'
   log_level: 'info'
   expose_metrics: False
+  duration_period: PT5M # Required, interval given for scheduler process in ISO-8601 format.
 
 misp:
   url: 'http://localhost' # Required
@@ -46,5 +47,4 @@ misp:
   import_to_ids_no_score: 40 # Optional, use as a score for the indicator/observable if the attribute to_ids is no
   import_unsupported_observables_as_text: false # Optional, import unsupported observable as x_opencti_text
   import_unsupported_observables_as_text_transparent: true # Optional, import unsupported observable as x_opencti_text just with the value
-  interval: 5 # Required, in minutes
   propagate_labels: false # Optional, propagate labels to the observables
