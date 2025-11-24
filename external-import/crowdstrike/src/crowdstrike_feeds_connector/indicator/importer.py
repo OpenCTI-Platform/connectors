@@ -94,7 +94,6 @@ class IndicatorImporter(BaseImporter):
 
         indicator_batch = self._fetch_indicators(fetch_timestamp)
         if indicator_batch:
-
             latest_batch_updated_datetime = self._process_indicators(indicator_batch)
 
             if latest_batch_updated_datetime is not None and (
@@ -238,15 +237,7 @@ class IndicatorImporter(BaseImporter):
                 indicator_unwanted_labels=self.indicator_unwanted_labels,
             )
 
-            try:
-                bundle_builder = IndicatorBundleBuilder(
-                    self.helper, bundle_builder_config
-                )
-            except Exception as err:
-                self.helper.connector_logger.warning(
-                    f"Unable to process indicator value: {indicator['indicator']}, error: {err}"
-                )
-                return None
+            bundle_builder = IndicatorBundleBuilder(self.helper, bundle_builder_config)
             indicator_bundle_built = bundle_builder.build()
             if indicator_bundle_built:
                 return indicator_bundle_built.get("indicator_bundle")
@@ -259,12 +250,24 @@ class IndicatorImporter(BaseImporter):
                     },
                 )
                 return None
+        except TypeError as err:
+            self.helper.connector_logger.warning(
+                "Skipping unsupported indicator type.",
+                {
+                    "indicator_id": indicator.get("id"),
+                    "indicator_type": indicator.get("type"),
+                    "indicator_value": indicator.get("indicator"),
+                    "error": str(err),
+                },
+            )
+            return None
         except Exception as err:
             self.helper.connector_logger.error(
                 "[ERROR] An unexpected error occurred when creating a bundle indicator.",
                 {
                     "error": err,
                     "indicator_id": indicator.get("id"),
+                    "indicator_type": indicator.get("type"),
                 },
             )
             raise
