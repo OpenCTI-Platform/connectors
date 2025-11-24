@@ -159,12 +159,14 @@ class LivehuntBuilder:
             )
             incident_id = None
             file_id = None
+            file_indicator_id = None
 
             if self.with_alert:
                 incident_id = self.create_alert(vtobj, external_reference)
 
             if self.with_file:
-                file_id = self.create_file(vtobj, incident_id)
+                file_id = self.create_file(vtobj, incident_id)[0]
+                file_indicator_id = self.create_file(vtobj, incident_id)[1]
 
             if self.with_yara_rule:
                 for source in vtobj._context_attributes["sources"]:
@@ -176,7 +178,7 @@ class LivehuntBuilder:
                     )
 
             if self.get_malware_config:
-                self.extract_malware_config(vtobj, file_id)
+                self.extract_malware_config(vtobj, file_id, file_indicator_id)
 
             if len(self.bundle) > 0:
                 if work_id is None:
@@ -370,6 +372,7 @@ class LivehuntBuilder:
             )
             self.bundle.append(relationship)
         # Create indicator for the file if needed
+        indicator_id = None
         if self.indicators:
             indicator = stix2.Indicator(
                 id=Indicator.generate_id(f"file:hashes.'SHA-256' = '{vtobj.sha256}'"),
@@ -420,7 +423,7 @@ class LivehuntBuilder:
                     object_marking_refs=[self.tlp],
                 )
                 self.bundle.append(relationship)
-        return file["id"]
+        return (file["id"], indicator_id)
 
     def create_rule(
         self,
@@ -619,7 +622,7 @@ class LivehuntBuilder:
 
         return labels
 
-    def extract_malware_config(self, vtobj, file_id: Optional[str] = None):
+    def extract_malware_config(self, vtobj, file_id: Optional[str] = None, file_indicator_id: Optional[str] = None):
         """Extract malware config from the file object and creates observables and notes."""
         if hasattr(vtobj, "malware_config") and vtobj.malware_config is not None:
             raw_config = ""
@@ -633,6 +636,8 @@ class LivehuntBuilder:
             note_obj_refs = []
             if file_id is not None:
                 note_obj_refs.append(file_id)
+            if file_indicator_id is not None:
+                note_obj_refs.append(file_indicator_id)
             families = vtobj.malware_config.get("families", None)
             if families is not None:
                 for family in families:
@@ -715,6 +720,7 @@ class LivehuntBuilder:
                                                     allow_custom=True,
                                                     object_marking_refs=[self.tlp],
                                                 )
+                                                note_obj_refs.append(indicator.id)
                                                 self.helper.connector_logger.debug(f"[VirusTotal Livehunt Notifications] malware config indicator created: {indicator}")
                                                 relationship = stix2.Relationship(
                                                     id=StixCoreRelationship.generate_id(
