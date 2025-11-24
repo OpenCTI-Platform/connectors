@@ -38,7 +38,7 @@ class KasperskyConnector:
 
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """
-        Initialize `TemplateConnector` with its configuration.
+        Initialize `KasperskyConnector` with its configuration.
 
         Args:
             config (ConnectorSettings): Configuration of the connector
@@ -46,12 +46,16 @@ class KasperskyConnector:
         """
         self.config = config
         self.helper = helper
-
+        api_key = self.config.kaspersky.api_key.get_secret_value()
         self.client = KasperskyClient(
             self.helper,
-            base_url=self.config.template.api_base_url,
-            api_key=self.config.template.api_key,
-            # Pass any arguments necessary to the client
+            base_url=self.config.kaspersky.api_base_url,
+            api_key=api_key,
+            params={
+                "count": 1,
+                "sections": "LicenseInfo,Zone,FileGeneralInfo",
+                "format": "json",
+            },
         )
         self.converter_to_stix = ConverterToStix(
             self.helper,
@@ -61,23 +65,31 @@ class KasperskyConnector:
 
         # Define variables
         self.author = None
-        self.tlp = None
         self.stix_objects_list = []
 
-    def _collect_intelligence(self, value, obs_id) -> list:
+    def resolve_file_hash(self, observable):
+        if "hashes" in observable and "SHA-256" in observable["hashes"]:
+            return observable["hashes"]["SHA-256"]
+        if "hashes" in observable and "SHA-1" in observable["hashes"]:
+            return observable["hashes"]["SHA-1"]
+        if "hashes" in observable and "MD5" in observable["hashes"]:
+            return observable["hashes"]["MD5"]
+        raise ValueError(
+            "Unable to enrich the observable, the observable does not have an SHA256, SHA1, or MD5"
+        )
+
+    def _process_file(self, observable) -> list:
         """
         Collect intelligence from the source and convert into STIX object
         :return: List of STIX objects
         """
         self.helper.connector_logger.info("[CONNECTOR] Starting enrichment...")
 
-        # ===========================
-        # === Add your code below ===
-        # ===========================
+        # Check file hash
+        obs_hash = self.resolve_file_hash(observable)
 
-        # EXAMPLE
-        # === Get entities from external sources based on entity value
-        # entities = self.client.get_entity(value)
+        # Get entities
+        self.client.get_file_info(obs_hash)
 
         # === Create the author
         # self.author = self.converter.create_author()
@@ -93,43 +105,20 @@ class KasperskyConnector:
         # ===========================
         raise NotImplementedError
 
-    def entity_in_scope(self, data) -> bool:
+    def entity_in_scope(self, obs_type) -> bool:
         """
         Security to limit playbook triggers to something other than the initial scope
         :param data: Dictionary of data
         :return: boolean
         """
         scopes = self.helper.connect_scope.lower().replace(" ", "").split(",")
-        entity_split = data["entity_id"].split("--")
+        entity_split = obs_type.split("--")
         entity_type = entity_split[0].lower()
 
         if entity_type in scopes:
             return True
         else:
             return False
-
-    def extract_and_check_markings(self, opencti_entity: dict) -> None:
-        """
-        Extract TLP, and we check if the variable "max_tlp" is less than
-        or equal to the markings access of the entity from OpenCTI
-        If this is true, we can send the data to connector for enrichment.
-        :param opencti_entity: Dict of observable from OpenCTI
-        :return: Boolean
-        """
-        if len(opencti_entity["objectMarking"]) != 0:
-            for marking_definition in opencti_entity["objectMarking"]:
-                if marking_definition["definition_type"] == "TLP":
-                    self.tlp = marking_definition["definition"]
-
-        valid_max_tlp = self.helper.check_max_tlp(
-            self.tlp, self.config.template.max_tlp_level
-        )
-
-        if not valid_max_tlp:
-            raise ValueError(
-                "[CONNECTOR] Do not send any data, TLP of the observable is greater than MAX TLP,"
-                "the connector does not has access to this observable, please check the group of the connector user"
-            )
 
     def process_message(self, data: dict) -> str:
         """
@@ -141,30 +130,33 @@ class KasperskyConnector:
         """
         try:
             opencti_entity = data["enrichment_entity"]
-            self.extract_and_check_markings(opencti_entity)
-
-            # To enrich the data, you can add more STIX object in stix_objects
-            self.stix_objects_list = data["stix_objects"]
-            observable = data["stix_entity"]
 
             # Extract information from entity data
-            obs_standard_id = observable["id"]
-            obs_value = observable["value"]
-            obs_type = observable["type"]
+            self.stix_objects_list = data["stix_objects"]
+            observable = data["stix_entity"]
+            obs_type = opencti_entity["entity_type"]
 
             info_msg = (
                 "[CONNECTOR] Processing observable for the following entity type: "
             )
             self.helper.connector_logger.info(info_msg, {"type": {obs_type}})
 
-            if self.entity_in_scope(data):
+            if self.entity_in_scope(obs_type):
                 # Performing the collection of intelligence and enrich the entity
-                # ===========================
-                # === Add your code below ===
-                # ===========================
-
-                # EXAMPLE Collect intelligence and enrich current STIX object
-                stix_objects = self._collect_intelligence(obs_value, obs_standard_id)
+                match obs_type:
+                    case "StixFile":
+                        stix_objects = self._process_file(observable)
+                    # case "IPv4-Addr":
+                    #     stix_objects = self._process_ip(observable)
+                    # case "Domain-Name" | "Hostname":
+                    #     stix_objects = self._process_domain(observable)
+                    # case "Url":
+                    #     stix_objects = self._process_url(observable)
+                    case _:
+                        raise ValueError(
+                            "Entity type is not supported",
+                            {"entity_type": obs_type},
+                        )
 
                 if stix_objects is not None and len(stix_objects):
                     return self._send_bundle(stix_objects)
@@ -172,9 +164,6 @@ class KasperskyConnector:
                     info_msg = "[CONNECTOR] No information found"
                     return info_msg
 
-                # ===========================
-                # === Add your code above ===
-                # ===========================
             else:
                 if not data.get("event_type"):
                     # If it is not in scope AND entity bundle passed through playbook, we should return the original bundle unchanged

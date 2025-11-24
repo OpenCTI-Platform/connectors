@@ -4,7 +4,11 @@ from pycti import OpenCTIConnectorHelper
 
 class KasperskyClient:
     def __init__(
-        self, helper: OpenCTIConnectorHelper, base_url: str | object, api_key: str
+        self,
+        helper: OpenCTIConnectorHelper,
+        base_url: str | object,
+        api_key: str,
+        params: dict,
     ):
         """
         Initialize the client with necessary configuration.
@@ -20,9 +24,10 @@ class KasperskyClient:
 
         self.base_url = base_url
         # Define headers in session and update when needed
-        headers = {"Bearer": api_key}
+        self.headers = {"Authorization": f"Bearer {api_key}"}
         self.session = requests.Session()
-        self.session.headers.update(headers)
+        self.session.headers.update(self.headers)
+        self.params = params
 
     def _request_data(self, api_url: str, params=None):
         """
@@ -46,26 +51,13 @@ class KasperskyClient:
             )
             return None
 
-    def get_entity(self, params=None) -> dict:
+    def get_file_info(self, obs_hash) -> dict:
         """
-        If params is None, retrieve all CVEs in National Vulnerability Database
-        :param params: Optional Params to filter what list to return
-        :return: A list of dicts of the complete collection of CVE from NVD
+        Retrieve file information
         """
         try:
-            # ===========================
-            # === Add your code below ===
-            # ===========================
-
-            # EXAMPLE
-            # response = self._request_data(self.config.api_base_url, params=params)
-
-            # return response.json()
-            # ===========================
-            # === Add your code above ===
-            # ===========================
-
-            raise NotImplementedError
-
+            file_url = f"{self.base_url}api/hash/{obs_hash}"
+            response = self._request_data(file_url, params=self.params)
+            return response.json()
         except Exception as err:
             self.helper.connector_logger.error(err)
