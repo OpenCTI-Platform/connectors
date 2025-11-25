@@ -767,8 +767,10 @@ class LivehuntBuilder:
         - a list of labels
         - the raw config as a string.
         """
+        netconfig = []
+        labels = []
+        raw_config = ""
         if hasattr(vtobj, "malware_config") and vtobj.malware_config is not None:
-            raw_config = ""
             try:
                 raw_config = f"""```\n{
                                     json.dumps(
@@ -776,8 +778,7 @@ class LivehuntBuilder:
                                     )}\n```"""
             except TypeError as e:
                 raise ValueError("Failed to serialize malware config") from e
-            labels = []
-            netconfig = []
+         
             families = vtobj.malware_config.get("families", None)
             if families is not None:
                 for family in families:
