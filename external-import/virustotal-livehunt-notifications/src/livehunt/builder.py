@@ -373,7 +373,6 @@ class LivehuntBuilder:
                 created_by_ref=self.author["standard_id"],
                 source_ref=incident_id,
                 target_ref=file["id"],
-                start_time=vtobj._context_attributes["notification_date"],
                 allow_custom=True,
                 object_marking_refs=[self.tlp],
             )
