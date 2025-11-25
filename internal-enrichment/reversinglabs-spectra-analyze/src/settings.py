@@ -13,14 +13,6 @@ class ReversinglabsSpectraAnalyzeConfig(BaseConfigModel):
     token: str = Field(
         description="API token", validation_alias="spectra_analyze_token"
     )
-    tlp_level: Literal[
-        "TLP:WHITE",
-        "TLP:CLEAR",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED",
-    ] = Field(description="TLP level", default="TLP:AMBER")
     max_tlp: Literal[
         "TLP:WHITE",
         "TLP:CLEAR",
