@@ -394,6 +394,7 @@ class LivehuntBuilder:
                 },
                 allow_custom=True,
                 object_marking_refs=[self.tlp],
+                labels=labels,
             )
             self.helper.connector_logger.debug(
                 f"[VirusTotal Livehunt Notifications] file indicator created: {indicator}"
@@ -445,8 +446,8 @@ class LivehuntBuilder:
                                 "standard_id"
                             ],
                             "x_opencti_description": "Extracted from malware config",
+                            "x_opencti_labels": config[1],
                         },
-                        labels=config[1],
                     )
                     self.helper.connector_logger.debug(f"Created IPv4 observable for value {observable_value}")
                 elif observable_type == "IPv6-Addr":
@@ -458,8 +459,8 @@ class LivehuntBuilder:
                                 "standard_id"
                             ],
                             "x_opencti_description": "Extracted from malware config",
+                            "x_opencti_labels": config[1],
                         },
-                        labels=config[1],
                     )
                     self.helper.connector_logger.debug(f"Created IPv6 observable for value {observable_value}")
                 elif observable_type == "Domain-Name":
@@ -471,8 +472,8 @@ class LivehuntBuilder:
                                 "standard_id"
                             ],
                             "x_opencti_description": "Extracted from malware config",
+                            "x_opencti_labels": config[1],
                         },
-                        labels=config[1],
                     )
                     self.helper.connector_logger.debug(f"Created DomainName observable for value {observable_value}")
                 elif observable_type == "Url":
@@ -484,8 +485,8 @@ class LivehuntBuilder:
                                 "standard_id"
                             ],
                             "x_opencti_description": "Extracted from malware config",
+                            "x_opencti_labels": config[1],
                         },
-                        labels=config[1],
                     )
                     self.helper.connector_logger.debug(f"Created URL observable for value {observable_value}")
                 elif observable_type == "Hostname":
@@ -497,8 +498,8 @@ class LivehuntBuilder:
                                 "standard_id"
                             ],
                             "x_opencti_description": "Extracted from malware config",
+                            "x_opencti_labels": config[1],
                         },
-                        labels=config[1],
                     )
                     self.helper.connector_logger.debug(f"Created Hostname observable for value {observable_value}")
                 if observable is not None:
