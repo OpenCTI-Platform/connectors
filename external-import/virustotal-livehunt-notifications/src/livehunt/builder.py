@@ -432,9 +432,11 @@ class LivehuntBuilder:
         # Create malware config observables and indicators if needed
         if self.get_malware_config and config[0]:
             note_obj_refs = [file["id"]]
-            for observable_type, observable_value in config[0]:
+            for obs in config[0]:
+                observable_type = obs[0]
+                observable_value = obs[1]
                 observable = None
-                if observable_type == "IPv4Address":
+                if observable_type == "IPv4-Addr":
                     observable = stix2.IPv4Address(
                         value=observable_value,
                         object_marking_refs=[self.tlp],
@@ -446,7 +448,8 @@ class LivehuntBuilder:
                         },
                         labels=config[1],
                     )
-                elif observable_type == "IPv6Address":
+                    self.helper.connector_logger.debug(f"Created IPv4 observable for value {observable_value}")
+                elif observable_type == "IPv6-Addr":
                     observable = stix2.IPv6Address(
                         value=observable_value,
                         object_marking_refs=[self.tlp],
@@ -458,7 +461,8 @@ class LivehuntBuilder:
                         },
                         labels=config[1],
                     )
-                elif observable_type == "DomainName":
+                    self.helper.connector_logger.debug(f"Created IPv6 observable for value {observable_value}")
+                elif observable_type == "Domain-Name":
                     observable = stix2.DomainName(
                         value=observable_value,
                         object_marking_refs=[self.tlp],
@@ -470,7 +474,8 @@ class LivehuntBuilder:
                         },
                         labels=config[1],
                     )
-                elif observable_type == "URL":
+                    self.helper.connector_logger.debug(f"Created DomainName observable for value {observable_value}")
+                elif observable_type == "Url":
                     observable = stix2.URL(
                         value=observable_value,
                         object_marking_refs=[self.tlp],
@@ -482,6 +487,7 @@ class LivehuntBuilder:
                         },
                         labels=config[1],
                     )
+                    self.helper.connector_logger.debug(f"Created URL observable for value {observable_value}")
                 elif observable_type == "Hostname":
                     observable = CustomObservableHostname(
                         value=observable_value,
@@ -494,6 +500,7 @@ class LivehuntBuilder:
                         },
                         labels=config[1],
                     )
+                    self.helper.connector_logger.debug(f"Created Hostname observable for value {observable_value}")
                 if observable is not None:
                     note_obj_refs.append(observable.id)
                     self.bundle.append(observable)
