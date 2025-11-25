@@ -165,8 +165,8 @@ class LivehuntBuilder:
                 incident_id = self.create_alert(vtobj, external_reference)
 
             if self.with_file:
-                file_id = self.create_file(vtobj)
-            
+                file_id = self.create_file(vtobj, incident_id)
+
             if self.with_yara_rule:
                 for source in vtobj._context_attributes["sources"]:
                     self.create_rule(
