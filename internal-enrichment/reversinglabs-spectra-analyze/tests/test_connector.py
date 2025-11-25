@@ -2,6 +2,8 @@ import json
 from typing import Any
 
 from main import ReversingLabsSpectraAnalyzeConnector
+from pycti import OpenCTIConnectorHelper
+from settings import ConfigLoader
 
 
 def find_dict_by_key_value(dicts: list[dict], key: str, value: Any) -> dict | None:
@@ -16,11 +18,15 @@ def filter_by_key_value(items: list[dict], key: str, value: Any) -> list[dict]:
 
 
 def test_should_run_connector():
-    ReversingLabsSpectraAnalyzeConnector()
+    config = ConfigLoader()
+    helper = OpenCTIConnectorHelper(config=config.to_helper_config())
+    ReversingLabsSpectraAnalyzeConnector(config=config, helper=helper)
 
 
 def test_should_enrich_file(file_enrichment_message, detailed_report_response):
-    connector = ReversingLabsSpectraAnalyzeConnector()
+    config = ConfigLoader()
+    helper = OpenCTIConnectorHelper(config=config.to_helper_config())
+    connector = ReversingLabsSpectraAnalyzeConnector(config=config, helper=helper)
 
     sent_bundle = {}
 
@@ -67,7 +73,9 @@ def test_should_enrich_url(
     check_submitted_url_status_response,
     get_classification_v3_response,
 ):
-    connector = ReversingLabsSpectraAnalyzeConnector()
+    config = ConfigLoader()
+    helper = OpenCTIConnectorHelper(config=config.to_helper_config())
+    connector = ReversingLabsSpectraAnalyzeConnector(config=config, helper=helper)
 
     sent_bundle = {}
 
@@ -100,7 +108,9 @@ def test_should_enrich_ipv4(
     network_urls_from_ip_aggregated_response,
     network_url_report_response,
 ):
-    connector = ReversingLabsSpectraAnalyzeConnector()
+    config = ConfigLoader()
+    helper = OpenCTIConnectorHelper(config=config.to_helper_config())
+    connector = ReversingLabsSpectraAnalyzeConnector(config=config, helper=helper)
 
     sent_bundle = {}
 
@@ -135,7 +145,9 @@ def test_should_enrich_domain_name(
     domain_name_enrichment_message,
     network_domain_report_response,
 ):
-    connector = ReversingLabsSpectraAnalyzeConnector()
+    config = ConfigLoader()
+    helper = OpenCTIConnectorHelper(config=config.to_helper_config())
+    connector = ReversingLabsSpectraAnalyzeConnector(config=config, helper=helper)
 
     sent_bundle = {}
 

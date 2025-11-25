@@ -40,9 +40,8 @@ def correct_config():
             "REVERSINGLABS_SPECTRA_ANALYZE_URL": "http://api",
             "REVERSINGLABS_SPECTRA_ANALYZE_TOKEN": "token",
             "REVERSINGLABS_MAX_TLP": "TLP:WHITE",
-            "REVERSINGLABS_SANDBOX_OS:": "windows10",
-            "REVERSINGLABS_CREATE_INDICATORS": "true",
             "REVERSINGLABS_CLOUD_ANALYSIS": "false",
+            "REVERSINGLABS_SANDBOX_OS": "windows11",
         },
     ):
         yield
