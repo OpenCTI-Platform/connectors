@@ -10,6 +10,8 @@ from functools import wraps
 from typing import Dict
 
 import stix2
+from connectors_sdk.models import ExternalReference, OrganizationAuthor, TLPMarking
+from connectors_sdk.models.enums import TLPLevel
 from pycti import (
     STIX_EXT_OCTI_SCO,
     Identity,
@@ -68,11 +70,19 @@ class ReversingLabsSpectraAnalyzeConnector:
     def __init__(self, config: ConfigLoader, helper: OpenCTIConnectorHelper):
         self.helper = helper
         self.config = config
-        self.reversinglabs_identity = self.helper.api.identity.create(
-            type="Organization",
-            name="ReversingLabs",
-            description="www.reversinglabs.com",
+        external_reference = ExternalReference(
+            source_name="ReversingLabs",
+            url="www.reversinglabs.com",
         )
+        self.reversinglabs_identity = OrganizationAuthor(
+            name="ReversingLabs",
+            markings=[
+                TLPMarking(
+                    level=TLPLevel("amber"),
+                )
+            ],
+            external_references=[external_reference],
+        ).to_stix2_object()
         self.reversinglabs_spectra_user_agent = (
             "ReversingLabs Spectra Analyze OpenCTI v1.2.0"
         )
@@ -120,7 +130,7 @@ class ReversingLabsSpectraAnalyzeConnector:
             id=Identity.generate_id(organization, "Organization"),
             name=organization,
             identity_class="organization",
-            created_by_ref=self.reversinglabs_identity["standard_id"],
+            created_by_ref=self.reversinglabs_identity.id,
         )
         self.stix_objects.append(stix_organization)
 
@@ -503,7 +513,7 @@ class ReversingLabsSpectraAnalyzeConnector:
                 name=results["malware_family_name"],
                 description="ReversingLabs",
                 is_family="false",
-                created_by_ref=self.reversinglabs_identity["standard_id"],
+                created_by_ref=self.reversinglabs_identity.id,
             )
             self.stix_objects.append(stix_malware)
             stix_malware_with_relationship.append(stix_malware)
@@ -534,7 +544,7 @@ class ReversingLabsSpectraAnalyzeConnector:
             description=results["description"],
             labels=results["labels"],
             pattern=indicator_pattern,
-            created_by_ref=self.reversinglabs_identity["standard_id"],
+            created_by_ref=self.reversinglabs_identity.id,
             object_marking_refs=[stix2.TLP_AMBER],
             custom_properties={
                 "pattern_type": "stix",
@@ -566,7 +576,7 @@ class ReversingLabsSpectraAnalyzeConnector:
             relationship_type=stix_core_relationship_type,
             source_ref=source_ref,
             target_ref=target_ref,
-            created_by_ref=self.reversinglabs_identity["standard_id"],
+            created_by_ref=self.reversinglabs_identity.id,
             object_marking_refs=[stix2.TLP_AMBER],
         )
 
@@ -612,7 +622,7 @@ class ReversingLabsSpectraAnalyzeConnector:
                 description=description,
                 labels=labels,
                 pattern=f"[file:hashes. 'SHA-1' = '{sha1}']",
-                created_by_ref=self.reversinglabs_identity["standard_id"],
+                created_by_ref=self.reversinglabs_identity.id,
                 object_marking_refs=[stix2.TLP_AMBER],
                 custom_properties={
                     "pattern_type": "stix",
@@ -630,7 +640,7 @@ class ReversingLabsSpectraAnalyzeConnector:
                 description=description,
                 labels=labels,
                 pattern=f"[url:value = '{download_url}']",
-                created_by_ref=self.reversinglabs_identity["standard_id"],
+                created_by_ref=self.reversinglabs_identity.id,
                 object_marking_refs=[stix2.TLP_AMBER],
                 custom_properties={
                     "pattern_type": "stix",
@@ -671,7 +681,7 @@ class ReversingLabsSpectraAnalyzeConnector:
                     description="ReversingLabs",
                     malware_types=[malware_type],
                     is_family="false",
-                    created_by_ref=self.reversinglabs_identity["standard_id"],
+                    created_by_ref=self.reversinglabs_identity.id,
                 )
                 self.stix_objects.append(malware)
 
@@ -733,7 +743,7 @@ class ReversingLabsSpectraAnalyzeConnector:
             id=Note.generate_id(now, content),
             abstract=abstract,
             content=content,
-            created_by_ref=self.reversinglabs_identity["standard_id"],
+            created_by_ref=self.reversinglabs_identity.id,
             object_refs=[self.stix_entity["id"]],
             object_marking_refs=[stix2.TLP_AMBER],
             custom_properties={"note_types": ["external"]},
@@ -829,7 +839,7 @@ class ReversingLabsSpectraAnalyzeConnector:
                             description="ReversingLabs",
                             malware_types=[threat_name_split[1]],
                             is_family="false",
-                            created_by_ref=self.reversinglabs_identity["standard_id"],
+                            created_by_ref=self.reversinglabs_identity.id,
                         )
                         malware_list.append(malware)
                         self.stix_objects.append(malware)
@@ -840,7 +850,7 @@ class ReversingLabsSpectraAnalyzeConnector:
                 description="Created from Spectra Analyze Domain report.",
                 labels=labels,
                 pattern=f"[domain-name:value = '{one_domain.get('requested_domain')}']",
-                created_by_ref=self.reversinglabs_identity["standard_id"],
+                created_by_ref=self.reversinglabs_identity.id,
                 object_marking_refs=[stix2.TLP_AMBER],
                 custom_properties={
                     "pattern_type": "stix",
@@ -895,7 +905,7 @@ class ReversingLabsSpectraAnalyzeConnector:
                 id=Note.generate_id(now, content),
                 abstract=abstract,
                 content=content,
-                created_by_ref=self.reversinglabs_identity["standard_id"],
+                created_by_ref=self.reversinglabs_identity.id,
                 object_refs=[self.stix_entity["id"]],
                 object_marking_refs=[stix2.TLP_AMBER],
                 custom_properties={"note_types": ["external"]},
@@ -968,7 +978,7 @@ class ReversingLabsSpectraAnalyzeConnector:
                             description="ReversingLabs",
                             malware_types=[threat_name_split[1]],
                             is_family="false",
-                            created_by_ref=self.reversinglabs_identity["standard_id"],
+                            created_by_ref=self.reversinglabs_identity.id,
                         )
                         malware_list.append(malware)
                         self.stix_objects.append(malware)
@@ -979,7 +989,7 @@ class ReversingLabsSpectraAnalyzeConnector:
                 description="Created from Spectra Analyze URL report.",
                 labels=labels,
                 pattern=f"[url:value = '{one_url.get('requested_url')}']",
-                created_by_ref=self.reversinglabs_identity["standard_id"],
+                created_by_ref=self.reversinglabs_identity.id,
                 object_marking_refs=[stix2.TLP_AMBER],
                 custom_properties={
                     "pattern_type": "stix",
@@ -1033,7 +1043,7 @@ class ReversingLabsSpectraAnalyzeConnector:
                 id=Note.generate_id(now, content),
                 abstract=abstract,
                 content=content,
-                created_by_ref=self.reversinglabs_identity["standard_id"],
+                created_by_ref=self.reversinglabs_identity.id,
                 object_refs=[self.stix_entity["id"]],
                 object_marking_refs=[stix2.TLP_AMBER],
                 custom_properties={"note_types": ["external"]},
@@ -1103,7 +1113,7 @@ class ReversingLabsSpectraAnalyzeConnector:
                     description="ReversingLabs",
                     malware_types=[threat_name_split[1]],
                     is_family="false",
-                    created_by_ref=self.reversinglabs_identity["standard_id"],
+                    created_by_ref=self.reversinglabs_identity.id,
                 )
                 malware_list.append(malware)
                 self.stix_objects.append(malware)
@@ -1114,7 +1124,7 @@ class ReversingLabsSpectraAnalyzeConnector:
             description="Created from Spectra Analyze Domain report.",
             labels=labels,
             pattern=f"[domain-name:value = '{self.domain_sample}']",
-            created_by_ref=self.reversinglabs_identity["standard_id"],
+            created_by_ref=self.reversinglabs_identity.id,
             object_marking_refs=[stix2.TLP_AMBER],
             custom_properties={
                 "pattern_type": "stix",
@@ -1173,7 +1183,7 @@ class ReversingLabsSpectraAnalyzeConnector:
             id=Note.generate_id(now, content),
             abstract=abstract,
             content=content,
-            created_by_ref=self.reversinglabs_identity["standard_id"],
+            created_by_ref=self.reversinglabs_identity.id,
             object_refs=[self.stix_entity["id"]],
             object_marking_refs=[stix2.TLP_AMBER],
             custom_properties={"note_types": ["external"]},
@@ -1240,7 +1250,7 @@ class ReversingLabsSpectraAnalyzeConnector:
                     description="ReversingLabs",
                     malware_types=[threat_name_split[1]],
                     is_family="false",
-                    created_by_ref=self.reversinglabs_identity["standard_id"],
+                    created_by_ref=self.reversinglabs_identity.id,
                 )
                 malware_list.append(malware)
                 self.stix_objects.append(malware)
@@ -1251,7 +1261,7 @@ class ReversingLabsSpectraAnalyzeConnector:
             description="Created from Spectra Analyze URL report.",
             labels=labels,
             pattern=f"[url:value = '{self.url_sample}']",
-            created_by_ref=self.reversinglabs_identity["standard_id"],
+            created_by_ref=self.reversinglabs_identity.id,
             object_marking_refs=[stix2.TLP_AMBER],
             custom_properties={
                 "pattern_type": "stix",
@@ -1309,7 +1319,7 @@ class ReversingLabsSpectraAnalyzeConnector:
             id=Note.generate_id(now, content),
             abstract=abstract,
             content=content,
-            created_by_ref=self.reversinglabs_identity["standard_id"],
+            created_by_ref=self.reversinglabs_identity.id,
             object_refs=[self.stix_entity["id"]],
             object_marking_refs=[stix2.TLP_AMBER],
             custom_properties={"note_types": ["external"]},
