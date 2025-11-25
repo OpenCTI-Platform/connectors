@@ -551,8 +551,8 @@ class LivehuntBuilder:
                         self.bundle.append(relationship)
                         note_obj_refs.append(indicator.id)
             # Create the note for the malware config
-            note = Note(
-                id=Note.generate_id(f"Malware config for file {vtobj.sha256}", config[2]),
+            note = stix2.Note(
+                id=Note.generate_id(None, config[2]),
                 abstract=f"Malware config extracted from file {vtobj.sha256}",
                 content=config[2],
                 object_refs=note_obj_refs,
