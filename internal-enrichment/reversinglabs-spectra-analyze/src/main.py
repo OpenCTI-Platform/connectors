@@ -1069,7 +1069,9 @@ class ReversingLabsSpectraAnalyzeConnector:
         bundle = self._generate_stix_bundle(
             stix_objects=self.stix_objects, stix_entity=self.stix_entity
         )
-        bundles_sent = self.helper.send_stix2_bundle(bundle)
+        bundles_sent = self.helper.send_stix2_bundle(
+            bundle=bundle, cleanup_inconsistent_bundle=True
+        )
 
         self.helper.connector_logger.info(
             f"{self.helper.connect_name}: Number of stix bundles sent to workers: {str(len(bundles_sent))}"
@@ -1204,7 +1206,9 @@ class ReversingLabsSpectraAnalyzeConnector:
         bundle = self._generate_stix_bundle(
             stix_objects=self.stix_objects, stix_entity=self.stix_entity
         )
-        bundles_sent = self.helper.send_stix2_bundle(bundle)
+        bundles_sent = self.helper.send_stix2_bundle(
+            bundle=bundle, cleanup_inconsistent_bundle=True
+        )
 
         self.helper.connector_logger.info(
             f"{self.helper.connect_name}: Number of stix bundles sent to workers: {str(len(bundles_sent))}"
@@ -1330,7 +1334,9 @@ class ReversingLabsSpectraAnalyzeConnector:
         bundle = self._generate_stix_bundle(
             stix_objects=self.stix_objects, stix_entity=self.stix_entity
         )
-        bundles_sent = self.helper.send_stix2_bundle(bundle)
+        bundles_sent = self.helper.send_stix2_bundle(
+            bundle=bundle, cleanup_inconsistent_bundle=True
+        )
 
         self.helper.connector_logger.info(
             f"{self.helper.connect_name}: Number of stix bundles sent to workers round 1: {str(len(bundles_sent))}"
@@ -1353,7 +1359,9 @@ class ReversingLabsSpectraAnalyzeConnector:
 
             # Create Stix Bundle and send it to OpenCTI
             bundle = self._generate_stix_bundle(stix_objects, stix_entity)
-            bundles_sent = self.helper.send_stix2_bundle(bundle)
+            bundles_sent = self.helper.send_stix2_bundle(
+                bundle=bundle, cleanup_inconsistent_bundle=True
+            )
 
             self.helper.connector_logger.info(
                 f"{self.helper.connect_name}: Number of stix bundles sent for workers: {str(len(bundles_sent))}"
