@@ -373,7 +373,7 @@ class LivehuntBuilder:
                 created_by_ref=self.author["standard_id"],
                 source_ref=incident_id,
                 target_ref=file["id"],
-                start_time=datetime.datetime.fromtimestamp(vtobj._context_attributes["notification_date"]),
+                start_time=vtobj._context_attributes["notification_date"],
                 allow_custom=True,
                 object_marking_refs=[self.tlp],
             )
@@ -388,9 +388,7 @@ class LivehuntBuilder:
                 description=f"File with SHA256 {vtobj.sha256} observed in VirusTotal Livehunt Notifications.",
                 pattern=f"[file:hashes.'SHA-256' = '{vtobj.sha256}']",
                 pattern_type="stix",
-                valid_from=self.helper.api.stix2.format_date(
-                    datetime.datetime.fromtimestamp(vtobj.first_submission_date)
-                ),
+                valid_from=vtobj.first_submission_date,
                 custom_properties={
                     "x_opencti_main_observable_type": "StixFile",
                 },
@@ -411,7 +409,7 @@ class LivehuntBuilder:
                 created_by_ref=self.author["standard_id"],
                 source_ref=indicator["id"],
                 target_ref=file["id"],
-                start_time=datetime.datetime.fromtimestamp(vtobj.first_submission_date),
+                start_time=vtobj.first_submission_date,
                 allow_custom=True,
                 object_marking_refs=[self.tlp],
             )
@@ -428,7 +426,7 @@ class LivehuntBuilder:
                     created_by_ref=self.author["standard_id"],
                     source_ref=incident_id,
                     target_ref=indicator["id"],
-                    start_time=datetime.datetime.fromtimestamp(vtobj.first_submission_date),
+                    start_time=vtobj.first_submission_date,
                     allow_custom=True,
                     object_marking_refs=[self.tlp],
                 )
@@ -522,7 +520,7 @@ class LivehuntBuilder:
                         ],
                         source_ref=file["id"],
                         target_ref=observable["id"],
-                        start_time=datetime.datetime.fromtimestamp(vtobj.first_submission_date),
+                        start_time=vtobj.first_submission_date,
                         allow_custom=True,
                         object_marking_refs=[self.tlp],
                     )    
@@ -535,9 +533,7 @@ class LivehuntBuilder:
                             description=f"Observable {observable.value} extracted from malware config.",
                             pattern=f"[{observable.type}:value = '{observable.value}']",
                             pattern_type="stix",
-                            valid_from=self.helper.api.stix2.format_date(
-                                datetime.datetime.fromtimestamp(vtobj.first_submission_date)
-                            ),
+                            valid_from=vtobj.first_submission_date,
                             custom_properties={
                                 "x_opencti_main_observable_type": observable_type,
                             },
@@ -558,7 +554,7 @@ class LivehuntBuilder:
                             ],
                             source_ref=indicator["id"],
                             target_ref=observable["id"],
-                            start_time=datetime.datetime.fromtimestamp(vtobj.first_submission_date),
+                            start_time=vtobj.first_submission_date,
                             allow_custom=True,
                             object_marking_refs=[self.tlp],
                         )
@@ -677,7 +673,6 @@ class LivehuntBuilder:
                         created_by_ref=self.author["standard_id"],
                         source_ref=file_id,
                         target_ref=indicator["id"],
-                        start_time=valid_from,
                         allow_custom=True,
                         object_marking_refs=[self.tlp],
                     )
