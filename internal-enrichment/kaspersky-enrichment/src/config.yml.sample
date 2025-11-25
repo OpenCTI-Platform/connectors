@@ -13,4 +13,5 @@ connector:
 kaspersky:
 #  api_base_url: 'https://tip.kaspersky.com'
   api_key: 'ChangeMe'
-#  max_tlp: "TLP:AMBER" # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
+#  zone_octi_score_mapping: 'red:100,orange:80,yellow:60,gray:20,green:0'
+#  file_sections: 'LicenseInfo,Zone,FileGeneralInfo'

@@ -1,5 +1,5 @@
 from kaspersky_client import KasperskyClient
-from pycti import OpenCTIConnectorHelper
+from pycti import STIX_EXT_OCTI_SCO, OpenCTIConnectorHelper, OpenCTIStix2
 
 from .converter_to_stix import ConverterToStix
 from .settings import ConnectorSettings
@@ -46,17 +46,31 @@ class KasperskyConnector:
         """
         self.config = config
         self.helper = helper
+        self.file_sections = (
+            self.config.kaspersky.file_sections
+        )  # TODO: prevent that LicenseInfo, Zone and FileGeneralInfo are in string
         api_key = self.config.kaspersky.api_key.get_secret_value()
+
+        # Convert zone_octi_score_mapping to dict
+        zone_octi_score_mapping = self.config.kaspersky.zone_octi_score_mapping.replace(
+            " ", ""
+        )
+        self.zone_octi_score_mapping = {
+            x.split(":")[0].lower(): int(x.split(":")[1])
+            for x in zone_octi_score_mapping.split(",")
+        }  # TODO: maybe convert in settings instead of here
+
         self.client = KasperskyClient(
             self.helper,
             base_url=self.config.kaspersky.api_base_url,
             api_key=api_key,
             params={
                 "count": 1,
-                "sections": "LicenseInfo,Zone,FileGeneralInfo",
+                "sections": self.file_sections,
                 "format": "json",
             },
         )
+
         self.converter_to_stix = ConverterToStix(
             self.helper,
             tlp_level="clear",
@@ -78,32 +92,57 @@ class KasperskyConnector:
             "Unable to enrich the observable, the observable does not have an SHA256, SHA1, or MD5"
         )
 
+    def check_quota(self, entity_info):
+        """
+        Check if quota is not exceeded.
+        Raise a warning otherwise.
+        """
+        if entity_info["DayRequests"] >= entity_info["DayQuota"]:
+            self.helper.connector_logger.warning(
+                "[CONNECTOR] The daily quota has been exceeded",
+                {
+                    "day_requests": entity_info["DayRequests"],
+                    "day_quota": entity_info["DayQuota"],
+                },
+            )
+
     def _process_file(self, observable) -> list:
         """
-        Collect intelligence from the source and convert into STIX object
-        :return: List of STIX objects
+        Collect intelligence from the source for a File type
         """
         self.helper.connector_logger.info("[CONNECTOR] Starting enrichment...")
 
-        # Check file hash
+        # Retrieve file hash
         obs_hash = self.resolve_file_hash(observable)
 
-        # Get entities
-        self.client.get_file_info(obs_hash)
+        # Get entity data from api client
+        entity_data = self.client.get_file_info(obs_hash)
 
-        # === Create the author
-        # self.author = self.converter.create_author()
+        # Check Quota
+        self.check_quota(entity_data["LicenseInfo"])
 
-        # === Convert into STIX2 object and add it to the stix_object_list
-        # entity_to_stix = self.converter_to_stix.create_obs(value,obs_id)
-        # self.stix_object_list.append(entity_to_stix)
+        # Manage FileGeneralInfo data
 
-        # return self.stix_objects_list
+        # Score
+        if entity_data.get("Zone"):
+            score = self.zone_octi_score_mapping[entity_data["Zone"].lower()]
+            OpenCTIStix2.put_attribute_in_extension(
+                observable, STIX_EXT_OCTI_SCO, "score", score
+            )
 
-        # ===========================
-        # === Add your code above ===
-        # ===========================
-        raise NotImplementedError
+        # Hashes
+        if entity_data["FileGeneralInfo"].get("Md5"):
+            observable["hashes"]["MD5"] = entity_data["FileGeneralInfo"]["Md5"]
+        if entity_data["FileGeneralInfo"].get("Sha1"):
+            observable["hashes"]["SHA-1"] = entity_data["FileGeneralInfo"]["Sha1"]
+        if entity_data["FileGeneralInfo"].get("Sha256"):
+            observable["hashes"]["SHA-256"] = entity_data["FileGeneralInfo"]["Sha256"]
+
+        # Size, mime_type and labels
+        mapping_fields = {"Size": "size", "Type": "mime_type", "Categories": "labels"}
+        for key, value in mapping_fields.items():
+            if entity_data["FileGeneralInfo"].get(key):
+                observable[value] = entity_data["FileGeneralInfo"][key]
 
     def entity_in_scope(self, obs_type) -> bool:
         """
@@ -145,35 +184,31 @@ class KasperskyConnector:
                 # Performing the collection of intelligence and enrich the entity
                 match obs_type:
                     case "StixFile":
-                        stix_objects = self._process_file(observable)
+                        self._process_file(observable)
                     # case "IPv4-Addr":
-                    #     stix_objects = self._process_ip(observable)
+                    #     self._process_ip(observable)
                     # case "Domain-Name" | "Hostname":
-                    #     stix_objects = self._process_domain(observable)
+                    #     self._process_domain(observable)
                     # case "Url":
-                    #     stix_objects = self._process_url(observable)
+                    #     self._process_url(observable)
                     case _:
                         raise ValueError(
                             "Entity type is not supported",
                             {"entity_type": obs_type},
                         )
 
-                if stix_objects is not None and len(stix_objects):
-                    return self._send_bundle(stix_objects)
+                if self.stix_objects_list is not None and len(self.stix_objects_list):
+                    return self._send_bundle(self.stix_objects_list)
                 else:
                     info_msg = "[CONNECTOR] No information found"
                     return info_msg
 
             else:
                 if not data.get("event_type"):
-                    # If it is not in scope AND entity bundle passed through playbook, we should return the original bundle unchanged
+                    # If it is not in scope AND entity bundle passed through playbook,
+                    # we should return the original bundle unchanged
                     self._send_bundle(self.stix_objects_list)
                 else:
-                    # self.helper.connector_logger.info(
-                    #     "[CONNECTOR] Skip the following entity as it does not concern "
-                    #     "the initial scope found in the config connector: ",
-                    #     {"entity_id": opencti_entity["entity_id"]},
-                    # )
                     raise ValueError(
                         f"Failed to process observable, {opencti_entity['entity_type']} is not a supported entity type."
                     )

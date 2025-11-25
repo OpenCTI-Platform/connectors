@@ -59,10 +59,18 @@ class KasperskyConfig(BaseConfigModel):
         description="API key used to authenticate requests to the Kaspersky service.",
     )
 
-    max_tlp: TLPToLower = Field(
-        default="TLP:AMBER",
-        description="Traffic Light Protocol (TLP) level to apply on objects imported into OpenCTI. "
-        "Available values: TLP:CLEAR, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED",
+    zone_octi_score_mapping: str = Field(
+        default="red:100,orange:80,yellow:60,gray:20,green:0",
+        description="Zone to score mapping. Only the numerical values ​​need to be changed if necessary. "
+        "See https://tip.kaspersky.com/Help/Doc_data/en-US/AboutZones.htm for further explanations",
+    )
+
+    file_sections: str = Field(
+        default="LicenseInfo,Zone,FileGeneralInfo",
+        min_length=1,  # Prevent empty string
+        description="Sections wanted to investigate for the requested hash. "
+        "LicenseInfo, Zone and FileGeneralInfo are called by default. "
+        "Only DetectionsInfo, FileDownloadedFromUrls, Industries and FileNames are currently supported",
     )
 
 
