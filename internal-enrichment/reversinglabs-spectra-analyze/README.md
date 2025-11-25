@@ -58,3 +58,7 @@ Note that logging messages can be added using `self.helper.log_{LOG_LEVEL}("Samp
 
 
 ### Additional information
+
+| Status            | Date     | Comment |
+|-------------------|----------|---------|
+| Filigran Verified | 30-11-25 |         |
