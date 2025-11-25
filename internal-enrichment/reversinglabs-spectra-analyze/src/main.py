@@ -1367,7 +1367,7 @@ class ReversingLabsSpectraAnalyzeConnector:
                 f"{self.helper.connect_name}: Number of stix bundles sent for workers: {str(len(bundles_sent))}"
             )
 
-    def _process_message(self, data: Dict):
+    def _process_message(self, data: Dict) -> str:
         stix_objects = data["stix_objects"]
         stix_entity = data["stix_entity"]
         opencti_entity = data["enrichment_entity"]
@@ -1496,6 +1496,8 @@ class ReversingLabsSpectraAnalyzeConnector:
             raise ValueError(
                 f"{self.helper.connect_name}: Connector is not registered to work with provided {str(opencti_type)} type!"
             )
+
+        return f"{self.helper.connect_name}: Successfully processed {str(opencti_type)} entity."
 
 
 if __name__ == "__main__":

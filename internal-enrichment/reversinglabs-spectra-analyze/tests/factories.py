@@ -48,6 +48,9 @@ class DownloadedFilesResponse:
 
 
 class DownloadedFileFactory(factory.Factory):
+    def __new__(cls, *args, **kwargs) -> DownloadedFile:
+        return super().__new__(*args, **kwargs)
+
     class Meta:
         model = DownloadedFile
 
@@ -74,6 +77,9 @@ class DownloadedFileFactory(factory.Factory):
 
 
 class DownloadedFilesResponseFactory(factory.Factory):
+    def __new__(cls, *args, **kwargs) -> DownloadedFilesResponse:
+        return super().__new__(*args, **kwargs)
+
     class Meta:
         model = DownloadedFilesResponse
 
@@ -106,6 +112,9 @@ SOURCES = ["cyradar", "crdf", "levelblue", "asimily", "criminalip", "apwg", "cyr
 
 
 class ThirdPartySourceFactory(factory.Factory):
+    def __new__(cls, *args, **kwargs) -> ThirdPartySource:
+        return super().__new__(*args, **kwargs)
+
     class Meta:
         model = ThirdPartySource
 
@@ -132,6 +141,9 @@ class ThirdPartyReputation:
 
 
 class ThirdPartyReputationFactory(factory.Factory):
+    def __new__(cls, *args, **kwargs) -> ThirdPartyReputation:
+        return super().__new__(*args, **kwargs)
+
     class Meta:
         model = ThirdPartyReputation
 
@@ -159,6 +171,9 @@ class DownloadedFilesStatistics:
 
 
 class DownloadedFilesStatisticsFactory(factory.Factory):
+    def __new__(cls, *args, **kwargs) -> DownloadedFilesStatistics:
+        return super().__new__(*args, **kwargs)
+
     class Meta:
         model = DownloadedFilesStatistics
 
@@ -182,6 +197,9 @@ class TopThreat:
 
 
 class TopThreatFactory(factory.Factory):
+    def __new__(cls, *args, **kwargs) -> TopThreat:
+        return super().__new__(*args, **kwargs)
+
     class Meta:
         model = TopThreat
 
@@ -205,6 +223,9 @@ class ReportResponse:
 
 
 class ReportResponseFactory(factory.Factory):
+    def __new__(cls, *args, **kwargs) -> ReportResponse:
+        return super().__new__(*args, **kwargs)
+
     class Meta:
         model = ReportResponse
 
@@ -223,6 +244,9 @@ class Resolution:
 
 
 class ResolutionFactory(factory.Factory):
+    def __new__(cls, *args, **kwargs) -> Resolution:
+        return super().__new__(*args, **kwargs)
+
     class Meta:
         model = Resolution
 
@@ -239,6 +263,9 @@ class ResolutionResponse:
 
 
 class ResolutionResponseFactory(factory.Factory):
+    def __new__(cls, *args, **kwargs) -> ResolutionResponse:
+        return super().__new__(*args, **kwargs)
+
     class Meta:
         model = ResolutionResponse
 
@@ -269,6 +296,9 @@ class UrlsResponse:
 
 
 class UrlsResponseFactory(factory.Factory):
+    def __new__(cls, *args, **kwargs) -> UrlsResponse:
+        return super().__new__(*args, **kwargs)
+
     class Meta:
         model = UrlsResponse
 
@@ -304,6 +334,9 @@ class DomainResponse:
 
 
 class DomainResponseFactory(factory.Factory):
+    def __new__(cls, *args, **kwargs) -> DomainResponse:
+        return super().__new__(*args, **kwargs)
+
     class Meta:
         model = DomainResponse
 
@@ -402,6 +435,9 @@ class AnalysisResponse:
 
 
 class AnalysisResponseFactory(factory.Factory):
+    def __new__(cls, *args, **kwargs) -> AnalysisResponse:
+        return super().__new__(*args, **kwargs)
+
     class Meta:
         model = AnalysisResponse
 
@@ -430,6 +466,9 @@ class UploadDetail:
 
 
 class UploadDetailFactory(factory.Factory):
+    def __new__(cls, *args, **kwargs) -> UploadDetail:
+        return super().__new__(*args, **kwargs)
+
     class Meta:
         model = UploadDetail
 
@@ -471,6 +510,9 @@ class ReportIntelligence:
 
 
 class ReportIntelligenceResponseFactory(factory.Factory):
+    def __new__(cls, *args, **kwargs) -> ReportIntelligence:
+        return super().__new__(*args, **kwargs)
+
     class Meta:
         model = ReportIntelligence
 
@@ -511,6 +553,9 @@ class HashClassification:
 
 
 class HashClassificationFactory(factory.Factory):
+    def __new__(cls, *args, **kwargs) -> HashClassification:
+        return super().__new__(*args, **kwargs)
+
     class Meta:
         model = HashClassification
 
@@ -799,6 +844,9 @@ class EnrichmentMessage:
 
 
 class FileEnrichmentFactory(factory.Factory):
+    def __new__(cls, *args, **kwargs) -> EnrichmentMessage:
+        return super().__new__(*args, **kwargs)
+
     class Meta:
         model = EnrichmentMessage
 
@@ -914,6 +962,9 @@ class UrlEnrichmentEntityFactory(factory.Factory):
 
 
 class UrlEnrichmentFactory(factory.Factory):
+    def __new__(cls, *args, **kwargs) -> EnrichmentMessage:
+        return super().__new__(*args, **kwargs)
+
     class Meta:
         model = EnrichmentMessage
 
@@ -996,6 +1047,9 @@ class Ipv4EnrichmentEntityFactory(factory.Factory):
 
 
 class Ipv4EnrichmentFactory(factory.Factory):
+    def __new__(cls, *args, **kwargs) -> EnrichmentMessage:
+        return super().__new__(*args, **kwargs)
+
     class Meta:
         model = EnrichmentMessage
 
@@ -1078,6 +1132,9 @@ class DomainNameEnrichmentEntityFactory(factory.Factory):
 
 
 class DomainNameEnrichmentFactory(factory.Factory):
+    def __new__(cls, *args, **kwargs) -> EnrichmentMessage:
+        return super().__new__(*args, **kwargs)
+
     class Meta:
         model = EnrichmentMessage
 
