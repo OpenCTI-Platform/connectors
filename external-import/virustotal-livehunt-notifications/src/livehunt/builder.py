@@ -808,7 +808,7 @@ class LivehuntBuilder:
                                         host = connection.get("host", None)
                                         url = connection.get("url", None)
                                         categories = connection.get("categories", [])
-                                        protocols = connection.get("protocols_tags", [])
+                                        protocols = connection.get("protocol_tags", [])
                                         if categories:
                                             labels.extend(categories)
                                         if protocols:
