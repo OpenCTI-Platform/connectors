@@ -4,12 +4,12 @@ import json
 import os
 import textwrap
 import time
+import traceback
 from datetime import datetime
 from functools import wraps
 from typing import Dict
 
 import stix2
-from lib.internal_enrichment import InternalEnrichmentConnector
 from pycti import (
     STIX_EXT_OCTI_SCO,
     Identity,
@@ -21,6 +21,7 @@ from pycti import (
 )
 from ReversingLabs.SDK.a1000 import A1000
 from ReversingLabs.SDK.helper import NotFoundError, RequestTimeoutError
+from settings import ConfigLoader
 
 ZIP_MIME_TYPES = (
     "application/x-bzip",
@@ -30,9 +31,6 @@ ZIP_MIME_TYPES = (
     "application/x-zip-compressed",
     "application/x-7z-compressed",
 )
-TRUE_LIST = ("true", "True", "yes", "Yes")
-FALSE_LIST = ("false", "False", "no", "No")
-PLATFORM_LIST = ("windows7", "windows10", "windows11", "macos11", "linux")
 FILE_SAMPLE = ("Artifact", "StixFile", "File")
 
 
@@ -65,45 +63,23 @@ def handle_spectra_errors(func):
     return wrapper
 
 
-class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
+class ReversingLabsSpectraAnalyzeConnector:
 
-    def __init__(self):
-        super().__init__()
-        self._get_config_variables()
-        # ReversingLabs identity
+    def __init__(self, config: ConfigLoader, helper: OpenCTIConnectorHelper):
+        self.helper = helper
+        self.config = config
         self.reversinglabs_identity = self.helper.api.identity.create(
             type="Organization",
             name="ReversingLabs",
             description="www.reversinglabs.com",
         )
-
-    def _get_config_variables(self):
-
-        self.helper.connector_logger.info(
-            f"{self.helper.connect_name}: Reading configuration env variables!"
-        )
-
-        self.connector_name = os.environ.get("CONNECTOR_NAME", None)
-        self.opencti_url = os.environ.get("OPENCTI_URL", None)
-        self.opencti_token = os.environ.get("OPENCTI_TOKEN", None)
-        self.reversinglabs_spectra_analyze_url = os.environ.get(
-            "REVERSINGLABS_SPECTRA_ANALYZE_URL", None
-        )
-        self.reversinglabs_spectra_analyze_token = os.environ.get(
-            "REVERSINGLABS_SPECTRA_ANALYZE_TOKEN", None
-        )
-        self.reversinglabs_max_tlp = os.environ.get("REVERSINGLABS_MAX_TLP", None)
-        self.reversinglabs_sandbox_platform = os.environ.get("REVERSINGLABS_SANDBOX_OS")
-        self.reversinglabs_create_indicators = os.environ.get(
-            "REVERSINGLABS_CREATE_INDICATORS"
-        )
-        self.reversinglabs_cloud_analysis = os.environ.get(
-            "REVERSINGLABS_CLOUD_ANALYSIS"
-        )
-
         self.reversinglabs_spectra_user_agent = (
             "ReversingLabs Spectra Analyze OpenCTI v1.2.0"
         )
+
+    # Start the main loop
+    def start(self):
+        self.helper.listen(message_callback=self._process_message)
 
     """
     Extract TLP and check if max_tlp is less than or equal to the marking access
@@ -117,7 +93,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                 tlp = marking_definition["definition"]
 
             if not OpenCTIConnectorHelper.check_max_tlp(
-                tlp, self.reversinglabs_max_tlp
+                tlp, self.config.reversinglabs_spectra_analyze.max_tlp
             ):
                 raise ValueError(
                     f"{self.helper.connect_name}: ERROR: Do not send any data, TLP of the observable is greater than MAX TLP"
@@ -162,16 +138,11 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             f"{self.helper.connect_name}: Submitting artifact {str(sample_name)} to ReversingLabs Spectra Analyze."
         )
 
-        if self.reversinglabs_cloud_analysis in TRUE_LIST:
-            cloud_analysis = True
-        else:
-            cloud_analysis = False
-
         response = self.a1000client.upload_sample_and_get_detailed_report_v2(
             file_path=sample_name,
             custom_filename=sample_name,
-            cloud_analysis=cloud_analysis,
-            rl_cloud_sandbox_platform=self.reversinglabs_sandbox_platform,
+            cloud_analysis=self.config.reversinglabs_spectra_analyze.cloud_analysis,
+            rl_cloud_sandbox_platform=self.config.reversinglabs_spectra_analyze.sandbox_os,
             comment="Uploaded from OpenCTI Platform",
             tags="opencti",
         )
@@ -246,9 +217,9 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         self.opencti_entity = opencti_entity
         self.url = url_sample
         analysis_report = {}
-        platform = self.reversinglabs_sandbox_platform
+        platform = self.config.reversinglabs_spectra_analyze.sandbox_os
 
-        if self.reversinglabs_cloud_analysis in TRUE_LIST:
+        if self.config.reversinglabs_spectra_analyze.cloud_analysis:
             crawler = "cloud"
         else:
             crawler = "local"
@@ -1405,8 +1376,8 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
 
         # Create A1k client
         self.a1000client = A1000(
-            host=self.reversinglabs_spectra_analyze_url,
-            token=self.reversinglabs_spectra_analyze_token,
+            host=self.config.reversinglabs_spectra_analyze.url,
+            token=self.config.reversinglabs_spectra_analyze.token,
             user_agent=self.reversinglabs_spectra_user_agent,
             verify=False,
         )
@@ -1520,5 +1491,11 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
 
 
 if __name__ == "__main__":
-    connector = ReversingLabsSpectraAnalyzeConnector()
-    connector.start()
+    try:
+        config = ConfigLoader()
+        helper = OpenCTIConnectorHelper(config=config.to_helper_config())
+        connector = ReversingLabsSpectraAnalyzeConnector(config=config, helper=helper)
+        connector.start()
+    except Exception:
+        traceback.print_exc()
+        exit(1)

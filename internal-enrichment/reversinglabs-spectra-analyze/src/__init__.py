@@ -1,3 +1,3 @@
-from main import ReversingLabsSpectraAnalyzeConnector
+from settings import ConfigLoader
 
-__all__ = ["ReversingLabsSpectraAnalyzeConnector"]
+__all__ = ["ConfigLoader"]
