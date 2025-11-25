@@ -166,3 +166,33 @@ def test_should_enrich_domain_name(
         for threat in network_domain_report_response.top_threats
     ]
     assert set(threat_names).issubset(set(malware_names))
+
+
+def test_should_send_identity(file_enrichment_message, detailed_report_response):
+    config = ConfigLoader()
+    helper = OpenCTIConnectorHelper(config=config.to_helper_config())
+    connector = ReversingLabsSpectraAnalyzeConnector(config=config, helper=helper)
+
+    sent_bundle = {}
+
+    def capture_sent_bundle(bundle: str, **_):
+        nonlocal sent_bundle
+        sent_bundle = json.loads(bundle)
+        return sent_bundle["objects"]
+
+    connector.helper.send_stix2_bundle = capture_sent_bundle
+    connector._process_message(file_enrichment_message)
+
+    identity = find_dict_by_key_value(sent_bundle["objects"], "type", "identity")
+
+    assert identity
+
+    identity_id = identity["id"]
+
+    for item in sent_bundle["objects"]:
+        if item["type"] in [
+            "indicator",
+            "relationship",
+            "malware",
+        ]:
+            assert item["created_by_ref"] == identity_id
