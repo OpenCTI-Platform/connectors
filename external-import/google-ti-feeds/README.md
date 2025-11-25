@@ -17,6 +17,16 @@ More information can be found in the [Google Threat Intel API documentation](htt
 > This connector requires a Google Threat Intel API key to function. You can obtain one by signing up for the Google Threat Intel service.5
 > Reports Analysis are only available to users with the Google Threat Intelligence (Google TI) Enterprise or Enterprise Plus licenses.5
 
+## **IMPORTANT API QUOTA LIMITATIONS**
+
+> **CRITICAL:** Retrieving large volumes of historical threat intelligence data may trigger Google TI API quota limitations, which will **temporarily pause** the connector's data retrieval and ingestion processes.
+
+The connector's ingestion state management system is specifically designed to handle these quota limitations gracefully:
+
+- **State Persistence:** The connector tracks the `update_date` of the last successfully ingested entity, ensuring no data loss occurs during quota-induced pauses.
+- **Automatic Resume:** When API quota limits reset and the service becomes available again, the connector will automatically resume data retrieval from exactly where it stopped.
+- **Seamless Recovery:** No manual intervention or data re-synchronization is required, the connector will continue processing from the last recorded state.
+
 ## **IMPORTANT DATA LIMITATIONS**
 
 > **IMPORTANT NOTE on Threat Actor/Malware Aliases:** The Google Threat Intelligence (GTI) platform aggregates data from both **curated** and **open-source** reports. 
