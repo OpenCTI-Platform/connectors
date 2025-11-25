@@ -27,6 +27,29 @@ from pycti import (
 import stix2
 
 
+def _parse_ts(val) -> Optional[datetime]:
+    if val is None:
+        return None
+    # numeric (epoch seconds)
+    if isinstance(val, (int, float)) or (
+        isinstance(val, str) and val.replace(".", "", 1).isdigit()
+    ):
+        try:
+            return datetime.fromtimestamp(float(val), tz=pytz.UTC)
+        except Exception:
+            pass
+    # ISO-8601 strings (with or without Z)
+    if isinstance(val, str):
+        try:
+            s = val.strip()
+            if s.endswith("Z"):
+                s = s[:-1] + "+00:00"
+            return datetime.fromisoformat(s).astimezone(pytz.UTC)
+        except Exception:
+            return None
+    return None
+
+
 def create_sighting(
     observable_id: str,
     author: Identity,
@@ -451,6 +474,18 @@ def parse_observables_and_incident(
         description = result["description"]
     else:
         description = f"{json.dumps(result)}"
+    # Prefer standardized names if present; fall back to your e_time/l_time; finally _time
+    first_seen = (
+        _parse_ts(result.get("first_seen"))
+        or _parse_ts(result.get("e_time"))
+        or _parse_ts(result.get("_time"))
+    )
+
+    last_seen = (
+        _parse_ts(result.get("last_seen"))
+        or _parse_ts(result.get("l_time"))
+        or first_seen
+    )
     for observable in observables:
         if isinstance(observable, SIGHTABLE_TYPES):  # Fixed the condition
             confidence = int(result.get("confidence", 80))
@@ -458,6 +493,8 @@ def parse_observables_and_incident(
                 observable_id=observable.id,
                 author=author,
                 source_identity=source_identity,
+                first_seen=first_seen,
+                last_seen=last_seen,
                 confidence=confidence,
                 description=description,
                 sighting_marking_id=sighting_marking_id,
