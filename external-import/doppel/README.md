@@ -36,8 +36,7 @@ STIX 2.1 Observable object, enriched with metadata such as severity, entity stat
 ### Requirements
 
 - OpenCTI Platform version >= 6.x
-- Doppel API access (URL + API Key + User API Key (optional))
-- Doppel API access (URL + API Key + User API Key (optional))
+- Doppel API access (URL + API Key + User API Key (optional) + Organization Code (optional))
 
 ## Configuration variables
 
