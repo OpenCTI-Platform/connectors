@@ -333,6 +333,7 @@ class LivehuntBuilder:
         # Extract malware config if needed and extend labels
         if self.get_malware_config:
             config = self.extract_malware_config(vtobj)
+            self.helper.connector_logger.debug(f"Malware config extraction returned: {config}")
             if config[1]:
                 labels.extend(config[1])
 
