@@ -159,15 +159,13 @@ class LivehuntBuilder:
             )
             incident_id = None
             file_id = None
-            file_indicator_id = None
 
             if self.with_alert:
                 incident_id = self.create_alert(vtobj, external_reference)
 
             if self.with_file:
-                file_id = self.create_file(vtobj, incident_id)[0]
-                file_indicator_id = self.create_file(vtobj, incident_id)[1]
-
+                file_id = self.create_file(vtobj)
+            
             if self.with_yara_rule:
                 for source in vtobj._context_attributes["sources"]:
                     self.create_rule(
@@ -176,9 +174,6 @@ class LivehuntBuilder:
                         incident_id,
                         file_id,
                     )
-
-            if self.get_malware_config:
-                self.extract_malware_config(vtobj, file_id, file_indicator_id)
 
             if len(self.bundle) > 0:
                 if work_id is None:
