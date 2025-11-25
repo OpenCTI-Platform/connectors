@@ -199,7 +199,12 @@ class VirustotalLivehuntNotifications:
             config,
             default=True,
         )
-
+        limit = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_LIMIT",
+            ["virustotal_livehunt_notifications", "limit"],
+            config,
+            isNumber=True,
+        )
         self.builder = LivehuntBuilder(
             client,
             self.helper,
@@ -224,7 +229,8 @@ class VirustotalLivehuntNotifications:
             enable_label_enrichment,
             get_malware_config,
             tlp,
-            indicators
+            indicators,
+            limit
         )
 
     @staticmethod

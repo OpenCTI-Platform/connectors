@@ -33,3 +33,4 @@ virustotal_livehunt_notifications:
   get_malware_config: False # # Set to true to add config data of malware files like IPs and domains, if present
   tlp: "GREEN" # Set the TLP level for created entities, e.g. WHITE, GREEN, AMBER, AMBER_STRICT or RED. Default is GREEN. 
   indicators: True # Set to true to create indicators linked to the alerts
+  limit: 100 (Optional) Maximum number of notifications to process per run
