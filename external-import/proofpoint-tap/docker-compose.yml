@@ -1,6 +1,6 @@
 services:
   connector-proofpoint-tap:
-    image: opencti/connector-proofpoint-tap:rolling
+    image: opencti/connector-proofpoint-tap:6.8.14
     env_file:
       - .env
     restart: unless-stopped
