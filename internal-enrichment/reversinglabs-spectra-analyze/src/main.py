@@ -7,13 +7,12 @@ import time
 import traceback
 from datetime import datetime
 from functools import wraps
-from typing import Dict
+from typing import Any, Dict
 
 import stix2
 from connectors_sdk.models import ExternalReference, OrganizationAuthor, TLPMarking
 from connectors_sdk.models.enums import TLPLevel
 from pycti import (
-    STIX_EXT_OCTI_SCO,
     Identity,
     Indicator,
     Malware,
@@ -34,6 +33,13 @@ ZIP_MIME_TYPES = (
     "application/x-7z-compressed",
 )
 FILE_SAMPLE = ("Artifact", "StixFile", "File")
+
+
+def dict_index_number(dicts: list[dict], key: str, value: Any) -> int:
+    for i, dic in enumerate(dicts):
+        if isinstance(dic, dict) and dic[key] == value:
+            return i
+    return -1
 
 
 # decorator wrapper
@@ -430,44 +436,23 @@ class ReversingLabsSpectraAnalyzeConnector:
 
     def _upsert_observable(self, results):
         risk_score = results["risk_score"] * 10
-        score = self._generate_score(risk_score)
         labels = results["labels"]
         description = results["description"]
 
-        # Upsert artifact score
-        self.helper.api.stix_cyber_observable.update_field(
-            id=self.stix_entity["id"],
-            input={
-                "key": "x_opencti_score",
-                "value": score,
-            },
-        )
-
-        # Upsert artifact description
-        self.helper.api.stix_cyber_observable.update_field(
-            id=self.stix_entity["id"],
-            input={
-                "key": "x_opencti_description",
-                "value": description,
-            },
-        )
+        # Upsert artifact score and description
+        self.stix_entity["x_opencti_score"] = risk_score
+        self.stix_entity["x_opencti_description"] = description
 
         # Upsert artifact labels
+        opencti_labels = self.stix_entity.get("x_opencti_labels", [])
         for lab in labels:
             if not ((lab == "Unknown") or (lab == "")):
-                label = self.helper.api.label.create(
-                    value=lab,
-                )
-                self.helper.api.stix_cyber_observable.add_label(
-                    id=self.stix_entity["id"],
-                    label_id=label["id"],
-                )
-
-    def _generate_score(self, score):
-        self.helper.api.stix2.put_attribute_in_extension(
-            self.stix_entity, STIX_EXT_OCTI_SCO, "x_opencti_score", score, True
+                opencti_labels.append(lab)
+        self.stix_entity["x_opencti_labels"] = opencti_labels
+        stix_entity_index_number = dict_index_number(
+            self.stix_objects, "id", self.stix_entity["id"]
         )
-        return score
+        self.stix_objects[stix_entity_index_number] = self.stix_entity
 
     def _create_indicators(self, results):
         self.helper.connector_logger.info(
@@ -750,13 +735,13 @@ class ReversingLabsSpectraAnalyzeConnector:
         )
         self.stix_objects.append(note)
 
-        self.helper.api.stix_cyber_observable.update_field(
-            id=self.stix_entity["id"],
-            input={
-                "key": "x_opencti_description",
-                "value": "This is an IP address observable enriched by Spectra Analyze.",
-            },
+        self.stix_entity["x_opencti_description"] = (
+            "This is an IP address observable enriched by Spectra Analyze."
         )
+        stix_entity_index_number = dict_index_number(
+            self.stix_objects, "id", self.stix_entity["id"]
+        )
+        self.stix_objects[stix_entity_index_number] = self.stix_entity
 
     @staticmethod
     def is_ip(address):
@@ -822,15 +807,13 @@ class ReversingLabsSpectraAnalyzeConnector:
 
             if malicious_exist:
                 if top_threats:
+                    opencti_labels = self.stix_entity.get("x_opencti_labels", [])
                     for threat in top_threats:
                         threat_name_split = threat.get("threat_name").split(".")
                         labels = [threat_name_split[1], threat_name_split[2]]
 
                         for label in labels:
-                            lbl = self.helper.api.label.create(value=label)
-                            self.helper.api.stix_cyber_observable.add_label(
-                                id=self.stix_entity["id"], label_id=lbl["id"]
-                            )
+                            opencti_labels.append(label)
 
                         malware = stix2.Malware(
                             id=Malware.generate_id(threat_name_split[2]),
@@ -843,6 +826,11 @@ class ReversingLabsSpectraAnalyzeConnector:
                         )
                         malware_list.append(malware)
                         self.stix_objects.append(malware)
+                    self.stix_entity["x_opencti_labels"] = opencti_labels
+                    stix_entity_index_number = dict_index_number(
+                        self.stix_objects, "id", self.stix_entity["id"]
+                    )
+                    self.stix_objects[stix_entity_index_number] = self.stix_entity
 
             indicator_domain = stix2.Indicator(
                 id=Indicator.generate_id(one_domain.get("requested_domain")),
@@ -961,15 +949,13 @@ class ReversingLabsSpectraAnalyzeConnector:
 
             if malicious_exist:
                 if top_threats:
+                    opencti_labels = self.stix_entity.get("x_opencti_labels", [])
                     for threat in top_threats:
                         threat_name_split = threat.get("threat_name").split(".")
                         labels = [threat_name_split[1], threat_name_split[2]]
 
                         for label in labels:
-                            lbl = self.helper.api.label.create(value=label)
-                            self.helper.api.stix_cyber_observable.add_label(
-                                id=self.stix_entity["id"], label_id=lbl["id"]
-                            )
+                            opencti_labels.append(label)
 
                         malware = stix2.Malware(
                             id=Malware.generate_id(threat_name_split[2]),
@@ -982,6 +968,11 @@ class ReversingLabsSpectraAnalyzeConnector:
                         )
                         malware_list.append(malware)
                         self.stix_objects.append(malware)
+                    self.stix_entity["x_opencti_labels"] = opencti_labels
+                    stix_entity_index_number = dict_index_number(
+                        self.stix_objects, "id", self.stix_entity["id"]
+                    )
+                    self.stix_objects[stix_entity_index_number] = self.stix_entity
 
             indicator_url = stix2.Indicator(
                 id=Indicator.generate_id(one_url.get("requested_url")),
@@ -1190,12 +1181,8 @@ class ReversingLabsSpectraAnalyzeConnector:
         )
         self.stix_objects.append(note)
 
-        self.helper.api.stix_cyber_observable.update_field(
-            id=self.stix_entity["id"],
-            input={
-                "key": "x_opencti_description",
-                "value": "This is a domain name observable enriched by Spectra Analyze.",
-            },
+        self.stix_entity["x_opencti_description"] = (
+            "This is a domain name observable enriched by Spectra Analyze."
         )
 
     def _domain_analysis_flow(self, stix_entity, opencti_entity, domain_sample):
