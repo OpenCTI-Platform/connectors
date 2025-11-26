@@ -1,5 +1,4 @@
 import datetime
-import json
 
 import stix2
 from pycti import Identity, Note, OpenCTIConnectorHelper, StixCoreRelationship
@@ -43,27 +42,6 @@ class ConverterToStix:
         )
         return author
 
-    def create_relationship(
-        self, source_id: str, relationship_type: str, target_id: str
-    ) -> dict:
-        """
-        Creates Relationship object
-        :param source_id: ID of source in string
-        :param relationship_type: Relationship type in string
-        :param target_id: ID of target in string
-        :return: Relationship STIX2 object
-        """
-        relationship = stix2.Relationship(
-            id=StixCoreRelationship.generate_id(
-                relationship_type, source_id, target_id
-            ),
-            relationship_type=relationship_type,
-            source_ref=source_id,
-            target_ref=target_id,
-            created_by_ref=self.author,
-        )
-        return relationship
-
     def create_file_note(self, obs_id, detection_info):
         """
         Create a note associated to the file observable
@@ -86,9 +64,42 @@ class ConverterToStix:
         note = stix2.Note(
             type="note",
             id=Note.generate_id(datetime.datetime.now().isoformat(), content),
-            abstract=json.dumps(detection_info),
+            abstract="Kaspersky Detections Info",
             content=content,
             created_by_ref=self.author,
             object_refs=[obs_id],
         )
         return note
+
+    def create_url(self, obs_url_score: int, url_info: dict):
+        """
+        Create an URL object
+        """
+        return stix2.URL(
+            value=url_info["Url"],
+            # object_marking_refs=[self._default_tlp],
+            custom_properties={
+                "score": obs_url_score,
+            },
+        )
+
+    def create_relationship(
+        self, source_id: str, relationship_type: str, target_id: str
+    ) -> dict:
+        """
+        Creates Relationship object
+        :param source_id: ID of source in string
+        :param relationship_type: Relationship type in string
+        :param target_id: ID of target in string
+        :return: Relationship STIX2 object
+        """
+        relationship = stix2.Relationship(
+            id=StixCoreRelationship.generate_id(
+                relationship_type, source_id, target_id
+            ),
+            relationship_type=relationship_type,
+            source_ref=source_id,
+            target_ref=target_id,
+            created_by_ref=self.author,
+        )
+        return relationship

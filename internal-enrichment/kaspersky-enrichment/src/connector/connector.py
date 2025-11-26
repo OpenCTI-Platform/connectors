@@ -134,6 +134,25 @@ class KasperskyConnector:
             if notes:
                 self.stix_objects += notes
 
+        # Manage FileDownloadedFromUrls data
+
+        if "FileDownloadedFromUrls" in self.file_sections:
+            urls_objects = []
+            for url_info in entity_data["FileDownloadedFromUrls"]:
+                obs_url_score = self.zone_octi_score_mapping[url_info["Zone"].lower()]
+                url_object = self.converter_to_stix.create_url(obs_url_score, url_info)
+                urls_objects.append(url_object)
+
+                url_relation = self.converter_to_stix.create_relationship(
+                    source_id=observable["id"],
+                    relationship_type="related-to",
+                    target_id=url_object.id,
+                )
+                urls_objects.append(url_relation)
+
+            if urls_objects:
+                self.stix_objects += urls_objects
+
     def _send_bundle(self, stix_objects: list) -> str:
         stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
         bundles_sent = self.helper.send_stix2_bundle(stix_objects_bundle)
