@@ -79,7 +79,7 @@ class KasperskyConnector:
 
         # Define variables
         self.author = None
-        self.stix_objects_list = []
+        self.stix_objects = []
 
     def resolve_file_hash(self, observable):
         if "hashes" in observable and "SHA-256" in observable["hashes"]:
@@ -144,6 +144,19 @@ class KasperskyConnector:
             if entity_data["FileGeneralInfo"].get(key):
                 observable[value] = entity_data["FileGeneralInfo"][key]
 
+        if "DetectionsInfo" in self.file_sections:
+            author = self.converter_to_stix.create_author()
+            self.stix_objects += [author]
+
+            notes = []
+            for obs_detection_info in entity_data["DetectionsInfo"]:
+                obs_note = self.converter_to_stix.create_file_note(
+                    observable["id"], obs_detection_info
+                )
+                notes.append(obs_note)
+            if notes:
+                self.stix_objects += notes
+
     def entity_in_scope(self, obs_type) -> bool:
         """
         Security to limit playbook triggers to something other than the initial scope
@@ -171,7 +184,7 @@ class KasperskyConnector:
             opencti_entity = data["enrichment_entity"]
 
             # Extract information from entity data
-            self.stix_objects_list = data["stix_objects"]
+            self.stix_objects = data["stix_objects"]
             observable = data["stix_entity"]
             obs_type = opencti_entity["entity_type"]
 
@@ -197,8 +210,8 @@ class KasperskyConnector:
                             {"entity_type": obs_type},
                         )
 
-                if self.stix_objects_list is not None and len(self.stix_objects_list):
-                    return self._send_bundle(self.stix_objects_list)
+                if self.stix_objects is not None and len(self.stix_objects):
+                    return self._send_bundle(self.stix_objects)
                 else:
                     info_msg = "[CONNECTOR] No information found"
                     return info_msg
@@ -207,7 +220,7 @@ class KasperskyConnector:
                 if not data.get("event_type"):
                     # If it is not in scope AND entity bundle passed through playbook,
                     # we should return the original bundle unchanged
-                    self._send_bundle(self.stix_objects_list)
+                    self._send_bundle(self.stix_objects)
                 else:
                     raise ValueError(
                         f"Failed to process observable, {opencti_entity['entity_type']} is not a supported entity type."

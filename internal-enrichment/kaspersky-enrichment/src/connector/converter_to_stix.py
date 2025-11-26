@@ -1,8 +1,8 @@
-import ipaddress
+import datetime
+import json
 
 import stix2
-import validators
-from pycti import Identity, OpenCTIConnectorHelper, StixCoreRelationship
+from pycti import Identity, Note, OpenCTIConnectorHelper, StixCoreRelationship
 
 
 class ConverterToStix:
@@ -35,17 +35,11 @@ class ConverterToStix:
         :return: Author in Stix2 object
         """
         author = stix2.Identity(
-            id=Identity.generate_id(name="Source Name", identity_class="organization"),
-            name="Source Name",
+            id=Identity.generate_id(
+                name="Kaspersky Enrichment", identity_class="organization"
+            ),
+            name="Kaspersky Enrichment",
             identity_class="organization",
-            description="DESCRIPTION",
-            external_references=[
-                stix2.ExternalReference(
-                    source_name="External Source",
-                    url="CHANGEME",
-                    description="DESCRIPTION",
-                )
-            ],
         )
         return author
 
@@ -70,86 +64,31 @@ class ConverterToStix:
         )
         return relationship
 
-    # ===========================#
-    # Other Examples
-    # ===========================#
+    def create_file_note(self, obs_id, detection_info):
+        """
+        Create a note associated to the file observable
+        """
+        detection_name = (
+            f"[{detection_info["DetectionName"]}]({detection_info["DescriptionUrl"]})"
+        )
+        content = "| Detection Date | Detection Name | Detection Method |\n"
+        content += "|----------------|----------------|------------------|\n"
+        content += (
+            "| "
+            + str(detection_info["LastDetectDate"])
+            + " | "
+            + str(detection_name)
+            + " | "
+            + str(detection_info["DetectionMethod"])
+            + " |\n"
+        )
 
-    @staticmethod
-    def _is_ipv6(value: str) -> bool:
-        """
-        Determine whether the provided IP string is IPv6
-        :param value: Value in string
-        :return: A boolean
-        """
-        try:
-            ipaddress.IPv6Address(value)
-            return True
-        except ipaddress.AddressValueError:
-            return False
-
-    @staticmethod
-    def _is_ipv4(value: str) -> bool:
-        """
-        Determine whether the provided IP string is IPv4
-        :param value: Value in string
-        :return: A boolean
-        """
-        try:
-            ipaddress.IPv4Address(value)
-            return True
-        except ipaddress.AddressValueError:
-            return False
-
-    @staticmethod
-    def _is_domain(value: str) -> bool:
-        """
-        Valid domain name regex including internationalized domain name
-        :param value: Value in string
-        :return: A boolean
-        """
-        is_valid_domain = validators.domain(value)
-
-        if is_valid_domain:
-            return True
-        else:
-            return False
-
-    def create_obs(self, value: str, obs_id: str = None) -> dict:
-        """
-        Create observable according to value given
-        :param value: Value in string
-        :param obs_id: Value of observable ID in string
-        :return: Stix object for IPV4, IPV6 or Domain
-        """
-        if self._is_ipv6(value) is True:
-            stix_ipv6_address = stix2.IPv6Address(
-                id=obs_id if obs_id is not None else None,
-                value=value,
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author["id"],
-                },
-            )
-            return stix_ipv6_address
-        elif self._is_ipv4(value) is True:
-            stix_ipv4_address = stix2.IPv4Address(
-                id=obs_id if obs_id is not None else None,
-                value=value,
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author["id"],
-                },
-            )
-            return stix_ipv4_address
-        elif self._is_domain(value) is True:
-            stix_domain_name = stix2.DomainName(
-                id=obs_id if obs_id is not None else None,
-                value=value,
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author["id"],
-                },
-            )
-            return stix_domain_name
-        else:
-            self.helper.connector_logger.error(
-                "This observable value is not a valid IPv4 or IPv6 address nor DomainName: ",
-                {"value": value},
-            )
+        note = stix2.Note(
+            type="note",
+            id=Note.generate_id(datetime.datetime.now().isoformat(), content),
+            abstract=json.dumps(detection_info),
+            content=content,
+            created_by_ref=self.author,
+            object_refs=[obs_id],
+        )
+        return note
