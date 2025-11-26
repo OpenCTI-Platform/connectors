@@ -48,7 +48,7 @@ class KasperskyConnector:
         self.helper = helper
         self.file_sections = (
             self.config.kaspersky.file_sections
-        )  # TODO: prevent that LicenseInfo, Zone and FileGeneralInfo are in string
+        )  # TODO: prevent that LicenseInfo, Zone and FileGeneralInfo are there
         api_key = self.config.kaspersky.api_key.get_secret_value()
 
         # Convert zone_octi_score_mapping to dict
@@ -120,22 +120,23 @@ class KasperskyConnector:
                 observable[value] = entity_data["FileGeneralInfo"][key]
 
         # Manage FileNames data
-        if "FileNames" in self.file_sections and entity_data.get("FileNames"):
-            obs_filenames = []
-            for filename in entity_data["FileNames"]:
-                obs_filenames.append(filename["FileName"])
 
-            if obs_filenames:
-                if observable.get("x_opencti_additional_names"):
-                    observable["x_opencti_additional_names"] += "," + ",".join(
-                        obs_filenames
+        if entity_data.get("FileNames"):
+            for filename in entity_data["FileNames"]:
+                if (
+                    observable.get("x_opencti_additional_names")
+                    and filename["FileName"]
+                    not in observable["x_opencti_additional_names"]
+                ):
+                    observable["x_opencti_additional_names"].append(
+                        f",{filename["FileName"]}"
                     )
                 else:
-                    observable["x_opencti_additional_names"] = ",".join(obs_filenames)
+                    observable["x_opencti_additional_names"] = filename["FileName"]
 
         # Manage DetectionsInfo data
 
-        if "DetectionsInfo" in self.file_sections:
+        if entity_data.get("DetectionsInfo"):
             author = self.converter_to_stix.create_author()
             self.stix_objects += [author]
 
@@ -150,7 +151,7 @@ class KasperskyConnector:
 
         # Manage FileDownloadedFromUrls data
 
-        if "FileDownloadedFromUrls" in self.file_sections:
+        if entity_data.get("FileDownloadedFromUrls"):
             urls_objects = []
             for url_info in entity_data["FileDownloadedFromUrls"]:
                 obs_url_score = self.zone_octi_score_mapping[url_info["Zone"].lower()]
@@ -170,7 +171,7 @@ class KasperskyConnector:
 
             # Manage Industries data
 
-            if "Industries" in self.file_sections:
+            if entity_data.get("Industries"):
                 industries_objects = []
                 for industry in entity_data["Industries"]:
                     industry_object = self.converter_to_stix.create_sector(industry)
