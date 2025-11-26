@@ -96,7 +96,7 @@ class LivehuntBuilder:
             "filter": filter
         }
         self.helper.connector_logger.info(
-            f"Url for notifications: {url} / params: {params}"
+            f"Url for notifications: {url} / params: {params} / limit: {self.limit}"
         )
 
         files_iterator = self.client.iterator(url, params=params, limit=self.limit)
