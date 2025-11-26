@@ -119,6 +119,20 @@ class KasperskyConnector:
             if entity_data["FileGeneralInfo"].get(key):
                 observable[value] = entity_data["FileGeneralInfo"][key]
 
+        # Manage FileNames data
+        if "FileNames" in self.file_sections and entity_data.get("FileNames"):
+            obs_filenames = []
+            for filename in entity_data["FileNames"]:
+                obs_filenames.append(filename["FileName"])
+
+            if obs_filenames:
+                if observable.get("x_opencti_additional_names"):
+                    observable["x_opencti_additional_names"] += "," + ",".join(
+                        obs_filenames
+                    )
+                else:
+                    observable["x_opencti_additional_names"] = ",".join(obs_filenames)
+
         # Manage DetectionsInfo data
 
         if "DetectionsInfo" in self.file_sections:
