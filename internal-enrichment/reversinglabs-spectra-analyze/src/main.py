@@ -1058,17 +1058,6 @@ class ReversingLabsSpectraAnalyzeConnector:
             f"{self.helper.connect_name}: Creating bundle for IP"
         )
 
-        bundle = self._generate_stix_bundle(
-            stix_objects=self.stix_objects, stix_entity=self.stix_entity
-        )
-        bundles_sent = self.helper.send_stix2_bundle(
-            bundle=bundle, cleanup_inconsistent_bundle=True
-        )
-
-        self.helper.connector_logger.info(
-            f"{self.helper.connect_name}: Number of stix bundles sent to workers: {str(len(bundles_sent))}"
-        )
-
     @handle_spectra_errors
     def _domain_report(self):
         self.helper.connector_logger.info(
@@ -1192,17 +1181,6 @@ class ReversingLabsSpectraAnalyzeConnector:
             f"{self.helper.connect_name}: Creating bundle for domain"
         )
 
-        bundle = self._generate_stix_bundle(
-            stix_objects=self.stix_objects, stix_entity=self.stix_entity
-        )
-        bundles_sent = self.helper.send_stix2_bundle(
-            bundle=bundle, cleanup_inconsistent_bundle=True
-        )
-
-        self.helper.connector_logger.info(
-            f"{self.helper.connect_name}: Number of stix bundles sent to workers: {str(len(bundles_sent))}"
-        )
-
     @handle_spectra_errors
     def _url_report(self):
         self.helper.connector_logger.info(
@@ -1321,17 +1299,6 @@ class ReversingLabsSpectraAnalyzeConnector:
             f"{self.helper.connect_name}: Creating bundle for URL"
         )
 
-        bundle = self._generate_stix_bundle(
-            stix_objects=self.stix_objects, stix_entity=self.stix_entity
-        )
-        bundles_sent = self.helper.send_stix2_bundle(
-            bundle=bundle, cleanup_inconsistent_bundle=True
-        )
-
-        self.helper.connector_logger.info(
-            f"{self.helper.connect_name}: Number of stix bundles sent to workers round 1: {str(len(bundles_sent))}"
-        )
-
     def _process_malicious(self, stix_objects, stix_entity, results):
         if (results["classification"] == "malicious") or (
             results["classification"] == "suspicious"
@@ -1346,16 +1313,6 @@ class ReversingLabsSpectraAnalyzeConnector:
 
             # Create Malware and add relationship to artifact
             self._generate_stix_malware(results)
-
-            # Create Stix Bundle and send it to OpenCTI
-            bundle = self._generate_stix_bundle(stix_objects, stix_entity)
-            bundles_sent = self.helper.send_stix2_bundle(
-                bundle=bundle, cleanup_inconsistent_bundle=True
-            )
-
-            self.helper.connector_logger.info(
-                f"{self.helper.connect_name}: Number of stix bundles sent for workers: {str(len(bundles_sent))}"
-            )
 
     def _process_message(self, data: Dict) -> str:
         stix_objects = data["stix_objects"]
@@ -1374,119 +1331,126 @@ class ReversingLabsSpectraAnalyzeConnector:
         self.stix_objects.append(self.reversinglabs_identity)
         self.stix_objects.append(stix2.TLP_AMBER)
 
-        # Create A1k client
-        self.a1000client = A1000(
-            host=self.config.reversinglabs_spectra_analyze.url,
-            token=self.config.reversinglabs_spectra_analyze.token,
-            user_agent=self.reversinglabs_spectra_user_agent,
-            verify=False,
-        )
-
-        if opencti_type in FILE_SAMPLE:
-            # Extract hash type and value from entity {[md5], [sha1], [sha256]}
-            hashes = opencti_entity.get("hashes")
-            hash_value = None
-            hash_type = None
-
-            for ent_hash in hashes:
-                if ent_hash["algorithm"] not in ("MD5", "SHA-512"):
-                    hash_value = ent_hash["hash"]
-                    hash_type = ent_hash["algorithm"]
-
-            if hash_value is None:
-                self.helper.connector_logger.warning(
-                    f"{self.helper.connect_name}: No supported hash found for analysis (skipping MD5/SHA-512)."
-                )
-
-            # Submit File sample for analysis
-            analysis_result = self._submit_file_for_analysis(
-                stix_entity, opencti_entity, hash_value, hash_type
+        try:
+            # Create A1k client
+            self.a1000client = A1000(
+                host=self.config.reversinglabs_spectra_analyze.url,
+                token=self.config.reversinglabs_spectra_analyze.token,
+                user_agent=self.reversinglabs_spectra_user_agent,
+                verify=False,
             )
 
-            # Integrate file analysis results with OpenCTI
-            if "results" in analysis_result:
-                results = self._process_file_analysis_result(
-                    stix_objects, stix_entity, opencti_entity, analysis_result
+            if opencti_type in FILE_SAMPLE:
+                # Extract hash type and value from entity {[md5], [sha1], [sha256]}
+                hashes = opencti_entity.get("hashes")
+                hash_value = None
+                hash_type = None
+
+                for ent_hash in hashes:
+                    if ent_hash["algorithm"] not in ("MD5", "SHA-512"):
+                        hash_value = ent_hash["hash"]
+                        hash_type = ent_hash["algorithm"]
+
+                if hash_value is None:
+                    self.helper.connector_logger.warning(
+                        f"{self.helper.connect_name}: No supported hash found for analysis (skipping MD5/SHA-512)."
+                    )
+
+                # Submit File sample for analysis
+                analysis_result = self._submit_file_for_analysis(
+                    stix_entity, opencti_entity, hash_value, hash_type
                 )
+
+                # Integrate file analysis results with OpenCTI
+                if "results" in analysis_result:
+                    results = self._process_file_analysis_result(
+                        stix_objects, stix_entity, opencti_entity, analysis_result
+                    )
+                    self._process_malicious(stix_objects, stix_entity, results)
+
+            elif opencti_type == "Url":
+                url_sample = stix_entity["value"]
+                self.helper.connector_logger.info(
+                    f"{self.helper.connect_name}: Submit URL sample for analysis on Spectra Analyze!"
+                )
+
+                self._url_report_flow(
+                    stix_entity=stix_entity,
+                    opencti_entity=opencti_entity,
+                    url_sample=url_sample,
+                )
+
+                # Submit URL sample for analysis on Spectra Analyze
+                analysis_result = self._submit_url_for_analysis(
+                    stix_entity,
+                    opencti_entity,
+                    url_sample,
+                )
+
+                if not analysis_result:
+                    self.helper.connector_logger.info(
+                        f"{self.helper.connect_name}: There is no analysis result for provided sample!"
+                    )
+
+                hash_value = hashlib.sha1(url_sample.encode()).hexdigest()
+
+                # Get file classification
+                classification_result = self._submit_file_for_classification(
+                    stix_entity, opencti_entity, hash_value
+                )
+
+                if not classification_result:
+                    raise ValueError(
+                        f"{self.helper.connect_name}: Provided sample does not exist on the appliance. Try to upload it first and re-run!"
+                    )
+
+                # Integrate classification analysis results with OpenCTI
+                results = self._process_file_classification_results(
+                    stix_objects, stix_entity, opencti_entity, classification_result
+                )
+
                 self._process_malicious(stix_objects, stix_entity, results)
 
-        elif opencti_type == "Url":
-            url_sample = stix_entity["value"]
-            self.helper.connector_logger.info(
-                f"{self.helper.connect_name}: Submit URL sample for analysis on Spectra Analyze!"
-            )
+                # Integrate analysis results with OpenCTI
+                results = self._process_url_analysis_result(
+                    stix_objects, stix_entity, opencti_entity, analysis_result
+                )
 
-            self._url_report_flow(
-                stix_entity=stix_entity,
-                opencti_entity=opencti_entity,
-                url_sample=url_sample,
-            )
+                self._process_malicious(stix_objects, stix_entity, results)
 
-            # Submit URL sample for analysis on Spectra Analyze
-            analysis_result = self._submit_url_for_analysis(
-                stix_entity,
-                opencti_entity,
-                url_sample,
-            )
-
-            if not analysis_result:
+            elif opencti_type == "IPv4-Addr":
+                ip_sample = stix_entity["value"]
                 self.helper.connector_logger.info(
-                    f"{self.helper.connect_name}: There is no analysis result for provided sample!"
+                    f"{self.helper.connect_name}: Starting IPv4 sample analysis on Spectra Analyze! Sample value: {str(ip_sample)}"
                 )
 
-            hash_value = hashlib.sha1(url_sample.encode()).hexdigest()
-
-            # Get file classification
-            classification_result = self._submit_file_for_classification(
-                stix_entity, opencti_entity, hash_value
-            )
-
-            if not classification_result:
-                raise ValueError(
-                    f"{self.helper.connect_name}: Provided sample does not exist on the appliance. Try to upload it first and re-run!"
+                self._ip_report_flow(
+                    stix_entity=stix_entity,
+                    opencti_entity=opencti_entity,
+                    ip_sample=ip_sample,
                 )
 
-            # Integrate classification analysis results with OpenCTI
-            results = self._process_file_classification_results(
-                stix_objects, stix_entity, opencti_entity, classification_result
+            elif opencti_type == "Domain-Name":
+                domain_sample = stix_entity["value"]
+                self.helper.connector_logger.info(
+                    f"{self.helper.connect_name}: Starting Domain sample analysis on Spectra Analyze! Sample value: {str(domain_sample)}"
+                )
+
+                self._domain_analysis_flow(
+                    stix_entity=stix_entity,
+                    opencti_entity=opencti_entity,
+                    domain_sample=domain_sample,
+                )
+        finally:
+            bundle = self._generate_stix_bundle(
+                stix_objects=self.stix_objects, stix_entity=self.stix_entity
+            )
+            bundles_sent = self.helper.send_stix2_bundle(
+                bundle=bundle, cleanup_inconsistent_bundle=True
             )
 
-            self._process_malicious(stix_objects, stix_entity, results)
-
-            # Integrate analysis results with OpenCTI
-            results = self._process_url_analysis_result(
-                stix_objects, stix_entity, opencti_entity, analysis_result
-            )
-
-            self._process_malicious(stix_objects, stix_entity, results)
-
-        elif opencti_type == "IPv4-Addr":
-            ip_sample = stix_entity["value"]
             self.helper.connector_logger.info(
-                f"{self.helper.connect_name}: Starting IPv4 sample analysis on Spectra Analyze! Sample value: {str(ip_sample)}"
-            )
-
-            self._ip_report_flow(
-                stix_entity=stix_entity,
-                opencti_entity=opencti_entity,
-                ip_sample=ip_sample,
-            )
-
-        elif opencti_type == "Domain-Name":
-            domain_sample = stix_entity["value"]
-            self.helper.connector_logger.info(
-                f"{self.helper.connect_name}: Starting Domain sample analysis on Spectra Analyze! Sample value: {str(domain_sample)}"
-            )
-
-            self._domain_analysis_flow(
-                stix_entity=stix_entity,
-                opencti_entity=opencti_entity,
-                domain_sample=domain_sample,
-            )
-
-        else:
-            raise ValueError(
-                f"{self.helper.connect_name}: Connector is not registered to work with provided {str(opencti_type)} type!"
+                f"{self.helper.connect_name}: Number of stix bundles sent to workers: {str(len(bundles_sent))}"
             )
 
         return f"{self.helper.connect_name}: Successfully processed {str(opencti_type)} entity."
@@ -1495,7 +1459,9 @@ class ReversingLabsSpectraAnalyzeConnector:
 if __name__ == "__main__":
     try:
         config = ConfigLoader()
-        helper = OpenCTIConnectorHelper(config=config.to_helper_config())
+        helper = OpenCTIConnectorHelper(
+            config=config.to_helper_config(), playbook_compatible=True
+        )
         connector = ReversingLabsSpectraAnalyzeConnector(config=config, helper=helper)
         connector.start()
     except Exception:
