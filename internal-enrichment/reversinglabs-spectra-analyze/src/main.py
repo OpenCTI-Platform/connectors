@@ -13,7 +13,6 @@ import stix2
 from connectors_sdk.models import ExternalReference, OrganizationAuthor, TLPMarking
 from connectors_sdk.models.enums import TLPLevel
 from pycti import (
-    Identity,
     Indicator,
     Malware,
     Note,
@@ -127,18 +126,6 @@ class ReversingLabsSpectraAnalyzeConnector:
             f"{self.helper.connect_name}: Number of Stix bundles to be enriched: {len(uniq_bundles_objects)}"
         )
         return self.helper.stix2_create_bundle(uniq_bundles_objects)
-
-    def _generate_stix_identity(self, stix_objects):
-        self.stix_objects = stix_objects
-        organization = "ReversingLabs"
-
-        stix_organization = stix2.Identity(
-            id=Identity.generate_id(organization, "Organization"),
-            name=organization,
-            identity_class="organization",
-            created_by_ref=self.reversinglabs_identity.id,
-        )
-        self.stix_objects.append(stix_organization)
 
     @handle_spectra_errors
     def _upload_file_to_spectra_analyze(self, file_uri, is_archive, sample_name):
@@ -498,6 +485,7 @@ class ReversingLabsSpectraAnalyzeConnector:
                 name=results["malware_family_name"],
                 description="ReversingLabs",
                 is_family="false",
+                object_marking_refs=[stix2.TLP_AMBER],
                 created_by_ref=self.reversinglabs_identity.id,
             )
             self.stix_objects.append(stix_malware)
@@ -665,6 +653,7 @@ class ReversingLabsSpectraAnalyzeConnector:
                     created=now,
                     description="ReversingLabs",
                     malware_types=[malware_type],
+                    object_marking_refs=[stix2.TLP_AMBER],
                     is_family="false",
                     created_by_ref=self.reversinglabs_identity.id,
                 )
@@ -821,6 +810,7 @@ class ReversingLabsSpectraAnalyzeConnector:
                             created=now,
                             description="ReversingLabs",
                             malware_types=[threat_name_split[1]],
+                            object_marking_refs=[stix2.TLP_AMBER],
                             is_family="false",
                             created_by_ref=self.reversinglabs_identity.id,
                         )
@@ -963,6 +953,7 @@ class ReversingLabsSpectraAnalyzeConnector:
                             created=now,
                             description="ReversingLabs",
                             malware_types=[threat_name_split[1]],
+                            object_marking_refs=[stix2.TLP_AMBER],
                             is_family="false",
                             created_by_ref=self.reversinglabs_identity.id,
                         )
@@ -1103,6 +1094,7 @@ class ReversingLabsSpectraAnalyzeConnector:
                     created=now,
                     description="ReversingLabs",
                     malware_types=[threat_name_split[1]],
+                    object_marking_refs=[stix2.TLP_AMBER],
                     is_family="false",
                     created_by_ref=self.reversinglabs_identity.id,
                 )
@@ -1236,6 +1228,7 @@ class ReversingLabsSpectraAnalyzeConnector:
                     created=now,
                     description="ReversingLabs",
                     malware_types=[threat_name_split[1]],
+                    object_marking_refs=[stix2.TLP_AMBER],
                     is_family="false",
                     created_by_ref=self.reversinglabs_identity.id,
                 )
@@ -1376,8 +1369,10 @@ class ReversingLabsSpectraAnalyzeConnector:
         self._check_tlp_markings(opencti_entity)
         opencti_type = stix_entity["x_opencti_type"]
 
-        # Generate Identity (Organization)
-        self._generate_stix_identity(stix_objects)
+        self.stix_objects = stix_objects
+
+        self.stix_objects.append(self.reversinglabs_identity)
+        self.stix_objects.append(stix2.TLP_AMBER)
 
         # Create A1k client
         self.a1000client = A1000(
