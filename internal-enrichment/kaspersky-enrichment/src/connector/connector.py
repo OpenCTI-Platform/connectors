@@ -81,31 +81,6 @@ class KasperskyConnector:
         self.author = None
         self.stix_objects = []
 
-    def resolve_file_hash(self, observable):
-        if "hashes" in observable and "SHA-256" in observable["hashes"]:
-            return observable["hashes"]["SHA-256"]
-        if "hashes" in observable and "SHA-1" in observable["hashes"]:
-            return observable["hashes"]["SHA-1"]
-        if "hashes" in observable and "MD5" in observable["hashes"]:
-            return observable["hashes"]["MD5"]
-        raise ValueError(
-            "Unable to enrich the observable, the observable does not have an SHA256, SHA1, or MD5"
-        )
-
-    def check_quota(self, entity_info):
-        """
-        Check if quota is not exceeded.
-        Raise a warning otherwise.
-        """
-        if entity_info["DayRequests"] >= entity_info["DayQuota"]:
-            self.helper.connector_logger.warning(
-                "[CONNECTOR] The daily quota has been exceeded",
-                {
-                    "day_requests": entity_info["DayRequests"],
-                    "day_quota": entity_info["DayQuota"],
-                },
-            )
-
     def _process_file(self, observable) -> list:
         """
         Collect intelligence from the source for a File type
@@ -144,6 +119,8 @@ class KasperskyConnector:
             if entity_data["FileGeneralInfo"].get(key):
                 observable[value] = entity_data["FileGeneralInfo"][key]
 
+        # Manage DetectionsInfo data
+
         if "DetectionsInfo" in self.file_sections:
             author = self.converter_to_stix.create_author()
             self.stix_objects += [author]
@@ -156,6 +133,29 @@ class KasperskyConnector:
                 notes.append(obs_note)
             if notes:
                 self.stix_objects += notes
+
+    def _send_bundle(self, stix_objects: list) -> str:
+        stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
+        bundles_sent = self.helper.send_stix2_bundle(stix_objects_bundle)
+
+        info_msg = (
+            "Sending " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
+        )
+        return info_msg
+
+    def check_quota(self, entity_info):
+        """
+        Check if quota is not exceeded.
+        Raise a warning otherwise.
+        """
+        if entity_info["DayRequests"] >= entity_info["DayQuota"]:
+            self.helper.connector_logger.warning(
+                "[CONNECTOR] The daily quota has been exceeded",
+                {
+                    "day_requests": entity_info["DayRequests"],
+                    "day_quota": entity_info["DayQuota"],
+                },
+            )
 
     def entity_in_scope(self, obs_type) -> bool:
         """
@@ -171,6 +171,17 @@ class KasperskyConnector:
             return True
         else:
             return False
+
+    def resolve_file_hash(self, observable):
+        if "hashes" in observable and "SHA-256" in observable["hashes"]:
+            return observable["hashes"]["SHA-256"]
+        if "hashes" in observable and "SHA-1" in observable["hashes"]:
+            return observable["hashes"]["SHA-1"]
+        if "hashes" in observable and "MD5" in observable["hashes"]:
+            return observable["hashes"]["MD5"]
+        raise ValueError(
+            "Unable to enrich the observable, the observable does not have an SHA256, SHA1, or MD5"
+        )
 
     def process_message(self, data: dict) -> str:
         """
@@ -230,15 +241,6 @@ class KasperskyConnector:
             return self.helper.connector_logger.error(
                 "[CONNECTOR] Unexpected Error occurred", {"error_message": str(err)}
             )
-
-    def _send_bundle(self, stix_objects: list) -> str:
-        stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
-        bundles_sent = self.helper.send_stix2_bundle(stix_objects_bundle)
-
-        info_msg = (
-            "Sending " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
-        )
-        return info_msg
 
     def run(self) -> None:
         """
