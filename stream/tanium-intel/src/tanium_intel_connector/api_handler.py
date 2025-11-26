@@ -120,7 +120,15 @@ class TaniumApiHandler:
             stix_entity["indicator_types"] = "unknown"
         # Convert the STIX 2 bundle in STIX 1
         initialize_options()
-        stix_indicator = slide_string(stix2_bundle)
+
+        try:
+            stix_indicator = slide_string(stix2_bundle)
+        except Exception as e:
+            self.helper.connector_logger.error(
+                "Error converting STIX 2 bundle to STIX 1",
+                {"error": str(e)},
+            )
+            return None
 
         url_path = (
             f"/plugin/products/threat-response/api/v1/sources/{self.source_id}/intels"
