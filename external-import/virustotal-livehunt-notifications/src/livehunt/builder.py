@@ -304,7 +304,7 @@ class LivehuntBuilder:
         )
 
         ## Add the names
-        file_name=f'{vtobj.meaningful_name if hasattr(vtobj, "meaningful_name") else "unknown"}',
+        file_name=f'{vtobj.meaningful_name if hasattr(vtobj, "meaningful_name") else "unknown"}'
         x_opencti_additional_names = []
         if hasattr(vtobj, "names"):
             for name in vtobj.names:
