@@ -71,6 +71,17 @@ class ConverterToStix:
         )
         return note
 
+    def create_sector(self, industry: str):
+        """
+        Create a Sector object
+        """
+        return stix2.Identity(
+            id=Identity.generate_id(identity_class="class", name=industry),
+            identity_class="class",
+            name=industry,
+            created_by_ref=self.author.id,
+        )
+
     def create_url(self, obs_url_score: int, url_info: dict):
         """
         Create an URL object
