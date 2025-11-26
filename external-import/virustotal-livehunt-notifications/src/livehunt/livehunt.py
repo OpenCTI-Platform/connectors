@@ -190,14 +190,14 @@ class VirustotalLivehuntNotifications:
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_TLP",
             ["virustotal_livehunt_notifications", "tlp"],
             config,
-            default="GREEN",
+            default=None,
         )
         
         indicators = get_config_variable(
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_INDICATORS",
             ["virustotal_livehunt_notifications", "indicators"],
             config,
-            default=True,
+            default=False,
         )
         limit = get_config_variable(
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_LIMIT",

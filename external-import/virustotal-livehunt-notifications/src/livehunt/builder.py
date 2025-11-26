@@ -16,7 +16,6 @@ import stix2
 import vt
 from pycti import Incident, Indicator, Note, OpenCTIConnectorHelper, StixCoreRelationship
 from pycti.utils.constants import CustomObservableHostname
-from stix2.canonicalization.Canonicalize import canonicalize
 
 logging.getLogger("plyara").setLevel(logging.ERROR)
 
@@ -238,7 +237,7 @@ class LivehuntBuilder:
             labels=self.retrieve_labels(vtobj),
             external_references=[external_reference],
             allow_custom=True,
-            object_marking_refs=[self.tlp],
+            object_marking_refs=self.tlp,
         )
         self.helper.connector_logger.debug(f"Adding alert: {incident}")
         self.bundle.append(incident)
@@ -289,7 +288,7 @@ class LivehuntBuilder:
             Id of the created file.
         """
         vt_score = None
-        config = None
+        malware_config = None
         try:
             if hasattr(vtobj, "last_analysis_stats"):
                 vt_score = self._compute_score(vtobj.last_analysis_stats)
@@ -333,10 +332,10 @@ class LivehuntBuilder:
 
         # Extract malware config if needed and extend labels
         if self.get_malware_config:
-            config = self.extract_malware_config(vtobj)
-            self.helper.connector_logger.debug(f"Malware config extraction returned: {config}")
-            if config[1]:
-                labels.extend(config[1])
+            malware_config = self.extract_malware_config(vtobj)
+            self.helper.connector_logger.debug(f"Malware config extraction returned: {malware_config}")
+            if malware_config[1]:
+                labels.extend(malware_config[1])
 
         # create the file object          
         file = stix2.File(
@@ -357,7 +356,7 @@ class LivehuntBuilder:
             },
             allow_custom=True,
             labels=labels,
-            object_marking_refs=[self.tlp],
+            object_marking_refs=self.tlp,
         )
         self.bundle.append(file)
 
@@ -374,7 +373,7 @@ class LivehuntBuilder:
                 source_ref=incident_id,
                 target_ref=file["id"],
                 allow_custom=True,
-                object_marking_refs=[self.tlp],
+                object_marking_refs=self.tlp,
             )
             self.bundle.append(relationship)
 
@@ -392,7 +391,7 @@ class LivehuntBuilder:
                     "x_opencti_main_observable_type": "StixFile",
                 },
                 allow_custom=True,
-                object_marking_refs=[self.tlp],
+                object_marking_refs=self.tlp,
                 labels=labels,
             )
             self.helper.connector_logger.debug(
@@ -410,7 +409,7 @@ class LivehuntBuilder:
                 target_ref=file["id"],
                 start_time=vtobj.first_submission_date,
                 allow_custom=True,
-                object_marking_refs=[self.tlp],
+                object_marking_refs=self.tlp,
             )
             self.bundle.append(indicator)
             self.bundle.append(relationship)
@@ -427,79 +426,79 @@ class LivehuntBuilder:
                     target_ref=indicator["id"],
                     start_time=vtobj.first_submission_date,
                     allow_custom=True,
-                    object_marking_refs=[self.tlp],
+                    object_marking_refs=self.tlp,
                 )
                 self.bundle.append(relationship)
         
         # Create malware config observables and indicators if needed
-        if self.get_malware_config and config[0]:
+        if self.get_malware_config and malware_config[0]:
             note_obj_refs = [file["id"]]
-            for obs in config[0]:
+            for obs in malware_config[0]:
                 observable_type = obs[0]
                 observable_value = obs[1]
                 observable = None
                 if observable_type == "IPv4-Addr":
                     observable = stix2.IPv4Address(
                         value=observable_value,
-                        object_marking_refs=[self.tlp],
+                        object_marking_refs=self.tlp,
                         custom_properties={
                             "created_by_ref": self.author[
                                 "standard_id"
                             ],
                             "x_opencti_description": "Extracted from malware config",
-                            "x_opencti_labels": config[1],
+                            "x_opencti_labels": malware_config[1],
                         },
                     )
                     self.helper.connector_logger.debug(f"Created IPv4 observable for value {observable_value}")
                 elif observable_type == "IPv6-Addr":
                     observable = stix2.IPv6Address(
                         value=observable_value,
-                        object_marking_refs=[self.tlp],
+                        object_marking_refs=self.tlp,
                         custom_properties={
                             "created_by_ref": self.author[
                                 "standard_id"
                             ],
                             "x_opencti_description": "Extracted from malware config",
-                            "x_opencti_labels": config[1],
+                            "x_opencti_labels": malware_config[1],
                         },
                     )
                     self.helper.connector_logger.debug(f"Created IPv6 observable for value {observable_value}")
                 elif observable_type == "Domain-Name":
                     observable = stix2.DomainName(
                         value=observable_value,
-                        object_marking_refs=[self.tlp],
+                        object_marking_refs=self.tlp,
                         custom_properties={
                             "created_by_ref": self.author[
                                 "standard_id"
                             ],
                             "x_opencti_description": "Extracted from malware config",
-                            "x_opencti_labels": config[1],
+                            "x_opencti_labels": malware_config[1],
                         },
                     )
                     self.helper.connector_logger.debug(f"Created DomainName observable for value {observable_value}")
                 elif observable_type == "Url":
                     observable = stix2.URL(
                         value=observable_value,
-                        object_marking_refs=[self.tlp],
+                        object_marking_refs=self.tlp,
                         custom_properties={
                             "created_by_ref": self.author[
                                 "standard_id"
                             ],
                             "x_opencti_description": "Extracted from malware config",
-                            "x_opencti_labels": config[1],
+                            "x_opencti_labels": malware_config[1],
                         },
                     )
                     self.helper.connector_logger.debug(f"Created URL observable for value {observable_value}")
                 elif observable_type == "Hostname":
                     observable = CustomObservableHostname(
                         value=observable_value,
-                        object_marking_refs=[self.tlp],
+                        object_marking_refs=self.tlp,
                         custom_properties={
                             "created_by_ref": self.author[
                                 "standard_id"
                             ],
                             "x_opencti_description": "Extracted from malware config",
-                            "x_opencti_labels": config[1],
+                            "x_opencti_labels": malware_config[1],
                         },
                     )
                     self.helper.connector_logger.debug(f"Created Hostname observable for value {observable_value}")
@@ -521,7 +520,7 @@ class LivehuntBuilder:
                         target_ref=observable["id"],
                         start_time=vtobj.first_submission_date,
                         allow_custom=True,
-                        object_marking_refs=[self.tlp],
+                        object_marking_refs=self.tlp,
                     )    
                     self.bundle.append(relationship)
                     if self.indicators and observable_type != "Hostname": # Indicators are not created for Hostname observables to limit the FP rate
@@ -537,8 +536,8 @@ class LivehuntBuilder:
                                 "x_opencti_main_observable_type": observable_type,
                             },
                             allow_custom=True,
-                            object_marking_refs=[self.tlp],
-                            labels=config[1],
+                            object_marking_refs=self.tlp,
+                            labels=malware_config[1],
                         )
                         self.helper.connector_logger.debug(f"[VirusTotal Livehunt Notifications] malware config indicator created: {indicator}")
                         relationship = stix2.Relationship(
@@ -555,20 +554,20 @@ class LivehuntBuilder:
                             target_ref=observable["id"],
                             start_time=vtobj.first_submission_date,
                             allow_custom=True,
-                            object_marking_refs=[self.tlp],
+                            object_marking_refs=self.tlp,
                         )
                         self.bundle.append(indicator)
                         self.bundle.append(relationship)
                         note_obj_refs.append(indicator.id)
             # Create the note for the malware config
             note = stix2.Note(
-                id=Note.generate_id(None, config[2]),
+                id=Note.generate_id(None, malware_config[2]),
                 abstract=f"Malware config extracted from file {vtobj.sha256}",
-                content=config[2],
+                content=malware_config[2],
                 object_refs=note_obj_refs,
                 created_by_ref=self.author["standard_id"],
                 allow_custom=True,
-                object_marking_refs=[self.tlp],
+                object_marking_refs=self.tlp,
             )
             self.bundle.append(note)
         return file["id"]
@@ -657,7 +656,7 @@ class LivehuntBuilder:
                         source_ref=incident_id,
                         target_ref=indicator["id"],
                         allow_custom=True,
-                        object_marking_refs=[self.tlp],
+                        object_marking_refs=self.tlp,
                     )
                     self.bundle.append(relationship)
 
@@ -673,7 +672,7 @@ class LivehuntBuilder:
                         source_ref=file_id,
                         target_ref=indicator["id"],
                         allow_custom=True,
-                        object_marking_refs=[self.tlp],
+                        object_marking_refs=self.tlp,
                     )
                     self.bundle.append(relationship)
 
@@ -773,11 +772,11 @@ class LivehuntBuilder:
     def extract_malware_config(self, vtobj) -> Tuple[List[Tuple[str, str]], List[str], str]:
         """
         Extract malware config from the file object and returns it in a tuple containing: 
-        - a list of observable types/values, 
-        - a list of labels
+        - a list of observable data (type/value tuples), 
+        - a list of labels strings,
         - the raw config as a string.
         """
-        netconfig = []
+        observables = []
         labels = []
         raw_config = ""
         if hasattr(vtobj, "malware_config") and vtobj.malware_config is not None:
@@ -817,16 +816,16 @@ class LivehuntBuilder:
                                         if host is not None:
                                             self.helper.connector_logger.debug(f"Found host: {host}")
                                             if self._ip_version(host) == 4:
-                                                netconfig.append(("IPv4-Addr", host))
+                                                observables.append(("IPv4-Addr", host))
                                             elif self._ip_version(host) == 6:
-                                                netconfig.append(("IPv6-Addr", host))
+                                                observables.append(("IPv6-Addr", host))
                                             elif self._is_valid_domain_name(host):
-                                                netconfig.append(("Domain-Name", host))
+                                                observables.append(("Domain-Name", host))
                                             else:
-                                                netconfig.append(("Hostname", host))
+                                                observables.append(("Hostname", host))
                                         if url is not None:
-                                            netconfig.append(("Url", url))
-        return (list(set(netconfig)), list(set(labels)), raw_config)
+                                            observables.append(("Url", url))
+        return (list(set(observables)), list(set(labels)), raw_config)
 
     def _is_valid_domain_name(self, value: str) -> bool:
         if LivehuntBuilder._DOMAIN_REGEX.match(value):
@@ -896,7 +895,7 @@ class LivehuntBuilder:
         elif tlp_string == "AMBER_STRICT":
             result = "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37"
         else:
-            result = stix2.TLP_GREEN
+            result = None
         return result
     
     @staticmethod

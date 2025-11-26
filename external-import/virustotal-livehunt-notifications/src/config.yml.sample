@@ -30,7 +30,7 @@ virustotal_livehunt_notifications:
   livehunt_label_prefix: 'vt:lh:' # Prefix that is added in livehunt label
   livehunt_tag_prefix: '' # Prefix used to state that the tag is imported from Livehunt
   enable_label_enrichment: True # Add livehunt name and matched yara rules label to the alert
-  get_malware_config: False # # Set to true to add config data of malware files like IPs and domains, if present
-  tlp: "GREEN" # Set the TLP level for created entities, e.g. WHITE, GREEN, AMBER, AMBER_STRICT or RED. Default is GREEN. 
-  indicators: True # Set to true to create indicators linked to the alerts
+  get_malware_config: False # (optional) Set to true to add config data of malware files like IPs and domains, if present
+  tlp: "GREEN" # (optional) Set the TLP level for created entities, e.g. WHITE, GREEN, AMBER, AMBER_STRICT or RED. 
+  indicators: False # (optional) Set to true to create indicators linked to the alerts or the observables. Default is false
   limit: 100 (Optional) Maximum number of notifications to process per run
