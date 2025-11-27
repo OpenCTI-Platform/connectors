@@ -235,11 +235,11 @@ class ReversingLabsSpectraAnalyzeConnector:
         # Parse TASK ID out of response
         response_json = json.loads(response.text)
         task_id = response_json["detail"]["id"]
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"{self.helper.connect_name}: Successfully submitted for analysis. Received task_id is {task_id}"
         )
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"{self.helper.connect_name}: Fetching submitted url status from Spectra Analyze."
         )
         for retry in range(5):
@@ -252,12 +252,12 @@ class ReversingLabsSpectraAnalyzeConnector:
             processing_status = analysis_status["processing_status"]
 
             if processing_status != "complete":
-                self.helper.log_info(
+                self.helper.connector_logger.info(
                     f"{self.helper.connect_name}: Processing status is {processing_status}. Wait for 2min and retry..."
                 )
                 time.sleep(120)
             else:
-                self.helper.log_info(
+                self.helper.connector_logger.info(
                     f"{self.helper.connect_name}: Report is successfully obtained!"
                 )
                 analysis_report = analysis_status
