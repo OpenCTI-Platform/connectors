@@ -192,7 +192,7 @@ class VirustotalLivehuntNotifications:
             config,
             default=None,
         )
-        
+
         indicators = get_config_variable(
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_INDICATORS",
             ["virustotal_livehunt_notifications", "indicators"],
@@ -230,7 +230,7 @@ class VirustotalLivehuntNotifications:
             get_malware_config,
             tlp,
             indicators,
-            limit
+            limit,
         )
 
     @staticmethod
