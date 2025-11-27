@@ -44,20 +44,32 @@ class KasperskyClient:
             response.raise_for_status()
             return response
 
-        except requests.RequestException as err:
-            error_msg = "[API] Error while fetching data: "
+        except requests.exceptions.HTTPError as errh:
+            if response.status_code == 401:
+                msg = "Permissions Error, Kaspersky returned a 401, please check your API key"
+            else:
+                msg = "Http error"
+            self.helper.connector_logger.error(msg, {"error": errh})
+            raise
+        except requests.exceptions.ConnectionError as errc:
+            self.helper.connector_logger.error("Error connecting", {"error": errc})
+            raise
+        except requests.exceptions.Timeout as errt:
+            self.helper.connector_logger.error("Timeout error", {"error": errt})
+            raise
+        except requests.exceptions.RequestException as err:
             self.helper.connector_logger.error(
-                error_msg, {"url_path": {api_url}, "error": {str(err)}}
+                "Something else happened", {"error": err}
             )
-            return None
+            raise
+        except Exception as err:
+            self.helper.connector_logger.error("Unknown error", {"error": err})
+            raise
 
     def get_file_info(self, obs_hash) -> dict:
         """
         Retrieve file information
         """
-        try:
-            file_url = f"{self.base_url}api/hash/{obs_hash}"
-            response = self._request_data(file_url, params=self.params)
-            return response.json()
-        except Exception as err:
-            self.helper.connector_logger.error(err)
+        file_url = f"{self.base_url}api/hash/{obs_hash}"
+        response = self._request_data(file_url, params=self.params)
+        return response.json()

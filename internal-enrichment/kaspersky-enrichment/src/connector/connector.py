@@ -36,7 +36,9 @@ class KasperskyConnector:
 
     """
 
-    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+    def __init__(
+        self, config: ConnectorSettings, helper: OpenCTIConnectorHelper
+    ) -> None:
         """
         Initialize `KasperskyConnector` with its configuration.
 
@@ -46,19 +48,9 @@ class KasperskyConnector:
         """
         self.config = config
         self.helper = helper
-        self.file_sections = (
-            self.config.kaspersky.file_sections
-        )  # TODO: prevent that LicenseInfo, Zone and FileGeneralInfo are there
+        self.file_sections = self.config.kaspersky.file_sections
+        self.zone_octi_score_mapping = self.config.kaspersky.zone_octi_score_mapping
         api_key = self.config.kaspersky.api_key.get_secret_value()
-
-        # Convert zone_octi_score_mapping to dict
-        zone_octi_score_mapping = self.config.kaspersky.zone_octi_score_mapping.replace(
-            " ", ""
-        )
-        self.zone_octi_score_mapping = {
-            x.split(":")[0].lower(): int(x.split(":")[1])
-            for x in zone_octi_score_mapping.split(",")
-        }  # TODO: maybe convert in settings instead of here
 
         self.client = KasperskyClient(
             self.helper,
@@ -71,17 +63,13 @@ class KasperskyConnector:
             },
         )
 
-        self.converter_to_stix = ConverterToStix(
-            self.helper,
-            tlp_level="clear",
-            # Pass any arguments necessary to the converter
-        )
+        self.converter_to_stix = ConverterToStix(self.helper)
 
         # Define variables
         self.author = None
         self.stix_objects = []
 
-    def _process_file(self, observable) -> list:
+    def _process_file(self, observable: dict) -> None:
         """
         Collect intelligence from the source for a File type
         """
@@ -98,6 +86,10 @@ class KasperskyConnector:
 
         # Manage FileGeneralInfo data
 
+        self.helper.connector_logger.info(
+            "[CONNECTOR] Process enrichment from FileGeneralInfo data..."
+        )
+
         # Score
         if entity_data.get("Zone"):
             score = self.zone_octi_score_mapping[entity_data["Zone"].lower()]
@@ -113,15 +105,28 @@ class KasperskyConnector:
         if entity_data["FileGeneralInfo"].get("Sha256"):
             observable["hashes"]["SHA-256"] = entity_data["FileGeneralInfo"]["Sha256"]
 
-        # Size, mime_type and labels
-        mapping_fields = {"Size": "size", "Type": "mime_type", "Categories": "labels"}
+        # Size, mime_type
+        mapping_fields = {"Size": "size", "Type": "mime_type"}
         for key, value in mapping_fields.items():
             if entity_data["FileGeneralInfo"].get(key):
                 observable[value] = entity_data["FileGeneralInfo"][key]
 
+        # Labels
+        if entity_data["FileGeneralInfo"].get("Categories"):
+            observable["labels"] = []
+            if observable.get("x_opencti_labels"):
+                observable["labels"] = observable["x_opencti_labels"]
+            for label in entity_data["FileGeneralInfo"]["Categories"]:
+                if label not in observable["labels"]:
+                    observable["labels"].append(label)
+
         # Manage FileNames data
 
         if entity_data.get("FileNames"):
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Process enrichment from FileNames data..."
+            )
+
             for filename in entity_data["FileNames"]:
                 if (
                     observable.get("x_opencti_additional_names")
@@ -134,11 +139,16 @@ class KasperskyConnector:
                 else:
                     observable["x_opencti_additional_names"] = filename["FileName"]
 
+        # Prepare author object
+        author = self.converter_to_stix.create_author()
+        self.stix_objects += [author]
+
         # Manage DetectionsInfo data
 
         if entity_data.get("DetectionsInfo"):
-            author = self.converter_to_stix.create_author()
-            self.stix_objects += [author]
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Process enrichment from DetectionsInfo data..."
+            )
 
             notes = []
             for obs_detection_info in entity_data["DetectionsInfo"]:
@@ -152,6 +162,10 @@ class KasperskyConnector:
         # Manage FileDownloadedFromUrls data
 
         if entity_data.get("FileDownloadedFromUrls"):
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Process enrichment from FileDownloadedFromUrls data..."
+            )
+
             urls_objects = []
             for url_info in entity_data["FileDownloadedFromUrls"]:
                 obs_url_score = self.zone_octi_score_mapping[url_info["Zone"].lower()]
@@ -169,26 +183,33 @@ class KasperskyConnector:
             if urls_objects:
                 self.stix_objects += urls_objects
 
-            # Manage Industries data
+        # Manage Industries data
 
-            if entity_data.get("Industries"):
-                industries_objects = []
-                for industry in entity_data["Industries"]:
-                    industry_object = self.converter_to_stix.create_sector(industry)
-                    industries_objects.append(industry_object)
+        if entity_data.get("Industries"):
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Process enrichment from Industries data..."
+            )
 
-                    if industry_object:
-                        industry_relation = self.converter_to_stix.create_relationship(
-                            source_id=observable["id"],
-                            relationship_type="related-to",
-                            target_id=industry_object.id,
-                        )
-                        industries_objects.append(industry_relation)
+            industries_objects = []
+            for industry in entity_data["Industries"]:
+                industry_object = self.converter_to_stix.create_sector(industry)
+                industries_objects.append(industry_object)
+
+                if industry_object:
+                    industry_relation = self.converter_to_stix.create_relationship(
+                        source_id=observable["id"],
+                        relationship_type="related-to",
+                        target_id=industry_object.id,
+                    )
+                    industries_objects.append(industry_relation)
 
             if industries_objects:
                 self.stix_objects += industries_objects
 
     def _send_bundle(self, stix_objects: list) -> str:
+        """
+        Send the STIX bundle to the OpenCTI platform
+        """
         stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
         bundles_sent = self.helper.send_stix2_bundle(stix_objects_bundle)
 
@@ -197,7 +218,7 @@ class KasperskyConnector:
         )
         return info_msg
 
-    def check_quota(self, entity_info):
+    def check_quota(self, entity_info: dict) -> None:
         """
         Check if quota is not exceeded.
         Raise a warning otherwise.
@@ -211,7 +232,7 @@ class KasperskyConnector:
                 },
             )
 
-    def entity_in_scope(self, obs_type) -> bool:
+    def entity_in_scope(self, obs_type: str) -> bool:
         """
         Security to limit playbook triggers to something other than the initial scope
         :param data: Dictionary of data
@@ -226,7 +247,7 @@ class KasperskyConnector:
         else:
             return False
 
-    def resolve_file_hash(self, observable):
+    def resolve_file_hash(self, observable: dict) -> str:
         if "hashes" in observable and "SHA-256" in observable["hashes"]:
             return observable["hashes"]["SHA-256"]
         if "hashes" in observable and "SHA-1" in observable["hashes"]:
@@ -292,9 +313,8 @@ class KasperskyConnector:
                     )
         except Exception as err:
             # Handling other unexpected exceptions
-            return self.helper.connector_logger.error(
-                "[CONNECTOR] Unexpected Error occurred", {"error_message": str(err)}
-            )
+            msg = f"[Kaspersky Enrichment] Unexpected Error occurred: {err}"
+            raise Exception(msg)
 
     def run(self) -> None:
         """

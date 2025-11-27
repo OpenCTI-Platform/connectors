@@ -1,4 +1,4 @@
-from typing import Annotated, Literal
+from typing import Annotated
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -6,18 +6,43 @@ from connectors_sdk import (
     BaseInternalEnrichmentConnectorConfig,
 )
 from connectors_sdk.core.pydantic import ListFromString
-from pydantic import Field, HttpUrl, PlainSerializer, SecretStr
+from pydantic import (
+    BeforeValidator,
+    Field,
+    HttpUrl,
+    PlainSerializer,
+    SecretStr,
+    SerializationInfo,
+    field_validator,
+)
 
-TLPToLower = Annotated[
-    Literal[
-        "TLP:CLEAR",
-        "TLP:WHITE",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED",
-    ],
-    PlainSerializer(lambda v: "".join(v), return_type=str),
+
+def parse_string_to_dict(value: str) -> dict:
+    """Coerce a string into a dict and add 'grey' key"""
+    if isinstance(value, str):
+        value_dict = {
+            x.split(":")[0].lower(): int(x.split(":")[1])
+            for x in value.replace(" ", "").split(",")
+        }
+        value_dict["grey"] = value_dict["gray"]
+        return value_dict
+    return value
+
+
+def pycti_list_serializer(v: dict, info: SerializationInfo) -> str:
+    """Serialize a dict as a comma-separated string when the Pydantic
+    serialization context requests "pycti" mode; otherwise, return the list
+    unchanged.
+    """
+    if isinstance(v, dict) and info.context and info.context.get("mode") == "pycti":
+        return ",".join(f"{k}:{v}" for k, v in v.items())
+    return v
+
+
+DictFromString = Annotated[
+    dict,
+    BeforeValidator(parse_string_to_dict),
+    PlainSerializer(pycti_list_serializer, when_used="json"),
 ]
 
 
@@ -59,7 +84,7 @@ class KasperskyConfig(BaseConfigModel):
         description="API key used to authenticate requests to the Kaspersky service.",
     )
 
-    zone_octi_score_mapping: str = Field(
+    zone_octi_score_mapping: DictFromString = Field(
         default="red:100,orange:80,yellow:60,gray:20,green:0",
         description="Zone to score mapping. Only the numerical values ​​need to be changed if necessary. "
         "See https://tip.kaspersky.com/Help/Doc_data/en-US/AboutZones.htm for further explanations",
@@ -72,6 +97,34 @@ class KasperskyConfig(BaseConfigModel):
         "LicenseInfo, Zone and FileGeneralInfo are called by default. "
         "Only DetectionsInfo, FileDownloadedFromUrls, Industries and FileNames are currently supported",
     )
+
+    @field_validator(
+        "file_sections",
+        mode="before",
+    )
+    @classmethod
+    def _validate_value(cls, value: str) -> str:
+        """Validate the value of the file sections."""
+        sections = value.replace(" ", "").split(",")
+        for section in sections:
+            if section not in [
+                "LicenseInfo",
+                "Zone",
+                "FileGeneralInfo",
+                "DetectionsInfo",
+                "FileDownloadedFromUrls",
+                "Industries",
+                "FileNames",
+            ]:
+                raise ValueError("Invalid file sections")
+        for mandatory_section in [
+            "LicenseInfo",
+            "Zone",
+            "FileGeneralInfo",
+        ]:
+            if mandatory_section not in value:
+                value += "," + mandatory_section
+        return value
 
 
 class ConnectorSettings(BaseConnectorSettings):

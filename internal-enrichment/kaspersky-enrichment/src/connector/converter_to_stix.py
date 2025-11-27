@@ -13,7 +13,7 @@ class ConverterToStix:
         e.g. `pycti.Identity.generate_id(name="Source Name", identity_class="organization")` for a STIX Identity.
     """
 
-    def __init__(self, helper: OpenCTIConnectorHelper, tlp_level: str):
+    def __init__(self, helper: OpenCTIConnectorHelper) -> None:
         """
         Initialize the converter with necessary configuration.
         For log purpose, the connector's helper CAN be injected.
@@ -21,14 +21,12 @@ class ConverterToStix:
 
         Args:
             helper (OpenCTIConnectorHelper): The helper of the connector. Used for logs.
-            tlp_level (str): The TLP level to add to the created STIX entities.
         """
         self.helper = helper
-
         self.author = self.create_author()
 
     @staticmethod
-    def create_author() -> dict:
+    def create_author() -> stix2.Identity:
         """
         Create Author
         :return: Author in Stix2 object
@@ -42,7 +40,7 @@ class ConverterToStix:
         )
         return author
 
-    def create_file_note(self, obs_id, detection_info):
+    def create_file_note(self, obs_id: str, detection_info: dict) -> stix2.Note:
         """
         Create a note associated to the file observable
         """
@@ -66,12 +64,12 @@ class ConverterToStix:
             id=Note.generate_id(datetime.datetime.now().isoformat(), content),
             abstract="Kaspersky Detections Info",
             content=content,
-            created_by_ref=self.author,
+            created_by_ref=self.author.id,
             object_refs=[obs_id],
         )
         return note
 
-    def create_sector(self, industry: str):
+    def create_sector(self, industry: str) -> stix2.Identity:
         """
         Create a Sector object
         """
@@ -82,13 +80,12 @@ class ConverterToStix:
             created_by_ref=self.author.id,
         )
 
-    def create_url(self, obs_url_score: int, url_info: dict):
+    def create_url(self, obs_url_score: int, url_info: dict) -> stix2.URL:
         """
         Create an URL object
         """
         return stix2.URL(
             value=url_info["Url"],
-            # object_marking_refs=[self._default_tlp],
             custom_properties={
                 "score": obs_url_score,
             },
@@ -96,7 +93,7 @@ class ConverterToStix:
 
     def create_relationship(
         self, source_id: str, relationship_type: str, target_id: str
-    ) -> dict:
+    ) -> stix2.Relationship:
         """
         Creates Relationship object
         :param source_id: ID of source in string
@@ -111,6 +108,6 @@ class ConverterToStix:
             relationship_type=relationship_type,
             source_ref=source_id,
             target_ref=target_id,
-            created_by_ref=self.author,
+            created_by_ref=self.author.id,
         )
         return relationship
