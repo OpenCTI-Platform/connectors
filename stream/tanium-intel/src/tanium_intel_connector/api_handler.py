@@ -260,6 +260,8 @@ class TaniumApiHandler:
                 if hash in hashes:
                     entry[hash] = hashes[hash]
                     entry["uploadedHash"] = hashes[hash]
+                else:
+                    entry[hash] = ""
 
             entity_description = OpenCTIConnectorHelper.get_attribute_in_extension(
                 "description", entity
