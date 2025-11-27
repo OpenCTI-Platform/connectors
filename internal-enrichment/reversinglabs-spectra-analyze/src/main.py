@@ -262,7 +262,7 @@ class ReversingLabsSpectraAnalyzeConnector:
                 )
                 analysis_report = analysis_status
                 # we can break here since we got the report
-                continue
+                break
 
         return analysis_report
 
