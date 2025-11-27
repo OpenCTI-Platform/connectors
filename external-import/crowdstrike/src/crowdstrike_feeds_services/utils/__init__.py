@@ -532,7 +532,7 @@ def create_sector(name: str, created_by: stix2.Identity) -> stix2.Identity:
     return create_identity(
         name,
         created_by=created_by,
-        identity_class="sector",
+        identity_class="class",
     )
 
 
