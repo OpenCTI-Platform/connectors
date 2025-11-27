@@ -153,7 +153,7 @@ class ShadowTrackrConnector:
             else:
                 description = opencti_entity["x_opencti_description"]
 
-            if "[ShadowTrackr] " in description:
+            if description is not None and "[ShadowTrackr] " in description:
                 return (
                     "This ip is already processed by the ShadowTrackr connector. We're not doing it again,"
                     " that might mess up the score"
