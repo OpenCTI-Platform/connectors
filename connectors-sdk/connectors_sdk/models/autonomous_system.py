@@ -21,7 +21,7 @@ class AutonomousSystem(BaseObservableEntity):
     )
 
     def to_stix2_object(self) -> stix2.v21.AutonomousSystem:
-        """Make stix-like object (not defined in stix spec nor lib).
+        """Make the stix2 autonomous system object.
 
         Returns:
             (stix2.v21.AutonomousSystem): The stix2 autonomous system object.

@@ -9,7 +9,12 @@ from stix2.v21 import Location as Stix2Location
 
 
 class Region(BaseIdentifiedEntity):
-    """Represent a region entity."""
+    """Represent a region entity.
+
+    Notes:
+        - OpenCTI maps STIX Location SDO to OCTI Region entity based on `x_opencti_location_type`.
+        - To create a AdministrativeArea entity on OpenCTI, `x_opencti_location_type` MUST be 'Region'.
+    """
 
     name: str = Field(
         description="A name used to identify the Region.",

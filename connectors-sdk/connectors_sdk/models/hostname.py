@@ -10,16 +10,9 @@ class Hostname(BaseObservableEntity):
 
     Examples:
         >>> hostname = Hostname(
-        ...     value=""
-        ...     create_indicator=True,
+        ...     value="example.com",
         ...     )
         >>> entity = hostname.to_stix2_object()
-
-    Notes:
-        - The `resolves_to_refs` (from STIX2.1 spec) field is not implemented on OpenCTI.
-          It must be replaced by explicit `resolves-to` relationships.
-        - The `belongs_to_refs` (from STIX2.1 spec) field is not implemented on OpenCTI.
-          It must be replaced by explicit `belongs-to` relationships.
     """
 
     value: str = Field(

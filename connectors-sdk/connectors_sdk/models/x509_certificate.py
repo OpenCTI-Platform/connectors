@@ -15,12 +15,6 @@ class X509Certificate(BaseObservableEntity):
         ...     create_indicator=True,
         ...     )
         >>> entity = x509_certificate.to_stix2_object()
-
-    Notes:
-        - The `resolves_to_refs` (from STIX2.1 spec) field is not implemented on OpenCTI.
-          It must be replaced by explicit `resolves-to` relationships.
-        - The `belongs_to_refs` (from STIX2.1 spec) field is not implemented on OpenCTI.
-          It must be replaced by explicit `belongs-to` relationships.
     """
 
     hashes: dict[HashAlgorithm, str] | None = Field(
