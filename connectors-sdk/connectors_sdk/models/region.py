@@ -13,7 +13,7 @@ class Region(BaseIdentifiedEntity):
 
     Notes:
         - OpenCTI maps STIX Location SDO to OCTI Region entity based on `x_opencti_location_type`.
-        - To create a AdministrativeArea entity on OpenCTI, `x_opencti_location_type` MUST be 'Region'.
+        - To create a Region entity on OpenCTI, `x_opencti_location_type` MUST be 'Region'.
     """
 
     name: str = Field(
