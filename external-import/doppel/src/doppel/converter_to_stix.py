@@ -20,6 +20,8 @@ from stix2 import Relationship as StixCoreRelationship
 
 from doppel.utils import parse_iso_datetime
 
+STIX_VERSION = "2.1"
+
 
 class ConverterToStix:
     """
@@ -397,7 +399,7 @@ class ConverterToStix:
                 note = Note(
                     abstract=note_content,
                     content=note_body,
-                    spec_version="2.1",
+                    spec_version=STIX_VERSION,
                     created=note_timestamp,
                     modified=note_timestamp,
                     created_by_ref=self.author.id,
@@ -433,7 +435,7 @@ class ConverterToStix:
         indicator = Indicator(
             pattern=pattern,
             pattern_type="stix",
-            spec_version="2.1",
+            spec_version=STIX_VERSION,
             name=name,
             description=self._build_description(alert),
             created=created_at,
@@ -473,7 +475,7 @@ class ConverterToStix:
         note = Note(
             abstract=note_content,
             content=note_body,
-            spec_version="2.1",
+            spec_version=STIX_VERSION,
             created=modified or created_at,
             modified=modified or created_at,
             created_by_ref=self.author.id,
@@ -578,7 +580,7 @@ class ConverterToStix:
             reversion_note = Note(
                 abstract="Moved from taken down back to unresolved",
                 content=f"Alert {alert_id} has been reverted from takedown state to {queue_state}",
-                spec_version="2.1",
+                spec_version=STIX_VERSION,
                 created=modified,
                 modified=modified,
                 created_by_ref=self.author.id,
@@ -610,7 +612,7 @@ class ConverterToStix:
 
         domain_observable = DomainName(
             value=domain_name,
-            spec_version="2.1",
+            spec_version=STIX_VERSION,
             object_marking_refs=[self.tlp_marking.id],
             labels=labels_flat or None,
             external_references=external_references if external_references else None,
@@ -637,7 +639,7 @@ class ConverterToStix:
 
         ip_observable = IPv4Address(
             value=ip_address,
-            spec_version="2.1",
+            spec_version=STIX_VERSION,
             object_marking_refs=[self.tlp_marking.id],
             labels=labels_flat or None,
             external_references=external_references if external_references else None,
@@ -666,7 +668,7 @@ class ConverterToStix:
             name=f"Case for Alert {alert_id}",
             context="suspicious-activity",
             object_refs=object_refs,
-            spec_version="2.1",
+            spec_version=STIX_VERSION,
             created_by_ref=self.author.id,
             external_references=self._build_external_references(alert)
             if self._build_external_references(alert)
@@ -690,7 +692,7 @@ class ConverterToStix:
             relationship_type=relationship_type,
             source_ref=source_id,
             target_ref=target_id,
-            spec_version="2.1",
+            spec_version=STIX_VERSION,
             created_by_ref=self.author.id,
             object_marking_refs=[self.tlp_marking.id],
             allow_custom=True,
@@ -831,11 +833,23 @@ class ConverterToStix:
                     "last_processed": datetime.utcnow().isoformat(),
                 }
 
+            except (KeyError, AttributeError, ValueError, TypeError) as e:
+                # Expected data errors - skip and continue
+                self.helper.log_warning(
+                    f"[DoppelConverter] Invalid alert data for {alert_id}. Skipping.",
+                )
+                self.helper.log_debug(
+                    f"Alert data validation error details - alert_id: {alert_id}, error: {str(e)}, error_type: {type(e).__name__}"
+                )
+                continue
+
             except Exception as e:
+                # Unexpected errors - log and raise
                 self.helper.log_error(
                     f"[DoppelConverter] Failed to process alert: {str(e)}",
                     {"alert": alert, "alert_id": alert_id},
                 )
+                raise
 
         # Persist updated state
         self.helper.set_state(state)
