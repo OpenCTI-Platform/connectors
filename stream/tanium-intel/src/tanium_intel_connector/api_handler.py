@@ -198,14 +198,14 @@ class TaniumApiHandler:
                 if isinstance(entity["hashes"], list):
                     _hashes = entity["hashes"]
                     entity["hashes"] = {}
-                    for hash in _hashes:
-                        entity["hashes"][hash["algorithm"]] = hash["hash"]
+                    for hash_type in _hashes:
+                        entity["hashes"][hash_type["algorithm"]] = hash_type["hash"]
 
                 hashes = entity["hashes"]
-                for hash in ["MD5", "SHA-1", "SHA-256"]:
-                    if hash in hashes:
-                        value += f"{hashes[hash]}\n"
-                        name = hashes[hash]
+                for hash_type in ["MD5", "SHA-1", "SHA-256"]:
+                    if hash_type in hashes:
+                        value += f"{hashes[hash_type]}\n"
+                        name = hashes[hash_type]
 
         elif entity["type"] in [
             "ipv4-addr",
@@ -252,16 +252,16 @@ class TaniumApiHandler:
             if isinstance(entity["hashes"], list):
                 hashes = entity["hashes"]
                 entity["hashes"] = {}
-                for hash in hashes:
-                    entity["hashes"][hash["algorithm"]] = hash["hash"]
+                for hash_type in hashes:
+                    entity["hashes"][hash_type["algorithm"]] = hash_type["hash"]
 
             hashes = entity["hashes"]
-            for hash in ["MD5", "SHA-1", "SHA-256"]:
-                if hash in hashes:
-                    entry[hash] = hashes[hash]
-                    entry["uploadedHash"] = hashes[hash]
+            for hash_type in ["MD5", "SHA-1", "SHA-256"]:
+                if hash_type in hashes:
+                    entry[hash_type] = hashes[hash_type]
+                    entry["uploadedHash"] = hashes[hash_type]
                 else:
-                    entry[hash] = ""
+                    entry[hash_type] = ""
 
             entity_description = OpenCTIConnectorHelper.get_attribute_in_extension(
                 "description", entity
@@ -365,14 +365,14 @@ class TaniumApiHandler:
                 if isinstance(entity["hashes"], list):
                     hashes = entity["hashes"]
                     entity["hashes"] = {}
-                    for hash in hashes:
-                        entity["hashes"][hash["algorithm"]] = hash["hash"]
+                    for hash_type in hashes:
+                        entity["hashes"][hash_type["algorithm"]] = hash_type["hash"]
 
                 hashes = entity["hashes"]
-                for hash in ["MD5", "SHA-1", "SHA-256"]:
-                    if hash in hashes:
-                        value += f"{hashes[hash]}\n"
-                        name = hashes[hash]
+                for hash_type in ["MD5", "SHA-1", "SHA-256"]:
+                    if hash_type in hashes:
+                        value += f"{hashes[hash_type]}\n"
+                        name = hashes[hash_type]
 
         elif entity["type"] in [
             "ipv4-addr",
