@@ -5,7 +5,7 @@ from connectors_sdk import (
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
 )
-from pydantic import Field
+from pydantic import Field, model_validator
 
 
 class ReversinglabsSpectraAnalyzeConfig(BaseConfigModel):
@@ -40,3 +40,11 @@ class ConfigLoader(BaseConnectorSettings):
         default_factory=ReversinglabsSpectraAnalyzeConfig,
         validation_alias="reversinglabs",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_deprecated_settings(cls, data) -> dict:
+        reversinglabs = data.get("reversinglabs", {})
+        reversinglabs.update(data.pop("reversinglabs_spectra_analyze", {}))
+        data["reversinglabs"] = reversinglabs
+        return data
