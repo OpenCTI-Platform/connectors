@@ -197,6 +197,11 @@ class _ConfigLoaderServiceNow(ConfigBaseSettings):
         default=True,
         description="Boolean to promote observables into indicators.",
     )
+    sysparam_display_value: Optional[bool] = Field(
+        alias="SERVICENOW_SYSPARAM_DISPLAY_VALUE",
+        default=True,
+        description="Boolean to populate the queryparam syparam_display_value.",
+    )
 
     @field_validator(
         "state_to_exclude",
