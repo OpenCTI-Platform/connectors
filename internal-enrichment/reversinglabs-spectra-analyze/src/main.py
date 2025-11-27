@@ -9,6 +9,7 @@ from datetime import datetime
 from functools import wraps
 from typing import Any, Dict
 
+import requests
 import stix2
 from connectors_sdk.models import ExternalReference, OrganizationAuthor, TLPMarking
 from connectors_sdk.models.enums import TLPLevel
@@ -23,14 +24,6 @@ from ReversingLabs.SDK.a1000 import A1000
 from ReversingLabs.SDK.helper import NotFoundError, RequestTimeoutError
 from settings import ConfigLoader
 
-ZIP_MIME_TYPES = (
-    "application/x-bzip",
-    "application/x-bzip2",
-    "application/gzip",
-    "application/zip",
-    "application/x-zip-compressed",
-    "application/x-7z-compressed",
-)
 FILE_SAMPLE = ("Artifact", "StixFile", "File")
 
 
@@ -128,8 +121,12 @@ class ReversingLabsSpectraAnalyzeConnector:
         return self.helper.stix2_create_bundle(uniq_bundles_objects)
 
     @handle_spectra_errors
-    def _upload_file_to_spectra_analyze(self, file_uri, is_archive, sample_name):
-        file_content = self.helper.api.fetch_opencti_file(file_uri, binary=True)
+    def _upload_file_to_spectra_analyze(self, file_uri, sample_name):
+        r = requests.get(
+            file_uri,
+            timeout=300,
+        )
+        file_content = r.content
         report = {}
 
         file = open(sample_name, "wb")
@@ -180,12 +177,10 @@ class ReversingLabsSpectraAnalyzeConnector:
         if stix_entity["x_opencti_type"] == "Artifact":
             sample_name = self.opencti_entity["importFiles"][0]["name"]
             file_id = self.opencti_entity["importFiles"][0]["id"]
-            file_mime_type = self.opencti_entity["mime_type"]
             file_uri = f"{self.helper.opencti_url}/storage/get/{file_id}"
 
-            is_archive = file_mime_type in ZIP_MIME_TYPES
             analysis_response = self._upload_file_to_spectra_analyze(
-                file_uri, is_archive, sample_name
+                file_uri, sample_name
             )
             analysis_report = json.loads(analysis_response) if analysis_response else {}
 
