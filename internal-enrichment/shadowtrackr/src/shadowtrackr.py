@@ -306,7 +306,7 @@ class ShadowTrackrConnector:
         return self._process_entity(stix_objects, stix_entity, opencti_entity)
 
     # Start the main loop
-    def start(self):
+    def run(self):
         self.helper.listen(message_callback=self._process_message)
 
     def _check_ip_in_shadowtrackr(self, ip, labels=None) -> dict:
@@ -333,4 +333,4 @@ class ShadowTrackrConnector:
 
 if __name__ == "__main__":
     ShadowTrackrInstance = ShadowTrackrConnector()
-    ShadowTrackrInstance.start()
+    ShadowTrackrInstance.run()
