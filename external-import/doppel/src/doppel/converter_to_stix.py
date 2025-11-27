@@ -18,6 +18,15 @@ from stix2 import MarkingDefinition as Stix2MarkingDefinition
 from stix2 import Note
 from stix2 import Relationship as StixCoreRelationship
 
+from doppel.stix_helpers import (
+    build_custom_properties,
+    build_description,
+    build_external_references,
+    build_labels,
+    calculate_priority,
+    is_reverted_state,
+    is_takedown_state,
+)
 from doppel.utils import parse_iso_datetime
 
 STIX_VERSION = "2.1"
@@ -70,187 +79,6 @@ class ConverterToStix:
             "red": TLP_RED,
         }
         return mapping[level]
-
-    def _calculate_priority(self, score) -> str:
-        """Calculate case priority based on score"""
-        if score is None:
-            return "P4"
-        try:
-            score_float = float(score)
-            if score_float > 0.8:
-                return "P1"
-            elif score_float >= 0.5:
-                return "P2"
-            elif score_float > 0:
-                return "P3"
-            else:
-                return "P4"
-        except (ValueError, TypeError):
-            return "P4"
-
-    def _is_takedown_state(self, queue_state) -> bool:
-        """Check if alert is in takedown state"""
-        return queue_state and queue_state.lower() in ["actioned", "taken_down"]
-
-    def _is_reverted_state(self, queue_state) -> bool:
-        """Check if alert is reverted from takedown"""
-        return queue_state and queue_state.lower() in [
-            "archived",
-            "needs_confirmation",
-            "doppel_review",
-            "monitoring",
-        ]
-
-    def _build_labels(self, alert) -> list:
-        """
-        Build labels for observables/indicators with semantic prefixes
-        Returns dict with categorized labels and flat list
-        """
-        labels_dict = {
-            "queue_state": None,
-            "entity_state": None,
-            "severity": None,
-            "platform": None,
-            "brand": None,
-            "tags": [],
-        }
-
-        if alert.get("queue_state"):
-            labels_dict["queue_state"] = f"queue_state:{alert['queue_state']}"
-        if alert.get("entity_state"):
-            labels_dict["entity_state"] = f"entity_state:{alert['entity_state']}"
-        if alert.get("severity"):
-            labels_dict["severity"] = f"severity:{alert['severity']}"
-        if alert.get("platform"):
-            labels_dict["platform"] = f"platform:{alert['platform']}"
-        if alert.get("brand"):
-            labels_dict["brand"] = f"brand:{alert['brand']}"
-
-        tags = alert.get("tags", [])
-
-        if tags:
-            labels_dict["tags"] = [tag.get("name") for tag in tags if "name" in tag]
-
-        labels_flat = [v for v in labels_dict.values() if v and isinstance(v, str)]
-        labels_flat.extend(labels_dict["tags"])
-
-        return labels_flat
-
-    def _build_description(self, alert) -> str:
-        """
-        Build description field from alert data
-        :param alert: Doppel alert
-        :return: Description string
-        """
-
-        # Extract entity_content data
-        entity_content = alert.get("entity_content", {})
-        root_domain = entity_content.get("root_domain", {})
-
-        country_code = root_domain.get("country_code")
-        registrar = root_domain.get("registrar")
-        hosting_provider = root_domain.get("hosting_provider")
-        contact_email = root_domain.get("contact_email")
-        mx_records = root_domain.get("mx_records", [])
-        nameservers = root_domain.get("nameservers", [])
-
-        description_parts = []
-        if alert.get("brand"):
-            description_parts.append(f"**Brand**: {alert.get('brand')}\n")
-        if alert.get("product"):
-            description_parts.append(f"**Product**: {alert.get('product')}\n")
-        if alert.get("notes"):
-            description_parts.append(f"**Notes**: {alert.get('notes')}\n")
-        if alert.get("uploaded_by"):
-            description_parts.append(f"**Uploaded By**: {alert.get('uploaded_by')}\n")
-        if alert.get("screenshot_url"):
-            description_parts.append(
-                f"**Screenshot URL**: {alert.get('screenshot_url')}\n"
-            )
-        if alert.get("message"):
-            description_parts.append(f"**Message**: {alert.get('message')}\n")
-        if alert.get("source"):
-            description_parts.append(f"**Source**: {alert.get('source')}\n")
-        if alert.get("assignee"):
-            description_parts.append(f"**Assignee**: {alert.get('assignee')}\n")
-        if country_code:
-            description_parts.append(f"**Country**: {country_code}\n")
-        if registrar:
-            description_parts.append(f"**Registrar**: {registrar}\n")
-        if hosting_provider:
-            description_parts.append(f"**Hosting Provider**: {hosting_provider}\n")
-        if contact_email:
-            description_parts.append(f"**Contact Email**: {contact_email}\n")
-        if mx_records:
-            formatted_mx = [
-                f"{mx.get('exchange')} (pref: {mx.get('preference')})"
-                for mx in mx_records
-            ]
-            description_parts.append(f"**MX Records**: {', '.join(formatted_mx)}\n")
-        if nameservers:
-            ns_text = ", ".join(
-                [ns if isinstance(ns, str) else ns.get("host") for ns in nameservers]
-            )
-            description_parts.append(f"**Nameservers**: {ns_text}\n")
-
-        return "\n".join(description_parts) if description_parts else ""
-
-    def _build_external_references(self, alert) -> list:
-        """
-        Build external references for observables/indicators
-        :param alert: Doppel alert
-        :return: List of external reference dicts
-        """
-        external_references = []
-        audit_logs = alert.get("audit_logs", [])
-        audit_log_text = (
-            "\n".join(
-                [
-                    f"{log.get('timestamp', '')}: {log.get('type', '')} - {log.get('value', '')} (by {log.get('changed_by', '')})"
-                    for log in audit_logs
-                ]
-            )
-            if audit_logs
-            else ""
-        )
-
-        if alert.get("doppel_link") or alert.get("id"):
-            external_ref = {
-                "source_name": alert.get("source", "Doppel"),
-            }
-            if alert.get("doppel_link"):
-                external_ref["url"] = alert.get("doppel_link")
-            if alert.get("id"):
-                external_ref["external_id"] = alert.get("id")
-            if audit_log_text:
-                external_ref["description"] = audit_log_text
-            external_references.append(external_ref)
-
-        return external_references
-
-    def _build_custom_properties(self, alert) -> dict:
-        """
-        Build custom properties for observables/indicators
-        :param alert: Doppel alert
-        :return: Dict of custom properties
-        """
-        custom_properties = {}
-        raw_score = alert.get("score")
-        try:
-            score = int(float(raw_score)) if raw_score is not None else 0
-        except (ValueError, TypeError):
-            score = 0
-        custom_properties["x_opencti_created_by_ref"] = self.author.id
-        custom_properties["x_opencti_score"] = score
-        custom_properties["x_opencti_workflow_id"] = alert.get(
-            "id"
-        )  # Store alert_id for lookup
-
-        x_opencti_description = self._build_description(alert)
-        if x_opencti_description:
-            custom_properties["x_opencti_description"] = x_opencti_description
-
-        return custom_properties
 
     def _find_indicators_by_alert_id(
         self, alert_id, domain_name=None, ip_address=None
@@ -418,13 +246,13 @@ class ConverterToStix:
             return
 
         # Build labels
-        labels_flat = self._build_labels(alert)
+        labels_flat = build_labels(alert)
 
         # Build external references
-        external_references = self._build_external_references(alert)
+        external_references = build_external_references(alert)
 
         # Build custom properties
-        custom_properties = self._build_custom_properties(alert)
+        custom_properties = build_custom_properties(alert, self.author.id)
 
         # Create Indicator
         indicator = Indicator(
@@ -432,7 +260,7 @@ class ConverterToStix:
             pattern_type="stix",
             spec_version=STIX_VERSION,
             name=name,
-            description=self._build_description(alert),
+            description=build_description(alert),
             created=created_at,
             modified=modified,
             created_by_ref=self.author.id,
@@ -597,13 +425,13 @@ class ConverterToStix:
         :return: DomainName Stix2 object
         """
         # Build labels
-        labels_flat = self._build_labels(alert)
+        labels_flat = build_labels(alert)
 
         # Build external references
-        external_references = self._build_external_references(alert)
+        external_references = build_external_references(alert)
 
         # Build custom properties
-        custom_properties = self._build_custom_properties(alert)
+        custom_properties = build_custom_properties(alert, self.author.id)
 
         domain_observable = DomainName(
             value=domain_name,
@@ -624,13 +452,13 @@ class ConverterToStix:
         :return: IPv4Address Stix2 object
         """
         # Build labels
-        labels_flat = self._build_labels(alert)
+        labels_flat = build_labels(alert)
 
         # Build external references
-        external_references = self._build_external_references(alert)
+        external_references = build_external_references(alert)
 
         # Build custom properties
-        custom_properties = self._build_custom_properties(alert)
+        custom_properties = build_custom_properties(alert, self.author.id)
 
         ip_observable = IPv4Address(
             value=ip_address,
@@ -652,10 +480,10 @@ class ConverterToStix:
         """
         alert_id = alert.get("id")
         score = alert.get("score")
-        priority = self._calculate_priority(score)
+        priority = calculate_priority(score)
 
         case_id = f"grouping--{uuid5(NAMESPACE_URL, f'doppel-case-{alert_id}')}"
-        case_labels = self._build_labels(alert)
+        case_labels = build_labels(alert)
         case_labels.append(f"priority:{priority}")
 
         case = Grouping(
@@ -665,10 +493,10 @@ class ConverterToStix:
             object_refs=object_refs,
             spec_version=STIX_VERSION,
             created_by_ref=self.author.id,
-            external_references=self._build_external_references(alert)
-            if self._build_external_references(alert)
+            external_references=build_external_references(alert)
+            if build_external_references(alert)
             else None,
-            description=self._build_description(alert),
+            description=build_description(alert),
             labels=case_labels or None,
             object_marking_refs=[self.tlp_marking.id],
             allow_custom=True,
@@ -766,14 +594,13 @@ class ConverterToStix:
                         stix_objects.append(relationship)
 
                 # DETECT STATE TRANSITIONS
-                is_takedown_now = self._is_takedown_state(current_queue_state)
+                is_takedown_now = is_takedown_state(current_queue_state)
                 was_takedown = (
-                    self._is_takedown_state(previous_queue_state)
+                    is_takedown_state(previous_queue_state)
                     if previous_queue_state
                     else False
                 )
-                is_reverted = self._is_reverted_state(current_queue_state)
-
+                is_reverted = is_reverted_state(current_queue_state)
                 # Transition: TO_TAKEDOWN (needs_review → taken_down)
                 if is_takedown_now and not was_takedown:
                     self._process_takedown(
