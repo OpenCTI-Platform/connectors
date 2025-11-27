@@ -46,13 +46,6 @@ class BaseIdentifiedObject(BaseObject, ABC):
         self._stix2_id = stix_id
         return stix_id
 
-    @id.setter
-    def id(self, value: str) -> None:
-        """Prevent setting the id property."""
-        raise AttributeError(
-            f"The 'id' property is read-only and cannot be modified with {value}."
-        )
-
     # https://github.com/pydantic/pydantic/discussions/10098
     @model_validator(mode="after")
     def _check_id(self) -> BaseIdentifiedObject:
