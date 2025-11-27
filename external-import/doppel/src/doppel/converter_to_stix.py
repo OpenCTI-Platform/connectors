@@ -71,7 +71,7 @@ class ConverterToStix:
         }
         return mapping[level]
 
-    def _calculate_priority(self, score):
+    def _calculate_priority(self, score) -> str:
         """Calculate case priority based on score"""
         if score is None:
             return "P4"
@@ -88,11 +88,11 @@ class ConverterToStix:
         except (ValueError, TypeError):
             return "P4"
 
-    def _is_takedown_state(self, queue_state):
+    def _is_takedown_state(self, queue_state) -> bool:
         """Check if alert is in takedown state"""
         return queue_state and queue_state.lower() in ["actioned", "taken_down"]
 
-    def _is_reverted_state(self, queue_state):
+    def _is_reverted_state(self, queue_state) -> bool:
         """Check if alert is reverted from takedown"""
         return queue_state and queue_state.lower() in [
             "archived",
@@ -101,7 +101,7 @@ class ConverterToStix:
             "monitoring",
         ]
 
-    def _build_labels(self, alert):
+    def _build_labels(self, alert) -> list:
         """
         Build labels for observables/indicators with semantic prefixes
         Returns dict with categorized labels and flat list
@@ -136,7 +136,7 @@ class ConverterToStix:
 
         return labels_flat
 
-    def _build_description(self, alert):
+    def _build_description(self, alert) -> str:
         """
         Build description field from alert data
         :param alert: Doppel alert
@@ -195,7 +195,7 @@ class ConverterToStix:
 
         return "\n".join(description_parts) if description_parts else ""
 
-    def _build_external_references(self, alert):
+    def _build_external_references(self, alert) -> list:
         """
         Build external references for observables/indicators
         :param alert: Doppel alert
@@ -228,7 +228,7 @@ class ConverterToStix:
 
         return external_references
 
-    def _build_custom_properties(self, alert):
+    def _build_custom_properties(self, alert) -> dict:
         """
         Build custom properties for observables/indicators
         :param alert: Doppel alert
@@ -252,7 +252,7 @@ class ConverterToStix:
 
         return custom_properties
 
-    def _find_indicators_by_alert_id(self, alert_id, domain_name=None, ip_address=None):
+    def _find_indicators_by_alert_id(self, alert_id, domain_name=None, ip_address=None) -> list:
         """
         Find indicators by alert_id stored in external_id
         :param alert_id: Doppel alert ID
@@ -594,7 +594,7 @@ class ConverterToStix:
             f"[DoppelConverter] Revoked {len(active_indicators)} indicator(s) - alert_id: {alert_id}"
         )
 
-    def _create_domain_observable(self, domain_name, alert):
+    def _create_domain_observable(self, domain_name, alert) -> DomainName:
         """
         Create DomainName observable
         :param domain_name: Domain name string
@@ -621,7 +621,7 @@ class ConverterToStix:
         )
         return domain_observable
 
-    def _create_ip_observable(self, ip_address, alert):
+    def _create_ip_observable(self, ip_address, alert) -> IPv4Address:
         """
         Create IPv4Address observable
         :param ip_address: IP address string
@@ -648,7 +648,7 @@ class ConverterToStix:
         )
         return ip_observable
 
-    def _create_grouping_case(self, alert, object_refs):
+    def _create_grouping_case(self, alert, object_refs) -> Grouping:
         """
         Create Grouping case object
         :param alert: Doppel alert
@@ -680,7 +680,7 @@ class ConverterToStix:
         )
         return case
 
-    def _create_relationship(self, source_id, target_id, relationship_type):
+    def _create_relationship(self, source_id, target_id, relationship_type) -> StixCoreRelationship:
         """
         Create StixCoreRelationship object
         :param source_id: Source object ID

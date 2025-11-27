@@ -110,5 +110,3 @@ class DoppelConnector:
             message_callback=self.process_message,
             duration_period=self.config.duration_period,
         )
-        # self.helper.connector_logger.info("[DoppelConnector] Running once manually for debug")
-        # self.process_message()
