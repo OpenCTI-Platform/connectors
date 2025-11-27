@@ -252,7 +252,9 @@ class ConverterToStix:
 
         return custom_properties
 
-    def _find_indicators_by_alert_id(self, alert_id, domain_name=None, ip_address=None) -> list:
+    def _find_indicators_by_alert_id(
+        self, alert_id, domain_name=None, ip_address=None
+    ) -> list:
         """
         Find indicators by alert_id stored in external_id
         :param alert_id: Doppel alert ID
@@ -260,62 +262,55 @@ class ConverterToStix:
         :param ip_address: Optional IP address to search by pattern
         :return: List of indicator objects
         """
-        try:
-            # First try searching by custom property (may not work if not indexed)
+
+        # First try searching by custom property (may not work if not indexed)
+        filters = {
+            "mode": "and",
+            "filters": [
+                {"key": "entity_type", "values": ["Indicator"]},
+                {"key": "x_opencti_workflow_id", "values": [alert_id]},
+            ],
+            "filterGroups": [],
+        }
+
+        indicators = self.helper.api.indicator.list(filters=filters)
+
+        # If not found and we have domain/IP, search by pattern
+        if (not indicators or len(indicators) == 0) and (domain_name or ip_address):
+            search_value = domain_name or ip_address
+            self.helper.log_info(
+                f"[DoppelConverter] No indicators found by workflow_id, trying pattern search alert_id: {alert_id}, search_value: {search_value}"
+            )
+
+            # Search by indicator name (which is the domain/IP)
             filters = {
                 "mode": "and",
                 "filters": [
                     {"key": "entity_type", "values": ["Indicator"]},
-                    {"key": "x_opencti_workflow_id", "values": [alert_id]},
+                    {"key": "name", "values": [search_value]},
                 ],
                 "filterGroups": [],
             }
 
             indicators = self.helper.api.indicator.list(filters=filters)
 
-            # If not found and we have domain/IP, search by pattern
-            if (not indicators or len(indicators) == 0) and (domain_name or ip_address):
-                search_value = domain_name or ip_address
-                self.helper.log_info(
-                    f"[DoppelConverter] No indicators found by workflow_id, trying pattern search alert_id: {alert_id}, search_value: {search_value}"
-                )
+            # Filter results to only include indicators with matching external_id
+            if indicators:
+                filtered_indicators = []
+                for ind in indicators:
+                    # Check external references for matching alert_id
+                    ext_refs = ind.get("externalReferences", []) or []
+                    for ext_ref in ext_refs:
+                        if ext_ref.get("external_id") == alert_id:
+                            filtered_indicators.append(ind)
+                            break
+                indicators = filtered_indicators
 
-                # Search by indicator name (which is the domain/IP)
-                filters = {
-                    "mode": "and",
-                    "filters": [
-                        {"key": "entity_type", "values": ["Indicator"]},
-                        {"key": "name", "values": [search_value]},
-                    ],
-                    "filterGroups": [],
-                }
+        self.helper.log_info(
+            f"[DoppelConverter] Found {len(indicators) if indicators else 0} indicators for alert_id :  {alert_id}"
+        )
 
-                indicators = self.helper.api.indicator.list(filters=filters)
-
-                # Filter results to only include indicators with matching external_id
-                if indicators:
-                    filtered_indicators = []
-                    for ind in indicators:
-                        # Check external references for matching alert_id
-                        ext_refs = ind.get("externalReferences", []) or []
-                        for ext_ref in ext_refs:
-                            if ext_ref.get("external_id") == alert_id:
-                                filtered_indicators.append(ind)
-                                break
-                    indicators = filtered_indicators
-
-            self.helper.log_info(
-                f"[DoppelConverter] Found {len(indicators) if indicators else 0} indicators for alert_id :  {alert_id}"
-            )
-
-            return indicators or []
-
-        except Exception as e:
-            self.helper.log_error(
-                f"[DoppelConverter] Error finding indicators: {str(e)}",
-                {"alert_id": alert_id},
-            )
-            return []
+        return indicators or []
 
     def _process_takedown(
         self, alert, domain_observable_id, ip_observable_id, stix_objects
@@ -680,7 +675,9 @@ class ConverterToStix:
         )
         return case
 
-    def _create_relationship(self, source_id, target_id, relationship_type) -> StixCoreRelationship:
+    def _create_relationship(
+        self, source_id, target_id, relationship_type
+    ) -> StixCoreRelationship:
         """
         Create StixCoreRelationship object
         :param source_id: Source object ID
