@@ -374,7 +374,7 @@ class CofenseThreatHQ:
                     sub_sectors = report_malware_details.get("naicsCodes", [])
                     for sector in sub_sectors:
                         sector_name = sector.get("label", "")
-                        # Replaces “and” and “,” with a special temporary separator, but only outside parentheses
+                        # Replaces "and" and "," with a special temporary separator, but only outside parentheses
                         # Example: 'Mining (except Oil and Gas)'
                         parts = re.split(r",(?![^(]*\))| and (?![^(]*\))", sector_name)
                         list_sector_name = [
