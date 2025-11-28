@@ -1,0 +1,21 @@
+services:
+  connector-kaspersky-enrichment:
+    image: opencti/connector-kaspersky-enrichment:rolling
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      #  Common parameters for connectors of type INTERNAL_ENRICHMENT
+      - CONNECTOR_ID=CHANGEME
+      # - CONNECTOR_NAME=Kaspersky Enrichment
+      # - CONNECTOR_SCOPE=StixFile  # Support for additional observable types (IP addresses, domains, and URLs) will be added in future releases.
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_AUTO=true
+
+      # Connector's custom execution parameters
+      # - KASPERSKY_API_BASE_URL=https://tip.kaspersky.com
+      - KASPERSKY_API_KEY=CHANGEME
+      # - KASPERSKY_ZONE_OCTI_SCORE_MAPPING=red:100,orange:80,yellow:60,gray:20,green:0
+      # - KASPERSKY_FILE_SECTIONS=LicenseInfo,Zone,FileGeneralInfo
+
+    restart: always
