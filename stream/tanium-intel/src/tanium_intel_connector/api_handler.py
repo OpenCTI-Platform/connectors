@@ -120,7 +120,15 @@ class TaniumApiHandler:
             stix_entity["indicator_types"] = "unknown"
         # Convert the STIX 2 bundle in STIX 1
         initialize_options()
-        stix_indicator = slide_string(stix2_bundle)
+
+        try:
+            stix_indicator = slide_string(stix2_bundle)
+        except Exception as e:
+            self.helper.connector_logger.error(
+                "Error converting STIX 2 bundle to STIX 1",
+                {"error": str(e)},
+            )
+            return None
 
         url_path = (
             f"/plugin/products/threat-response/api/v1/sources/{self.source_id}/intels"
@@ -188,19 +196,17 @@ class TaniumApiHandler:
             intel_type = "File Hashes"
             if "hashes" in entity:
                 if isinstance(entity["hashes"], list):
-                    hashes = entity["hashes"]
+                    _hashes = entity["hashes"]
                     entity["hashes"] = {}
-                    for hash in hashes:
-                        entity["hashes"][hash["algorithm"]] = hash["hash"]
-                if "MD5" in entity["hashes"]:
-                    value = value + entity["hashes"]["MD5"] + "\n"
-                    name = entity["hashes"]["MD5"]
-                if "SHA-1" in entity["hashes"]:
-                    value = value + entity["hashes"]["SHA-1"] + "\n"
-                    name = entity["hashes"]["SHA-1"]
-                if "SHA-256" in entity["hashes"]:
-                    value = value + entity["hashes"]["SHA-256"] + "\n"
-                    name = entity["hashes"]["SHA-256"]
+                    for hash_type in _hashes:
+                        entity["hashes"][hash_type["algorithm"]] = hash_type["hash"]
+
+                hashes = entity["hashes"]
+                for hash_type in ["MD5", "SHA-1", "SHA-256"]:
+                    if hash_type in hashes:
+                        value += f"{hashes[hash_type]}\n"
+                        name = hashes[hash_type]
+
         elif entity["type"] in [
             "ipv4-addr",
             "ipv6-addr",
@@ -246,23 +252,16 @@ class TaniumApiHandler:
             if isinstance(entity["hashes"], list):
                 hashes = entity["hashes"]
                 entity["hashes"] = {}
-                for hash in hashes:
-                    entity["hashes"][hash["algorithm"]] = hash["hash"]
-            if "MD5" in entity["hashes"]:
-                entry["md5"] = entity["hashes"]["MD5"]
-                entry["uploadedHash"] = entity["hashes"]["MD5"]
-            else:
-                entry["md5"] = ""
-            if "SHA-1" in entity["hashes"]:
-                entry["sha1"] = entity["hashes"]["SHA-1"]
-                entry["uploadedHash"] = entity["hashes"]["SHA-1"]
-            else:
-                entry["sha1"] = ""
-            if "SHA-256" in entity["hashes"]:
-                entry["sha256"] = entity["hashes"]["SHA-256"]
-                entry["uploadedHash"] = entity["hashes"]["SHA-256"]
-            else:
-                entry["sha256"] = ""
+                for hash_type in hashes:
+                    entity["hashes"][hash_type["algorithm"]] = hash_type["hash"]
+
+            hashes = entity["hashes"]
+            for hash_type in ["MD5", "SHA-1", "SHA-256"]:
+                if hash_type in hashes:
+                    entry[hash_type] = hashes[hash_type]
+                    entry["uploadedHash"] = hashes[hash_type]
+                else:
+                    entry[hash_type] = ""
 
             entity_description = OpenCTIConnectorHelper.get_attribute_in_extension(
                 "description", entity
@@ -366,17 +365,15 @@ class TaniumApiHandler:
                 if isinstance(entity["hashes"], list):
                     hashes = entity["hashes"]
                     entity["hashes"] = {}
-                    for hash in hashes:
-                        entity["hashes"][hash["algorithm"]] = hash["hash"]
-                if "MD5" in entity["hashes"]:
-                    value = value + entity["hashes"]["MD5"] + "\n"
-                    name = entity["hashes"]["MD5"]
-                if "SHA-1" in entity["hashes"]:
-                    value = value + entity["hashes"]["SHA-1"] + "\n"
-                    name = entity["hashes"]["SHA-1"]
-                if "SHA-256" in entity["hashes"]:
-                    value = value + entity["hashes"]["SHA-256"] + "\n"
-                    name = entity["hashes"]["SHA-256"]
+                    for hash_type in hashes:
+                        entity["hashes"][hash_type["algorithm"]] = hash_type["hash"]
+
+                hashes = entity["hashes"]
+                for hash_type in ["MD5", "SHA-1", "SHA-256"]:
+                    if hash_type in hashes:
+                        value += f"{hashes[hash_type]}\n"
+                        name = hashes[hash_type]
+
         elif entity["type"] in [
             "ipv4-addr",
             "ipv6-addr",
