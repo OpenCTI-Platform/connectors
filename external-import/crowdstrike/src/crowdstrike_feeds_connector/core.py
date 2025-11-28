@@ -13,7 +13,6 @@ from crowdstrike_feeds_services.utils import (
     convert_comma_separated_str_to_list,
     create_organization,
     get_tlp_string_marking_definition,
-    is_timestamp_in_future,
     timestamp_to_datetime,
 )
 from crowdstrike_feeds_services.utils.config_variables import ConfigCrowdstrike
@@ -83,12 +82,8 @@ class CrowdStrike:
             create_indicators = bool(create_indicators)
 
         actor_start_timestamp = self.config.actor_start_timestamp
-        if is_timestamp_in_future(actor_start_timestamp):
-            raise ValueError("Actor start timestamp is in the future")
 
         report_start_timestamp = self.config.report_start_timestamp
-        if is_timestamp_in_future(report_start_timestamp):
-            raise ValueError("Report start timestamp is in the future")
 
         report_status_str = self.config.report_status
         report_status = self._convert_report_status_str_to_report_status_int(
@@ -117,8 +112,6 @@ class CrowdStrike:
         report_guess_relations = bool(self.config.report_guess_relations)
 
         indicator_start_timestamp = self.config.indicator_start_timestamp
-        if is_timestamp_in_future(indicator_start_timestamp):
-            raise ValueError("Indicator start timestamp is in the future")
 
         indicator_exclude_types_str = self.config.indicator_exclude_types
         indicator_exclude_types = []
