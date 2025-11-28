@@ -9,9 +9,9 @@ connector:
   #log_level: 'info'
   #auto: false
 
-reversinglabs_spectra_analyze:
-  url: 'ChangeMe'
-  token: 'ChangeMe'
+reversinglabs:
+  spectra_analyze_url: 'ChangeMe'
+  spectra_analyze_token: 'ChangeMe'
   #max_tlp: 'TLP:AMBER'
   #sandbox_os: 'windows10'
   #cloud_analysis: true
