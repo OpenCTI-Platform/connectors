@@ -6,6 +6,7 @@ from connectors_sdk import (
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
 )
+from connectors_sdk.core.pydantic import ListFromString
 from pydantic import Field, model_validator
 
 
@@ -17,12 +18,15 @@ class ConnectorHuntIoConfig(BaseConfigModel):
     )
 
 
+class ConnectorSettings(BaseExternalImportConnectorConfig):
+    name: str = Field(description="Connector name", default="Hunt IO")
+    scope: ListFromString = Field(description="Connector scope", default="Hunt IO")
+
+
 class ConfigLoader(BaseConnectorSettings):
     """Handles connector configuration loading and validation."""
 
-    connector: BaseExternalImportConnectorConfig = Field(
-        default_factory=BaseExternalImportConnectorConfig
-    )
+    connector: ConnectorSettings = Field(default_factory=ConnectorSettings)
     hunt_io: ConnectorHuntIoConfig = Field(
         default_factory=ConnectorHuntIoConfig,
     )
