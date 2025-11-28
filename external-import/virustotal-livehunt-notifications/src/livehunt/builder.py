@@ -59,7 +59,10 @@ class LivehuntBuilder:
         enable_label_enrichment: bool,
         get_malware_config: bool,
         tlp: str,
-        indicators: bool,
+        file_indicators: bool,
+        domain_name_indicators: bool,
+        ip_indicators: bool,
+        url_indicators: bool,
         limit: Optional[int] = None,
     ) -> None:
         """Initialize Virustotal builder."""
@@ -87,7 +90,10 @@ class LivehuntBuilder:
         self.enable_label_enrichment = enable_label_enrichment
         self.get_malware_config = get_malware_config
         self.tlp = self._get_tlp(tlp)
-        self.indicators = indicators
+        self.file_indicators = file_indicators
+        self.domain_name_indicators = domain_name_indicators
+        self.ip_indicators = ip_indicators
+        self.url_indicators = url_indicators
         self.limit = limit
 
     def process(self, start_date: str, timestamp: int):
@@ -387,7 +393,7 @@ class LivehuntBuilder:
             self.bundle.append(relationship)
 
         # Create indicator for the file if needed
-        if self.indicators:
+        if self.file_indicators:
             indicator = stix2.Indicator(
                 id=Indicator.generate_id(f"file:hashes.'SHA-256' = '{vtobj.sha256}'"),
                 created_by_ref=self.author["standard_id"],
@@ -472,7 +478,7 @@ class LivehuntBuilder:
                     self.helper.connector_logger.debug(
                         f"Created IPv6 observable for value {observable_value}"
                     )
-                elif observable_type == "Domain-Name":
+                elif observable_type == "Domain-Name" and self._is_valid_domain_name(observable_value): # Non active domain names are ignored
                     observable = stix2.DomainName(
                         value=observable_value,
                         object_marking_refs=self.tlp,
@@ -498,19 +504,6 @@ class LivehuntBuilder:
                     self.helper.connector_logger.debug(
                         f"Created URL observable for value {observable_value}"
                     )
-                elif observable_type == "Hostname":
-                    observable = CustomObservableHostname(
-                        value=observable_value,
-                        object_marking_refs=self.tlp,
-                        custom_properties={
-                            "created_by_ref": self.author["standard_id"],
-                            "x_opencti_description": "Extracted from malware config",
-                            "x_opencti_labels": malware_config[1],
-                        },
-                    )
-                    self.helper.connector_logger.debug(
-                        f"Created Hostname observable for value {observable_value}"
-                    )
                 if observable is not None:
                     note_obj_refs.append(observable.id)
                     self.bundle.append(observable)
@@ -531,8 +524,11 @@ class LivehuntBuilder:
                     )
                     self.bundle.append(relationship)
                     if (
-                        self.indicators and observable_type != "Hostname"
-                    ):  # Indicators are not created for Hostname observables to limit the FP rate
+                        (observable_type == "Domain-name" and self.domain_name_indicators) or 
+                        (observable_type == "IPv4-Addr" and self.ip_indicators) or 
+                        (observable_type == "IPv6-Addr" and self.ip_indicators) or 
+                        (observable_type == "Url" and self.url_indicators)
+                    ):
                         indicator = stix2.Indicator(
                             id=Indicator.generate_id(
                                 f"{observable.type}:value = '{observable.value}'"

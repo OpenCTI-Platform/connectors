@@ -193,9 +193,27 @@ class VirustotalLivehuntNotifications:
             default=None,
         )
 
-        indicators = get_config_variable(
-            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_INDICATORS",
-            ["virustotal_livehunt_notifications", "indicators"],
+        file_indicators = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_FILE_INDICATORS",
+            ["virustotal_livehunt_notifications", "file_indicators"],
+            config,
+            default=False,
+        )
+        domain_name_indicators = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_DOMAIN_NAME_INDICATORS",
+            ["virustotal_livehunt_notifications", "domain_name_indicators"],
+            config,
+            default=False,
+        )
+        ip_indicators = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_IP_INDICATORS",
+            ["virustotal_livehunt_notifications", "ip_indicators"],
+            config,
+            default=False,
+        )
+        url_indicators = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_URL_INDICATORS",
+            ["virustotal_livehunt_notifications", "url_indicators"],
             config,
             default=False,
         )
@@ -229,7 +247,10 @@ class VirustotalLivehuntNotifications:
             enable_label_enrichment,
             get_malware_config,
             tlp,
-            indicators,
+            file_indicators,
+            domain_name_indicators,
+            ip_indicators,
+            url_indicators,
             limit,
         )
 
