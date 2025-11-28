@@ -12,9 +12,9 @@ import sys
 import traceback
 
 from censys_enrichment.client import Client
-from censys_enrichment.config import Config as ConfigLoader
 from censys_enrichment.connector import Connector
 from censys_enrichment.converter import Converter
+from censys_enrichment.settings import ConfigLoader
 from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
