@@ -82,13 +82,15 @@ class DiodeImport:
             # region Register the connector in OpenCTI to simulate the real activity if not in cache
             if self.connectors_cache.get(connector_id) is None:
                 connector_registration = OpenCTIConnector(
-                    connector.get("id"),
-                    connector.get("name"),
-                    connector.get("type"),
-                    connector.get("scope"),
-                    connector.get("auto"),
-                    False,
-                    False,
+                    connector_id=connector.get("id"),
+                    connector_name=connector.get("name"),
+                    connector_type=connector.get("type"),
+                    scope=connector.get("scope"),
+                    auto=connector.get("auto"),
+                    only_contextual=False,  # default
+                    playbook_compatible=False,  # default
+                    auto_update=False,  # default
+                    enrichment_resolution="none",  # default
                 )
                 self.helper.api.connector.register(connector_registration)
                 self.connectors_cache[connector_id] = connector_id
