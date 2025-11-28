@@ -1,7 +1,6 @@
 from unittest.mock import Mock
 
 import pytest
-from censys_enrichment.config import Config
 from censys_enrichment.connector import (
     Connector,
     EntityNotInScopeError,
@@ -9,12 +8,16 @@ from censys_enrichment.connector import (
     MaxTlpError,
 )
 from censys_enrichment.converter import Converter
+from censys_enrichment.settings import ConfigLoader
 
 
 @pytest.mark.usefixtures("mock_config")
 def test__send_bundle(mocked_helper: Mock) -> None:
     connector = Connector(
-        config=Config(), helper=mocked_helper, client=Mock(), converter=Converter()
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=Mock(),
+        converter=Converter(),
     )
     res = connector._send_bundle([])
     mocked_helper.stix2_create_bundle.assert_called_once_with(items=[])
@@ -25,7 +28,10 @@ def test__send_bundle(mocked_helper: Mock) -> None:
 @pytest.mark.usefixtures("mock_config")
 def test__is_entity_in_scope(mocked_helper: Mock) -> None:
     connector = Connector(
-        config=Config(), helper=mocked_helper, client=Mock(), converter=Converter()
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=Mock(),
+        converter=Converter(),
     )
     assert connector._is_entity_in_scope("IPv4-Addr")
     assert not connector._is_entity_in_scope("NotInScope")
@@ -51,7 +57,10 @@ def test__extract_tlp(
     mocked_helper: Mock, markings: list[dict[str, str]], expected_tlp: str | None
 ) -> None:
     connector = Connector(
-        config=Config(), helper=mocked_helper, client=Mock(), converter=Converter()
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=Mock(),
+        converter=Converter(),
     )
     assert connector._extract_tlp(markings) == expected_tlp
 
@@ -70,7 +79,10 @@ def test__is_entity_tlp_allowed(
     mocked_helper: Mock, markings: list[dict[str, str]], expected: bool
 ) -> None:
     connector = Connector(
-        config=Config(), helper=mocked_helper, client=Mock(), converter=Converter()
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=Mock(),
+        converter=Converter(),
     )
 
     assert connector._is_entity_tlp_allowed(markings) == expected
@@ -79,7 +91,10 @@ def test__is_entity_tlp_allowed(
 @pytest.mark.usefixtures("mock_config")
 def test__generate_octi_objects_wrong_entity_type(mocked_helper: Mock) -> None:
     connector = Connector(
-        config=Config(), helper=mocked_helper, client=Mock(), converter=Converter()
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=Mock(),
+        converter=Converter(),
     )
     with pytest.raises(EntityTypeNotSupportedError) as exc_info:
         connector._generate_octi_objects({"type": "wrong-type"})
@@ -91,7 +106,10 @@ def test__generate_octi_objects_wrong_entity_type(mocked_helper: Mock) -> None:
 @pytest.mark.usefixtures("mock_config")
 def test__process_entity_not_in_scope_error(mocked_helper: Mock) -> None:
     connector = Connector(
-        config=Config(), helper=mocked_helper, client=Mock(), converter=Converter()
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=Mock(),
+        converter=Converter(),
     )
 
     with pytest.raises(EntityNotInScopeError) as exc_info:
@@ -136,7 +154,10 @@ def test__process_entity_not_in_scope_error(mocked_helper: Mock) -> None:
 @pytest.mark.usefixtures("mock_config")
 def test__process_max_tlp_error(mocked_helper: Mock) -> None:
     connector = Connector(
-        config=Config(), helper=mocked_helper, client=Mock(), converter=Converter()
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=Mock(),
+        converter=Converter(),
     )
 
     with pytest.raises(MaxTlpError) as exc_info:
@@ -157,7 +178,10 @@ def test__process_max_tlp_error(mocked_helper: Mock) -> None:
 @pytest.mark.usefixtures("mock_config")
 def test__process_entity_type_not_supported_error(mocked_helper: Mock) -> None:
     connector = Connector(
-        config=Config(), helper=mocked_helper, client=Mock(), converter=Converter()
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=Mock(),
+        converter=Converter(),
     )
 
     with pytest.raises(EntityTypeNotSupportedError) as exc_info:
@@ -179,7 +203,10 @@ def test__process_entity_type_not_supported_error(mocked_helper: Mock) -> None:
 @pytest.mark.usefixtures("mock_config")
 def test__message_callback_entity_type_not_supported_error(mocked_helper: Mock) -> None:
     connector = Connector(
-        config=Config(), helper=mocked_helper, client=Mock(), converter=Converter()
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=Mock(),
+        converter=Converter(),
     )
 
     with pytest.raises(EntityTypeNotSupportedError) as exc_info:
@@ -203,7 +230,10 @@ def test__message_callback_entity_type_not_supported_error(mocked_helper: Mock) 
 @pytest.mark.usefixtures("mock_config")
 def test__message_callback_in_playbook(mocked_helper: Mock) -> None:
     connector = Connector(
-        config=Config(), helper=mocked_helper, client=Mock(), converter=Converter()
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=Mock(),
+        converter=Converter(),
     )
 
     res = connector._message_callback(
@@ -223,7 +253,10 @@ def test__message_callback_in_playbook(mocked_helper: Mock) -> None:
 @pytest.mark.usefixtures("mock_config")
 def test__message_callback_not_in_playbook(mocked_helper: Mock) -> None:
     connector = Connector(
-        config=Config(), helper=mocked_helper, client=Mock(), converter=Converter()
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=Mock(),
+        converter=Converter(),
     )
     with pytest.raises(KeyError) as exc_info:
         connector._message_callback(
@@ -245,7 +278,10 @@ def test__message_callback_not_in_playbook(mocked_helper: Mock) -> None:
 @pytest.mark.usefixtures("mock_config")
 def test_run(mocked_helper: Mock) -> None:
     connector = Connector(
-        config=Config(), helper=mocked_helper, client=Mock(), converter=Converter()
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=Mock(),
+        converter=Converter(),
     )
     connector.run()
 

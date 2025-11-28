@@ -1,12 +1,12 @@
 import pytest
-from censys_enrichment.config import Config
+from censys_enrichment.settings import ConfigLoader
 from connectors_sdk import ConfigValidationError
 from pydantic import HttpUrl
 
 
 @pytest.mark.usefixtures("mock_config")
 def test_config() -> None:
-    config = Config()
+    config = ConfigLoader()
 
     # Test config from env
     assert config.opencti.url == HttpUrl("http://test")
@@ -35,5 +35,5 @@ def test_config() -> None:
 def test_missing_values(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("OPENCTI_URL")
     with pytest.raises(ConfigValidationError) as exc_info:
-        Config()
+        ConfigLoader()
     assert exc_info.value.args == ("Error validating configuration.",)
