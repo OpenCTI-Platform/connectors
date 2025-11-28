@@ -10,7 +10,7 @@ import yaml
 import requests
 import base64
 import json
-from typing import Dict, Any, List
+from typing import Dict, List
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from assemblyline_client import get_client
 
@@ -120,21 +120,8 @@ class AssemblyLineConnector:
         """
         Retrieve the file content depending on the observable type.
         Returns (file_content, file_name, file_hash)
-        """
-        import requests
-        entity_type = observable.get("entity_type")
-        file_content = None
-        file_name = None
-        file_hash = None
-
-    def _get_file_content(self, observable: Dict) -> tuple:
-        """
-        Retrieve the file content depending on the observable type.
-        Returns (file_content, file_name, file_hash)
         Includes automatic retry mechanism for file upload completion.
         """
-        import requests
-        import time
         entity_type = observable.get("entity_type")
         file_content = None
         file_name = None
@@ -153,7 +140,6 @@ class AssemblyLineConnector:
 
                 # Check payload_bin
                 if observable.get("payload_bin"):
-                    import base64
                     file_content = base64.b64decode(observable["payload_bin"])
                     file_name = observable.get("x_opencti_additional_names", [f"artifact_{observable.get('id', 'unknown')[:8]}"])[0]
 
@@ -281,13 +267,10 @@ class AssemblyLineConnector:
 
             # Method 1: direct file lookup - just to check if file exists
             try:
-                file_info = self.al_client.file.info(file_hash)
-                if file_info:
-                    self.helper.log_info("File found in AssemblyLine database")
-                    # Don't use file.result() - it doesn't have detailed tags
-                    # Instead, search for submissions to get the SID with full details
-                else:
-                    self.helper.log_info("File not found in database")
+                _ = self.al_client.file.info(file_hash)
+                self.helper.log_info("File found in AssemblyLine database")
+                # Don't use file.result() - it doesn't have detailed tags
+                # Instead, search for submissions to get the SID with full details
             except Exception as e:
                 self.helper.log_info(f"File not found in database: {str(e)}")
 
@@ -325,12 +308,10 @@ class AssemblyLineConnector:
                                     if 'file_info' in full_result:
                                         summary_result['file_info'] = full_result['file_info']
                                     return summary_result
-                                else:
-                                    # Fallback to full result if summary fails
-                                    full_result['sid'] = sid
-                                    return full_result
-                            else:
-                                self.helper.log_info(f"Existing submission not completed (state: {state})")
+                                # Fallback to full result if summary fails
+                                full_result['sid'] = sid
+                                return full_result
+                            self.helper.log_info(f"Existing submission not completed (state: {state})")
                         else:
                             self.helper.log_info("Could not retrieve submission details")
                     except Exception as e:
@@ -468,10 +449,9 @@ class AssemblyLineConnector:
                             if 'file_info' in result:
                                 summary_result['file_info'] = result['file_info']
                             return summary_result
-                        else:
-                            # Fallback to full result if summary fails
-                            result['sid'] = submission_id
-                            return result
+                        # Fallback to full result if summary fails
+                        result['sid'] = submission_id
+                        return result
 
                     elif state == "failed":
                         raise Exception(f"AssemblyLine analysis failed for submission {submission_id}")
@@ -810,7 +790,7 @@ class AssemblyLineConnector:
         for url in malicious_iocs['urls'][:20]:  # Limit to 20
             try:
                 # Use the full URL as name, but truncate if too long for display
-                url_name = url if len(url) <= 100 else url[:97] + "..."
+                _ = url if len(url) <= 100 else url[:97] + "..."
 
                 indicator = self.helper.api.indicator.create(
                     name=url,
@@ -839,7 +819,7 @@ class AssemblyLineConnector:
                 # Create malware object for the family
                 malware = self.helper.api.malware.create(
                     name=family,
-                    description=f"Malware family identified by AssemblyLine analysis",
+                    description="Malware family identified by AssemblyLine analysis",
                     labels=["trojan"],  # Default label, could be refined
                     is_family=True
                 )
@@ -908,7 +888,7 @@ class AssemblyLineConnector:
         # Create observable + relationship for each MALICIOUS URL
         for url in malicious_iocs['urls'][:20]:
             try:
-                url_obs = self.helper.api.stix_cyber_observable.create(
+                _ = self.helper.api.stix_cyber_observable.create(
                     observableData={"type": "url", "value": url}
                 )
                 # Note: Skip relationship creation for URLs due to OpenCTI restriction
@@ -982,12 +962,11 @@ class AssemblyLineConnector:
                         payload_bin = observable.get("payload_bin", "")
                         if payload_bin:
                             # payload_bin is base64 encoded, calculate original size
-                            import base64
                             try:
                                 decoded_size = len(base64.b64decode(payload_bin))
                                 file_size = decoded_size
-                            except Exception as decode_e:
-                                self.helper.log_warning(f"Could not decode payload_bin: {str(decode_e)}")
+                            except Exception:
+                                pass
 
                     # Check for size in different locations
                     if file_size == "N/A":
