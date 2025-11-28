@@ -524,7 +524,7 @@ class LivehuntBuilder:
                     )
                     self.bundle.append(relationship)
                     if (
-                        (observable_type == "Domain-name" and self.domain_name_indicators) or 
+                        (observable_type == "Domain-Name" and self.domain_name_indicators) or 
                         (observable_type == "IPv4-Addr" and self.ip_indicators) or 
                         (observable_type == "IPv6-Addr" and self.ip_indicators) or 
                         (observable_type == "Url" and self.url_indicators)
