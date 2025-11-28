@@ -95,6 +95,10 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
         default=False,
         description="Whether to use report tags to guess related malware.",
     )
+    report_guess_relations: bool = Field(
+        default=False,
+        description="Whether to automatically guess and create relationships in reports.",
+    )
 
     # Indicator configuration
     indicator_start_timestamp: int = Field(

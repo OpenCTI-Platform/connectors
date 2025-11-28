@@ -50,6 +50,7 @@ class ConfigCrowdstrike:
 
         self.report_type = self.config.crowdstrike.report_type
         self.report_guess_malware = self.config.crowdstrike.report_guess_malware
+        self.report_guess_relations = self.config.crowdstrike.report_guess_relations
         self.indicator_start_timestamp = (
             self.config.crowdstrike.indicator_start_timestamp
         )
