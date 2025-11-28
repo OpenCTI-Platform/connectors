@@ -36,7 +36,9 @@ class ConfigLoader(BaseConnectorSettings):
         """
         for key, value in data.get("connector", {}).items():
             if key.startswith("hunt_ui_"):
-                data["hunt_io"][key[8:]] = value
+                hunt_io = data.get("hunt_io", {})
+                hunt_io[key[8:]] = value
+                data["hunt_io"] = hunt_io
                 warnings.warn(
                     message="Env vars prefixed by 'CONNECTOR_HUNT_UI' is deprecated. Use 'HUNT_IO' prefix instead.",
                     category=DeprecationWarning,
