@@ -2,7 +2,7 @@
 """OpenCTI CrowdStrike actor importer module."""
 
 from collections import Counter
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Generator, List, Optional
 
 from crowdstrike_feeds_services.client.actors import ActorsAPI
@@ -178,6 +178,23 @@ class ActorImporter(BaseImporter):
             elif self.current_state.get(self._LATEST_ACTOR_TIMESTAMP):
                 fetch_timestamp = self.current_state.get(self._LATEST_ACTOR_TIMESTAMP)
                 timestamp_source = "actor"
+
+            now_utc = datetime.now(timezone.utc)
+            fetch_datetime = timestamp_to_datetime(fetch_timestamp)
+            if fetch_datetime.tzinfo is None:
+                fetch_datetime = fetch_datetime.replace(tzinfo=timezone.utc)
+
+            delta_days = (now_utc - fetch_datetime).days
+            if delta_days > 30:
+                thirty_days_ago = now_utc - timedelta(days=30)
+                fetch_timestamp = datetime_to_timestamp(thirty_days_ago)
+                self._warning(
+                    "Fetch timestamp is more than 30 days old ({0} days). "
+                    "Falling back to 30 days ago: {1}",
+                    delta_days,
+                    thirty_days_ago,
+                )
+                timestamp_source = "30d gated"
 
             _fql_filter = f"actors:['{actor_name}']+last_updated:>{fetch_timestamp}"
 
