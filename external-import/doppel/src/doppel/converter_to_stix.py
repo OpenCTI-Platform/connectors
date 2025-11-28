@@ -219,22 +219,13 @@ class ConverterToStix:
                 note_refs.append(primary_observable_id)
 
             if note_refs:
-                note = Note(
-                    abstract=note_content,
-                    content=note_body,
-                    spec_version=STIX_VERSION,
-                    created=note_timestamp,
-                    modified=note_timestamp,
-                    created_by_ref=self.author.id,
-                    object_refs=note_refs,
-                    object_marking_refs=[self.tlp_marking.id],
-                    allow_custom=True,
+                note = self._create_note(
+                    note_content, note_body, note_refs, note_timestamp
                 )
                 stix_objects.append(note)
 
             return  # Indicator already exists and is active
 
-        # Create new Indicator (domain_name and ip_address already extracted above)
         # Build pattern
         if domain_name:
             pattern = f"[domain-name:value = '{domain_name}']"
@@ -245,32 +236,8 @@ class ConverterToStix:
         else:
             return
 
-        # Build labels
-        labels_flat = build_labels(alert)
-
-        # Build external references
-        external_references = build_external_references(alert)
-
-        # Build custom properties
-        custom_properties = build_custom_properties(alert, self.author.id)
-
         # Create Indicator
-        indicator = Indicator(
-            pattern=pattern,
-            pattern_type="stix",
-            spec_version=STIX_VERSION,
-            name=name,
-            description=build_description(alert),
-            created=created_at,
-            modified=modified,
-            created_by_ref=self.author.id,
-            object_marking_refs=[self.tlp_marking.id],
-            labels=labels_flat or None,
-            external_references=external_references if external_references else None,
-            valid_from=created_at,
-            custom_properties=custom_properties,
-            allow_custom=True,
-        )
+        indicator = self._create_indicator(alert, pattern, name, created_at, modified)
         stix_objects.append(indicator)
 
         # Create based-on relationship to primary observable
@@ -295,17 +262,7 @@ class ConverterToStix:
         if primary_observable_id:
             note_refs.append(primary_observable_id)
 
-        note = Note(
-            abstract=note_content,
-            content=note_body,
-            spec_version=STIX_VERSION,
-            created=modified or created_at,
-            modified=modified or created_at,
-            created_by_ref=self.author.id,
-            object_refs=note_refs,
-            object_marking_refs=[self.tlp_marking.id],
-            allow_custom=True,
-        )
+        note = self._create_note(note_content, note_body, note_refs, note_timestamp)
         stix_objects.append(note)
 
         self.helper.log_info(
@@ -524,6 +481,97 @@ class ConverterToStix:
         )
         return relationship
 
+    def _create_note(self, note_content, note_body, note_refs, note_timestamp) -> Note:
+        return Note(
+            abstract=note_content,
+            content=note_body,
+            spec_version=STIX_VERSION,
+            created=note_timestamp,
+            modified=note_timestamp,
+            created_by_ref=self.author.id,
+            object_refs=note_refs,
+            object_marking_refs=[self.tlp_marking.id],
+            allow_custom=True,
+        )
+
+    def _create_indicator(
+        self, alert, pattern, name, created_at, modified
+    ) -> Indicator:
+
+        # Build labels
+        labels_flat = build_labels(alert)
+
+        # Build external references
+        external_references = build_external_references(alert)
+
+        # Build custom properties
+        custom_properties = build_custom_properties(alert, self.author.id)
+
+        # Create Indicator
+        indicator = Indicator(
+            pattern=pattern,
+            pattern_type="stix",
+            spec_version=STIX_VERSION,
+            name=name,
+            description=build_description(alert),
+            created=created_at,
+            modified=modified,
+            created_by_ref=self.author.id,
+            object_marking_refs=[self.tlp_marking.id],
+            labels=labels_flat or None,
+            external_references=external_references if external_references else None,
+            valid_from=created_at,
+            custom_properties=custom_properties,
+            allow_custom=True,
+        )
+        return indicator
+
+    def _handle_state_transitions(
+        self,
+        current_queue_state,
+        previous_queue_state,
+        alert_id,
+        alert,
+        domain_observable_id,
+        ip_observable_id,
+        stix_objects,
+        domain_name,
+        ip_address,
+    ):
+
+        # Handle State Transition when queue_state changes
+        is_takedown_now = is_takedown_state(current_queue_state)
+        was_takedown = (
+            is_takedown_state(previous_queue_state) if previous_queue_state else False
+        )
+        is_reverted = is_reverted_state(current_queue_state)
+        # Transition: TO_TAKEDOWN (needs_review → taken_down)
+        if is_takedown_now and not was_takedown:
+            self._process_takedown(
+                alert, domain_observable_id, ip_observable_id, stix_objects
+            )
+
+        # Transition: REVERSION (taken_down → unresolved)
+        elif was_takedown and not is_takedown_now:
+            self._process_reversion(
+                alert, domain_observable_id, ip_observable_id, stix_objects
+            )
+
+        # Handle case where previous_state is null but we have an active indicator in reverted state
+        elif previous_queue_state is None and is_reverted and not is_takedown_now:
+            # Check if there's an active indicator for this alert (domain_name and ip_address already extracted above)
+            existing_indicators = self._find_indicators_by_alert_id(
+                alert_id, domain_name=domain_name, ip_address=ip_address
+            )
+            active_indicators = [
+                ind for ind in existing_indicators if not ind.get("revoked", False)
+            ]
+
+            if active_indicators:
+                self._process_reversion(
+                    alert, domain_observable_id, ip_observable_id, stix_objects
+                )
+
     def convert_alerts_to_stix(self, alerts: list):
         """
         Convert list of alerts to stix2 Observable objects (domain-name and ipv4-addr)
@@ -594,43 +642,17 @@ class ConverterToStix:
                         stix_objects.append(relationship)
 
                 # DETECT STATE TRANSITIONS
-                is_takedown_now = is_takedown_state(current_queue_state)
-                was_takedown = (
-                    is_takedown_state(previous_queue_state)
-                    if previous_queue_state
-                    else False
+                self._handle_state_transitions(
+                    current_queue_state,
+                    previous_queue_state,
+                    alert_id,
+                    alert,
+                    domain_observable_id,
+                    ip_observable_id,
+                    stix_objects,
+                    domain_name,
+                    ip_address,
                 )
-                is_reverted = is_reverted_state(current_queue_state)
-                # Transition: TO_TAKEDOWN (needs_review → taken_down)
-                if is_takedown_now and not was_takedown:
-                    self._process_takedown(
-                        alert, domain_observable_id, ip_observable_id, stix_objects
-                    )
-
-                # Transition: REVERSION (taken_down → unresolved)
-                elif was_takedown and not is_takedown_now:
-                    self._process_reversion(
-                        alert, domain_observable_id, ip_observable_id, stix_objects
-                    )
-
-                # Handle case where previous_state is null but we have an active indicator in reverted state
-                elif (
-                    previous_queue_state is None and is_reverted and not is_takedown_now
-                ):
-                    # Check if there's an active indicator for this alert (domain_name and ip_address already extracted above)
-                    existing_indicators = self._find_indicators_by_alert_id(
-                        alert_id, domain_name=domain_name, ip_address=ip_address
-                    )
-                    active_indicators = [
-                        ind
-                        for ind in existing_indicators
-                        if not ind.get("revoked", False)
-                    ]
-
-                    if active_indicators:
-                        self._process_reversion(
-                            alert, domain_observable_id, ip_observable_id, stix_objects
-                        )
 
                 # Case Creation
                 if domain_observable_id or ip_observable_id:

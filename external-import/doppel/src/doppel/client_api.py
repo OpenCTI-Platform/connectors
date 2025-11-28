@@ -2,7 +2,13 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 import requests
-from tenacity import retry, stop_after_attempt, wait_fixed
+from tenacity import (
+    retry,
+    retry_if_exception,
+    stop_after_attempt,
+    wait_exponential_jitter,
+    wait_fixed,
+)
 
 
 class ConnectorClient:
@@ -23,6 +29,19 @@ class ConnectorClient:
 
         self.session.headers.update(headers)
 
+    def is_rate_limit_error(exception):
+        return (
+            isinstance(exception, requests.HTTPError)
+            and exception.response is not None
+            and exception.response.status_code == 429
+        )
+
+    @retry(
+        retry=retry_if_exception(is_rate_limit_error),
+        wait=wait_exponential_jitter(initial=10, max=60, jitter=1),
+        stop=stop_after_attempt(5),
+        reraise=True,
+    )
     @retry(wait=wait_fixed(5), stop=stop_after_attempt(3))  # Default fallback values
     def _request_data(self, api_url: str, params=None):
         """
@@ -37,6 +56,12 @@ class ConnectorClient:
             if http_err.response.status_code == 504:
                 self.helper.connector_logger.warning(
                     "[API] Gateway Timeout, retrying...",
+                    {"url": api_url, "params": params},
+                )
+                raise
+            if http_err.response.status_code == 429:
+                self.helper.connector_logger.warning(
+                    "[API] Rate limited (429), retrying with backoff...",
                     {"url": api_url, "params": params},
                 )
                 raise
