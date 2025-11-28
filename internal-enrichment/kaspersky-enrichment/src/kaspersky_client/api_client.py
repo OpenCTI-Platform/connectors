@@ -1,12 +1,13 @@
 import requests
 from pycti import OpenCTIConnectorHelper
+from pydantic import HttpUrl
 
 
 class KasperskyClient:
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
-        base_url: str | object,
+        base_url: str | HttpUrl,
         api_key: str,
         params: dict,
     ):
@@ -29,7 +30,7 @@ class KasperskyClient:
         self.session.headers.update(self.headers)
         self.params = params
 
-    def _request_data(self, api_url: str, params=None):
+    def _request_data(self, api_url: str, params: dict) -> requests.Response:
         """
         Internal method to handle API requests
         :return: Response in JSON format
@@ -47,6 +48,8 @@ class KasperskyClient:
         except requests.exceptions.HTTPError as errh:
             if response.status_code == 401:
                 msg = "Permissions Error, Kaspersky returned a 401, please check your API key"
+            elif response.status_code == 404:
+                msg = "File not found on Kaspersky, no enrichment possible"
             else:
                 msg = "Http error"
             self.helper.connector_logger.error(msg, {"error": errh})
@@ -66,7 +69,7 @@ class KasperskyClient:
             self.helper.connector_logger.error("Unknown error", {"error": err})
             raise
 
-    def get_file_info(self, obs_hash) -> dict:
+    def get_file_info(self, obs_hash: str) -> dict:
         """
         Retrieve file information
         """

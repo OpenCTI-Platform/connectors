@@ -19,14 +19,12 @@ from pydantic import (
 
 def parse_string_to_dict(value: str) -> dict:
     """Coerce a string into a dict and add 'grey' key"""
-    if isinstance(value, str):
-        value_dict = {
-            x.split(":")[0].lower(): int(x.split(":")[1])
-            for x in value.replace(" ", "").split(",")
-        }
-        value_dict["grey"] = value_dict["gray"]
-        return value_dict
-    return value
+    value_dict = {
+        x.split(":")[0].lower(): int(x.split(":")[1])
+        for x in value.replace(" ", "").split(",")
+    }
+    value_dict["grey"] = value_dict["gray"]
+    return value_dict
 
 
 def pycti_list_serializer(v: dict, info: SerializationInfo) -> str:
@@ -34,7 +32,7 @@ def pycti_list_serializer(v: dict, info: SerializationInfo) -> str:
     serialization context requests "pycti" mode; otherwise, return the list
     unchanged.
     """
-    if isinstance(v, dict) and info.context and info.context.get("mode") == "pycti":
+    if info.context and info.context.get("mode") == "pycti":
         return ",".join(f"{k}:{v}" for k, v in v.items())
     return v
 
@@ -60,7 +58,7 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         description="Name of the connector.",
     )
     scope: ListFromString = Field(
-        default=["StixFile", "IPv4-Addr", "Domain-Name", "Hostname", "Url"],
+        default=["StixFile"],
         description="The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
     )
     auto: bool = Field(
@@ -86,7 +84,7 @@ class KasperskyConfig(BaseConfigModel):
 
     zone_octi_score_mapping: DictFromString = Field(
         default="red:100,orange:80,yellow:60,gray:20,green:0",
-        description="Zone to score mapping. Only the numerical values ​​need to be changed if necessary. "
+        description="Zone to score mapping. Only the numerical value need to be changed if necessary. "
         "See https://tip.kaspersky.com/Help/Doc_data/en-US/AboutZones.htm for further explanations",
     )
 
@@ -94,7 +92,7 @@ class KasperskyConfig(BaseConfigModel):
         default="LicenseInfo,Zone,FileGeneralInfo",
         min_length=1,  # Prevent empty string
         description="Sections wanted to investigate for the requested hash. "
-        "LicenseInfo, Zone and FileGeneralInfo are called by default. "
+        "LicenseInfo, Zone and FileGeneralInfo are always set, can't be disabled. "
         "Only DetectionsInfo, FileDownloadedFromUrls, Industries and FileNames are currently supported",
     )
 

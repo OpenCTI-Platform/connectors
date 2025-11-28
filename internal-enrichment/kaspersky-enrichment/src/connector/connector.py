@@ -66,7 +66,6 @@ class KasperskyConnector:
         self.converter_to_stix = ConverterToStix(self.helper)
 
         # Define variables
-        self.author = None
         self.stix_objects = []
 
     def _process_file(self, observable: dict) -> None:
@@ -90,6 +89,8 @@ class KasperskyConnector:
             "[CONNECTOR] Process enrichment from FileGeneralInfo data..."
         )
 
+        entity_file_general_info = entity_data["FileGeneralInfo"]
+
         # Score
         if entity_data.get("Zone"):
             score = self.zone_octi_score_mapping[entity_data["Zone"].lower()]
@@ -98,25 +99,25 @@ class KasperskyConnector:
             )
 
         # Hashes
-        if entity_data["FileGeneralInfo"].get("Md5"):
-            observable["hashes"]["MD5"] = entity_data["FileGeneralInfo"]["Md5"]
-        if entity_data["FileGeneralInfo"].get("Sha1"):
-            observable["hashes"]["SHA-1"] = entity_data["FileGeneralInfo"]["Sha1"]
-        if entity_data["FileGeneralInfo"].get("Sha256"):
-            observable["hashes"]["SHA-256"] = entity_data["FileGeneralInfo"]["Sha256"]
+        if entity_file_general_info.get("Md5"):
+            observable["hashes"]["MD5"] = entity_file_general_info["Md5"]
+        if entity_file_general_info.get("Sha1"):
+            observable["hashes"]["SHA-1"] = entity_file_general_info["Sha1"]
+        if entity_file_general_info.get("Sha256"):
+            observable["hashes"]["SHA-256"] = entity_file_general_info["Sha256"]
 
         # Size, mime_type
         mapping_fields = {"Size": "size", "Type": "mime_type"}
         for key, value in mapping_fields.items():
-            if entity_data["FileGeneralInfo"].get(key):
-                observable[value] = entity_data["FileGeneralInfo"][key]
+            if entity_file_general_info.get(key):
+                observable[value] = entity_file_general_info[key]
 
         # Labels
-        if entity_data["FileGeneralInfo"].get("Categories"):
+        if entity_file_general_info.get("Categories"):
             observable["labels"] = []
             if observable.get("x_opencti_labels"):
                 observable["labels"] = observable["x_opencti_labels"]
-            for label in entity_data["FileGeneralInfo"]["Categories"]:
+            for label in entity_file_general_info["Categories"]:
                 if label not in observable["labels"]:
                     observable["labels"].append(label)
 
@@ -127,21 +128,18 @@ class KasperskyConnector:
                 "[CONNECTOR] Process enrichment from FileNames data..."
             )
 
+            observable["additional_names"] = observable.get(
+                "x_opencti_additional_names", []
+            )
             for filename in entity_data["FileNames"]:
-                if (
-                    observable.get("x_opencti_additional_names")
-                    and filename["FileName"]
-                    not in observable["x_opencti_additional_names"]
-                ):
-                    observable["x_opencti_additional_names"].append(
-                        f",{filename["FileName"]}"
-                    )
+                if filename["FileName"] not in observable["additional_names"]:
+                    observable["additional_names"].append(f" {filename["FileName"]}")
                 else:
-                    observable["x_opencti_additional_names"] = filename["FileName"]
+                    observable["additional_names"] = filename["FileName"]
 
         # Prepare author object
         author = self.converter_to_stix.create_author()
-        self.stix_objects += [author]
+        self.stix_objects.append(author)
 
         # Manage DetectionsInfo data
 
@@ -150,14 +148,11 @@ class KasperskyConnector:
                 "[CONNECTOR] Process enrichment from DetectionsInfo data..."
             )
 
-            notes = []
             for obs_detection_info in entity_data["DetectionsInfo"]:
                 obs_note = self.converter_to_stix.create_file_note(
                     observable["id"], obs_detection_info
                 )
-                notes.append(obs_note)
-            if notes:
-                self.stix_objects += notes
+                self.stix_objects.append(obs_note)
 
         # Manage FileDownloadedFromUrls data
 
@@ -166,22 +161,18 @@ class KasperskyConnector:
                 "[CONNECTOR] Process enrichment from FileDownloadedFromUrls data..."
             )
 
-            urls_objects = []
             for url_info in entity_data["FileDownloadedFromUrls"]:
                 obs_url_score = self.zone_octi_score_mapping[url_info["Zone"].lower()]
                 url_object = self.converter_to_stix.create_url(obs_url_score, url_info)
-                urls_objects.append(url_object)
 
                 if url_object:
+                    self.stix_objects.append(url_object)
                     url_relation = self.converter_to_stix.create_relationship(
                         source_id=observable["id"],
                         relationship_type="related-to",
                         target_id=url_object.id,
                     )
-                    urls_objects.append(url_relation)
-
-            if urls_objects:
-                self.stix_objects += urls_objects
+                    self.stix_objects.append(url_relation)
 
         # Manage Industries data
 
@@ -190,21 +181,17 @@ class KasperskyConnector:
                 "[CONNECTOR] Process enrichment from Industries data..."
             )
 
-            industries_objects = []
             for industry in entity_data["Industries"]:
                 industry_object = self.converter_to_stix.create_sector(industry)
-                industries_objects.append(industry_object)
 
                 if industry_object:
+                    self.stix_objects.append(industry_object)
                     industry_relation = self.converter_to_stix.create_relationship(
                         source_id=observable["id"],
                         relationship_type="related-to",
                         target_id=industry_object.id,
                     )
-                    industries_objects.append(industry_relation)
-
-            if industries_objects:
-                self.stix_objects += industries_objects
+                    self.stix_objects.append(industry_relation)
 
     def _send_bundle(self, stix_objects: list) -> str:
         """

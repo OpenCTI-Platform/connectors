@@ -49,15 +49,7 @@ class ConverterToStix:
         )
         content = "| Detection Date | Detection Name | Detection Method |\n"
         content += "|----------------|----------------|------------------|\n"
-        content += (
-            "| "
-            + str(detection_info["LastDetectDate"])
-            + " | "
-            + str(detection_name)
-            + " | "
-            + str(detection_info["DetectionMethod"])
-            + " |\n"
-        )
+        content += f"| {detection_info["LastDetectDate"]} | {detection_name} | {detection_info["DetectionMethod"]} |\n"
 
         note = stix2.Note(
             type="note",

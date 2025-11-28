@@ -3,6 +3,10 @@ import traceback
 from connector import ConnectorSettings, KasperskyConnector
 from pycti import OpenCTIConnectorHelper
 
+
+class ConfigLoader(ConnectorSettings): ...
+
+
 if __name__ == "__main__":
     """
     Entry point of the script

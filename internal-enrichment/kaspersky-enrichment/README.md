@@ -2,9 +2,9 @@
 
 ## Status Filigran
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
+| Status            | Date          | Comment |
+|-------------------|---------------|---------|
+| Filigran Verified | 11/28/2025    | -       |
 
 ## Introduction
 
@@ -23,7 +23,7 @@ Find all the configuration variables available (default/required) here: [Connect
 ### Docker Deployment
 
 Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
+version of OpenCTI you're running. Example, `pycti==6.8.14`. If you don't, it will take the latest version, but
 sometimes the OpenCTI SDK fails to initialize.
 
 Build a Docker Image using the provided `Dockerfile`.
@@ -56,7 +56,7 @@ Install the required python dependencies (preferably in a virtual environment):
 pip3 install -r requirements.txt
 ```
 
-Then, start the connector from recorded-future/src:
+Then, start the connector from kaspersky-enrichment/src:
 
 ```shell
 python3 main.py
