@@ -1,8 +1,8 @@
 from typing import Any, Generator
 
 from censys_enrichment.client import Client
-from censys_enrichment.config import Config
 from censys_enrichment.converter import Converter
+from censys_enrichment.settings import ConfigLoader
 from connectors_sdk.models import BaseObject
 from pycti import OpenCTIConnectorHelper
 
@@ -20,11 +20,11 @@ class EntityTypeNotSupportedError(Exception):
 
 
 class Connector:
-    """Shodan InternetDB connector"""
+    """Censys connector"""
 
     def __init__(
         self,
-        config: Config,
+        config: ConfigLoader,
         helper: OpenCTIConnectorHelper,
         client: Client,
         converter: Converter,

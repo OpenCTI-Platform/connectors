@@ -49,7 +49,7 @@ class _CensysEnrichmentConfig(BaseConfigModel):
     )
 
 
-class Config(BaseConnectorSettings):
+class ConfigLoader(BaseConnectorSettings):
     connector: _ConnectorConfig = Field(
         default_factory=_ConnectorConfig,
         description="Internal Enrichment Connector configurations.",
