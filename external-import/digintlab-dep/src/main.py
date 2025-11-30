@@ -230,7 +230,9 @@ class DepConnector:
         self,
         item: dict[str, Any],
     ) -> dict[str, Any] | None:
-        victim_name = item.get("victim", "Unknown victim")
+        victim_name = item.get("victim")
+        if not victim_name:
+            victim_name = item.get("victimDomain", "Unknown Victim")
         incident_name = f"DEP announcement - {victim_name}"
         description = item.get("annDescription") or item.get("description")
         if description:
@@ -271,6 +273,7 @@ class DepConnector:
         return self.helper.api.incident.create(
             name=incident_name,
             createdBy=self.organization["id"],
+            incident_type="cybercrime",
             description=description,
             first_seen=first_seen,
             created=first_seen,
@@ -397,6 +400,7 @@ class DepConnector:
         # Intrusion set creation is intentionally disabled because datasets may
         # include non-adversarial actors.
         incident = self._create_incident(item)
+        self._create_intrusion_set(item)
 
         indicators: list[dict[str, Any]] = []
         site_indicator = self._create_site_indicator(item)
