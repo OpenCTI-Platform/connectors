@@ -12,7 +12,7 @@ Kaspersky enrichment is used to investigate objects by using the Kaspersky Threa
 
 ## Requirements
 
-- OpenCTI Platform >= 6.8.14
+- OpenCTI Platform >= 6.8.15
 
 ## Configuration variables environment
 
@@ -23,7 +23,7 @@ Find all the configuration variables available (default/required) here: [Connect
 ### Docker Deployment
 
 Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==6.8.14`. If you don't, it will take the latest version, but
+version of OpenCTI you're running. Example, `pycti==6.8.15`. If you don't, it will take the latest version, but
 sometimes the OpenCTI SDK fails to initialize.
 
 Build a Docker Image using the provided `Dockerfile`.
