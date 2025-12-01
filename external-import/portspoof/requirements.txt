@@ -1,0 +1,4 @@
+pycti>=6.4.0
+pika==1.3.2
+python-dotenv==1.0.1
+pydantic==2.8.2

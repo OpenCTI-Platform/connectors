@@ -1,0 +1,16 @@
+version: '3'
+services:
+  connector-portspoof:
+    image: opencti/connector-portspoof:rolling
+    environment:
+      - OPENCTI_URL=${OPENCTI_URL}
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_ID}
+      - CONNECTOR_NAME=${CONNECTOR_NAME:-PortSpoofPro}
+      - CONNECTOR_SCOPE=${CONNECTOR_SCOPE:-portspoof-pro}
+      - CONNECTOR_LOG_LEVEL=${CONNECTOR_LOG_LEVEL:-info}
+      - RABBITMQ_URL=${RABBITMQ_URL}
+      - RABBITMQ_QUEUE_NAME=${RABBITMQ_QUEUE_NAME:-opencti-connector-queue}
+      - PS_LOG_FILE=${PS_LOG_FILE:-}
+      - PS_DEBUG_FULL_DUMPS=${PS_DEBUG_FULL_DUMPS:-0}
+    restart: always
