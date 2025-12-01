@@ -12,7 +12,7 @@ connector:
 
 shadowtrackr:
   api_key: 'ChangeMe'
-  max_tlp_level: "TLP:AMBER"
+  max_tlp: "TLP:AMBER"
   replace_with_lower_score: true
   replace_valid_to_date: true
 

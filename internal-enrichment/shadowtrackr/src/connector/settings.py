@@ -30,7 +30,7 @@ class ShadowTrackrConfig(BaseConfigModel):
         default="https://shadowtrackr.com/api/v3",
     )
     api_key: str = Field(description="API key for authentication.")
-    max_tlp_level: Literal[
+    max_tlp: Literal[
         "TLP:WHITE",
         "TLP:CLEAR",
         "TLP:GREEN",
