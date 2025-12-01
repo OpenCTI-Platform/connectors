@@ -18,6 +18,7 @@ from stix2 import MarkingDefinition as Stix2MarkingDefinition
 from stix2 import Note
 from stix2 import Relationship as StixCoreRelationship
 
+from doppel.constants import STIX_VERSION
 from doppel.stix_helpers import (
     build_custom_properties,
     build_description,
@@ -28,8 +29,6 @@ from doppel.stix_helpers import (
     is_takedown_state,
 )
 from doppel.utils import parse_iso_datetime
-
-STIX_VERSION = "2.1"
 
 
 class ConverterToStix:

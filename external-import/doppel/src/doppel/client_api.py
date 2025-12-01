@@ -10,10 +10,7 @@ from tenacity import (
     wait_fixed,
 )
 
-RETRYABLE_REQUEST_ERRORS = (
-    requests.Timeout,
-    requests.ConnectionError,
-)
+from doppel.constants import RETRYABLE_REQUEST_ERRORS
 
 
 class ConnectorClient:
@@ -66,7 +63,7 @@ class ConnectorClient:
                     {"url": api_url, "params": params},
                 )
                 raise
-            if http_err.response.status_code == 429:
+            elif http_err.response.status_code == 429:
                 self.helper.connector_logger.warning(
                     "[API] Rate limited (429), retrying with backoff...",
                     {"url": api_url, "params": params},
