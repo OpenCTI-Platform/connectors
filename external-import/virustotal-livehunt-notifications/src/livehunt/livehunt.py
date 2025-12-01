@@ -321,7 +321,7 @@ class VirustotalLivehuntNotifications:
                 self.helper.connector_logger.info(
                     f"[Virustotal Livehunt Notifications] loaded state: {current_state}"
                 )
-                self.helper.connector_logger.debug(f"[Virustotal Livehunt Notifications] /n file_indicators: {self.builder.file_indicators}/n domain_name_indicators: {self.builder.domaine_name_indicators}/n ip_indicators: {self.builder.ip_indicators}/n url_indicators: {self.builder.url_indicators}")
+                self.helper.connector_logger.debug(f"[Virustotal Livehunt Notifications] /n file_indicators: {self.builder.file_indicators}/n domain_name_indicators: {self.builder.domain_name_indicators}/n ip_indicators: {self.builder.ip_indicators}/n url_indicators: {self.builder.url_indicators}")
 
                 last_run = self._get_state_value(
                     current_state,
