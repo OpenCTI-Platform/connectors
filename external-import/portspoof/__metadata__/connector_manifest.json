@@ -1,10 +1,16 @@
-{
-  "name": "PortSpoofPro",
-  "version": "1.0.0",
-  "author": "SharpSec",
-  "description": "Real-time threat intelligence connector that ingests PortSpoofPro telemetry data into OpenCTI.",
-  "is_public": false,
-  "license": "MIT",
-  "connector_type": "EXTERNAL_IMPORT",
-  "scope": "Threat-Actor,Observed-Data,IPv4-Addr,IPv6-Addr,Tool,Attack-Pattern,Infrastructure,Report,Relationship,Sighting"
-}
+  {
+    "title": "Portspoof Pro",
+    "slug": "portspoof",
+    "description": "Imports threat intelligence from Portspoof Pro's active deception platform: attacker IPs, tool fingerprints, scan techniques, behavioral patterns, and MITRE ATT&CK mappings.",
+    "short_description": "High-fidelity threat intelligence from Portspoof Pro's active deception platform.",
+    "logo": "external-import/portspoof/__metadata__/logo.png",
+    "use_cases": [
+      "Early Warning Intelligence",
+      "Threat Actor Profiling",
+      "Deception-Based Detection"
+    ],
+    "subscription_link": "https://portspoof.io",
+    "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/portspoof",
+    "container_image": "opencti/connector-portspoof",
+    "container_type": "EXTERNAL_IMPORT"
+  }

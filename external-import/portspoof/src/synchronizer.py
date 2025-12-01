@@ -6,21 +6,49 @@ import uuid
 from typing import Any, Dict, List, Optional
 
 from pycti import Identity as PyctiIdentity
-from pycti import OpenCTIConnectorHelper, ThreatActorIndividual
-from stix2 import (TLP_WHITE, AttackPattern, Bundle, Identity, Indicator,
-                   IPv4Address, IPv6Address, NetworkTraffic, ObservedData,
-                   Relationship, Report, Sighting, ThreatActor, Tool)
+from pycti import (
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
+    ThreatActorIndividual,
+)
+from stix2 import (
+    TLP_WHITE,
+    AttackPattern,
+    Bundle,
+    Identity,
+    Indicator,
+    IPv4Address,
+    IPv6Address,
+    NetworkTraffic,
+    ObservedData,
+    Relationship,
+    Report,
+    Sighting,
+    ThreatActor,
+    Tool,
+)
 from stix2.canonicalization.Canonicalize import canonicalize
 
-from constants import (AUTHOR_DESCRIPTION, AUTHOR_NAME, ENVIRONMENT,
-                       MAX_STRATEGIC_TARGET_RELATIONSHIPS, OPENCTI_NAMESPACE,
-                       OPENCTI_SSL_VERIFY_DEFAULT, SESSION_SOURCE_NAME,
-                       THREAT_ACTOR_SOURCE_NAME)
-from helpers import (build_external_reference,
-                     build_session_external_references,
-                     calculate_opencti_score, generate_labels,
-                     map_threat_level, parse_iso_datetime, safe_get_float,
-                     safe_get_int)
+from constants import (
+    AUTHOR_DESCRIPTION,
+    AUTHOR_NAME,
+    ENVIRONMENT,
+    MAX_STRATEGIC_TARGET_RELATIONSHIPS,
+    OPENCTI_NAMESPACE,
+    OPENCTI_SSL_VERIFY_DEFAULT,
+    SESSION_SOURCE_NAME,
+    THREAT_ACTOR_SOURCE_NAME,
+)
+from helpers import (
+    build_external_reference,
+    build_session_external_references,
+    calculate_opencti_score,
+    generate_labels,
+    map_threat_level,
+    parse_iso_datetime,
+    safe_get_float,
+    safe_get_int,
+)
 
 
 def generate_deterministic_stix_id(object_type: str, properties: dict) -> str:
@@ -50,10 +78,12 @@ def generate_indicator_stix_id(source_ip: str) -> str:
 
 def generate_attack_pattern_stix_id(pattern_type: str, name: str) -> str:
     """Generate deterministic STIX ID for AttackPattern objects."""
-    from constants import (PORTSPOOF_ATTACK_NAMESPACE_PREFIX,
-                           PORTSPOOF_BEHAVIOR_NAMESPACE_PREFIX,
-                           PORTSPOOF_MITRE_TTP_NAMESPACE_PREFIX,
-                           PORTSPOOF_TECHNIQUE_NAMESPACE_PREFIX)
+    from constants import (
+        PORTSPOOF_ATTACK_NAMESPACE_PREFIX,
+        PORTSPOOF_BEHAVIOR_NAMESPACE_PREFIX,
+        PORTSPOOF_MITRE_TTP_NAMESPACE_PREFIX,
+        PORTSPOOF_TECHNIQUE_NAMESPACE_PREFIX,
+    )
 
     if pattern_type == "technique":
         namespace_prefix = PORTSPOOF_TECHNIQUE_NAMESPACE_PREFIX
@@ -317,8 +347,10 @@ class DomainObjectManager:
 
             display_name = format_mitre_ttp_name(normalized_ttp_id)
             ttp_url = format_mitre_ttp_url(normalized_ttp_id)
+            pattern_id = generate_attack_pattern_stix_id("mitre", normalized_ttp_id)
 
             pattern = AttackPattern(
+                id=pattern_id,
                 name=display_name,
                 description=f"MITRE ATT&CK technique {normalized_ttp_id} detected by PortSpoofPro",
                 labels=["portspoof-pro", f"mitre-ttp:{normalized_ttp_id}"],
@@ -347,7 +379,11 @@ class DomainObjectManager:
         relationships = []
 
         for tool in tools:
+            rel_id = StixCoreRelationship.generate_id(
+                "uses", threat_actor_id, tool.id
+            )
             rel = Relationship(
+                id=rel_id,
                 relationship_type="uses",
                 source_ref=threat_actor_id,
                 target_ref=tool.id,
@@ -357,7 +393,11 @@ class DomainObjectManager:
             relationships.append(rel)
 
         for pattern in attack_patterns:
+            rel_id = StixCoreRelationship.generate_id(
+                "uses", threat_actor_id, pattern.id
+            )
             rel = Relationship(
+                id=rel_id,
                 relationship_type="uses",
                 source_ref=threat_actor_id,
                 target_ref=pattern.id,
@@ -382,11 +422,13 @@ class IpObservableManager:
         marking_refs: List[str],
     ):
         """Create IPv4 or IPv6 Address observable for attacker IP with queryable labels."""
-        from helpers import (calculate_duration_minutes,
-                             calculate_port_scan_metrics,
-                             calculate_port_volume_category,
-                             calculate_time_wasted_minutes,
-                             calculate_unique_tcp_ports)
+        from helpers import (
+            calculate_duration_minutes,
+            calculate_port_scan_metrics,
+            calculate_port_volume_category,
+            calculate_time_wasted_minutes,
+            calculate_unique_tcp_ports,
+        )
 
         risk_score = state.get("risk_score", 0)
         alert_level = state.get("alert_level", 0)
@@ -591,7 +633,14 @@ class IpObservableManager:
                 f"intelligence including port details and techniques."
             )
 
+            # Generate deterministic ID for NetworkTraffic based on src/dst
+            nt_id = generate_deterministic_stix_id(
+                "network-traffic",
+                {"src_ref": source_ip_observable.id, "dst_ref": target_ip_obs.id},
+            )
+
             nt = NetworkTraffic(
+                id=nt_id,
                 src_ref=source_ip_observable.id,
                 dst_ref=target_ip_obs.id,
                 protocols=["tcp", "udp"],
@@ -636,11 +685,13 @@ class ObservedDataManager:
         capping_label: Optional[str] = None,
     ):
         """Create Observed-Data with queryable labels and evidence custom properties."""
-        from helpers import (calculate_duration_minutes,
-                             calculate_port_scan_metrics,
-                             calculate_port_volume_category,
-                             calculate_time_wasted_minutes,
-                             calculate_unique_tcp_ports)
+        from helpers import (
+            calculate_duration_minutes,
+            calculate_port_scan_metrics,
+            calculate_port_volume_category,
+            calculate_time_wasted_minutes,
+            calculate_unique_tcp_ports,
+        )
 
         try:
             object_refs = [source_ip_observable.id]
@@ -727,7 +778,13 @@ class ObservedDataManager:
                     if isinstance(value, (int, float)):
                         custom_properties[target_key] = value
 
+            # Generate deterministic ID for ObservedData based on session
+            observed_data_id = generate_deterministic_stix_id(
+                "observed-data", {"session_id": session_id, "sensor_id": sensor_id}
+            )
+
             observed_data = ObservedData(
+                id=observed_data_id,
                 first_observed=parse_iso_datetime(state.get("session_start_time")),
                 last_observed=parse_iso_datetime(state.get("last_activity_time")),
                 number_observed=1,
@@ -1151,7 +1208,11 @@ class StixSynchronizer:
             marking_refs=[self.tlp_clear_stix_id],
         )
 
+        source_ip_rel_id = StixCoreRelationship.generate_id(
+            "related-to", threat_actor.id, source_ip_observable.id
+        )
         source_ip_relationship = Relationship(
+            id=source_ip_rel_id,
             relationship_type="related-to",
             source_ref=threat_actor.id,
             target_ref=source_ip_observable.id,
@@ -1196,25 +1257,17 @@ class StixSynchronizer:
                     )
                 victim_observables_for_rels.append(victim_observable)
 
-                from stix2.utils import _get_dict
-
-                rel_dict = {
-                    "type": "relationship",
-                    "relationship_type": "targets",
-                    "source_ref": threat_actor.id,
-                    "target_ref": victim_observable.id,
-                    "external_references": [
-                        {"source_name": SESSION_SOURCE_NAME, "external_id": session_id}
-                    ],
-                }
-                rel_id = str(
-                    uuid.uuid5(
-                        OPENCTI_NAMESPACE, canonicalize(_get_dict(rel_dict), utf8=False)
-                    )
+                # Generate deterministic ID using pycti helper
+                rel_id = StixCoreRelationship.generate_id(
+                    "targets",
+                    threat_actor.id,
+                    victim_observable.id,
+                    session_start,
+                    session_end,
                 )
 
                 target_relationship = Relationship(
-                    id=f"relationship--{rel_id}",
+                    id=rel_id,
                     relationship_type="targets",
                     source_ref=threat_actor.id,
                     target_ref=victim_observable.id,
@@ -1301,7 +1354,11 @@ This indicator represents confirmed malicious activity observed through direct i
         objects.append(indicator)
         self.stats["indicators_created"] += 1
 
+        based_on_rel_id = StixCoreRelationship.generate_id(
+            "based-on", indicator.id, source_ip_observable.id
+        )
         based_on_rel = Relationship(
+            id=based_on_rel_id,
             relationship_type="based-on",
             source_ref=indicator.id,
             target_ref=source_ip_observable.id,
@@ -1315,7 +1372,11 @@ This indicator represents confirmed malicious activity observed through direct i
         objects.append(based_on_rel)
         self.stats["relationships_created"] += 1
 
+        indicates_rel_id = StixCoreRelationship.generate_id(
+            "indicates", indicator.id, threat_actor.id
+        )
         indicates_rel = Relationship(
+            id=indicates_rel_id,
             relationship_type="indicates",
             source_ref=indicator.id,
             target_ref=threat_actor.id,

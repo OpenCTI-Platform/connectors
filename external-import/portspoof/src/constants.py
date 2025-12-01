@@ -10,10 +10,10 @@ TLP_CLEAR_STIX_ID = "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
 OPENCTI_SSL_VERIFY_DEFAULT = True
 
 # Identity
-AUTHOR_NAME = "PortSpoof Pro CTI Platform"
+AUTHOR_NAME = "PortSpoofPro CTI Platform"
 AUTHOR_DESCRIPTION = (
-    "Threat intelligence from PortSpoof Pro"
-    "Advanced deception platform"
+    "Threat intelligence from PortSpoofPro Session Aggregator - "
+    "Advanced deception platform with eBPF detection."
 )
 
 # External reference sources
