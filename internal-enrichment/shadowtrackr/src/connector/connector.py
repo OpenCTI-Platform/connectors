@@ -61,7 +61,7 @@ class ShadowTrackrConnector:
         )
 
         # Define variables
-        self.max_tlp_level = self.config.shadowtrackr.max_tlp_level
+        self.max_tlp = self.config.shadowtrackr.max_tlp
         self.replace_with_lower_score = (
             self.config.shadowtrackr.replace_with_lower_score
         )
@@ -103,16 +103,17 @@ class ShadowTrackrConnector:
         :param opencti_entity: Dict of observable from OpenCTI
         :return: Boolean
         """
+        tlp = None
         if len(opencti_entity["objectMarking"]) != 0:
             for marking_definition in opencti_entity["objectMarking"]:
                 if marking_definition["definition_type"] == "TLP":
                     tlp = marking_definition["definition"]
 
-        valid_max_tlp = self.helper.check_max_tlp(tlp, self.max_tlp_level)
+        valid_max_tlp = self.helper.check_max_tlp(tlp, self.max_tlp)
 
         if not valid_max_tlp:
             msg = (
-                f"[ShadowTrackr] Do not send any data, TLP of the observable '{tlp}' is greater than MAX TLP '{self.max_tlp_level}',"
+                f"[ShadowTrackr] Do not send any data, TLP of the observable '{tlp}' is greater than MAX TLP '{self.max_tlp}',"
                 "the connector does not has access to this observable, please check the group of the connector user"
             )
             raise ValueError(msg)
