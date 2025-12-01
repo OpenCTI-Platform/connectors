@@ -378,9 +378,7 @@ class DomainObjectManager:
         relationships = []
 
         for tool in tools:
-            rel_id = StixCoreRelationship.generate_id(
-                "uses", threat_actor_id, tool.id
-            )
+            rel_id = StixCoreRelationship.generate_id("uses", threat_actor_id, tool.id)
             rel = Relationship(
                 id=rel_id,
                 relationship_type="uses",
