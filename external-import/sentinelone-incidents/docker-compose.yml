@@ -1,7 +1,7 @@
 version: '3'
 services:
   sentinelone-incidents:
-    image: opencti/connector-sentinelone-incidents:rolling
+    image: opencti/connector-sentinelone-incidents:6.8.15
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe

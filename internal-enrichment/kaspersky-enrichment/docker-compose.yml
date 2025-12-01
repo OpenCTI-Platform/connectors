@@ -1,6 +1,6 @@
 services:
   connector-kaspersky-enrichment:
-    image: opencti/connector-kaspersky-enrichment:rolling
+    image: opencti/connector-kaspersky-enrichment:6.8.15
     environment:
       # Generic parameters (connection with OpenCTI)
       - OPENCTI_URL=http://localhost

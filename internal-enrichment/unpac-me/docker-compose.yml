@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-unpac-me:
-    image: opencti/connector-unpac-me:rolling
+    image: opencti/connector-unpac-me:6.8.15
     environment:
       - OPENCTI_URL=ChangeMe
       - OPENCTI_TOKEN=ChangeMe
