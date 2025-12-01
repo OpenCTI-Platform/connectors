@@ -109,8 +109,7 @@
       "type": "array"
     },
     "CROWDSTRIKE_ACTOR_START_TIMESTAMP": {
-      "default": 0,
-      "description": "Unix timestamp from which to start importing actors. BEWARE: 0 means ALL actors!",
+      "description": "Unix timestamp from which to start importing actors. Default is 30 days ago. BEWARE: 0 means ALL actors!",
       "type": "integer"
     },
     "CROWDSTRIKE_REPORT_START_TIMESTAMP": {
