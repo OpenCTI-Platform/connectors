@@ -40,7 +40,7 @@ file of OpenCTI.
 | `replace_with_lower_score` | `SHADOWTRACKR_REPLACE_WITH_LOWER_SCORE` | Yes       | Lower the score based on the ShadowTrackr false positive estimate value |
 | `api_key`                  | `SHADOWTRACKR_API_KEY`                  | Yes       | Get one here: https://shadowtrackr.com/usr/                             |                                                                   |
 | `replace_valid_to_date`    | `SHADOWTRACKR_REPLACE_VALID_TO_DATE`    | Yes       | Set the valid to date to tomorrow for CDNs, Clouds and VPNs             |
-| `max_tlp`                  | `SHADOWTRACKR_MAX_TLP`                  | No        | Don't send anything above this TLP to ShadowTrackr                      |
+| `max_tlp_level             | `SHADOWTRACKR_MAX_TLP`                  | No        | Don't send anything above this TLP to ShadowTrackr                      |
 
 ## Behavior
 
