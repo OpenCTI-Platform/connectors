@@ -7,44 +7,20 @@ from typing import Any, Dict, List, Optional
 
 from pycti import Identity as PyctiIdentity
 from pycti import OpenCTIConnectorHelper, ThreatActorIndividual
-from stix2 import (
-    TLP_WHITE,
-    AttackPattern,
-    Bundle,
-    Identity,
-    Indicator,
-    IPv4Address,
-    IPv6Address,
-    NetworkTraffic,
-    ObservedData,
-    Relationship,
-    Report,
-    Sighting,
-    ThreatActor,
-    Tool,
-)
+from stix2 import (TLP_WHITE, AttackPattern, Bundle, Identity, Indicator,
+                   IPv4Address, IPv6Address, NetworkTraffic, ObservedData,
+                   Relationship, Report, Sighting, ThreatActor, Tool)
 from stix2.canonicalization.Canonicalize import canonicalize
 
-from constants import (
-    AUTHOR_DESCRIPTION,
-    AUTHOR_NAME,
-    ENVIRONMENT,
-    MAX_STRATEGIC_TARGET_RELATIONSHIPS,
-    OPENCTI_NAMESPACE,
-    OPENCTI_SSL_VERIFY_DEFAULT,
-    SESSION_SOURCE_NAME,
-    THREAT_ACTOR_SOURCE_NAME,
-)
-from helpers import (
-    build_external_reference,
-    build_session_external_references,
-    calculate_opencti_score,
-    generate_labels,
-    map_threat_level,
-    parse_iso_datetime,
-    safe_get_float,
-    safe_get_int,
-)
+from constants import (AUTHOR_DESCRIPTION, AUTHOR_NAME, ENVIRONMENT,
+                       MAX_STRATEGIC_TARGET_RELATIONSHIPS, OPENCTI_NAMESPACE,
+                       OPENCTI_SSL_VERIFY_DEFAULT, SESSION_SOURCE_NAME,
+                       THREAT_ACTOR_SOURCE_NAME)
+from helpers import (build_external_reference,
+                     build_session_external_references,
+                     calculate_opencti_score, generate_labels,
+                     map_threat_level, parse_iso_datetime, safe_get_float,
+                     safe_get_int)
 
 
 def generate_deterministic_stix_id(object_type: str, properties: dict) -> str:
@@ -74,12 +50,10 @@ def generate_indicator_stix_id(source_ip: str) -> str:
 
 def generate_attack_pattern_stix_id(pattern_type: str, name: str) -> str:
     """Generate deterministic STIX ID for AttackPattern objects."""
-    from constants import (
-        PORTSPOOF_ATTACK_NAMESPACE_PREFIX,
-        PORTSPOOF_BEHAVIOR_NAMESPACE_PREFIX,
-        PORTSPOOF_MITRE_TTP_NAMESPACE_PREFIX,
-        PORTSPOOF_TECHNIQUE_NAMESPACE_PREFIX,
-    )
+    from constants import (PORTSPOOF_ATTACK_NAMESPACE_PREFIX,
+                           PORTSPOOF_BEHAVIOR_NAMESPACE_PREFIX,
+                           PORTSPOOF_MITRE_TTP_NAMESPACE_PREFIX,
+                           PORTSPOOF_TECHNIQUE_NAMESPACE_PREFIX)
 
     if pattern_type == "technique":
         namespace_prefix = PORTSPOOF_TECHNIQUE_NAMESPACE_PREFIX
@@ -408,13 +382,11 @@ class IpObservableManager:
         marking_refs: List[str],
     ):
         """Create IPv4 or IPv6 Address observable for attacker IP with queryable labels."""
-        from helpers import (
-            calculate_duration_minutes,
-            calculate_port_scan_metrics,
-            calculate_port_volume_category,
-            calculate_time_wasted_minutes,
-            calculate_unique_tcp_ports,
-        )
+        from helpers import (calculate_duration_minutes,
+                             calculate_port_scan_metrics,
+                             calculate_port_volume_category,
+                             calculate_time_wasted_minutes,
+                             calculate_unique_tcp_ports)
 
         risk_score = state.get("risk_score", 0)
         alert_level = state.get("alert_level", 0)
@@ -664,13 +636,11 @@ class ObservedDataManager:
         capping_label: Optional[str] = None,
     ):
         """Create Observed-Data with queryable labels and evidence custom properties."""
-        from helpers import (
-            calculate_duration_minutes,
-            calculate_port_scan_metrics,
-            calculate_port_volume_category,
-            calculate_time_wasted_minutes,
-            calculate_unique_tcp_ports,
-        )
+        from helpers import (calculate_duration_minutes,
+                             calculate_port_scan_metrics,
+                             calculate_port_volume_category,
+                             calculate_time_wasted_minutes,
+                             calculate_unique_tcp_ports)
 
         try:
             object_refs = [source_ip_observable.id]

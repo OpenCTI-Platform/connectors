@@ -1,0 +1,10 @@
+{
+  "name": "PortSpoofPro",
+  "version": "1.0.0",
+  "author": "SharpSec",
+  "description": "Real-time threat intelligence connector that ingests PortSpoofPro telemetry data into OpenCTI.",
+  "is_public": false,
+  "license": "MIT",
+  "connector_type": "EXTERNAL_IMPORT",
+  "scope": "Threat-Actor,Observed-Data,IPv4-Addr,IPv6-Addr,Tool,Attack-Pattern,Infrastructure,Report,Relationship,Sighting"
+}
