@@ -5,6 +5,26 @@ import os
 import uuid
 from typing import Any, Dict, List, Optional
 
+from constants import (
+    AUTHOR_DESCRIPTION,
+    AUTHOR_NAME,
+    ENVIRONMENT,
+    MAX_STRATEGIC_TARGET_RELATIONSHIPS,
+    OPENCTI_NAMESPACE,
+    OPENCTI_SSL_VERIFY_DEFAULT,
+    SESSION_SOURCE_NAME,
+    THREAT_ACTOR_SOURCE_NAME,
+)
+from helpers import (
+    build_external_reference,
+    build_session_external_references,
+    calculate_opencti_score,
+    generate_labels,
+    map_threat_level,
+    parse_iso_datetime,
+    safe_get_float,
+    safe_get_int,
+)
 from pycti import Identity as PyctiIdentity
 from pycti import (
     OpenCTIConnectorHelper,
@@ -28,27 +48,6 @@ from stix2 import (
     Tool,
 )
 from stix2.canonicalization.Canonicalize import canonicalize
-
-from constants import (
-    AUTHOR_DESCRIPTION,
-    AUTHOR_NAME,
-    ENVIRONMENT,
-    MAX_STRATEGIC_TARGET_RELATIONSHIPS,
-    OPENCTI_NAMESPACE,
-    OPENCTI_SSL_VERIFY_DEFAULT,
-    SESSION_SOURCE_NAME,
-    THREAT_ACTOR_SOURCE_NAME,
-)
-from helpers import (
-    build_external_reference,
-    build_session_external_references,
-    calculate_opencti_score,
-    generate_labels,
-    map_threat_level,
-    parse_iso_datetime,
-    safe_get_float,
-    safe_get_int,
-)
 
 
 def generate_deterministic_stix_id(object_type: str, properties: dict) -> str:

@@ -12,7 +12,6 @@ from typing import Any, Dict, List, Optional
 import pika
 from dotenv import load_dotenv
 from pydantic import BaseModel, ConfigDict, Field
-
 from synchronizer import StixSynchronizer, build_config_from_env
 
 load_dotenv()
