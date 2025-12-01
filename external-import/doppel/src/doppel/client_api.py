@@ -10,6 +10,11 @@ from tenacity import (
     wait_fixed,
 )
 
+RETRYABLE_REQUEST_ERRORS = (
+    requests.Timeout,
+    requests.ConnectionError,
+)
+
 
 class ConnectorClient:
     def __init__(self, helper, config):
@@ -29,20 +34,22 @@ class ConnectorClient:
 
         self.session.headers.update(headers)
 
-    def is_rate_limit_error(exception):
-        return (
-            isinstance(exception, requests.HTTPError)
-            and exception.response is not None
-            and exception.response.status_code == 429
-        )
+    @staticmethod
+    def is_retryable_exception(exception):
+        if isinstance(exception, requests.HTTPError):
+            if exception.response.status_code in (429, 500, 502, 503, 504):
+                return True
+
+        if isinstance(exception, RETRYABLE_REQUEST_ERRORS):
+            return True
+        return False
 
     @retry(
-        retry=retry_if_exception(is_rate_limit_error),
+        retry=retry_if_exception(is_retryable_exception),
         wait=wait_exponential_jitter(initial=10, max=60, jitter=1),
         stop=stop_after_attempt(5),
         reraise=True,
     )
-    @retry(wait=wait_fixed(5), stop=stop_after_attempt(3))  # Default fallback values
     def _request_data(self, api_url: str, params=None):
         """
         Internal method to handle API requests
