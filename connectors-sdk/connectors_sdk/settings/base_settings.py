@@ -6,14 +6,13 @@ to manage and validate configuration parameters using Pydantic.
 These models can be extended to create specific configurations for different types of connectors.
 """
 
-import os
+import sys
 from abc import ABC
 from copy import deepcopy
 from datetime import timedelta
 from pathlib import Path
 from typing import Any, Literal, Self
 
-import __main__
 from connectors_sdk.settings.annotated_types import ListFromString
 from connectors_sdk.settings.exceptions import ConfigValidationError
 from pydantic import (
@@ -88,6 +87,48 @@ class _SettingsLoader(BaseSettings):
     )
 
     @classmethod
+    def _get_connector_main_path(cls) -> Path:
+        """Locate the main module of the running connector.
+        This method is used to locate configuration files relative to connector's entrypoint.
+
+        Notes:
+            - This method assumes that the connector is launched using a file-backed entrypoint
+            (i.e., `python -m <module>` or `python <file>`).
+            - At module import time, `__main__.__file__` might not be available yet,
+            thus this method should be called at runtime only.
+        """
+        main = sys.modules.get("__main__")
+        if main and getattr(main, "__file__", None):
+            return Path(main.__file__).resolve()  # type: ignore
+
+        raise RuntimeError(
+            "Cannot determine connector's location: __main__.__file__ is not available. "
+            "Ensure the connector is launched using `python -m <module>` or a file-backed entrypoint."
+        )
+
+    @classmethod
+    def _get_config_yml_file_path(cls) -> Path | None:
+        """Locate the `config.yml` file of the running connector."""
+        main_path = _SettingsLoader._get_connector_main_path()
+        config_yml_legacy_file_path = main_path.parent / "config.yml"
+        config_yml_file_path = main_path.parent.parent / "config.yml"
+
+        if config_yml_legacy_file_path.is_file():
+            return config_yml_legacy_file_path
+        elif config_yml_file_path.is_file():
+            return config_yml_file_path
+        else:
+            return None
+
+    @classmethod
+    def _get_dot_env_file_path(cls) -> Path | None:
+        """Locate the `.env` file of the running connector."""
+        main_path = _SettingsLoader._get_connector_main_path()
+        dot_env_file_path = main_path.parent.parent / ".env"
+
+        return dot_env_file_path if dot_env_file_path.is_file() else None
+
+    @classmethod
     def settings_customise_sources(
         cls,
         settings_cls: type[BaseSettings],
@@ -109,26 +150,22 @@ class _SettingsLoader(BaseSettings):
             1. If a config.yml file is found, the order will be: `ENV VAR` → config.yml → default value
             2. If a .env file is found, the order will be: `ENV VAR` → .env → default value
         """
-        _main_path = os.path.dirname(os.path.abspath(__main__.__file__))
-
-        settings_cls.model_config["env_file"] = f"{_main_path}/../.env"
-
-        if not settings_cls.model_config["yaml_file"]:
-            if Path(f"{_main_path}/config.yml").is_file():
-                settings_cls.model_config["yaml_file"] = f"{_main_path}/config.yml"
-            if Path(f"{_main_path}/../config.yml").is_file():
-                settings_cls.model_config["yaml_file"] = f"{_main_path}/../config.yml"
-
-        if Path(settings_cls.model_config["yaml_file"] or "").is_file():  # type: ignore
+        config_yml_file_path = _SettingsLoader._get_config_yml_file_path()
+        if config_yml_file_path:
+            settings_cls.model_config["yaml_file"] = config_yml_file_path
             return (
                 env_settings,
                 YamlConfigSettingsSource(settings_cls),
             )
-        if Path(settings_cls.model_config["env_file"] or "").is_file():  # type: ignore
+
+        dot_env_file_path = _SettingsLoader._get_dot_env_file_path()
+        if dot_env_file_path:
+            settings_cls.model_config["env_file"] = dot_env_file_path
             return (
                 env_settings,
                 DotEnvSettingsSource(settings_cls),
             )
+
         return (env_settings,)
 
     @classmethod
