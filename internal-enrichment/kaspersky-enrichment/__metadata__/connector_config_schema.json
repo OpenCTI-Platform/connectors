@@ -66,10 +66,9 @@
       "writeOnly": true
     },
     "KASPERSKY_ZONE_OCTI_SCORE_MAPPING": {
-      "additionalProperties": true,
       "default": "red:100,orange:80,yellow:60,gray:20,green:0",
       "description": "Zone to score mapping. Only the numerical value need to be changed if necessary. See https://tip.kaspersky.com/Help/Doc_data/en-US/AboutZones.htm for further explanations",
-      "type": "object"
+      "type": "string"
     },
     "KASPERSKY_FILE_SECTIONS": {
       "default": "LicenseInfo,Zone,FileGeneralInfo",
