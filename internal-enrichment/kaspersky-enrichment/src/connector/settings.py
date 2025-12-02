@@ -7,7 +7,7 @@ from connectors_sdk import (
 )
 from connectors_sdk.core.pydantic import ListFromString
 from pydantic import (
-    BeforeValidator,
+    AfterValidator,
     Field,
     HttpUrl,
     PlainSerializer,
@@ -38,8 +38,8 @@ def pycti_list_serializer(v: dict, info: SerializationInfo) -> str:
 
 
 DictFromString = Annotated[
-    dict,
-    BeforeValidator(parse_string_to_dict),
+    str,
+    AfterValidator(parse_string_to_dict),
     PlainSerializer(pycti_list_serializer, when_used="json"),
 ]
 
