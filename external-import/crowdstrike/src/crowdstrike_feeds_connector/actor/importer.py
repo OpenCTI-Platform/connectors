@@ -205,6 +205,7 @@ class ActorImporter(BaseImporter):
 
             if related_indicators is not None:
                 for indicator in related_indicators:
+                    indicator["actors"] = [actor_name]
                     bundle_builder_config = IndicatorBundleBuilderConfig(
                         indicator=indicator,
                         author=self.author,
@@ -256,9 +257,21 @@ class ActorImporter(BaseImporter):
                         continue
                     indicator_bundle_built = bundle_builder.build()
                     if indicator_bundle_built:
-                        indicator_with_related_entities = indicator_bundle_built[
-                            "object_refs"
-                        ]
+                        indicator_with_related_entities = []
+                        first_intrusion_set = None
+
+                        for obj in indicator_bundle_built["object_refs"]:
+                            if obj.get("type") == "intrusion-set":
+                                if first_intrusion_set is None:
+                                    first_intrusion_set = obj
+                            else:
+                                indicator_with_related_entities.append(obj)
+
+                        if first_intrusion_set:
+                            indicator_with_related_entities.insert(
+                                0, first_intrusion_set
+                            )
+
                         related_indicators_with_related_entities.extend(
                             indicator_with_related_entities
                         )
