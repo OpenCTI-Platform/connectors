@@ -1,5 +1,7 @@
 import sys
+from pathlib import Path
 from types import SimpleNamespace
+
 import pytest
 
 
@@ -11,8 +13,11 @@ def mock_main_path(monkeypatch):
         sys.modules, "__main__", SimpleNamespace(__file__="/app/src/main.py")
     )
 
+
 @pytest.fixture
-def mock_basic_environment(monkeypatch):
+def mock_environment(monkeypatch):
+    """Mock `os.environ` for `_SettingsLoader` and `BaseConnectorSettings` calls."""
+
     monkeypatch.setenv("OPENCTI_URL", "http://localhost:8080")
     monkeypatch.setenv("OPENCTI_TOKEN", "changeme")
     monkeypatch.setenv("CONNECTOR_ID", "connector-poc--uid")
@@ -23,60 +28,26 @@ def mock_basic_environment(monkeypatch):
 
 
 @pytest.fixture
-def mock_yaml_file_presence(monkeypatch):
-    def is_file(self):
-        if self.name == "config.yml":
-            return True
-        return False
+def mock_config_yml_file_presence(monkeypatch):
+    """Mock the path of `config.yml` for `_SettingsLoader` and `BaseConnectorSettings` calls."""
 
-    monkeypatch.setattr("pathlib.Path.is_file", is_file)
-
-
-@pytest.fixture
-def mock_env_file_presence(monkeypatch):
-    def is_file(self):
-        if self.name == ".env":
-            return True
-        return False
-
-    monkeypatch.setattr("pathlib.Path.is_file", is_file)
-
-
-@pytest.fixture
-def mock_yaml_config_settings_read_files(monkeypatch):
-    def read_files(_, __):
-        return {
-            "connector": {
-                "duration_period": "PT5M",
-                "id": "connector-poc--uid",
-                "log_level": "error",
-                "name": "Test Connector",
-                "scope": "test",
-            },
-            "opencti": {"token": "changeme", "url": "http://localhost:8080"},
-        }
+    def get_config_yml_file_path():
+        return Path(__file__).parent / "data" / "config.test.yml"
 
     monkeypatch.setattr(
-        "pydantic_settings.YamlConfigSettingsSource._read_files", read_files
+        "connectors_sdk.settings.base_settings._SettingsLoader._get_config_yml_file_path",
+        get_config_yml_file_path,
     )
 
 
 @pytest.fixture
-def mock_env_config_settings_read_env_files(monkeypatch):
-    def _read_env_files(self):
-        if self.settings_cls.__name__ == "SettingsLoader":
-            return {
-                "opencti": {"url": "http://localhost:8080", "token": "changeme"},
-                "connector": {
-                    "id": "connector-poc--uid",
-                    "name": "Test Connector",
-                    "duration_period": "PT5M",
-                    "log_level": "error",
-                    "scope": "test",
-                },
-            }
-        return {}
+def mock_dot_env_file_presence(monkeypatch):
+    """Mock the path of `.env` for `_SettingsLoader` and `BaseConnectorSettings` calls."""
+
+    def get_dot_env_file_path():
+        return Path(__file__).parent / "data" / ".env.test"
 
     monkeypatch.setattr(
-        "pydantic_settings.DotEnvSettingsSource._load_env_vars", _read_env_files
+        "connectors_sdk.settings.base_settings._SettingsLoader._get_dot_env_file_path",
+        get_dot_env_file_path,
     )

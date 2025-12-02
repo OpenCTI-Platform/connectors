@@ -1,0 +1,11 @@
+opencti:
+  url: http://localhost:8080
+  token: changeme
+
+connector:
+  id: connector-poc--uid
+  name: Test Connector
+  scope: test
+  log_level: error
+  duration_period: PT5M
+            
