@@ -1,18 +1,19 @@
 {
   "title": "Urlscan.io",
   "slug": "urlscan",
-  "description": "Information coming soon",
-  "short_description": "Information coming soon",
+  "description": "The OpenCTI URLScan.io connector allows automatic import of phishing URLs from the URLScan.io \"Phishing URL Feed\", which detects thousands of suspicious, malicious and phishing URLs daily across 680+ tracked brands. The feed of these detected URLs is available to customers to ingest into their Threat Intelligence systems or improve their own security products.",
+  "short_description": "The OpenCTI URLScan.io connector allows automatic import of phishing URLs from the URLScan.io \"Phishing URL Feed\", which detects thousands of suspicious, malicious and phishing URLs daily across 680+ tracked brands. The feed of these detected URLs is available to customers to ingest into their Threat Intelligence systems or improve their own security products.",
   "logo": "external-import/urlscan/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Commercial Threat Intel",
+    "Phishing"
   ],
   "verified": true,
   "last_verified_date": "2025-02-12",
   "playbook_supported": false,
   "max_confidence_level": 50,
   "support_version": ">=6.8.0",
-  "subscription_link": null,
+  "subscription_link": "https://urlscan.io/pricing/phishingfeed/",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/urlscan",
   "manager_supported": false,
   "container_version": "rolling",
