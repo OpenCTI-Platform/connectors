@@ -1,0 +1,16 @@
+version: "3.9"
+services:
+  connector-criminalip:
+    build: .
+    container_name: connector-criminalip
+    restart: always
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CRIMINALIP_TOKEN=${CRIMINALIP_TOKEN}
+      - CONNECTOR_ID=${CRIMINALIP_CONNECTOR_ID}
+      - CONNECTOR_NAME=CriminalIPConnector
+      - CONNECTOR_SCOPE=IPv4-Addr 
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      - CONNECTOR_CONFIDENCE_LEVEL=70 # Connector의 신뢰 점수 설정.
+      - CONNECTOR_LOG_LEVEL=debug
