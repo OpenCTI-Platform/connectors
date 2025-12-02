@@ -5,7 +5,18 @@ from connectors_sdk import (
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
 )
+from connectors_sdk.core.pydantic import ListFromString
 from pydantic import Field, model_validator
+
+
+class ConnectorSettings(BaseInternalEnrichmentConnectorConfig):
+    name: str = Field(
+        description="Connector name.", default="ReversingLabs Spectra Analyze"
+    )
+    scope: ListFromString = Field(
+        description="Comma-separated list of entity types the connector will enrich.",
+        default="Artifact,IPv4-Addr,Domain-Name",
+    )
 
 
 class ReversinglabsSpectraAnalyzeConfig(BaseConfigModel):

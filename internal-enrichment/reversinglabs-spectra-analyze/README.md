@@ -7,8 +7,6 @@ It enables `file` and `URL` submission to the ReversingLabs Spectra Analyze plat
 The connector works for the following observable types in OpenCTI:
 
 - Artifact
-- Url
-- StixFile  
 - Domain-Name
 - IPv4-Addr
 

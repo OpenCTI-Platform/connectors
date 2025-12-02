@@ -5,7 +5,7 @@ opencti:
 connector:
   id: 'ChangeMe'
   name: 'ReversingLabs Spectra Analyze'
-  scope: 'Artifact,Url,StixFile,File,IPv4-Addr,Domain-Name'
+  scope: 'Artifact,IPv4-Addr,Domain-Name'
   #log_level: 'info'
   #auto: false
 
