@@ -10,6 +10,9 @@
 
 Kaspersky enrichment is used to investigate objects by using the Kaspersky Threat Intelligence Portal such as File, IPV4, Domain/Hostname and URL.
 
+> [!NOTE]
+> At this time, the connector only supports the enrichment of File-type observables. Enrichment for other observable types will be introduced in future releases.
+
 ## Requirements
 
 - OpenCTI Platform >= 6.8.15
@@ -73,8 +76,15 @@ However, if you would like to force an immediate download of a new batch of enti
 Find the connector, and click on the refresh button to reset the connector's state and force a new
 download of data by re-running the connector.
 
+## API Endpoints in Use
+
+| API                                             | Use in the connector     |
+|-------------------------------------------------|--------------------------|
+| https://tip.kaspersky.com/api/hash/{hash_value} | Enrich 'File' observable |
+
+
 ## Debugging
 
-The connector can be debugged by setting the appropiate log level.
+The connector can be debugged by setting the appropriate log level.
 Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
 e., `self.helper.connector_logger.error("An error message")`.
