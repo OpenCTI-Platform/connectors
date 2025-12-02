@@ -1,5 +1,15 @@
+import sys
+from types import SimpleNamespace
 import pytest
 
+
+@pytest.fixture
+def mock_main_path(monkeypatch):
+    """Mock the path of `__main__.__file__` for `_SettingsLoader._get_connector_main_path` calls."""
+
+    monkeypatch.setitem(
+        sys.modules, "__main__", SimpleNamespace(__file__="/app/src/main.py")
+    )
 
 @pytest.fixture
 def mock_basic_environment(monkeypatch):
