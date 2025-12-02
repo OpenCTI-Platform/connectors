@@ -78,13 +78,72 @@ def test_settings_loader_should_get_dot_env_file_path(mock_main_path):
         dot_env_file_path = _SettingsLoader._get_dot_env_file_path()
 
     assert dot_env_file_path == Path("/app/.env").resolve()
+
+
+def test_settings_loader_should_parse_config_yml_file(mock_config_yml_file_presence):
+    """
+    Test that `_SettingsLoader()` parses config vars in `config.yml`.
+    For testing purpose, the path of `config.yml` file is `tests/test_settings/data/config.test.yml`.
+    """
+    settings_loader = _SettingsLoader()
+    settings_dict = settings_loader.model_dump()
+
+    assert settings_dict == {
+        "opencti": {
+            "url": "http://localhost:8080",
+            "token": "changeme",
+        },
+        "connector": {
+            "id": "connector-poc--uid",
+            "name": "Test Connector",
+            "duration_period": "PT5M",
+            "log_level": "error",
+            "scope": "test",
+        },
+    }
+
+
+def test_settings_loader_should_parse_dot_env_file(mock_dot_env_file_presence):
+    """
+    Test that `_SettingsLoader()` parses env vars in `.env`.
+    For testing purpose, the path of `.env` file is `tests/test_settings/data/.env.test`.
+    """
+
+    settings_loader = _SettingsLoader()
+    settings_dict = settings_loader.model_dump()
+
+    assert settings_dict == {
+        "opencti_url": "http://localhost:8080",
+        "opencti_token": "changeme",
+        "connector_id": "connector-poc--uid",
+        "connector_name": "Test Connector",
+        "connector_duration_period": "PT5M",
+        "connector_log_level": "error",
+        "connector_scope": "test",
+    }
+
+
+def test_settings_loader_should_parse_os_environ(mock_environment):
+    """
+    Test that `_SettingsLoader()` parses env vars from `os.environ`.
+    For testing purpose, `os.environ` is patched.
+    """
+
     settings_loader = _SettingsLoader()
     settings_dict = settings_loader.model_dump()
 
     assert settings_dict == {}
 
 
-def test_should_create_settings_loader_from_model(mock_basic_environment):
+def test_settings_loader_should_parse_config_yml_from_model(
+    mock_config_yml_file_presence,
+):
+    """
+    Test that `_SettingsLoader.build_loader_from_model` returns a `BaseSettings` subclass
+    capable of parsing `config.yml` according to the given `BaseModel`.
+    For testing purpose, the path of `config.yml` file is `tests/test_settings/data/config.test.yml`.
+    """
+
     settings_loader = _SettingsLoader.build_loader_from_model(BaseConnectorSettings)
     settings_dict = settings_loader().model_dump()
 
@@ -96,8 +155,52 @@ def test_should_create_settings_loader_from_model(mock_basic_environment):
     assert settings_dict["connector"]["log_level"] == "error"
 
 
-def test_should_create_base_connector_settings(mock_basic_environment):
+def test_settings_loader_should_parse_dot_env_from_model(mock_dot_env_file_presence):
+    """
+    Test that `_SettingsLoader.build_loader_from_model` returns a `BaseSettings` subclass
+    capable of parsing `.env` according to the given `BaseModel`.
+    For testing purpose, the path of `.env` file is `tests/test_settings/data/.env.test`.
+    """
+
+    settings_loader = _SettingsLoader.build_loader_from_model(BaseConnectorSettings)
+    settings_dict = settings_loader().model_dump()
+
+    assert settings_dict["opencti"]["url"] == "http://localhost:8080"
+    assert settings_dict["opencti"]["token"] == "changeme"
+    assert settings_dict["connector"]["id"] == "connector-poc--uid"
+    assert settings_dict["connector"]["name"] == "Test Connector"
+    assert settings_dict["connector"]["scope"] == "test"
+    assert settings_dict["connector"]["log_level"] == "error"
+
+
+def test_settings_loader_should_parse_os_environ_from_model(mock_environment):
+    """
+    Test that `_SettingsLoader.build_loader_from_model` returns a `BaseSettings` subclass
+    capable of parsing `os.environ` according to the given `BaseModel`.
+    For testing purpose, `os.environ` is patched.
+    """
+
+    settings_loader = _SettingsLoader.build_loader_from_model(BaseConnectorSettings)
+    settings_dict = settings_loader().model_dump()
+
+    assert settings_dict["opencti"]["url"] == "http://localhost:8080"
+    assert settings_dict["opencti"]["token"] == "changeme"
+    assert settings_dict["connector"]["id"] == "connector-poc--uid"
+    assert settings_dict["connector"]["name"] == "Test Connector"
+    assert settings_dict["connector"]["scope"] == "test"
+    assert settings_dict["connector"]["log_level"] == "error"
+
+
+def test_base_connector_settings_should_validate_settings_from_config_yaml_file(
+    mock_config_yml_file_presence,
+):
+    """
+    Test that `BaseConnectorSettings` casts and validates config vars in `config.yml`.
+    For testing purpose, the path of `config.yml` file is `tests/test_settings/data/config.test.yml`.
+    """
+
     settings = BaseConnectorSettings()
+
     assert settings.opencti.url == HttpUrl("http://localhost:8080/")
     assert settings.opencti.token == "changeme"
     assert settings.connector.id == "connector-poc--uid"
@@ -106,14 +209,57 @@ def test_should_create_base_connector_settings(mock_basic_environment):
     assert settings.connector.log_level == "error"
 
 
-def test_should_fail_with_missing_mandatory_env_vars():
+def test_base_connector_settings_should_validate_settings_from_dot_env_file(
+    mock_dot_env_file_presence,
+):
+    """
+    Test that `BaseConnectorSettings` casts and validates env vars in `.env`.
+    For testing purpose, the path of `.env` file is `tests/test_settings/data/.env.test`.
+    """
+
+    settings = BaseConnectorSettings()
+
+    assert settings.opencti.url == HttpUrl("http://localhost:8080/")
+    assert settings.opencti.token == "changeme"
+    assert settings.connector.id == "connector-poc--uid"
+    assert settings.connector.name == "Test Connector"
+    assert settings.connector.scope == ["test"]
+    assert settings.connector.log_level == "error"
+
+
+def test_base_connector_settings_should_validate_settings_from_os_environ(
+    mock_environment,
+):
+    """
+    Test that `BaseConnectorSettings` casts and validates env vars in `os.environ`.
+    For testing purpose, `os.environ` is patched.
+    """
+
+    settings = BaseConnectorSettings()
+
+    assert settings.opencti.url == HttpUrl("http://localhost:8080/")
+    assert settings.opencti.token == "changeme"
+    assert settings.connector.id == "connector-poc--uid"
+    assert settings.connector.name == "Test Connector"
+    assert settings.connector.scope == ["test"]
+    assert settings.connector.log_level == "error"
+
+
+def test_base_connector_settings_should_raise_when_missing_mandatory_env_vars():
+    """Test that `BaseConnectorSettings` raises a `ValidationError` when no value is provided for required fields."""
     with pytest.raises(ConfigValidationError):
         BaseConnectorSettings()
 
 
-def test_should_dump_opencti_model(mock_basic_environment):
+def test_base_connector_settings_should_provide_helper_config(mock_environment):
+    """
+    Test that `BaseConnectorSettings().to_helper_config` returns a valid `config` dict for `pycti.OpenCTIConnectorHelper`.
+    For testing purpose, `os.environ` is patched.
+    """
+
     settings = BaseConnectorSettings()
     opencti_dict = settings.to_helper_config()
+
     assert opencti_dict == {
         "connector": {
             "duration_period": "PT5M",
@@ -122,57 +268,8 @@ def test_should_dump_opencti_model(mock_basic_environment):
             "name": "Test Connector",
             "scope": "test",
         },
-        "opencti": {"token": "changeme", "url": "http://localhost:8080/"},
+        "opencti": {
+            "token": "changeme",
+            "url": "http://localhost:8080/",
+        },
     }
-
-
-def test_should_create_yml_settings_loader_from_model(
-    mock_yaml_file_presence, mock_yaml_config_settings_read_files
-):
-    settings_loader = _SettingsLoader.build_loader_from_model(BaseConnectorSettings)
-    settings_dict = settings_loader().model_dump()
-
-    assert settings_dict["opencti"]["url"] == "http://localhost:8080"
-    assert settings_dict["opencti"]["token"] == "changeme"
-    assert settings_dict["connector"]["id"] == "connector-poc--uid"
-    assert settings_dict["connector"]["name"] == "Test Connector"
-    assert settings_dict["connector"]["scope"] == "test"
-    assert settings_dict["connector"]["log_level"] == "error"
-
-
-def test_should_load_settings_from_yaml_file(
-    mock_yaml_file_presence, mock_yaml_config_settings_read_files
-):
-    settings = BaseConnectorSettings()
-    assert settings.opencti.url == HttpUrl("http://localhost:8080/")
-    assert settings.opencti.token == "changeme"
-    assert settings.connector.id == "connector-poc--uid"
-    assert settings.connector.name == "Test Connector"
-    assert settings.connector.scope == ["test"]
-    assert settings.connector.log_level == "error"
-
-
-def test_should_create_dot_env_settings_loader_from_model(
-    mock_env_file_presence, mock_env_config_settings_read_env_files
-):
-    settings_loader = _SettingsLoader.build_loader_from_model(BaseConnectorSettings)
-    settings_dict = settings_loader().model_dump()
-
-    assert settings_dict["opencti"]["url"] == "http://localhost:8080"
-    assert settings_dict["opencti"]["token"] == "changeme"
-    assert settings_dict["connector"]["id"] == "connector-poc--uid"
-    assert settings_dict["connector"]["name"] == "Test Connector"
-    assert settings_dict["connector"]["scope"] == "test"
-    assert settings_dict["connector"]["log_level"] == "error"
-
-
-def test_should_load_settings_from_env_file(
-    mock_env_file_presence, mock_env_config_settings_read_env_files
-):
-    settings = BaseConnectorSettings()
-    assert settings.opencti.url == HttpUrl("http://localhost:8080/")
-    assert settings.opencti.token == "changeme"
-    assert settings.connector.id == "connector-poc--uid"
-    assert settings.connector.name == "Test Connector"
-    assert settings.connector.scope == ["test"]
-    assert settings.connector.log_level == "error"
