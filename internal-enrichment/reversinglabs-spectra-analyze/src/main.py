@@ -9,7 +9,6 @@ from datetime import datetime
 from functools import wraps
 from typing import Any, Dict
 
-import requests
 import stix2
 from connectors_sdk.models import ExternalReference, OrganizationAuthor, TLPMarking
 from connectors_sdk.models.enums import TLPLevel
@@ -122,11 +121,7 @@ class ReversingLabsSpectraAnalyzeConnector:
 
     @handle_spectra_errors
     def _upload_file_to_spectra_analyze(self, file_uri, sample_name):
-        r = requests.get(
-            file_uri,
-            timeout=300,
-        )
-        file_content = r.content
+        file_content = self.helper.api.fetch_opencti_file(file_uri, binary=True)
         report = {}
 
         file = open(sample_name, "wb")
