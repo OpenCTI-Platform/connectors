@@ -7,10 +7,7 @@ name = "vclib"
 version = "0.1.0"
 description = "VulnCheck connector for OpenCTI"
 readme = "README.md"
-authors = [
-  { name = "VulnCheck" },
-  { name = "EJ Reilly", email = "ereilly@vulncheck.com" },
-]
+authors = [{ name = "VulnCheck" }]
 requires-python = ">= 3.12.7, <3.13"
 dependencies = [
   "vulncheck-sdk==0.0.40",
