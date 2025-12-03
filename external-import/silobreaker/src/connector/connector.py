@@ -2,9 +2,7 @@ import base64
 import hashlib
 import hmac
 import json
-import os
 import sys
-import traceback
 import urllib.parse
 import urllib.request
 from datetime import datetime
@@ -12,7 +10,7 @@ from datetime import datetime
 import html2text
 import pytz
 import stix2
-import yaml
+from connector.settings import ConnectorSettings
 from dateutil.parser import parse
 from pycti import (
     AttackPattern,
@@ -26,64 +24,24 @@ from pycti import (
     Report,
     StixCoreRelationship,
     Vulnerability,
-    get_config_variable,
 )
 
 
 class Silobreaker:
-    def __init__(self):
-        # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config)
-        self.duration_period = get_config_variable(
-            "CONNECTOR_DURATION_PERIOD",
-            ["connector", "duration_period"],
-            config,
-        )
-        # Extra config
-        self.silobreaker_api_url = get_config_variable(
-            "SILOBREAKER_API_URL",
-            ["silobreaker", "api_url"],
-            config,
-            default="https://api.silobreaker.com",
-        )
-        self.silobreaker_api_key = get_config_variable(
-            "SILOBREAKER_API_KEY", ["silobreaker", "api_key"], config
-        )
-        self.silobreaker_api_shared = get_config_variable(
-            "SILOBREAKER_API_SHARED", ["silobreaker", "api_shared"], config
-        )
-        self.silobreaker_import_start_date = get_config_variable(
-            "SILOBREAKER_IMPORT_START_DATE",
-            ["silobreaker", "import_start_date"],
-            config,
-        )
-        self.silobreaker_lists = get_config_variable(
-            "SILOBREAKER_LISTS",
-            ["silobreaker", "lists"],
-            config,
-            default="138809,96910,36592,55112,50774",
-        ).split(",")
-        self.silobreaker_interval = get_config_variable(
-            "SILOBREAKER_INTERVAL", ["silobreaker", "interval"], config, isNumber=True
-        )
 
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+        self.config = config
+        self.helper = helper
         self.identity = self.helper.api.identity.create(
             type="Organization",
             name="Silobreaker",
             description="Silobreaker helps security, business and intelligence professionals make sense of the overwhelming amount of data on the web.",
         )
-        # Init variables
         self.auth_token = None
         self.cache = {}
 
     def get_interval(self):
-        return int(self.silobreaker_interval) * 60
+        return int(self.config.silobreaker.interval) * 60
 
     def _query(self, method, url, body=None):
         try:
@@ -92,7 +50,7 @@ class Silobreaker:
                 urlSignature = verb + " " + url
                 message = urlSignature.encode() + body
                 hmac_sha512 = hmac.new(
-                    self.silobreaker_api_shared.encode(),
+                    self.config.silobreaker.api_shared.get_secret_value().encode(),
                     message,
                     digestmod=hashlib.sha512,
                 )
@@ -101,7 +59,7 @@ class Silobreaker:
                     url
                     + ("&" if "?" in url else "?")
                     + "apiKey="
-                    + self.silobreaker_api_key
+                    + self.config.silobreaker.api_key.get_secret_value()
                     + "&digest="
                     + urllib.parse.quote(digest.decode())
                 )
@@ -112,7 +70,7 @@ class Silobreaker:
                 verb = "GET"
                 message = verb + " " + url
                 hmac_sha512 = hmac.new(
-                    self.silobreaker_api_shared.encode(),
+                    self.config.silobreaker.api_shared.get_secret_value().encode(),
                     message.encode(),
                     digestmod=hashlib.sha512,
                 )
@@ -121,7 +79,7 @@ class Silobreaker:
                     url
                     + ("&" if "?" in url else "?")
                     + "apiKey="
-                    + self.silobreaker_api_key
+                    + self.config.silobreaker.api_key.get_secret_value()
                     + "&digest="
                     + urllib.parse.quote(digest.decode())
                 )
@@ -130,7 +88,7 @@ class Silobreaker:
                 verb = "GET"
                 message = verb + " " + url
                 hmac_sha512 = hmac.new(
-                    self.silobreaker_api_shared.encode(),
+                    self.config.silobreaker.api_shared.get_secret_value().encode(),
                     message.encode(),
                     digestmod=hashlib.sha512,
                 )
@@ -139,12 +97,11 @@ class Silobreaker:
                     url
                     + ("&" if "?" in url else "?")
                     + "apiKey="
-                    + self.silobreaker_api_key
+                    + self.config.silobreaker.api_key.get_secret_value()
                     + "&digest="
                     + urllib.parse.quote(digest.decode())
                 )
                 req = urllib.request.Request(final_url)
-
             if method == "DOWNLOAD":
                 return base64.b64encode(urllib.request.urlopen(req).read()).decode(
                     "utf-8"
@@ -154,7 +111,6 @@ class Silobreaker:
                     responseJson = response.read()
                 return json.loads(responseJson.decode("utf-8"))
         except urllib.request.HTTPError as err:
-            # In this specific case, get error from API response
             error_metadata = {
                 "error_status_reason": err.reason,
                 "error_status": str(err.status),
@@ -194,7 +150,7 @@ class Silobreaker:
                 item["Type"] == "Report"
                 or item["Type"] == "News"
                 or item["Type"] == "User Article"
-                or item["Type"] == "Blog"
+                or (item["Type"] == "Blog")
             ):
                 objects = []
                 threats = []
@@ -218,12 +174,11 @@ class Silobreaker:
                             source_name=item["Publisher"], url=item["SourceUrl"]
                         )
                     )
-
                 if entities:
                     for entity in entities:
                         enrichment = self._query(
                             "GET",
-                            self.silobreaker_api_url
+                            self.config.silobreaker.api_url
                             + "/v2/enrichments?type="
                             + entity["Type"]
                             + "&description="
@@ -359,8 +314,6 @@ class Silobreaker:
                             )
                             objects.append(vulnerability_stix)
                             victims.append(vulnerability_stix)
-
-                        ## Observables
                         if entity["Type"] == "Domain":
                             domain_stix = stix2.DomainName(
                                 value=entity["Description"],
@@ -511,7 +464,6 @@ class Silobreaker:
                                 target_ref=email_stix.get("id"),
                             )
                             objects.append(based_on_stix)
-
                 if len(threats) > 0 and len(victims) > 0:
                     for threat in threats:
                         for victim in victims:
@@ -608,7 +560,6 @@ class Silobreaker:
                             "mime_type": "application/pdf",
                             "data": self._query("DOWNLOAD", item["DownloadUrl"]),
                         }
-
                     report_stix = stix2.Report(
                         id=Report.generate_id(
                             item["Description"], item["PublicationDate"]
@@ -630,18 +581,12 @@ class Silobreaker:
                         },
                     )
                     objects.append(report_stix)
-                    bundle = stix2.Bundle(
-                        objects=objects,
-                        allow_custom=True,
-                    )
-                    self.helper.send_stix2_bundle(
-                        bundle.serialize(),
-                        work_id=work_id,
-                    )
+                    bundle = stix2.Bundle(objects=objects, allow_custom=True)
+                    self.helper.send_stix2_bundle(bundle.serialize(), work_id=work_id)
 
     def _import_documents(self, list, work_id, delta_days):
         url = (
-            self.silobreaker_api_url
+            self.config.silobreaker.api_url
             + '/v2/documents/search?query=list:"'
             + urllib.parse.quote(list)
             + '"%20fromdate:-'
@@ -650,14 +595,14 @@ class Silobreaker:
             + "&entityTypes=ThreatActor%2CMalware%2CMitreTechnique%2CPerson%2CCountry%2CCity%2CCompany%2COrganization%2CGovernmentBody%2CVulnerability%2CDomain%2CIPv4%2CSubdomain%2CEmail"
         )
         data = self._query("GET", url)
-        if "Items" in data and "ResultCount" in data and data["ResultCount"] > 0:
+        if "Items" in data and "ResultCount" in data and (data["ResultCount"] > 0):
             total_iterations = round(data["TotalCount"] / data["ResultCount"]) + 1
             page_number = 0
             while page_number <= total_iterations:
                 if (
                     "Items" in data
                     and "ResultCount" in data
-                    and data["ResultCount"] > 0
+                    and (data["ResultCount"] > 0)
                 ):
                     self._process_items(data, work_id)
                     page_number = page_number + 1
@@ -668,7 +613,7 @@ class Silobreaker:
                         + str(page_number * 100 + 100)
                     )
                     url = (
-                        self.silobreaker_api_url
+                        self.config.silobreaker.api_url
                         + '/v2/documents/search?query=list:"'
                         + urllib.parse.quote(list)
                         + '"%20fromdate:-'
@@ -681,11 +626,9 @@ class Silobreaker:
                     data = self._query("GET", url)
 
     def _process_lists(self, work_id, delta_days):
-        for list in self.silobreaker_lists:
-            url = self.silobreaker_api_url + "/v2/lists/15_" + list
+        for list in self.config.silobreaker.lists.split(","):
+            url = self.config.silobreaker.api_url + "/v2/lists/15_" + list
             data = self._query("GET", url)
-
-            # If data exists and "Description" in data, import documents. Else log the error for each list
             if data and data.get("Description"):
                 self._import_documents(data["Description"], work_id, delta_days)
             else:
@@ -696,11 +639,12 @@ class Silobreaker:
 
     def process_message(self):
         try:
-            # Get the current timestamp and check
             current_state = self.helper.get_state()
             if current_state is None or "last_run" not in current_state:
-                self.helper.set_state({"last_run": self.silobreaker_import_start_date})
-                last_run = parse(self.silobreaker_import_start_date).astimezone(
+                self.helper.set_state(
+                    {"last_run": self.config.silobreaker.import_start_date}
+                )
+                last_run = parse(self.config.silobreaker.import_start_date).astimezone(
                     pytz.UTC
                 )
             else:
@@ -729,7 +673,6 @@ class Silobreaker:
             self.helper.connector_logger.info(message)
             self.helper.set_state({"last_run": last_run})
             self.helper.api.work.to_processed(work_id, message)
-
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
                 "[CONNECTOR] Connector stopped...",
@@ -740,23 +683,14 @@ class Silobreaker:
             self.helper.connector_logger.error(str(err))
 
     def run(self):
-        if self.duration_period:
+        if self.config.connector.duration_period:
             self.helper.schedule_iso(
                 message_callback=self.process_message,
-                duration_period=self.duration_period,
+                duration_period=self.config.connector.duration_period,
             )
         else:
             self.helper.schedule_unit(
                 message_callback=self.process_message,
-                duration_period=self.silobreaker_interval,
+                duration_period=self.config.silobreaker.interval,
                 time_unit=self.helper.TimeUnit.MINUTES,
             )
-
-
-if __name__ == "__main__":
-    try:
-        silobreakerConnector = Silobreaker()
-        silobreakerConnector.run()
-    except Exception:
-        traceback.print_exc()
-        exit(1)
