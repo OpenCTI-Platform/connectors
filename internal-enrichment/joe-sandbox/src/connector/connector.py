@@ -1,9 +1,6 @@
-# coding: utf-8
-
 import ipaddress
 import json
 import os
-import sys
 import time
 from io import BytesIO
 from typing import Dict
@@ -11,257 +8,83 @@ from typing import Dict
 import jbxapi
 import pycti
 import stix2
-import yaml
-from pycti import OpenCTIConnectorHelper, StixCoreRelationship, get_config_variable
+from connector.settings import ConnectorSettings
+from pycti import OpenCTIConnectorHelper, StixCoreRelationship
 
 
 class JoeSandboxConnector:
-    def __init__(self):
-        # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config)
 
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+        self.config = config
+        self.helper = helper
         self.identity = self.helper.api.identity.create(
             type="Organization", name="Joe Security", description="Joe Security"
         )["standard_id"]
-
-        self.octi_api_url = get_config_variable(
-            "OPENCTI_URL", ["opencti", "url"], config
-        )
-
-        # JoeSandbox class instatiation settings from config
-        api_key = get_config_variable(
-            "JOE_SANDBOX_API_KEY", ["joe_sandbox", "api_key"], config
-        )
-        # Cloud Pro: https://jbxcloud.joesecurity.org/api
-        # Cloud Basic: https://joesandbox.com/api
-        api_url = get_config_variable(
-            "JOE_SANDBOX_API_URL", ["joe_sandbox", "api_url"], config
-        )
-        # Cloud Pro: https://jbxcloud.joesecurity.org/analysis
-        # Cloud Basic: https://joesandbox.com/analysis
-        self._analysis_url = get_config_variable(
-            "JOE_SANDBOX_ANALYSIS_URL", ["joe_sandbox", "analysis_url"], config
-        )
-        accept_tac = get_config_variable(
-            "JOE_SANDBOX_ACCEPT_TAC", ["joe_sandbox", "accept_tac"], config
-        )
-        api_timeout = get_config_variable(
-            "JOE_SANDBOX_API_TIMEOUT",
-            ["joe_sandbox", "api_timeout"],
-            config,
-            isNumber=True,
-        )
-        verify_ssl = get_config_variable(
-            "JOE_SANDBOX_VERIFY_SSL", ["joe_sandbox", "verify_ssl"], config
-        )
-        api_retries = get_config_variable(
-            "JOE_SANDBOX_API_RETRIES",
-            ["joe_sandbox", "api_retries"],
-            config,
-            isNumber=True,
-        )
-        # Must be a json encoded map, see the following link for the format:
-        # https://requests.readthedocs.io/en/latest/user/advanced/?highlight=proxy#proxies
-        proxies = get_config_variable(
-            "JOE_SANDBOX_PROXIES", ["joe_sandbox", "proxies"], config
-        )
-        if proxies:
-            proxies = json.loads(proxies)
-
-        user_agent = get_config_variable(
-            "JOE_SANDBOX_USER_AGENT", ["joe_sandbox", "user_agent"], config
-        )
-
-        # See https://github.com/joesecurity/jbxapi/blob/master/docs/api.md
+        self.octi_api_url = self.config.opencti.url
         self.joe_sandbox_client = jbxapi.JoeSandbox(
-            apikey=api_key,  # The API key
-            apiurl=api_url,  # The API url
-            # Joe Sandbox Cloud requires accepting the Terms and Conditions.
-            # https://jbxcloud.joesecurity.org/resources/termsandconditions.pdf
-            accept_tac=accept_tac,
-            timeout=api_timeout,  # Timeout in seconds for accessing the API. Raises a ConnectionError on timeout.
-            verify_ssl=verify_ssl,  # Enable or disable checking SSL certificates.
-            retries=api_retries,  # Number of times requests should be retried if they timeout.
-            # Proxy settings, see the requests library for more information:
-            # https://requests.readthedocs.io/en/latest/user/advanced/?highlight=proxy#proxies
-            proxies=proxies,
-            # The user agent. Use this when you write an integration with Joe Sandbox
-            # so that it is possible to track how often an integration is being used.
-            user_agent=user_agent,
+            apikey=self.config.joe_sandbox.api_key.get_secret_value(),
+            apiurl=self.config.joe_sandbox.api_url,
+            accept_tac=self.config.joe_sandbox.accept_tac,
+            timeout=self.config.joe_sandbox.api_timeout,
+            verify_ssl=self.config.joe_sandbox.verify_ssl,
+            retries=self.config.joe_sandbox.api_retries,
+            proxies=self.config.joe_sandbox.proxies,
+            user_agent=self.config.joe_sandbox.user_agent,
         )
-
-        self._report_types = get_config_variable(
-            "JOE_SANDBOX_REPORT_TYPES", ["joe_sandbox", "report_types"], config
-        ).split(",")
-
-        # JoeSandbox submit settings from config
-        self._systems = get_config_variable(
-            "JOE_SANDBOX_SYSTEMS", ["joe_sandbox", "systems"], config
-        ).split(",")
-        self._analysis_time = get_config_variable(
-            "JOE_SANDBOX_ANALYSIS_TIME",
-            ["joe_sandbox", "analysis_time"],
-            config,
-            isNumber=True,
+        self._report_types = self.config.joe_sandbox.report_types.split(",")
+        self._systems = self.config.joe_sandbox.systems.split(",")
+        self._analysis_time = self.config.joe_sandbox.analysis_time
+        self._internet_access = self.config.joe_sandbox.internet_access
+        self._internet_simulation = self.config.joe_sandbox.internet_simulation
+        self._hybrid_code_analysis = self.config.joe_sandbox.hybrid_code_analysis
+        self._hybrid_decompilation = self.config.joe_sandbox.hybrid_decompilation
+        self._report_cache = self.config.joe_sandbox.report_cache
+        self._apk_instrumentation = self.config.joe_sandbox.apk_instrumentation
+        self._amsi_unpacking = self.config.joe_sandbox.amsi_unpacking
+        self._ssl_inspection = self.config.joe_sandbox.ssl_inspection
+        self._vba_instrumentation = self.config.joe_sandbox.vba_instrumentation
+        self._js_instrumentation = self.config.joe_sandbox.js_instrumentation
+        self._java_jar_tracing = self.config.joe_sandbox.java_jar_tracing
+        self._dotnet_tracing = self.config.joe_sandbox.dotnet_tracing
+        self._start_as_normal_user = self.config.joe_sandbox.start_as_normal_user
+        self._system_date = self.config.joe_sandbox.system_date
+        self._language_and_locale = self.config.joe_sandbox.language_and_locale
+        self._localized_internet_country = (
+            self.config.joe_sandbox.localized_internet_country
         )
-        self._internet_access = get_config_variable(
-            "JOE_SANDBOX_INTERNET_ACCESS", ["joe_sandbox", "internet_access"], config
+        self._email_notification = self.config.joe_sandbox.email_notification
+        self._archive_no_unpack = self.config.joe_sandbox.archive_no_unpack
+        self._hypervisor_based_inspection = (
+            self.config.joe_sandbox.hypervisor_based_inspection
         )
-        self._internet_simulation = get_config_variable(
-            "JOE_SANDBOX_INTERNET_SIMULATION",
-            ["joe_sandbox", "internet_simulation"],
-            config,
-        )
-        self._hybrid_code_analysis = get_config_variable(
-            "JOE_SANDBOX_HYBRID_CODE_ANALYSIS",
-            ["joe_sandbox", "hybrid_code_analysis"],
-            config,
-        )
-        self._hybrid_decompilation = get_config_variable(
-            "JOE_SANDBOX_HYBRID_DECOMPILATION",
-            ["joe_sandbox", "hybrid_decompilation"],
-            config,
-        )
-        self._report_cache = get_config_variable(
-            "JOE_SANDBOX_REPORT_CACHE", ["joe_sandbox", "report_cache"], config
-        )
-        self._apk_instrumentation = get_config_variable(
-            "JOE_SANDBOX_APK_INSTRUMENTATION",
-            ["joe_sandbox", "apk_instrumentation"],
-            config,
-        )
-        self._amsi_unpacking = get_config_variable(
-            "JOE_SANDBOX_AMSI_UNPACKING", ["joe_sandbox", "amsi_unpacking"], config
-        )
-        self._ssl_inspection = get_config_variable(
-            "JOE_SANDBOX_SSL_INSPECTION", ["joe_sandbox", "ssl_inspection"], config
-        )
-        self._vba_instrumentation = get_config_variable(
-            "JOE_SANDBOX_VBA_INSTRUMENTATION",
-            ["joe_sandbox", "vba_instrumentation"],
-            config,
-        )
-        self._js_instrumentation = get_config_variable(
-            "JOE_SANDBOX_JS_INSTRUMENTATION",
-            ["joe_sandbox", "js_instrumentation"],
-            config,
-        )
-        self._java_jar_tracing = get_config_variable(
-            "JOE_SANDBOX_JAVA_JAR_TRACING", ["joe_sandbox", "java_jar_tracing"], config
-        )
-        self._dotnet_tracing = get_config_variable(
-            "JOE_SANDBOX_DOTNET_TRACING", ["joe_sandbox", "dotnet_tracing"], config
-        )
-        self._start_as_normal_user = get_config_variable(
-            "JOE_SANDBOX_START_AS_NORMAL_USER",
-            ["joe_sandbox", "start_as_normal_user"],
-            config,
-        )
-        self._system_date = get_config_variable(
-            "JOE_SANDBOX_SYSTEM_DATE", ["joe_sandbox", "system_date"], config
-        )
-        self._language_and_locale = get_config_variable(
-            "JOE_SANDBOX_LANGUAGE_AND_LOCALE",
-            ["joe_sandbox", "language_and_locale"],
-            config,
-        )
-        self._localized_internet_country = get_config_variable(
-            "JOE_SANDBOX_LOCALIZED_INTERNET_COUNTRY",
-            ["joe_sandbox", "localized_internet_country"],
-            config,
-        )
-        self._email_notification = get_config_variable(
-            "JOE_SANDBOX_EMAIL_NOTIFICATION",
-            ["joe_sandbox", "email_notification"],
-            config,
-        )
-        self._archive_no_unpack = get_config_variable(
-            "JOE_SANDBOX_ARCHIVE_NO_UNPACK",
-            ["joe_sandbox", "archive_no_unpack"],
-            config,
-        )
-        self._hypervisor_based_inspection = get_config_variable(
-            "JOE_SANDBOX_HYPERVISOR_BASED_INSPECTION",
-            ["joe_sandbox", "hypervisor_based_inspection"],
-            config,
-        )
-        self._fast_mode = get_config_variable(
-            "JOE_SANDBOX_FAST_MODE", ["joe_sandbox", "fast_mode"], config
-        )
-        self._secondary_results = get_config_variable(
-            "JOE_SANDBOX_SECONDARY_RESULTS",
-            ["joe_sandbox", "secondary_results"],
-            config,
-        )
-
+        self._fast_mode = self.config.joe_sandbox.fast_mode
+        self._secondary_results = self.config.joe_sandbox.secondary_results
         self._cookbook = None
-        cookbook_file_path = get_config_variable(
-            "JOE_SANDBOX_COOKBOOK_FILE_PATH",
-            ["joe_sandbox", "cookbook_file_path"],
-            config,
-        )
-        if cookbook_file_path and os.path.exists(cookbook_file_path):
-            with open(cookbook_file_path, "rb") as f:
+        if self.config.joe_sandbox.cookbook_file_path and os.path.exists(
+            self.config.joe_sandbox.cookbook_file_path
+        ):
+            with open(self.config.joe_sandbox.cookbook_file_path, "rb") as f:
                 self._cookbook = BytesIO(f.read())
-
-        self._document_password = get_config_variable(
-            "JOE_SANDBOX_DOCUMENT_PASSWORD",
-            ["joe_sandbox", "document_password"],
-            config,
+        self._document_password = (
+            self.config.joe_sandbox.document_password.get_secret_value()
         )
-        self._archive_password = get_config_variable(
-            "JOE_SANDBOX_ARCHIVE_PASSWORD", ["joe_sandbox", "archive_password"], config
+        self._archive_password = (
+            self.config.joe_sandbox.archive_password.get_secret_value()
         )
-        self._command_line_argument = get_config_variable(
-            "JOE_SANDBOX_COMMAND_LINE_ARGUMENT",
-            ["joe_sandbox", "command_line_argument"],
-            config,
+        self._command_line_argument = self.config.joe_sandbox.command_line_argument
+        self._encrypt_with_password = (
+            self.config.joe_sandbox.encrypt_with_password.get_secret_value()
+            if self.config.joe_sandbox.encrypt_with_password
+            else None
         )
-        self._encrypt_with_password = get_config_variable(
-            "JOE_SANDBOX_ENCRYPT_WITH_PASSWORD",
-            ["joe_sandbox", "encrypt_with_password"],
-            config,
-        )
-        self._browser = get_config_variable(
-            "JOE_SANDBOX_BROWSER", ["joe_sandbox", "browser"], config
-        )
-        self._url_reputation = get_config_variable(
-            "JOE_SANDBOX_URL_REPUTATION", ["joe_sandbox", "url_reputation"], config
-        )
-        self._export_to_jbxview = get_config_variable(
-            "JOE_SANDBOX_EXPORT_TO_JBXVIEW",
-            ["joe_sandbox", "export_to_jbxview"],
-            config,
-        )
-        self._delete_after_days = get_config_variable(
-            "JOE_SANDBOX_DELETE_AFTER_DAYS",
-            ["joe_sandbox", "delete_after_days"],
-            config,
-            isNumber=True,
-        )
-        self._priority = get_config_variable(
-            "JOE_SANDBOX_PRIORITY", ["joe_sandbox", "priority"], config, isNumber=True
-        )
-
-        self._default_tlp = get_config_variable(
-            "JOE_SANDBOX_DEFAULT_TLP", ["joe_sandbox", "default_tlp"], config
-        ).lower()
-
-        self._yara_color = get_config_variable(
-            "JOE_SANDBOX_YARA_COLOR", ["joe_sandbox", "yara_color"], config
-        )
-
-        default_color = get_config_variable(
-            "JOE_SANDBOX_DEFAULT_COLOR", ["joe_sandbox", "default_color"], config
-        )
-
-        # Create default labels
+        self._browser = self.config.joe_sandbox.browser
+        self._url_reputation = self.config.joe_sandbox.url_reputation
+        self._export_to_jbxview = self.config.joe_sandbox.export_to_jbxview
+        self._delete_after_days = self.config.joe_sandbox.delete_after_days
+        self._priority = self.config.joe_sandbox.priority
+        self._default_tlp = self.config.joe_sandbox.default_tlp.lower()
+        self._yara_color = self.config.joe_sandbox.yara_color
+        default_color = self.config.joe_sandbox.default_color
         self.helper.api.label.create(value="dynamic", color=default_color)
 
     def _process_observable(self, observable):
@@ -298,28 +121,24 @@ class JoeSandboxConnector:
             # JOE SANDBOX CLOUD EXCLUSIVE PARAMETERS - Only include these if they are defined
             **(
                 {"url-reputation": self._url_reputation} if self._url_reputation else {}
-            ),  # Lookup the reputation of URLs and domains to improve the analysis. This option will send URLs and domains to third party services and WHOIS servers!.
+            ),
             **(
                 {"export-to-jbxview": self._export_to_jbxview}
                 if self._export_to_jbxview
                 else {}
-            ),  # Export the report(s) from this analysis to Joe Sandbox View.
+            ),
             **(
                 {"delete-after-days": self._delete_after_days}
                 if self._delete_after_days
                 else {}
-            ),  # Delete the analysis after X days. If not set, the default value is used
-            ## ON PREMISE EXCLUSIVE PARAMETERS
-            "priority": self._priority,  # Integer value between 1 and 10, higher value means higher priority.
+            ),
+            "priority": self._priority,
         }
-
         submission_dict = {}
         if observable["entity_type"] == "Url":
             self.helper.log_info(
                 f"Submitting {observable['observable_value']} to JoeSandbox for analysis..."
             )
-            # True = use the browser for analysis, False = download/execute
-            # Submit the url to Joe Sandbox
             if self._browser:
                 submission_dict = self.joe_sandbox_client.submit_url(
                     url=observable["observable_value"], params=params
@@ -329,12 +148,10 @@ class JoeSandboxConnector:
                     url=observable["observable_value"], params=params
                 )
         elif observable["entity_type"] == "Artifact":
-            # Download the Artifact from OpenCTI
             sample = self._download_artifact(observable)
             self.helper.log_info(
                 f"Submitting {observable['importFiles'][0]['name']} to JoeSandbox for analysis..."
             )
-            # Submit the sample to Joe Sandbox
             submission_dict = self.joe_sandbox_client.submit_sample(
                 sample, cookbook=self._cookbook, params=params
             )
@@ -342,13 +159,8 @@ class JoeSandboxConnector:
             raise ValueError(
                 f"Failed to process observable, {observable['entity_type']} is not a supported entity type."
             )
-
         self.helper.log_info(json.dumps(submission_dict, indent=2))
-
-        # Get the submission id
         submission_id = submission_dict["submission_id"]
-
-        # Process submission
         return self._process_submission(observable, submission_id)
 
     def _download_artifact(self, observable):
@@ -369,23 +181,15 @@ class JoeSandboxConnector:
         submission_id: Int representing the submission id
         returns: a str representing a message to return to OpenCTI
         """
-
-        # Wait for all analyses to finish
         submission_dict = self._wait_for_analyses(submission_id)
         self.helper.log_info(json.dumps(submission_dict, indent=2))
-
-        # Process all of the analyses
         bundle_objects = self._process_analyses(
             observable, submission_dict.get("analyses")
         )
-
-        # Set score of the observable
         score = submission_dict.get("most_relevant_analysis").get("score")
         self.helper.api.stix_cyber_observable.update_field(
             id=observable["id"], input={"key": "x_opencti_score", "value": str(score)}
         )
-
-        # Serialize and send bundles
         if bundle_objects:
             bundle = self.helper.stix2_create_bundle(bundle_objects)
             bundles_sent = self.helper.send_stix2_bundle(bundle)
@@ -400,16 +204,11 @@ class JoeSandboxConnector:
         submission_id: An int representing the submission to wait for.
         returns: Submission dict, see https://jbxcloud.joesecurity.org/userguide?sphinxurl=usage%2Fwebapi.html#id3
         """
-
         while True:
-            # Sleep for a second before attempting to check on the analyses
             time.sleep(1)
-
             submission_info = self.joe_sandbox_client.submission_info(submission_id)
-
             if submission_info["status"] != "finished":
                 continue
-
             return submission_info
 
     def _process_analyses(self, observable, analyses):
@@ -421,14 +220,11 @@ class JoeSandboxConnector:
         analyses: a list of dicts containing the analysis info
         """
         bundle_objects = []
-
         for analysis_dict in analyses:
             webid = analysis_dict["webid"]
             threatname = analysis_dict["threatname"]
             detection = analysis_dict["detection"]
-
-            # Attach external reference
-            analysis_url = f"{self._analysis_url}/{webid}"
+            analysis_url = f"{self.config.joe_sandbox.analysis_url}/{webid}"
             external_reference = self.helper.api.external_reference.create(
                 source_name=f"Joe Sandbox Analysis [{detection}-{threatname}-{webid}]",
                 url=analysis_url,
@@ -437,8 +233,6 @@ class JoeSandboxConnector:
             self.helper.api.stix_cyber_observable.add_external_reference(
                 id=observable["id"], external_reference_id=external_reference["id"]
             )
-
-            # Upload the html management report to the external reference files
             if "executive" in self._report_types:
                 try:
                     name, executive_report = self.joe_sandbox_client.analysis_download(
@@ -454,8 +248,6 @@ class JoeSandboxConnector:
                     self.helper.log_info(
                         f"Failed to retrieve html report, exception: {e}"
                     )
-
-            # Upload the html report to the external reference files
             if "html" in self._report_types:
                 try:
                     name, html_report = self.joe_sandbox_client.analysis_download(
@@ -471,10 +263,8 @@ class JoeSandboxConnector:
                     self.helper.log_info(
                         f"Failed to retrieve html report, exception: {e}"
                     )
-
             if "iochtml" in self._report_types:
                 try:
-                    # Upload the iochtml report to the external reference files
                     name, iochtml_report = self.joe_sandbox_client.analysis_download(
                         webid, "iochtml", password=self._encrypt_with_password
                     )
@@ -488,10 +278,8 @@ class JoeSandboxConnector:
                     self.helper.log_info(
                         f"Failed to retrieve iochtml report, exception: {e}"
                     )
-
             if "iocxml" in self._report_types:
                 try:
-                    # Upload the full JSON report to the external reference files
                     name, iocxml = self.joe_sandbox_client.analysis_download(
                         webid, "iocxml", password=self._encrypt_with_password
                     )
@@ -505,10 +293,8 @@ class JoeSandboxConnector:
                     self.helper.log_info(
                         f"Failed to retrieve iocxml report, exception: {e}"
                     )
-
             if "iocjson" in self._report_types:
                 try:
-                    # Upload the iocjson report to the external reference files
                     name, iocjson = self.joe_sandbox_client.analysis_download(
                         webid, "iocjson", password=self._encrypt_with_password
                     )
@@ -523,20 +309,14 @@ class JoeSandboxConnector:
                     self.helper.log_info(
                         f"Failed to retrieve iocjson report, exception: {e}"
                     )
-
-            # Only available in Cloud Pro
             if "json" in self._report_types:
                 try:
                     name, json_report = self.joe_sandbox_client.analysis_download(
                         webid, "json", password=self._encrypt_with_password
                     )
-
-                    # Handle the JSON report
                     bundle_objects = self._process_json_report(
                         self, observable, json_report
                     )
-
-                    # Upload the full JSON report to the external reference files
                     json_report = json.loads(json_report)
                     self.helper.api.external_reference.add_file(
                         id=external_reference["id"],
@@ -548,20 +328,14 @@ class JoeSandboxConnector:
                     self.helper.log_info(
                         f"Failed to retrieve json report, exception: {e}"
                     )
-
-            # Only available in Cloud Pro
             if "lightjsonfixed" in self._report_types:
                 try:
                     name, json_report = self.joe_sandbox_client.analysis_download(
                         webid, "lightjsonfixed", password=self._encrypt_with_password
                     )
-
-                    # Handle the JSON report
                     bundle_objects = self._process_json_report(
                         self, observable, json_report
                     )
-
-                    # Upload the full JSON report to the external reference files
                     json_report = json.loads(json_report)
                     self.helper.api.external_reference.add_file(
                         id=external_reference["id"],
@@ -573,11 +347,8 @@ class JoeSandboxConnector:
                     self.helper.log_info(
                         f"Failed to retrieve lightjsonfixed report, exception: {e}"
                     )
-
-            # Only available in Cloud Pro
             if "xml" in self._report_types:
                 try:
-                    # Upload the full JSON report to the external reference files
                     name, xml = self.joe_sandbox_client.analysis_download(
                         webid, "xml", password=self._encrypt_with_password
                     )
@@ -591,11 +362,8 @@ class JoeSandboxConnector:
                     self.helper.log_info(
                         f"Failed to retrieve xml report, exception: {e}"
                     )
-
-            # Only available in Cloud Pro
             if "lightxml" in self._report_types:
                 try:
-                    # Upload the full JSON report to the external reference files
                     name, lightxml = self.joe_sandbox_client.analysis_download(
                         webid, "lightxml", password=self._encrypt_with_password
                     )
@@ -609,10 +377,8 @@ class JoeSandboxConnector:
                     self.helper.log_info(
                         f"Failed to retrieve lightxml report, exception: {e}"
                     )
-
             if "unpackpe" in self._report_types:
                 try:
-                    # Upload the unpacked PE files zip archive
                     name, unpackpe = self.joe_sandbox_client.analysis_download(
                         webid, "unpackpe", password=self._encrypt_with_password
                     )
@@ -626,10 +392,8 @@ class JoeSandboxConnector:
                     self.helper.log_info(
                         f"Failed to retrieve unpackpe zip, exception: {e}"
                     )
-
             if "stix" in self._report_types:
                 try:
-                    # Upload the stix report
                     name, stix_report = self.joe_sandbox_client.analysis_download(
                         webid, "stix", password=self._encrypt_with_password
                     )
@@ -644,10 +408,8 @@ class JoeSandboxConnector:
                     self.helper.log_info(
                         f"Failed to retrieve stix report, exception: {e}"
                     )
-
             if "ida" in self._report_types:
                 try:
-                    # Upload the ida files
                     name, ida = self.joe_sandbox_client.analysis_download(
                         webid, "ida", password=self._encrypt_with_password
                     )
@@ -659,10 +421,8 @@ class JoeSandboxConnector:
                     )
                 except Exception as e:
                     self.helper.log_info(f"Failed to retrieve ida zip, exception: {e}")
-
             if "misp" in self._report_types:
                 try:
-                    # Upload the misp report
                     name, misp = self.joe_sandbox_client.analysis_download(
                         webid, "misp", password=self._encrypt_with_password
                     )
@@ -676,10 +436,8 @@ class JoeSandboxConnector:
                     self.helper.log_info(
                         f"Failed to retrieve misp report, exception: {e}"
                     )
-
             if "pdf" in self._report_types:
                 try:
-                    # Upload the full pdf report
                     name, pdf = self.joe_sandbox_client.analysis_download(
                         webid, "pdf", password=self._encrypt_with_password
                     )
@@ -693,10 +451,8 @@ class JoeSandboxConnector:
                     self.helper.log_info(
                         f"Failed to retrieve pdf report, exception: {e}"
                     )
-
             if "pdfexecutive" in self._report_types:
                 try:
-                    # Upload the full pdf report
                     name, pdfexecutive = self.joe_sandbox_client.analysis_download(
                         webid, "pdfexecutive", password=self._encrypt_with_password
                     )
@@ -710,10 +466,8 @@ class JoeSandboxConnector:
                     self.helper.log_info(
                         f"Failed to retrieve pdf management (pdfexecutive) report, exception: {e}"
                     )
-
             if "pcap" in self._report_types:
                 try:
-                    # Upload the pcap
                     name, pcap = self.joe_sandbox_client.analysis_download(
                         webid, "pcap", password=self._encrypt_with_password
                     )
@@ -725,10 +479,8 @@ class JoeSandboxConnector:
                     )
                 except Exception as e:
                     self.helper.log_info(f"Failed to retrieve pcap, exception: {e}")
-
             if "pcapsslinspection" in self._report_types:
                 try:
-                    # Upload the pcap
                     name, pcapsslinspection = self.joe_sandbox_client.analysis_download(
                         webid, "pcapsslinspection", password=self._encrypt_with_password
                     )
@@ -742,10 +494,8 @@ class JoeSandboxConnector:
                     self.helper.log_info(
                         f"Failed to retrieve pcapsslinspection, exception: {e}"
                     )
-
             if "pcapunified" in self._report_types:
                 try:
-                    # Upload the pcap
                     name, pcapunified = self.joe_sandbox_client.analysis_download(
                         webid, "pcapunified", password=self._encrypt_with_password
                     )
@@ -759,10 +509,8 @@ class JoeSandboxConnector:
                     self.helper.log_info(
                         f"Failed to retrieve pcapunified, exception: {e}"
                     )
-
             if "maec" in self._report_types:
                 try:
-                    # Upload the maec report
                     name, maec = self.joe_sandbox_client.analysis_download(
                         webid, "maec", password=self._encrypt_with_password
                     )
@@ -776,10 +524,8 @@ class JoeSandboxConnector:
                     self.helper.log_info(
                         f"Failed to retrieve maec report, exception: {e}"
                     )
-
             if "memdumps" in self._report_types:
                 try:
-                    # Upload memory dumps
                     name, memdumps = self.joe_sandbox_client.analysis_download(
                         webid, "memdumps", password=self._encrypt_with_password
                     )
@@ -793,19 +539,14 @@ class JoeSandboxConnector:
                     self.helper.log_info(
                         f"Failed to retrieve memdumps zip, exception: {e}"
                     )
-
         return bundle_objects
 
     def _process_json(self, observable, json_report):
         """
         Handle the json report
         """
-
         bundle_objects = []
         json_report = json_report.get("analysis")
-
-        # Extract any identified Malware Configurations
-        # and create relationship between Note and observable
         malware_configs = json_report.get("malware_configs")
         if malware_configs:
             configs = malware_configs.get("config")
@@ -820,9 +561,6 @@ class JoeSandboxConnector:
                     object_refs=[observable["standard_id"]],
                 )
                 bundle_objects.append(note)
-
-        # Extract any identified Yara rules
-        # apply as labels to the observable
         yara = json_report.get("yara")
         if yara:
             memorydumps = yara.get("memorydumps")
@@ -843,8 +581,6 @@ class JoeSandboxConnector:
                     self.helper.api.stix_cyber_observable.add_label(
                         id=observable["id"], label_id=label["id"]
                     )
-
-        # Extract Domains and create relationship with observable
         domaininfo = json_report.get("domaininfo")
         if domaininfo:
             for domain_dict in domaininfo.get("domain"):
@@ -868,8 +604,6 @@ class JoeSandboxConnector:
                 )
                 bundle_objects.append(domain_stix)
                 bundle_objects.append(relationship)
-
-        # Extract URLs and create relationship with observable
         urlinfo = json_report.get("urlinfo")
         if urlinfo:
             for url_dict in urlinfo.get("url"):
@@ -893,8 +627,6 @@ class JoeSandboxConnector:
                 )
                 bundle_objects.append(url_stix)
                 bundle_objects.append(relationship)
-
-        # Extract IPv4 and create relationship with observable
         ipinfo = json_report.get("ipinfo")
         if ipinfo:
             for ip_dict in ipinfo.get("ip"):
@@ -922,23 +654,11 @@ class JoeSandboxConnector:
                 )
                 bundle_objects.append(ip_stix)
                 bundle_objects.append(relationship)
-
         return bundle_objects
 
     def _process_message(self, data: Dict):
         observable = data["enrichment_entity"]
         return self._process_observable(observable)
 
-    # Start the main loop
-    def start(self):
+    def run(self):
         self.helper.listen(message_callback=self._process_message)
-
-
-if __name__ == "__main__":
-    try:
-        joe_sandbox = JoeSandboxConnector()
-        joe_sandbox.start()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        sys.exit(0)
