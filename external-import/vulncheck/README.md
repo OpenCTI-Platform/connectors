@@ -12,6 +12,7 @@ and more.
 
 ## Table of Contents
 
+<!--toc:start-->
 - [OpenCTI VulnCheck Connector](#opencti-vulncheck-connector)
   - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
@@ -25,8 +26,11 @@ and more.
     - [Manual Deployment](#manual-deployment)
   - [Usage](#usage)
   - [Behavior](#behavior)
+    - [Data Sources](#data-sources)
+    - [Data Volume](#data-volume)
   - [Debugging](#debugging)
-  - [Additional information](#additional-information)
+  - [Additional Information](#additional-information)
+<!--toc:end-->
 
 ## Introduction
 
@@ -232,16 +236,10 @@ logging messages can be added using
 
 ---
 
-## Useful Resources
+## Additional Information
 
 OpenCTI documentation for connectors:
 
 - [OpenCTI Ecosystem](https://filigran.notion.site/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76)
 - [Connectors Deployment](https://docs.opencti.io/latest/deployment/connectors/)
 - [Connectors Development](https://docs.opencti.io/latest/development/connectors/)
-
-## Maintainers
-
-This integration is maintained by:
-
-- [@maddawik](https://github.com/maddawik) - Primary maintainer
