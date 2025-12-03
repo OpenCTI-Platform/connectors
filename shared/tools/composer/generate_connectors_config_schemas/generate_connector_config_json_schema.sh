@@ -204,15 +204,15 @@ fi
 
 echo ""
 echo -e "\033[32mProcessing connector: $CONNECTOR_NAME\033[0m"
-echo "> Looking for a config loader in $CONNECTOR_DIRECTORY"
+echo "> Looking for a config model in $CONNECTOR_DIRECTORY"
 
 requirements_file=$(find_requirements_txt "$CONNECTOR_DIRECTORY")
 if [ -n "$requirements_file" ]; then
     echo "Found requirements.txt: $requirements_file"
     
-    # Check if requirements file contains pydantic-settings
-    if grep -q "pydantic-settings" "$requirements_file"; then
-        echo -e "\033[32mFound pydantic-settings in requirements. Proceeding with schema generation...\033[0m"
+    # Check if requirements file contains pydantic-settings or connectors-sdk dependency
+    if grep -qE "pydantic-settings|connectors-sdk" "$requirements_file"; then
+        echo -e "\033[32mFound pydantic-settings and/or connectors-sdk in requirements. Proceeding with schema generation...\033[0m"
         
         (
             # Activate virtual environment
@@ -260,7 +260,7 @@ if [ -n "$requirements_file" ]; then
         echo ""
         echo -e "\033[32m✅ Schema generation completed for connector: $CONNECTOR_NAME\033[0m"
     else
-        echo -e "\033[33mWarning: pydantic-settings not found in requirements.txt\033[0m"
+        echo -e "\033[33mWarning: pydantic-settings and connectors-sdk not found in requirements.txt\033[0m"
         echo -e "\033[33mThis connector may not support config schema generation.\033[0m"
     fi
 else
