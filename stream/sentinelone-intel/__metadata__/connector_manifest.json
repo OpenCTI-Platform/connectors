@@ -8,8 +8,8 @@
     "SIEM & Analytics",
     "EDR"
   ],
-  "verified": false,
-  "last_verified_date": null,
+  "verified": true,
+  "last_verified_date": "2025-12-04",
   "playbook_supported": false,
   "max_confidence_level": 50,
   "support_version": ">= 6.5.9",
