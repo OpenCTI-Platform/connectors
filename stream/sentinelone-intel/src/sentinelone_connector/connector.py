@@ -1,4 +1,5 @@
 import json
+import logging
 
 from pycti import OpenCTIConnectorHelper
 from sentinelone_connector.settings import ConnectorSettings
@@ -32,14 +33,14 @@ class SentinelOneIntelConnector:
         # Handle the Creation of an Indicator with a stix pattern
         if data["type"] == "indicator" and data["pattern_type"] == "stix":
             if msg.event == "create":
-                self.helper.connector_logger.info(
-                    "[CREATE] Processing indicator",
-                    {
-                        "Indicator ID": self.helper.get_attribute_in_extension(
-                            "id", data
-                        )
-                    },
-                )
+                if self.helper.connector_logger.local_logger.isEnabledFor(logging.INFO):
+                    # `get_attribute_in_extension` can take a while to execute,
+                    # so we check if the logger is enabled for INFO level first
+                    indicator_id = self.helper.get_attribute_in_extension("id", data)
+                    self.helper.connector_logger.info(
+                        "[CREATE] Processing indicator",
+                        {"Indicator ID": indicator_id},
+                    )
 
                 if self.client.create_indicator(data):
                     self.helper.connector_logger.info(
