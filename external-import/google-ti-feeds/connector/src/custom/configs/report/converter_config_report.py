@@ -32,12 +32,8 @@ from connector.src.custom.mappers.gti_iocs.gti_domain_to_stix_domain import (
 from connector.src.custom.mappers.gti_iocs.gti_file_to_stix_file import (
     GTIFileToSTIXFile,
 )
-from connector.src.custom.mappers.gti_iocs.gti_ip_to_stix_ip import (
-    GTIIPToSTIXIP,
-)
-from connector.src.custom.mappers.gti_iocs.gti_url_to_stix_url import (
-    GTIUrlToSTIXUrl,
-)
+from connector.src.custom.mappers.gti_iocs.gti_ip_to_stix_ip import GTIIPToSTIXIP
+from connector.src.custom.mappers.gti_iocs.gti_url_to_stix_url import GTIUrlToSTIXUrl
 from connector.src.custom.mappers.gti_malwares.gti_malware_family_to_stix_composite import (
     GTIMalwareFamilyToSTIXComposite,
 )
@@ -59,31 +55,17 @@ from connector.src.custom.mappers.gti_vulnerabilities.gti_vulnerability_to_stix_
 from connector.src.custom.models.gti.gti_attack_technique_id_model import (
     GTIAttackTechniqueIDData,
 )
-from connector.src.custom.models.gti.gti_campaign_model import (
-    GTICampaignData,
-)
-from connector.src.custom.models.gti.gti_domain_model import (
-    GTIDomainData,
-)
-from connector.src.custom.models.gti.gti_file_model import (
-    GTIFileData,
-)
-from connector.src.custom.models.gti.gti_ip_addresses_model import (
-    GTIIPData,
-)
+from connector.src.custom.models.gti.gti_campaign_model import GTICampaignData
+from connector.src.custom.models.gti.gti_domain_model import GTIDomainData
+from connector.src.custom.models.gti.gti_file_model import GTIFileData
+from connector.src.custom.models.gti.gti_ip_addresses_model import GTIIPData
 from connector.src.custom.models.gti.gti_malware_family_model import (
     GTIMalwareFamilyData,
 )
 from connector.src.custom.models.gti.gti_report_model import GTIReportData
-from connector.src.custom.models.gti.gti_threat_actor_model import (
-    GTIThreatActorData,
-)
-from connector.src.custom.models.gti.gti_url_model import (
-    GTIURLData,
-)
-from connector.src.custom.models.gti.gti_vulnerability_model import (
-    GTIVulnerabilityData,
-)
+from connector.src.custom.models.gti.gti_threat_actor_model import GTIThreatActorData
+from connector.src.custom.models.gti.gti_url_model import GTIURLData
+from connector.src.custom.models.gti.gti_vulnerability_model import GTIVulnerabilityData
 from connector.src.utils.converters.generic_converter_config import (
     GenericConverterConfig,
 )

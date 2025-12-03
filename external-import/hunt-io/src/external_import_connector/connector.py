@@ -143,9 +143,10 @@ class IntelligenceCollector:
         self.helper.connector_logger.info(
             f"{LoggingPrefixes.SEQUENTIAL_BATCH} Phase 1: Creating all STIX objects..."
         )
-        all_objects, entity_metadata = (
-            self.entity_processor.process_entities_objects_phase(entities, batch_size)
-        )
+        (
+            all_objects,
+            entity_metadata,
+        ) = self.entity_processor.process_entities_objects_phase(entities, batch_size)
 
         # Phase 2: Process all relationships using the created objects
         self.helper.connector_logger.info(

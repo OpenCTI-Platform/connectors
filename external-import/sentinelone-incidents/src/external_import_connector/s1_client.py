@@ -16,7 +16,6 @@ INCIDENT_API_LOCATION_TEMPLATE = "/web/api/v2.1/private/threats/{incident_id}/an
 
 
 class SentinelOneClient:
-
     def __init__(self, logger: logging.Logger, config: ConfigConnector):
         self.logger = logger
         self.config = config

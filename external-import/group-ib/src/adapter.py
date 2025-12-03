@@ -19,7 +19,6 @@ from stix2.patterns import HashConstant
 
 
 class DataToSTIXAdapter:
-
     def __init__(self, mitre_mapper, collection, tlp_color, helper, is_ioc=False):
         # type: (dict, str, str, Any, bool) -> None
 

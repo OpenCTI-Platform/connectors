@@ -7,7 +7,6 @@ from malpedia_services.client import MalpediaClient
 
 @pytest.mark.usefixtures("setup_config")
 class TestMalpediaClient:
-
     @pytest.fixture(scope="class")
     def mock_helper(self):
         return Mock()

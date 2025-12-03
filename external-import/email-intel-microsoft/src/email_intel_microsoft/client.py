@@ -8,15 +8,9 @@ from base_connector import BaseClient
 from base_connector.errors import ConnectorError
 from kiota_abstractions.base_request_configuration import RequestConfiguration
 from msgraph import GraphServiceClient
-from msgraph.generated.models.attachment import (
-    Attachment,
-)
-from msgraph.generated.models.file_attachment import (
-    FileAttachment,
-)
-from msgraph.generated.models.message import (
-    Message,
-)
+from msgraph.generated.models.attachment import Attachment
+from msgraph.generated.models.file_attachment import FileAttachment
+from msgraph.generated.models.message import Message
 from msgraph.generated.models.message_collection_response import (
     MessageCollectionResponse,
 )
@@ -31,7 +25,6 @@ logger = logging.getLogger(__name__)
 
 
 class ConnectorClient(BaseClient):
-
     def __init__(
         self,
         tenant_id: str,

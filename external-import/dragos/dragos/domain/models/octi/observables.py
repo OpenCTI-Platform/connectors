@@ -12,11 +12,7 @@ from dragos.domain.models.octi.common import (
     TLPMarking,
 )
 from dragos.domain.models.octi.domain import Indicator
-from dragos.domain.models.octi.enums import (
-    HashAlgorithm,
-    ObservableType,
-    PatternType,
-)
+from dragos.domain.models.octi.enums import HashAlgorithm, ObservableType, PatternType
 from pydantic import AwareDatetime, Field, PositiveInt, field_validator, model_validator
 
 

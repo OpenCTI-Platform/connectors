@@ -4,9 +4,7 @@ import ipaddress
 from datetime import datetime, timezone
 from typing import Any
 
-from connector.src.custom.models.gti.gti_ip_addresses_model import (
-    GTIIPData,
-)
+from connector.src.custom.models.gti.gti_ip_addresses_model import GTIIPData
 from connector.src.stix.octi.models.indicator_model import OctiIndicatorModel
 from connector.src.stix.octi.models.ipv4_address_model import OctiIPv4AddressModel
 from connector.src.stix.octi.models.ipv6_address_model import OctiIPv6AddressModel

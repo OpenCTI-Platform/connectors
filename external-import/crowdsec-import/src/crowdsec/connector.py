@@ -10,11 +10,7 @@ from pycti import Identity, MarkingDefinition, OpenCTIConnectorHelper
 from .client_api import CrowdSecClient
 from .config_loader import CrowdSecConfig
 from .converter_to_stix import CrowdSecBuilder
-from .utils import (
-    get_ip_version,
-    handle_none_cti_value,
-    handle_observable_description,
-)
+from .utils import get_ip_version, handle_none_cti_value, handle_observable_description
 
 
 class CrowdSecImporter:

@@ -7,9 +7,7 @@ from pycti import OpenCTIConnectorHelper
 
 from .api_handler import DefenderApiHandler
 from .config_variables import ConfigConnector
-from .utils import (
-    FILE_HASH_TYPES_MAPPER,
-)
+from .utils import FILE_HASH_TYPES_MAPPER
 
 
 def chunker_list(a, n):

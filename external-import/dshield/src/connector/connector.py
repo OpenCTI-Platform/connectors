@@ -9,7 +9,6 @@ from .converter_to_stix import ConverterToStix
 
 
 class DshieldConnector:
-
     def __init__(self, config: ConfigConnector, helper: OpenCTIConnectorHelper):
         """
         Initialize the Connector with necessary configurations

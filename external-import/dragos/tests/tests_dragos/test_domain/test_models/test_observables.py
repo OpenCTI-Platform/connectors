@@ -5,11 +5,7 @@ from datetime import datetime, timezone
 import pytest
 import stix2
 from dragos.domain.models import octi
-from dragos.domain.models.octi.enums import (
-    ObservableType,
-    PatternType,
-    TLPLevel,
-)
+from dragos.domain.models.octi.enums import ObservableType, PatternType, TLPLevel
 from pydantic import ValidationError
 
 

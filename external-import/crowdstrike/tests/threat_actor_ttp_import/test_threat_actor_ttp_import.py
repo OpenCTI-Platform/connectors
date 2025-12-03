@@ -142,10 +142,12 @@ def test_handle_actors_without_ttps(
     Scenario: Handle actors without TTPs
     """
     # Given the Crowdstrike API returns an actor with no TTP data
-    mock_env, actor_without_ttps, empty_response = (
-        _given_crowdstrike_api_returns_actor_without_ttps(
-            crowdstrike_config_standard, fake_actor_data
-        )
+    (
+        mock_env,
+        actor_without_ttps,
+        empty_response,
+    ) = _given_crowdstrike_api_returns_actor_without_ttps(
+        crowdstrike_config_standard, fake_actor_data
     )
 
     try:

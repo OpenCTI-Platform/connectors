@@ -21,14 +21,7 @@ from .domain import (
     Sector,
     Vulnerability,
 )
-from .observables import (
-    DomainName,
-    File,
-    IPV4Address,
-    IPV6Address,
-    Observable,
-    Url,
-)
+from .observables import DomainName, File, IPV4Address, IPV6Address, Observable, Url
 from .relationships import IndicatorBasedOnObservable
 
 __all__ = [

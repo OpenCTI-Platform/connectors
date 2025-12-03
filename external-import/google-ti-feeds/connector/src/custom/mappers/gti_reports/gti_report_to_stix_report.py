@@ -2,10 +2,7 @@
 
 from datetime import datetime, timezone
 
-from connector.src.custom.models.gti.gti_report_model import (
-    GTIReportData,
-    ReportModel,
-)
+from connector.src.custom.models.gti.gti_report_model import GTIReportData, ReportModel
 from connector.src.stix.octi.models.report_model import OctiReportModel
 from connector.src.stix.v21.models.cdts.external_reference_model import (
     ExternalReferenceModel,

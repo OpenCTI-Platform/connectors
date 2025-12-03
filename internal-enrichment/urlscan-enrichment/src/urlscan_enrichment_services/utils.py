@@ -7,7 +7,6 @@ import requests
 
 
 class UrlscanUtils:
-
     @staticmethod
     def prepare_file_png(data: dict) -> dict | None:
         """

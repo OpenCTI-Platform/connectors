@@ -4,10 +4,7 @@ import logging
 import re
 from typing import Any
 
-from connector.src.custom.configs import (
-    REPORT_BATCH_PROCESSOR_CONFIG,
-    GTIConfig,
-)
+from connector.src.custom.configs import REPORT_BATCH_PROCESSOR_CONFIG, GTIConfig
 from connector.src.custom.convert_to_stix.report.convert_to_stix_report import (
     ConvertToSTIXReport,
 )

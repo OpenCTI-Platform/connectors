@@ -7,7 +7,6 @@ from .config_loader import ConfigConnector
 
 
 class SentinelOneIntelConnector:
-
     def __init__(self, config: ConfigConnector, helper: OpenCTIConnectorHelper):
         """
         Initialize the SentinelOne Intel Connector

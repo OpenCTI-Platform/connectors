@@ -1,7 +1,4 @@
-from pydantic import (
-    Field,
-    PositiveInt,
-)
+from pydantic import Field, PositiveInt
 from src.models.configs.base_settings import ConfigBaseSettings
 
 FT3_TACTICS_URL = (

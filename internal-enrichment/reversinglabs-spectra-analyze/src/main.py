@@ -65,7 +65,6 @@ def handle_spectra_errors(func):
 
 
 class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
-
     def __init__(self):
         super().__init__()
         self._get_config_variables()

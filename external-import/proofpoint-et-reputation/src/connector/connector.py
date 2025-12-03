@@ -22,7 +22,6 @@ class ReputationEntity(Enum):
 
 
 class ProofpointEtReputationConnector:
-
     def __init__(self):
         """
         Initialize the connector with the required configurations.

@@ -115,9 +115,10 @@ class BaseClient(  # noqa: B024 # Even though there is no abstract method, it is
     @retry_options.setter
     def retry_options(self, retry_backoff: tuple[int, "timedelta"]) -> None:
         """Set the retry options."""
-        retry, backoff = (
-            retry_backoff  # Reminder, only 1 arg can be passed to property.setter
-        )
+        (
+            retry,
+            backoff,
+        ) = retry_backoff  # Reminder, only 1 arg can be passed to property.setter
         self._retry_options = ListRetry(
             timeouts=[backoff.total_seconds()] * retry,
             exceptions=(ClientResponseError, ClientConnectionError),

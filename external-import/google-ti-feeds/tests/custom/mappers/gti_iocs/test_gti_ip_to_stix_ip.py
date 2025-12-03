@@ -5,9 +5,7 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from connector.src.custom.mappers.gti_iocs.gti_ip_to_stix_ip import (
-    GTIIPToSTIXIP,
-)
+from connector.src.custom.mappers.gti_iocs.gti_ip_to_stix_ip import GTIIPToSTIXIP
 from connector.src.custom.models.gti.gti_ip_addresses_model import (
     ContributingFactors,
     GTIAssessment,

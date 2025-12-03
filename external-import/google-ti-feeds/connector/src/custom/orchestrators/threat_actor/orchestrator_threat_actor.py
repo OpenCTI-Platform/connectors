@@ -4,10 +4,7 @@ import logging
 import re
 from typing import Any
 
-from connector.src.custom.configs import (
-    THREAT_ACTOR_BATCH_PROCESSOR_CONFIG,
-    GTIConfig,
-)
+from connector.src.custom.configs import THREAT_ACTOR_BATCH_PROCESSOR_CONFIG, GTIConfig
 from connector.src.custom.convert_to_stix.threat_actor.convert_to_stix_threat_actor import (
     ConvertToSTIXThreatActor,
 )

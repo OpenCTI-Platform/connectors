@@ -7,7 +7,6 @@ VENDOR_NAME = "FILIGRAN"
 
 
 class CTIConverter:
-
     def __init__(self, helper, config):
         """
         Init CTI Converter.

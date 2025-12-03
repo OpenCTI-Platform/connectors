@@ -4,12 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional, Tuple
 
 import tldextract
-from pycti import (
-    STIX_EXT_OCTI,
-    STIX_EXT_OCTI_SCO,
-    OpenCTIConnectorHelper,
-    OpenCTIStix2,
-)
+from pycti import STIX_EXT_OCTI, STIX_EXT_OCTI_SCO, OpenCTIConnectorHelper, OpenCTIStix2
 from pymispwarninglists import WarningList, WarningLists
 from src.connector.models import ConfigLoader
 

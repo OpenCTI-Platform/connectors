@@ -274,9 +274,11 @@ class RecordedFutureAlertConnector(threading.Thread):
                     table_markdown.append([key, str(entity[key])])
                 hit_note = hit_note + make_markdown_table(table_markdown)
                 if entity["type"] == "Image":
-                    image_presence, image_data, image_name = (
-                        self.api_recorded_future.get_image_alert(entity["name"])
-                    )
+                    (
+                        image_presence,
+                        image_data,
+                        image_name,
+                    ) = self.api_recorded_future.get_image_alert(entity["name"])
                     if image_presence:
                         external_files.append(
                             {

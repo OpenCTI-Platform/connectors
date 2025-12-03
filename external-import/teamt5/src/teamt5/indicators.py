@@ -7,7 +7,6 @@ NUM_INDICATORS_PER_PAGE = 16
 
 
 class IndicatorHandler:
-
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,

@@ -1,10 +1,7 @@
 """Offer OpenCTI entities."""
 
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
-from connectors_sdk.models.enums import (
-    IndustrySector,
-    Reliability,
-)
+from connectors_sdk.models.enums import IndustrySector, Reliability
 from pycti import Identity as PyctiIdentity
 from pydantic import Field
 from stix2.v21 import Identity as Stix2Identity

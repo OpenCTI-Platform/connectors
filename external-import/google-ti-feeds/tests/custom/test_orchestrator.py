@@ -555,9 +555,7 @@ def _given_orchestrator_with_test_setup(gti_config: DummyConfig, caplog: Any) ->
     logger.setLevel(logging.INFO)
     caplog.set_level(logging.INFO)
 
-    from connector.src.custom.orchestrators.orchestrator import (
-        Orchestrator,
-    )
+    from connector.src.custom.orchestrators.orchestrator import Orchestrator
 
     orchestrator = Orchestrator(
         work_manager=fake_wm,  # type: ignore

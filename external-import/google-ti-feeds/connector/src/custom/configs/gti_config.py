@@ -4,9 +4,7 @@ This module combines all GTI configuration classes from the specialized modules
 into a single GTIConfig class that inherits from all entity-specific configurations.
 """
 
-from connector.src.custom.configs.campaign.gti_config_campaign import (
-    GTICampaignConfig,
-)
+from connector.src.custom.configs.campaign.gti_config_campaign import GTICampaignConfig
 from connector.src.custom.configs.malware.gti_config_malware import GTIMalwareConfig
 from connector.src.custom.configs.report.gti_config_report import GTIReportConfig
 from connector.src.custom.configs.threat_actor.gti_config_threat_actor import (

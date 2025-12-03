@@ -14,11 +14,7 @@ from typing import Dict, Optional
 from pycti import OpenCTIConnectorHelper
 
 from .api_handler import SplunkSoarApiHandler
-from .utils import (
-    get_entity_type,
-    is_incident_entity,
-    is_supported_container_type,
-)
+from .utils import get_entity_type, is_incident_entity, is_supported_container_type
 
 
 class SplunkSoarConnector:
@@ -507,9 +503,12 @@ class SplunkSoarConnector:
             try:
                 # Get item from queue with timeout to check stop signal
                 try:
-                    event_type, entity_data, entity_id, is_incident = (
-                        self.work_queue.get(timeout=1)
-                    )
+                    (
+                        event_type,
+                        entity_data,
+                        entity_id,
+                        is_incident,
+                    ) = self.work_queue.get(timeout=1)
                 except queue.Empty:
                     continue
 

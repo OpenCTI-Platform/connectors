@@ -3,9 +3,7 @@
 from datetime import datetime, timezone
 from typing import Any
 
-from connector.src.custom.models.gti.gti_domain_model import (
-    GTIDomainData,
-)
+from connector.src.custom.models.gti.gti_domain_model import GTIDomainData
 from connector.src.stix.octi.models.domain_model import OctiDomainModel
 from connector.src.stix.octi.models.indicator_model import OctiIndicatorModel
 from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel

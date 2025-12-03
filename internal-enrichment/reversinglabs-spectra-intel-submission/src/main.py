@@ -33,7 +33,6 @@ SLEEP_INTERVAL = 250
 
 
 class ReversingLabsSpectraIntelConnector(InternalEnrichmentConnector):
-
     def __init__(self):
         super().__init__()
         self._get_config_variables()

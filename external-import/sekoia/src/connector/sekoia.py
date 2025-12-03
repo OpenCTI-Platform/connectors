@@ -182,9 +182,10 @@ class SekoiaConnector(object):
 
         if self.import_ioc_relationships:
             # Retrieve all related object to IOC and relationship
-            [all_related_objects, all_relationships] = (
-                self._retrieve_related_objects_and_relationships(items)
-            )
+            [
+                all_related_objects,
+                all_relationships,
+            ] = self._retrieve_related_objects_and_relationships(items)
 
             if self.import_source_list:
                 all_related_objects = self._add_sources_to_items(all_related_objects)

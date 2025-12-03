@@ -14,7 +14,6 @@ from pycti import OpenCTIConnectorHelper
 
 
 class ConverterToStix:
-
     def __init__(self, helper: OpenCTIConnectorHelper):
         """Initializes the `ConverterToStix` class.
 

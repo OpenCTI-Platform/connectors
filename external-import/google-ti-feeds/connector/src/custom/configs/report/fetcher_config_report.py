@@ -4,9 +4,7 @@ This module defines configurations for fetching report entities
 from the Google Threat Intelligence API using the generic fetcher system.
 """
 
-from connector.src.custom.exceptions import (
-    GTIReportFetchError,
-)
+from connector.src.custom.exceptions import GTIReportFetchError
 from connector.src.custom.models.gti.gti_report_model import (
     GTIReportData,
     GTIReportResponse,

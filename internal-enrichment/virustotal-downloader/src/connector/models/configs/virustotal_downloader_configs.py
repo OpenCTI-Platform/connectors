@@ -1,7 +1,4 @@
-from pydantic import (
-    Field,
-    SecretStr,
-)
+from pydantic import Field, SecretStr
 from src.connector.models.configs.base_settings import ConfigBaseSettings
 
 

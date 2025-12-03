@@ -13,12 +13,7 @@ from pycti import (
     StixCoreRelationship,
     get_config_variable,
 )
-from rstcloud import (
-    FeedFetch,
-    FeedType,
-    ThreatTypes,
-    feed_converter,
-)
+from rstcloud import FeedFetch, FeedType, ThreatTypes, feed_converter
 
 
 class RSTThreatFeed:

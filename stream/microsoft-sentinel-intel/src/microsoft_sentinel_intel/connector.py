@@ -5,10 +5,7 @@ import traceback
 from filigran_sseclient.sseclient import Event
 from microsoft_sentinel_intel.client import ConnectorClient
 from microsoft_sentinel_intel.config import ConnectorSettings
-from microsoft_sentinel_intel.errors import (
-    ConnectorError,
-    ConnectorWarning,
-)
+from microsoft_sentinel_intel.errors import ConnectorError, ConnectorWarning
 from microsoft_sentinel_intel.utils import is_stix_indicator
 from pycti import OpenCTIConnectorHelper
 

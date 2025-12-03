@@ -250,7 +250,9 @@ class _ConfigLoaderTAPEnv(ConfigLoaderTAPPort, _BaseLoaderEnv):
         return flag
 
     @property
-    def _events_type(self) -> Optional[
+    def _events_type(
+        self,
+    ) -> Optional[
         Literal[
             "all",
             "issues",
@@ -536,7 +538,9 @@ class _ConfigLoaderTAPConfigYaml(ConfigLoaderTAPPort, _BaseLoaderConfigYaml):
         return flag
 
     @property
-    def _events_type(self) -> Optional[
+    def _events_type(
+        self,
+    ) -> Optional[
         Literal[
             "all",
             "issues",

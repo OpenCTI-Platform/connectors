@@ -9,9 +9,7 @@ from connector.src.custom.exceptions import GTIConfigurationError
 from connector.src.octi.connector import Connector
 from connector.src.octi.global_config import GlobalConfig
 from dotenv import load_dotenv
-from pycti import (  # type: ignore  # Missing library stubs
-    OpenCTIConnectorHelper,
-)
+from pycti import OpenCTIConnectorHelper  # type: ignore  # Missing library stubs
 
 logger = logging.getLogger(__name__)
 

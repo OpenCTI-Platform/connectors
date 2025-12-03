@@ -4,9 +4,7 @@ This module defines configurations for fetching campaign entities
 from the Google Threat Intelligence API using the generic fetcher system.
 """
 
-from connector.src.custom.exceptions import (
-    GTICampaignFetchError,
-)
+from connector.src.custom.exceptions import GTICampaignFetchError
 from connector.src.custom.models.gti.gti_campaign_model import (
     GTICampaignData,
     GTICampaignResponse,

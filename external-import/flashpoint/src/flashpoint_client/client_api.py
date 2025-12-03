@@ -16,7 +16,6 @@ class FlashpointClientError(Exception):
 
 
 class FlashpointClient:
-
     def __init__(
         self,
         api_base_url: str,

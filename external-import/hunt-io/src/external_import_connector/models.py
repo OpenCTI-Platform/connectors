@@ -11,11 +11,7 @@ from pycti import Identity as PyCTIIdentity
 from pycti import Infrastructure as PyCTIInfrastructure
 from pycti import Malware as PyCTIMalware
 
-from .constants import (
-    CustomProperties,
-    NetworkProtocols,
-    UUIDNamespace,
-)
+from .constants import CustomProperties, NetworkProtocols, UUIDNamespace
 from .exceptions import STIXConversionError
 
 

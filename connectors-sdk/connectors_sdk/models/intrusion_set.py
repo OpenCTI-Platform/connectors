@@ -1,10 +1,7 @@
 """IntrusionSet."""
 
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
-from connectors_sdk.models.enums import (
-    AttackMotivation,
-    AttackResourceLevel,
-)
+from connectors_sdk.models.enums import AttackMotivation, AttackResourceLevel
 from pycti import IntrusionSet as PyctiIntrusionSet
 from pydantic import AwareDatetime, Field
 from stix2.v21 import IntrusionSet as Stix2IntrusionSet

@@ -258,10 +258,11 @@ class CofenseThreatHQ:
             for report, report_malware_details, report_pdf in report_details_futures:
                 reports_combined = {"report": report}
 
-                collected_report_malware_details, collected_report_pdf = (
-                    await asyncio.gather(
-                        report_malware_details, report_pdf, return_exceptions=True
-                    )
+                (
+                    collected_report_malware_details,
+                    collected_report_pdf,
+                ) = await asyncio.gather(
+                    report_malware_details, report_pdf, return_exceptions=True
                 )
 
                 report_malware_details = self._handle_errors_tenacity(

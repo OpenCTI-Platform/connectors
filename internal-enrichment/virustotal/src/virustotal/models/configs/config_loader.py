@@ -15,9 +15,7 @@ from virustotal.models.configs.connector_configs import (
     ConfigLoaderConnectorExtra,
     ConfigLoaderOCTI,
 )
-from virustotal.models.configs.virustotal_configs import (
-    ConfigLoaderVirusTotal,
-)
+from virustotal.models.configs.virustotal_configs import ConfigLoaderVirusTotal
 
 
 class ConfigLoaderConnector(ConfigLoaderConnectorExtra):

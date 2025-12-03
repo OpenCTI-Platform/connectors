@@ -12,7 +12,6 @@ from stix2.v21.vocab import MALWARE_TYPE
 
 
 class ConfigConnector:
-
     def __init__(self):
         """
         Initialize the connector with necessary configurations

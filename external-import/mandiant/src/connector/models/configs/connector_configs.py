@@ -3,13 +3,7 @@ from typing import Annotated, Literal
 
 from connector.models.configs import ConfigBaseSettings
 from connectors_sdk.core.pydantic import ListFromString
-from pydantic import (
-    BeforeValidator,
-    Field,
-    HttpUrl,
-    PlainSerializer,
-    field_validator,
-)
+from pydantic import BeforeValidator, Field, HttpUrl, PlainSerializer, field_validator
 
 LogLevelToLower = Annotated[
     Literal["debug", "info", "warn", "warning", "error"],

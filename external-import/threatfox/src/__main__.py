@@ -17,12 +17,7 @@ from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 import stix2
 import validators
-from pycti import (
-    Indicator,
-    Malware,
-    OpenCTIConnectorHelper,
-    StixCoreRelationship,
-)
+from pycti import Indicator, Malware, OpenCTIConnectorHelper, StixCoreRelationship
 from src.models.configs.config_loader import ConfigLoader
 from stix2.base import _Observable as Observable
 

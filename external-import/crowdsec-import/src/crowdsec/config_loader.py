@@ -4,9 +4,7 @@ from pathlib import Path
 import yaml
 from pycti import get_config_variable
 
-from .utils import (
-    clean_config,
-)
+from .utils import clean_config
 
 
 class CrowdSecConfig:

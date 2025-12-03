@@ -4,10 +4,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Optional
 
 from dragos.interfaces.common import DataRetrievalError, FrozenBaseModel
-from pydantic import (
-    Field,
-    ValidationError,
-)
+from pydantic import Field, ValidationError
 
 
 class GeocodingRetrievalError(DataRetrievalError):

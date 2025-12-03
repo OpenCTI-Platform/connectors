@@ -3,9 +3,7 @@
 import logging
 from typing import Any
 
-from connector.src.custom.configs import (
-    GTIConfig,
-)
+from connector.src.custom.configs import GTIConfig
 from connector.src.custom.convert_to_stix.convert_to_stix_base import BaseConvertToSTIX
 
 LOG_PREFIX = "[ConvertToSTIXReport]"

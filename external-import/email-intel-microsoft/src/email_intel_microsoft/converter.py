@@ -3,9 +3,7 @@ from typing import Generator, Literal
 import stix2
 from base_connector import BaseConverter
 from base_connector.models import OpenCTIFile
-from msgraph.generated.models.message import (
-    Message,
-)
+from msgraph.generated.models.message import Message
 from pycti import OpenCTIConnectorHelper
 from stix2.v21.vocab import REPORT_TYPE_THREAT_REPORT
 

@@ -7,11 +7,7 @@ from abc import ABC
 from typing import Any
 
 from connectors_sdk.models.base_object import BaseObject
-from pydantic import (
-    PrivateAttr,
-    computed_field,
-    model_validator,
-)
+from pydantic import PrivateAttr, computed_field, model_validator
 
 
 class BaseIdentifiedObject(BaseObject, ABC):

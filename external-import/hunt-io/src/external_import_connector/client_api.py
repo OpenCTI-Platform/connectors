@@ -10,11 +10,7 @@ from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectTimeout, HTTPError, ReadTimeout, RequestException
 from urllib3.util.retry import Retry
 
-from .constants import (
-    APIConstants,
-    LoggingPrefixes,
-    ProcessingLimits,
-)
+from .constants import APIConstants, LoggingPrefixes, ProcessingLimits
 from .exceptions import APIError, NonRetryableError, RetryableError
 from .models import C2
 

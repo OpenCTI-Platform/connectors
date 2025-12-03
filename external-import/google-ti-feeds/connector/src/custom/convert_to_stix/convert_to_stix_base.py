@@ -3,12 +3,8 @@
 import logging
 from typing import Any, Literal, cast
 
-from connector.src.custom.configs import (
-    GTIConfig,
-)
-from connector.src.custom.configs.converter_config import (
-    CONVERTER_CONFIGS,
-)
+from connector.src.custom.configs import GTIConfig
+from connector.src.custom.configs.converter_config import CONVERTER_CONFIGS
 from connector.src.utils.converters import GenericConverterFactory
 from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
     OrganizationAuthor,

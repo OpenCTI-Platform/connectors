@@ -5,11 +5,7 @@ from typing import Dict
 import pycountry
 import requests
 import stix2
-from pycti import (
-    Location,
-    OpenCTIConnectorHelper,
-    StixCoreRelationship,
-)
+from pycti import Location, OpenCTIConnectorHelper, StixCoreRelationship
 from src import ConfigLoader
 
 

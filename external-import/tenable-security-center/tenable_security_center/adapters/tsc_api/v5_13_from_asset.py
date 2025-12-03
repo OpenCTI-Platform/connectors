@@ -141,7 +141,6 @@ class _CVEAPI(CVEPort):
 
 
 class _CVEsAPI:  # pylint: disable=too-few-public-methods
-
     def __init__(self, tsc_client: TenableSC, logger: "AppLogger", num_threads: int):
         self.logger = logger
         self.client = tsc_client

@@ -5,10 +5,7 @@ from datetime import datetime, timedelta
 from pycti import OpenCTIConnectorHelper  # type: ignore
 from src import ConfigLoader
 from src.services import CVEConverter  # type: ignore
-from src.services.utils import (  # type: ignore
-    MAX_AUTHORIZED,
-    convert_hours_to_seconds,
-)
+from src.services.utils import MAX_AUTHORIZED, convert_hours_to_seconds  # type: ignore
 
 
 class CVEConnector:

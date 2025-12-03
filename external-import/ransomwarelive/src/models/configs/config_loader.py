@@ -5,10 +5,7 @@ from typing import Any
 
 from connectors_sdk.core.pydantic import ListFromString
 from models.configs.base_settings import ConfigBaseSettings
-from models.configs.connector_configs import (
-    _ConfigLoaderConnector,
-    _ConfigLoaderOCTI,
-)
+from models.configs.connector_configs import _ConfigLoaderConnector, _ConfigLoaderOCTI
 from pydantic import Field, model_validator
 from pydantic_settings import (
     BaseSettings,

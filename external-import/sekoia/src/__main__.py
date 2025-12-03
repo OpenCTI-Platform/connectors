@@ -1,10 +1,7 @@
 import traceback
 
 from pycti import OpenCTIConnectorHelper
-from src import (
-    ConfigLoader,
-    SekoiaConnector,
-)
+from src import ConfigLoader, SekoiaConnector
 
 if __name__ == "__main__":
     """

@@ -15,18 +15,10 @@ from connector.src.custom.exceptions import (
 from connector.src.custom.models.gti.gti_attack_technique_model import (
     GTIAttackTechniqueData,
 )
-from connector.src.custom.models.gti.gti_domain_model import (
-    GTIDomainData,
-)
-from connector.src.custom.models.gti.gti_file_model import (
-    GTIFileData,
-)
-from connector.src.custom.models.gti.gti_ip_addresses_model import (
-    GTIIPData,
-)
-from connector.src.custom.models.gti.gti_url_model import (
-    GTIURLData,
-)
+from connector.src.custom.models.gti.gti_domain_model import GTIDomainData
+from connector.src.custom.models.gti.gti_file_model import GTIFileData
+from connector.src.custom.models.gti.gti_ip_addresses_model import GTIIPData
+from connector.src.custom.models.gti.gti_url_model import GTIURLData
 from connector.src.utils.fetchers.generic_fetcher_config import GenericFetcherConfig
 
 GTI_ATTACK_TECHNIQUE_FETCHER_CONFIG = GenericFetcherConfig(

@@ -1,12 +1,6 @@
 from typing import Annotated, Literal
 
-from pydantic import (
-    Field,
-    PlainSerializer,
-    PrivateAttr,
-    SecretStr,
-    model_validator,
-)
+from pydantic import Field, PlainSerializer, PrivateAttr, SecretStr, model_validator
 from virustotal.models.configs.base_settings import ConfigBaseSettings
 
 TLPToLower = Annotated[

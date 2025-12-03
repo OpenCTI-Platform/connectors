@@ -4,9 +4,7 @@ This module defines configurations for fetching threat actor entities
 from the Google Threat Intelligence API using the generic fetcher system.
 """
 
-from connector.src.custom.exceptions import (
-    GTIActorFetchError,
-)
+from connector.src.custom.exceptions import GTIActorFetchError
 from connector.src.custom.models.gti.gti_threat_actor_model import (
     GTIThreatActorData,
     GTIThreatActorResponse,

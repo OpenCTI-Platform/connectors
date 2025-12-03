@@ -54,7 +54,6 @@ BLOCK_OBJ = {
 
 
 class CofenseIntel(CofenseIntegration):
-
     def _get_labels(self, mrti: MalwareThreatReport) -> list:
         labels = []
 

@@ -11,10 +11,7 @@ from connectors_sdk.settings.base_settings import (
     BaseInternalImportFileConnectorConfig,
     BaseStreamConnectorConfig,
 )
-from connectors_sdk.settings.exceptions import (
-    ConfigError,
-    ConfigValidationError,
-)
+from connectors_sdk.settings.exceptions import ConfigError, ConfigValidationError
 
 __all__ = [
     # Base Settings

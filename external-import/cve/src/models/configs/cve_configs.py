@@ -1,8 +1,4 @@
-from pydantic import (
-    Field,
-    PositiveInt,
-    SecretStr,
-)
+from pydantic import Field, PositiveInt, SecretStr
 from src.models.configs import ConfigBaseSettings
 
 

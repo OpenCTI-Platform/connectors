@@ -5,9 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from email_intel_microsoft.client import ConnectorClient
-from msgraph.generated.models.file_attachment import (
-    FileAttachment,
-)
+from msgraph.generated.models.file_attachment import FileAttachment
 
 
 def test_sync_fetch_two_messages_mixed_attachments(

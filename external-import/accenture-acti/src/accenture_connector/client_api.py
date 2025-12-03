@@ -3,7 +3,6 @@ from pycognito import Cognito
 
 
 class ConnectorClient:
-
     def __init__(self, helper, config):
         """
         Initialize the client with necessary configurations

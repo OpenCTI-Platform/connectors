@@ -3,10 +3,7 @@ from typing import Any
 
 from connectors_sdk.core.pydantic import ListFromString
 from models.configs.base_settings import ConfigBaseSettings
-from models.configs.connector_configs import (
-    _ConfigLoaderConnector,
-    _ConfigLoaderOCTI,
-)
+from models.configs.connector_configs import _ConfigLoaderConnector, _ConfigLoaderOCTI
 from models.configs.sparta_configs import _ConfigLoaderSparta
 from pydantic import Field
 from pydantic_settings import (

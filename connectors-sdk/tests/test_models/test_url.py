@@ -1,7 +1,5 @@
 import pytest
-from connectors_sdk.models.url import (
-    URL,
-)
+from connectors_sdk.models.url import URL
 from pydantic import ValidationError
 from stix2.v21 import URL as Stix2URL
 

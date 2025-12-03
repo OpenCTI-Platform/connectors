@@ -9,10 +9,7 @@ from connectors_sdk.models.base_author_entity import BaseAuthorEntity
 from connectors_sdk.models.base_identified_object import BaseIdentifiedObject
 from connectors_sdk.models.external_reference import ExternalReference
 from connectors_sdk.models.tlp_marking import TLPMarking
-from pydantic import (
-    Field,
-    PrivateAttr,
-)
+from pydantic import Field, PrivateAttr
 
 
 class BaseIdentifiedEntity(BaseIdentifiedObject, ABC):

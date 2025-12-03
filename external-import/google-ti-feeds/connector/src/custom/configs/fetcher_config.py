@@ -7,9 +7,7 @@ from the specialized modules.
 from connector.src.custom.configs.campaign.fetcher_config_campaign import (
     CAMPAIGN_FETCHER_CONFIGS,
 )
-from connector.src.custom.configs.fetcher_config_common import (
-    COMMON_FETCHER_CONFIGS,
-)
+from connector.src.custom.configs.fetcher_config_common import COMMON_FETCHER_CONFIGS
 from connector.src.custom.configs.malware.fetcher_config_malware import (
     MALWARE_FETCHER_CONFIGS,
 )

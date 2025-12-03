@@ -5,9 +5,7 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from connector.src.custom.mappers.gti_iocs.gti_url_to_stix_url import (
-    GTIUrlToSTIXUrl,
-)
+from connector.src.custom.mappers.gti_iocs.gti_url_to_stix_url import GTIUrlToSTIXUrl
 from connector.src.custom.models.gti.gti_url_model import (
     ContributingFactors,
     GTIAssessment,

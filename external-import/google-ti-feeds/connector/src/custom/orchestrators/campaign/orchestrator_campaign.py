@@ -4,10 +4,7 @@ import logging
 import re
 from typing import Any
 
-from connector.src.custom.configs import (
-    CAMPAIGN_BATCH_PROCESSOR_CONFIG,
-    GTIConfig,
-)
+from connector.src.custom.configs import CAMPAIGN_BATCH_PROCESSOR_CONFIG, GTIConfig
 from connector.src.custom.convert_to_stix.campaign.convert_to_stix_campaign import (
     ConvertToSTIXCampaign,
 )

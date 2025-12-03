@@ -1,10 +1,6 @@
 from typing import Annotated, Literal
 
-from pydantic import (
-    Field,
-    PlainSerializer,
-    SecretStr,
-)
+from pydantic import Field, PlainSerializer, SecretStr
 from src.connector.models.configs.base_settings import ConfigBaseSettings
 
 TLPToLower = Annotated[

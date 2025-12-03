@@ -11,9 +11,7 @@ from connector.src.custom.exceptions.connector_errors.gti_work_processing_error 
 from connector.src.custom.exceptions.gti_configuration_error import (
     GTIConfigurationError,
 )
-from connector.src.custom.orchestrators.orchestrator import (
-    Orchestrator,
-)
+from connector.src.custom.orchestrators.orchestrator import Orchestrator
 from connector.src.octi.work_manager import WorkManager
 
 if TYPE_CHECKING:
