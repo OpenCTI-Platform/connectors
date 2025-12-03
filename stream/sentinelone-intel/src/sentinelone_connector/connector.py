@@ -15,20 +15,6 @@ class SentinelOneIntelConnector:
         self.helper = helper
         self.client = SentinelOneClient(config, helper)
 
-    def check_stream_id(self) -> None:
-        """
-        In case of stream_id configuration is missing, raise Value Error
-        :return: None
-        """
-        if (
-            self.helper.connect_live_stream_id is None
-            or self.helper.connect_live_stream_id == "CHANGEME"
-        ):
-            self.helper.connector_logger.error(
-                "[CONFIG] Missing stream ID configuration"
-            )
-            raise ValueError("Missing stream ID, please check your configurations.")
-
     def process_message(self, msg) -> None:
         """
         Main process if connector successfully works.
@@ -38,10 +24,6 @@ class SentinelOneIntelConnector:
         :param msg: Message event from stream containing event data
         :return: None
         """
-
-        # Check stream_id configuration, ensuring Exception can propagate
-        self.check_stream_id()
-
         try:
             data = json.loads(msg.data)["data"]
         except Exception as e:
