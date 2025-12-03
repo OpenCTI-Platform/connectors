@@ -1,7 +1,7 @@
+from internal_enrichment_connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
 from .client_api import ConnectorClient
-from .config_variables import ConfigConnector
 from .converter_to_stix import ConverterToStix
 from .utils import is_cve_format
 
@@ -42,21 +42,14 @@ class FirstEPSSConnector:
 
     """
 
-    def __init__(self):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """
         Initialize the Connector with necessary configurations
         """
-
-        # Load configuration file and connection helper
-        self.config = ConfigConnector()
-        # playbook_compatible=True only if a bundle is sent !
-        self.helper = OpenCTIConnectorHelper(
-            config=self.config.load, playbook_compatible=True
-        )
-        self.api = ConnectorClient(self.helper, self.config)
+        self.config = config
+        self.helper = helper
+        self.api = ConnectorClient(self.helper, self.config.first_epss.api_base_url)
         self.converter_to_stix = ConverterToStix(self.helper)
-
-        # Define variables
         self.author = None
         self.tlp = None
         self.stix_objects_list = []
@@ -67,34 +60,25 @@ class FirstEPSSConnector:
         :param cve_name: CVE to collect intelligence from
         :return: List of STIX objects
         """
-
         self.helper.connector_logger.info("[CONNECTOR] Starting enrichment...")
-
         self.author = self.converter_to_stix.create_author()
-
         enrichment_response = self.api.get_entity({"cve": cve_name})
         enrichment_infos = enrichment_response["data"]
-
         stix_objects = []
-
         for info in enrichment_infos:
             cve_name = info["cve"]
             epss_score = float(info["epss"])
             epss_percentile = float(info["percentile"])
-
             vulnerability_stix_object = self.converter_to_stix.create_vulnerability(
                 {
                     "name": cve_name,
                     "x_opencti_epss_score": epss_score,
                     "x_opencti_epss_percentile": epss_percentile,
-                },
+                }
             )
-
             stix_objects.append(vulnerability_stix_object)
-
         if stix_objects:
             stix_objects.append(self.author)
-
         return stix_objects
 
     def _process_submission(self, vulnerability: dict) -> list:
@@ -103,17 +87,13 @@ class FirstEPSSConnector:
         :param vulnerability: dict of vulnerability to enrich
         :return: List of sent bundles
         """
-
         stix_objects = self._collect_intelligence(vulnerability["name"])
-
         if stix_objects:
             self.stix_objects_list.extend(stix_objects)
-
             stix_objects_bundle = self.helper.stix2_create_bundle(
                 self.stix_objects_list
             )
             bundles_sent = self.helper.send_stix2_bundle(stix_objects_bundle)
-
             return bundles_sent
 
     def is_entity_in_scope(self, data) -> bool:
@@ -122,10 +102,8 @@ class FirstEPSSConnector:
         :param data: Dictionary of data
         :return: boolean
         """
-
         scopes = self.helper.connect_scope.lower().replace(" ", "").split(",")
         entity_type = data["type"].lower()
-
         return entity_type in scopes
 
     def extract_and_check_markings(self, opencti_entity: dict) -> None:
@@ -136,18 +114,16 @@ class FirstEPSSConnector:
         :param opencti_entity: Dict of vulnerability from OpenCTI
         :return: Boolean
         """
-
         if len(opencti_entity["objectMarking"]) != 0:
             for marking_definition in opencti_entity["objectMarking"]:
                 if marking_definition["definition_type"] == "TLP":
                     self.tlp = marking_definition["definition"]
-
-        valid_max_tlp = self.helper.check_max_tlp(self.tlp, self.config.max_tlp)
-
+        valid_max_tlp = self.helper.check_max_tlp(
+            self.tlp, self.config.first_epss.max_tlp
+        )
         if not valid_max_tlp:
             raise ValueError(
-                "[CONNECTOR] Do not send any data, TLP of the observable is greater than MAX TLP,"
-                "the connector does not has access to this observable, please check the group of the connector user"
+                "[CONNECTOR] Do not send any data, TLP of the observable is greater than MAX TLP,the connector does not has access to this observable, please check the group of the connector user"
             )
 
     def process_message(self, data: dict) -> str:
@@ -158,18 +134,13 @@ class FirstEPSSConnector:
         :param data: dict of data to process
         :return: string
         """
-
         try:
             self.stix_objects_list = data["stix_objects"]
-
             stix_entity = data["stix_entity"]
             opencti_entity = data["enrichment_entity"]
-
             self.extract_and_check_markings(opencti_entity)
-
             info_msg = "[CONNECTOR] Processing vulnerability for the following CVE identifier: "
             self.helper.connector_logger.info(info_msg, {"cve": stix_entity["name"]})
-
             if self.is_entity_in_scope(stix_entity) and is_cve_format(
                 stix_entity["name"]
             ):
@@ -184,18 +155,14 @@ class FirstEPSSConnector:
                     )
                 else:
                     info_msg = "[CONNECTOR] No information found"
-
             else:
                 info_msg = (
                     "[CONNECTOR] Skip the following entity as it does not concern "
                     + "the initial scope found in the connector config: "
                     + str({"entity_id": stix_entity["id"]})
                 )
-
             self.helper.connector_logger.info(info_msg)
-
             return info_msg
-
         except Exception as err:
             return self.helper.connector_logger.error(
                 "[CONNECTOR] Unexpected Error occurred", {"error_message": str(err)}
