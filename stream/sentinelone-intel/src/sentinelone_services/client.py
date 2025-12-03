@@ -2,6 +2,8 @@ import re
 import time
 
 import requests
+from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
+from sentinelone_connector.settings import ConnectorSettings
 
 # The suffix to be appended to a base URL for a POST request of IOCs to S1
 IOC_ENDPOINT_URL = "/web/api/v2.1/threat-intelligence/iocs/stix"
@@ -19,14 +21,15 @@ SUPPORTED_STIX_PATTERNS = [
 
 
 class SentinelOneClient:
-    def __init__(self, config, helper) -> None:
-
-        self.config = config
+    def __init__(
+        self, config: ConnectorSettings, helper: OpenCTIConnectorHelper
+    ) -> None:
+        self.config = config.sentinelone_intel
         self.helper = helper
 
         self.session = requests.Session()
         headers = {
-            "Authorization": f"APIToken {self.config.api_key}",
+            "Authorization": f"APIToken {self.config.api_key.get_secret_value()}",
             "Content-Type": "application/json",
         }
         self.session.headers.update(headers)
@@ -73,12 +76,14 @@ class SentinelOneClient:
         payload = {"bundle": {"objects": [indicator]}, "filter": {"tenant": "false"}}
 
         # Add scope filters based on the configuration combination
-        if self.config.account_id is not None:
-            payload["filter"]["accountIds"] = [self.config.account_id]
-        if self.config.group_id is not None:
-            payload["filter"]["groupIds"] = [self.config.group_id]
-        if self.config.site_id is not None:
-            payload["filter"]["siteIds"] = [self.config.site_id]
+        if (account_id := self.config.account_id) is not None:
+            payload["filter"]["accountIds"] = [account_id]
+
+        if (group_id := self.config.group_id) is not None:
+            payload["filter"]["groupIds"] = [group_id]
+
+        if (site_id := self.config.site_id) is not None:
+            payload["filter"]["siteIds"] = [site_id]
 
         return payload
 
@@ -95,7 +100,7 @@ class SentinelOneClient:
         request_attempts = 3
         backoff_factor = 5
 
-        url = self.config.api_url + IOC_ENDPOINT_URL
+        url = f"{self.config.api_url}{IOC_ENDPOINT_URL}"
 
         for attempt in range(request_attempts):
             try:
