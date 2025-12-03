@@ -1,3 +1,7 @@
+"""
+Client module for the SentinelOne services API
+"""
+
 import re
 import time
 
@@ -8,10 +12,16 @@ from sentinelone_connector.settings import ConnectorSettings
 # The suffix to be appended to a base URL for a POST request of IOCs to S1
 IOC_ENDPOINT_URL = "/web/api/v2.1/threat-intelligence/iocs/stix"
 
-"""
-SentinelOne can only accept Patterns with single elements of the types: File hashes (MD5, SHA1, SHA256),
-Domain names, URLs IPv4 addresses. Such regex patterns allow the connector to thus filter for valid Indicators. More details can be found in the connector's documentation. 
-"""
+
+# SentinelOne can only accept Patterns with single elements of the types:
+#   - File hashes (MD5, SHA1, SHA256)
+#   - Domain names
+#   - URLs
+#   - IPv4 addresses
+#
+# Such regex patterns allow the connector to thus filter for valid Indicators.
+# More details can be found in the connector's documentation.
+
 SUPPORTED_STIX_PATTERNS = [
     re.compile(r"^\s*\[file:hashes\.(MD5|SHA1|SHA256)\s*=\s*\'[^\']+\'\s*\]\s*$"),
     re.compile(r"^\s*\[domain-name:value\s*=\s*\'[^\']+\'\s*\]\s*$"),
@@ -21,9 +31,19 @@ SUPPORTED_STIX_PATTERNS = [
 
 
 class SentinelOneClient:
+    """
+    Client class for the SentinelOne API
+    """
+
     def __init__(
         self, config: ConnectorSettings, helper: OpenCTIConnectorHelper
     ) -> None:
+        """
+        Initialize the SentinelOne client
+
+        :param config: Connector settings
+        :param helper: OpenCTI connector helper
+        """
         self.config = config.sentinelone_intel
         self.helper = helper
 
