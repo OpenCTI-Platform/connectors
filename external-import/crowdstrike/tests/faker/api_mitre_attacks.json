@@ -1,0 +1,28 @@
+{
+  "errors": [],
+  "meta": {
+    "powered_by": "msa-api",
+    "query_time": 0.13005394,
+    "trace_id": "52d35a5e-b307-4cb2-9302-20395cf3c4de"
+  },
+  "resources": [
+    "scion-spider_TA0001_T1190",
+    "scion-spider_TA0002_T1047",
+    "scion-spider_TA0002_T1059.001",
+    "scion-spider_TA0002_T1059.003",
+    "scion-spider_TA0002_T1059.005",
+    "scion-spider_TA0003_T1136",
+    "scion-spider_TA0003_T1505",
+    "scion-spider_TA0004_T1068",
+    "scion-spider_TA0005_T1027",
+    "scion-spider_TA0005_T1562.001",
+    "scion-spider_TA0005_T1562.004",
+    "scion-spider_TA0006_T1003.001",
+    "scion-spider_TA0007_T1082",
+    "scion-spider_TA0008_T1021.002",
+    "scion-spider_TA0008_T1570",
+    "scion-spider_TA0011_T1105",
+    "scion-spider_TA0011_T1219",
+    "scion-spider_TA0040_T1486"
+  ]
+}

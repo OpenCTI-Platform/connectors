@@ -2,7 +2,7 @@
 """OpenCTI CrowdStrike report importer module."""
 
 from datetime import datetime
-from typing import Any, Dict, Generator, List, Mapping, Optional
+from typing import Any, Generator, List, Mapping, Optional
 
 from crowdstrike_feeds_services.client.indicators import IndicatorsAPI
 from crowdstrike_feeds_services.client.reports import ReportsAPI
@@ -29,8 +29,6 @@ class ReportImporter(BaseImporter):
 
     _LATEST_REPORT_TIMESTAMP = "latest_report_timestamp"
 
-    _GUESS_NOT_A_MALWARE = "GUESS_NOT_A_MALWARE"
-
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
@@ -42,6 +40,7 @@ class ReportImporter(BaseImporter):
         report_status: int,
         report_type: str,
         guess_malware: bool,
+        report_guess_relations: bool,
         indicator_config: dict,
         no_file_trigger_import: bool,
     ) -> None:
@@ -55,21 +54,16 @@ class ReportImporter(BaseImporter):
         self.report_status = report_status
         self.report_type = report_type
         self.guess_malware = guess_malware
+        self.report_guess_relations = report_guess_relations
         self.indicators_api_cs = IndicatorsAPI(helper)
         self.indicator_config = indicator_config
         self.no_file_trigger_import = no_file_trigger_import
 
-        self.malware_guess_cache: Dict[str, str] = {}
-
-    def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
-        """Run importer."""
+    def run(self, state: dict[str, Any]) -> dict[str, Any]:
         self._info(
-            "Running report importer (guess malware: {0}) with state: {1}...",  # noqa: E501
-            self.guess_malware,
+            "Running report importer with state: {0}...",  # noqa: E501
             state,
         )
-
-        self._clear_malware_guess_cache()
 
         fetch_timestamp = state.get(
             self._LATEST_REPORT_TIMESTAMP, self.default_latest_timestamp
@@ -103,9 +97,6 @@ class ReportImporter(BaseImporter):
         )
 
         return {self._LATEST_REPORT_TIMESTAMP: latest_report_timestamp}
-
-    def _clear_malware_guess_cache(self):
-        self.malware_guess_cache.clear()
 
     def _fetch_reports(self, start_timestamp: int) -> Generator[List, None, None]:
         limit = 30
@@ -254,9 +245,22 @@ class ReportImporter(BaseImporter):
                             "indicator_unwanted_labels"
                         ],
                     )
-                    bundle_builder = IndicatorBundleBuilder(
-                        self.helper, bundle_builder_config
-                    )
+                    try:
+                        bundle_builder = IndicatorBundleBuilder(
+                            self.helper, bundle_builder_config
+                        )
+                    except TypeError as err:
+                        self.helper.connector_logger.warning(
+                            "Skipping unsupported indicator type for report.",
+                            {
+                                "report_name": report_name,
+                                "indicator_id": indicator.get("id"),
+                                "indicator_type": indicator.get("type"),
+                                "indicator_value": indicator.get("indicator"),
+                                "error": str(err),
+                            },
+                        )
+                        continue
                     indicator_bundle_built = bundle_builder.build()
                     if indicator_bundle_built:
                         indicator_with_related_entities = indicator_bundle_built[
@@ -295,12 +299,7 @@ class ReportImporter(BaseImporter):
         report_status = self.report_status
         report_type = self.report_type
         confidence_level = self._confidence_level()
-        guessed_malwares: Mapping[str, str] = {}
         related_indicators_with_related_entities = []
-
-        tags = report["tags"]
-        if tags is not None:
-            guessed_malwares = self._guess_malwares_from_tags(tags)
 
         report_slug = report["slug"]
         if report_slug is not None:
@@ -308,6 +307,8 @@ class ReportImporter(BaseImporter):
             related_indicators_with_related_entities = self._get_related_iocs(
                 report_name
             )
+
+        malwares_from_field = report.get("malware", [])
 
         bundle_builder = ReportBundleBuilder(
             report,
@@ -317,12 +318,14 @@ class ReportImporter(BaseImporter):
             report_status,
             report_type,
             confidence_level,
-            guessed_malwares,
             report_file,
             related_indicators_with_related_entities,
+            self.report_guess_relations,
+            malwares_from_field=malwares_from_field,
         )
         return bundle_builder.build()
 
+    # MVP2
     def _guess_malwares_from_tags(self, tags: List) -> Mapping[str, str]:
         if not self.guess_malware:
             return {}

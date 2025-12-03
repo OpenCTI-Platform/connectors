@@ -1,0 +1,16 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'ESET ETI Report Enrichment Connector'
+  scope: 'report'
+  log_level: 'info'
+  auto: true
+
+eset:
+  api_key: 'ChangeMe'
+  api_secret: 'ChangeMe'
+  api_host: 'https://eti.eset.com/'

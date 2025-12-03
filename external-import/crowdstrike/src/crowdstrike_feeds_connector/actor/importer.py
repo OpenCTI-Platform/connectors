@@ -8,6 +8,7 @@ from typing import Any, Dict, Generator, List, Optional
 from crowdstrike_feeds_services.client.actors import ActorsAPI
 from crowdstrike_feeds_services.client.indicators import IndicatorsAPI
 from crowdstrike_feeds_services.utils import (
+    create_attack_pattern,
     datetime_to_timestamp,
     paginate,
     timestamp_to_datetime,
@@ -237,9 +238,22 @@ class ActorImporter(BaseImporter):
                             "indicator_unwanted_labels"
                         ],
                     )
-                    bundle_builder = IndicatorBundleBuilder(
-                        self.helper, bundle_builder_config
-                    )
+                    try:
+                        bundle_builder = IndicatorBundleBuilder(
+                            self.helper, bundle_builder_config
+                        )
+                    except TypeError as err:
+                        self.helper.connector_logger.warning(
+                            "Skipping unsupported indicator type for actor.",
+                            {
+                                "actor_name": actor_name,
+                                "indicator_id": indicator.get("id"),
+                                "indicator_type": indicator.get("type"),
+                                "indicator_value": indicator.get("indicator"),
+                                "error": str(err),
+                            },
+                        )
+                        continue
                     indicator_bundle_built = bundle_builder.build()
                     if indicator_bundle_built:
                         indicator_with_related_entities = indicator_bundle_built[
@@ -299,6 +313,8 @@ class ActorImporter(BaseImporter):
                     actor_name,
                 )
 
+        attack_patterns = self._get_and_create_attack_patterns(actor)
+
         bundle_builder = ActorBundleBuilder(
             actor,
             author,
@@ -306,5 +322,63 @@ class ActorImporter(BaseImporter):
             object_marking_refs,
             confidence_level,
             related_indicators_with_related_entities,
+            attack_patterns,
         )
         return bundle_builder.build()
+
+    def _get_and_create_attack_patterns(self, actor) -> List:
+        """Get MITRE ATT&CK TTPs and create AttackPattern entities."""
+        try:
+            actor_id = actor["id"]
+            actor_name = actor["name"]
+
+            self._info(
+                "Fetching MITRE ATT&CK TTPs for actor: {0} (ID: {1})",
+                actor_name,
+                actor_id,
+            )
+
+            ttps_response = self.actors_api_cs.query_mitre_attacks(actor_id)
+            ttp_ids = ttps_response.get("resources", [])
+
+            if not ttp_ids:
+                self._info("No TTPs found for actor: {0}", actor_name)
+                return []
+
+            self._info("Retrieved {0} TTPs for actor: {1}", len(ttp_ids), actor_name)
+
+            technique_ids = {
+                ttp_id.split("_")[2]
+                for ttp_id in ttp_ids
+                if "_" in ttp_id
+                and len(ttp_id.split("_")) >= 3
+                and ttp_id.split("_")[2].startswith("T")
+            }
+
+            attack_patterns = [
+                create_attack_pattern(
+                    name=technique_id,
+                    mitre_id=technique_id,
+                    created_by=self.author,
+                    object_markings=[self.tlp_marking],
+                )
+                for technique_id in technique_ids
+            ]
+
+            self._info(
+                "Created {0} AttackPattern entities for actor: {1}",
+                len(attack_patterns),
+                actor_name,
+            )
+            return attack_patterns
+
+        except Exception as err:
+            self.helper.connector_logger.error(
+                "[ERROR] Failed to retrieve and process TTPs for actor.",
+                {
+                    "error": err,
+                    "actor_id": actor.get("id"),
+                    "actor_name": actor.get("name"),
+                },
+            )
+            return []

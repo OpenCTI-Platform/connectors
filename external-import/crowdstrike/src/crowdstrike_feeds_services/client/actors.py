@@ -2,7 +2,6 @@ from .base_api import BaseCrowdstrikeClient
 
 
 class ActorsAPI(BaseCrowdstrikeClient):
-
     def __init__(self, helper):
         super().__init__(helper)
 
@@ -26,5 +25,21 @@ class ActorsAPI(BaseCrowdstrikeClient):
 
         self.handle_api_error(response)
         self.helper.connector_logger.info("Getting combined actor entities...")
+
+        return response["body"]
+
+    def query_mitre_attacks(self, actor_id: int):
+        """
+        Query MITRE ATT&CK techniques associated with a specific threat actor.
+        :param actor_id: The ID for the threat actor
+        :return: Dict object containing API response with TTP data in format:
+                 {'errors': [], 'meta': {...}, 'resources': ['actor_TA0001_T1190', ...]}
+        """
+        response = self.cs_intel.query_mitre_attacks(id=str(actor_id))
+
+        self.handle_api_error(response)
+        self.helper.connector_logger.info(
+            f"Getting MITRE attacks for actor ID: {actor_id}..."
+        )
 
         return response["body"]
