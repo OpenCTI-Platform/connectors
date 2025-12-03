@@ -112,8 +112,14 @@ class LivehuntBuilder:
 
         files_iterator = self.client.iterator(url, params=params, limit=self.limit)
 
-        for vtobj in files_iterator:
+        counter = 0
 
+        self.helper.connector_logger.info("Starting processing of VT Livehunt notifications")
+
+        for vtobj in files_iterator:
+            
+            counter += 1
+            
             if self.delete_notification:
                 self.delete_livehunt_notification(vtobj.id)
 
@@ -190,6 +196,8 @@ class LivehuntBuilder:
                 if work_id is None:
                     work_id = self.initiate_work(timestamp)
                 self.send_bundle(work_id)
+
+        self.helper.connector_logger.info(f"Processing done for {counter} VT objects.")
 
     def artifact_exists_opencti(self, sha256: str) -> bool:
         """
