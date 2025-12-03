@@ -1,9 +1,9 @@
 """
 This script is used for generating a JSON schema model purpose.
-Make sure to define or import ConfigLoader and ensure it is compatible (e.g., a Pydantic model).
+Make sure to define or import ConfigLoader or ConnectorSettings and ensure it is compatible (i.e. a Pydantic model).
 The code assumes that the __metadata__ directory exists and contains the necessary JSON files.
 All methods are documented for clarity and maintainability.
-The print statement in create_connector_config_json_schema provides positive feedback when the contract is generated.
+The print statement in create_config_json_schema provides positive feedback when the contract is generated.
 The connector configuration MUST use `pydantic` or `pydantic-settings` Python libraries.
 """
 
@@ -15,6 +15,7 @@ import traceback
 from copy import deepcopy
 from typing import override
 
+from pydantic import BaseModel
 from pydantic.json_schema import GenerateJsonSchema
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
@@ -28,8 +29,11 @@ __FILTERED_ATTRIBUTES__ = [
     "CONNECTOR_ID",
 ]
 
-def get_connector_config_schema_generator(connector_name: str) -> GenerateJsonSchema:
-    class ConnectorConfigSchemaGenerator(GenerateJsonSchema):
+
+def get_connector_config_schema_generator(
+    connector_name: str,
+) -> type[GenerateJsonSchema]:
+    class GenerateConnectorConfigJsonSchema(GenerateJsonSchema):
         @staticmethod
         def dereference_schema(schema_with_refs):
             """Return a new schema with all internal $ref resolved."""
@@ -100,7 +104,15 @@ def get_connector_config_schema_generator(connector_name: str) -> GenerateJsonSc
             for filtered_attribute in __FILTERED_ATTRIBUTES__:
                 if filtered_attribute in schema["properties"]:
                     del schema["properties"][filtered_attribute]
-                    schema.update({ "required": [item for item in schema["required"] if item != filtered_attribute] })
+                    schema.update(
+                        {
+                            "required": [
+                                item
+                                for item in schema["required"]
+                                if item != filtered_attribute
+                            ]
+                        }
+                    )
 
             return schema
 
@@ -137,31 +149,54 @@ def get_connector_config_schema_generator(connector_name: str) -> GenerateJsonSc
             else:
                 return inner_json_schema
 
-    return ConnectorConfigSchemaGenerator
+    return GenerateConnectorConfigJsonSchema
 
 
-class ConnectorContractGenerator:
+class ConnectorConfigJsonSchemaBuilder:
     """
-    Specifications of the generator
+    Specifications of the build
 
-    This class encapsulates the main actions to generate a connector contract.
+    This class encapsulates the main actions to build a connector config JSON Schema.
     """
 
     def __init__(self):
+        try:
+            # Try with ConfigLoader first
+            self.config_model = self._load_config_loader()
+        except ImportError:
+            # If not found, try with ConnectorSettings
+            self.config_model = self._load_connector_settings()
+
+        self.connector_name = os.path.basename(os.path.dirname(__file__))
+        self._create_metadata_directory()
+
+    @staticmethod
+    def _load_config_loader() -> BaseModel:
         try:  # Import from a packaged connector (with `src/__main__.py`)
             from src import ConfigLoader
+
+            return ConfigLoader
         except ImportError as err:
             try:  # Import from a connector following our templates (with `src/main.py`)
                 from src.main import ConfigLoader
-            except ImportError:
-                raise err
 
-        self.connector_name = os.path.basename(os.path.dirname(__file__))
-        self.connector_config_loader = (
-            ConfigLoader  # Should be a Pydantic model or config loader
-        )
+                return ConfigLoader
+            except ImportError as e:
+                raise e from err
 
-        self._create_metadata_directory()
+    @staticmethod
+    def _load_connector_settings() -> BaseModel:
+        try:  # Import from a packaged connector (with `src/__main__.py`)
+            from src import ConnectorSettings
+
+            return ConnectorSettings
+        except ImportError as err:
+            try:  # Import from a connector following our templates (with `src/main.py`)
+                from src.main import ConnectorSettings
+
+                return ConnectorSettings
+            except ImportError as e:
+                raise e from err
 
     @staticmethod
     def _create_metadata_directory():
@@ -178,7 +213,7 @@ class ConnectorContractGenerator:
             else:
                 raise
 
-    def generate_connector_config_schema(self):
+    def build_config_schema(self):
         """
         Generates the complete connector schema using a custom schema generator compatible with Pydantic.
         Isolate custom class generator, Pydantic expects a class, not an instance
@@ -187,17 +222,17 @@ class ConnectorContractGenerator:
         """
         schema_generator = get_connector_config_schema_generator(self.connector_name)
 
-        return self.connector_config_loader.model_json_schema(
+        return self.config_model.model_json_schema(
             by_alias=False,
             schema_generator=schema_generator,
             mode="validation",
         )
 
-    def create_connector_config_json_schema(self):
+    def create_config_json_schema(self):
         """
         Generates the connector contract and writes it to a JSON file.
         """
-        connector_config_json_schema = self.generate_connector_config_schema()
+        config_json_schema = self.build_config_schema()
 
         filepath = os.path.join(
             os.path.dirname(__file__),
@@ -205,10 +240,8 @@ class ConnectorContractGenerator:
             __CONNECTOR_CONFIG_JSON_SCHEMA_FILENAME__,
         )
         with open(filepath, "w") as file:
-            connector_config_json_schema_json = json.dumps(
-                connector_config_json_schema, indent=2
-            )
-            file.write(connector_config_json_schema_json)
+            config_json_schema_json = json.dumps(config_json_schema, indent=2)
+            file.write(config_json_schema_json)
 
         print(f"✅ Connector config JSON schema written to {filepath}")
 
@@ -218,8 +251,8 @@ if __name__ == "__main__":
     Entry point of the script
     """
     try:
-        connector_config_json_schema_generator = ConnectorContractGenerator()
-        connector_config_json_schema_generator.create_connector_config_json_schema()
+        connector_config_json_schema_builder = ConnectorConfigJsonSchemaBuilder()
+        connector_config_json_schema_builder.create_config_json_schema()
     except Exception:
         traceback.print_exc()
         exit(1)

@@ -58,9 +58,7 @@ deactivate_venv() {
     rm -rf "$1"
 }
 
-# Find all parents directory of connector with config loader
-# printf action with the %h format specifier, which prints the directory part (parent directory) of the file path
-# (macOS/Bash 3.2 fix: replace unsupported -printf with sed)
+# Find all parents directory of connector with __metadata__ directory
 connector_directories_path=$(find . -type d -name "$CONNECTOR_METADATA_DIRECTORY" | sed 's:/*'"$CONNECTOR_METADATA_DIRECTORY"'$::' | sort -u)
 
 # Loop in each connector directory with infos and regenerate JSON schema if changed
@@ -81,10 +79,10 @@ do
       echo "Connector is not supported: " "$connector_directory_path"
     else
       echo "Changes in: " "$connector_directory_path"
-      echo "> Looking for a config loader in " "$connector_directory_path"
+      echo "> Looking for a config model in " "$connector_directory_path"
       requirements_file=$(find_requirements_txt "$connector_directory_path")
       echo "Found requirements.txt: " "$requirements_file"
-      if [ -f "$requirements_file" ] && grep -q "pydantic-settings" "$requirements_file"; then
+      if [ -f "$requirements_file" ] && grep -qE "pydantic-settings|connectors-sdk" "$requirements_file"; then
         (
           activate_venv "$connector_directory_path"
           # Generate connector JSON schema in __metadata__

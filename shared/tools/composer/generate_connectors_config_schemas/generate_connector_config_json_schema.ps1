@@ -244,16 +244,16 @@ if (Test-Path $manifestPath) {
 
 Write-Host ""
 Write-Host "Processing connector: $CONNECTOR_NAME" -ForegroundColor Green
-Write-Host "> Looking for a config loader in $CONNECTOR_DIRECTORY"
+Write-Host "> Looking for a config model in $CONNECTOR_DIRECTORY"
 
 $requirements_file = Find-RequirementsTxt -Path $CONNECTOR_DIRECTORY
 if ($requirements_file) {
     Write-Host "Found requirements.txt: $requirements_file"
     
-    # Check if requirements file contains pydantic-settings
+    # Check if requirements file contains pydantic-settings or connectors-sdk
     $requirementsContent = Get-Content $requirements_file -Raw
-    if ($requirementsContent -match "pydantic-settings") {
-        Write-Host "Found pydantic-settings in requirements. Proceeding with schema generation..." -ForegroundColor Green
+    if ($requirementsContent -match "pydantic-settings" -or $requirementsContent -match "connectors-sdk") {
+        Write-Host "Found pydantic-settings or connectors-sdk in requirements. Proceeding with schema generation..." -ForegroundColor Green
         
         # Create a new PowerShell session to isolate the virtual environment
         $scriptBlock = {
@@ -342,7 +342,7 @@ if ($requirements_file) {
         Write-Host ""
         Write-Host "✅ Schema generation completed for connector: $CONNECTOR_NAME" -ForegroundColor Green
     } else {
-        Write-Host "Warning: pydantic-settings not found in requirements.txt" -ForegroundColor Yellow
+        Write-Host "Warning: pydantic-settings or connectors-sdk not found in requirements.txt" -ForegroundColor Yellow
         Write-Host "This connector may not support config schema generation." -ForegroundColor Yellow
     }
 } else {

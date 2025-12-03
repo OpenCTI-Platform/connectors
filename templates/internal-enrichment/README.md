@@ -1,4 +1,4 @@
-# OpenCTI Internal Enrichment Connector Template
+# OpenCTI Internal Enrichment Template Connector
 
 <!--
 General description of the connector
@@ -13,7 +13,7 @@ General description of the connector
 
 Table of Contents
 
-- [OpenCTI Internal Enrichment Connector Template](#opencti-internal-enrichment-connector-template)
+- [OpenCTI Internal Enrichment Template Connector](#opencti-internal-enrichment-connector-template)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -35,7 +35,10 @@ Table of Contents
 
 ### Requirements
 
-- OpenCTI Platform >= 
+- Python >= 3.11
+- OpenCTI Platform >= 6.8.13
+- [`pycti`](https://pypi.org/project/pycti/) library matching your OpenCTI version
+- [`connectors-sdk`](https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk) library matching your OpenCTI version
 
 ## Configuration variables
 
@@ -47,7 +50,7 @@ in `config.yml` (for manual deployment).
 Below are the parameters you'll need to set for OpenCTI:
 
 | Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
+| ------------- | ---------- | --------------------------- | --------- | ---------------------------------------------------- |
 | OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
 | OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
 
@@ -55,21 +58,21 @@ Below are the parameters you'll need to set for OpenCTI:
 
 Below are the parameters you'll need to set for running the connector properly:
 
-| Parameter       | config.yml      | Docker environment variable | Default         | Mandatory | Description                                                                              |
-|-----------------|-----------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID    | id              | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type  | type            | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `INTERNAL_ENRICHMENT` for this connector.                        |
-| Connector Name  | name            | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope           | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
-| Connector Auto  | connector_auto	 | `CONNECTOR_AUTO`            | True            | Yes       | Must be `true` or `false` to enable or disable auto-enrichment of observables            |
+| Parameter       | config.yml     | Docker environment variable | Default         | Mandatory | Description                                                                              |
+| --------------- | -------------- | --------------------------- | --------------- | --------- | ---------------------------------------------------------------------------------------- |
+| Connector ID    | id             | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
+| Connector Type  | type           | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `INTERNAL_ENRICHMENT` for this connector.                        |
+| Connector Name  | name           | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
+| Connector Scope | scope          | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
+| Log Level       | log_level      | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+| Connector Auto  | connector_auto | `CONNECTOR_AUTO`            | True            | Yes       | Must be `true` or `false` to enable or disable auto-enrichment of observables            |
 
 ### Connector extra parameters environment variables
 
 Below are the parameters you'll need to set for the connector:
 
 | Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description |
-|--------------|--------------|-----------------------------|---------|-----------|-------------|
+| ------------ | ------------ | --------------------------- | ------- | --------- | ----------- |
 | API base URL | api_base_url |                             |         | Yes       |             |
 | API key      | api_key      |                             |         | Yes       |             |
 
@@ -111,7 +114,7 @@ Install the required python dependencies (preferably in a virtual environment):
 pip3 install -r requirements.txt
 ```
 
-Then, start the connector from recorded-future/src:
+Then, start the connector from `src` directory:
 
 ```shell
 python3 main.py
@@ -136,7 +139,6 @@ Describe how the connector functions:
 * Important considerations for users when utilizing this connector
 * Additional relevant details
 -->
-
 
 ## Debugging
 
