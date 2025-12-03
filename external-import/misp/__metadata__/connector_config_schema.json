@@ -1,0 +1,252 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/misp_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Misp",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "MISP_URL": {
+      "description": "The MISP instance URL.",
+      "type": "string"
+    },
+    "MISP_REFERENCE_URL": {
+      "default": "",
+      "description": "The MISP instance reference URL (used to create external reference, optional)",
+      "type": "string"
+    },
+    "MISP_KEY": {
+      "description": "The MISP instance key.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "MISP_SSL_VERIFY": {
+      "default": false,
+      "description": "A boolean (`True` or `False`), check if the SSL certificate is valid when using `https`.",
+      "type": "boolean"
+    },
+    "MISP_CLIENT_CERT": {
+      "default": "",
+      "description": "The client certificate of the MISP instance. It must be a path to the client certificate and readable",
+      "type": "string"
+    },
+    "MISP_DATE_FILTER_FIELD": {
+      "default": "date_from",
+      "description": "The attribute to be used in filter to query new MISP events.",
+      "type": "string"
+    },
+    "MISP_DATETIME_ATTRIBUTE": {
+      "default": "timestamp",
+      "description": "The attribute to be used to get the date of the event.",
+      "type": "string"
+    },
+    "MISP_CREATE_REPORTS": {
+      "default": true,
+      "description": "A boolean (`True` or `False`), create reports for each imported MISP event.",
+      "type": "boolean"
+    },
+    "MISP_CREATE_INDICATORS": {
+      "default": true,
+      "description": "A boolean (`True` or `False`), create indicators from attributes.",
+      "type": "boolean"
+    },
+    "MISP_CREATE_OBSERVABLES": {
+      "default": true,
+      "description": "A boolean (`True` or `False`), create observables from attributes.",
+      "type": "boolean"
+    },
+    "MISP_CREATE_OBJECT_OBSERVABLES": {
+      "default": true,
+      "description": "A boolean (`True` or `False`), create text observables for MISP objects.",
+      "type": "boolean"
+    },
+    "MISP_REPORT_DESCRIPTION_ATTRIBUTE_FILTER": {
+      "default": "",
+      "description": "Filter to be used to find the attribute with report description (example: 'type=comment,category=Internal reference').",
+      "type": "string"
+    },
+    "MISP_CREATE_TAGS_AS_LABELS": {
+      "default": true,
+      "description": "A boolean (`True` or `False`), create tags as labels.",
+      "type": "boolean"
+    },
+    "MISP_GUESS_THREATS_FROM_TAGS": {
+      "default": false,
+      "description": "A boolean (`True` or `False`), try to guess threats (threat actor, intrusion set, malware, etc.) from MISP tags when they are present in OpenCTI.",
+      "type": "boolean"
+    },
+    "MISP_AUTHOR_FROM_TAGS": {
+      "default": false,
+      "description": "A boolean (`True` or `False`), map creator:XX=YY (author of event will be YY instead of the author of the event).",
+      "type": "boolean"
+    },
+    "MISP_MARKINGS_FROM_TAGS": {
+      "default": false,
+      "description": "A boolean (`True` or `False`), map marking:XX=YY (in addition to TLP, add XX:YY as marking definition, where XX is marking type, YY is marking value).",
+      "type": "boolean"
+    },
+    "MISP_KEEP_ORIGINAL_TAGS_AS_LABEL": {
+      "default": "",
+      "description": "Any tag that start with any of these comma-separated value are kept as-is.",
+      "type": "string"
+    },
+    "MISP_ENFORCE_WARNING_LIST": {
+      "default": false,
+      "description": "A boolean (`True` or `False`), enforce warning list in MISP queries.",
+      "type": "boolean"
+    },
+    "MISP_REPORT_TYPE": {
+      "default": "misp-event",
+      "description": "If `create_reports` is `True`, specify the `report_class` (category), default is `MISP Event`.",
+      "type": "string"
+    },
+    "MISP_REPORT_STATUS": {
+      "default": "New",
+      "description": "The status of the report.",
+      "type": "string"
+    },
+    "MISP_IMPORT_FROM_DATE": {
+      "default": "2010-01-01",
+      "description": "A date formatted `YYYY-MM-DD`, only import events created after this date.",
+      "type": "string"
+    },
+    "MISP_IMPORT_TAGS": {
+      "default": "",
+      "description": "A list of tags separated with `,`, only import events with these tags.",
+      "type": "string"
+    },
+    "MISP_IMPORT_TAGS_NOT": {
+      "default": "",
+      "description": "A list of tags separated with `,`, to exclude from import.",
+      "type": "string"
+    },
+    "MISP_IMPORT_CREATOR_ORGS": {
+      "default": "",
+      "description": "A list of org identifiers separated with `,`, only import events created by these orgs.",
+      "type": "string"
+    },
+    "MISP_IMPORT_CREATOR_ORGS_NOT": {
+      "default": "",
+      "description": "A list of org identifiers separated with `,`, do not import events created by these orgs.",
+      "type": "string"
+    },
+    "MISP_IMPORT_OWNER_ORGS": {
+      "default": "",
+      "description": "A list of org identifiers separated with `,`, only import events owned by these orgs.",
+      "type": "string"
+    },
+    "MISP_IMPORT_OWNER_ORGS_NOT": {
+      "default": "",
+      "description": "A list of org identifiers separated with `,`, do not import events owned by these orgs.",
+      "type": "string"
+    },
+    "MISP_IMPORT_OWNER_KEYWORD": {
+      "default": "",
+      "description": "Search only events based on a keyword.",
+      "type": "string"
+    },
+    "MISP_IMPORT_DISTRIBUTION_LEVELS": {
+      "default": "0,1,2,3",
+      "description": "A list of distribution levels separated with `,`, only import events with these distribution levels.",
+      "type": "string"
+    },
+    "MISP_IMPORT_THREAT_LEVELS": {
+      "default": "1,2,3,4",
+      "description": "A list of threat levels separated with `,`, only import events with these threat levels.",
+      "type": "string"
+    },
+    "MISP_IMPORT_ONLY_PUBLISHED": {
+      "default": false,
+      "description": "A boolean (`True` or `False`), import only MISP published events.",
+      "type": "boolean"
+    },
+    "MISP_IMPORT_WITH_ATTACHMENTS": {
+      "default": false,
+      "description": "A boolean (`True` or `False`), try to import a PDF file from the attachment attribute.",
+      "type": "boolean"
+    },
+    "MISP_IMPORT_TO_IDS_NO_SCORE": {
+      "default": 40,
+      "description": "A score (`Integer`) value for the indicator/observable if the attribute `to_ids` value is no.",
+      "type": "integer"
+    },
+    "MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT": {
+      "default": false,
+      "description": "A boolean (`True` or `False`), import unsupported observable as x_opencti_text.",
+      "type": "boolean"
+    },
+    "MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT": {
+      "default": true,
+      "description": "A boolean (`True` or `False`), import unsupported observable as x_opencti_text just with the value.",
+      "type": "boolean"
+    },
+    "MISP_PROPAGATE_LABELS": {
+      "default": false,
+      "description": "A boolean (`True` or `False`), propagate labels to the observables.",
+      "type": "boolean"
+    },
+    "MISP_IMPORT_KEYWORD": {
+      "default": "",
+      "description": "Search only events based on a keyword.",
+      "type": "string"
+    },
+    "MISP_INTERVAL": {
+      "default": 5,
+      "deprecated": true,
+      "description": "The interval in minutes between each run of the connector.",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_SCOPE",
+    "MISP_URL",
+    "MISP_KEY"
+  ],
+  "additionalProperties": true
+}
