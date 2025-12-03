@@ -1,14 +1,12 @@
 import json
 
 from pycti import OpenCTIConnectorHelper
+from sentinelone_connector.settings import ConnectorSettings
 from sentinelone_services import SentinelOneClient
-
-from .config_loader import ConfigConnector
 
 
 class SentinelOneIntelConnector:
-
-    def __init__(self, config: ConfigConnector, helper: OpenCTIConnectorHelper):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """
         Initialize the SentinelOne Intel Connector
         with necessary configurations
