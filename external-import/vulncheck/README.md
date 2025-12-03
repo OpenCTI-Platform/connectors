@@ -27,7 +27,6 @@ and more.
     - [Data Volume](#data-volume)
   - [Debugging](#debugging)
   - [Useful Resources](#useful-resources)
-  - [Maintainers](#maintainers)
 <!--toc:end-->
 
 ## Introduction
@@ -241,9 +240,3 @@ OpenCTI documentation for connectors:
 - [OpenCTI Ecosystem](https://filigran.notion.site/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76)
 - [Connectors Deployment](https://docs.opencti.io/latest/deployment/connectors/)
 - [Connectors Development](https://docs.opencti.io/latest/development/connectors/)
-
-## Maintainers
-
-This integration is maintained by:
-
-- [@maddawik](https://github.com/maddawik) - Primary maintainer
