@@ -102,7 +102,7 @@ Below are the parameters you'll need to set for the connector:
 | API Key      | api_key      | `SENTINELONE_INTEL_API_KEY` | Yes       | SentinelOne API token for authentication |
 | Account ID   | account_id   | `SENTINELONE_INTEL_ACCOUNT_ID` | No        | SentinelOne Account ID for scoping indicators (at least one ID required) |
 | Site ID      | site_id      | `SENTINELONE_INTEL_SITE_ID` | No        | SentinelOne Site ID for scoping indicators (cannot be used with Account ID) |
-| Group ID     | group_id     | `SENTINELONE_INTEL_SITE_ID` | No        | SentinelOne Group ID for scoping indicators |
+| Group ID     | group_id     | `SENTINELONE_INTEL_GROUP_ID` | No        | SentinelOne Group ID for scoping indicators |
 
 ## Deployment
 
