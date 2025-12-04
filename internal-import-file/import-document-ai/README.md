@@ -22,17 +22,17 @@ OpenCTI data is coming from *import* connectors.
 
 | Parameter                        | Docker envvar                           | Default                                | Mandatory | Description                                                                                   |
 |----------------------------------|-----------------------------------------|----------------------------------------|-----------|-----------------------------------------------------------------------------------------------|
-| `opencti_url`                    | `OPENCTI_URL`                           |                                        | Yes       | The URL of the OpenCTI platform.                                                              |
-| `opencti_token`                  | `OPENCTI_TOKEN`                         |                                        | Yes       | The default admin token configured in the OpenCTI platform parameters file.                   |
-| `connector_id`                   | `CONNECTOR_ID`                          |                                        | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector.                            |
-| `connector_name`                 | `CONNECTOR_NAME`                        |                                        | Yes       | Option `ImportDocumentAI`                                                                     |
-| `connector_auto`                 | `CONNECTOR_AUTO`                        | `false`                                | No        | Enable/disable auto import of report file                                                     |
-| `connector_scope`                | `CONNECTOR_SCOPE`                       |                                        | Yes       | Supported file types: `'application/pdf','text/plain','text/html','text/markdown'`            |
-| `connector_log_level`            | `CONNECTOR_LOG_LEVEL`                   | error                                  | No        | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose). |
-| `connector_create_indicator`     | `CONNECTOR_CREATE_INDICATOR`            | `false`                                | No        | Create an indicator for each extracted observable                                             |
-| `connector_web_service_url`      | `CONNECTOR_WEB_SERVICE_URL`             | `https://importdoc.ariane.filigran.io` | No        | The URL of the extraction service running the AI model                                      |
-| `connector_licence_key_pem`      | `CONNECTOR_LICENCE_KEY_PEM`             |                                        | Yes       | The license certificate in a PEM format (provided by Filigran to Enterprise Edition users)    |
-| `import_document_include_relationships` | `IMPORT_DOCUMENT_INCLUDE_RELATIONSHIPS` | `true` | No | Whether to include relationships in the imported bundle. If set to `false`, relationships will be removed from the bundle and any references to them in container objects will also be removed. |
+| `opencti.url`                    | `OPENCTI_URL`                           |                                        | Yes       | The URL of the OpenCTI platform.                                                              |
+| `opencti.token`                  | `OPENCTI_TOKEN`                         |                                        | Yes       | The default admin token configured in the OpenCTI platform parameters file.                   |
+| `connector.id`                   | `CONNECTOR_ID`                          |                                        | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector.                            |
+| `connector.name`                 | `CONNECTOR_NAME`                        |                                        | Yes       | Option `ImportDocumentAI`                                                                     |
+| `connector.auto`                 | `CONNECTOR_AUTO`                        | `false`                                | No        | Enable/disable auto import of report file                                                     |
+| `connector.scope`                | `CONNECTOR_SCOPE`                       |                                        | Yes       | Supported file types: `'application/pdf','text/plain','text/html','text/markdown'`            |
+| `connector.log_level`            | `CONNECTOR_LOG_LEVEL`                   | error                                  | No        | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose). |
+| `import_document_ai_create_indicator` | `IMPORT_DOCUMENT_AI_CREATE_INDICATOR`      | `false`                                | No        | Create an indicator for each extracted observable                                             |
+| `import_document_ai.api_base_url`      | `IMPORT_DOCUMENT_AI_API_BASE_URL`             | `https://importdoc.ariane.filigran.io` | No        | The URL of the extraction service running the AI model                                      |
+| `import_document_ai.api_key`      | `IMPORT_DOCUMENT_AI_API_KEY`             |                                        | Yes       | The license certificate in a PEM format (provided by Filigran to Enterprise Edition users)    |
+| `import_document_ai.include_relationships` | `IMPORT_DOCUMENT_AI_INCLUDE_RELATIONSHIPS` | `true` | No | Whether to include relationships in the imported bundle. If set to `false`, relationships will be removed from the bundle and any references to them in container objects will also be removed. |
 
 ### Debugging
 
