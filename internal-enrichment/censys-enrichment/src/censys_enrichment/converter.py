@@ -1,4 +1,5 @@
 import datetime
+import ipaddress
 from typing import Any, Generator
 
 from censys_platform import (
@@ -16,6 +17,8 @@ from connectors_sdk.models import (
     City,
     Country,
     Hostname,
+    IPV4Address,
+    IPV6Address,
     Note,
     Organization,
     OrganizationAuthor,
@@ -342,21 +345,41 @@ class Converter:
                     vendor=software.vendor,
                     cpe=software.cpe,
                 )
-            certificate = yield from self._generate_certificate(
-                cert=service.cert,
-            )
-            yield Relationship(
-                source=observable,
-                target=certificate,
-                type=RelationshipType.RELATED_TO,
-                **self._common_props,
-            )
+            if service.cert:
+                certificate = yield from self._generate_certificate(
+                    cert=service.cert,
+                )
+                yield Relationship(
+                    source=observable,
+                    target=certificate,
+                    type=RelationshipType.RELATED_TO,
+                    **self._common_props,
+                )
             yield from self._generate_note(
                 observable=observable,
                 port=service.port,
                 content=service.banner,
                 publication_date=service.scan_time,
             )
+
+    def _generate_ip(
+        self, observable: EmbeddedIdentifiedStixObject, ip: str
+    ) -> Generator[BaseObject, None, None | IPV4Address | IPV6Address]:
+        ip_version = ipaddress.ip_network(ip, strict=False).version
+        if ip_version == 4:
+            ip_address = IPV4Address(value=ip, **self._common_props)
+        else:
+            ip_address = IPV6Address(value=ip, **self._common_props)
+        yield from [
+            ip_address,
+            Relationship(
+                source=observable,
+                target=ip_address,
+                type=RelationshipType.RELATED_TO,
+                **self._common_props,
+            ),
+        ]
+        return ip_address
 
     def generate_octi_objects(
         self, stix_entity: dict[str, Any], data: Host
@@ -431,4 +454,16 @@ class Converter:
         for cert in certs:
             yield from self._generate_certificate(
                 cert=cert,
+            )
+
+    def generate_octi_objects_from_hosts(
+        self, stix_entity: dict[str, Any], hosts: list[Host]
+    ) -> Generator[BaseObject, None, None]:
+        for host in hosts:
+            ip_stix = yield from self._generate_ip(
+                observable=EmbeddedIdentifiedStixObject(stix_object=stix_entity),
+                ip=host.ip,
+            )
+            yield from self.generate_octi_objects(
+                stix_entity=ip_stix.to_stix2_object(), data=host
             )
