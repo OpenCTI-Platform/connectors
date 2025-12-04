@@ -1,6 +1,6 @@
-# -*- coding: utf-8 -*-
 """DomainTools connector module."""
 
-from .core import DomainToolsConnector
+from connector.connector import DomainToolsConnector
+from connector.settings import ConnectorSettings
 
-__all__ = ["DomainToolsConnector"]
+__all__ = ["DomainToolsConnector", "ConnectorSettings"]
