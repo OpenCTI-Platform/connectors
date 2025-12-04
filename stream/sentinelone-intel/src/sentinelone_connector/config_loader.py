@@ -39,16 +39,16 @@ class ConfigConnector:
 
         # Handle existence of suffix / by removing for consistency
         self.api_url = get_config_variable(
-            "SENTINELONE-INTEL_API_URL",
-            ["sentinelone-intel", "api_url"],
+            "SENTINELONE_INTEL_URL",
+            ["sentinelone_intel", "url"],
             self.load,
             default=None,
             required=True,
         ).strip("/")
 
         self.api_key = get_config_variable(
-            "SENTINELONE-INTEL_API_KEY",
-            ["sentinelone-intel", "api_key"],
+            "SENTINELONE_INTEL_API_KEY",
+            ["sentinelone_intel", "api_key"],
             self.load,
             default=None,
             required=True,
@@ -61,8 +61,8 @@ class ConfigConnector:
         # SentinelOne API Filtering Parameters:
 
         self.account_id = get_config_variable(
-            "SENTINELONE-INTEL_ACCOUNT_ID",
-            ["sentinelone-intel", "account_id"],
+            "SENTINELONE_INTEL_ACCOUNT_ID",
+            ["sentinelone_intel", "account_id"],
             self.load,
             default=None,
         )
@@ -70,8 +70,8 @@ class ConfigConnector:
             self.account_id = int(self.account_id)
 
         self.site_id = get_config_variable(
-            "SENTINELONE-INTEL_SITE_ID",
-            ["sentinelone-intel", "site_id"],
+            "SENTINELONE_INTEL_SITE_ID",
+            ["sentinelone_intel", "site_id"],
             self.load,
             default=None,
         )
@@ -79,8 +79,8 @@ class ConfigConnector:
             self.site_id = int(self.site_id)
 
         self.group_id = get_config_variable(
-            "SENTINELONE-INTEL_GROUP_ID",
-            ["sentinelone-intel", "group_id"],
+            "SENTINELONE_INTEL_GROUP_ID",
+            ["sentinelone_intel", "group_id"],
             self.load,
             default=None,
         )
