@@ -1,3 +1,3 @@
-from .connector import MicrosoftDefenderIntelConnector
-
-__all__ = ["MicrosoftDefenderIntelConnector"]
+__all__ = ["MicrosoftDefenderIntelConnector", "ConnectorSettings"]
+from microsoft_defender_intel_connector.connector import MicrosoftDefenderIntelConnector
+from microsoft_defender_intel_connector.settings import ConnectorSettings
