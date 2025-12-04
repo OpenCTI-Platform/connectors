@@ -1,6 +1,9 @@
+import json
+from typing import Any
 from unittest.mock import Mock
 
 import pytest
+from censys_enrichment.client import Client
 from censys_enrichment.connector import (
     Connector,
     EntityNotInScopeError,
@@ -9,6 +12,10 @@ from censys_enrichment.connector import (
 )
 from censys_enrichment.converter import Converter
 from censys_enrichment.settings import ConfigLoader
+
+
+def filter_by_key_value(items: list[dict], key: str, value: Any) -> list[dict]:
+    return [item for item in items if item.get(key) == value]
 
 
 @pytest.mark.usefixtures("mock_config")
@@ -288,3 +295,78 @@ def test_run(mocked_helper: Mock) -> None:
     mocked_helper.listen.assert_called_once_with(
         message_callback=connector._message_callback
     )
+
+
+@pytest.mark.usefixtures("mock_config")
+def test_enrichment(mocked_helper: Mock, get_host, ipv4_enrichment_message):
+    client = Client(
+        organisation_id="test-org-id",
+        token="test-token",
+    )
+    connector = Connector(
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=client,
+        converter=Converter(),
+    )
+    sent_bundle = {}
+
+    def capture_sent_bundle(bundle: str, **_):
+        nonlocal sent_bundle
+        sent_bundle = json.loads(bundle)
+        return sent_bundle["objects"]
+
+    connector.helper.send_stix2_bundle = capture_sent_bundle
+    connector._message_callback(ipv4_enrichment_message)
+
+    city_name = filter_by_key_value(
+        sent_bundle["objects"], "x_opencti_location_type", "City"
+    )[0]["name"]
+    assert city_name == get_host.location.city
+    region_name = filter_by_key_value(
+        sent_bundle["objects"], "x_opencti_location_type", "Region"
+    )[0]["name"]
+    assert region_name == get_host.location.continent
+    administrative_area_name = filter_by_key_value(
+        sent_bundle["objects"], "x_opencti_location_type", "Administrative-Area"
+    )[0]["name"]
+    assert administrative_area_name == get_host.location.province
+    country_name = filter_by_key_value(
+        sent_bundle["objects"], "x_opencti_location_type", "Country"
+    )
+    assert country_name[0]["name"] == get_host.location.country
+
+    hostnames = filter_by_key_value(sent_bundle["objects"], "type", "hostname")
+    for url in get_host.dns.names:
+        assert any(hostname_obj["value"] == url for hostname_obj in hostnames)
+
+    softwares = filter_by_key_value(sent_bundle["objects"], "type", "software")
+
+    host_softwares = [service.software[0] for service in get_host.services]
+    for host_software in host_softwares:
+        assert any(
+            software_obj["name"] == host_software.product
+            and software_obj["vendor"] == host_software.vendor
+            and software_obj["cpe"] == host_software.cpe
+            for software_obj in softwares
+        )
+
+    autonomous_system = filter_by_key_value(
+        sent_bundle["objects"], "type", "autonomous-system"
+    )[0]
+    assert autonomous_system["number"] == get_host.autonomous_system.asn
+    assert autonomous_system["name"] == get_host.autonomous_system.name
+    assert (
+        autonomous_system["x_opencti_description"]
+        == get_host.autonomous_system.description
+    )
+
+    sent_certs = filter_by_key_value(sent_bundle["objects"], "type", "x509-certificate")
+    certs = [service.cert for service in get_host.services]
+    for cert in certs:
+        assert any(
+            sent_cert["hashes"]["MD5"] == cert.fingerprint_md5
+            and sent_cert["hashes"]["SHA-1"] == cert.fingerprint_sha1
+            and sent_cert["hashes"]["SHA-256"] == cert.fingerprint_sha256
+            for sent_cert in sent_certs
+        )

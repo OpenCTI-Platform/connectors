@@ -1,4 +1,7 @@
-from unittest.mock import MagicMock, Mock
+import os
+import sys
+from dataclasses import asdict
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from censys_platform import (
@@ -11,18 +14,25 @@ from censys_platform import (
     Coordinates,
     ExtendedKeyUsage,
     Host,
+    HostAsset,
     HostDNS,
     KeyAlgorithm,
     KeyUsage,
     Location,
+    ResponseEnvelopeHostAsset,
     Routing,
     Service,
     Signature,
     SubjectKeyInfo,
+    V3GlobaldataAssetHostResponse,
     ValidityPeriod,
 )
 from pycti import OpenCTIConnectorHelper
 from pytest_mock import MockerFixture
+
+from .factories import HostFactory, Ipv4EnrichmentFactory
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
 
 @pytest.fixture(name="mock_config")
@@ -114,3 +124,25 @@ def fixture_host_ipv4() -> Host:
             )
         ],
     )
+
+
+@pytest.fixture
+def get_host():
+    with patch("censys_platform.global_data.GlobalData.get_host") as mock_get_host:
+        host = HostFactory()
+        result = V3GlobaldataAssetHostResponse(
+            headers={},
+            result=ResponseEnvelopeHostAsset(
+                result=HostAsset(
+                    extensions={},
+                    resource=host,
+                )
+            ),
+        )
+        mock_get_host.return_value = result
+        yield host
+
+
+@pytest.fixture
+def ipv4_enrichment_message():
+    yield asdict(Ipv4EnrichmentFactory())
