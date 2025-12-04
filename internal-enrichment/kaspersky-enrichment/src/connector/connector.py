@@ -148,11 +148,17 @@ class KasperskyConnector:
                 "[CONNECTOR] Process enrichment from DetectionsInfo data..."
             )
 
+            content = "| Detection Date | Detection Name | Detection Method |\n"
+            content += "|----------------|----------------|------------------|\n"
+
             for obs_detection_info in entity_data["DetectionsInfo"]:
-                obs_note = self.converter_to_stix.create_file_note(
-                    observable["id"], obs_detection_info
-                )
-                self.stix_objects.append(obs_note)
+                detection_name = f"[{obs_detection_info["DetectionName"]}]({obs_detection_info["DescriptionUrl"]})"
+                content += f"| {obs_detection_info["LastDetectDate"]} | {detection_name} | {obs_detection_info["DetectionMethod"]} |\n"
+
+            obs_note = self.converter_to_stix.create_file_note(
+                observable["id"], content
+            )
+            self.stix_objects.append(obs_note)
 
         # Manage FileDownloadedFromUrls data
 

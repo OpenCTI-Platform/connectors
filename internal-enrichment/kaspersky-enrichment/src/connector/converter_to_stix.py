@@ -40,17 +40,10 @@ class ConverterToStix:
         )
         return author
 
-    def create_file_note(self, obs_id: str, detection_info: dict) -> stix2.Note:
+    def create_file_note(self, obs_id: str, content: str) -> stix2.Note:
         """
         Create a note associated to the file observable
         """
-        detection_name = (
-            f"[{detection_info["DetectionName"]}]({detection_info["DescriptionUrl"]})"
-        )
-        content = "| Detection Date | Detection Name | Detection Method |\n"
-        content += "|----------------|----------------|------------------|\n"
-        content += f"| {detection_info["LastDetectDate"]} | {detection_name} | {detection_info["DetectionMethod"]} |\n"
-
         note = stix2.Note(
             type="note",
             id=Note.generate_id(datetime.datetime.now().isoformat(), content),
