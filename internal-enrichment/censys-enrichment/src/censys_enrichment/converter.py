@@ -248,15 +248,15 @@ class Converter:
         ]
 
     def _generate_certificate(
-        self, observable: EmbeddedIdentifiedStixObject, cert: Certificate | None
-    ) -> Generator[BaseObject, None, None]:
+        self, cert: Certificate | None
+    ) -> Generator[BaseObject, None, X509Certificate | None]:
         if not cert or not (
             cert.fingerprint_sha256
             or cert.fingerprint_sha1
             or cert.fingerprint_md5
             or cert.parsed
         ):
-            return
+            return None
         certificate = X509Certificate(
             hashes={
                 HashAlgorithm.SHA1: cert.fingerprint_sha1,
@@ -288,33 +288,29 @@ class Converter:
                         cert.parsed.subject_key_info.rsa.exponent
                     )
             if cert.parsed.extensions:
-                certificate.key_usage = (
-                    cert.parsed.extensions.key_usage.model_dump_json()
-                )
-                certificate.basic_constraints = (
-                    cert.parsed.extensions.basic_constraints.model_dump_json()
-                )
+                if cert.parsed.extensions.key_usage:
+                    certificate.key_usage = (
+                        cert.parsed.extensions.key_usage.model_dump_json()
+                    )
+                if cert.parsed.extensions.basic_constraints:
+                    certificate.basic_constraints = (
+                        cert.parsed.extensions.basic_constraints.model_dump_json()
+                    )
                 certificate.crl_distribution_points = str(
                     cert.parsed.extensions.crl_distribution_points
                 )
                 certificate.authority_key_identifier = (
                     cert.parsed.extensions.authority_key_id
                 )
-                certificate.extended_key_usage = (
-                    cert.parsed.extensions.extended_key_usage.model_dump_json()
-                )
+                if cert.parsed.extensions.extended_key_usage:
+                    certificate.extended_key_usage = (
+                        cert.parsed.extensions.extended_key_usage.model_dump_json()
+                    )
                 certificate.certificate_policies = str(
                     cert.parsed.extensions.certificate_policies
                 )
-        yield from [
-            certificate,
-            Relationship(
-                source=observable,
-                target=certificate,
-                type=RelationshipType.RELATED_TO,
-                **self._common_props,
-            ),
-        ]
+        yield certificate
+        return certificate
 
     def _generate_note(
         self,
@@ -346,9 +342,14 @@ class Converter:
                     vendor=software.vendor,
                     cpe=software.cpe,
                 )
-            yield from self._generate_certificate(
-                observable=observable,
+            certificate = yield from self._generate_certificate(
                 cert=service.cert,
+            )
+            yield Relationship(
+                source=observable,
+                target=certificate,
+                type=RelationshipType.RELATED_TO,
+                **self._common_props,
             )
             yield from self._generate_note(
                 observable=observable,
@@ -418,3 +419,16 @@ class Converter:
                     type=RelationshipType.RELATED_TO,
                     **self._common_props,
                 )
+
+    def generate_octi_objects_from_certs(
+        self, certs: list[Certificate]
+    ) -> Generator[BaseObject, None, None]:
+        yield from [
+            self.author,
+            self.marking,
+        ]
+
+        for cert in certs:
+            yield from self._generate_certificate(
+                cert=cert,
+            )
