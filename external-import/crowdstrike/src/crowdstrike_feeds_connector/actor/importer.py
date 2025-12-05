@@ -185,16 +185,16 @@ class ActorImporter(BaseImporter):
                 fetch_datetime = fetch_datetime.replace(tzinfo=timezone.utc)
 
             delta_days = (now_utc - fetch_datetime).days
-            if delta_days > 30:
-                thirty_days_ago = now_utc - timedelta(days=30)
-                fetch_timestamp = datetime_to_timestamp(thirty_days_ago)
+            if delta_days > 15:
+                fifteen_days_ago = now_utc - timedelta(days=15)
+                fetch_timestamp = datetime_to_timestamp(fifteen_days_ago)
                 self._warning(
-                    "Fetch timestamp is more than 30 days old ({0} days). "
-                    "Falling back to 30 days ago: {1}",
+                    "Fetch timestamp is more than 15 days old ({0} days). "
+                    "Falling back to 15 days ago: {1}",
                     delta_days,
-                    thirty_days_ago,
+                    fifteen_days_ago,
                 )
-                timestamp_source = "30d gated"
+                timestamp_source = "15d gated"
 
             _fql_filter = f"actors:['{actor_name}']+last_updated:>{fetch_timestamp}"
 
