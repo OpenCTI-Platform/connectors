@@ -130,7 +130,7 @@ class TeamT5Connector:
                     "Connector last run", {"last_run_datetime": last_run}
                 )
                 last_run_timestamp = int(
-                    datetime.strptime(last_run, "%Y-%m-%d %H:%M:%S").timestamp()
+                    datetime.fromisoformat(last_run).timestamp()
                 )
 
             # If the connector has never run, we should retrieve from the timestamp specified in configs
