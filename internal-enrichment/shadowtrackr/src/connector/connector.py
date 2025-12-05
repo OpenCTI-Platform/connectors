@@ -281,7 +281,7 @@ class ShadowTrackrConnector:
         return score, date_shortened
 
     def _process_score(
-        self, observable: dict, false_positive_estimate: int, score: int
+        self, observable: dict, false_positive_estimate: int, score: int | None
     ) -> tuple[bool, int]:
         """
         Process the score based on the false positive estimate
@@ -290,7 +290,7 @@ class ShadowTrackrConnector:
         :param score: Integer of score
         :return: Tuple of boolean and integer
         """
-        if not self.replace_with_lower_score:
+        if score is None or not self.replace_with_lower_score:
             return False, score
 
         score_lowered = False
