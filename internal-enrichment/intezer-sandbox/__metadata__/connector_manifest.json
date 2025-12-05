@@ -1,8 +1,8 @@
 {
   "title": "Intezer Sandbox",
   "slug": "intezer-sandbox",
-  "description": "Information coming soon",
-  "short_description": "Information coming soon",
+  "description": "The OpenCTI Intezer Sandbox enrichment connector allows automatic enrichment of Artifact observables by submitting suspicious files for dynamic analysis. It retrieves detailed sandbox detonation results, associates detected malware families, and assigns maliciousness verdicts (Malicious, Suspicious, Trusted, Unknown) to observables. The connector automatically correlates findings within OpenCTI by creating or updating Malware entities and establishing relationships between artifacts and threat families, enhancing the overall threat intelligence context.",
+  "short_description": "The OpenCTI Intezer Sandbox enrichment connector allows automatic enrichment of Artifact observables by submitting suspicious files for dynamic analysis. It retrieves detailed sandbox detonation results, associates detected malware families, and assigns maliciousness verdicts (Malicious, Suspicious, Trusted, Unknown) to observables. The connector automatically correlates findings within OpenCTI by creating or updating Malware entities and establishing relationships between artifacts and threat families, enhancing the overall threat intelligence context.",
   "logo": "internal-enrichment/intezer-sandbox/__metadata__/logo.png",
   "use_cases": [
     "Enrichment & Analysis",
