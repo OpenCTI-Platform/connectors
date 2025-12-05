@@ -2,14 +2,12 @@ opencti:
   url: 'http://localhost:8080'
   token: 'ChangeMe'
 
-
 connector:
   id: 'ChangeMe'
   type: 'INTERNAL_ENRICHMENT'
   name: 'ShadowTrackr'
   scope: 'IPv4-Addr,IPv6-Addr,Indicator'
   auto: true # Enable/disable auto-enrichment of observables
-  confidence_level: 70 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
 
 shadowtrackr:
