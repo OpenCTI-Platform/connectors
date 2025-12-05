@@ -15,22 +15,27 @@ from censys_platform import (
     ExtendedKeyUsage,
     Host,
     HostAsset,
+    HostAssetWithMatchedServices,
     HostDNS,
     KeyAlgorithm,
     KeyUsage,
     Location,
     ResponseEnvelopeHostAsset,
+    ResponseEnvelopeSearchQueryResponse,
     Routing,
+    SearchQueryHit,
+    SearchQueryResponse,
     Service,
     Signature,
     SubjectKeyInfo,
     V3GlobaldataAssetHostResponse,
+    V3GlobaldataSearchQueryResponse,
     ValidityPeriod,
 )
 from pycti import OpenCTIConnectorHelper
 from pytest_mock import MockerFixture
 
-from .factories import HostFactory, Ipv4EnrichmentFactory
+from .factories import DomainNameEnrichmentFactory, HostFactory, Ipv4EnrichmentFactory
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -146,3 +151,41 @@ def get_host():
 @pytest.fixture
 def ipv4_enrichment_message():
     yield asdict(Ipv4EnrichmentFactory())
+
+
+@pytest.fixture
+def fetch_hosts():
+    with patch("censys_platform.global_data.GlobalData.search") as mock_fetch_hosts:
+        hosts = HostFactory.create_batch(2)
+        result = V3GlobaldataSearchQueryResponse(
+            headers={},
+            result=ResponseEnvelopeSearchQueryResponse(
+                result=SearchQueryResponse(
+                    hits=[
+                        SearchQueryHit(
+                            host_v1=HostAssetWithMatchedServices(
+                                extensions={},
+                                resource=hosts[0],
+                            )
+                        ),
+                        SearchQueryHit(
+                            host_v1=HostAssetWithMatchedServices(
+                                extensions={},
+                                resource=hosts[1],
+                            )
+                        ),
+                    ],
+                    total_hits=2,
+                    next_page_token="",
+                    query_duration_millis=123,
+                    previous_page_token="",
+                ),
+            ),
+        )
+        mock_fetch_hosts.return_value = result
+        yield hosts
+
+
+@pytest.fixture
+def domain_name_enrichment_message():
+    yield asdict(DomainNameEnrichmentFactory())
