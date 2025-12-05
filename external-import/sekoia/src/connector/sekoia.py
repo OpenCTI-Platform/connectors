@@ -36,6 +36,7 @@ class SekoiaConnector(object):
         # Extra config Sekoia
         self.api_key = self.config.sekoia.api_key.get_secret_value()
         self.base_url = self.config.sekoia.base_url
+        self.confidence_score = self.config.sekoia.confidence_score
         self.start_date = self.config.sekoia.start_date
         self.limit = self.config.sekoia.limit
         self.collection = self.config.sekoia.collection
@@ -170,7 +171,7 @@ class SekoiaConnector(object):
             return cursor
 
         items = self._retrieve_references(items)
-        self._add_main_observable_type_to_indicators(items)
+        self._add_main_observable_type_to_indicators(items, self.confidence_score)
         if self.create_observables:
             self._add_create_observables_to_indicators(items)
         self._clean_external_references_fields(items)
@@ -285,7 +286,9 @@ class SekoiaConnector(object):
                 item["x_opencti_create_observables"] = True
 
     @staticmethod
-    def _add_main_observable_type_to_indicators(items: List[Dict]):
+    def _add_main_observable_type_to_indicators(
+        items: List[Dict], confidence_score: int | None
+    ):
         for item in items:
             if (
                 item.get("type") == "indicator"
@@ -298,6 +301,10 @@ class SekoiaConnector(object):
                 )
                 if item.get("revoked") is not None and item.get("revoked") is True:
                     item["valid_until"] = item.get("modified")
+                if confidence_score:
+                    item["x_opencti_score"] = confidence_score
+                else:
+                    item["x_opencti_score"] = item.get("confidence", None)
 
     def _retrieve_references(
         self, items: List[Dict], current_depth: int = 0
