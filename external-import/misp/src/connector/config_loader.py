@@ -244,7 +244,11 @@ class _MISPConfig(_ConfigBaseModel):
         default="timestamp",
     )
     # TODO: check if Literal is correct
-    date_filter_field: Literal["date_from", "timestamp"] = Field(
+    date_filter_field: Literal[
+        "date_from",
+        "timestamp",
+        "publish_timestamp",
+    ] = Field(
         description="The attribute to use as filter to query new MISP events by date.",
         default="timestamp",
     )
