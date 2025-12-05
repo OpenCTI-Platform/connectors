@@ -59,11 +59,13 @@ class ShadowTrackrConnector:
                 default=False,
             )
         )
-        self.helper.log_info(f"max_tlp: {self.max_tlp}")
-        self.helper.log_info(
+        self.helper.connector_logger.info(f"max_tlp: {self.max_tlp}")
+        self.helper.connector_logger.info(
             f"replace_with_lower_score : {self.replace_with_lower_score}"
         )
-        self.helper.log_info(f"replace_valid_to_date: {self.replace_valid_to_date}")
+        self.helper.connector_logger.info(
+            f"replace_valid_to_date: {self.replace_valid_to_date}"
+        )
 
         # Create Tags in OpenCTI for later use
         self.label_bogon = self.helper.api.label.read_or_create_unchecked(
@@ -325,7 +327,7 @@ class ShadowTrackrConnector:
             ipaddress.ip_address(ip)
             return True
         except Exception as e:
-            self.helper.log_error("Error validating ip", {"error": str(e)})
+            self.helper.connector_logger.error("Error validating ip", {"error": str(e)})
             return False
 
 
