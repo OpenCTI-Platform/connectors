@@ -267,7 +267,7 @@ class ShadowTrackrConnector:
 
         text = self._get_ip_info_msg(ip_info, score_lowered, date_shortened)
         if text:
-            description += f"\n[ShadowTrackr] {text}"
+            description = f"{description or ''}\n[ShadowTrackr] {text}"
             if is_indicator:
                 observable["description"] = description
             else:
