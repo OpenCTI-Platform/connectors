@@ -46,19 +46,19 @@ class Client:
             raise EntityHasNoUsableHashError(
                 "At least one hash (MD5, SHA1, SHA256) must be provided."
             )
+        parts = []
+        if "MD5" in hashes:
+            parts.append(f'cert.fingerprint_md5 = "{hashes["MD5"]}"')
+        if "SHA1" in hashes:
+            parts.append(f'cert.fingerprint_sha1 = "{hashes["SHA1"]}"')
+        if "SHA256" in hashes:
+            parts.append(f'cert.fingerprint_sha256 = "{hashes["SHA256"]}"')
+        query = " or ".join(parts)
+        search_query = SearchQueryInputBody(query=query)
         with SDK(
             organization_id=self.organisation_id,
             personal_access_token=self.token,
         ) as sdk:
-            parts = []
-            if "MD5" in hashes:
-                parts.append(f'cert.fingerprint_md5 = "{hashes["MD5"]}"')
-            if "SHA1" in hashes:
-                parts.append(f'cert.fingerprint_sha1 = "{hashes["SHA1"]}"')
-            if "SHA256" in hashes:
-                parts.append(f'cert.fingerprint_sha256 = "{hashes["SHA256"]}"')
-            query = " or ".join(parts)
-            search_query = SearchQueryInputBody(query=query)
             res: V3GlobaldataSearchQueryResponse = sdk.global_data.search(
                 search_query_input_body=search_query
             )
