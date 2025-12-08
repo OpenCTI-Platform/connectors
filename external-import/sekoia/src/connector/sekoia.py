@@ -428,7 +428,7 @@ class SekoiaConnector(object):
         ):
             if item["id"].startswith("marking-definition--"):
                 item.pop("object_marking_refs", None)
-            
+
             # Apply cache size limit with FIFO eviction
             if len(self._cache) >= self._max_identity_cache_size:
                 # Remove oldest entry
@@ -539,7 +539,7 @@ class SekoiaConnector(object):
 
             labels = []
             label_names = []
-            source_refs_to_fetch : List[str] = item.get("x_inthreat_sources_refs", [])
+            source_refs_to_fetch: List[str] = item.get("x_inthreat_sources_refs", [])
             for source_ref in item.get("x_inthreat_sources_refs", []):
                 if source_ref in self._cache:
                     source = self._cache[source_ref]
@@ -550,8 +550,8 @@ class SekoiaConnector(object):
                 source_refs_to_fetch, self.get_object_url
             ):
                 labels.append(f'source:{source["name"]}'.lower())
-            
-            for label_name in labels :
+
+            for label_name in labels:
                 if label_name not in self.all_labels:
                     self._create_custom_label(label_name, "#f8c167")
                 label_names.append(label_name)
