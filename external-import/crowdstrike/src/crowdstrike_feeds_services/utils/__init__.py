@@ -489,6 +489,61 @@ def create_intrusion_set_from_name(
     )
 
 
+def create_intrusion_set_from_actor_entity(
+    actor: Mapping[str, Any],
+    created_by: Optional[stix2.Identity] = None,
+    confidence: Optional[int] = None,
+    object_markings: Optional[List[stix2.MarkingDefinition]] = None,
+) -> stix2.IntrusionSet:
+    """
+    Create a STIX IntrusionSet from a CrowdStrike actor entity.
+
+    Expects a full actor resource as returned by the Intel API.
+    """
+    # Name / slug
+    name = actor.get("name") or actor.get("slug")
+    if not name:
+        raise ValueError("Actor entity is missing both 'name' and 'slug'")
+
+    # Description
+    description = actor.get("description") or actor.get("short_description")
+
+    # Aliases (field names may need tweaking based on actual CS schema)
+    aliases = actor.get("aliases") or actor.get("known_as") or []
+    if isinstance(aliases, str):
+        aliases = [aliases]
+
+    # Motivations (if provided by CS)
+    motivations = actor.get("motivations") or {}
+    primary_motivation = motivations.get("primary")
+    secondary_motivations = motivations.get("secondary") or []
+
+    # External reference back to CrowdStrike
+    external_references: List[stix2.ExternalReference] = []
+    cs_id = str(actor.get("id") or "")
+    url = actor.get("url")
+    if cs_id and url:
+        external_references.append(
+            create_external_reference(
+                "CrowdStrike Intel",
+                cs_id,
+                url,
+            )
+        )
+
+    return create_intrusion_set(
+        name,
+        created_by=created_by,
+        description=description,
+        aliases=aliases or None,
+        primary_motivation=primary_motivation,
+        secondary_motivations=secondary_motivations or None,
+        confidence=confidence,
+        external_references=external_references or None,
+        object_markings=object_markings,
+    )
+
+
 def create_organization(
     name: str, created_by: Optional[stix2.Identity] = None
 ) -> stix2.Identity:

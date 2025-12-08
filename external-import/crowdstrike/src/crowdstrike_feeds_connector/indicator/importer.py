@@ -245,6 +245,10 @@ class IndicatorImporter(BaseImporter):
                                 "actor_names": resolved_actor_names,
                             },
                         )
+
+                    if resources:
+                        indicator["actor_entities"] = resources
+
                 except Exception as err:
                     # Do not fail the whole indicator if actor resolution fails.
                     # Keep existing 'actors' field (slugs) and log a warning.

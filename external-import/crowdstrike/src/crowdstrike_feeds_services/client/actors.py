@@ -60,7 +60,7 @@ class ActorsAPI(BaseCrowdstrikeClient):
 
         if fields is None:
             # Start with basic – can switch to "__full__" if you need more.
-            fields = ["__basic__"]
+            fields = ["__full__"]
 
         fql_filter = self.build_slug_filter(cleaned_slugs)
 

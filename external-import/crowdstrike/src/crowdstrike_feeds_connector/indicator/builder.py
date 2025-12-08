@@ -23,6 +23,7 @@ from crowdstrike_feeds_services.utils import (
     create_indicates_relationships,
     create_indicator,
     create_intrusion_sets_from_names,
+    create_intrusion_set_from_actor_entity,
     create_kill_chain_phase,
     create_malware,
     create_object_refs,
@@ -160,6 +161,19 @@ class IndicatorBundleBuilder:
         return factory
 
     def _create_intrusion_sets(self) -> List[IntrusionSet]:
+        actor_entities = self.indicator.get("actor_entities") or []
+        if actor_entities:
+            return [
+                create_intrusion_set_from_actor_entity(
+                    actor,
+                    created_by=self.author,
+                    confidence=self.confidence_level,
+                    object_markings=self.object_markings,
+                )
+                for actor in actor_entities
+            ]
+
+        # fallback to name-only path
         indicator_actors = self.indicator["actors"]
         if not indicator_actors:
             return []
@@ -170,6 +184,31 @@ class IndicatorBundleBuilder:
             confidence=self.confidence_level,
             object_markings=self.object_markings,
         )
+
+    def _create_intrusion_set_from_actor(self, actor: dict) -> IntrusionSet:
+        """
+        Build a full IntrusionSet from a CrowdStrike actor entity.
+        Expecting a 'full' actor resource from the Intel API.
+        """
+        name = actor.get("name") or actor.get("slug")
+        description = actor.get("description")
+        aliases = actor.get("aliases") or actor.get("known_as") or []
+        if isinstance(aliases, str):
+            aliases = [aliases]
+
+        # Map other interesting fields if available
+        primary_motivation = actor.get("motivations", {}).get("primary")
+        secondary_motivations = actor.get("motivations", {}).get("secondary", [])
+
+        # Example mapping – adjust fields based on actual CS schema
+        return create_intrusion_sets_from_names(
+            [name],
+            created_by=self.author,
+            confidence=self.confidence_level,
+            object_markings=self.object_markings,
+        )[0]
+        # OR, better: a dedicated create_intrusion_set(...) util that accepts
+        # name, description, aliases, motivations, external_references, etc.
 
     def _create_kill_chain_phases(self) -> List[KillChainPhase]:
         kill_chain_phases = []
