@@ -29,6 +29,19 @@ class Client:
             raise ValueError(f"No data found for IP {ip}")
 
     def fetch_certs(self, hashes: Dict[str, str]) -> Generator[Certificate, None, None]:
+        """Fetch certificates by their hashes
+
+        Args:
+            hashes (Dict[str, str]): A dictionary containing one or more of the following keys
+                with their corresponding hash values:
+                    - "MD5"
+                    - "SHA1"
+                    - "SHA256"
+        Yields:
+            Certificate: Censys Certificate objects matching the provided hashes.
+        Raises:
+            EntityHasNoUsableHashError: If none of the required hashes are provided.
+        """
         if not any(h in hashes for h in ("MD5", "SHA1", "SHA256")):
             raise EntityHasNoUsableHashError(
                 "At least one hash (MD5, SHA1, SHA256) must be provided."
