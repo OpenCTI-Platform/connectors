@@ -237,6 +237,10 @@ class S3Connector:
                 ):
                     self.helper.log_error("Found non-mapped custom key: " + key)
 
+            # Ensure modification date
+            if "modified" in obj:
+                obj["x_opencti_modified"] = obj["modified"]
+
             # Ensure author and marking
             if self.identity is not None and "created_by_ref" not in obj:
                 obj["created_by_ref"] = self.identity["standard_id"]
