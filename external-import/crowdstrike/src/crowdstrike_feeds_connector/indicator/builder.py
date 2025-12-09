@@ -43,6 +43,7 @@ from stix2 import (
 )
 from stix2 import Indicator as STIXIndicator  # type: ignore
 from stix2 import (
+    AttackPattern,
     IntrusionSet,
     KillChainPhase,
     Malware,
@@ -239,6 +240,44 @@ class IndicatorBundleBuilder:
                 create_kill_chain_phase("mitre-attack", phase_name)
             )
         return kill_chain_phases
+
+    def _create_attack_patterns(
+        self, kill_chain_phases: List[KillChainPhase]
+    ) -> List[AttackPattern]:
+        """Create AttackPattern objects from MITRE techniques parsed from labels.
+
+        Uses prettified technique names from self.parsed_labels.mitre_technique_names.
+        """
+        attack_patterns: List[AttackPattern] = []
+
+        # Filter MITRE-specific kill-chain phases if you want them separated
+        mitre_kcps = [
+            kcp for kcp in kill_chain_phases if kcp.kill_chain_name == "mitre-attack"
+        ]
+        if not mitre_kcps:
+            mitre_kcps = kill_chain_phases
+
+        for technique_name in sorted(self.parsed_labels.mitre_technique_names):
+            try:
+                ap = AttackPattern(
+                    name=technique_name,
+                    created_by_ref=self.author.id,
+                    kill_chain_phases=mitre_kcps,
+                    confidence=self.confidence_level,
+                    object_marking_refs=[m.id for m in self.object_markings],
+                )
+                attack_patterns.append(ap)
+            except Exception as e:
+                self.helper.connector_logger.warning(
+                    "[WARNING] AttackPattern creation failed from MITRE labels.",
+                    {
+                        "error": str(e),
+                        "indicator_id": self.indicator.get("id"),
+                        "technique_name": technique_name,
+                    },
+                )
+
+        return attack_patterns
 
     @staticmethod
     def _create_kill_chain_phase(phase_name: str) -> KillChainPhase:
@@ -507,6 +546,10 @@ class IndicatorBundleBuilder:
         # Create kill chain phases.
         kill_chain_phases = self._create_kill_chain_phases()
 
+        # 🔥 Create attack patterns from MITRE labels and add to bundle.
+        attack_patterns = self._create_attack_patterns(kill_chain_phases)
+        bundle_objects.extend(attack_patterns)
+
         # Create malwares and add to bundle.
         malwares = self._create_malwares(kill_chain_phases)
         bundle_objects.extend(malwares)
@@ -516,6 +559,18 @@ class IndicatorBundleBuilder:
             intrusion_sets, malwares
         )
         bundle_objects.extend(intrusion_sets_use_malwares)
+
+        # Intrusion sets use attack patterns and add to bundle.
+        intrusion_sets_use_attack_patterns = self._create_uses_relationships(
+            intrusion_sets, attack_patterns
+        )
+        bundle_objects.extend(intrusion_sets_use_attack_patterns)
+
+        # Malwares use attack patterns and add to bundle.
+        malwares_use_attack_patterns = self._create_uses_relationships(
+            malwares, attack_patterns
+        )
+        bundle_objects.extend(malwares_use_attack_patterns)
 
         # Create target sectors and add to bundle.
         target_sectors = self._create_targeted_sectors()
@@ -580,7 +635,7 @@ class IndicatorBundleBuilder:
         bundle_objects.extend(indicators_based_on_observables)
 
         # Indicator(s) indicate entities and add to bundle.
-        indicator_indicates = intrusion_sets + malwares
+        indicator_indicates = intrusion_sets + malwares + attack_patterns
 
         indicator_indicates_entities = self._create_indicates_relationships(
             indicators, indicator_indicates
@@ -602,6 +657,9 @@ class IndicatorBundleBuilder:
             indicators,
             indicators_based_on_observables,
             indicator_indicates_entities,
+            attack_patterns,
+            intrusion_sets_use_attack_patterns,
+            malwares_use_attack_patterns,
         )
 
         # XXX: Without allow_custom=True the observable with the custom property
