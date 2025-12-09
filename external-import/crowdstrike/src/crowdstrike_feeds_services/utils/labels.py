@@ -4,6 +4,9 @@
 import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, List, Set, Tuple
+import re
+
+_CAMEL_SPLIT_RE = re.compile(r"(?<!^)(?=[A-Z0-9])")
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +28,12 @@ class ParsedLabels:
     mitre_tactic_technique_pairs: Set[Tuple[str, str]] = field(default_factory=set)
 
     other: Dict[str, Set[str]] = field(default_factory=dict)
+
+
+def _prettify_label_token(token: str) -> str:
+    """Turn 'DataObfuscation' into 'Data Obfuscation'."""
+    parts = _CAMEL_SPLIT_RE.split(token)
+    return " ".join(parts)
 
 
 def extract_label_names(labels: Any) -> List[str]:
@@ -123,11 +132,13 @@ def parse_crowdstrike_labels(labels: Iterable[str]) -> ParsedLabels:
             if not rest:
                 continue
 
-            tactic = rest[0]
+            raw_tactic = rest[0]
+            tactic = _prettify_label_token(raw_tactic)
             parsed.mitre_tactics.add(tactic)
 
             if len(rest) >= 2:
-                technique_name = rest[1]
+                raw_technique_name = rest[1]
+                technique_name = _prettify_label_token(raw_technique_name)
                 parsed.mitre_technique_names.add(technique_name)
                 parsed.mitre_tactic_technique_pairs.add((tactic, technique_name))
             continue

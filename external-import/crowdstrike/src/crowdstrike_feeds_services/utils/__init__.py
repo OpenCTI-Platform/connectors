@@ -308,7 +308,9 @@ def create_vulnerability_external_references(
 
     if name.startswith("CVE-"):
         external_reference = create_external_reference(
-            "NIST NVD", f"https://nvd.nist.gov/vuln/detail/{name}", name
+            "NIST NVD",
+            name,  # external_id = "CVE-XXXX-YYYY"
+            f"https://nvd.nist.gov/vuln/detail/{name}",
         )
         external_references.append(external_reference)
 
@@ -597,17 +599,17 @@ def create_intrusion_set_from_actor_entity(
                     secondary_values.append(val)
             if secondary_values:
                 secondary_motivations = secondary_values
-    logger.debug(
-        "Mapped CrowdStrike actor to IntrusionSet motivations and aliases",
-        {
-            "actor_id": actor.get("id"),
-            "actor_name": name,
-            "motivations_raw": motivations_raw,
-            "primary_motivation": primary_motivation,
-            "secondary_motivations": secondary_motivations,
-            "aliases": aliases,
-        },
-    )
+        logger.debug(
+            "Mapped CrowdStrike actor to IntrusionSet motivations and aliases: %s",
+            {
+                "actor_id": actor.get("id"),
+                "actor_name": name,
+                "motivations_raw": motivations_raw,
+                "primary_motivation": primary_motivation,
+                "secondary_motivations": secondary_motivations,
+                "aliases": aliases,
+            },
+        )
 
     # Goals (map CrowdStrike 'objectives' to STIX goals)
     goals_raw = actor.get("objectives") or []

@@ -33,6 +33,8 @@ from crowdstrike_feeds_services.utils import (
     create_vulnerability,
     create_vulnerability_external_references,
     timestamp_to_datetime,
+    ParsedLabels,
+    parse_crowdstrike_labels_from_raw,
 )
 from pycti import OpenCTIConnectorHelper
 from stix2 import (
@@ -152,6 +154,9 @@ class IndicatorBundleBuilder:
         self.indicator_unwanted_labels = config.indicator_unwanted_labels
 
         self.observation_factory = self._get_observation_factory(self.indicator["type"])
+        self.parsed_labels: ParsedLabels = parse_crowdstrike_labels_from_raw(
+            self.indicator.get("labels") or []
+        )
 
     @classmethod
     def _get_observation_factory(cls, indicator_type: str) -> ObservationFactory:
@@ -213,6 +218,7 @@ class IndicatorBundleBuilder:
     def _create_kill_chain_phases(self) -> List[KillChainPhase]:
         kill_chain_phases = []
 
+        # 1) Existing CrowdStrike → Lockheed-Martin mapping
         for kill_chain in self.indicator["kill_chains"]:
             lh_kill_chain = self._CS_KILL_CHAIN_TO_LOCKHEED_MARTIN_CYBER_KILL_CHAIN.get(
                 kill_chain
@@ -226,7 +232,12 @@ class IndicatorBundleBuilder:
 
             kill_chain_phase = self._create_kill_chain_phase(lh_kill_chain)
             kill_chain_phases.append(kill_chain_phase)
-
+        # 2) MITRE ATT&CK tactics from labels → 'mitre-attack' kill chain
+        for tactic in sorted(self.parsed_labels.mitre_tactics):
+            phase_name = tactic.replace(" ", "-").lower()
+            kill_chain_phases.append(
+                create_kill_chain_phase("mitre-attack", phase_name)
+            )
         return kill_chain_phases
 
     @staticmethod
@@ -356,17 +367,7 @@ class IndicatorBundleBuilder:
         return Observation(observable, indicator, indicator_based_on_observable)
 
     def _get_labels(self) -> List[str]:
-        labels = []
-
-        indicator_labels = self.indicator["labels"]
-        for indicator_label in indicator_labels:
-            label = indicator_label["name"]
-            if not label:
-                continue
-
-            labels.append(label)
-
-        return labels
+        return list(self.parsed_labels.raw_labels)
 
     def _create_observable(
         self, labels: List[str], score: int
