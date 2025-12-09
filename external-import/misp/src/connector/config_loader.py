@@ -24,28 +24,7 @@ from pydantic_settings import (
 )
 
 _MAIN_PATH_ = os.path.dirname(os.path.abspath(__main__.__file__))
-
-"""
-All the variables that have default values will override configuration from the OpenCTI helper.
-
-All the variables of this classes are customizable through:
-    - config.yml 
-    - .env
-    - environment variables.
-
-If a variable is set in 2 different places, the first one will be used in this order:
-    1. YAML file
-    2. .env file
-    3. Environment variables
-    4. Default value
-    
-WARNING:
-    The Environment variables in the .env or global environment must be set in the following format:
-    OPENCTI_<variable>
-    CONNECTOR_<variable>
-    
-    the split is made on the first occurrence of the "_" character.
-"""
+'\nAll the variables that have default values will override configuration from the OpenCTI helper.\n\nAll the variables of this classes are customizable through:\n    - config.yml \n    - .env\n    - environment variables.\n\nIf a variable is set in 2 different places, the first one will be used in this order:\n    1. YAML file\n    2. .env file\n    3. Environment variables\n    4. Default value\n    \nWARNING:\n    The Environment variables in the .env or global environment must be set in the following format:\n    OPENCTI_<variable>\n    CONNECTOR_<variable>\n    \n    the split is made on the first occurrence of the "_" character.\n'
 
 
 class ConfigRetrievalError(Exception):
@@ -79,7 +58,11 @@ def pycti_dict_serializer(value: list[str], info: SerializationInfo) -> str | li
         > serialized_values = pycti_dict_serializer({ "key_1": "value_1", "key_2"="value_2" })
         > print(serialized_values) # "key_1=value_1,key_2=value_2"
     """
-    if isinstance(value, dict) and info.context and info.context.get("mode") == "pycti":
+    if (
+        isinstance(value, dict)
+        and info.context
+        and (info.context.get("mode") == "pycti")
+    ):
         entries = [
             f"{entry_key}={entry_value}"
             for entry_key, entry_value in list(value.items())
@@ -119,7 +102,11 @@ def pycti_list_serializer(value: list[str], info: SerializationInfo) -> str | li
         > serialized_values = pycti_list_serializer([ "e1", "e2", "e3" ])
         > print(serialized_values) # "e1,e2,e3"
     """
-    if isinstance(value, list) and info.context and info.context.get("mode") == "pycti":
+    if (
+        isinstance(value, list)
+        and info.context
+        and (info.context.get("mode") == "pycti")
+    ):
         return ",".join(value)
     return value
 
@@ -139,23 +126,18 @@ def safe_aware_datetime_validator(value: str | datetime) -> AwareDatetime:
         > aware_datetime = safe_aware_datetime_validator("2023-10-01T12:00:00Z")
         > print(aware_datetime) # 2023-10-01 12:00:00+00:00
     """
-    # Parse ISO string first
     if isinstance(value, str):
         value = datetime.fromisoformat(value)
-
-    # Set timezone
     if isinstance(value, datetime):
         if value.tzinfo:
             value = value.astimezone(tz=timezone.utc)
-        else:  # assumes ISO string represented UTC datetime
+        else:
             value = value.replace(tzinfo=timezone.utc)
-
     return value
 
 
 SafeAwareDatetime = Annotated[
-    AwareDatetime,
-    BeforeValidator(safe_aware_datetime_validator),
+    AwareDatetime, BeforeValidator(safe_aware_datetime_validator)
 ]
 
 
@@ -181,28 +163,19 @@ class _ConnectorConfig(_ConfigBaseModel):
     Define config specific to this type of connector, e.g. an `external-import`.
     """
 
-    id: str = Field(
-        description="A UUID v4 to identify the connector in OpenCTI.",
-    )
-    name: str = Field(
-        description="The name of the connector.",
-    )
+    id: str = Field(description="A UUID v4 to identify the connector in OpenCTI.")
+    name: str = Field(description="The name of the connector.")
     type: Literal["EXTERNAL_IMPORT"] = "EXTERNAL_IMPORT"
     scope: ListFromString = Field(
-        description="The scope of the connector, e.g. 'misp'.",
-        default=["misp"],
+        description="The scope of the connector, e.g. 'misp'.", default=["misp"]
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
         default=timedelta(minutes=5),
     )
-    log_level: Literal[
-        "debug",
-        "info",
-        "warn",  # alias of warning
-        "warning",
-        "error",
-    ] = Field(default="error")
+    log_level: Literal["debug", "info", "warn", "warning", "error"] = Field(
+        default="error"
+    )
 
 
 class _MISPConfig(_ConfigBaseModel):
@@ -211,88 +184,65 @@ class _MISPConfig(_ConfigBaseModel):
     """
 
     url: str = Field(description="MISP instance URL")
-    key: str = Field(
-        description="MISP instance API key.",
-    )
+    key: str = Field(description="MISP instance API key.")
     ssl_verify: bool = Field(
-        description="Whether to check if the SSL certificate is valid when using `HTTPS` protocol or not.",
+        description="Whether to check if the SSL certificate is valid when using `HTTPS` protocol or not."
     )
     client_cert: str | None = Field(
         description="Filepath to the client certificate to use for MISP API calls. Required if `ssl_verify` is enabled.",
         default=None,
     )
     reference_url: str | None = Field(
-        description="MISP base URL used for External References",
-        default=None,
+        description="MISP base URL used for External References", default=None
     )
     create_reports: bool = Field(
-        description="Whether to create reports for each imported MISP event or not.",
+        description="Whether to create reports for each imported MISP event or not."
     )
     create_indicators: bool = Field(
-        description="Whether to create an indicator for each imported MISP attribute or not.",
+        description="Whether to create an indicator for each imported MISP attribute or not."
     )
     create_observables: bool = Field(
-        description="Whether to create an observable for each imported MISP attribute or not.",
+        description="Whether to create an observable for each imported MISP attribute or not."
     )
     datetime_attribute: Literal[
-        "date",
-        "timestamp",
-        "publish_timestamp",
-        "sighting_timestamp",
+        "date", "timestamp", "publish_timestamp", "sighting_timestamp"
     ] = Field(
-        description="The attribute to use as MISP events date.",
-        default="timestamp",
+        description="The attribute to use as MISP events date.", default="timestamp"
     )
-    # TODO: check if Literal is correct
-    date_filter_field: Literal[
-        "date_from",
-        "timestamp",
-        "publish_timestamp",
-    ] = Field(
+    date_filter_field: Literal["date_from", "timestamp", "publish_timestamp"] = Field(
         description="The attribute to use as filter to query new MISP events by date.",
         default="timestamp",
     )
-    # ? What does it means??
     report_description_attribute_filters: DictFromString = Field(
         description="Filter to use to find the attribute that will be used for report description (example: 'type=comment,category=Internal reference')",
         default={},
-        alias="report_description_attribute_filter",  # backward compatibility with mispelled env var
+        alias="report_description_attribute_filter",
     )
     create_object_observables: bool = Field(
         description="Whether to create a text observable for each MISP Event's object or not.",
         default=False,
     )
     create_tags_as_labels: bool = Field(
-        description="Whether to create labels from MISP tags or not.",
-        default=True,
+        description="Whether to create labels from MISP tags or not.", default=True
     )
-    # ! Not documented in README
     guess_threats_from_tags: bool = Field(
         description="Whether to **guess** and create Threats from MISP tags or not.",
         default=False,
-        alias="guess_threat_from_tags",  # backward compatibility with mispelled env var
+        alias="guess_threat_from_tags",
     )
-    # ! Not documented in README
     author_from_tags: bool = Field(
-        description="Whether to create Authors from MISP tags or not.",
-        default=False,
+        description="Whether to create Authors from MISP tags or not.", default=False
     )
-    # ! Not documented in README
     markings_from_tags: bool = Field(
-        description="Whether to create Markings from MISP tags or not.",
-        default=False,
+        description="Whether to create Markings from MISP tags or not.", default=False
     )
-    # ! Not documented in README
     keep_original_tags_as_label: ListFromString = Field(
-        description="List of original MISP tags to keep as labels.",
-        default=[],
+        description="List of original MISP tags to keep as labels.", default=[]
     )
-    # ! Not documented in README
     enforce_warning_list: bool = Field(
         description="Whether to enforce the warning list for MISP events or not.",
         default=False,
     )
-    # ! Documented as MISP_REPORT_CLASS in README
     report_type: str = Field(
         description="The type of report to create on OpenCTI from MISP events.",
         default="misp-event",
@@ -326,8 +276,7 @@ class _MISPConfig(_ConfigBaseModel):
         default=[],
     )
     import_keyword: str | None = Field(
-        description="Keyword to use as filter to import MISP events.",
-        default=None,
+        description="Keyword to use as filter to import MISP events.", default=None
     )
     import_distribution_levels: ListFromString = Field(
         description="List of distribution levels to filter MISP events to import, **including** only events with these distribution levels.",
@@ -338,14 +287,14 @@ class _MISPConfig(_ConfigBaseModel):
         default=[],
     )
     import_only_published: bool = Field(
-        description="Whether to only import published MISP events or not.",
+        description="Whether to only import published MISP events or not."
     )
     import_with_attachments: bool = Field(
         description="Whether to import attachment attribute content as a file (works only with PDF).",
         default=False,
     )
     import_to_ids_no_score: int = Field(
-        description="A score value for the indicator/observable if the attribute `to_ids` value is no.",
+        description="A score value for the indicator/observable if the attribute `to_ids` value is no."
     )
     import_unsupported_observables_as_text: bool = Field(
         description="Whether to import unsupported observable as x_opencti_text or not.",
@@ -372,8 +321,6 @@ class ConfigLoader(BaseSettings):
     opencti: _OpenCTIConfig
     connector: _ConnectorConfig
     misp: _MISPConfig
-
-    # Setup model config and env vars parsing
     model_config = SettingsConfigDict(
         frozen=True,
         extra="allow",
@@ -419,9 +366,9 @@ class ConfigLoader(BaseSettings):
             3. Environment variables
             4. Default values
         """
-        if Path(settings_cls.model_config["yaml_file"] or "").is_file():  # type: ignore
+        if Path(settings_cls.model_config["yaml_file"] or "").is_file():
             return (YamlConfigSettingsSource(settings_cls),)
-        if Path(settings_cls.model_config["env_file"] or "").is_file():  # type: ignore
+        if Path(settings_cls.model_config["env_file"] or "").is_file():
             return (dotenv_settings,)
         return (env_settings,)
 
@@ -434,12 +381,9 @@ class ConfigLoader(BaseSettings):
         """
         connector_data: dict = data.get("connector", {})
         misp_data: dict = data.get("misp", {})
-
         if interval := misp_data.pop("interval", None):
             warnings.warn(
                 "Env var 'MISP_INTERVAL' is deprecated. Use 'CONNECTOR_DURATION_PERIOD' instead."
             )
-
             connector_data["duration_period"] = timedelta(minutes=int(interval))
-
         return data
