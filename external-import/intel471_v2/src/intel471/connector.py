@@ -6,10 +6,11 @@ import yaml
 from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.schedulers.base import BaseScheduler
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from intel471.settings import ConnectorSettings
+from pycti import OpenCTIConnectorHelper
 from yaml.parser import ParserError
 
-from . import HelperRequest
+from .common import HelperRequest
 from .streams.breach_alerts import Intel471BreachAlertsStream
 from .streams.common import Intel471Stream
 from .streams.cves import Intel471CVEsStream
@@ -21,36 +22,20 @@ from .streams.yara import Intel471YARAStream
 
 
 class Intel471Connector:
-    def __init__(self) -> None:
-        config: dict = self._init_config()
+
+    def __init__(
+        self, config: ConnectorSettings, helper: OpenCTIConnectorHelper
+    ) -> None:
+        self.config = config
+        self.helper = helper
         self.scheduler: BaseScheduler = self._init_scheduler()
-        self.helper = OpenCTIConnectorHelper(config)
-        # We'll use queues to coordinate helper state reads/writes from threaded streams
         self.in_queue = Queue()
         self.out_queues: dict[str, Queue] = {}
-
-        update_existing_data = bool(
-            get_config_variable(
-                "CONNECTOR_UPDATE_EXISTING_DATA",
-                ["connector", "update_existing_data"],
-                config,
-            )
-        )
-        api_username = get_config_variable(
-            "INTEL471_API_USERNAME", ["intel471", "api_username"], config
-        )
-        api_key = get_config_variable(
-            "INTEL471_API_KEY", ["intel471", "api_key"], config
-        )
-        proxy_url = get_config_variable("INTEL471_PROXY", ["intel471", "proxy"], config)
-        ioc_score = get_config_variable(
-            "INTEL471_IOC_SCORE",
-            ["intel471", "ioc_score"],
-            config,
-            isNumber=True,
-            default=70,
-        )
-
+        update_existing_data = False
+        api_username = self.config.intel471.api_username
+        api_key = self.config.intel471.api_key.get_secret_value()
+        proxy_url = self.config.intel471.proxy
+        ioc_score = self.config.intel471.ioc_score
         for stream_class in (
             Intel471IndicatorsStream,
             Intel471CVEsStream,
@@ -60,20 +45,12 @@ class Intel471Connector:
             Intel471SpotReportsStream,
             Intel471MalwareReportsStream,
         ):
-            if interval := get_config_variable(
-                f"INTEL471_INTERVAL_{stream_class.group_label}".upper(),
-                ["intel471", f"interval_{stream_class.group_label}"],
-                config,
-                isNumber=True,
-                default=0,
+            if interval := getattr(
+                self.config.intel471, f"interval_{stream_class.group_label}"
             ):
                 self.out_queues[stream_class.label] = Queue()
-                initial_history = get_config_variable(
-                    f"INTEL471_INITIAL_HISTORY_{stream_class.group_label}".upper(),
-                    ["intel471", f"initial_history_{stream_class.group_label}"],
-                    config,
-                    isNumber=True,
-                    default=0,
+                initial_history = getattr(
+                    self.config.intel471, f"initial_history_{stream_class.group_label}"
                 )
                 self.add_job(
                     stream_class(
@@ -89,13 +66,12 @@ class Intel471Connector:
                     ),
                     interval,
                 )
-
         signal.signal(signal.SIGTERM, self._signal_handler)
         signal.signal(signal.SIGINT, self._signal_handler)
 
     def run(self) -> None:
         self.scheduler.start()
-        self.handle_helper_state()  # main loop
+        self.handle_helper_state()
 
     def handle_helper_state(self) -> None:
         """
