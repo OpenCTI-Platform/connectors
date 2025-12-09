@@ -63,11 +63,14 @@ class ActorsAPI(BaseCrowdstrikeClient):
             fields = ["__full__"]
 
         fql_filter = self.build_slug_filter(cleaned_slugs)
+        self.helper.connector_logger.debug(
+            f"Resolving actors by slugs with FQL filter: {fql_filter}"
+        )
 
         return self.get_combined_actor_entities(
             limit=len(cleaned_slugs),
             offset=0,
-            sort="last_modified_timestamp|desc",
+            sort="slug|asc",
             fql_filter=fql_filter,
             fields=fields,
         )
@@ -83,6 +86,6 @@ class ActorsAPI(BaseCrowdstrikeClient):
         if not cleaned_slugs:
             return ""
 
-        conditions = [f"slug:'{slug}'" for slug in cleaned_slugs]
+        conditions = [f"name:'{slug}'" for slug in cleaned_slugs]
         # CrowdStrike FQL uses comma as OR between clauses.
         return "(" + ",".join(conditions) + ")"

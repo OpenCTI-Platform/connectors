@@ -204,6 +204,15 @@ class IndicatorImporter(BaseImporter):
     def _process_indicator(self, indicator: dict) -> bool:
         self._info("Processing indicator {0}...", indicator["id"])
 
+        # 🔍 Debug raw CrowdStrike indicator content
+        self.helper.connector_logger.debug(
+            "Raw CrowdStrike indicator payload",
+            {
+                "indicator_id": indicator.get("id"),
+                "type": indicator.get("type"),
+                "raw": indicator,
+            },
+        )
         indicator_bundle = self._create_indicator_bundle(indicator)
         if indicator_bundle is None:
             self._warning("Discarding indicator {0} bundle", indicator["id"])
@@ -229,6 +238,15 @@ class IndicatorImporter(BaseImporter):
                 try:
                     response = self.actors_api_cs.get_actors_by_slugs(actor_slugs)
                     resources = response.get("resources", [])
+
+                    self.helper.connector_logger.debug(
+                        "Raw CrowdStrike actor entities resolved from slugs",
+                        {
+                            "indicator_id": indicator.get("id"),
+                            "actor_slugs": actor_slugs,
+                            "actor_resources": resources,
+                        },
+                    )
                     resolved_actor_names: List[str] = []
                     for actor in resources:
                         # Prefer canonical name, fall back to slug if needed.
