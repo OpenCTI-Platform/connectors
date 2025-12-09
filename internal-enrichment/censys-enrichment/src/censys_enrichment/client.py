@@ -68,6 +68,12 @@ class Client:
                         yield hit.certificate_v1.resource
 
     def fetch_hosts(self, hostname: str) -> Generator[Host, None, None]:
+        """Fetch hosts by hostname
+        Args:
+            hostname (str): The hostname to search for.
+        Yields:
+            Generator[Host, None, None]: Yields Host objects matching the hostname.
+        """
         with SDK(
             organization_id=self.organisation_id,
             personal_access_token=self.token,
