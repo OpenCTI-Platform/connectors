@@ -1,15 +1,11 @@
 import json
 from json import JSONDecodeError
 
+from microsoft_defender_intel_connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
 from .api_handler import DefenderApiHandler, DefenderApiHandlerError
-from .config_variables import ConfigConnector
-from .utils import (
-    FILE_HASH_TYPES_MAPPER,
-    is_observable,
-    is_stix_indicator,
-)
+from .utils import FILE_HASH_TYPES_MAPPER, is_observable, is_stix_indicator
 
 
 class MicrosoftDefenderIntelConnector:
@@ -39,15 +35,13 @@ class MicrosoftDefenderIntelConnector:
 
     """
 
-    def __init__(self):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """
         Initialize the Connector with necessary configurations
         """
-
-        # Load configuration file and connection helper
-        self.config = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
-        self.api = DefenderApiHandler(self.helper, self.config)
+        self.config = config
+        self.helper = helper
+        self.api = DefenderApiHandler(self.helper, self.config.microsoft_defender_intel)
 
     def _check_stream_id(self) -> None:
         """
@@ -73,7 +67,6 @@ class MicrosoftDefenderIntelConnector:
                 "observable_values", data
             )
             if parsed_observables:
-                # Iterate over the parsed observables
                 for observable in parsed_observables:
                     observable_data = {}
                     observable_data.update(data)
@@ -92,7 +85,6 @@ class MicrosoftDefenderIntelConnector:
                             observable_data["type"] = "file"
                             observable_data["hashes"] = file
                             observables.append(observable_data)
-
             return observables
         except:
             indicator_opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
@@ -117,13 +109,11 @@ class MicrosoftDefenderIntelConnector:
                 "[CREATE] Indicator created",
                 {"defender_id": result["id"], "opencti_id": observable_opencti_id},
             )
-            # Update OpenCTI SDO external references
             external_reference = self.helper.api.external_reference.create(
                 source_name="Microsoft Defender",
                 external_id=result["id"],
                 description="Intel within the Microsoft platform.",
             )
-            # If observable was built from an OpenCTI Indicator
             if "pattern" in observable_data:
                 self.helper.api.stix_domain_object.add_external_reference(
                     id=observable_opencti_id,
@@ -184,10 +174,7 @@ class MicrosoftDefenderIntelConnector:
                     did_update = True
                     self.helper.connector_logger.info(
                         "[UPDATE] Indicator updated",
-                        {
-                            "defender_id": result[0]["id"],
-                            "opencti_id": opencti_id,
-                        },
+                        {"defender_id": result[0]["id"], "opencti_id": opencti_id},
                     )
         elif is_observable(data):
             result = self.api.find_indicators(data["value"])
@@ -196,10 +183,7 @@ class MicrosoftDefenderIntelConnector:
                 did_update = True
                 self.helper.connector_logger.info(
                     "[UPDATE] Indicator updated",
-                    {
-                        "defender_id": result[0]["id"],
-                        "opencti_id": opencti_id,
-                    },
+                    {"defender_id": result[0]["id"], "opencti_id": opencti_id},
                 )
         if not did_update:
             self.helper.connector_logger.info(
@@ -265,23 +249,14 @@ class MicrosoftDefenderIntelConnector:
                 did_delete = True
                 self.helper.connector_logger.info(
                     "[DELETE] Indicator deleted",
-                    {
-                        "defender_id": indicator_result["id"],
-                        "opencti_id": opencti_id,
-                    },
+                    {"defender_id": indicator_result["id"], "opencti_id": opencti_id},
                 )
                 external_reference = self.helper.api.external_reference.read(
                     filters={
                         "mode": "and",
                         "filters": [
-                            {
-                                "key": "source_name",
-                                "values": ["Microsoft Defender"],
-                            },
-                            {
-                                "key": "external_id",
-                                "values": [indicator_result["id"]],
-                            },
+                            {"key": "source_name", "values": ["Microsoft Defender"]},
+                            {"key": "external_id", "values": [indicator_result["id"]]},
                         ],
                         "filterGroups": [],
                     }
@@ -319,20 +294,16 @@ class MicrosoftDefenderIntelConnector:
         """
         try:
             self._check_stream_id()
-
             parsed_msg = self.validate_json(msg)
             data = parsed_msg["data"]
-
             if msg.event == "create":
                 self._handle_create_event(data)
             if msg.event == "update":
                 self._handle_update_event(data)
             if msg.event == "delete":
                 self._handle_delete_event(data)
-
         except DefenderApiHandlerError as err:
             self.helper.connector_logger.error(err.msg, err.metadata)
-
         except Exception as err:
             self.helper.connector_logger.error(
                 "[ERROR] Failed processing data {" + str(err) + "}"
