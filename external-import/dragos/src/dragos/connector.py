@@ -12,10 +12,9 @@ from pycti import (  # type: ignore[import-untyped]  # PyCTI is not typed
 )
 
 if TYPE_CHECKING:
-    from dragos.interfaces.config import ConfigLoader
-    from dragos.settings import ConnectorSettings
     from dragos.interfaces.geocoding import Geocoding
     from dragos.interfaces.report import Report, Reports
+    from dragos.settings import ConnectorSettings
 
 
 class Connector:
