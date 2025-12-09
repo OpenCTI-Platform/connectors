@@ -288,30 +288,17 @@ class ActorImporter(BaseImporter):
         source_name = self._source_name()
         object_marking_refs = [self.tlp_marking]
         confidence_level = self._confidence_level()
+        # NOTE: Import of IOCs from the actors collection is temporarily disabled
+        # to reduce load on client platforms (see issue #5017).
+        # We keep the structure in place but do not call the indicators API here.
         related_indicators_with_related_entities = []
 
-        actor_name = actor["name"]
-        if actor_name is not None:
-            self._info("Fetching related IOCs for actor: {0}", actor_name)
-            related_indicators_with_related_entities = self._get_related_iocs(
-                actor_name
+        actor_name = actor.get("name")
+        if actor_name:
+            self._info(
+                "Skipping related IOCs import for actor {0} (feature temporarily disabled).",
+                actor_name,
             )
-            if len(related_indicators_with_related_entities) > 0:
-                counts = Counter(
-                    s["type"]
-                    for s in {
-                        (stix["type"], stix["id"]): stix
-                        for stix in related_indicators_with_related_entities
-                        if stix["type"] not in ["relationship", "indicator"]
-                    }.values()
-                )
-
-                summary = ", ".join(f"{t}:{n}" for t, n in counts.items())
-                self._info(
-                    "Creating {0} stix objects for the IOCs and related entities for actor: {1}",
-                    summary,
-                    actor_name,
-                )
 
         attack_patterns = self._get_and_create_attack_patterns(actor)
 
