@@ -8,7 +8,7 @@ from pathlib import Path
 from dragos.adapters.config.env import ConfigLoaderEnv
 from dragos.adapters.geocoding.octi import OctiGeocoding
 from dragos.adapters.report.dragos_v1 import ReportsAPIV1
-from dragos.app import Connector
+from dragos.connector import Connector
 from limiter import Limiter  # type: ignore[import-untyped]  # Limiter is not typed
 from pycti import (  # type: ignore[import-untyped]  # PyCTI is not typed
     OpenCTIConnectorHelper,
@@ -19,7 +19,7 @@ logger = getLogger(__name__)
 
 if __name__ == "__main__":
     try:
-        dev_config = Path(__file__).parent / "config.yml"
+        dev_config = Path(__file__).parent.parent / "config.yml"
         if dev_config.exists():
             from dragos.adapters.config.yaml import ConfigLoaderYAML
 
