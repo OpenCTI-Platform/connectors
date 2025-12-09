@@ -1,6 +1,6 @@
 services:
   connector-tenable-security-center:
-    image: opencti/connector-tenable-security-center:rolling
+    image: opencti/connector-tenable-security-center:6.8.16
     env_file:
       - .env
     restart: unless-stopped

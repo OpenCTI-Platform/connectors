@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-nti:
-    image: opencti/connector-nti:rolling
+    image: opencti/connector-nti:6.8.16
     container_name: nti-connector
     environment:
       - OPENCTI_URL=http://opencti:8080
