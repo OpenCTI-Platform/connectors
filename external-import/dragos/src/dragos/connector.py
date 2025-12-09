@@ -13,6 +13,7 @@ from pycti import (  # type: ignore[import-untyped]  # PyCTI is not typed
 
 if TYPE_CHECKING:
     from dragos.interfaces.config import ConfigLoader
+    from dragos.settings import ConnectorSettings
     from dragos.interfaces.geocoding import Geocoding
     from dragos.interfaces.report import Report, Reports
 
@@ -32,7 +33,7 @@ class Connector:
 
     def __init__(
         self,
-        config: "ConfigLoader",
+        config: "ConnectorSettings",
         reports: "Reports",
         geocoding: "Geocoding",
         helper: OpenCTIConnectorHelper,
