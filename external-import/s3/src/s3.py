@@ -239,7 +239,7 @@ class S3Connector:
 
             # Ensure modification date
             if "modified" in obj:
-                obj["x_opencti_modified"] = obj["modified"]
+                obj["x_opencti_modified_at"] = obj["modified"]
 
             # Ensure author and marking
             if self.identity is not None and "created_by_ref" not in obj:
