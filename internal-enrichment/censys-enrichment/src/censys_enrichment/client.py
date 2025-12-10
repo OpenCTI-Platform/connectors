@@ -35,24 +35,24 @@ class Client:
             hashes (Dict[str, str]): A dictionary containing one or more of the following keys
                 with their corresponding hash values:
                     - "MD5"
-                    - "SHA1"
-                    - "SHA256"
+                    - "SHA-1"
+                    - "SHA-256"
         Yields:
             Certificate: Censys Certificate objects matching the provided hashes.
         Raises:
             EntityHasNoUsableHashError: If none of the required hashes are provided.
         """
-        if not any(h in hashes for h in ("MD5", "SHA1", "SHA256")):
+        if not any(h in hashes for h in ("MD5", "SHA-1", "SHA-256")):
             raise EntityHasNoUsableHashError(
                 "At least one hash (MD5, SHA1, SHA256) must be provided."
             )
         parts = []
         if "MD5" in hashes:
             parts.append(f'cert.fingerprint_md5 = "{hashes["MD5"]}"')
-        if "SHA1" in hashes:
-            parts.append(f'cert.fingerprint_sha1 = "{hashes["SHA1"]}"')
-        if "SHA256" in hashes:
-            parts.append(f'cert.fingerprint_sha256 = "{hashes["SHA256"]}"')
+        if "SHA-1" in hashes:
+            parts.append(f'cert.fingerprint_sha1 = "{hashes["SHA-1"]}"')
+        if "SHA-256" in hashes:
+            parts.append(f'cert.fingerprint_sha256 = "{hashes["SHA-256"]}"')
         query = " or ".join(parts)
         search_query = SearchQueryInputBody(query=query)
         with SDK(
