@@ -1,5 +1,13 @@
 # OpenCTI ShadowTrackr Connector
 
+## Status Filigran
+
+| Status            | Date       | Comment |
+|-------------------|------------|---------|
+| Filigran Verified | 2025-12-10 | -       |
+
+----
+
 This internal enrichment connector lowers the score for IP addresses that are 
 false positives, and changes the valid until date for sources
 that are known to change function regularly, like CDNs, Clouds and VPNs. 
