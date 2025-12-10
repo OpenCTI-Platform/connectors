@@ -123,6 +123,15 @@ class IndicatorBundleBuilder:
 
     _INDICATOR_PATTERN_TYPE_STIX = "stix"
 
+    _MALICIOUS_CONFIDENCE_TO_CONFIDENCE = {
+        "low": 15,
+        "medium": 50,
+        "moderate": 50,
+        "high": 75,
+        "very-high": 85,
+        "critical": 90,
+    }
+
     _CS_KILL_CHAIN_TO_LOCKHEED_MARTIN_CYBER_KILL_CHAIN = {
         "Reconnaissance": "reconnaissance",
         "Weaponization": "weaponization",
@@ -165,6 +174,58 @@ class IndicatorBundleBuilder:
         if factory is None:
             raise TypeError(f"Unsupported indicator type: {indicator_type}")
         return factory
+
+    def _get_indicator_confidence(self) -> int:
+        """Derive the indicator's confidence from CrowdStrike malicious_confidence.
+
+        Falls back to the connector's default confidence_level if no mapping is found.
+        """
+        raw = (self.indicator.get("malicious_confidence") or "").lower()
+
+        # Optional: fall back to labels if field is missing
+        if not raw and self.parsed_labels.malicious_confidences:
+            raw = next(iter(self.parsed_labels.malicious_confidences)).lower()
+
+        mapped = self._MALICIOUS_CONFIDENCE_TO_CONFIDENCE.get(raw)
+        if mapped is not None:
+            return mapped
+
+        # Fallback to connector-wide default
+        return self.confidence_level
+
+    def _get_indicator_types(self) -> List[str]:
+        """Build indicator_types from CrowdStrike fields.
+
+        - threat_types → core indicator types (Botnet, Criminal, etc.).
+        - domain_types → extra types for domain indicators.
+        - ip_address_types → extra types for IP indicators.
+        - malware_families → generic 'malware' type if present.
+        """
+        types: Set[str] = set()
+
+        # 1) CrowdStrike threat_types (top-level field)
+        for t in self.indicator.get("threat_types") or []:
+            if t:
+                types.add(str(t))
+
+        # 2) Domain-specific classifications
+        indicator_type = self.indicator.get("type")
+        if indicator_type == "domain":
+            for dt in self.indicator.get("domain_types") or []:
+                if dt:
+                    types.add(str(dt))
+
+        # 3) IP-specific classifications
+        if indicator_type in ("ip_address", "ip_address_block"):
+            for ipt in self.indicator.get("ip_address_types") or []:
+                if ipt:
+                    types.add(str(ipt))
+
+        # 4) If there is at least one malware family, we can safely say this is malware-related
+        if self.indicator.get("malware_families"):
+            types.add("malware")
+
+        return sorted(types)
 
     def _create_intrusion_sets(self) -> List[IntrusionSet]:
         actor_entities = self.indicator.get("actor_entities") or []
@@ -484,6 +545,9 @@ class IndicatorBundleBuilder:
                 self.indicator["published_date"]
             )
 
+            indicator_confidence = self._get_indicator_confidence()
+            indicator_types = self._get_indicator_types()
+
             return create_indicator(
                 indicator_pattern.pattern,
                 indicator_pattern_type,
@@ -493,10 +557,11 @@ class IndicatorBundleBuilder:
                 created=indicator_published,
                 kill_chain_phases=kill_chain_phases,
                 labels=labels,
-                confidence=self.confidence_level,
+                confidence=indicator_confidence,
                 object_markings=self.object_markings,
                 x_opencti_main_observable_type=indicator_pattern.main_observable_type,
                 x_opencti_score=score,
+                indicator_types=indicator_types or None,
             )
         except Exception as e:
             self.helper.connector_logger.warning(
