@@ -128,17 +128,12 @@ class ConnectorSettings(BaseConnectorSettings):
     Override `BaseConnectorSettings` to include `StreamConnectorConfig` and `TemplateConfig`.
     """
 
-    connector: Annotated[
-        StreamConnectorConfig, Field(default_factory=StreamConnectorConfig)
-    ]
-    sentinelone_intel: Annotated[
-        SentinelOneIntelSettings,
-        Field(
-            default_factory=SentinelOneIntelSettings,
-            validation_alias=AliasChoices(
-                "sentinelone_intel",
-                "sentinelone-intel",  # accept old key
-            ),
-            serialization_alias="sentinelone_intel",  # always output new key
+    connector: StreamConnectorConfig = Field(default_factory=StreamConnectorConfig)
+    sentinelone_intel: SentinelOneIntelSettings = Field(
+        default_factory=SentinelOneIntelSettings,
+        validation_alias=AliasChoices(
+            "sentinelone_intel",
+            "sentinelone-intel",  # accept old key
         ),
-    ]
+        serialization_alias="sentinelone_intel",  # always output new key
+    )
