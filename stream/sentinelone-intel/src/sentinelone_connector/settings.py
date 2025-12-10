@@ -27,8 +27,8 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
         default="SentinelOne Intel Stream Connector",
     )
     scope: ListFromString = Field(
-        description="The scope of the connector, e.g. 'all'.",
-        default="all",
+        description="The scope of the connector, e.g. 'sentinelone'.",
+        default="sentinelone",
     )
     log_level: Literal["debug", "info", "warn", "warning", "error"] = Field(
         description="The minimum level of logs to display.",
