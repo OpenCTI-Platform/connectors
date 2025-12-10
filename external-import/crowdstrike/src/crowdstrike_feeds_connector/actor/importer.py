@@ -6,7 +6,6 @@ from datetime import datetime
 from typing import Any, Dict, Generator, List, Optional
 
 from crowdstrike_feeds_services.client.actors import ActorsAPI
-from crowdstrike_feeds_services.client.indicators import IndicatorsAPI
 from crowdstrike_feeds_services.utils import (
     create_attack_pattern,
     datetime_to_timestamp,
@@ -29,7 +28,6 @@ class ActorImporter(BaseImporter):
     _NAME = "Actor"
 
     _LATEST_ACTOR_TIMESTAMP = "latest_actor_timestamp"
-    _LATEST_INDICATOR_TIMESTAMP = "latest_indicator_timestamp"
 
     def __init__(
         self,
@@ -37,14 +35,11 @@ class ActorImporter(BaseImporter):
         author: Identity,
         default_latest_timestamp: int,
         tlp_marking: MarkingDefinition,
-        indicator_config: Dict[str, Any],
     ) -> None:
         """Initialize CrowdStrike actor importer."""
         super().__init__(helper, author, tlp_marking)
         self.actors_api_cs = ActorsAPI(helper)
-        self.indicators_api_cs = IndicatorsAPI(helper)
         self.default_latest_timestamp = default_latest_timestamp
-        self.indicator_config = indicator_config
 
     def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Run importer."""
@@ -157,161 +152,22 @@ class ActorImporter(BaseImporter):
 
         self._send_bundle(actor_bundle)
 
-    def _get_related_iocs(self, actor_name: str) -> List[Any]:
-        """Get IOCs associated with the specified actor."""
-        try:
-            related_indicators = []
-            related_indicators_with_related_entities = []
-            _limit = 10000
-            _sort = "last_updated|asc"
-
-            fetch_timestamp = self.indicator_config.get(
-                "default_latest_timestamp", self.default_latest_timestamp
-            )
-            timestamp_source = "config_default"
-
-            if self.current_state.get(self._LATEST_INDICATOR_TIMESTAMP):
-                fetch_timestamp = self.current_state.get(
-                    self._LATEST_INDICATOR_TIMESTAMP
-                )
-                timestamp_source = "indicator"
-            elif self.current_state.get(self._LATEST_ACTOR_TIMESTAMP):
-                fetch_timestamp = self.current_state.get(self._LATEST_ACTOR_TIMESTAMP)
-                timestamp_source = "actor"
-
-            _fql_filter = f"actors:['{actor_name}']+last_updated:>{fetch_timestamp}"
-
-            exclude_types = self.indicator_config.get("exclude_types", [])
-            if exclude_types:
-                _fql_filter = f"{_fql_filter}+type:!{exclude_types}"
-
-            self._info(
-                "Fetching IOCs for actor {0} with timestamp filter {1} (using {2} timestamp)",
-                actor_name,
-                timestamp_to_datetime(fetch_timestamp),
-                timestamp_source,
-            )
-
-            response = self.indicators_api_cs.get_combined_indicator_entities(
-                limit=_limit, sort=_sort, fql_filter=_fql_filter, deep_pagination=True
-            )
-            related_indicators.extend(response["resources"])
-
-            self._info(
-                "Retrieved {0} raw IOCs from CrowdStrike for actor: {1}",
-                len(related_indicators),
-                actor_name,
-            )
-
-            if related_indicators is not None:
-                for indicator in related_indicators:
-                    bundle_builder_config = IndicatorBundleBuilderConfig(
-                        indicator=indicator,
-                        author=self.author,
-                        source_name=self._source_name(),
-                        object_markings=[self.tlp_marking],
-                        confidence_level=self._confidence_level(),
-                        create_observables=self.indicator_config["create_observables"],
-                        create_indicators=self.indicator_config["create_indicators"],
-                        default_x_opencti_score=self.indicator_config[
-                            "default_x_opencti_score"
-                        ],
-                        indicator_low_score=self.indicator_config[
-                            "indicator_low_score"
-                        ],
-                        indicator_low_score_labels=self.indicator_config[
-                            "indicator_low_score_labels"
-                        ],
-                        indicator_medium_score=self.indicator_config[
-                            "indicator_medium_score"
-                        ],
-                        indicator_medium_score_labels=self.indicator_config[
-                            "indicator_medium_score_labels"
-                        ],
-                        indicator_high_score=self.indicator_config[
-                            "indicator_high_score"
-                        ],
-                        indicator_high_score_labels=self.indicator_config[
-                            "indicator_high_score_labels"
-                        ],
-                        indicator_unwanted_labels=self.indicator_config[
-                            "indicator_unwanted_labels"
-                        ],
-                    )
-                    try:
-                        bundle_builder = IndicatorBundleBuilder(
-                            self.helper, bundle_builder_config
-                        )
-                    except TypeError as err:
-                        self.helper.connector_logger.warning(
-                            "Skipping unsupported indicator type for actor.",
-                            {
-                                "actor_name": actor_name,
-                                "indicator_id": indicator.get("id"),
-                                "indicator_type": indicator.get("type"),
-                                "indicator_value": indicator.get("indicator"),
-                                "error": str(err),
-                            },
-                        )
-                        continue
-                    indicator_bundle_built = bundle_builder.build()
-                    if indicator_bundle_built:
-                        indicator_with_related_entities = indicator_bundle_built[
-                            "object_refs"
-                        ]
-                        related_indicators_with_related_entities.extend(
-                            indicator_with_related_entities
-                        )
-                    else:
-                        self.helper.connector_logger.debug(
-                            "[DEBUG] The construction of the indicator has been skipped in the actor.",
-                            {
-                                "indicator_id": indicator.get("id"),
-                                "indicator_type": indicator.get("type"),
-                            },
-                        )
-                        continue
-
-            return related_indicators_with_related_entities
-        except Exception as err:
-            self.helper.connector_logger.error(
-                "[ERROR] An unexpected error occurred when retrieving indicators for the actor.",
-                {
-                    "error": err,
-                    "actor_name": actor_name,
-                },
-            )
-            raise
-
     def _create_actor_bundle(self, actor) -> Bundle:
         author = self.author
         source_name = self._source_name()
         object_marking_refs = [self.tlp_marking]
         confidence_level = self._confidence_level()
+        # NOTE: Import of IOCs from the actors collection is temporarily disabled
+        # to reduce load on client platforms (see issues #5382 and #5309 / bottleneck discussion).
+        # We keep the structure in place but do not call the indicators API here.
         related_indicators_with_related_entities = []
 
-        actor_name = actor["name"]
-        if actor_name is not None:
-            self._info("Fetching related IOCs for actor: {0}", actor_name)
-            related_indicators_with_related_entities = self._get_related_iocs(
-                actor_name
+        actor_name = actor.get("name")
+        if actor_name:
+            self._info(
+                "Skipping related IOCs import for actor {0} (feature temporarily disabled).",
+                actor_name,
             )
-            if len(related_indicators_with_related_entities) > 0:
-                counts = Counter(
-                    s["type"]
-                    for s in {
-                        (stix["type"], stix["id"]): stix
-                        for stix in related_indicators_with_related_entities
-                        if stix["type"] not in ["relationship", "indicator"]
-                    }.values()
-                )
-
-                summary = ", ".join(f"{t}:{n}" for t, n in counts.items())
-                self._info(
-                    "Creating {0} stix objects for the IOCs and related entities for actor: {1}",
-                    summary,
-                    actor_name,
-                )
 
         attack_patterns = self._get_and_create_attack_patterns(actor)
 
