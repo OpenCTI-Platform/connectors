@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-sparta:
-    image: opencti/connector-sparta:rolling
+    image: opencti/connector-sparta:6.8.17
     environment:
       # OpenCTI parameters - REQUIRED
       - OPENCTI_URL=CHANGEME

@@ -1,6 +1,6 @@
 services:
   connector-google-ti-feeds:
-    image: opencti/connector-google-ti-feeds:rolling
+    image: opencti/connector-google-ti-feeds:6.8.17
     environment:
       - OPENCTI_URL='http://localhost:PORT'
       - OPENCTI_TOKEN='ChangeMe'

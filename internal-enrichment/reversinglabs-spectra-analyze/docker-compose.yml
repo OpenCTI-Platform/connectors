@@ -1,6 +1,6 @@
 services:
   connector-reversinglabs-spectra-analyze:
-    image: opencti/connector-reversinglabs-spectra-analyze:rolling
+    image: opencti/connector-reversinglabs-spectra-analyze:6.8.17
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=Changeme

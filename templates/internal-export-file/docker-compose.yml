@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-template:
-    image: opencti/connector-template:rolling # 'template' being the name of connector's directory
+    image: opencti/connector-template:6.8.17 # 'template' being the name of connector's directory
     environment:
       # Generic parameters (connection with OpenCTI)
       - OPENCTI_URL=http://localhost
