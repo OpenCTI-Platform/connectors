@@ -19,7 +19,7 @@ class _ConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         description="The name of the connector.",
     )
     scope: ListFromString = Field(
-        default=["IPv4-Addr", "IPv6-Addr"],
+        default=["IPv4-Addr", "IPv6-Addr", "X509-Certificate", "Domain-Name"],
         description="The scope of the connector.",
     )
     log_level: Literal["debug", "info", "warn", "warning", "error"] = Field(

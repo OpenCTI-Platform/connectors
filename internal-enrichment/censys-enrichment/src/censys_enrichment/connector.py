@@ -70,7 +70,15 @@ class Connector:
                     stix_entity=stix_entity,
                     data=self.client.fetch_ip(stix_entity["value"]),
                 )
-
+            case "x509-certificate":
+                return self.converter.generate_octi_objects_from_certs(
+                    certs=list(self.client.fetch_certs(hashes=stix_entity["hashes"])),
+                )
+            case "domain-name":
+                return self.converter.generate_octi_objects_from_hosts(
+                    stix_entity=stix_entity,
+                    hosts=list(self.client.fetch_hosts(stix_entity["value"])),
+                )
             case _:
                 raise EntityTypeNotSupportedError(
                     f"Observable type {stix_entity['type']} not supported"

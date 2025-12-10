@@ -1,4 +1,5 @@
 import datetime
+import ipaddress
 from typing import Any, Generator
 
 from censys_platform import (
@@ -16,6 +17,8 @@ from connectors_sdk.models import (
     City,
     Country,
     Hostname,
+    IPV4Address,
+    IPV6Address,
     Note,
     Organization,
     OrganizationAuthor,
@@ -248,15 +251,15 @@ class Converter:
         ]
 
     def _generate_certificate(
-        self, observable: EmbeddedIdentifiedStixObject, cert: Certificate | None
-    ) -> Generator[BaseObject, None, None]:
+        self, cert: Certificate | None
+    ) -> Generator[BaseObject, None, X509Certificate | None]:
         if not cert or not (
             cert.fingerprint_sha256
             or cert.fingerprint_sha1
             or cert.fingerprint_md5
             or cert.parsed
         ):
-            return
+            return None
         certificate = X509Certificate(
             hashes={
                 HashAlgorithm.SHA1: cert.fingerprint_sha1,
@@ -288,33 +291,29 @@ class Converter:
                         cert.parsed.subject_key_info.rsa.exponent
                     )
             if cert.parsed.extensions:
-                certificate.key_usage = (
-                    cert.parsed.extensions.key_usage.model_dump_json()
-                )
-                certificate.basic_constraints = (
-                    cert.parsed.extensions.basic_constraints.model_dump_json()
-                )
+                if cert.parsed.extensions.key_usage:
+                    certificate.key_usage = (
+                        cert.parsed.extensions.key_usage.model_dump_json()
+                    )
+                if cert.parsed.extensions.basic_constraints:
+                    certificate.basic_constraints = (
+                        cert.parsed.extensions.basic_constraints.model_dump_json()
+                    )
                 certificate.crl_distribution_points = str(
                     cert.parsed.extensions.crl_distribution_points
                 )
                 certificate.authority_key_identifier = (
                     cert.parsed.extensions.authority_key_id
                 )
-                certificate.extended_key_usage = (
-                    cert.parsed.extensions.extended_key_usage.model_dump_json()
-                )
+                if cert.parsed.extensions.extended_key_usage:
+                    certificate.extended_key_usage = (
+                        cert.parsed.extensions.extended_key_usage.model_dump_json()
+                    )
                 certificate.certificate_policies = str(
                     cert.parsed.extensions.certificate_policies
                 )
-        yield from [
-            certificate,
-            Relationship(
-                source=observable,
-                target=certificate,
-                type=RelationshipType.RELATED_TO,
-                **self._common_props,
-            ),
-        ]
+        yield certificate
+        return certificate
 
     def _generate_note(
         self,
@@ -346,16 +345,41 @@ class Converter:
                     vendor=software.vendor,
                     cpe=software.cpe,
                 )
-            yield from self._generate_certificate(
-                observable=observable,
-                cert=service.cert,
-            )
+            if service.cert:
+                certificate = yield from self._generate_certificate(
+                    cert=service.cert,
+                )
+                yield Relationship(
+                    source=observable,
+                    target=certificate,
+                    type=RelationshipType.RELATED_TO,
+                    **self._common_props,
+                )
             yield from self._generate_note(
                 observable=observable,
                 port=service.port,
                 content=service.banner,
                 publication_date=service.scan_time,
             )
+
+    def _generate_ip(
+        self, observable: EmbeddedIdentifiedStixObject, ip: str
+    ) -> Generator[BaseObject, None, None | IPV4Address | IPV6Address]:
+        ip_version = ipaddress.ip_network(ip, strict=False).version
+        if ip_version == 4:
+            ip_address = IPV4Address(value=ip, **self._common_props)
+        else:
+            ip_address = IPV6Address(value=ip, **self._common_props)
+        yield from [
+            ip_address,
+            Relationship(
+                source=observable,
+                target=ip_address,
+                type=RelationshipType.RELATED_TO,
+                **self._common_props,
+            ),
+        ]
+        return ip_address
 
     def generate_octi_objects(
         self, stix_entity: dict[str, Any], data: Host
@@ -418,3 +442,28 @@ class Converter:
                     type=RelationshipType.RELATED_TO,
                     **self._common_props,
                 )
+
+    def generate_octi_objects_from_certs(
+        self, certs: list[Certificate]
+    ) -> Generator[BaseObject, None, None]:
+        yield from [
+            self.author,
+            self.marking,
+        ]
+
+        for cert in certs:
+            yield from self._generate_certificate(
+                cert=cert,
+            )
+
+    def generate_octi_objects_from_hosts(
+        self, stix_entity: dict[str, Any], hosts: list[Host]
+    ) -> Generator[BaseObject, None, None]:
+        for host in hosts:
+            ip_stix = yield from self._generate_ip(
+                observable=EmbeddedIdentifiedStixObject(stix_object=stix_entity),
+                ip=host.ip,
+            )
+            yield from self.generate_octi_objects(
+                stix_entity=ip_stix.to_stix2_object(), data=host
+            )

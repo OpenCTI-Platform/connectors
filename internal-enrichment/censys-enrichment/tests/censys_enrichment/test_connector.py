@@ -370,3 +370,112 @@ def test_enrichment(mocked_helper: Mock, get_host, ipv4_enrichment_message):
             and sent_cert["hashes"]["SHA-256"] == cert.fingerprint_sha256
             for sent_cert in sent_certs
         )
+
+
+@pytest.mark.usefixtures("mock_config")
+def test_domain_name_enrichment(
+    mocked_helper: Mock, fetch_hosts, domain_name_enrichment_message
+):
+    client = Client(
+        organisation_id="test-org-id",
+        token="test-token",
+    )
+    connector = Connector(
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=client,
+        converter=Converter(),
+    )
+    sent_bundle = {}
+
+    def capture_sent_bundle(bundle: str, **_):
+        nonlocal sent_bundle
+        sent_bundle = json.loads(bundle)
+        return sent_bundle["objects"]
+
+    connector.helper.send_stix2_bundle = capture_sent_bundle
+    connector._message_callback(domain_name_enrichment_message)
+
+    for host in fetch_hosts:
+        ipv4_addresses = [
+            addr["value"]
+            for addr in filter_by_key_value(sent_bundle["objects"], "type", "ipv4-addr")
+        ]
+        assert host.ip in ipv4_addresses
+        city_names = [
+            city["name"]
+            for city in filter_by_key_value(
+                sent_bundle["objects"], "x_opencti_location_type", "City"
+            )
+        ]
+        assert host.location.city in city_names
+        region_names = [
+            region["name"]
+            for region in filter_by_key_value(
+                sent_bundle["objects"], "x_opencti_location_type", "Region"
+            )
+        ]
+        assert host.location.continent in region_names
+        administrative_area_names = [
+            area["name"]
+            for area in filter_by_key_value(
+                sent_bundle["objects"], "x_opencti_location_type", "Administrative-Area"
+            )
+        ]
+        assert host.location.province in administrative_area_names
+        country_names = [
+            country["name"]
+            for country in filter_by_key_value(
+                sent_bundle["objects"], "x_opencti_location_type", "Country"
+            )
+        ]
+        assert host.location.country in country_names
+
+        hostnames = filter_by_key_value(sent_bundle["objects"], "type", "hostname")
+        for url in host.dns.names:
+            assert any(hostname_obj["value"] == url for hostname_obj in hostnames)
+
+        softwares = filter_by_key_value(sent_bundle["objects"], "type", "software")
+
+        host_softwares = [service.software[0] for service in host.services]
+        for host_software in host_softwares:
+            assert any(
+                software_obj["name"] == host_software.product
+                and software_obj["vendor"] == host_software.vendor
+                and software_obj["cpe"] == host_software.cpe
+                for software_obj in softwares
+            )
+
+        autonomous_system_numbers = [
+            asys["number"]
+            for asys in filter_by_key_value(
+                sent_bundle["objects"], "type", "autonomous-system"
+            )
+        ]
+        assert host.autonomous_system.asn in autonomous_system_numbers
+        autonomous_system_names = [
+            asys["name"]
+            for asys in filter_by_key_value(
+                sent_bundle["objects"], "type", "autonomous-system"
+            )
+        ]
+        assert host.autonomous_system.name in autonomous_system_names
+        autonomous_system_descriptions = [
+            asys["x_opencti_description"]
+            for asys in filter_by_key_value(
+                sent_bundle["objects"], "type", "autonomous-system"
+            )
+        ]
+        assert host.autonomous_system.description in autonomous_system_descriptions
+
+        sent_certs = filter_by_key_value(
+            sent_bundle["objects"], "type", "x509-certificate"
+        )
+        certs = [service.cert for service in host.services]
+        for cert in certs:
+            assert any(
+                sent_cert["hashes"]["MD5"] == cert.fingerprint_md5
+                and sent_cert["hashes"]["SHA-1"] == cert.fingerprint_sha1
+                and sent_cert["hashes"]["SHA-256"] == cert.fingerprint_sha256
+                for sent_cert in sent_certs
+            )

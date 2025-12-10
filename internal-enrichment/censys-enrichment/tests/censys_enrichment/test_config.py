@@ -24,7 +24,12 @@ def test_config() -> None:
     )
     assert config.connector.type == "INTERNAL_ENRICHMENT"
     assert config.connector.name == "Censys Enrichment"
-    assert config.connector.scope == ["IPv4-Addr", "IPv6-Addr"]
+    assert config.connector.scope == [
+        "IPv4-Addr",
+        "IPv6-Addr",
+        "X509-Certificate",
+        "Domain-Name",
+    ]
     assert config.connector.log_level == "error"
     assert config.connector.auto is False
 
