@@ -1,7 +1,7 @@
 """The module defines the InfrastructureModel class, which represents a STIX 2.1 Infrastructure object."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pycti  # type: ignore  # Missing library stubs
 from connector.src.stix.v21.models.cdts.kill_chain_phase_model import (
@@ -25,40 +25,40 @@ class InfrastructureModel(BaseSDOModel):
         ...,
         description="A name or characterizing text used to identify the Infrastructure.",
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
         default=None,
         description="More details and context about the Infrastructure—purpose, use, relationships, and key characteristics.",
     )
-    infrastructure_types: List[InfrastructureTypeOV] = Field(
+    infrastructure_types: list[InfrastructureTypeOV] = Field(
         ...,
         description="Open vocabulary describing the type(s) of Infrastructure. SHOULD come from the infrastructure-type-ov vocabulary.",
     )
-    aliases: Optional[List[str]] = Field(
+    aliases: list[str] | None = Field(
         default=None,
         description="Alternative names used to identify this Infrastructure.",
     )
-    kill_chain_phases: Optional[List[KillChainPhaseModel]] = Field(
+    kill_chain_phases: list[KillChainPhaseModel] | None = Field(
         default=None,
         description="Kill Chain Phases for which this Infrastructure is used.",
     )
-    first_seen: Optional[datetime] = Field(
+    first_seen: datetime | None = Field(
         default=None,
         description="Timestamp when this Infrastructure was first observed performing malicious activity.",
     )
-    last_seen: Optional[datetime] = Field(
+    last_seen: datetime | None = Field(
         default=None,
         description="Timestamp when this Infrastructure was last observed. MUST be >= first_seen if both are present.",
     )
 
     @model_validator(mode="before")
     @classmethod
-    def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+    def generate_id(cls, data: dict[str, Any]) -> dict[str, Any]:
         """Generate ID regardless of whether one is provided."""
         data["id"] = InfrastructureModel._generate_id(data=data)
         return data
 
     @classmethod
-    def _generate_id(cls, data: Dict[str, Any]) -> Any:
+    def _generate_id(cls, data: dict[str, Any]) -> Any:
         """Generate ID regardless of whether one is provided."""
         if isinstance(data, dict) and "name" in data:
             data["id"] = pycti.Infrastructure.generate_id(name=data["name"])

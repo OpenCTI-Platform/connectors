@@ -7,9 +7,9 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'MISP' # Required
   scope: 'misp'
-  update_existing_data: false
   log_level: 'info'
   expose_metrics: False
+  duration_period: PT5M # Required, interval given for scheduler process in ISO-8601 format.
 
 misp:
   url: 'http://localhost' # Required
@@ -35,8 +35,8 @@ misp:
   import_from_date: '2010-01-01' # Optional, import all event from this date
   import_tags: '' # Optional, list of tags used to filter events to import
   import_tags_not: '' # Optional, list of tags to not include
-  import_creator_orgs: '' # Optional, only import events created by those orgs (put the identifiers here)
-  import_creator_orgs_not: '' # Optional, do not import events created by those orgs (put the identifiers here)
+  import_creator_orgs: '' # Optional, only import events created by those orgs (put the org identifier (ID), the org UUID or the org name)
+  import_creator_orgs_not: '' # Optional, do not import events created by those orgs (put the org identifier (ID), the org UUID or the org name)
   import_owner_orgs: '' # Optional, only import events owned by those orgs (put the identifiers here)
   import_owner_orgs_not: '' # Optional, do not import events owned by those orgs (put the identifiers here)
   import_owner_keyword: '' # Optional, search only events based on a keyword
@@ -47,5 +47,4 @@ misp:
   import_to_ids_no_score: 40 # Optional, use as a score for the indicator/observable if the attribute to_ids is no
   import_unsupported_observables_as_text: false # Optional, import unsupported observable as x_opencti_text
   import_unsupported_observables_as_text_transparent: true # Optional, import unsupported observable as x_opencti_text just with the value
-  interval: 5 # Required, in minutes
   propagate_labels: false # Optional, propagate labels to the observables

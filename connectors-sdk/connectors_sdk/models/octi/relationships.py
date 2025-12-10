@@ -1,67 +1,9 @@
 """Define Relationships handled by OpenCTI platform."""
 
-from typing import Literal, Optional
+from typing import Literal
 
-from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
-from pycti import StixCoreRelationship as PyctiStixCoreRelationship
-from pydantic import AwareDatetime, Field
-from stix2.v21 import Relationship as Stix2Relationship
-
-
-@MODEL_REGISTRY.register
-class Relationship(BaseIdentifiedEntity):
-    """Base class for OpenCTI relationships."""
-
-    type: Literal[
-        "related-to",
-        "based-on",
-        "derived-from",
-        "indicates",
-        "targets",
-        "located-at",
-        "has",
-    ] = Field(description="Type of the relationship.")
-    source: BaseIdentifiedEntity = Field(
-        description="The source entity of the relationship.",
-    )
-    target: BaseIdentifiedEntity = Field(
-        description="The target entity of the relationship.",
-    )
-    description: Optional[str] = Field(
-        description="Description of the relationship.",
-        default=None,
-    )
-    start_time: Optional[AwareDatetime] = Field(
-        description="Start time of the relationship in ISO 8601 format.",
-        default=None,
-    )
-    stop_time: Optional[AwareDatetime] = Field(
-        description="End time of the relationship in ISO 8601 format.",
-        default=None,
-    )
-
-    def to_stix2_object(self) -> Stix2Relationship:
-        """Make stix object."""
-        return Stix2Relationship(
-            id=PyctiStixCoreRelationship.generate_id(
-                relationship_type=self.type,
-                source_ref=self.source.id,
-                target_ref=self.target.id,
-                start_time=self.start_time,
-                stop_time=self.stop_time,
-            ),
-            relationship_type=self.type,
-            source_ref=self.source.id,
-            target_ref=self.target.id,
-            description=self.description,
-            start_time=self.start_time,
-            stop_time=self.stop_time,
-            created_by_ref=self.author.id if self.author else None,
-            object_marking_refs=[marking.id for marking in self.markings or []],
-            external_references=[
-                ref.to_stix2_object() for ref in self.external_references or []
-            ],
-        )
+from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
+from connectors_sdk.models.relationship import Relationship
 
 
 class _RelationshipBuilder:
@@ -131,8 +73,6 @@ targets = relationship_builder("targets")
 located_at = relationship_builder("located-at")
 has = relationship_builder("has")
 
-
-MODEL_REGISTRY.rebuild_all()
 
 if __name__ == "__main__":  # pragma: no cover # do not run coverage on doctests
     import doctest

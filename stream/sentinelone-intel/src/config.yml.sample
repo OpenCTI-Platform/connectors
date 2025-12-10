@@ -1,21 +1,21 @@
 opencti:
-  url: 'http://localhost:PORT'
+  url: 'http://opencti:8080'
   token: 'ChangeMe'
 
 connector:
   id: 'ChangeMe'
-  type: 'STREAM'
-  name: 'SentinelOne Intel'
-  scope: 'ChangeMe'
-  log_level: 'info'
-  live_stream_id: 'live' # ID of the live stream created in the OpenCTI UI
-  live_stream_listen_delete: true
-  live_stream_no_dependencies: true
+  name: 'SentinelOne Intel Stream Connector'
+  # scope: 'sentinelone'
+  # log_level: 'error'
+  # live_stream_id: 'ChangeMe' # `live` or ID of the live stream created in the OpenCTI UI
+  # live_stream_listen_delete: true
+  # live_stream_no_dependencies: true
 
 sentinelone_intel:
-  url: 'change Me Ending In/'
+  url: 'ChangeMe'
   api_key: 'ChangeMe'
-  account_id: 'ChangeMe'
-  max_api_attempts: 5
-  log_s1_response: true
-  
+  # need at least one of account_id, group_id, or site_id
+  # account_id and site_id cannot be used simultaneously
+  # account_id: 'ChangeMeOrEmpty'
+  # site_id: 'ChangeMeOrEmpty'
+  # group_id: 'ChangeMeOrEmpty'

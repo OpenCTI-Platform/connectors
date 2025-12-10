@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-ipinfo:
-    image: opencti/connector-ipinfo:6.7.14
+    image: opencti/connector-ipinfo:rolling
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -12,6 +12,6 @@ services:
       - CONNECTOR_CONFIDENCE_LEVEL=75 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - IPINFO_TOKEN=ChangeMe
-      - IPINFO_MAX_TLP=TLP:AMBER
+      - IPINFO_MAX_TLP=TLP:AMBER # "TLP:CLEAR", "TLP:GREEN", "TLP:AMBER", "TLP:AMBER+STRICT", "TLP:RED"
       - IPINFO_USE_ASN_NAME=true      # Set false if you want ASN name to be just the number e.g. AS8075
     restart: always

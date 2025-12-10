@@ -1,7 +1,7 @@
 """Shared client API class for common subentity fetching methods."""
 
 import logging
-from typing import Any, Dict, List
+from typing import Any
 
 from connector.src.custom.client_api.client_api_base import BaseClientAPI
 from connector.src.utils.api_engine.exceptions.api_http_error import ApiHttpError
@@ -24,7 +24,7 @@ class ClientAPIShared(BaseClientAPI):
 
     async def fetch_subentities_ids(
         self, entity_name: str, entity_id: str, subentity_types: list[str]
-    ) -> Dict[str, List[str]]:
+    ) -> dict[str, list[str]]:
         """Fetch subentities IDs from the API.
 
         Args:
@@ -33,13 +33,13 @@ class ClientAPIShared(BaseClientAPI):
             subentity_types (list[str]): The type of subentities to fetch.
 
         Returns:
-            Dict[str, List[str]]: The fetched subentities IDs.
+            dict[str, list[str]]: The fetched subentities IDs.
 
         """
         subentities_ids = {}
 
         relationships_fetcher = self.fetcher_factory.create_fetcher_by_name(
-            "relationships", base_url=self.config.api_url
+            "relationships", base_url=self.config.api_url.unicode_string()
         )
         try:
             for subentity_type in subentity_types:
@@ -72,48 +72,78 @@ class ClientAPIShared(BaseClientAPI):
 
                 except Exception as e:
                     self.logger.debug(
-                        f"{LOG_PREFIX} Error fetching {subentity_type} relationships: {str(e)}"
+                        "Error fetching relationships",
+                        {
+                            "prefix": LOG_PREFIX,
+                            "subentity_type": subentity_type,
+                            "error": str(e),
+                        },
                     )
 
                 if all_ids:
                     self.logger.info(
-                        f"{LOG_PREFIX} Retrieved {len(all_ids)} {subentity_type} relationship IDs for {entity_name} {entity_id}"
+                        "Retrieved relationship IDs",
+                        {
+                            "prefix": LOG_PREFIX,
+                            "count": len(all_ids),
+                            "subentity_type": subentity_type,
+                            "entity_name": entity_name,
+                            "entity_id": entity_id,
+                        },
                     )
                     subentities_ids[subentity_type] = all_ids
                 else:
                     self.logger.debug(
-                        f"{LOG_PREFIX} No {subentity_type} relationship IDs found for {entity_name} {entity_id}"
+                        "No relationship IDs found",
+                        {
+                            "prefix": LOG_PREFIX,
+                            "subentity_type": subentity_type,
+                            "entity_name": entity_name,
+                            "entity_id": entity_id,
+                        },
                     )
 
             return subentities_ids
         except Exception as e:
             self.logger.error(
-                f"{LOG_PREFIX} Failed to gather relationships for {entity_name} {entity_id}: {str(e)}"
+                "Failed to gather relationships",
+                {
+                    "prefix": LOG_PREFIX,
+                    "entity_name": entity_name,
+                    "entity_id": entity_id,
+                    "error": str(e),
+                },
             )
             return {entity_type: [] for entity_type in subentity_types}
         finally:
             self.logger.info(
-                f"{LOG_PREFIX} Finished gathering relationships for {entity_name} {entity_id}"
+                "Finished gathering relationships",
+                {
+                    "prefix": LOG_PREFIX,
+                    "entity_name": entity_name,
+                    "entity_id": entity_id,
+                },
             )
 
     async def fetch_subentity_details(
-        self, subentity_ids: Dict[str, List[str]]
-    ) -> Dict[str, List[Any]]:
+        self, subentity_ids: dict[str, list[str]]
+    ) -> dict[str, list[Any]]:
         """Fetch subentity details in parallel for multiple IDs.
 
         Args:
-            subentity_ids: Dictionary mapping entity types to lists of IDs
+            subentity_ids: dictionary mapping entity types to lists of IDs
 
         Returns:
-            Dictionary mapping entity types to lists of fetched entities
+            dictionary mapping entity types to lists of fetched entities
 
         """
-        subentities: Dict[str, List[Any]] = {}
+        subentities: dict[str, list[Any]] = {}
         total_to_fetch = sum(len(ids) for ids in subentity_ids.values())
 
         if total_to_fetch > 0:
             self.logger.info(
-                f"{LOG_PREFIX} Fetching details for {total_to_fetch} subentities..."
+                "Fetching details for subentities",
+                {"prefix": LOG_PREFIX, "total_to_fetch": total_to_fetch},
             )
 
         for entity_type, ids in subentity_ids.items():
@@ -123,28 +153,45 @@ class ClientAPIShared(BaseClientAPI):
 
             try:
                 fetcher = self.fetcher_factory.create_fetcher_by_name(
-                    entity_type, base_url=self.config.api_url
+                    entity_type, base_url=self.config.api_url.unicode_string()
                 )
                 entities = await fetcher.fetch_multiple(ids)
                 subentities[entity_type] = entities
                 self.logger.debug(
-                    f"{LOG_PREFIX} Fetched {len(entities)} {entity_type} entities"
+                    "Fetched entities",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "count": len(entities),
+                        "entity_type": entity_type,
+                    },
                 )
 
             except ApiHttpError as e:
                 if e.status_code == 404 and entity_type == "files":
                     self.logger.info(
-                        f"{LOG_PREFIX} 404 errors expected for files (files may no longer exist in VirusTotal). Treating as normal behavior."
+                        "404 errors expected for files (files may no longer exist in VirusTotal). Treating as normal behavior.",
+                        {"prefix": LOG_PREFIX},
                     )
                     subentities[entity_type] = []
                 else:
                     self.logger.error(
-                        f"{LOG_PREFIX} HTTP {e.status_code} error fetching {entity_type} details: {str(e)}"
+                        "HTTP error fetching details",
+                        {
+                            "prefix": LOG_PREFIX,
+                            "status_code": e.status_code,
+                            "entity_type": entity_type,
+                            "error": str(e),
+                        },
                     )
                     subentities[entity_type] = []
             except Exception as e:
                 self.logger.error(
-                    f"{LOG_PREFIX} Failed to fetch {entity_type} details: {str(e)}"
+                    "Failed to fetch details",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "entity_type": entity_type,
+                        "error": str(e),
+                    },
                 )
                 subentities[entity_type] = []
 
@@ -153,6 +200,9 @@ class ClientAPIShared(BaseClientAPI):
                 [f"{k}: {len(v)}" for k, v in subentities.items() if len(v) > 0]
             )
             if fetched_summary:
-                self.logger.info(f"{LOG_PREFIX} Fetched details {{{fetched_summary}}}")
+                self.logger.info(
+                    "Fetched details",
+                    {"prefix": LOG_PREFIX, "summary": fetched_summary},
+                )
 
         return subentities

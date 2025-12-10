@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike connector core module."""
+
 import os
 import sys
 import time
@@ -12,7 +13,6 @@ from crowdstrike_feeds_services.utils import (
     convert_comma_separated_str_to_list,
     create_organization,
     get_tlp_string_marking_definition,
-    is_timestamp_in_future,
     timestamp_to_datetime,
 )
 from crowdstrike_feeds_services.utils.config_variables import ConfigCrowdstrike
@@ -82,12 +82,8 @@ class CrowdStrike:
             create_indicators = bool(create_indicators)
 
         actor_start_timestamp = self.config.actor_start_timestamp
-        if is_timestamp_in_future(actor_start_timestamp):
-            raise ValueError("Actor start timestamp is in the future")
 
         report_start_timestamp = self.config.report_start_timestamp
-        if is_timestamp_in_future(report_start_timestamp):
-            raise ValueError("Report start timestamp is in the future")
 
         report_status_str = self.config.report_status
         report_status = self._convert_report_status_str_to_report_status_int(
@@ -113,10 +109,9 @@ class CrowdStrike:
             )
 
         report_guess_malware = bool(self.config.report_guess_malware)
+        report_guess_relations = bool(self.config.report_guess_relations)
 
         indicator_start_timestamp = self.config.indicator_start_timestamp
-        if is_timestamp_in_future(indicator_start_timestamp):
-            raise ValueError("Indicator start timestamp is in the future")
 
         indicator_exclude_types_str = self.config.indicator_exclude_types
         indicator_exclude_types = []
@@ -183,11 +178,27 @@ class CrowdStrike:
         importers: List[BaseImporter] = []
 
         if self._CONFIG_SCOPE_ACTOR in scopes:
+            actor_indicator_config = {
+                "default_latest_timestamp": actor_start_timestamp,
+                "create_observables": create_observables,
+                "create_indicators": create_indicators,
+                "exclude_types": indicator_exclude_types,
+                "default_x_opencti_score": default_x_opencti_score,
+                "indicator_low_score": indicator_low_score,
+                "indicator_low_score_labels": set(indicator_low_score_labels),
+                "indicator_medium_score": indicator_medium_score,
+                "indicator_medium_score_labels": set(indicator_medium_score_labels),
+                "indicator_high_score": indicator_high_score,
+                "indicator_high_score_labels": set(indicator_high_score_labels),
+                "indicator_unwanted_labels": set(indicator_unwanted_labels),
+            }
+
             actor_importer = ActorImporter(
                 self.helper,
                 author,
                 actor_start_timestamp,
                 tlp_marking,
+                actor_indicator_config,
             )
 
             importers.append(actor_importer)
@@ -217,6 +228,7 @@ class CrowdStrike:
                 report_status,
                 report_type,
                 report_guess_malware,
+                report_guess_relations,
                 indicator_config,
                 no_file_trigger_import,
             )
@@ -271,6 +283,9 @@ class CrowdStrike:
             )
 
             importers.append(snort_master_importer)
+
+        # MVP 5
+        # MVP 6
 
         self.importers = importers
 

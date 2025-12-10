@@ -1,0 +1,22 @@
+{
+  "title": "SentinelOne Intel",
+  "slug": "sentinelone-intel",
+  "description": "The OpenCTI SentinelOne Intelligence connector facilitates real-time synchronisation of threat intelligence. By leveraging OpenCTI's live stream capabilities, this connector ensures that Indicators of Compromise (IOCs) are promptly shared with SentinelOne, enhancing the organisation's ability to detect and respond to threats effectively.",
+  "short_description": "The OpenCTI SentinelOne Intelligence connector facilitates real-time synchronisation of threat intelligence. By leveraging OpenCTI's live stream capabilities, this connector ensures that Indicators of Compromise (IOCs) are promptly shared with SentinelOne, enhancing the organisation's ability to detect and respond to threats effectively.",
+  "logo": "stream/sentinelone-intel/__metadata__/logo.png",
+  "use_cases": [
+    "SIEM & Analytics",
+    "EDR"
+  ],
+  "verified": true,
+  "last_verified_date": "2025-12-04",
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">= 6.5.9",
+  "subscription_link": "https://www.sentinelone.com",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/sentinelone-intel",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-sentinelone-intel",
+  "container_type": "STREAM"
+}

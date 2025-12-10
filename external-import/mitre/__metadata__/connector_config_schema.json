@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/mitre_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The OpenCTI platform URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "MITRE ATT&CK",
+      "description": "Name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "tool",
+        "report",
+        "malware",
+        "identity",
+        "campaign",
+        "intrusion-set",
+        "attack-pattern",
+        "course-of-action",
+        "x-mitre-data-source",
+        "x-mitre-data-component",
+        "x-mitre-matrix",
+        "x-mitre-tactic",
+        "x-mitre-collection"
+      ],
+      "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_TYPE": {
+      "default": "EXTERNAL_IMPORT",
+      "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "Determines the verbosity of the logs.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "MITRE_REMOVE_STATEMENT_MARKING": {
+      "default": false,
+      "description": "Whether to remove statement markings from the ingested MITRE data. Useful when marking metadata is unnecessary or interferes with processing.",
+      "type": "boolean"
+    },
+    "MITRE_INTERVAL": {
+      "default": 7,
+      "description": "Polling interval in days for fetching and refreshing MITRE data. Determines how often the system checks for updates to ATT&CK datasets.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "MITRE_ENTERPRISE_FILE_URL": {
+      "default": "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json",
+      "description": "URL to the MITRE ATT&CK Enterprise JSON file. This dataset includes tactics, techniques, and procedures (TTPs) for enterprise IT environments.",
+      "type": "string"
+    },
+    "MITRE_MOBILE_ATTACK_FILE_URL": {
+      "default": "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/mobile-attack/mobile-attack.json",
+      "description": "URL to the MITRE Mobile ATT&CK JSON file. Contains mobile-specific attack techniques and mappings.",
+      "type": "string"
+    },
+    "MITRE_ICS_ATTACK_FILE_URL": {
+      "default": "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/ics-attack/ics-attack.json",
+      "description": "URL to the MITRE ICS ATT&CK JSON file. Pertains to attack techniques targeting industrial control systems.",
+      "type": "string"
+    },
+    "MITRE_CAPEC_FILE_URL": {
+      "default": "https://raw.githubusercontent.com/mitre/cti/master/capec/2.1/stix-capec.json",
+      "description": "URL to the CAPEC (Common Attack Pattern Enumeration and Classification) JSON file. Provides a comprehensive dictionary of known attack patterns used by adversaries.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}

@@ -1,0 +1,40 @@
+version: '3'
+services:
+  connector-splunk-soar-push:
+    image: opencti/connector-splunk-soar-push:latest
+    environment:
+      # OpenCTI Configuration
+      - OPENCTI_URL=${OPENCTI_URL}
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+      
+      # Connector Configuration
+      - CONNECTOR_ID=${CONNECTOR_ID}
+      - CONNECTOR_TYPE=STREAM
+      - CONNECTOR_NAME=Splunk SOAR Push
+      - CONNECTOR_SCOPE=splunk-soar-push
+      - CONNECTOR_CONFIDENCE_LEVEL=100
+      - CONNECTOR_LOG_LEVEL=${CONNECTOR_LOG_LEVEL:-INFO}
+      - CONNECTOR_LIVE_STREAM_ID=${CONNECTOR_LIVE_STREAM_ID}
+      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=false
+      
+      # Splunk SOAR Configuration
+      - SPLUNK_SOAR_URL=${SPLUNK_SOAR_URL}
+      - SPLUNK_SOAR_API_TOKEN=${SPLUNK_SOAR_API_TOKEN}
+      # Alternative authentication (if not using token)
+      # - SPLUNK_SOAR_USERNAME=${SPLUNK_SOAR_USERNAME}
+      # - SPLUNK_SOAR_PASSWORD=${SPLUNK_SOAR_PASSWORD}
+      - SPLUNK_SOAR_VERIFY_SSL=${SPLUNK_SOAR_VERIFY_SSL:-true}
+      - SPLUNK_SOAR_DELETE_ON_REMOVAL=${SPLUNK_SOAR_DELETE_ON_REMOVAL:-false}
+      
+      # Optional Proxy Configuration
+      # - HTTP_PROXY=${HTTP_PROXY}
+      # - HTTPS_PROXY=${HTTPS_PROXY}
+      # - NO_PROXY=${NO_PROXY}
+    restart: unless-stopped
+    networks:
+      - opencti_default
+
+networks:
+  opencti_default:
+    external: true

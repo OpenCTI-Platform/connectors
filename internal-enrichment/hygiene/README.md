@@ -1,4 +1,14 @@
-# OpenCTI Hygiene Connector
+# OpenCTI Internal Enrichment Hygiene Connector
+
+## Status Filigran
+
+| Status            | Date | Comment |
+|-------------------|------|---------|
+| Filigran Verified | -    | -       |
+
+## Introduction
+
+**Introducing Hygiene**
 
 This is an internal enrichment connector that uses the following external
 projects to look for observable values in the database that you might want to
@@ -27,19 +37,54 @@ We provide an example of [`docker-compose.yml`](docker-compose.yml) file that
 could be used independently or integrated to the global `docker-compose.yml`
 file of OpenCTI.
 
-## Configuration
+## Requirements
 
-| Parameter            	      | Docker envvar                      | Mandatory | Description                                                                                                                                                                 |
-|-----------------------------|------------------------------------|-----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `warninglists_slow_search`  | `HYGIENE_WARNINGLISTS_SLOW_SEARCH` | No        | Enable slow search mode for the warning lists. If true, uses the most appropriate search method. Can be slower. Default: exact match.                                       |
-| `label_name`                | `HYGIENE_LABEL_NAME`               | No        | Set the label name. The default is`hygiene`.                                                                                                                                |
-| `label_parent_name`         | `HYGIENE_LABEL_PARENT_NAME`        | No        | Label name to be used when enriching sub-domains, by default `hygiene_parent`.                                                                                              |
-| `label_color`               | `HYGIENE_LABEL_COLOR`              | No        | Color to use for the label, by default `#fc0341`.                                                                                                                           |
-| `label_parent_color`        | `HYGIENE_LABEL_PARENT_COLOR`       | No        | Color to use for the label when enriching subdomains, by default `#fc0341`.                                                                                                 |                                                                                                                                            |
-| `enrich_subdomains`         | `HYGIENE_ENRICH_SUBDOMAINS`        | No        | Enable enrichment of sub-domains, This option will add "hygiene_parent" label and ext refs of the parent domain to the subdomain, if sub-domain is not found but parent is. |
+- tldextract==5.3.0
+- pydantic-settings==2.10.1
+- pycti==6.7.15
+- git+http://github.com/MISP/PyMISPWarningLists.git@main#egg=pymispwarninglists
+
+## Configuration variables environment
+
+Find all the configuration variables available (default/required) here: [Connector Configurations](./__metadata__)
 
 ## Behavior
 
 1. Adds a `hygiene` or `hygiene_parent` label by default on items that correspond to a warning list entry. These are configurable(both color and label name)
 2. Sets the score of all related indicators to a value based on the number of
    reported entries (1:15, >=3:10, >=5:5, default:20).
+
+## Performance and Multi-threading
+
+The connector now supports multi-threaded processing for significant performance improvements:
+
+- **Parallel Processing**: Process up to 100 indicators/observables simultaneously using ThreadPoolExecutor
+- **Direct Thread Pool Submission**: Messages are immediately submitted to the thread pool for processing
+- **Thread-safe Operations**: All warning list searches are protected with thread locks
+- **Automatic Resource Management**: ThreadPoolExecutor handles queueing and worker management internally
+- **Statistics Tracking**: Monitor processing rates, hits, errors, active tasks, and average processing time
+- **Graceful Shutdown**: Properly handles shutdown signals and waits for all active tasks to complete
+
+### Configuration
+
+Set the number of parallel workers using the `HYGIENE_MAX_WORKERS` environment variable:
+- Default: 100 workers
+- Range: 1-500 workers
+- Set to 1 for sequential processing (old behavior)
+
+### Performance Metrics
+
+The connector logs statistics every 100 processed messages, including:
+- Total messages processed
+- Total warning list hits
+- Processing errors
+- Average processing time per message
+- Number of active tasks vs max workers
+
+### Architecture
+
+The multi-threaded architecture is extremely simple:
+1. The main thread receives messages from RabbitMQ via the standard OpenCTI helper
+2. Each message is immediately submitted to a ThreadPoolExecutor
+3. The thread pool handles all queuing and worker management automatically
+4. Workers process messages in parallel, limited only by the max_workers setting

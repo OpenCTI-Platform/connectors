@@ -1,0 +1,20 @@
+version: '3'
+services:
+  connector-elastic-security-incidents:
+    image: opencti/connector-elastic-security-incidents:rolling
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Elastic Security Incidents
+      - CONNECTOR_DURATION_PERIOD=PT30M # Run every 30 minutes
+      - ELASTIC_SECURITY_URL=https://localhost:9200
+      - ELASTIC_SECURITY_API_KEY=ChangeMe
+      - ELASTIC_SECURITY_VERIFY_SSL=true
+      - ELASTIC_SECURITY_IMPORT_START_DATE=2024-01-01T00:00:00Z
+      - ELASTIC_SECURITY_IMPORT_ALERTS=true
+      - ELASTIC_SECURITY_IMPORT_CASES=true
+      # - "ELASTIC_SECURITY_ALERT_STATUSES=open,acknowledged,closed" # Uncomment to filter alerts
+      # - "ELASTIC_SECURITY_ALERT_RULE_TAGS=Domain: Endpoint,OS: Windows" # Uncomment to filter cases
+      # - "ELASTIC_SECURITY_CASE_STATUSES=open,in-progress,closed" # Uncomment to filter cases
+    restart: unless-stopped

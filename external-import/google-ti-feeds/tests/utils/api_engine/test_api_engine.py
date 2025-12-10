@@ -1,6 +1,6 @@
 """Module to test the API engine components."""
 
-from typing import Any, Dict, Optional, Tuple, Type
+from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
@@ -31,12 +31,12 @@ def mock_aiohttp_client() -> AsyncMock:
     async def _request(
         method: str,
         url: str,
-        headers: Optional[Dict[str, str]] = None,
-        params: Optional[Dict[str, str]] = None,
-        data: Optional[Dict[str, str]] = None,
-        json_payload: Optional[Dict[str, str]] = None,
-        ssl: Optional[bool] = None,
-        timeout: Optional[float] = None,
+        headers: dict[str, str] | None = None,
+        params: dict[str, str] | None = None,
+        data: dict[str, str] | None = None,
+        json_payload: dict[str, str] | None = None,
+        ssl: bool | None = None,
+        timeout: float | None = None,
     ) -> Any:
         m = method.upper()
         if m == "GET":
@@ -190,7 +190,7 @@ async def test_api_client_successful_get_no_model(
 async def test_api_client_successful_get_with_model(
     api_client: ApiClient,
     mock_aiohttp_client: AsyncMock,
-    successful_get_scenario: Dict[str, Any],
+    successful_get_scenario: dict[str, Any],
 ) -> None:
     """Test successful GET request with a Pydantic model."""
     # Given: A mocked API client configured to return specific response data
@@ -218,7 +218,7 @@ async def test_api_client_successful_get_with_model(
 async def test_api_client_get_http_error(
     api_client: ApiClient,
     mock_aiohttp_client: AsyncMock,
-    failed_get_scenario: Dict[str, Any],
+    failed_get_scenario: dict[str, Any],
 ) -> None:
     """Test GET request that results in an HTTP error (e.g., 404, 500)."""
     # Given: A mocked API client configured to fail with a specific HTTP status code
@@ -316,7 +316,7 @@ async def test_circuit_breaker_opens_after_failures(
 def _given_mock_response(
     mock_client: AsyncMock,
     method: str = "get",
-    data: Dict[str, Any] | None = None,
+    data: dict[str, Any] | None = None,
     status: int = 200,
     raise_exception: Exception | None = None,
 ) -> None:
@@ -342,8 +342,8 @@ def _given_mock_response(
 
 # --- WHEN: Execute the system under test ---
 async def _when_api_get_called(
-    client: ApiClient, url: str, model: Type[BaseModel] | None = None
-) -> Tuple[Any, Exception | None]:
+    client: ApiClient, url: str, model: type[BaseModel] | None = None
+) -> tuple[Any, Exception | None]:
     """Call the get method of the ApiClient."""
     try:
         return await client.call_api(url, model=model), None
@@ -356,8 +356,8 @@ async def _when_api_get_called(
 # --- THEN: Verify the expected outcomes ---
 def _then_response_is_successful(
     response: Any,
-    expected_data: Dict[str, Any],
-    model_type: Type[BaseModel] | None = None,
+    expected_data: dict[str, Any],
+    model_type: type[BaseModel] | None = None,
 ) -> None:
     """Assert that the API response is successful and matches expected data."""
     assert response is not None  # noqa: S101

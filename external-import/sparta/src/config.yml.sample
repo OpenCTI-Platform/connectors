@@ -1,0 +1,18 @@
+opencti:
+  # OpenCTI definition parameters - REQUIRED
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  # Connector definition parameters - REQUIRED
+  id: 'ChangeMe'
+
+  # Connector definition parameters - OPTIONAL
+  #name: 'Aerospace SPARTA'
+  #scope: 'attack-pattern, course-of-action, indicator, identity'
+  #log_level: 'error'
+  #duration_period: 'PT5H' # (ISO8601 format in String, start with P...)
+
+sparta:
+  # SPARTA definition parameters - OPTIONAL
+  #base_url: 'https://sparta.aerospace.org/download/STIX?f=latest'

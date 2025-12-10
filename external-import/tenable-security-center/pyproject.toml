@@ -16,15 +16,12 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     ]
 dependencies = [
-    "stix2~=3.0.1",
-    "pycti==6.7.14",
+    "pycti==6.8.16",
     "validators~=0.35.0",
     "pydantic>=2.8.2,<3.0.0",
     "pytenable~=1.5.3", # for now we handle API from 5.13 to 6.4
     "cvss~=3.3",
     "semver>=3,<4",
-    "requests~=2.32.2",
-    "PyYAML~=6.0.0"
 ]
 
 [project.optional-dependencies]
@@ -33,8 +30,8 @@ test = [
     "pytest>=8.1.1,<9",             # Pytest for running tests
 ]
 dev = [
-    "black>=22.0.0,<25",  # Code formatter
-    "isort>=6,<7",  # Import sorter
+    "black>=25.9,<26",  # Code formatter
+    "isort>=7,<8",  # Import sorter
     "ruff>=0.7.2,<1",  # linter
     "mypy>=1.13.0,<2",  # type validator
     "types-requests",  # stubs for requests lib

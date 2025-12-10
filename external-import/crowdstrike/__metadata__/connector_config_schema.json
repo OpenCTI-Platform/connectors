@@ -1,0 +1,265 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/crowdstrike_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The OpenCTI platform URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "CrowdStrike",
+      "description": "Name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "crowdstrike"
+      ],
+      "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "ISO8601 Duration format starting with 'P' for Period (e.g., 'PT30M' for 30 minutes).",
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "default": "EXTERNAL_IMPORT",
+      "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "Determines the verbosity of the logs.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CROWDSTRIKE_BASE_URL": {
+      "default": "https://api.crowdstrike.com",
+      "description": "CrowdStrike API base URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "CROWDSTRIKE_CLIENT_ID": {
+      "description": "CrowdStrike API client ID for authentication.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CROWDSTRIKE_CLIENT_SECRET": {
+      "description": "CrowdStrike API client secret for authentication.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CROWDSTRIKE_TLP": {
+      "default": "amber+strict",
+      "description": "Default Traffic Light Protocol (TLP) marking for imported data.",
+      "enum": [
+        "red",
+        "amber+strict",
+        "amber",
+        "green",
+        "clear",
+        "white"
+      ],
+      "type": "string"
+    },
+    "CROWDSTRIKE_CREATE_OBSERVABLES": {
+      "default": true,
+      "description": "Whether to create observables in OpenCTI.",
+      "type": "boolean"
+    },
+    "CROWDSTRIKE_CREATE_INDICATORS": {
+      "default": true,
+      "description": "Whether to create indicators in OpenCTI.",
+      "type": "boolean"
+    },
+    "CROWDSTRIKE_SCOPES": {
+      "default": [
+        "actor",
+        "report",
+        "indicator",
+        "yara_master",
+        "snort_suricata_master"
+      ],
+      "description": "Comma-separated list of scopes to enable. Available: actor, report, indicator, yara_master, snort_suricata_master.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CROWDSTRIKE_ACTOR_START_TIMESTAMP": {
+      "description": "Unix timestamp from which to start importing actors. Default is 30 days ago. BEWARE: 0 means ALL actors!",
+      "type": "integer"
+    },
+    "CROWDSTRIKE_REPORT_START_TIMESTAMP": {
+      "description": "Unix timestamp from which to start importing reports. Default is 30 days ago. BEWARE: 0 means ALL reports!",
+      "type": "integer"
+    },
+    "CROWDSTRIKE_REPORT_STATUS": {
+      "default": "New",
+      "description": "Report status filter.",
+      "enum": [
+        "New",
+        "In Progress",
+        "Analyzed",
+        "Closed"
+      ],
+      "type": "string"
+    },
+    "CROWDSTRIKE_REPORT_INCLUDE_TYPES": {
+      "default": [
+        "notice",
+        "tipper",
+        "intelligence report",
+        "periodic report"
+      ],
+      "description": "Comma-separated list of report types to include.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CROWDSTRIKE_REPORT_TYPE": {
+      "default": "threat-report",
+      "description": "OpenCTI report type for imported reports.",
+      "type": "string"
+    },
+    "CROWDSTRIKE_REPORT_TARGET_INDUSTRIES": {
+      "default": null,
+      "description": "Comma-separated list of target industries to filter reports.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CROWDSTRIKE_REPORT_GUESS_MALWARE": {
+      "default": false,
+      "description": "Whether to use report tags to guess related malware.",
+      "type": "boolean"
+    },
+    "CROWDSTRIKE_REPORT_GUESS_RELATIONS": {
+      "default": false,
+      "description": "Whether to automatically guess and create relationships in reports.",
+      "type": "boolean"
+    },
+    "CROWDSTRIKE_INDICATOR_START_TIMESTAMP": {
+      "description": "Unix timestamp from which to start importing indicators. Default is 30 days ago. BEWARE: 0 means ALL indicators!",
+      "type": "integer"
+    },
+    "CROWDSTRIKE_INDICATOR_EXCLUDE_TYPES": {
+      "default": [
+        "hash_ion",
+        "hash_md5",
+        "hash_sha1",
+        "password",
+        "username"
+      ],
+      "description": "Comma-separated list of indicator types to exclude from import.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CROWDSTRIKE_DEFAULT_X_OPENCTI_SCORE": {
+      "default": 50,
+      "description": "Default confidence score for entities without explicit score.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "CROWDSTRIKE_INDICATOR_LOW_SCORE": {
+      "default": 40,
+      "description": "Score assigned to indicators with low confidence labels.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "CROWDSTRIKE_INDICATOR_LOW_SCORE_LABELS": {
+      "default": [
+        "MaliciousConfidence/Low"
+      ],
+      "description": "Comma-separated list of labels indicating low confidence.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CROWDSTRIKE_INDICATOR_MEDIUM_SCORE": {
+      "default": 60,
+      "description": "Score assigned to indicators with medium confidence labels.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "CROWDSTRIKE_INDICATOR_MEDIUM_SCORE_LABELS": {
+      "default": [
+        "MaliciousConfidence/Medium"
+      ],
+      "description": "Comma-separated list of labels indicating medium confidence.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CROWDSTRIKE_INDICATOR_HIGH_SCORE": {
+      "default": 80,
+      "description": "Score assigned to indicators with high confidence labels.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "CROWDSTRIKE_INDICATOR_HIGH_SCORE_LABELS": {
+      "default": [
+        "MaliciousConfidence/High"
+      ],
+      "description": "Comma-separated list of labels indicating high confidence.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CROWDSTRIKE_INDICATOR_UNWANTED_LABELS": {
+      "default": null,
+      "description": "Comma-separated list of unwanted labels to filter out indicators. Can be used to filter low confidence indicators: 'MaliciousConfidence/Low,MaliciousConfidence/Medium'.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CROWDSTRIKE_NO_FILE_TRIGGER_IMPORT": {
+      "default": true,
+      "description": "Whether to trigger import without file dependencies.",
+      "type": "boolean"
+    },
+    "CROWDSTRIKE_INTERVAL_SEC": {
+      "default": 1800,
+      "description": "Polling interval in seconds for fetching data (used when duration_period is not set).",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CROWDSTRIKE_CLIENT_ID",
+    "CROWDSTRIKE_CLIENT_SECRET"
+  ],
+  "additionalProperties": true
+}

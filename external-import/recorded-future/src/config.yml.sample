@@ -8,21 +8,22 @@ connector:
   name: 'Recorded Future' # Required
   scope: 'ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1'
   log_level: 'info'
-  duration_period: 'PT24H' # ISO8601 Format starting with "P" for Period ex: "PT24H" // Period time of 5 minutes
+  duration_period: 'PT24H' # ISO8601 Format starting with "P" for Period ex: "PT24H" // Period time of 24 Hours
 
 rf:
   token: 'ChangeMe' # Required
   initial_lookback: 240 # Required, in hours
   pull_analyst_notes: True
   last_published_notes: 24 # Required, in hours
-  TLP: red
-  topic: 'VTrvnW,g1KBGl,ZjnoP0,aDKkpk,TXSFt5,UrMRnT,TXSFt3' # optional / Corresponds to Yara Rule, Sigma Rule, Snort Rule, TTP Instance, Validated Intelligence Event, Informational, Threat Lead
+  tlp: amber+strict
+  topic: 'VTrvnW,g1KBGI,ZjnoP0,aDKkpk,TXSFt5,UrMRnT,TXSFt3' # optional / Corresponds to Yara Rule, Sigma Rule, Snort Rule, TTP Instance, Validated Intelligence Event, Informational, Threat Lead
   insikt_only: True # optional
   pull_signatures: False # Pull Yara/Snort/Sigma rules into OpenCTI. optional
-  person_to_TA: False # optional
-  TA_to_intrusion_set: False # optional
+  person_to_ta: False # optional
+  ta_to_intrusion_set: False # optional
   risk_as_score: True # optional
   risk_threshold: 60 # optional
+  analyst_notes_guess_relationships=False # optional
   pull_risk_list: False
   riskrules_as_label: False # optional
   risk_list_threshold: 70 # optional
@@ -30,6 +31,7 @@ rf:
   # Available choices: Malware,Hash,URL,Threat Actor,MitreAttackIdentifier
   risklist_related_entities: 'Malware,Threat Actor,MitreAttackIdentifier'
   pull_threat_maps: False # optional - Pull Threat Actors and Malware maps
+  interval: 1 # Interval in hours for pulling data
 
 alert:
   enable: False # required

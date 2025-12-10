@@ -1,15 +1,16 @@
 """Report-specific client API for fetching and processing report data."""
 
 import logging
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from collections.abc import AsyncGenerator
+from typing import Any
 
 from connector.src.custom.client_api.client_api_base import BaseClientAPI
-
-LOG_PREFIX = "[FetcherReport]"
 
 
 class ClientAPIReport(BaseClientAPI):
     """Report-specific client API for fetching and processing report data."""
+
+    LOG_PREFIX = "[FetcherReport]"
 
     def __init__(
         self,
@@ -26,12 +27,12 @@ class ClientAPIReport(BaseClientAPI):
         self,
         collection_type: str,
         start_date: str,
-        initial_state: Optional[Dict[str, Any]] = None,
-        types: Optional[List[str]] = None,
-        origins: Optional[List[str]] = None,
+        initial_state: dict[str, Any] | None = None,
+        types: list[str] | None = None,
+        origins: list[str] | None = None,
         entity_name: str = "reports",
         cursor_key: str = "cursor",
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Build filter configurations based on config settings.
 
         Args:
@@ -44,7 +45,7 @@ class ClientAPIReport(BaseClientAPI):
             cursor_key: Key to use for cursor in initial_state
 
         Returns:
-            List of filter configurations with params and cursors
+            list of filter configurations with params and cursors
 
         """
         try:
@@ -65,7 +66,8 @@ class ClientAPIReport(BaseClientAPI):
 
         except Exception as e:
             self.logger.error(
-                f"{LOG_PREFIX} Failed to build filter configurations: {str(e)}"
+                "Failed to build filter configurations",
+                {"prefix": self.LOG_PREFIX, "error": str(e)},
             )
             return [
                 {
@@ -84,9 +86,9 @@ class ClientAPIReport(BaseClientAPI):
         data_count: int,
         entity_description: str,
         page_nb: int,
-        total_pages: Optional[int],
-        total_items: Optional[int],
-        cursor: Optional[str],
+        total_pages: int | None,
+        total_items: int | None,
+        cursor: str | None,
     ) -> str:
         """Build pagination log message and update total count."""
         if entity_description == "reports" and total_items:
@@ -102,18 +104,18 @@ class ClientAPIReport(BaseClientAPI):
         elif total_items:
             page_info = f" (total of {total_items} items)"
 
-        return f"{LOG_PREFIX} Fetched {data_count} {entity_description} from API{page_info}{cursor_info}"
+        return f"Fetched {data_count} {entity_description} from API{page_info}{cursor_info}"
 
     async def fetch_reports(
-        self, initial_state: Optional[Dict[str, Any]]
-    ) -> AsyncGenerator[Dict[Any, Any], None]:
+        self, initial_state: dict[str, Any] | None
+    ) -> AsyncGenerator[dict[Any, Any], None]:
         """Fetch reports from the API.
 
         Args:
-            initial_state (Optional[Dict[str, Any]]): The initial state of the fetcher.
+            initial_state (dict[str, Any] | None): The initial state of the fetcher.
 
         Yields:
-            AsyncGenerator[Dict[str, Any], None]: The fetched reports.
+            AsyncGenerator[dict[str, Any], None]: The fetched reports.
 
         """
         start_date = self._parse_start_date(
@@ -127,14 +129,19 @@ class ClientAPIReport(BaseClientAPI):
             initial_state=initial_state,
         )
         report_fetcher = self.fetcher_factory.create_fetcher_by_name(
-            "main_reports", base_url=self.config.api_url
+            "main_reports", base_url=self.config.api_url.unicode_string()
         )
 
         for filter_config in filter_configs:
             endpoint_params = filter_config.get("params", {})
 
             self.logger.info(
-                f"{LOG_PREFIX} Fetching reports from endpoint 'reports' with filters: {endpoint_params}"
+                "Fetching reports from endpoint 'reports'",
+                {
+                    "prefix": self.LOG_PREFIX,
+                    "endpoint": "reports",
+                    "filters": endpoint_params,
+                },
             )
 
             async for report_data in self._paginate_with_cursor(

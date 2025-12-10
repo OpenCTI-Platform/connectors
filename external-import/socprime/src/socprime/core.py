@@ -1,23 +1,19 @@
-import datetime
-import os
 import sys
-import time
 from copy import deepcopy
+from datetime import UTC, datetime, timezone
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Union
 
 import pycti
+import stix2
 import yaml
 from dateutil.parser import parse as parse_date_str
 from pycti import StixCoreRelationship
-from pycti.connector.opencti_connector_helper import (
-    OpenCTIConnectorHelper,
-    get_config_variable,
-)
+from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
+from socprime.config import ConnectorSettings
 from socprime.mitre_attack import MitreAttack
 from socprime.tdm_api_client import ApiClient
 from stix2 import (
     AttackPattern,
-    Bundle,
     Identity,
     Indicator,
     IntrusionSet,
@@ -28,6 +24,10 @@ from stix2 import (
 )
 
 
+class InvalidTlpLevelError(Exception):
+    """Error raised when the TLP level is invalid."""
+
+
 class ParsedRule(NamedTuple):
     name: str
     description: str | None
@@ -36,70 +36,43 @@ class ParsedRule(NamedTuple):
     status: str | None
     author: str | None
     sigma_tags: list[str]
-    release_date: datetime.datetime | None
+    release_date: datetime | None
 
 
 class SocprimeConnector:
-    _DEFAULT_CONNECTOR_RUN_INTERVAL_SEC = 3600
     _STATE_LAST_RUN = "last_run"
     _stix_object_types_to_udate = (Indicator, Relationship)
 
     def __init__(self):
-        config = self._read_configuration()
-        self.helper = OpenCTIConnectorHelper(config)
-        tdm_api_key = get_config_variable(
-            "SOCPRIME_API_KEY", ["socprime", "api_key"], config
-        )
-        if not tdm_api_key:
-            raise Exception("Configuration error. SOCPRIME_API_KEY is required.")
-        self._content_list_names = get_config_variable(
-            "SOCPRIME_CONTENT_LIST_NAME", ["socprime", "content_list_name"], config
-        )
-        self._job_ids = get_config_variable(
-            "SOCPRIME_JOB_IDS", ["socprime", "job_ids"], config
-        )
-        self._siem_types_for_refs = get_config_variable(
-            "SOCPRIME_SIEM_TYPE", ["socprime", "siem_type"], config
-        )
-        self._indicator_siem_type = get_config_variable(
-            "SOCPRIME_INDICATOR_SIEM_TYPE",
-            ["socprime", "indicator_siem_type"],
-            config,
-            default="sigma",
-        )
-        self.interval_sec = get_config_variable(
-            env_var="SOCPRIME_INTERVAL_SEC",
-            yaml_path=["socprime", "interval_sec"],
-            config=config,
-            isNumber=True,
-            default=self._DEFAULT_CONNECTOR_RUN_INTERVAL_SEC,
-        )
-        self.tdm_api_client = ApiClient(api_key=tdm_api_key)
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(self.config.model_dump_pycti())
+        self.tdm_api_client = ApiClient(api_key=self.config.socprime.api_key)
         self.mitre_attack = MitreAttack()
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-        )
+        self.start_datetime = datetime.now(tz=UTC)  # redefined in _process()
+        self.work_id = None
+        self.author = self._create_author_identity()
+        self.tlp_marking = self._create_tlp_marking()
 
-    @staticmethod
-    def _read_configuration() -> Dict[str, str]:
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/../config.yml"
-        if not os.path.isfile(config_file_path):
-            return {}
-        return yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-
-    def get_siem_types_for_refs(self) -> List[str]:
-        if not self._siem_types_for_refs:
-            return []
-        elif isinstance(self._siem_types_for_refs, list):
-            return self._siem_types_for_refs
-        else:
-            return [x.strip() for x in str(self._siem_types_for_refs).split(",")]
-
-    @staticmethod
-    def _current_unix_timestamp() -> int:
-        return int(time.time())
+    def _create_tlp_marking(self) -> stix2.MarkingDefinition:
+        match self.config.socprime.tlp_level:
+            case "white" | "clear":
+                return stix2.TLP_WHITE
+            case "green":
+                return stix2.TLP_GREEN
+            case "amber":
+                return stix2.TLP_AMBER
+            case "amber+strict":
+                return stix2.MarkingDefinition(
+                    id=pycti.MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+                    definition_type="statement",
+                    definition={"statement": "custom"},
+                    custom_properties={
+                        "x_opencti_definition_type": "TLP",
+                        "x_opencti_definition": "TLP:AMBER+STRICT",
+                    },
+                )
+            case "red":
+                return stix2.TLP_RED
 
     def _load_state(self) -> Dict[str, Any]:
         current_state = self.helper.get_state()
@@ -115,22 +88,10 @@ class SocprimeConnector:
             return state.get(key, default)
         return default
 
-    def _is_scheduled(self, last_run: Optional[int], current_time: int) -> bool:
-        if last_run is None:
-            self.helper.log_info("Connector first run")
-            return True
-        time_diff = current_time - last_run
-        return time_diff >= self.interval_sec
-
-    @classmethod
-    def _sleep(cls, delay_sec: Optional[int] = None) -> None:
-        time.sleep(delay_sec)
-
     def get_stix_objects_from_rule(
         self,
         rule: dict,
         siem_types: Optional[List[str]] = None,
-        author_id: Optional[str] = None,
     ) -> List:
         stix_objects = []
         parsed_rule = self._parse_rule(rule)
@@ -151,8 +112,10 @@ class SocprimeConnector:
             external_references=self._get_external_refs_from_rule(
                 rule, siem_types=siem_types
             ),
-            created_by_ref=author_id,
-            valid_from=parsed_rule.release_date,
+            created_by_ref=self.author.id,
+            object_marking_refs=[self.tlp_marking.id],
+            created=parsed_rule.release_date,
+            valid_from=None,
             valid_until=None,
         )
         stix_objects.append(indicator)
@@ -233,7 +196,9 @@ class SocprimeConnector:
         res = []
         indicator_id = pycti.Indicator.generate_id(pattern=indicator.pattern)
         for tool_name in self._get_tools_from_rule(rule):
-            tool = self.mitre_attack.get_tool_by_name(tool_name)
+            tool = self.mitre_attack.get_tool_by_name(
+                tool_name, self.author.id, self.tlp_marking
+            )
             if tool:
                 res.append(tool)
                 rel = Relationship(
@@ -243,6 +208,8 @@ class SocprimeConnector:
                     relationship_type="indicates",
                     source_ref=indicator_id,
                     target_ref=tool.id,
+                    created_by_ref=self.author.id,
+                    object_marking_refs=[self.tlp_marking.id],
                 )
                 res.append(rel)
         return res
@@ -264,7 +231,9 @@ class SocprimeConnector:
         res = []
         indicator_id = pycti.Indicator.generate_id(pattern=indicator.pattern)
         for technique_id in self._get_techniques_from_rule(rule):
-            technique = self.mitre_attack.get_technique_by_id(technique_id)
+            technique = self.mitre_attack.get_technique_by_id(
+                technique_id, self.author.id, self.tlp_marking
+            )
             if technique:
                 res.append(technique)
                 rel = Relationship(
@@ -274,6 +243,8 @@ class SocprimeConnector:
                     relationship_type="indicates",
                     source_ref=indicator_id,
                     target_ref=technique.id,
+                    created_by_ref=self.author.id,
+                    object_marking_refs=[self.tlp_marking.id],
                 )
                 res.append(rel)
         return res
@@ -292,7 +263,9 @@ class SocprimeConnector:
         res = []
         indicator_id = pycti.Indicator.generate_id(pattern=indicator.pattern)
         for actor_name in self._get_actors_from_rule(rule):
-            intusion_set = self.mitre_attack.get_intrusion_set_by_name(actor_name)
+            intusion_set = self.mitre_attack.get_intrusion_set_by_name(
+                actor_name, self.author.id, self.tlp_marking
+            )
             if intusion_set:
                 res.append(intusion_set)
                 rel = Relationship(
@@ -302,6 +275,8 @@ class SocprimeConnector:
                     relationship_type="indicates",
                     source_ref=indicator_id,
                     target_ref=intusion_set.id,
+                    created_by_ref=self.author.id,
+                    object_marking_refs=[self.tlp_marking.id],
                 )
                 res.append(rel)
         return res
@@ -363,7 +338,9 @@ class SocprimeConnector:
             return f"https://socprime.com/rs/rule/{sigma_id}"
 
     @staticmethod
-    def convert_sigma_status_to_stix_confidence(sigma_level: str) -> Optional[int]:
+    def convert_sigma_status_to_stix_confidence(
+        sigma_level: Optional[str],
+    ) -> Optional[int]:
         mapping = {
             "stable": 85,
             "test": 50,
@@ -378,7 +355,7 @@ class SocprimeConnector:
         if rule_ids:
             try:
                 query = "case.id: (" + " OR ".join(rule_ids) + ")"
-                for siem_type in self.get_siem_types_for_refs():
+                for siem_type in self.config.socprime.siem_type:
                     rules = self.tdm_api_client.search_rules(
                         siem_type=siem_type, client_query_string=query
                     )
@@ -387,70 +364,58 @@ class SocprimeConnector:
                         if case_id not in res:
                             res[case_id] = []
                         res[case_id].append(siem_type)
-            except Exception:
-                self.helper.log_error("Error while getting availables siem types.")
+            except Exception as err:
+                self.helper.connector_logger.error(
+                    "Error while getting availables siem types.",
+                    meta={"error": str(err)},
+                )
         return res
 
     def _get_rules_from_content_lists_and_jobs(self) -> list[str]:
-        list_names = self._get_content_list_names()
-        job_ids = self._get_job_ids()
-        if not list_names and not job_ids:
-            raise Exception(
-                "Configuration error. At least one job id or one content list name must be provided."
-            )
         res = []
-        for list_name in list_names:
+        for list_name in self.config.socprime.content_list_name:
             res.extend(
                 self._get_rules_from_one_content_list(content_list_name=list_name)
             )
-        for job_id in job_ids:
+        for job_id in self.config.socprime.job_ids:
             res.extend(self._get_rules_from_one_job(job_id=job_id))
         return res
 
-    def _get_content_list_names(self) -> list[str]:
-        if not self._content_list_names:
-            return []
-        names = str(self._content_list_names).split(",")
-        names = [x.strip() for x in names if x.strip()]
-        return names
-
     def _get_rules_from_one_content_list(self, content_list_name: str) -> List[dict]:
-        self.helper.log_info(f"Getting rules from content list {content_list_name}")
+        self.helper.connector_logger.info(
+            f"Getting rules from content list {content_list_name}"
+        )
         try:
             return self.tdm_api_client.get_rules_from_content_list(
                 content_list_name=content_list_name,
-                siem_type=self._indicator_siem_type,
+                siem_type=self.config.socprime.indicator_siem_type,
             )
         except Exception as err:
-            self.helper.log_error(
-                f"Error while getting rules from content list - {err}"
+            self.helper.connector_logger.error(
+                f"Error while getting rules from content list - {err}",
+                meta={"error": str(err)},
             )
             return []
 
-    def _get_job_ids(self) -> list[str]:
-        if not self._job_ids:
-            return []
-        ids = str(self._job_ids).split(",")
-        ids = [x.strip() for x in ids if x.strip()]
-        return ids
-
     def _get_rules_from_one_job(self, job_id: str) -> List[dict]:
-        self.helper.log_info(f"Getting rules from job {job_id}")
+        self.helper.connector_logger.info(f"Getting rules from job {job_id}")
         try:
             return self.tdm_api_client.get_rules_from_job(job_id=job_id)
         except Exception as err:
-            self.helper.log_error(f"Error while getting rules from job - {err}")
+            self.helper.connector_logger.error(
+                f"Error while getting rules from job - {err}", meta={"error": str(err)}
+            )
             return []
 
-    def _create_author_identity(self, work_id: str) -> str:
+    def _create_author_identity(self) -> stix2.Identity:
         """Creates SOC Prime author and returns its id."""
-        name = "SOC Prime"
-        author_identity = Identity(
-            id=pycti.Identity.generate_id(name=name, identity_class="organization"),
+        return Identity(
+            id=pycti.Identity.generate_id(
+                name="SOC Prime", identity_class="organization"
+            ),
             type="identity",
-            name=name,
+            name="SOC Prime",
             identity_class="organization",
-            confidence=85,
             description="SOC Prime operates the world’s largest and most advanced Platform for collaborative cyber defense. "
             + "The SOC Prime Platform integration with OpenCTI provides the latest detections within Sigma rules.",
             contact_information="support@socprime.com",
@@ -459,12 +424,8 @@ class SocprimeConnector:
             ],
         )
 
-        serialized_bundle = Bundle(objects=[author_identity]).serialize()
-        self.helper.send_stix2_bundle(serialized_bundle, work_id=work_id)
-        return author_identity.get("id")
-
-    def send_rules_from_tdm(self, work_id: str) -> None:
-        author_id = self._create_author_identity(work_id)
+    def send_rules_from_tdm(self) -> None:
+        self.mitre_attack.initialize()
 
         bundle_objects = []
         rules = self._get_rules_from_content_lists_and_jobs()
@@ -478,91 +439,109 @@ class SocprimeConnector:
                 rule_stix_objects = self.get_stix_objects_from_rule(
                     rule=rule,
                     siem_types=available_siem_types.get(rule["case"]["id"]),
-                    author_id=author_id,
                 )
                 bundle_objects.extend(rule_stix_objects)
                 rules_count += 1
             except Exception as err:
                 case_id = rule.get("case", {}).get("id")
-                self.helper.log_error(f"Error while parsing rule {case_id} - {err}")
+                self.helper.connector_logger.error(
+                    f"Error while parsing rule {case_id} - {err}",
+                    meta={"error": str(err)},
+                )
 
-        self.helper.log_info(f"Sending {rules_count} rules")
+        self.helper.connector_logger.info(f"Sending {rules_count} rules")
 
-        self._send_stix_objects(objects_list=bundle_objects, work_id=work_id)
+        if bundle_objects:
+            self.work_id = self.helper.api.work.initiate_work(
+                connector_id=self.helper.connector_id,
+                friendly_name="SOC Prime run @ "
+                + self.start_datetime.isoformat(timespec="seconds"),
+            )
+            bundle = self.helper.stix2_create_bundle(
+                items=[self.author] + [self.tlp_marking] + bundle_objects
+            )
+            self.helper.send_stix2_bundle(bundle, work_id=self.work_id)
 
-    def _send_stix_objects(self, objects_list: list, work_id: str) -> None:
-        objects = [
-            x
-            for x in objects_list
-            if not isinstance(x, self._stix_object_types_to_udate)
-        ]
-        if objects:
-            bundle = Bundle(objects=objects).serialize()
-            self.helper.send_stix2_bundle(
-                bundle, update=self.update_existing_data, work_id=work_id
+    def process(self):
+        """
+        Connector main process to collect, transform and send intelligence.
+        """
+        self.start_datetime = datetime.now(tz=timezone.utc)
+
+        error_flag = False  # Work in_error flag
+        message = ""  # Work message placeholder
+
+        try:
+            current_state = self._load_state()
+            self.helper.connector_logger.debug(
+                "Loaded state", {"current_state": current_state}
             )
 
-        objects = [
-            x for x in objects_list if isinstance(x, self._stix_object_types_to_udate)
-        ]
-        if objects:
-            bundle = Bundle(objects=objects).serialize()
-            self.helper.send_stix2_bundle(bundle, work_id=work_id)
+            last_run = self._get_state_value(current_state, self._STATE_LAST_RUN)
+            if last_run is None:
+                self.helper.connector_logger.info("[CONNECTOR] Connector has never run")
+            else:
+                if isinstance(last_run, int):  # for legacy
+                    last_run = datetime.fromtimestamp(last_run, tz=timezone.utc)
+                elif isinstance(last_run, str):
+                    last_run = datetime.fromisoformat(last_run).replace(
+                        tzinfo=timezone.utc
+                    )
+
+                self.helper.connector_logger.info(
+                    "[CONNECTOR] Connector last run", {"last_run": last_run}
+                )
+
+            self.send_rules_from_tdm()
+
+            new_state = current_state.copy()
+            new_state[self._STATE_LAST_RUN] = self.start_datetime.isoformat(
+                timespec="seconds"
+            )
+
+            self.helper.connector_logger.info(
+                "Storing new state", {"new_state": new_state}
+            )
+            self.helper.set_state(new_state)
+
+            message = f"{self.helper.connect_name} connector successfully run"
+            self.helper.connector_logger.info(message)
+
+        except (KeyboardInterrupt, SystemExit):
+            error_flag = True
+            message = "Connector stopped by user or system"
+            self.helper.connector_logger.error(message)
+
+            sys.exit(0)
+        except Exception as err:
+            error_flag = True
+            message = "Unexpected error. See connector's log for more details."
+            self.helper.connector_logger.error(
+                "[CONNECTOR] Unexpected error.", {"error": str(err)}
+            )
+
+        finally:
+            if self.work_id:
+                self.helper.api.work.to_processed(
+                    self.work_id, message, in_error=error_flag
+                )
 
     def run(self):
-        self.helper.log_info("Starting SOC Prime connector...")
-        while True:
-            self.helper.log_info("Running SOC Prime connector...")
-            run_interval = self.interval_sec
-
-            try:
-                timestamp = self._current_unix_timestamp()
-                current_state = self._load_state()
-
-                self.helper.log_info(f"Loaded state: {current_state}")
-
-                last_run = self._get_state_value(current_state, self._STATE_LAST_RUN)
-                if self._is_scheduled(last_run, timestamp):
-                    now = datetime.datetime.utcfromtimestamp(timestamp)
-                    friendly_name = "SOC Prime run @ " + now.strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    )
-                    work_id = self.helper.api.work.initiate_work(
-                        self.helper.connect_id, friendly_name
-                    )
-
-                    self.send_rules_from_tdm(work_id)
-
-                    new_state = current_state.copy()
-                    new_state[self._STATE_LAST_RUN] = self._current_unix_timestamp()
-
-                    self.helper.log_info(f"Storing new state: {new_state}")
-                    self.helper.set_state(new_state)
-                    message = (
-                        "State stored, next run in: "
-                        + str(self.interval_sec)
-                        + " seconds"
-                    )
-                    self.helper.api.work.to_processed(work_id, message)
-                    self.helper.log_info(message)
-                else:
-                    next_run = self.interval_sec - (timestamp - last_run)
-                    run_interval = min(run_interval, next_run)
-
-                    self.helper.log_info(
-                        f"Connector will not run, next run in: {next_run} seconds"
-                    )
-
-            except (KeyboardInterrupt, SystemExit):
-                self.helper.log_info("Connector stop")
-                sys.exit(0)
-
-            if self.helper.connect_run_and_terminate:
-                self.helper.log_info("Connector stop")
-                self.helper.force_ping()
-                sys.exit(0)
-
-            self._sleep(delay_sec=run_interval)
+        """
+        Run the main process encapsulated in a scheduler
+        It allows you to schedule the process to run at a certain intervals
+        This specific scheduler from the pycti connector helper will also check the queue size of a connector
+        If `CONNECTOR_QUEUE_THRESHOLD` is set, if the connector's queue size exceeds the queue threshold,
+        the connector's main process will not run until the queue is ingested and reduced sufficiently,
+        allowing it to restart during the next scheduler check. (default is 500MB)
+        It requires the `duration_period` connector variable in ISO-8601 standard format
+        Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
+        :return: None
+        """
+        self.helper.schedule_process(
+            message_callback=self.process,
+            duration_period=self.config.connector.duration_period.total_seconds(),
+        )
 
     def _get_vulnerabilities_and_relations_from_indicator(
         self, indicator: Indicator, rule: dict
@@ -580,6 +559,8 @@ class SocprimeConnector:
                     relationship_type="indicates",
                     source_ref=indicator_id,
                     target_ref=vuln.id,
+                    created_by_ref=self.author.id,
+                    object_marking_refs=[self.tlp_marking.id],
                 )
                 res.append(rel)
         return res
@@ -592,8 +573,7 @@ class SocprimeConnector:
                 res.extend(rule["tags"]["cve_id"])
         return res
 
-    @staticmethod
-    def _get_vuln_by_cve_id(cve_id: str) -> Vulnerability:
+    def _get_vuln_by_cve_id(self, cve_id: str) -> Vulnerability:
         return Vulnerability(
             type="vulnerability",
             id=pycti.Vulnerability.generate_id(name=cve_id),
@@ -604,4 +584,6 @@ class SocprimeConnector:
                     "external_id": cve_id,
                 }
             ],
+            created_by_ref=self.author.id,
+            object_marking_refs=[self.tlp_marking.id],
         )

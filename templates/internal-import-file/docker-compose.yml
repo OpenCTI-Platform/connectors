@@ -1,20 +1,18 @@
 version: '3'
 services:
   connector-template:
-    image: opencti/connector-template:6.7.14
+    image: opencti/connector-template:rolling # 'template' being the name of connector's directory
     environment:
-      # Connector's generic execution parameters
+      # Generic parameters (connection with OpenCTI)
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=CHANGEME
-      # Connector's definition parameters REQUIRED
+      # Common parameters for connectors of type INTERNAL_IMPORT_FILE
       - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_NAME=CHANGEME
+      - CONNECTOR_NAME=CHANGEME # optional (default: 'Template Connector')
       - CONNECTOR_SCOPE=CHANGEME
-      - CONNECTOR_LOG_LEVEL=error
-
-      # Connector's custom execution parameters
-      - CONNECTOR_TEMPLATE_API_BASE_URL=CHANGEME
-      - CONNECTOR_TEMPLATE_API_KEY=CHANGEME
+      - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      # Custom parameters for connector-template
+      - TEMPLATE_API_KEY=CHANGEME
 
       # Add proxy parameters below if needed
       # - HTTP_PROXY=CHANGEME

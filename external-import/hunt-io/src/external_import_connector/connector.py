@@ -1,205 +1,223 @@
 import sys
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
-import stix2
-from pycti import ObservedData as PyCTIObservedData
 from pycti import OpenCTIConnectorHelper
 
+from .batch_manager import BatchManager
 from .client_api import ConnectorClient
 from .config_variables import ConfigConnector
+from .constants import DateTimeFormats, LoggingPrefixes, StateKeys
 from .converter_to_stix import ConverterToStix
-from .models import C2, C2ScanResult
-from .utils import convert_timestamp_to_iso_format
+from .entity_processor import EntityProcessor
+from .models import C2
 
 
-class ConnectorHuntIo:
-    """
-    Specifications of the external import connector
-    """
+class StateManager:
+    """Manages connector state operations."""
 
-    def __init__(self):
-        """
-        Initialize the Connector with necessary configurations
-        """
+    def __init__(self, helper: OpenCTIConnectorHelper):
+        self.helper = helper
 
-        # Load configuration file and connection helper
-        self.config = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
-        self.client = ConnectorClient(self.helper, self.config)
-        self.converter_to_stix = ConverterToStix(self.helper)
+    def get_last_timestamp(self) -> Optional[str]:
+        """Get the last processed timestamp from state."""
+        current_state = self.helper.get_state()
+        if current_state and StateKeys.LAST_TIMESTAMP in current_state:
+            return current_state[StateKeys.LAST_TIMESTAMP]
+        return None
 
-    def _collect_intelligence_and_ingest(self) -> None:
+    def update_processing_state(self, processing: bool) -> None:
+        """Update the processing flag in state."""
+        current_state = self.helper.get_state() or {}
+        current_state[StateKeys.PROCESSING] = processing
+        self.helper.set_state(current_state)
+
+    def is_processing(self) -> bool:
+        """Check if connector is currently processing."""
+        current_state = self.helper.get_state()
+        return current_state and current_state.get(StateKeys.PROCESSING, False)
+
+    def update_run_state(
+        self, latest_timestamp: Optional[str], entities_processed: int
+    ) -> None:
+        """Update state after successful run."""
+        current_state = self.helper.get_state() or {}
+
+        if latest_timestamp:
+            current_state[StateKeys.LAST_TIMESTAMP] = latest_timestamp
+
+        current_state[StateKeys.LAST_RUN] = datetime.now().strftime(
+            DateTimeFormats.STANDARD_FORMAT
+        )
+        current_state[StateKeys.ENTITIES_PROCESSED] = entities_processed
+        current_state[StateKeys.PROCESSING] = False
+
+        self.helper.set_state(current_state)
+
+
+class IntelligenceCollector:
+    """Handles the intelligence collection and ingestion process."""
+
+    def __init__(
+        self,
+        helper: OpenCTIConnectorHelper,
+        client: ConnectorClient,
+        entity_processor: EntityProcessor,
+        batch_manager: BatchManager,
+        state_manager: StateManager,
+    ):
+        self.helper = helper
+        self.client = client
+        self.entity_processor = entity_processor
+        self.batch_manager = batch_manager
+        self.state_manager = state_manager
+
+    def collect_and_ingest(self) -> None:
         """
         Collect intelligence from the source, convert into STIX objects and send
           incrementally to OpenCTI.
         """
+        # Get current state for incremental processing
+        last_timestamp = self.state_manager.get_last_timestamp()
 
-        def process_entity(entity: C2ScanResult):
-            """
-            Process a single entity into STIX objects and send it to OpenCTI.
-            """
-            try:
-                relationships = []
-                confidence = int(entity.confidence)
+        if last_timestamp:
+            self.helper.connector_logger.info(
+                f"{LoggingPrefixes.CONNECTOR} Incremental run - fetching entities since: {last_timestamp}"
+            )
+        else:
+            self.helper.connector_logger.info(
+                f"{LoggingPrefixes.CONNECTOR} First run - fetching ALL entities"
+            )
 
-                timestamp = convert_timestamp_to_iso_format(entity.timestamp)
+        # Fetch entities incrementally to prevent reprocessing large datasets
+        entities: List[C2] = (
+            self.client.get_entities(since_timestamp=last_timestamp) or []
+        )
 
-                ipv4_object = self.converter_to_stix.create_ipv4_observable(entity.ip)
+        if not entities:
+            self.helper.connector_logger.info(
+                f"{LoggingPrefixes.CONNECTOR} No new entities to process since last run"
+            )
+            return
 
-                malware_object = self.converter_to_stix.create_malware_object(
-                    entity.malware_name, entity.malware_subsystem
-                )
+        # Check system health before processing
+        if not self.batch_manager.check_processing_feasibility():
+            return
 
-                url_indicator = self.converter_to_stix.create_url_indicator(
-                    entity.scan_uri, timestamp
-                )
+        # Apply emergency limits
+        entities = self.batch_manager.apply_emergency_limits(entities)
 
-                domain_object = self.converter_to_stix.create_domain_observable(
-                    entity.hostname
-                )
+        self.helper.connector_logger.info(
+            f"{LoggingPrefixes.CONNECTOR} Processing {len(entities)} NEW entities (incremental processing)"
+        )
 
-                c2_infrastructure = self.converter_to_stix.create_c2_infrastructure(
-                    entity.malware_name, "command-and-control", timestamp
-                )
+        # Process entities using sequential batching approach
+        self._process_entities_sequentially(entities)
 
-                if ipv4_object:
-                    network_traffic_object = (
-                        self.converter_to_stix.create_network_traffic(
-                            entity.port, ipv4_object.id
-                        )
-                    )
+        # Update state with latest timestamp for next incremental run
+        if hasattr(self.client, "latest_timestamp") and self.client.latest_timestamp:
+            self.state_manager.update_run_state(
+                self.client.latest_timestamp, len(entities)
+            )
 
-                    if c2_infrastructure.id and malware_object:
-                        c2_infrastructure_malware_relationship = (
-                            self.converter_to_stix.create_relationship(
-                                "controls",
-                                timestamp,
-                                c2_infrastructure.id,
-                                malware_object.id,
-                                confidence,
-                            )
-                        )
+            self.helper.connector_logger.info(
+                f"{LoggingPrefixes.CONNECTOR} Updated state - last_timestamp: {self.client.latest_timestamp}, "
+                f"entities_processed: {len(entities)}"
+            )
 
-                        relationships.append(
-                            c2_infrastructure_malware_relationship.stix2_object
-                        )
+    def _process_entities_sequentially(self, entities: List[C2]) -> None:
+        """
+        Process entities using sequential batching to prevent race conditions.
+        Phase 1: Create all STIX objects (indicators, infrastructure, malware, etc.)
+        Phase 2: Create all relationships after objects exist
+        This prevents MISSING_REFERENCE_ERROR issues.
+        """
+        batch_size = self.batch_manager.get_optimal_batch_size()
 
-                    if c2_infrastructure.id and ipv4_object:
-                        c2_infrastructure_ipv4_relationship = (
-                            self.converter_to_stix.create_relationship(
-                                "consists-of",
-                                timestamp,
-                                c2_infrastructure.id,
-                                ipv4_object.id,
-                                confidence,
-                            )
-                        )
+        self.helper.connector_logger.info(
+            f"{LoggingPrefixes.CONNECTOR} Processing {len(entities)} entities using sequential batching approach "
+            f"(batch size: {batch_size})"
+        )
 
-                        relationships.append(
-                            c2_infrastructure_ipv4_relationship.stix2_object
-                        )
+        # Phase 1: Process all entities to create STIX objects (no relationships)
+        self.helper.connector_logger.info(
+            f"{LoggingPrefixes.SEQUENTIAL_BATCH} Phase 1: Creating all STIX objects..."
+        )
+        all_objects, entity_metadata = (
+            self.entity_processor.process_entities_objects_phase(entities, batch_size)
+        )
 
-                    if c2_infrastructure.id and domain_object:
-                        c2_infrastructure_domain_relationship = (
-                            self.converter_to_stix.create_relationship(
-                                "consists-of",
-                                timestamp,
-                                c2_infrastructure.id,
-                                domain_object.id,
-                                confidence,
-                            )
-                        )
+        # Phase 2: Process all relationships using the created objects
+        self.helper.connector_logger.info(
+            f"{LoggingPrefixes.SEQUENTIAL_BATCH} Phase 2: Creating all relationships..."
+        )
+        all_relationships = self.entity_processor.process_entities_relationships_phase(
+            entity_metadata, batch_size
+        )
 
-                        relationships.append(
-                            c2_infrastructure_domain_relationship.stix2_object
-                        )
+        # Phase 3: Send final consolidated bundle with all objects and relationships
+        self.helper.connector_logger.info(
+            f"{LoggingPrefixes.SEQUENTIAL_BATCH} Phase 3: Sending consolidated bundle..."
+        )
+        self.batch_manager.send_consolidated_bundle(
+            all_objects, all_relationships, len(entities)
+        )
 
-                    if url_indicator.id and malware_object:
-                        c2_infrastructure_url_malware_relationship = (
-                            self.converter_to_stix.create_relationship(
-                                "indicates",
-                                timestamp,
-                                url_indicator.id,
-                                malware_object.id,
-                                confidence,
-                            )
-                        )
 
-                        relationships.append(
-                            c2_infrastructure_url_malware_relationship.stix2_object
-                        )
+class ConnectorHuntIo:
+    """
+    Hunt.IO external import connector.
 
-                # Create ObservedData with only valid objects
-                observed_data_refs = [
-                    obj
-                    for obj in [
-                        ipv4_object.stix2_object,
-                        domain_object.stix2_object,
-                        network_traffic_object.stix2_object,
-                    ]
-                    if obj
-                ]
+    This connector fetches threat intelligence data from Hunt.IO API and converts it
+    to STIX format for ingestion into OpenCTI. It follows SOLID principles with
+    clear separation of concerns.
+    """
 
-                if observed_data_refs:
-                    observed_data = stix2.ObservedData(
-                        id=PyCTIObservedData.generate_id("observed-data"),
-                        first_observed=timestamp,
-                        last_observed=timestamp,
-                        number_observed=1,
-                        object_refs=observed_data_refs,
-                    )
-                else:
-                    observed_data = None
+    def __init__(self):
+        """Initialize the Connector with necessary configurations."""
+        # Load configuration and setup helper
+        self.config = ConfigConnector()
+        self.helper = OpenCTIConnectorHelper(self.config.load)
 
-                # Collect all STIX objects and filter None
-                stix_objects = [
-                    obj
-                    for obj in [
-                        ipv4_object.stix2_object,
-                        domain_object.stix2_object,
-                        url_indicator.stix2_object,
-                        c2_infrastructure.stix2_object,
-                        malware_object.stix2_object,
-                        network_traffic_object.stix2_object,
-                        observed_data,
-                    ]
-                    if obj
-                ]
-                stix_objects.extend(relationships)
+        # Initialize components following dependency injection pattern
+        self.client = ConnectorClient(self.helper, self.config)
+        self.converter_to_stix = ConverterToStix(self.helper)
+        self.entity_processor = EntityProcessor(self.helper, self.converter_to_stix)
+        self.batch_manager = BatchManager(self.helper)
+        self.state_manager = StateManager(self.helper)
 
-                # Create STIX bundle
-                if stix_objects:
-                    stix_bundle = stix2.Bundle(objects=stix_objects, allow_custom=True)
+        # Initialize intelligence collector with all dependencies
+        self.intelligence_collector = IntelligenceCollector(
+            self.helper,
+            self.client,
+            self.entity_processor,
+            self.batch_manager,
+            self.state_manager,
+        )
 
-                    # Send the STIX bundle to OpenCTI incrementally
-                    self.helper.send_stix2_bundle(stix_bundle.serialize(), update=True)
-
-            except Exception as e:
-                self.helper.connector_logger.error(
-                    f"Error processing entity {entity}: {e}"
-                )
-
-        # Fetch entities from the external source
-        entities: List[C2] = self.client.get_entities() or []
-
-        # Use ThreadPoolExecutor to process entities concurrently
-        with ThreadPoolExecutor(max_workers=4) as executor:
-            futures = {
-                executor.submit(process_entity, C2ScanResult(entity)): entity
-                for entity in entities
-            }
-            for future in as_completed(futures):
-                future.result()
+    def _collect_intelligence_and_ingest(self) -> None:
+        """
+        Collect intelligence from the source, convert into STIX objects and send
+        incrementally to OpenCTI.
+        """
+        self.intelligence_collector.collect_and_ingest()
 
     def process_message(self) -> None:
         """
-        Connector main process to collect intelligence
-        :return: None
+        Connector main process to collect intelligence.
         """
+        # Check if previous run is still processing
+        if self.state_manager.is_processing():
+            self.helper.connector_logger.warning(
+                f"{LoggingPrefixes.CONNECTOR} Previous run still processing, skipping this cycle to prevent overlap"
+            )
+            return
+
+        # Mark as processing
+        self.state_manager.update_processing_state(True)
+
         self.helper.connector_logger.info(
-            "[CONNECTOR] Starting connector...",
+            f"{LoggingPrefixes.CONNECTOR} Starting connector...",
             {"connector_name": self.helper.connect_name},
         )
 
@@ -209,16 +227,15 @@ class ConnectorHuntIo:
             current_timestamp = int(datetime.timestamp(now))
             current_state = self.helper.get_state()
 
-            if current_state is not None and "last_run" in current_state:
-                last_run = current_state["last_run"]
-
+            if current_state is not None and StateKeys.LAST_RUN in current_state:
+                last_run = current_state[StateKeys.LAST_RUN]
                 self.helper.connector_logger.info(
-                    "[CONNECTOR] Connector last run",
+                    f"{LoggingPrefixes.CONNECTOR} Connector last run",
                     {"last_run_datetime": last_run},
                 )
             else:
                 self.helper.connector_logger.info(
-                    "[CONNECTOR] Connector has never run..."
+                    f"{LoggingPrefixes.CONNECTOR} Connector has never run..."
                 )
 
             # Friendly name will be displayed on OpenCTI platform
@@ -230,7 +247,7 @@ class ConnectorHuntIo:
             )
 
             self.helper.connector_logger.info(
-                "[CONNECTOR] Running connector...",
+                f"{LoggingPrefixes.CONNECTOR} Running connector...",
                 {"connector_name": self.helper.connect_name},
             )
 
@@ -243,14 +260,14 @@ class ConnectorHuntIo:
                 {"current_timestamp": current_timestamp},
             )
             current_state = self.helper.get_state()
-            current_state_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
+            current_state_datetime = now.strftime(DateTimeFormats.STANDARD_FORMAT)
             last_run_datetime = datetime.utcfromtimestamp(current_timestamp).strftime(
-                "%Y-%m-%d %H:%M:%S"
+                DateTimeFormats.STANDARD_FORMAT
             )
             if current_state:
-                current_state["last_run"] = current_state_datetime
+                current_state[StateKeys.LAST_RUN] = current_state_datetime
             else:
-                current_state = {"last_run": current_state_datetime}
+                current_state = {StateKeys.LAST_RUN: current_state_datetime}
             self.helper.set_state(current_state)
 
             message = (
@@ -261,29 +278,33 @@ class ConnectorHuntIo:
             self.helper.api.work.to_processed(work_id, message)
             self.helper.connector_logger.info(message)
 
+            # Mark processing as complete
+            self.state_manager.update_processing_state(False)
+
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
-                "[CONNECTOR] Connector stopped...",
+                f"{LoggingPrefixes.CONNECTOR} Connector stopped...",
                 {"connector_name": self.helper.connect_name},
             )
             sys.exit(0)
         except Exception as err:
             self.helper.connector_logger.error(str(err))
+            # Mark processing as complete even on error
+            self.state_manager.update_processing_state(False)
 
     def run(self) -> None:
         """
-        Run the main process encapsulated in a scheduler
-        It allows you to schedule the process to run at a certain intervals
+        Run the main process encapsulated in a scheduler.
+
+        It allows you to schedule the process to run at certain intervals.
         This specific scheduler from the pycti connector helper will also check the queue size
-          of a connector
-        If `CONNECTOR_QUEUE_THRESHOLD` is set, if the connector's queue size exceeds the queue
-          threshold,
-        the connector's main process will not run until the queue is ingested and reduced
-          sufficiently,
-        allowing it to restart during the next scheduler check. (default is 500MB)
-        It requires the `duration_period` connector variable in ISO-8601 standard format
+        of a connector. If `CONNECTOR_QUEUE_THRESHOLD` is set, if the connector's queue size
+        exceeds the queue threshold, the connector's main process will not run until the queue
+        is ingested and reduced sufficiently, allowing it to restart during the next scheduler
+        check. (default is 500MB)
+
+        It requires the `duration_period` connector variable in ISO-8601 standard format.
         Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
-        :return: None
         """
         self.helper.schedule_iso(
             message_callback=self.process_message,

@@ -17,8 +17,6 @@ def fake_config_dict() -> dict[str, dict[str, Any]]:
         "opencti": {
             "token": "test-opencti-token",
             "url": "http://test-opencti-url/",
-            "ssl_verify": False,
-            "json_logging": True,
         },
         "connector": {
             "id": "test-connector-id",
@@ -27,17 +25,6 @@ def fake_config_dict() -> dict[str, dict[str, Any]]:
             "scope": "test",
             "log_level": "info",
             "duration_period": "PT1H",
-            "expose_metrics": False,
-            "metrics_port": 9095,
-            "only_contextual": False,
-            "queue_protocol": "amqp",
-            "queue_threshold": 500,
-            "run_and_terminate": False,
-            "send_to_directory": False,
-            "send_to_directory_path": None,
-            "send_to_directory_retention": 7,
-            "send_to_queue": True,
-            "validate_before_import": False,
         },
         "flashpoint": {
             "api_key": "test-flashpoint-api-key",
@@ -93,6 +80,9 @@ def test_config_loader_with_valid_yaml_file():
         config_loader_dump["flashpoint"]["import_start_date"] = (
             config_loader.flashpoint.import_start_date.isoformat(timespec="minutes")
         )
+        config_loader_dump["flashpoint"][
+            "api_key"
+        ] = config_loader.flashpoint.api_key.get_secret_value()
 
         assert config_loader_dump == config_dict
 
@@ -110,6 +100,9 @@ def test_config_loader_with_valid_environment_variables():
         config_loader_dump["flashpoint"]["import_start_date"] = (
             config_loader.flashpoint.import_start_date.isoformat(timespec="minutes")
         )
+        config_loader_dump["flashpoint"][
+            "api_key"
+        ] = config_loader.flashpoint.api_key.get_secret_value()
 
         assert config_loader_dump == config_dict
 

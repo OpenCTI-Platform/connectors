@@ -13,15 +13,16 @@ from .misp_converter_to_stix import MISPConverterToStix
 
 class FlashpointConnector:
 
-    def __init__(self):
+    def __init__(self, config: ConfigLoader, helper: OpenCTIConnectorHelper):
         """
         Initialize the Connector with necessary configurations
         """
-        self.config = ConfigLoader()
-        self.helper = OpenCTIConnectorHelper(self.config.model_dump_pycti())
+        self.config = config
+        self.helper = helper
+
         self.client = FlashpointClient(
             api_base_url="https://api.flashpoint.io",
-            api_key=self.config.flashpoint.api_key,
+            api_key=self.config.flashpoint.api_key.get_secret_value(),
         )
         self.converter_to_stix = ConverterToStix(self.helper)
         self.misp_converter_to_stix = MISPConverterToStix(self.helper, self.config)
@@ -548,6 +549,10 @@ class FlashpointConnector:
                 "Getting current state and update it with last run of the connector",
                 {"current_datetime": now_iso},
             )
+
+            # need to retrieve the current state as it can be updated in the 'import_indicators' function
+            current_state = self._get_state()
+
             current_state["last_run"] = now_iso
             self._set_state(current_state)
 

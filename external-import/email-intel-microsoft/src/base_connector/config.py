@@ -59,8 +59,6 @@ ListFromString = Annotated[
 class _OpenCTIConfig(BaseModel):
     url: HttpUrl
     token: str
-    json_logging: bool = Field(default=True)
-    ssl_verify: bool = Field(default=False)
 
 
 class ConnectorConfig(BaseModel):
@@ -71,20 +69,6 @@ class ConnectorConfig(BaseModel):
     duration_period: datetime.timedelta
     log_level: LogLevelType
 
-    auto: bool = Field(default=False)
-    expose_metrics: bool = Field(default=False)
-    metrics_port: int = Field(default=9095)
-    only_contextual: bool = Field(default=False)
-    run_and_terminate: bool = Field(default=False)
-    validate_before_import: bool = Field(default=False)
-    queue_protocol: str = Field(default="amqp")
-    queue_threshold: int = Field(default=500)
-
-    send_to_queue: bool = Field(default=True)
-    send_to_directory: bool = Field(default=False)
-    send_to_directory_path: str | None = Field(default=None)
-    send_to_directory_retention: int = Field(default=7)
-
 
 class BaseConnectorSettings(abc.ABC, BaseSettings):
     opencti: _OpenCTIConfig
@@ -92,7 +76,10 @@ class BaseConnectorSettings(abc.ABC, BaseSettings):
 
     # files needs to be at the same level as the module
     model_config = SettingsConfigDict(
-        env_nested_delimiter="_", env_nested_max_split=1, enable_decoding=False
+        extra="allow",
+        env_nested_delimiter="_",
+        env_nested_max_split=1,
+        enable_decoding=False,
     )
 
     def __init__(self) -> None:

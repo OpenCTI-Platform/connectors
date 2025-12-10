@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-first-epss:
-    image: opencti/connector-first-epss:6.7.14
+    image: opencti/connector-first-epss:rolling
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost
@@ -10,7 +10,6 @@ services:
       - CONNECTOR_ID=CHANGEME
       - "CONNECTOR_NAME=FIRST EPSS"
       - CONNECTOR_SCOPE=vulnerability
-      - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_AUTO=false
 
       # Connector's custom execution parameters

@@ -11,12 +11,14 @@ from crowdstrike_feeds_services.utils import (
     create_regions_and_countries_from_entities,
     create_sectors_from_entities,
     create_targets_relationships,
+    create_uses_relationships,
     normalize_start_time_and_stop_time,
     remove_html_tags,
     timestamp_to_datetime,
 )
 from stix2 import Identity  # type: ignore
 from stix2 import (
+    AttackPattern,
     Bundle,
     ExternalReference,
     IntrusionSet,
@@ -51,6 +53,8 @@ class ActorBundleBuilder:
         source_name: str,
         object_markings: List[MarkingDefinition],
         confidence_level: int,
+        related_indicators: Optional[List] = None,
+        attack_patterns: Optional[List] = None,
     ) -> None:
         """Initialize actor bundle builder."""
         self.actor = actor
@@ -58,6 +62,8 @@ class ActorBundleBuilder:
         self.source_name = source_name
         self.object_markings = object_markings
         self.confidence_level = confidence_level
+        self.related_indicators = related_indicators or []
+        self.attack_patterns = attack_patterns or []
 
         first_seen = timestamp_to_datetime(self.actor["first_activity_date"])
         last_seen = timestamp_to_datetime(self.actor["last_activity_date"])
@@ -228,6 +234,24 @@ class ActorBundleBuilder:
             self.object_markings,
         )
 
+    def _get_attack_patterns(self) -> List[AttackPattern]:
+        """Get AttackPatterns data."""
+        return self.attack_patterns
+
+    def _create_uses_relationships(
+        self, sources: List[_DomainObject], targets: List[_DomainObject]
+    ) -> List[Relationship]:
+        """Create 'uses' relationships between IntrusionSet and AttackPatterns."""
+        return create_uses_relationships(
+            self.author,
+            sources,
+            targets,
+            self.confidence_level,
+            self.object_markings,
+            start_time=self.first_seen,
+            stop_time=self.last_seen,
+        )
+
     def build(self) -> Bundle:
         """Build actor bundle."""
         # Create bundle with author.
@@ -283,5 +307,19 @@ class ActorBundleBuilder:
             intrusion_sets, target_sectors
         )
         bundle_objects.extend(intrusion_sets_target_sectors)
+
+        # Add related indicators and their entities to bundle
+        bundle_objects.extend(self.related_indicators)
+
+        # MVP4
+        # Create attack patterns from TTP data and add to bundle
+        attack_patterns = self._get_attack_patterns()
+        bundle_objects.extend(attack_patterns)
+
+        # Create uses relationships between intrusion sets and attack patterns
+        intrusion_sets_use_attack_patterns = self._create_uses_relationships(
+            intrusion_sets, attack_patterns
+        )
+        bundle_objects.extend(intrusion_sets_use_attack_patterns)
 
         return Bundle(objects=bundle_objects, allow_custom=True)

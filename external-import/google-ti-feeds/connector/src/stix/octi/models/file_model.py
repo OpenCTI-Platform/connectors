@@ -1,7 +1,6 @@
 """The module contains the OctiFileModel class, which represents an OpenCTI File."""
 
-from typing import Any, Dict, List, Optional
-from uuid import uuid4
+from typing import Any
 
 from connector.src.stix.v21.models.scos.file_model import FileModel
 
@@ -14,20 +13,20 @@ class OctiFileModel:
         organization_id: str,
         marking_ids: list[str],
         create_indicator: bool = False,
-        hashes: Optional[Dict[str, str]] = None,
-        name: Optional[str] = None,
-        additional_names: Optional[List[str]] = None,
-        size: Optional[int] = None,
-        score: Optional[int] = None,
+        hashes: dict[str, str] | None = None,
+        name: str | None = None,
+        additional_names: list[str] | None = None,
+        size: int | None = None,
+        score: int | None = None,
         **kwargs: Any,
     ) -> FileModel:
         """Create a File model.
 
         Args:
             organization_id: The ID of the organization that created this file
-            marking_ids: List of marking definition IDs to apply to the file
+            marking_ids: list of marking definition IDs to apply to the file
             create_indicator: Whether to create an indicator for the file
-            hashes: Dictionary of hash algorithm names and hash values
+            hashes: dictionary of hash algorithm names and hash values
             name: The name of the file
             additional_names: Additional names for the file
             size: Size of the file in bytes
@@ -49,7 +48,6 @@ class OctiFileModel:
             custom_properties["x_opencti_create_indicator"] = create_indicator
 
         data = {
-            "id": f"file--{uuid4()}",
             "type": "file",
             "spec_version": "2.1",
             "object_marking_refs": marking_ids,
