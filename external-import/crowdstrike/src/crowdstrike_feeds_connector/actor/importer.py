@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike actor importer module."""
 
-from collections import Counter
 from datetime import datetime
 from typing import Any, Dict, Generator, List, Optional
 
