@@ -350,6 +350,8 @@ class RelationshipType(_PermissiveEnum):
     TARGETS = "targets"
     LOCATED_AT = "located-at"
     HAS = "has"
+    BELONGS_TO = "belongs-to"
+    RESOLVES_TO = "resolves-to"
 
 
 class Reliability(_PermissiveEnum):
