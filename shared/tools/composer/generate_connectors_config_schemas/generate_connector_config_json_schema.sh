@@ -66,11 +66,23 @@ find_requirements_txt() {
     | cut -d' ' -f2-
 }
 
+find_pyproject_toml() {
+  # Method to find the highest pyproject.toml in connector's tree
+
+  # find: find all requirements.txt recursively
+  # awk: count path length
+  # sort: sort by path length
+  # head: take the first file
+  # cut: get file path only
+  find "$1" -type f -name "pyproject.toml" \
+    | awk -F/ '{print NF, $0}' \
+    | sort -n \
+    | head -n1 \
+    | cut -d' ' -f2-
+}
+
 activate_venv() {
     # Method to activate isolate venv
-
-    # Install dependencies
-    requirements_file=$(find_requirements_txt "$1")
 
     # Create isolated virtual environment in connector path
     python -m venv "$1/$VENV_NAME"
@@ -82,10 +94,19 @@ activate_venv() {
       . "$1/$VENV_NAME/Scripts/activate"  # Windows
     fi
 
+    # Install dependencies
     echo '> Installing requirements in: ' "$1"
 
+    # Install requirements.txt from connector's directory
+    original_dir=$(pwd)
+    cd "$1"
+
+    requirements_file=$(find_requirements_txt .)
     # -qq: Hides both informational and warning messages, showing only errors.
     python -m pip install -qq -r "$requirements_file"
+
+    # Return to original working directory
+    cd "$original_dir"
 
     # Check if venv is well created
     venv_exists=$(find "$1" -name ".temp_venv")
@@ -207,29 +228,35 @@ echo -e "\033[32mProcessing connector: $CONNECTOR_NAME\033[0m"
 echo "> Looking for a config model in $CONNECTOR_DIRECTORY"
 
 requirements_file=$(find_requirements_txt "$CONNECTOR_DIRECTORY")
+pyproject_toml=$(find_pyproject_toml "$CONNECTOR_DIRECTORY")
+
 if [ -n "$requirements_file" ]; then
     echo "Found requirements.txt: $requirements_file"
-    
+
     # Check if requirements file contains pydantic-settings or connectors-sdk dependency
-    if grep -qE "pydantic-settings|connectors-sdk" "$requirements_file"; then
-        echo -e "\033[32mFound pydantic-settings and/or connectors-sdk in requirements. Proceeding with schema generation...\033[0m"
+    # If not found in requirements.txt and pyproject.toml exists, try to find connectors-sdk in pyproject.toml
+    has_required_dependency=false
+    if grep -qE 'pydantic-settings|connectors-sdk' "$requirements_file"; then
+        has_required_dependency=true
+    elif [[ -n "$pyproject_toml" ]] && grep -q 'connectors-sdk' "$pyproject_toml"; then
+        has_required_dependency=true
+    fi
+    
+    if $has_required_dependency; then
+        echo -e "\033[32mFound pydantic-settings and/or connectors-sdk in dependencies. Proceeding with schema generation...\033[0m"
         
         (
             # Activate virtual environment
             activate_venv "$CONNECTOR_DIRECTORY"
-            
-            # Save current directory and change to connector directory
-            original_dir=$(pwd)
-            cd "$CONNECTOR_DIRECTORY"
-            
+                        
             echo -e "\033[36m> Generating connector JSON schema...\033[0m"
             
             # Generate connector JSON schema in __metadata__
-            generator_path=$(find "$original_dir" -name "generate_connector_config_json_schema.py.sample")
+            generator_path=$(find . -name "generate_connector_config_json_schema.py.sample")
             if [ -n "$generator_path" ]; then
-                cp "$generator_path" "generate_connector_config_json_schema_tmp.py"
-                python "generate_connector_config_json_schema_tmp.py"
-                rm "generate_connector_config_json_schema_tmp.py"
+                cp "$generator_path" "$CONNECTOR_DIRECTORY/generate_connector_config_json_schema_tmp.py"
+                python "$CONNECTOR_DIRECTORY/generate_connector_config_json_schema_tmp.py"
+                rm "$CONNECTOR_DIRECTORY/generate_connector_config_json_schema_tmp.py"
                 echo -e "\033[32m✅ JSON schema generated successfully\033[0m"
             else
                 echo -e "\033[31m❌ Could not find generate_connector_config_json_schema.py.sample\033[0m"
@@ -240,18 +267,15 @@ if [ -n "$requirements_file" ]; then
             # Generate configurations table in __metadata/CONNECTOR_CONFIG_DOC.md
             python -m pip install -q --disable-pip-version-check jsonschema_markdown
             
-            generator_config_doc_path=$(find "$original_dir" -name "generate_connector_config_doc.py.sample")
+            generator_config_doc_path=$(find . -name "generate_connector_config_doc.py.sample")
             if [ -n "$generator_config_doc_path" ]; then
-                cp "$generator_config_doc_path" "generate_connector_config_doc_tmp.py"
-                python "generate_connector_config_doc_tmp.py"
-                rm "generate_connector_config_doc_tmp.py"
+                cp "$generator_config_doc_path" "$CONNECTOR_DIRECTORY/generate_connector_config_doc_tmp.py"
+                python "$CONNECTOR_DIRECTORY/generate_connector_config_doc_tmp.py"
+                rm "$CONNECTOR_DIRECTORY/generate_connector_config_doc_tmp.py"
                 echo -e "\033[32m✅ Configuration documentation generated successfully\033[0m"
             else
                 echo -e "\033[31m❌ Could not find generate_connector_config_doc.py.sample\033[0m"
             fi
-            
-            # Return to original directory
-            cd "$original_dir"
             
             # Clean up virtual environment
             deactivate_venv "$CONNECTOR_DIRECTORY/$VENV_NAME"
@@ -260,7 +284,7 @@ if [ -n "$requirements_file" ]; then
         echo ""
         echo -e "\033[32m✅ Schema generation completed for connector: $CONNECTOR_NAME\033[0m"
     else
-        echo -e "\033[33mWarning: pydantic-settings and connectors-sdk not found in requirements.txt\033[0m"
+        echo -e "\033[33mWarning: pydantic-settings and connectors-sdk not found in connector's dependencies\033[0m"
         echo -e "\033[33mThis connector may not support config schema generation.\033[0m"
     fi
 else
