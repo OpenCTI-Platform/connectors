@@ -346,3 +346,191 @@ class Ipv4EnrichmentFactory(Factory):
     enrichment_entity = SubFactory(Ipv4EnrichmentEntityFactory)
     stix_entity = SubFactory(StixIpv4EntityFactory, id=SelfAttribute("..entity_id"))
     stix_objects = LazyAttribute(lambda o: [o.stix_entity])
+
+
+@dataclass
+class MetaData:
+    mimetype: str
+    version: str
+
+
+class MetaDataFactory(Factory):
+    class Meta:
+        model = MetaData
+
+    mimetype = "application/json"
+    version = Faker("iso8601")
+
+
+@dataclass
+class ImportFile:
+    id: str
+    name: str
+    size: int
+    metaData: MetaData
+    createdById: str | None = None
+
+
+@dataclass
+class ExternalReference:
+    id: str
+    source_name: str
+    url: str
+    entity_type: str
+    external_id: str | None = None
+    description: str | None = None
+    created: str | None = None
+    modified: str | None = None
+    createdById: str | None = None
+    hash: str | None = None
+    importFiles: list[ImportFile] | None = None
+    importFilesIds: list[str] | None = None
+    standard_id: str | None = None
+
+
+@dataclass
+class DomainNameEnrichmentEntity:
+    created_at: str
+    creators: list[Creator]
+    entity_type: str
+    externalReferences: list[ExternalReference]
+    externalReferencesIds: list[str]
+    id: str
+    importFiles: list[ImportFile]
+    importFilesIds: list[str]
+    indicators: list[dict]
+    indicatorsIds: list[str]
+    objectLabel: list
+    objectLabelIds: list[str]
+    objectMarking: list
+    objectMarkingIds: list[str]
+    objectOrganization: list[str]
+    observable_value: str
+    parent_types: list[str]
+    spec_version: str
+    standard_id: str
+    updated_at: str
+    value: str
+    x_opencti_score: int
+    createdBy: dict = None
+    createdById: str | None = None
+    x_opencti_description: str | None = None
+
+
+class ImportFileFactory(Factory):
+    class Meta:
+        model = ImportFile
+
+    id = Faker("file_path")
+    name = Faker("file_name")
+    size = Faker("random_int", min=100, max=10000)
+    metaData = SubFactory(MetaDataFactory)
+    createdById = None
+
+
+class ExternalReferenceFactory(Factory):
+    class Meta:
+        model = ExternalReference
+
+    id = Faker("uuid4")
+    source_name = "MISP"
+    url = Faker("url")
+    entity_type = "External-Reference"
+    external_id = Faker("uuid4")
+    description = Faker("sentence")
+    created = Faker("iso8601")
+    modified = Faker("iso8601")
+    createdById = None
+    hash = None
+    importFiles = List([SubFactory(ImportFileFactory)])
+    importFilesIds = LazyAttribute(
+        lambda o: [f.id for f in o.importFiles] if o.importFiles else []
+    )
+    standard_id = LazyAttribute(lambda o: f"external-reference--{o.id}")
+
+
+class DomainNameEnrichmentEntityFactory(Factory):
+    class Meta:
+        model = DomainNameEnrichmentEntity
+
+    created_at = Faker("iso8601")
+    creators = List([SubFactory(CreatorFactory)])
+    entity_type = "Domain-Name"
+    externalReferences = List([SubFactory(ExternalReferenceFactory)])
+    externalReferencesIds = LazyAttribute(
+        lambda o: [r.id for r in o.externalReferences]
+    )
+    id = Faker("uuid4")
+    importFiles = []
+    importFilesIds = []
+    indicators = []
+    indicatorsIds = []
+    objectLabel = []
+    objectLabelIds = []
+    objectMarking = []
+    objectMarkingIds = LazyAttribute(lambda o: [m.id for m in o.objectMarking])
+    objectOrganization = []
+    observable_value = Faker("domain_name")
+    parent_types = [
+        "Basic-Object",
+        "Stix-Object",
+        "Stix-Core-Object",
+        "Stix-Cyber-Observable",
+    ]
+    spec_version = "2.1"
+    standard_id = LazyAttribute(lambda o: f"domain-name--{o.id}")
+    updated_at = Faker("iso8601")
+    value = SelfAttribute("observable_value")
+    x_opencti_score = Faker("random_int", min=0, max=100)
+    createdBy = None
+    createdById = LazyAttribute(
+        lambda o: o.createdBy.x_opencti_id if o.createdBy else None
+    )
+    x_opencti_description = Faker("sentence")
+
+
+@dataclass
+class StixDomainNameEntity:
+    id: str
+    x_opencti_score: int
+    x_opencti_description: str
+    value: str
+    x_opencti_id: str
+    x_opencti_type: str
+    type: str
+    external_references: list[StixExternalReference]
+    x_opencti_labels: list[str]
+    spec_version: str = "2.1"
+
+
+class StixDomainNameEntityFactory(Factory):
+    class Meta:
+        model = StixDomainNameEntity
+
+    id = Faker("uuid4")
+    x_opencti_score = Faker("random_int", min=0, max=100)
+    x_opencti_description = Faker("sentence")
+    value = Faker("domain_name")
+    x_opencti_id = SelfAttribute("id")
+    x_opencti_type = "Domain-Name"
+    type = "domain-name"
+    external_references = List([SubFactory(StixExternalReferenceFactory)])
+    x_opencti_labels = List([Faker("word")])
+
+
+class DomainNameEnrichmentFactory(Factory):
+    def __new__(cls, *args, **kwargs) -> EnrichmentMessage:
+        return super().__new__(*args, **kwargs)
+
+    class Meta:
+        model = EnrichmentMessage
+
+    id = Faker("uuid4")
+    entity_id = LazyAttribute(lambda o: f"domain-name--{o.id}")
+    entity_type = "Domain-Name"
+    event_type = "INTERNAL_ENRICHMENT"
+    enrichment_entity = SubFactory(DomainNameEnrichmentEntityFactory)
+    stix_entity = SubFactory(
+        StixDomainNameEntityFactory, id=SelfAttribute("..entity_id")
+    )
+    stix_objects = LazyAttribute(lambda o: [o.stix_entity])

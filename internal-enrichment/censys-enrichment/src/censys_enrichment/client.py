@@ -66,3 +66,24 @@ class Client:
                 for hit in res.result.result.hits:
                     if hit.certificate_v1:
                         yield hit.certificate_v1.resource
+
+    def fetch_hosts(self, hostname: str) -> Generator[Host, None, None]:
+        """Fetch hosts by hostname
+        Args:
+            hostname (str): The hostname to search for.
+        Yields:
+            Generator[Host, None, None]: Yields Host objects matching the hostname.
+        """
+        with SDK(
+            organization_id=self.organisation_id,
+            personal_access_token=self.token,
+        ) as sdk:
+            query = f"host.dns.names = '{hostname}'"
+            search_query = SearchQueryInputBody(query=query)
+            res: V3GlobaldataSearchQueryResponse = sdk.global_data.search(
+                search_query_input_body=search_query
+            )
+            if res.result.result:
+                for hit in res.result.result.hits:
+                    if hit.host_v1:
+                        yield hit.host_v1.resource

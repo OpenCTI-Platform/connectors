@@ -5,7 +5,7 @@ opencti:
 #connector:
 #  id: "ChangeMe"
 #  name: "Censys Enrichment"
-#  scope: "IPv4-Addr,IPv6-Addr,X509-Certificate"
+#  scope: "IPv4-Addr,IPv6-Addr,X509-Certificate,Domain-Name"
 #  log_level: "error"
 
 censys_enrichment:
