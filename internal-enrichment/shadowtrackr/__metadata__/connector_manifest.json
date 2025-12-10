@@ -7,8 +7,8 @@
   "use_cases": [
     "Enrichment & Analysis"
   ],
-  "verified": false,
-  "last_verified_date": null,
+  "verified": true,
+  "last_verified_date": "2025-12-05",
   "playbook_supported": true,
   "max_confidence_level": 50,
   "support_version": ">=6.3.2",
