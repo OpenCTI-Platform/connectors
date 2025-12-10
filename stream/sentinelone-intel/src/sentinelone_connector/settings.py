@@ -32,7 +32,7 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
     )
     log_level: Literal["debug", "info", "warn", "warning", "error"] = Field(
         description="The minimum level of logs to display.",
-        default="info",
+        default="error",
     )
     live_stream_id: str = Field(
         description="The ID of the live stream to connect to.",

@@ -5,15 +5,17 @@ opencti:
 connector:
   id: 'ChangeMe'
   name: 'SentinelOne Intel Stream Connector'
-  scope: 'ChangeMe'
-  log_level: 'error'
-  live_stream_id: 'ChangeMe' # ID of the live stream created in the OpenCTI UI
-  live_stream_listen_delete: true
-  live_stream_no_dependencies: true
+  # scope: 'sentinelone'
+  # log_level: 'error'
+  # live_stream_id: 'ChangeMe' # `live` or ID of the live stream created in the OpenCTI UI
+  # live_stream_listen_delete: true
+  # live_stream_no_dependencies: true
 
 sentinelone_intel:
   url: 'ChangeMe'
   api_key: 'ChangeMe'
-  account_id: 'ChangeMeOrEmpty'
-  site_id: 'ChangeMeOrEmpty'
-  group_id: 'ChangeMeOrEmpty'
+  # need at least one of account_id, group_id, or site_id
+  # account_id and site_id cannot be used simultaneously
+  # account_id: 'ChangeMeOrEmpty'
+  # site_id: 'ChangeMeOrEmpty'
+  # group_id: 'ChangeMeOrEmpty'
