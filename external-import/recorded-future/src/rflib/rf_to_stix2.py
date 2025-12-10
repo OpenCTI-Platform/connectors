@@ -45,7 +45,15 @@ class ConversionError(Exception):
 class RFStixEntity:
     """Parent class"""
 
-    def __init__(self, name, _type, author=None, tlp="amber+strict", first_seen=None, last_seen=None):
+    def __init__(
+        self,
+        name,
+        _type,
+        author=None,
+        tlp="amber+strict",
+        first_seen=None,
+        last_seen=None,
+    ):
         self.name = name
         self.type = _type
         self.author = author or self._create_author()
@@ -237,7 +245,9 @@ class Indicator(RFStixEntity):
 
 
 class IPAddress(Indicator):
-    def __init__(self, name, _type, author=None, tlp=None, first_seen=None, last_seen=None):
+    def __init__(
+        self, name, _type, author=None, tlp=None, first_seen=None, last_seen=None
+    ):
         super().__init__(name, _type, author, tlp, first_seen, last_seen)
 
     """Converts IP address to IP indicator and observable"""
@@ -294,7 +304,9 @@ class IPAddress(Indicator):
 class Domain(Indicator):
     """Converts Domain to Domain indicator and observable"""
 
-    def __init__(self, name, _type, author=None, tlp=None, first_seen=None, last_seen=None):
+    def __init__(
+        self, name, _type, author=None, tlp=None, first_seen=None, last_seen=None
+    ):
         super().__init__(name, _type, author, tlp, first_seen, last_seen)
 
     def _create_pattern(self):
@@ -311,7 +323,9 @@ class Domain(Indicator):
 class URL(Indicator):
     """Converts URL to URL indicator and observable"""
 
-    def __init__(self, name, _type, author=None, tlp=None, first_seen=None, last_seen=None):
+    def __init__(
+        self, name, _type, author=None, tlp=None, first_seen=None, last_seen=None
+    ):
         super().__init__(name, _type, author, tlp, first_seen, last_seen)
 
     def _create_pattern(self):
@@ -330,7 +344,9 @@ class URL(Indicator):
 class FileHash(Indicator):
     """Converts Hash to File indicator and observable"""
 
-    def __init__(self, name, _type, author=None, tlp=None, first_seen=None, last_seen=None):
+    def __init__(
+        self, name, _type, author=None, tlp=None, first_seen=None, last_seen=None
+    ):
         super().__init__(name, _type, author, tlp, first_seen, last_seen)
         self.algorithm = self._determine_algorithm()
 
