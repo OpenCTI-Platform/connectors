@@ -4,15 +4,15 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'INTERNAL_ENRICHMENT'
-  name: 'ShadowTrackr'
+#   type: 'INTERNAL_ENRICHMENT'
+#   name: 'ShadowTrackr'
   scope: 'IPv4-Addr,IPv6-Addr,Indicator'
-  auto: true # Enable/disable auto-enrichment of observables
-  log_level: 'info'
+#   auto: true # Enable/disable auto-enrichment of observables
+#   log_level: 'error'
 
 shadowtrackr:
   api_key: 'ChangeMe'
-  max_tlp: "TLP:AMBER"
-  replace_with_lower_score: true
-  replace_valid_to_date: true
+#   max_tlp: "TLP:AMBER"
+#   replace_with_lower_score: true
+#   replace_valid_to_date: true
 

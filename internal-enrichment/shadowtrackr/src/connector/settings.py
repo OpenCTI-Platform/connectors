@@ -46,7 +46,7 @@ class ShadowTrackrConfig(BaseConfigModel):
         default=False,
     )
     replace_valid_to_date: bool = Field(
-        description=" Set the valid to date to tomorrow for CDNs, Clouds and VPNs.",
+        description="Set the valid to date to tomorrow for CDNs, Clouds and VPNs.",
         default=False,
     )
 
