@@ -862,14 +862,22 @@ class ElasticApiHandler:
                                 {"opencti_id": opencti_id},
                             )
 
-            # Always create threat intel entry for all indicators
-            if operation in ["create", "update"]:
+            if operation == "create":
                 result = self.create_indicator(indicator_data)
                 if not result:
                     success = False
                 else:
                     self.helper.connector_logger.info(
-                        f"Created/Updated threat intel entry for {pattern_type} indicator",
+                        f"Created threat intel entry for {pattern_type} indicator",
+                        {"opencti_id": opencti_id},
+                    )
+            elif operation == "update":
+                result = self.update_indicator(indicator_data)
+                if not result:
+                    success = False
+                else:
+                    self.helper.connector_logger.info(
+                        f"Updated threat intel entry for {pattern_type} indicator",
                         {"opencti_id": opencti_id},
                     )
             elif operation == "delete":
@@ -1046,14 +1054,19 @@ class ElasticApiHandler:
             delete_query = {"query": {"term": {"opencti_doc_id": doc_id}}}
 
             delete_url = f"{self.elastic_url}/{self.index_name}/_delete_by_query"
-            requests.post(
+            delete_request = requests.post(
                 delete_url,
                 headers=self.headers,
                 json=delete_query,
                 verify=self._get_verify_config(),
                 timeout=30,
             )
-
+            if delete_request.status_code == 200:
+                delete_result = delete_request.json()
+                self.helper.connector_logger.debug(
+                    f"Successfully deleted {delete_result["total"]} old indicator for update",
+                    {"opencti_doc_id": doc_id},
+                )
             # Now create the new document (data streams are append-only)
             url = f"{self.elastic_url}/{self.index_name}/_doc"
             response = requests.post(
