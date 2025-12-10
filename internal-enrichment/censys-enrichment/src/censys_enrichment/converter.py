@@ -164,9 +164,9 @@ class Converter:
             yield from [
                 host_name,
                 Relationship(
-                    source=observable,
-                    target=host_name,
-                    type=RelationshipType.RELATED_TO,
+                    source=host_name,
+                    target=observable,
+                    type=RelationshipType.RESOLVES_TO,
                     **self._common_props,
                 ),
             ]
@@ -213,9 +213,9 @@ class Converter:
         yield from [
             autonomous_system,
             Relationship(
-                source=autonomous_system,
-                target=observable,
-                type=RelationshipType.RELATED_TO,
+                source=observable,
+                target=autonomous_system,
+                type=RelationshipType.BELONGS_TO,
                 **self._common_props,
             ),
         ]

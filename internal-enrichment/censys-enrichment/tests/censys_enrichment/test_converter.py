@@ -112,13 +112,13 @@ def test_converter_ipv4(host_ipv4: Host) -> None:
 
     entity = stix_objects[9]
     assert entity.created_by_ref == "identity--6f9f67f6-7eb2-5397-a02f-d8130aadb954"
-    assert entity.id == "relationship--7321d77c-5f03-5d5e-a941-162364c5baca"
+    assert entity.id == "relationship--2e421e88-4e89-5f40-bd18-600d41e30756"
     assert entity.object_marking_refs == [
         "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
     ]
-    assert entity.relationship_type == "related-to"
-    assert entity.source_ref == "ipv4-addr--cbd67181-b9f8-595b-8bc3-3971e34fa1cc"
-    assert entity.target_ref == "hostname--2aa1a527-f7f9-59c6-aa42-716270bccb27"
+    assert entity.relationship_type == "resolves-to"
+    assert entity.source_ref == "hostname--2aa1a527-f7f9-59c6-aa42-716270bccb27"
+    assert entity.target_ref == "ipv4-addr--cbd67181-b9f8-595b-8bc3-3971e34fa1cc"
     assert entity.type == "relationship"
 
     entity = stix_objects[10]
@@ -135,13 +135,13 @@ def test_converter_ipv4(host_ipv4: Host) -> None:
 
     entity = stix_objects[11]
     assert entity.created_by_ref == "identity--6f9f67f6-7eb2-5397-a02f-d8130aadb954"
-    assert entity.id == "relationship--ffe16cae-f7d4-5a35-96bb-cb5bcb116f51"
+    assert entity.id == "relationship--9bb2de5d-4f5b-543a-a46f-6ed695ea9935"
     assert entity.object_marking_refs == [
         "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
     ]
-    assert entity.relationship_type == "related-to"
-    assert entity.source_ref == "ipv4-addr--cbd67181-b9f8-595b-8bc3-3971e34fa1cc"
-    assert entity.target_ref == "hostname--21f6b21c-7cae-55af-b29b-54628a2c56f4"
+    assert entity.relationship_type == "resolves-to"
+    assert entity.source_ref == "hostname--21f6b21c-7cae-55af-b29b-54628a2c56f4"
+    assert entity.target_ref == "ipv4-addr--cbd67181-b9f8-595b-8bc3-3971e34fa1cc"
     assert entity.type == "relationship"
 
     entity = stix_objects[12]
@@ -290,15 +290,15 @@ def test_converter_ipv4(host_ipv4: Host) -> None:
 
     entity = stix_objects[22]
     assert entity.created_by_ref == "identity--6f9f67f6-7eb2-5397-a02f-d8130aadb954"
-    assert entity.id == "relationship--fb347070-7d12-5bbb-bf74-59ede364e651"
+    assert entity.id == "relationship--3711db39-b33a-59bf-b0fd-e6949077d75d"
     assert entity.object_marking_refs == [
         "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
     ]
-    assert entity.relationship_type == "related-to"
+    assert entity.relationship_type == "belongs-to"
+    assert entity.source_ref == "ipv4-addr--cbd67181-b9f8-595b-8bc3-3971e34fa1cc"
     assert (
-        entity.source_ref == "autonomous-system--0204c07d-e4dd-5f14-a3d5-c93cb1c5a9fc"
+        entity.target_ref == "autonomous-system--0204c07d-e4dd-5f14-a3d5-c93cb1c5a9fc"
     )
-    assert entity.target_ref == "ipv4-addr--cbd67181-b9f8-595b-8bc3-3971e34fa1cc"
     assert entity.type == "relationship"
 
     entity = stix_objects[23]
