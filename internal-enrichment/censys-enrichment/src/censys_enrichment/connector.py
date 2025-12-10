@@ -37,7 +37,7 @@ class Connector:
     def _send_bundle(self, stix_objects: list[dict[str, Any]]) -> str:
         bundle = self.helper.stix2_create_bundle(items=stix_objects)
         bundles_sent = self.helper.send_stix2_bundle(bundle=bundle)
-        return f"Sending {str(len(bundles_sent))} stix bundle(s) for worker import"
+        return f"Sending {len(bundles_sent)} stix bundle(s) for worker import"
 
     def _is_entity_in_scope(self, entity_type: str) -> bool:
         """Return True if the entity type is supported by the connector scope."""
