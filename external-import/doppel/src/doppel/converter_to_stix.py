@@ -356,6 +356,7 @@ class ConverterToStix:
 
         if note_refs:
             reversion_note = Note(
+                id=Note.generate_id(note_refs),
                 abstract="Moved from taken down back to unresolved",
                 content=f"Alert {alert_id} has been reverted from takedown state to {queue_state}",
                 spec_version=STIX_VERSION,
@@ -469,6 +470,11 @@ class ConverterToStix:
         :return: StixCoreRelationship object
         """
         relationship = StixCoreRelationship(
+            id=StixCoreRelationship.generate_id(
+                source_id=source_id,
+                target_id=target_id,
+                relationship_type=relationship_type,
+            ),
             relationship_type=relationship_type,
             source_ref=source_id,
             target_ref=target_id,
@@ -481,6 +487,7 @@ class ConverterToStix:
 
     def _create_note(self, note_content, note_body, note_refs, note_timestamp) -> Note:
         return Note(
+            id=Note.generate_id(note_body),
             abstract=note_content,
             content=note_body,
             spec_version=STIX_VERSION,
@@ -507,6 +514,7 @@ class ConverterToStix:
 
         # Create Indicator
         indicator = Indicator(
+            id=Indicator.generate_id(pattern),
             pattern=pattern,
             pattern_type="stix",
             spec_version=STIX_VERSION,
