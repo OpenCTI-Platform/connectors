@@ -69,10 +69,11 @@ class KasperskyClient:
             self.helper.connector_logger.error("Unknown error", {"error": err})
             raise
 
-    def get_file_info(self, obs_hash: str) -> dict:
+    def get_file_info(self, obs_hash: str, sections: str) -> dict:
         """
         Retrieve file information
         """
         file_url = f"{self.base_url}api/hash/{obs_hash}"
+        self.params["sections"] = sections
         response = self._request_data(file_url, params=self.params)
         return response.json()
