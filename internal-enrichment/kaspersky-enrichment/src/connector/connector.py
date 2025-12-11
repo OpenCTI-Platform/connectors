@@ -1,5 +1,7 @@
+from connector.use_cases.enrich_file import FileEnricher
+from connector.utils import entity_in_scope
 from kaspersky_client import KasperskyClient
-from pycti import STIX_EXT_OCTI_SCO, OpenCTIConnectorHelper, OpenCTIStix2
+from pycti import OpenCTIConnectorHelper
 
 from .converter_to_stix import ConverterToStix
 from .settings import ConnectorSettings
@@ -48,156 +50,32 @@ class KasperskyConnector:
         """
         self.config = config
         self.helper = helper
-        self.file_sections = self.config.kaspersky.file_sections
-        self.zone_octi_score_mapping = self.config.kaspersky.zone_octi_score_mapping
+        file_sections = self.config.kaspersky.file_sections
+        zone_octi_score_mapping = self.config.kaspersky.zone_octi_score_mapping
         api_key = self.config.kaspersky.api_key.get_secret_value()
 
-        self.client = KasperskyClient(
+        client = KasperskyClient(
             self.helper,
             base_url=self.config.kaspersky.api_base_url,
             api_key=api_key,
             params={
                 "count": 1,
-                "sections": self.file_sections,
                 "format": "json",
             },
         )
 
-        self.converter_to_stix = ConverterToStix(self.helper)
+        converter_to_stix = ConverterToStix(self.helper)
+
+        self.file_enricher = FileEnricher(
+            helper=self.helper,
+            client=client,
+            sections=file_sections,
+            zone_octi_score_mapping=zone_octi_score_mapping,
+            converter_to_stix=converter_to_stix,
+        )
 
         # Define variables
         self.stix_objects = []
-
-    def _process_file(self, observable: dict) -> None:
-        """
-        Collect intelligence from the source for a File type
-        """
-        self.helper.connector_logger.info("[CONNECTOR] Starting enrichment...")
-
-        # Retrieve file hash
-        obs_hash = self.resolve_file_hash(observable)
-
-        # Get entity data from api client
-        entity_data = self.client.get_file_info(obs_hash)
-
-        # Check Quota
-        self.check_quota(entity_data["LicenseInfo"])
-
-        # Manage FileGeneralInfo data
-
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from FileGeneralInfo data..."
-        )
-
-        entity_file_general_info = entity_data["FileGeneralInfo"]
-
-        # Score
-        if entity_data.get("Zone"):
-            score = self.zone_octi_score_mapping[entity_data["Zone"].lower()]
-            OpenCTIStix2.put_attribute_in_extension(
-                observable, STIX_EXT_OCTI_SCO, "score", score
-            )
-
-        # Hashes
-        if entity_file_general_info.get("Md5"):
-            observable["hashes"]["MD5"] = entity_file_general_info["Md5"]
-        if entity_file_general_info.get("Sha1"):
-            observable["hashes"]["SHA-1"] = entity_file_general_info["Sha1"]
-        if entity_file_general_info.get("Sha256"):
-            observable["hashes"]["SHA-256"] = entity_file_general_info["Sha256"]
-
-        # Size, mime_type
-        mapping_fields = {"Size": "size", "Type": "mime_type"}
-        for key, value in mapping_fields.items():
-            if entity_file_general_info.get(key):
-                observable[value] = entity_file_general_info[key]
-
-        # Labels
-        if entity_file_general_info.get("Categories"):
-            observable["labels"] = []
-            if observable.get("x_opencti_labels"):
-                observable["labels"] = observable["x_opencti_labels"]
-            for label in entity_file_general_info["Categories"]:
-                if label not in observable["labels"]:
-                    observable["labels"].append(label)
-
-        # Manage FileNames data
-
-        if entity_data.get("FileNames"):
-            self.helper.connector_logger.info(
-                "[CONNECTOR] Process enrichment from FileNames data..."
-            )
-
-            observable["additional_names"] = observable.get(
-                "x_opencti_additional_names", []
-            )
-            for filename in entity_data["FileNames"]:
-                if filename["FileName"] not in observable["additional_names"]:
-                    observable["additional_names"].append(f" {filename["FileName"]}")
-                else:
-                    observable["additional_names"] = filename["FileName"]
-
-        # Prepare author object
-        author = self.converter_to_stix.create_author()
-        self.stix_objects.append(author)
-
-        # Manage DetectionsInfo data
-
-        if entity_data.get("DetectionsInfo"):
-            self.helper.connector_logger.info(
-                "[CONNECTOR] Process enrichment from DetectionsInfo data..."
-            )
-
-            content = "| Detection Date | Detection Name | Detection Method |\n"
-            content += "|----------------|----------------|------------------|\n"
-
-            for obs_detection_info in entity_data["DetectionsInfo"]:
-                detection_name = f"[{obs_detection_info["DetectionName"]}]({obs_detection_info["DescriptionUrl"]})"
-                content += f"| {obs_detection_info["LastDetectDate"]} | {detection_name} | {obs_detection_info["DetectionMethod"]} |\n"
-
-            obs_note = self.converter_to_stix.create_file_note(
-                observable["id"], content
-            )
-            self.stix_objects.append(obs_note)
-
-        # Manage FileDownloadedFromUrls data
-
-        if entity_data.get("FileDownloadedFromUrls"):
-            self.helper.connector_logger.info(
-                "[CONNECTOR] Process enrichment from FileDownloadedFromUrls data..."
-            )
-
-            for url_info in entity_data["FileDownloadedFromUrls"]:
-                obs_url_score = self.zone_octi_score_mapping[url_info["Zone"].lower()]
-                url_object = self.converter_to_stix.create_url(obs_url_score, url_info)
-
-                if url_object:
-                    self.stix_objects.append(url_object)
-                    url_relation = self.converter_to_stix.create_relationship(
-                        source_id=observable["id"],
-                        relationship_type="related-to",
-                        target_id=url_object.id,
-                    )
-                    self.stix_objects.append(url_relation)
-
-        # Manage Industries data
-
-        if entity_data.get("Industries"):
-            self.helper.connector_logger.info(
-                "[CONNECTOR] Process enrichment from Industries data..."
-            )
-
-            for industry in entity_data["Industries"]:
-                industry_object = self.converter_to_stix.create_sector(industry)
-
-                if industry_object:
-                    self.stix_objects.append(industry_object)
-                    industry_relation = self.converter_to_stix.create_relationship(
-                        source_id=observable["id"],
-                        relationship_type="related-to",
-                        target_id=industry_object.id,
-                    )
-                    self.stix_objects.append(industry_relation)
 
     def _send_bundle(self, stix_objects: list) -> str:
         """
@@ -210,46 +88,6 @@ class KasperskyConnector:
             "Sending " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
         )
         return info_msg
-
-    def check_quota(self, entity_info: dict) -> None:
-        """
-        Check if quota is not exceeded.
-        Raise a warning otherwise.
-        """
-        if entity_info["DayRequests"] >= entity_info["DayQuota"]:
-            self.helper.connector_logger.warning(
-                "[CONNECTOR] The daily quota has been exceeded",
-                {
-                    "day_requests": entity_info["DayRequests"],
-                    "day_quota": entity_info["DayQuota"],
-                },
-            )
-
-    def entity_in_scope(self, obs_type: str) -> bool:
-        """
-        Security to limit playbook triggers to something other than the initial scope
-        :param data: Dictionary of data
-        :return: boolean
-        """
-        scopes = self.helper.connect_scope.lower().replace(" ", "").split(",")
-        entity_split = obs_type.split("--")
-        entity_type = entity_split[0].lower()
-
-        if entity_type in scopes:
-            return True
-        else:
-            return False
-
-    def resolve_file_hash(self, observable: dict) -> str:
-        if "hashes" in observable and "SHA-256" in observable["hashes"]:
-            return observable["hashes"]["SHA-256"]
-        if "hashes" in observable and "SHA-1" in observable["hashes"]:
-            return observable["hashes"]["SHA-1"]
-        if "hashes" in observable and "MD5" in observable["hashes"]:
-            return observable["hashes"]["MD5"]
-        raise ValueError(
-            "Unable to enrich the observable, the observable does not have an SHA256, SHA1, or MD5"
-        )
 
     def process_message(self, data: dict) -> str:
         """
@@ -272,25 +110,35 @@ class KasperskyConnector:
             )
             self.helper.connector_logger.info(info_msg, {"type": {obs_type}})
 
-            if self.entity_in_scope(obs_type):
+            if entity_in_scope(self.helper.connect_scope, obs_type):
                 # Performing the collection of intelligence and enrich the entity
                 match obs_type:
                     case "StixFile":
-                        self._process_file(observable)
+                        octi_objects = self.file_enricher.process_file_enrichment(
+                            observable
+                        )
                     # case "IPv4-Addr":
-                    #     self._process_ip(observable)
+                    #     octi_objects = self.file_enricher.process_ipv4_enrichment(
+                    #         observable
+                    #     )
                     # case "Domain-Name" | "Hostname":
-                    #     self._process_domain(observable)
+                    #     octi_objects = self.file_enricher.process_domain_enrichment(
+                    #         observable
+                    #     )
                     # case "Url":
-                    #     self._process_url(observable)
+                    #     octi_objects = self.file_enricher.process_url_enrichment(
+                    #         observable
+                    #     )
                     case _:
                         raise ValueError(
                             "Entity type is not supported",
                             {"entity_type": obs_type},
                         )
 
-                if self.stix_objects is not None and len(self.stix_objects):
-                    return self._send_bundle(self.stix_objects)
+                bundle_objects = self.stix_objects + octi_objects
+
+                if bundle_objects is not None and len(bundle_objects):
+                    return self._send_bundle(bundle_objects)
                 else:
                     info_msg = "[CONNECTOR] No information found"
                     return info_msg
