@@ -126,7 +126,7 @@ Install the required python dependencies (preferably in a virtual environment):
 pip3 install -r requirements.txt
 ```
 
-Then, start the connector from recorded-future/src:
+Then, start the connector from luminar/src:
 
 ```shell
 python3 main.py
