@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
@@ -16,11 +14,12 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
 
     name: str = Field(
         description="The name of the connector.",
-        default="Intel471_V2",
+        default="Intel471 v2",
     )
-    duration_period: timedelta = Field(
-        description="The period of time to await between two runs of the connector.",
-        default=timedelta(hours=1),
+    # Override `BaseExternalImportConnectorConfig.duration_period` as `pycti`'s scheduler is not implemented yet
+    duration_period: None = Field(
+        description="Dot not use. Not implemented in the connector yet.",
+        default=None,
     )
 
 
@@ -37,34 +36,42 @@ class Intel471_V2Config(BaseConfigModel):
     )
     interval_indicators: int = Field(
         description="How often malware indicators should be fetched in minutes. If not set, the stream will not be enabled.",
-        default=60,
+        default=0,
     )
     initial_history_indicators: int = Field(
-        description="Initial date in epoch milliseconds UTC, such as 1643989649000, the malware indicators should be fetched from on the connector's first run. If not set, they will be fetched from the connector's start date. Excludes historical dates.",
+        description="Initial date in epoch milliseconds UTC, such as `1643989649000`, "
+        "the malware indicators should be fetched from on the connector's first run. "
+        "If not set, they will be fetched from the connector's start date. Excludes historical dates.",
         default=0,
     )
     interval_yara: int = Field(
         description="How often YARA rules should be fetched in minutes. If not set, the stream will not be enabled.",
-        default=60,
+        default=0,
     )
     initial_history_yara: int = Field(
-        description="Initial date in epoch milliseconds UTC, such as 1643989649000, the YARA rules should be fetched from on the connector's first run. If not set, they will be fetched from the connector's start date. Excludes historical dates.",
+        description="Initial date in epoch milliseconds UTC, such as `1643989649000`, "
+        "the YARA rules should be fetched from on the connector's first run. "
+        "If not set, they will be fetched from the connector's start date. Excludes historical dates.",
         default=0,
     )
     interval_cves: int = Field(
         description="How often CVE reports should be fetched in minutes. If not set, the stream will not be enabled.",
-        default=120,
+        default=0,
     )
     initial_history_cves: int = Field(
-        description="Initial date in epoch milliseconds UTC, such as 1643989649000, the CVE reports should be fetched from on the connector's first run. If not set, they will be fetched from the connector's start date. Excludes historical dates.",
+        description="Initial date in epoch milliseconds UTC, such as `1643989649000`, "
+        "the CVE reports should be fetched from on the connector's first run. "
+        "If not set, they will be fetched from the connector's start date. Excludes historical dates.",
         default=0,
     )
     interval_reports: int = Field(
         description="How often reports should be fetched in minutes. If not set, the stream will not be enabled.",
-        default=120,
+        default=0,
     )
     initial_history_reports: int = Field(
-        description="Initial date in epoch milliseconds UTC, such as 1643989649000, the reports should be fetched from on the connector's first run. If not set, they will be fetched from the connector's start date. Excludes historical dates.",
+        description="Initial date in epoch milliseconds UTC, such as `1643989649000`, "
+        "the reports should be fetched from on the connector's first run. "
+        "If not set, they will be fetched from the connector's start date. Excludes historical dates.",
         default=0,
     )
     proxy: str | None = Field(

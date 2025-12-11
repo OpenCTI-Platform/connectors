@@ -39,7 +39,6 @@ class StubConnectorSettings(ConnectorSettings):
                     "name": "Test Connector",
                     "scope": "test, connector",
                     "log_level": "error",
-                    "duration_period": "PT5M",
                 },
                 "intel471": {
                     "api_username": "test-username",
@@ -88,7 +87,7 @@ def test_opencti_connector_helper_is_instantiated(mock_opencti_connector_helper)
     assert helper.connect_name == "Test Connector"
     assert helper.connect_scope == "test,connector"
     assert helper.log_level == "ERROR"
-    assert helper.connect_duration_period == "PT5M"
+    assert helper.connect_duration_period is None  # not implemented yet
 
 
 def test_connector_is_instantiated(mock_opencti_connector_helper):

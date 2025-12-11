@@ -4,52 +4,62 @@ import pytest
 from connectors_sdk import BaseConfigModel, ConfigValidationError
 from intel471 import ConnectorSettings
 
+INITIAL_HISTORY_TIMESTAMP = 1696156471  # 2023-10-01
+
 
 @pytest.mark.parametrize(
     "settings_dict",
     [
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
                 "connector": {
                     "id": "connector-id",
                     "name": "Test Connector",
                     "scope": "test, connector",
                     "log_level": "error",
-                    "duration_period": "PT5M",
                 },
                 "intel471": {
                     "api_username": "test-username",
                     "api_key": "test-api-key",
                     "interval_indicators": 60,
-                    "initial_history_indicators": 0,
+                    "initial_history_indicators": INITIAL_HISTORY_TIMESTAMP,
                     "interval_yara": 60,
-                    "initial_history_yara": 0,
+                    "initial_history_yara": INITIAL_HISTORY_TIMESTAMP,
                     "interval_cves": 120,
-                    "initial_history_cves": 0,
+                    "initial_history_cves": INITIAL_HISTORY_TIMESTAMP,
                     "interval_reports": 120,
-                    "initial_history_reports": 0,
+                    "initial_history_reports": INITIAL_HISTORY_TIMESTAMP,
                     "proxy": None,
-                    "ioc_score": 70,
+                    "ioc_score": 90,
                 },
             },
             id="full_valid_settings_dict",
         ),
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
-                "connector": {"id": "connector-id", "scope": "test, connector"},
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "test, connector",
+                },
                 "intel471": {
                     "api_username": "test-username",
                     "api_key": "test-api-key",
                     "interval_indicators": 60,
-                    "initial_history_indicators": 0,
+                    "initial_history_indicators": INITIAL_HISTORY_TIMESTAMP,
                     "interval_yara": 60,
-                    "initial_history_yara": 0,
+                    "initial_history_yara": INITIAL_HISTORY_TIMESTAMP,
                     "interval_cves": 120,
-                    "initial_history_cves": 0,
+                    "initial_history_cves": INITIAL_HISTORY_TIMESTAMP,
                     "interval_reports": 120,
-                    "initial_history_reports": 0,
+                    "initial_history_reports": INITIAL_HISTORY_TIMESTAMP,
                 },
             },
             id="minimal_valid_settings_dict",
@@ -87,27 +97,29 @@ def test_settings_should_accept_valid_input(settings_dict):
         pytest.param({}, "settings", id="empty_settings_dict"),
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:PORT", "token": "test-token"},
+                "opencti": {
+                    "url": "http://localhost:PORT",
+                    "token": "test-token",
+                },
                 "connector": {
                     "id": "connector-id",
                     "name": "Test Connector",
                     "scope": "test, connector",
                     "log_level": "error",
-                    "duration_period": "PT5M",
                 },
                 "intel471": {
                     "api_username": "test-username",
                     "api_key": "test-api-key",
                     "interval_indicators": 60,
-                    "initial_history_indicators": 0,
+                    "initial_history_indicators": INITIAL_HISTORY_TIMESTAMP,
                     "interval_yara": 60,
-                    "initial_history_yara": 0,
+                    "initial_history_yara": INITIAL_HISTORY_TIMESTAMP,
                     "interval_cves": 120,
-                    "initial_history_cves": 0,
+                    "initial_history_cves": INITIAL_HISTORY_TIMESTAMP,
                     "interval_reports": 120,
-                    "initial_history_reports": 0,
+                    "initial_history_reports": INITIAL_HISTORY_TIMESTAMP,
                     "proxy": None,
-                    "ioc_score": 70,
+                    "ioc_score": 90,
                 },
             },
             "opencti.url",
@@ -115,26 +127,28 @@ def test_settings_should_accept_valid_input(settings_dict):
         ),
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
                 "connector": {
                     "name": "Test Connector",
                     "scope": "test, connector",
                     "log_level": "error",
-                    "duration_period": "PT5M",
                 },
                 "intel471": {
                     "api_username": "test-username",
                     "api_key": "test-api-key",
                     "interval_indicators": 60,
-                    "initial_history_indicators": 0,
+                    "initial_history_indicators": INITIAL_HISTORY_TIMESTAMP,
                     "interval_yara": 60,
-                    "initial_history_yara": 0,
+                    "initial_history_yara": INITIAL_HISTORY_TIMESTAMP,
                     "interval_cves": 120,
-                    "initial_history_cves": 0,
+                    "initial_history_cves": INITIAL_HISTORY_TIMESTAMP,
                     "interval_reports": 120,
-                    "initial_history_reports": 0,
+                    "initial_history_reports": INITIAL_HISTORY_TIMESTAMP,
                     "proxy": None,
-                    "ioc_score": 70,
+                    "ioc_score": 90,
                 },
             },
             "connector.id",
