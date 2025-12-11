@@ -6,7 +6,7 @@ services:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME
       - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_NAME=Intel471
+      - "CONNECTOR_NAME=Intel471 v2"
       - CONNECTOR_SCOPE=malware,vulnerability,indicator
       - CONNECTOR_LOG_LEVEL=error
       - INTEL471_API_USERNAME=CHANGEME
