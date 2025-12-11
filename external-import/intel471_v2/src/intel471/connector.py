@@ -1,24 +1,20 @@
-import os
 import signal
 from queue import Queue
 
-import yaml
 from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.schedulers.base import BaseScheduler
+from intel471.common import HelperRequest
 from intel471.settings import ConnectorSettings
+from intel471.streams.breach_alerts import Intel471BreachAlertsStream
+from intel471.streams.common import Intel471Stream
+from intel471.streams.cves import Intel471CVEsStream
+from intel471.streams.indicators import Intel471IndicatorsStream
+from intel471.streams.malware_reports import Intel471MalwareReportsStream
+from intel471.streams.reports import Intel471ReportsStream
+from intel471.streams.spot_reports import Intel471SpotReportsStream
+from intel471.streams.yara import Intel471YARAStream
 from pycti import OpenCTIConnectorHelper
-from yaml.parser import ParserError
-
-from .common import HelperRequest
-from .streams.breach_alerts import Intel471BreachAlertsStream
-from .streams.common import Intel471Stream
-from .streams.cves import Intel471CVEsStream
-from .streams.indicators import Intel471IndicatorsStream
-from .streams.malware_reports import Intel471MalwareReportsStream
-from .streams.reports import Intel471ReportsStream
-from .streams.spot_reports import Intel471SpotReportsStream
-from .streams.yara import Intel471YARAStream
 
 
 class Intel471Connector:
@@ -28,6 +24,7 @@ class Intel471Connector:
     ) -> None:
         self.config = config
         self.helper = helper
+
         self.scheduler: BaseScheduler = self._init_scheduler()
         self.in_queue = Queue()
         self.out_queues: dict[str, Queue] = {}
@@ -113,17 +110,6 @@ class Intel471Connector:
             job_defaults={"coalesce": True},
             timezone="UTC",
         )
-
-    @staticmethod
-    def _init_config() -> dict:
-        config_file_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "..", "config.yml"
-        )
-        try:
-            with open(config_file_path) as fh:
-                return yaml.load(fh, Loader=yaml.FullLoader)
-        except (FileNotFoundError, ParserError):
-            return {}
 
     def _signal_handler(self, *args) -> None:
         self.helper.log_info("Shutting down")
