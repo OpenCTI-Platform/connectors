@@ -2,8 +2,8 @@
   "title": "Censys Enrichment",
   "slug": "censys-enrichment",
   "description": "The Censys Enrichment connector allows OpenCTI to enrich observables (such as domains, IP addresses, and certificates) using data from the Censys search and intelligence platform. It retrieves detailed information on hosts, certificates, services, and organizations to enhance context and visibility within investigations.",
-  "short_description": "Enriches observables with data from the Censys search and intelligence platform.",
-  "logo": null,
+  "short_description": "The Censys Enrichment connector allows OpenCTI to enrich observables (such as domains, IP addresses, and certificates) using data from the Censys search and intelligence platform. It retrieves detailed information on hosts, certificates, services, and organizations to enhance context and visibility within investigations.",
+  "logo": "internal-enrichment/censys/__metadata__/logo.png",
   "use_cases": [
     "Enrichment & Analysis"
   ],
