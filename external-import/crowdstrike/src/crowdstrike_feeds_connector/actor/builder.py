@@ -6,6 +6,7 @@ from typing import List, Optional, Tuple
 
 from crowdstrike_feeds_services.utils import (
     create_external_reference,
+    create_intrusion_set_from_actor_entity,
     create_intrusion_set,
     create_originates_from_relationships,
     create_regions_and_countries_from_entities,
@@ -86,22 +87,95 @@ class ActorBundleBuilder:
         return external_references
 
     def _create_intrusion_set(self) -> IntrusionSet:
-        description = self._get_description()
-        aliases = self._get_aliases()
-        primary_motivation, secondary_motivations = self._get_motivations()
-        external_references = self._create_external_references()
+        """
+        Create IntrusionSet from actor entity.
+        This leverages the canonical helper `create_intrusion_set_from_actor_entity`
+        to ensure we map fields (description, aliases, goals, motivations, etc.)
+        consistently across the connector. On top of that, we enrich the IntrusionSet
+        with raw motivations and adversary type as labels to match customer
+        expectations.
+        """
+        actor = self.actor
+
+        # Base IntrusionSet mapping (name, description, aliases, goals,
+        # motivations, external references, first/last seen, etc.)
+        base_intrusion_set = create_intrusion_set_from_actor_entity(
+            actor,
+            created_by=self.author,
+            confidence=self.confidence_level,
+            object_markings=self.object_markings,
+        )
+
+        # Start with any labels that may already exist on the base intrusion set.
+        labels: List[str] = []
+        existing_labels = getattr(base_intrusion_set, "labels", None) or []
+        for label in existing_labels:
+            if label:
+                labels.append(label)
+
+        # Add raw motivation values as labels (e.g. "Criminal", "Espionage").
+        motivations_raw = actor.get("motivations") or []
+        for mot in motivations_raw:
+            try:
+                value = (mot.get("value") or mot.get("slug") or "").strip()  # type: ignore[attr-defined]
+            except AttributeError:
+                # If the structure is unexpected, skip gracefully.
+                continue
+            if value:
+                labels.append(value)
+
+        # Add adversary type as a label if present.
+        # CrowdStrike may expose this as a single string or a list.
+        adversary_type = actor.get("adversary_type") or actor.get("actor_type")
+        if isinstance(adversary_type, str):
+            adv_val = adversary_type.strip()
+            if adv_val:
+                labels.append(adv_val)
+        elif isinstance(adversary_type, list):
+            for adv in adversary_type:
+                if isinstance(adv, str):
+                    adv_val = adv.strip()
+                elif isinstance(adv, dict):
+                    adv_val = str(
+                        adv.get("value") or adv.get("slug") or adv.get("name") or ""
+                    ).strip()
+                else:
+                    adv_val = ""
+                if adv_val:
+                    labels.append(adv_val)
+
+        # Deduplicate labels while preserving order.
+        seen_labels = set()
+        deduped_labels: List[str] = []
+        for label in labels:
+            if label and label not in seen_labels:
+                seen_labels.add(label)
+                deduped_labels.append(label)
+
+        final_labels: Optional[List[str]] = deduped_labels or None
+
+        # Rebuild the IntrusionSet so we can attach our final labels while
+        # keeping the canonical field mapping from the helper.
 
         return create_intrusion_set(
-            self.actor["name"],
+            base_intrusion_set.name,
             created_by=self.author,
-            description=description,
-            aliases=aliases,
-            first_seen=self.first_seen,
-            last_seen=self.last_seen,
-            primary_motivation=primary_motivation,
-            secondary_motivations=secondary_motivations,
+            description=getattr(base_intrusion_set, "description", None),
+            aliases=list(getattr(base_intrusion_set, "aliases", None) or []) or None,
+            first_seen=getattr(base_intrusion_set, "first_seen", None),
+            last_seen=getattr(base_intrusion_set, "last_seen", None),
+            goals=list(getattr(base_intrusion_set, "goals", None) or []) or None,
+            primary_motivation=getattr(base_intrusion_set, "primary_motivation", None),
+            secondary_motivations=list(
+                getattr(base_intrusion_set, "secondary_motivations", None) or []
+            )
+            or None,
+            labels=final_labels,
             confidence=self.confidence_level,
-            external_references=external_references,
+            external_references=list(
+                getattr(base_intrusion_set, "external_references", None) or []
+            )
+            or None,
             object_markings=self.object_markings,
         )
 
