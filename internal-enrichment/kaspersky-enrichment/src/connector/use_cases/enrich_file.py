@@ -24,6 +24,9 @@ class FileEnricher:
         Collect intelligence from the source for a File type
         """
         octi_objects = []
+        observable_to_ref = self.converter_to_stix.create_reference(
+            obs_id=observable["id"]
+        )
         self.helper.connector_logger.info("[CONNECTOR] Starting enrichment...")
 
         # Retrieve file hash
@@ -114,9 +117,7 @@ class FileEnricher:
                 detection_name = f"[{obs_detection_info["DetectionName"]}]({obs_detection_info["DescriptionUrl"]})"
                 content += f"| {obs_detection_info["LastDetectDate"]} | {detection_name} | {obs_detection_info["DetectionMethod"]} |\n"
 
-            obs_note = self.converter_to_stix.create_file_note(
-                observable["id"], content
-            )
+            obs_note = self.converter_to_stix.create_note(observable_to_ref, content)
             octi_objects.append(obs_note.to_stix2_object())
 
         # Manage FileDownloadedFromUrls data
@@ -133,9 +134,9 @@ class FileEnricher:
                 if url_object:
                     octi_objects.append(url_object.to_stix2_object())
                     url_relation = self.converter_to_stix.create_relationship(
-                        source=observable["id"],
                         relationship_type="related-to",
-                        target=url_object.id,
+                        source_obj=observable_to_ref,
+                        target_obj=url_object,
                     )
                     octi_objects.append(url_relation.to_stix2_object())
 
@@ -152,9 +153,9 @@ class FileEnricher:
                 if industry_object:
                     octi_objects.append(industry_object.to_stix2_object())
                     industry_relation = self.converter_to_stix.create_relationship(
-                        source=observable["id"],
                         relationship_type="related-to",
-                        target=industry_object.id,
+                        source_obj=observable_to_ref,
+                        target_obj=industry_object,
                     )
                     octi_objects.append(industry_relation.to_stix2_object())
 

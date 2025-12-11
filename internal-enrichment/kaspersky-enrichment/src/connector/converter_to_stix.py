@@ -1,23 +1,27 @@
 import datetime
 
-import stix2
-from pycti import Identity, Note, OpenCTIConnectorHelper, StixCoreRelationship
+import pytz
+from connectors_sdk.models import (
+    URL,
+    File,
+    Note,
+    OrganizationAuthor,
+    Reference,
+    Relationship,
+    Sector,
+)
+from pycti import OpenCTIConnectorHelper
 
 
 class ConverterToStix:
     """
-    Provides methods for converting various types of input data into STIX 2.1 objects.
-
-    REQUIREMENTS:
-        - `generate_id()` methods from `pycti` library MUST be used to generate the `id` of each entity (except observables),
-        e.g. `pycti.Identity.generate_id(name="Source Name", identity_class="organization")` for a STIX Identity.
+    Provides methods for converting various types of input data into
+    STIX 2.1 objects with connectors_sdk models.
     """
 
     def __init__(self, helper: OpenCTIConnectorHelper) -> None:
         """
         Initialize the converter with necessary configuration.
-        For log purpose, the connector's helper CAN be injected.
-        Other arguments CAN be added (e.g. `tlp_level`) if necessary.
 
         Args:
             helper (OpenCTIConnectorHelper): The helper of the connector. Used for logs.
@@ -26,73 +30,71 @@ class ConverterToStix:
         self.author = self.create_author()
 
     @staticmethod
-    def create_author() -> stix2.Identity:
+    def create_author() -> OrganizationAuthor:
         """
         Create Author
-        :return: Author in Stix2 object
         """
-        author = stix2.Identity(
-            id=Identity.generate_id(
-                name="Kaspersky Enrichment", identity_class="organization"
-            ),
-            name="Kaspersky Enrichment",
-            identity_class="organization",
-        )
+        author = OrganizationAuthor(name="Kaspersky Enrichment")
         return author
 
-    def create_file_note(self, obs_id: str, content: str) -> stix2.Note:
+    def create_file(self, observable: dict) -> File:
+        file = File(
+            hashes=observable.get("hashes"),
+            size=observable.get("size"),
+            name=observable.get("name"),
+            mime_type=observable.get("mime_type"),
+            ctime=observable.get("ctime"),
+            mtime=observable.get("mtime"),
+            atime=observable.get("atime"),
+            additional_names=[observable.get("additional_names")],
+        )
+        return file
+
+    def create_note(self, observable: Reference, content: str) -> Note:
         """
         Create a note associated to the file observable
         """
-        note = stix2.Note(
-            type="note",
-            id=Note.generate_id(datetime.datetime.now().isoformat(), content),
+        return Note(
             abstract="Kaspersky Detections Info",
             content=content,
-            created_by_ref=self.author.id,
-            object_refs=[obs_id],
+            objects=[observable],
+            author=self.author,
+            publication_date=datetime.datetime.now().astimezone(pytz.UTC),
         )
-        return note
 
-    def create_sector(self, industry: str) -> stix2.Identity:
+    def create_reference(self, obs_id: str) -> Reference:
+        """
+        Create a simple Reference object
+        """
+        return Reference(id=obs_id)
+
+    def create_relationship(
+        self, relationship_type: str, source_obj, target_obj
+    ) -> Relationship:
+        """
+        Creates Relationship object
+        """
+        return Relationship(
+            type=relationship_type,
+            source=source_obj,
+            target=target_obj,
+            author=self.author,
+        )
+
+    def create_sector(self, industry: str) -> Sector:
         """
         Create a Sector object
         """
-        return stix2.Identity(
-            id=Identity.generate_id(identity_class="class", name=industry),
-            identity_class="class",
+        return Sector(
             name=industry,
-            created_by_ref=self.author.id,
+            author=self.author,
         )
 
-    def create_url(self, obs_url_score: int, url_info: dict) -> stix2.URL:
+    def create_url(self, obs_url_score: int, url_info: dict) -> URL:
         """
         Create an URL object
         """
-        return stix2.URL(
+        return URL(
             value=url_info["Url"],
-            custom_properties={
-                "score": obs_url_score,
-            },
+            score=obs_url_score,
         )
-
-    def create_relationship(
-        self, source_id: str, relationship_type: str, target_id: str
-    ) -> stix2.Relationship:
-        """
-        Creates Relationship object
-        :param source_id: ID of source in string
-        :param relationship_type: Relationship type in string
-        :param target_id: ID of target in string
-        :return: Relationship STIX2 object
-        """
-        relationship = stix2.Relationship(
-            id=StixCoreRelationship.generate_id(
-                relationship_type, source_id, target_id
-            ),
-            relationship_type=relationship_type,
-            source_ref=source_id,
-            target_ref=target_id,
-            created_by_ref=self.author.id,
-        )
-        return relationship
