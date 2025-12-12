@@ -1,7 +1,10 @@
 """Relationship."""
 
+from typing import Union
+
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.enums import RelationshipType
+from connectors_sdk.models.reference import Reference
 from pycti import StixCoreRelationship as PyctiStixCoreRelationship
 from pydantic import AwareDatetime, Field
 from stix2.v21 import Relationship as Stix2Relationship
@@ -13,10 +16,10 @@ class Relationship(BaseIdentifiedEntity):
     type: RelationshipType = Field(
         description="Type of the relationship.",
     )
-    source: BaseIdentifiedEntity = Field(
+    source: Union[BaseIdentifiedEntity, Reference] = Field(
         description="The source entity of the relationship.",
     )
-    target: BaseIdentifiedEntity = Field(
+    target: Union[BaseIdentifiedEntity, Reference] = Field(
         description="The target entity of the relationship.",
     )
     description: str | None = Field(
