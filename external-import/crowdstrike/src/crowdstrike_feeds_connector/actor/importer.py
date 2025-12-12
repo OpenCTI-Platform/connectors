@@ -155,17 +155,6 @@ class ActorImporter(BaseImporter):
         source_name = self._source_name()
         object_marking_refs = [self.tlp_marking]
         confidence_level = self._confidence_level()
-        # NOTE: Import of IOCs from the actors collection is temporarily disabled
-        # to reduce load on client platforms (see issues #5382 and #5309 / bottleneck discussion).
-        # We keep the structure in place but do not call the indicators API here.
-        related_indicators_with_related_entities = []
-
-        actor_name = actor.get("name")
-        if actor_name:
-            self._info(
-                "Skipping related IOCs import for actor {0} (feature temporarily disabled).",
-                actor_name,
-            )
 
         attack_patterns = self._get_and_create_attack_patterns(actor)
 
@@ -175,7 +164,6 @@ class ActorImporter(BaseImporter):
             source_name,
             object_marking_refs,
             confidence_level,
-            related_indicators_with_related_entities,
             attack_patterns,
         )
         return bundle_builder.build()
