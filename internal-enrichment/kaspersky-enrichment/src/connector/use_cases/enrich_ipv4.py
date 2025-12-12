@@ -1,5 +1,5 @@
 from connector.converter_to_stix import ConverterToStix
-from connector.utils import check_quota
+from connector.utils import check_quota, string_to_datetime
 from kaspersky_client import KasperskyClient
 from pycti import STIX_EXT_OCTI_SCO, OpenCTIConnectorHelper, OpenCTIStix2
 
@@ -82,4 +82,32 @@ class Ipv4Enricher:
                     target_obj=obs_country,
                 )
                 octi_objects.append(country_relation.to_stix2_object())
+
+        # Manage FilesDownloadedFromIp data
+
+        self.helper.connector_logger.info(
+            "[CONNECTOR] Process enrichment from FilesDownloadedFromIp data..."
+        )
+
+        if entity_data.get("FilesDownloadedFromIp"):
+            for file in entity_data["FilesDownloadedFromIp"]:
+                obs_file = self.converter_to_stix.create_file(
+                    hashes={"MD5": file["Md5"]},
+                    score=self.zone_octi_score_mapping[file["Zone"].lower()],
+                )
+
+                if obs_file:
+                    octi_objects.append(obs_file.to_stix2_object())
+                    format = "%Y-%m-%dT%H:%MZ"
+                    first_seen_datetime = string_to_datetime(file["FirstSeen"], format)
+                    last_seen_datetime = string_to_datetime(file["LastSeen"], format)
+                    file_relation = self.converter_to_stix.create_relationship(
+                        relationship_type="related-to",
+                        source_obj=observable_to_ref,
+                        target_obj=obs_file,
+                        start_time=first_seen_datetime,
+                        stop_time=last_seen_datetime,
+                    )
+                    octi_objects.append(file_relation.to_stix2_object())
+
         return octi_objects

@@ -1,4 +1,5 @@
 import datetime
+from typing import Optional
 
 import pytz
 from connectors_sdk.models import (
@@ -46,20 +47,11 @@ class ConverterToStix:
             name=country_name,
         )
 
-    def create_file(self, observable: dict) -> File:
+    def create_file(self, hashes: dict, score: int) -> File:
         """
         Create a File object
         """
-        file = File(
-            hashes=observable.get("hashes"),
-            size=observable.get("size"),
-            name=observable.get("name"),
-            mime_type=observable.get("mime_type"),
-            ctime=observable.get("ctime"),
-            mtime=observable.get("mtime"),
-            atime=observable.get("atime"),
-            additional_names=[observable.get("additional_names")],
-        )
+        file = File(hashes=hashes, score=score)
         return file
 
     def create_note(self, observable: Reference, content: str) -> Note:
@@ -81,7 +73,12 @@ class ConverterToStix:
         return Reference(id=obs_id)
 
     def create_relationship(
-        self, relationship_type: str, source_obj, target_obj
+        self,
+        relationship_type: str,
+        source_obj,
+        target_obj,
+        start_time: Optional[str] = None,
+        stop_time: Optional[str] = None,
     ) -> Relationship:
         """
         Creates Relationship object
@@ -91,6 +88,8 @@ class ConverterToStix:
             source=source_obj,
             target=target_obj,
             author=self.author,
+            start_time=start_time,
+            stop_time=stop_time,
         )
 
     def create_sector(self, industry: str) -> Sector:
