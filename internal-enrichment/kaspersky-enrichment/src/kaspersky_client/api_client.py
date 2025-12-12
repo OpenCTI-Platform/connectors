@@ -77,3 +77,12 @@ class KasperskyClient:
         self.params["sections"] = sections
         response = self._request_data(file_url, params=self.params)
         return response.json()
+
+    def get_ipv4_info(self, obs_ipv4: str, sections: str) -> dict:
+        """
+        Retrieve ipv4 information
+        """
+        file_url = f"{self.base_url}api/ip/{obs_ipv4}"
+        self.params["sections"] = sections
+        response = self._request_data(file_url, params=self.params)
+        return response.json()

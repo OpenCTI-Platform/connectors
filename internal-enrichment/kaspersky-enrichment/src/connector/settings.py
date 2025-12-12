@@ -1,5 +1,6 @@
 from typing import Annotated
 
+from connector.constants import SECTIONS
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
@@ -13,6 +14,7 @@ from pydantic import (
     PlainSerializer,
     SecretStr,
     SerializationInfo,
+    ValidationInfo,
     field_validator,
 )
 
@@ -58,7 +60,7 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         description="Name of the connector.",
     )
     scope: ListFromString = Field(
-        default=["StixFile"],
+        default=["StixFile", "IPv4-Addr"],
         description="The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
     )
     auto: bool = Field(
@@ -90,38 +92,36 @@ class KasperskyConfig(BaseConfigModel):
 
     file_sections: str = Field(
         default="LicenseInfo,Zone,FileGeneralInfo",
-        min_length=1,  # Prevent empty string
         description="Sections wanted to investigate for the requested hash. "
         "LicenseInfo, Zone and FileGeneralInfo are always set, can't be disabled. "
+        "Only DetectionsInfo, FileDownloadedFromUrls, Industries and FileNames are currently supported",
+    )
+    ipv4_sections: str = Field(
+        default="LicenseInfo,Zone,IpGeneralInfo",
+        description="Sections wanted to investigate for the requested IPV4. "
+        "LicenseInfo, Zone and IpGeneralInfo are always set, can't be disabled. "
         "Only DetectionsInfo, FileDownloadedFromUrls, Industries and FileNames are currently supported",
     )
 
     @field_validator(
         "file_sections",
+        "ipv4_sections",
         mode="before",
     )
     @classmethod
-    def _validate_value(cls, value: str) -> str:
-        """Validate the value of the file sections."""
+    def _validate_value(cls, value: str, info: ValidationInfo) -> str:
+        """Validate the value of sections."""
         sections = value.replace(" ", "").split(",")
+        field_constants = SECTIONS[info.field_name]
+
         for section in sections:
-            if section not in [
-                "LicenseInfo",
-                "Zone",
-                "FileGeneralInfo",
-                "DetectionsInfo",
-                "FileDownloadedFromUrls",
-                "Industries",
-                "FileNames",
-            ]:
+            if section not in field_constants["supported_sections"]:
                 raise ValueError("Invalid file sections")
-        for mandatory_section in [
-            "LicenseInfo",
-            "Zone",
-            "FileGeneralInfo",
-        ]:
+
+        for mandatory_section in field_constants["mandatories_sections"]:
             if mandatory_section not in value:
                 value += "," + mandatory_section
+
         return value
 
 
