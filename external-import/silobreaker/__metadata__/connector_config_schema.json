@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/silobreaker_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Silobreaker",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "SILOBREAKER_API_URL": {
+      "default": "https://api.silobreaker.com",
+      "description": "The URL of the Silobreaker API.",
+      "type": "string"
+    },
+    "SILOBREAKER_API_KEY": {
+      "description": "The API key for the Silobreaker API.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "SILOBREAKER_API_SHARED": {
+      "description": "The shared secret for the Silobreaker API.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "SILOBREAKER_LISTS": {
+      "default": "138809,96910,36592,55112,50774",
+      "description": "The lists of Silobreaker to import.",
+      "type": "string"
+    },
+    "SILOBREAKER_IMPORT_START_DATE": {
+      "default": "2024-09-01",
+      "description": "The start date for importing Silobreaker data.",
+      "type": "string"
+    },
+    "SILOBREAKER_INTERVAL": {
+      "default": 60,
+      "description": "The interval in minutes for importing Silobreaker data.",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_SCOPE",
+    "SILOBREAKER_API_KEY",
+    "SILOBREAKER_API_SHARED"
+  ],
+  "additionalProperties": true
+}
