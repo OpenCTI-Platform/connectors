@@ -6,6 +6,7 @@ from connectors_sdk.models import (
     URL,
     AutonomousSystem,
     Country,
+    DomainName,
     File,
     Note,
     OrganizationAuthor,
@@ -53,6 +54,9 @@ class ConverterToStix:
         return Country(
             name=country_name,
         )
+
+    def create_domain(self, name: str, score: int) -> DomainName:
+        return DomainName(value=name, score=score, author=self.author)
 
     def create_file(self, hashes: dict, score: int) -> File:
         """

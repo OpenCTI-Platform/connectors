@@ -40,3 +40,9 @@ def resolve_file_hash(observable: dict) -> str:
 
 def string_to_datetime(value: str, format: str) -> datetime:
     return datetime.strptime(value, format).replace(tzinfo=timezone.utc)
+
+
+def is_last_seen_equal_to_first_seen(first_seen: datetime, last_seen: datetime) -> bool:
+    if last_seen == first_seen:
+        return True
+    return False

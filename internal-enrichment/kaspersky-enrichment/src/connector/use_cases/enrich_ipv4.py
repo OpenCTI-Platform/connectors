@@ -1,6 +1,12 @@
+from datetime import timedelta
+
 from connector.constants import DATETIME_FORMAT
 from connector.converter_to_stix import ConverterToStix
-from connector.utils import check_quota, string_to_datetime
+from connector.utils import (
+    check_quota,
+    is_last_seen_equal_to_first_seen,
+    string_to_datetime,
+)
 from kaspersky_client import KasperskyClient
 from pycti import STIX_EXT_OCTI_SCO, OpenCTIConnectorHelper, OpenCTIStix2
 
@@ -99,18 +105,17 @@ class Ipv4Enricher:
 
                 if obs_file:
                     octi_objects.append(obs_file.to_stix2_object())
-                    first_seen_datetime = string_to_datetime(
-                        file["FirstSeen"], DATETIME_FORMAT
-                    )
-                    last_seen_datetime = string_to_datetime(
-                        file["LastSeen"], DATETIME_FORMAT
+                    file_first_seen_datetime, file_last_seen_datetime = (
+                        self.get_first_and_last_seen_datetime(
+                            file["FirstSeen"], file["LastSeen"]
+                        )
                     )
                     file_relation = self.converter_to_stix.create_relationship(
                         relationship_type="related-to",
                         source_obj=observable_to_ref,
                         target_obj=obs_file,
-                        start_time=first_seen_datetime,
-                        stop_time=last_seen_datetime,
+                        start_time=file_first_seen_datetime,
+                        stop_time=file_last_seen_datetime,
                     )
                     octi_objects.append(file_relation.to_stix2_object())
 
@@ -127,11 +132,10 @@ class Ipv4Enricher:
 
                 if obs_url:
                     octi_objects.append(obs_url.to_stix2_object())
-                    url_first_seen_datetime = string_to_datetime(
-                        url_entity["FirstSeen"], DATETIME_FORMAT
-                    )
-                    url_last_seen_datetime = string_to_datetime(
-                        url_entity["LastSeen"], DATETIME_FORMAT
+                    url_first_seen_datetime, url_last_seen_datetime = (
+                        self.get_first_and_last_seen_datetime(
+                            url_entity["FirstSeen"], url_entity["LastSeen"]
+                        )
                     )
                     url_relation = self.converter_to_stix.create_relationship(
                         relationship_type="related-to",
@@ -160,4 +164,41 @@ class Ipv4Enricher:
                     )
                     octi_objects.append(asn_relation.to_stix2_object())
 
+        # Manage IpDnsResolutions
+
+        if entity_data.get("IpDnsResolutions"):
+            for resolution in entity_data["IpDnsResolutions"]:
+                obs_domain = self.converter_to_stix.create_domain(
+                    name=resolution["Domain"],
+                    score=self.zone_octi_score_mapping[resolution["Zone"].lower()],
+                )
+
+                if obs_domain:
+                    octi_objects.append(obs_domain.to_stix2_object())
+                    domain_first_seen_datetime, domain_last_seen_datetime = (
+                        self.get_first_and_last_seen_datetime(
+                            resolution["FirstSeen"], resolution["LastSeen"]
+                        )
+                    )
+                    domain_relation = self.converter_to_stix.create_relationship(
+                        relationship_type="resolves-to",
+                        source_obj=obs_domain,
+                        target_obj=observable_to_ref,
+                        start_time=domain_first_seen_datetime,
+                        stop_time=domain_last_seen_datetime,
+                    )
+                    octi_objects.append(domain_relation.to_stix2_object())
+
         return octi_objects
+
+    def get_first_and_last_seen_datetime(self, first_seen, last_seen):
+        """
+        Convert first and last seen string to datetime.
+        If last==first, add one minute to last seen value.
+        """
+        first_seen_datetime = string_to_datetime(first_seen, DATETIME_FORMAT)
+        last_seen_datetime = string_to_datetime(last_seen, DATETIME_FORMAT)
+        if is_last_seen_equal_to_first_seen(first_seen_datetime, last_seen_datetime):
+            last_seen_datetime = last_seen_datetime + timedelta(minutes=1)
+
+        return first_seen_datetime, last_seen_datetime
