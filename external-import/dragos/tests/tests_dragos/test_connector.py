@@ -2,7 +2,7 @@
 
 from unittest.mock import Mock, call
 
-from dragos.app import Connector
+from dragos.connector import Connector
 from dragos.domain.use_cases.common import UseCaseError
 from dragos.interfaces.common import DataRetrievalError
 

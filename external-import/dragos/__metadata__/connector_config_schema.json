@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/dragos_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Dragos",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "dragos"
+      ],
+      "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "DRAGOS_API_BASE_URL": {
+      "default": "https://portal.dragos.com/",
+      "description": "Dragos API base URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "DRAGOS_API_TOKEN": {
+      "description": "Dragos API token.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "DRAGOS_API_SECRET": {
+      "description": "Dragos API secret.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "DRAGOS_IMPORT_START_DATE": {
+      "description": "Start date of first import (ISO format). Can be a relative or an absolute date.",
+      "format": "date-time",
+      "type": "string"
+    },
+    "DRAGOS_TLP_LEVEL": {
+      "default": "amber+strict",
+      "description": "TLP level to apply on objects imported into OpenCTI.",
+      "enum": [
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "DRAGOS_API_TOKEN",
+    "DRAGOS_API_SECRET"
+  ],
+  "additionalProperties": true
+}
