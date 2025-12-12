@@ -6,7 +6,7 @@ connector:
 #  id: 'ChangeMe'
 #  type: 'INTERNAL_ENRICHMENT'
 #  name: 'Kaspersky Enrichment'
-#  scope: 'StixFile'  # Support for additional observable types (IP addresses, domains, and URLs) will be added in future releases.
+#  scope: 'StixFile,IPv4-Addr'  # Support for additional observable types (domains, and URLs) will be added in future releases.
 #  log_level: 'error'
 #  auto: true # Enable/disable auto-enrichment of observables
 
@@ -15,3 +15,4 @@ kaspersky:
   api_key: 'ChangeMe'
 #  zone_octi_score_mapping: 'red:100,orange:80,yellow:60,gray:20,green:0'
 #  file_sections: 'LicenseInfo,Zone,FileGeneralInfo'
+#  ipv4_sections: 'LicenseInfo,Zone,IpGeneralInfo'
