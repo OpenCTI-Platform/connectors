@@ -1,3 +1,3 @@
-from .malpedia import MalpediaConnector
-
-__all__ = ["MalpediaConnector"]
+__all__ = ["MalpediaConnector", "ConnectorSettings"]
+from malpedia_connector.connector import MalpediaConnector
+from malpedia_connector.settings import ConnectorSettings
