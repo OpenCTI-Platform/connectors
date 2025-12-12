@@ -1,3 +1,4 @@
+from connector.constants import DATETIME_FORMAT
 from connector.converter_to_stix import ConverterToStix
 from connector.utils import check_quota, string_to_datetime
 from kaspersky_client import KasperskyClient
@@ -98,9 +99,12 @@ class Ipv4Enricher:
 
                 if obs_file:
                     octi_objects.append(obs_file.to_stix2_object())
-                    format = "%Y-%m-%dT%H:%MZ"
-                    first_seen_datetime = string_to_datetime(file["FirstSeen"], format)
-                    last_seen_datetime = string_to_datetime(file["LastSeen"], format)
+                    first_seen_datetime = string_to_datetime(
+                        file["FirstSeen"], DATETIME_FORMAT
+                    )
+                    last_seen_datetime = string_to_datetime(
+                        file["LastSeen"], DATETIME_FORMAT
+                    )
                     file_relation = self.converter_to_stix.create_relationship(
                         relationship_type="related-to",
                         source_obj=observable_to_ref,
@@ -109,5 +113,33 @@ class Ipv4Enricher:
                         stop_time=last_seen_datetime,
                     )
                     octi_objects.append(file_relation.to_stix2_object())
+
+        # Manage HostedUrls data
+
+        if entity_data.get("HostedUrls"):
+            for url_entity in entity_data["HostedUrls"]:
+                obs_url = self.converter_to_stix.create_url(
+                    url_info=url_entity,
+                    obs_url_score=self.zone_octi_score_mapping[
+                        url_entity["Zone"].lower()
+                    ],
+                )
+
+                if obs_url:
+                    octi_objects.append(obs_url.to_stix2_object())
+                    url_first_seen_datetime = string_to_datetime(
+                        url_entity["FirstSeen"], DATETIME_FORMAT
+                    )
+                    url_last_seen_datetime = string_to_datetime(
+                        url_entity["LastSeen"], DATETIME_FORMAT
+                    )
+                    url_relation = self.converter_to_stix.create_relationship(
+                        relationship_type="related-to",
+                        source_obj=observable_to_ref,
+                        target_obj=obs_url,
+                        start_time=url_first_seen_datetime,
+                        stop_time=url_last_seen_datetime,
+                    )
+                    octi_objects.append(url_relation.to_stix2_object())
 
         return octi_objects
