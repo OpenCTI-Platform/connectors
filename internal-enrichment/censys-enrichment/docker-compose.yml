@@ -3,7 +3,7 @@
 version: '3'
 services:
   connector-censys-enrichment:
-    image: opencti/connector-censys-enrichment:rolling
+    image: opencti/connector-censys-enrichment:6.9.0
     environment:
       # OpenCTI configuration
       OPENCTI_URL: http://localhost:8080

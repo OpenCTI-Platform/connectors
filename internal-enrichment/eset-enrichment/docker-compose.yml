@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-template:
-    image: opencti/eset-enrichment-connector:rolling
+    image: opencti/eset-enrichment-connector:6.9.0
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://opencti:8080
