@@ -27,3 +27,5 @@ SECTIONS = {
     "domain_sections": {},
     "url_sections": {},
 }
+
+DATETIME_FORMAT = "%Y-%m-%dT%H:%MZ"
