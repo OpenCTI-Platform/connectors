@@ -14,29 +14,34 @@ from .constants import URLS_MAPPING
 class MalpediaClient:
     """Malpedia client."""
 
-    def __init__(self, helper: OpenCTIConnectorHelper, api_key: str) -> None:
+    def __init__(
+        self, helper: OpenCTIConnectorHelper, api_key: str | None = None
+    ) -> None:
         """Initialize Malpedia api client."""
         self.helper = helper
-        self.api_key = api_key
-        self.api_url = URLS_MAPPING["default_api_url"]
 
+        self.api_url = URLS_MAPPING["default_api_url"]
+        self.api_key = api_key
+
+    @property
+    def with_authentication(self) -> bool:
         if self.api_key == "" or self.api_key is None:
-            self.unauthenticated = True
+            return False
         else:
-            self.unauthenticated = False
             if not self.token_check():
                 raise ValueError(
                     "The API request failed because the token is invalid. "
                     "Please enter a valid auth_key or "
                     "run the connector in unauthenticated mode (no value)."
                 )
+            return True
 
-    def api_response(self, url: str, retry_delay: int, auth: bool):
-        if not auth:
-            response = requests.get(url, timeout=30)
-        else:
+    def api_response(self, url: str, retry_delay: int):
+        if self.with_authentication:
             prepared_headers = {"Authorization": "apitoken " + self.api_key}
             response = requests.get(url, headers=prepared_headers, timeout=30)
+        else:
+            response = requests.get(url, timeout=30)
 
         if (
             response.status_code == 403
@@ -102,16 +107,10 @@ class MalpediaClient:
             retry_delay = 65  # in second
 
             for _ in range(max_retries):
-                if self.unauthenticated:
-                    data = self.api_response(url, retry_delay, False)
-                    if data is None:
-                        continue
-                    return data
-                else:
-                    data = self.api_response(url, retry_delay, True)
-                    if data is None:
-                        continue
-                    return data
+                data = self.api_response(url, retry_delay)
+                if data is None:
+                    continue
+                return data
 
         except requests.exceptions.RequestException as e:
             self.helper.connector_logger.error(
