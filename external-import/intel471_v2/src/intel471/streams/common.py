@@ -7,6 +7,7 @@ from typing import Any, Iterator, Union
 
 import titan_client
 from pycti import OpenCTIConnectorHelper
+from pydantic import HttpUrl
 from stix2 import Bundle
 from titan_client.titan_stix import STIXMapperSettings
 from titan_client.titan_stix.exceptions import EmptyBundle
@@ -56,7 +57,7 @@ class Intel471Stream(ABC):
         out_queue: Queue,
         initial_history: int = None,
         update_existing_data: bool = False,
-        proxy_url: Union[str, None] = None,
+        proxy_url: Union[HttpUrl, None] = None,
         ioc_score: Union[int, None] = None,
     ) -> None:
         self.helper = helper
@@ -65,15 +66,20 @@ class Intel471Stream(ABC):
         self.api_config = titan_client.Configuration(
             username=api_username, password=api_key
         )
-        self.api_config.proxy = proxy_url
-        if proxy_auth := parse_url(proxy_url).auth:
-            self.api_config.proxy_headers = make_headers(proxy_basic_auth=proxy_auth)
-        self.ioc_score = ioc_score
-        self.update_existing_data = update_existing_data
-        if initial_history:
-            self.initial_history = initial_history
-        else:
-            self.initial_history = int((datetime.datetime.utcnow()).timestamp() * 1000)
+        if proxy_url:
+            self.api_config.proxy = str(proxy_url)
+            if proxy_auth := parse_url(self.api_config.proxy).auth:
+                self.api_config.proxy_headers = make_headers(
+                    proxy_basic_auth=proxy_auth
+                )
+            self.ioc_score = ioc_score
+            self.update_existing_data = update_existing_data
+            if initial_history:
+                self.initial_history = initial_history
+            else:
+                self.initial_history = int(
+                    (datetime.datetime.utcnow()).timestamp() * 1000
+                )
 
     @property
     def cursor_name(self) -> str:
