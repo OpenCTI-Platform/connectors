@@ -325,7 +325,6 @@ def _when_system_imports_threat_actor(
             author=author,
             default_latest_timestamp=0,
             tlp_marking=tlp_marking,
-            indicator_config={},
         )
 
         attack_patterns = importer._get_and_create_attack_patterns(actor_data)
@@ -336,7 +335,6 @@ def _when_system_imports_threat_actor(
             source_name="CrowdStrike",
             object_markings=[tlp_marking],
             confidence_level=80,
-            related_indicators=[],
             attack_patterns=attack_patterns,
         )
 
@@ -405,7 +403,6 @@ def _when_system_imports_actor_without_ttps(
             author=author,
             default_latest_timestamp=0,
             tlp_marking=tlp_marking,
-            indicator_config={},
         )
 
         attack_patterns = importer._get_and_create_attack_patterns(actor_data)
@@ -416,7 +413,6 @@ def _when_system_imports_actor_without_ttps(
             source_name="CrowdStrike",
             object_markings=[tlp_marking],
             confidence_level=80,
-            related_indicators=[],
             attack_patterns=attack_patterns,
         )
 
@@ -528,7 +524,6 @@ def _when_system_processes_ttp_data(
             author=author,
             default_latest_timestamp=0,
             tlp_marking=tlp_marking,
-            indicator_config={},
         )
 
         attack_patterns = importer._get_and_create_attack_patterns(actor_data)
@@ -578,7 +573,6 @@ def _given_system_has_intrusion_set_and_attack_patterns(
             author=author,
             default_latest_timestamp=0,
             tlp_marking=tlp_marking,
-            indicator_config={},
         )
 
         attack_patterns = importer._get_and_create_attack_patterns(actor_data)
@@ -598,7 +592,6 @@ def _when_system_builds_actor_bundle(
         source_name="CrowdStrike",
         object_markings=[tlp_marking],
         confidence_level=80,
-        related_indicators=[],
         attack_patterns=attack_patterns,
     )
 
