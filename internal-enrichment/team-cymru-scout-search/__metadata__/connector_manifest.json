@@ -1,0 +1,21 @@
+{
+  "title": "Team Cymru Scout Search",
+  "slug": "team-cymru-scout-search",
+  "description": "Scout Search Connector provides real-time visibility of external threats using Team Cymru Scout API. This connector enriches Text observables via playbook queries to retrieve threat intelligence.",
+  "short_description": "Enriches Text observables using Team Cymru Scout Search API for playbook-based threat intelligence queries.",
+  "logo": "internal-enrichment/team-cymru-scout-search/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 100,
+  "support_version": ">=6.7.16",
+  "subscription_link": "https://www.team-cymru.com/pure-signal-scout",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/team-cymru-scout-search",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-team-cymru-scout-search",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

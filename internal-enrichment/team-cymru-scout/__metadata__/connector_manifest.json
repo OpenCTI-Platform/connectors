@@ -1,0 +1,21 @@
+{
+  "title": "Team Cymru Scout",
+  "slug": "team-cymru-scout",
+  "description": "Pure Signal Scout is a powerful cyber threat intelligence tool that provides real-time visibility of external threats. This connector enriches IP addresses and domain names with high-fidelity STIX 2.1 intelligence from Team Cymru Scout API.",
+  "short_description": "Enriches observables using Team Cymru's Pure Signal Scout API with real-time threat intelligence.",
+  "logo": "internal-enrichment/team-cymru-scout/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 75,
+  "support_version": ">=6.7.16",
+  "subscription_link": "https://www.team-cymru.com/pure-signal-scout",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/team-cymru-scout",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-team-cymru-scout",
+  "container_type": "INTERNAL_ENRICHMENT"
+}
