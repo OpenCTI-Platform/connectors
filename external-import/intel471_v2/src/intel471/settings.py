@@ -2,6 +2,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    ListFromString,
 )
 from pydantic import Field, HttpUrl, SecretStr
 from pydantic.json_schema import SkipJsonSchema
@@ -13,9 +14,17 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     to the configuration for connectors of type `EXTERNAL_IMPORT`.
     """
 
+    id: str = Field(
+        description="The UUID of the connector.",
+        default="d5067b93-7f6a-47e2-b76d-bb4ed69e270d",
+    )
     name: str = Field(
         description="The name of the connector.",
         default="Intel471 v2",
+    )
+    scope: ListFromString = Field(
+        description="The scope of the connector, e.g. 'malware, vulnerability, indicator'.",
+        default=["malware", "vulnerability", "indicator"],
     )
     # Override `BaseExternalImportConnectorConfig.duration_period` as `pycti`'s scheduler is not implemented yet
     duration_period: SkipJsonSchema[None] = Field(

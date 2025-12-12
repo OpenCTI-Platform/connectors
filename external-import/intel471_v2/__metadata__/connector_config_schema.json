@@ -20,7 +20,12 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "default": [
+        "malware",
+        "vulnerability",
+        "indicator"
+      ],
+      "description": "The scope of the connector, e.g. 'malware, vulnerability, indicator'.",
       "items": {
         "type": "string"
       },
@@ -110,7 +115,6 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "CONNECTOR_SCOPE",
     "INTEL471_API_USERNAME",
     "INTEL471_API_KEY"
   ],
