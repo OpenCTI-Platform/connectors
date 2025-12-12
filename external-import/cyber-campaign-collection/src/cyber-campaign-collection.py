@@ -7,7 +7,7 @@ import ssl
 import sys
 import time
 import urllib
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Optional
 
 import requests
@@ -50,12 +50,20 @@ class CyberMonitor:
         self.cyber_monitor_interval = get_config_variable(
             "CYBER_MONITOR_INTERVAL", ["cyber_monitor", "interval"], config, True
         )
+        self.cyber_monitor_report_type = get_config_variable(
+            "CYBER_MONITOR_REPORT_TYPE", ["cyber_monitor", "report_type"], config, False
+        )
+        self.cyber_monitor_report_status = get_config_variable(
+            "CYBER_MONITOR_REPORT_STATUS",
+            ["cyber_monitor", "report_status"],
+            config,
+            False,
+        )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
             ["connector", "update_existing_data"],
             config,
         )
-
         self.dummy_organization = self.helper.api.identity.create(
             type="Organization",
             name="DUMMY",
@@ -169,6 +177,8 @@ class CyberMonitor:
                     report = stix2.Report(
                         id=Report.generate_id(report_name, report_date),
                         name=report_name,
+                        report_types=[self.cyber_monitor_report_type],
+                        x_opencti_report_status=self.cyber_monitor_report_status,
                         published=report_date,
                         external_references=[external_reference],
                         object_refs=[self.dummy_organization["standard_id"]],
@@ -199,7 +209,9 @@ class CyberMonitor:
                 last_run = current_state["last_run"]
                 self.helper.log_info(
                     "Connector last run: "
-                    + datetime.utcfromtimestamp(last_run).strftime("%Y-%m-%d %H:%M:%S")
+                    + datetime.fromtimestamp(last_run, tz=timezone.utc).strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
                 )
             else:
                 last_run = None
@@ -212,7 +224,7 @@ class CyberMonitor:
             ):
                 self.helper.log_info("Connector will run!")
 
-                now = datetime.utcfromtimestamp(timestamp)
+                now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
                 friendly_name = "Cyber Monitor run @ " + now.strftime(
                     "%Y-%m-%d %H:%M:%S"
                 )
