@@ -3,6 +3,7 @@ import datetime
 import pytz
 from connectors_sdk.models import (
     URL,
+    Country,
     File,
     Note,
     OrganizationAuthor,
@@ -37,7 +38,18 @@ class ConverterToStix:
         author = OrganizationAuthor(name="Kaspersky Enrichment")
         return author
 
+    def create_country(self, country_name: str) -> Country:
+        """
+        Create a Country object
+        """
+        return Country(
+            name=country_name,
+        )
+
     def create_file(self, observable: dict) -> File:
+        """
+        Create a File object
+        """
         file = File(
             hashes=observable.get("hashes"),
             size=observable.get("size"),

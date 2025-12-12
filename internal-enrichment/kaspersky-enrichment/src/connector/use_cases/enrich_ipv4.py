@@ -1,7 +1,7 @@
 from connector.converter_to_stix import ConverterToStix
 from connector.utils import check_quota
 from kaspersky_client import KasperskyClient
-from pycti import OpenCTIConnectorHelper
+from pycti import STIX_EXT_OCTI_SCO, OpenCTIConnectorHelper, OpenCTIStix2
 
 
 class Ipv4Enricher:
@@ -24,6 +24,9 @@ class Ipv4Enricher:
         Collect intelligence from the source for an IPV4 type
         """
         octi_objects = []
+        observable_to_ref = self.converter_to_stix.create_reference(
+            obs_id=observable["id"]
+        )
         self.helper.connector_logger.info("[CONNECTOR] Starting enrichment...")
 
         # Retrieve ipv4
@@ -42,4 +45,41 @@ class Ipv4Enricher:
                 },
             )
 
+        # Manage IpGeneralInfo data
+
+        self.helper.connector_logger.info(
+            "[CONNECTOR] Process enrichment from IpGeneralInfo data..."
+        )
+        entity_general_info = entity_data["IpGeneralInfo"]
+
+        # Score
+        if entity_data.get("Zone"):
+            score = self.zone_octi_score_mapping[entity_data["Zone"].lower()]
+            OpenCTIStix2.put_attribute_in_extension(
+                observable, STIX_EXT_OCTI_SCO, "score", score
+            )
+
+        # Labels
+        if entity_general_info.get("Categories"):
+            observable["labels"] = []
+            if observable.get("x_opencti_labels"):
+                observable["labels"] = observable["x_opencti_labels"]
+            for label in entity_general_info["Categories"]:
+                if label not in observable["labels"]:
+                    observable["labels"].append(label)
+
+        # Country
+        if entity_general_info.get("CountryCode"):
+            obs_country = self.converter_to_stix.create_country(
+                entity_general_info["CountryCode"]
+            )
+
+            if obs_country:
+                octi_objects.append(obs_country.to_stix2_object())
+                country_relation = self.converter_to_stix.create_relationship(
+                    source_obj=observable_to_ref,
+                    relationship_type="located-at",
+                    target_obj=obs_country,
+                )
+                octi_objects.append(country_relation.to_stix2_object())
         return octi_objects
