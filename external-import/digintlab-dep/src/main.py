@@ -6,88 +6,92 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import unquote
 
+import pycti  # type: ignore[import-untyped]
 import requests
 import yaml
-from pycti import (  # type: ignore[import-untyped]
-    OpenCTIConnectorHelper,
-    get_config_variable,
-)
+from stix2 import v21 as stix2  # type: ignore[import-untyped]
 
 
 class DepConnector:
     def __init__(self) -> None:
         config = self._load_config()
-        self.helper = OpenCTIConnectorHelper(config)
-        self.organization = self.helper.api.identity.create(
-            type="Organization",
-            name="DigIntLab",
+        self.helper = pycti.OpenCTIConnectorHelper(config)
+        self.label_value = "DigIntLab"
+        self.author_identity = stix2.Identity(
+            id=pycti.Identity.generate_id(
+                self.label_value, identity_class="organization"
+            ),
+            name=self.label_value,
             description="We Track and Monitor the Cyber Space",
             contact_information="https://doubleextortion.com/",
-        )
-        self.digintlab_label = self.helper.api.label.create(
-            value="DigIntLab",
-            color="#730000",
+            identity_class="organization",
         )
 
-        self.interval = get_config_variable(
+        self.interval = pycti.get_config_variable(
             "CONNECTOR_RUN_INTERVAL",
             ["connector", "interval"],
             config,
             default=3600,
             isNumber=True,
         )
-        self.lookback_days = get_config_variable(
+        self.lookback_days = pycti.get_config_variable(
             "DEP_LOOKBACK_DAYS",
             ["dep", "lookback_days"],
             config,
             default=7,
             isNumber=True,
         )
-        self.confidence = get_config_variable(
+        self.confidence = pycti.get_config_variable(
             "DEP_CONFIDENCE", ["dep", "confidence"], config, default=70, isNumber=True
         )
-        self.api_key = get_config_variable("DEP_API_KEY", ["dep", "api_key"], config)
-        self.username = get_config_variable("DEP_USERNAME", ["dep", "username"], config)
-        self.password = get_config_variable("DEP_PASSWORD", ["dep", "password"], config)
-        self.client_id = get_config_variable(
+        self.api_key = pycti.get_config_variable(
+            "DEP_API_KEY", ["dep", "api_key"], config
+        )
+        self.username = pycti.get_config_variable(
+            "DEP_USERNAME", ["dep", "username"], config
+        )
+        self.password = pycti.get_config_variable(
+            "DEP_PASSWORD", ["dep", "password"], config
+        )
+        self.client_id = pycti.get_config_variable(
             "DEP_CLIENT_ID", ["dep", "client_id"], config, default=""
         )
         if not self.client_id:
             error = "DEP client ID must be provided via configuration"
             raise ValueError(error)
-        self.login_endpoint = get_config_variable(
+        self.login_endpoint = pycti.get_config_variable(
             "DEP_LOGIN_ENDPOINT",
             ["dep", "login_endpoint"],
             config,
             default="https://cognito-idp.eu-west-1.amazonaws.com/",
         )
 
-        self.api_endpoint = get_config_variable(
+        self.api_endpoint = pycti.get_config_variable(
             "DEP_API_ENDPOINT",
             ["dep", "api_endpoint"],
             config,
             default="https://api.eu-ep1.doubleextortion.com/v1/dbtr/privlist",
         )
-        self.dataset = get_config_variable(
+        self.dataset = pycti.get_config_variable(
             "DEP_DSET",
             ["dep", "dset"],
             config,
             default="ext",
         )
-        self.extended_results = get_config_variable(
+        self.extended_results = pycti.get_config_variable(
             "DEP_EXTENDED_RESULTS",
             ["dep", "extended_results"],
             config,
             default=True,
         )
-        self.enable_site_indicator = get_config_variable(
+        self.enable_site_indicator = pycti.get_config_variable(
             "DEP_ENABLE_SITE_INDICATOR",
             ["dep", "enable_site_indicator"],
             config,
             default=True,
         )
 
-        self.enable_hash_indicator = get_config_variable(
+        self.enable_hash_indicator = pycti.get_config_variable(
             "DEP_ENABLE_HASH_INDICATOR",
             ["dep", "enable_hash_indicator"],
             config,
@@ -166,12 +170,12 @@ class DepConnector:
         self.helper.log_warning("DEP API returned unexpected payload type")
         return []
 
-    def _create_victim_identity(self, item: dict[str, Any]) -> dict[str, Any] | None:
+    def _create_victim_identity(self, item: dict[str, Any]) -> stix2.Identity | None:
         victim_name = item.get("victim")
         if not victim_name:
             return None
 
-        external_references = []
+        external_references: list[dict[str, Any]] = []
         if item.get("annLink"):
             external_references.append(
                 {
@@ -199,67 +203,31 @@ class DepConnector:
             description_parts.append(f"Reported revenue: {item['revenue']}")
         description = "\n".join(description_parts) or None
 
-        country = item.get("country")
-        location_id = self._resolve_location(country) if country else None
-
-        return self.helper.api.identity.create(
-            type="Organization",
-            createdBy=self.organization["id"],
+        return stix2.Identity(
+            id=pycti.Identity.generate_id(victim_name, identity_class="organization"),
             name=victim_name,
             description=description,
+            identity_class="organization",
             confidence=self.confidence,
-            external_references=external_references,
-            x_opencti_location=location_id,
-            objectLabel=self.digintlab_label["id"],
+            labels=[self.label_value],
+            created_by_ref=self.author_identity,
+            external_references=external_references or None,
         )
 
-    def _create_intrusion_set(self, item: dict[str, Any]) -> dict[str, Any] | None:
-        actor_name = item.get("actor")
-        if not actor_name:
-            return None
-        return self.helper.api.intrusion_set.create(
-            name=actor_name,
-            createdBy=self.organization["id"],
-            description="Threat actor",
-            aliases=[actor_name],
-            objectLabel=self.digintlab_label["id"],
-            confidence=self.confidence,
-        )
-
-    def _create_incident(
-        self,
-        item: dict[str, Any],
-    ) -> dict[str, Any] | None:
-        victim_name = item.get("victim")
+    def _create_incident(self, item: dict[str, Any]) -> stix2.Incident | None:
+        victim_name = item.get("victim") or item.get("victimDomain")
         if not victim_name:
-            victim_name = item.get("victimDomain", "Unknown Victim")
+            victim_name = "Unknown Victim"
         incident_name = f"DEP announcement - {victim_name}"
         description = item.get("annDescription") or item.get("description")
         if description:
             description = unquote(description)
         announcement_date = item.get("date")
-        first_seen = None
+        first_seen: datetime | None = None
         if announcement_date:
-            cleaned = announcement_date.strip().rstrip("Zz")
-            parsed = None
-            for fmt in (
-                "%Y-%m-%d",
-                "%Y/%m/%d",
-                "%Y-%m-%dT%H:%M:%S",
-                "%Y-%m-%dT%H:%M:%S.%f",
-            ):
-                try:
-                    parsed = datetime.strptime(cleaned, fmt)  # noqa: DTZ007
-                    break
-                except ValueError:
-                    continue
-
-            if parsed:
-                first_seen = parsed.replace(tzinfo=UTC).isoformat()
-            else:
-                self.helper.log_warning(
-                    f"Skipping invalid announcement date: {announcement_date}"
-                )
+            first_seen = datetime.strptime(
+                announcement_date.strip(), "%Y-%m-%d"
+            ).replace(tzinfo=UTC)
         external_reference = {"source_name": "dep"}
         if item.get("annLink"):
             external_reference["url"] = item["annLink"]
@@ -270,19 +238,22 @@ class DepConnector:
             )
         if item.get("annTitle"):
             external_reference["description"] = item["annTitle"]
-        return self.helper.api.incident.create(
+        return stix2.Incident(
+            id=pycti.Incident.generate_id(incident_name, first_seen),
             name=incident_name,
-            createdBy=self.organization["id"],
-            incident_type="cybercrime",
             description=description,
-            first_seen=first_seen,
             created=first_seen,
             confidence=self.confidence,
-            objectLabel=self.digintlab_label["id"],
+            labels=[self.label_value],
+            created_by_ref=self.author_identity,
             external_references=[external_reference],
+            custom_properties={
+                "incident_type": "cybercrime",
+                "first_seen": first_seen,
+            },
         )
 
-    def _create_site_indicator(self, item: dict[str, Any]) -> dict[str, Any] | None:
+    def _create_site_indicator(self, item: dict[str, Any]) -> stix2.Indicator | None:
         if not self.enable_site_indicator:
             return None
         domain = item.get("victimDomain") or item.get("site")
@@ -292,19 +263,21 @@ class DepConnector:
         domain = domain.replace("https://", "").replace("http://", "")
         if not domain:
             return None
-        return self.helper.api.indicator.create(
+
+        pattern = f"[domain-name:value = '{domain}']"
+        return stix2.Indicator(
+            id=pycti.Indicator.generate_id(pattern),
             name=f"Domain associated with {item.get('victim', 'unknown victim')}",
-            createdBy=self.organization["id"],
-            objectLabel=self.digintlab_label["id"],
             description="Victim domain",
             pattern_type="stix",
-            pattern=f"[domain-name:value = '{domain}']",
-            x_opencti_main_observable_type="Domain-Name",
+            pattern=pattern,
+            valid_from=datetime.now(UTC),
             confidence=self.confidence,
-            valid_from=datetime.now(UTC).isoformat(),
+            labels=[self.label_value],
+            created_by_ref=self.author_identity,
         )
 
-    def _create_hash_indicator(self, item: dict[str, Any]) -> dict[str, Any] | None:
+    def _create_hash_indicator(self, item: dict[str, Any]) -> stix2.Indicator | None:
         if not self.enable_hash_indicator:
             return None
         hash_value = item.get("hashid")
@@ -316,16 +289,18 @@ class DepConnector:
         hash_type = self._detect_hash_type(hash_value)
         if not hash_type:
             return None
-        return self.helper.api.indicator.create(
+
+        pattern = f"[file:hashes.'{hash_type}' = '{hash_value}']"
+        return stix2.Indicator(
+            id=pycti.Indicator.generate_id(pattern),
             name=f"Announcement hash for {item.get('victim', 'unknown victim')}",
             description="Hash identifier for tracking",
-            createdBy=self.organization["id"],
-            objectLabel=self.digintlab_label["id"],
             pattern_type="stix",
-            pattern=f"[file:hashes.'{hash_type}' = '{hash_value}']",
-            x_opencti_main_observable_type="File",
+            pattern=pattern,
+            valid_from=datetime.now(UTC),
             confidence=self.confidence,
-            valid_from=datetime.now(UTC).isoformat(),
+            labels=[self.label_value],
+            created_by_ref=self.author_identity,
         )
 
     @staticmethod
@@ -333,76 +308,36 @@ class DepConnector:
         length_to_type = {32: "MD5", 40: "SHA-1", 64: "SHA-256"}
         return length_to_type.get(len(hash_value))
 
-    def _resolve_location(self, country: str) -> str | None:
-        if not country:
-            return None
-        try:
-            result = self.helper.api.location.read(
-                filters={
-                    "mode": "and",
-                    "filters": [
-                        {
-                            "key": "x_opencti_aliases",
-                            "values": [country],
-                            "operator": "match",
-                            "mode": "or",
-                        }
-                    ],
-                    "filterGroups": [],
-                }
-            )
-            if result:
-                return str(result.get("id"))
-        except Exception as error:  # pylint: disable=broad-except
-            self.helper.log_warning(
-                f"Unable to resolve location for {country}: {error}"
-            )
-        return None
-
-    def _link_entities(
+    def _build_relationship(
         self,
-        victim: dict[str, Any] | None,
-        incident: dict[str, Any] | None,
-        indicators: list[dict[str, Any]],
-    ) -> None:
-        if not incident:
+        relationship_type: str,
+        source_ref: str,
+        target_ref: str,
+    ) -> stix2.Relationship:
+        return stix2.Relationship(
+            id=pycti.StixCoreRelationship.generate_id(
+                relationship_type, source_ref, target_ref
+            ),
+            relationship_type=relationship_type,
+            source_ref=source_ref,
+            target_ref=target_ref,
+            created_by_ref=self.author_identity,
+            confidence=self.confidence,
+            labels=[self.label_value],
+        )
+
+    def _send_objects(self, objects: list[stix2._STIXBase21]) -> None:
+        if not objects:
             return
-        incident_id = incident.get("id")
-        if not incident_id:
-            self.helper.log_warning("Skipping relationships: incident has no id")
-            return
-        if victim:
-            self.helper.api.stix_core_relationship.create(
-                relationship_type="targets",
-                fromId=incident_id,
-                toId=victim["id"],
-                confidence=self.confidence,
-                objectLabel=self.digintlab_label["id"],
-                createdBy=self.organization["id"],
-            )
-        for indicator in indicators:
-            try:
-                self.helper.api.stix_core_relationship.create(
-                    relationship_type="indicates",
-                    fromId=indicator["id"],
-                    toId=incident_id,
-                    confidence=self.confidence,
-                    objectLabel=self.digintlab_label["id"],
-                    createdBy=self.organization["id"],
-                )
-            except Exception as error:  # pylint: disable=broad-except
-                self.helper.log_warning(
-                    f"Unable to create indicates relationship for indicator {indicator.get('id')}: {error}"
-                )
+        deduped = {obj.id: obj for obj in objects if getattr(obj, "id", None)}
+        bundle = stix2.Bundle(objects=list(deduped.values()), allow_custom=True)
+        self.helper.send_stix2_bundle(bundle.serialize(), update=True)
 
     def _process_item(self, item: dict[str, Any]) -> None:
         victim = self._create_victim_identity(item)
-        # Intrusion set creation is intentionally disabled because datasets may
-        # include non-adversarial actors.
         incident = self._create_incident(item)
-        self._create_intrusion_set(item)
 
-        indicators: list[dict[str, Any]] = []
+        indicators: list[stix2.Indicator] = []
         site_indicator = self._create_site_indicator(item)
         if site_indicator:
             indicators.append(site_indicator)
@@ -410,16 +345,31 @@ class DepConnector:
         if hash_indicator:
             indicators.append(hash_indicator)
 
-        self._link_entities(victim, incident, indicators)
+        objects: list[stix2._STIXBase21] = [self.author_identity]
+        if victim:
+            objects.append(victim)
+        if incident:
+            objects.append(incident)
+        if incident and victim:
+            objects.append(self._build_relationship("targets", incident.id, victim.id))
+        if incident:
+            for indicator in indicators:
+                objects.append(indicator)
+                objects.append(
+                    self._build_relationship("indicates", indicator.id, incident.id)
+                )
+        self._send_objects(objects)
 
     def _run_cycle(self) -> None:
-        current_state = self.helper.get_state()
         now = datetime.now(UTC)
-        try:
-            start = datetime.fromisoformat(current_state.get("last_run"))
-        except Exception:
-            start = now - timedelta(days=self.lookback_days)
         start = now - timedelta(days=self.lookback_days)
+        try:
+            last_run = self.helper.get_state().get("last_run")
+            if last_run:
+                parsed = datetime.fromisoformat(last_run)
+                start = parsed
+        except Exception:  # noqa: S110
+            pass
         end = now
 
         self.helper.log_info(
