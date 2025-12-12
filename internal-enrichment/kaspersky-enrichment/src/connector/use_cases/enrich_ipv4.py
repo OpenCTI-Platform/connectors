@@ -142,4 +142,22 @@ class Ipv4Enricher:
                     )
                     octi_objects.append(url_relation.to_stix2_object())
 
+        # Manage IpWhoIs data
+
+        if entity_data.get("IpWhoIs") and entity_data["IpWhoIs"].get("Asn"):
+            asn_entities = entity_data["IpWhoIs"]["Asn"]
+            for asn_entity in asn_entities:
+                obs_asn = self.converter_to_stix.create_autonomous_system(
+                    number=asn_entity["Number"]
+                )
+
+                if obs_asn:
+                    octi_objects.append(obs_asn.to_stix2_object())
+                    asn_relation = self.converter_to_stix.create_relationship(
+                        source_obj=observable_to_ref,
+                        relationship_type="belongs-to",
+                        target_obj=obs_asn,
+                    )
+                    octi_objects.append(asn_relation.to_stix2_object())
+
         return octi_objects

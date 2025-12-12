@@ -4,6 +4,7 @@ from typing import Optional
 import pytz
 from connectors_sdk.models import (
     URL,
+    AutonomousSystem,
     Country,
     File,
     Note,
@@ -38,6 +39,12 @@ class ConverterToStix:
         """
         author = OrganizationAuthor(name="Kaspersky Enrichment")
         return author
+
+    def create_autonomous_system(self, number: str) -> AutonomousSystem:
+        return AutonomousSystem(
+            number=number,
+            author=self.author,
+        )
 
     def create_country(self, country_name: str) -> Country:
         """
