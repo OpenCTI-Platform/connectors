@@ -83,6 +83,6 @@ class ActorsAPI(BaseCrowdstrikeClient):
         if not cleaned_slugs:
             return ""
 
-        conditions = [f"slug:'{slug}'" for slug in cleaned_slugs]
+        conditions = [f"name:'{slug}'" for slug in cleaned_slugs]
         # CrowdStrike FQL uses comma as OR between clauses.
         return "(" + ",".join(conditions) + ")"
