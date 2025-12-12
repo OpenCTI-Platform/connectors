@@ -1,10 +1,10 @@
+from connector.converter_to_stix import ConverterToStix
+from connector.settings import ConnectorSettings
 from connector.use_cases.enrich_file import FileEnricher
+from connector.use_cases.enrich_ipv4 import Ipv4Enricher
 from connector.utils import entity_in_scope
 from kaspersky_client import KasperskyClient
 from pycti import OpenCTIConnectorHelper
-
-from .converter_to_stix import ConverterToStix
-from .settings import ConnectorSettings
 
 
 class KasperskyConnector:
@@ -51,6 +51,7 @@ class KasperskyConnector:
         self.config = config
         self.helper = helper
         file_sections = self.config.kaspersky.file_sections
+        ipv4_sections = self.config.kaspersky.ipv4_sections
         zone_octi_score_mapping = self.config.kaspersky.zone_octi_score_mapping
         api_key = self.config.kaspersky.api_key.get_secret_value()
 
@@ -70,6 +71,13 @@ class KasperskyConnector:
             helper=self.helper,
             client=client,
             sections=file_sections,
+            zone_octi_score_mapping=zone_octi_score_mapping,
+            converter_to_stix=converter_to_stix,
+        )
+        self.ipv4_enricher = Ipv4Enricher(
+            helper=self.helper,
+            client=client,
+            sections=ipv4_sections,
             zone_octi_score_mapping=zone_octi_score_mapping,
             converter_to_stix=converter_to_stix,
         )
@@ -117,16 +125,16 @@ class KasperskyConnector:
                         octi_objects = self.file_enricher.process_file_enrichment(
                             observable
                         )
-                    # case "IPv4-Addr":
-                    #     octi_objects = self.file_enricher.process_ipv4_enrichment(
-                    #         observable
-                    #     )
+                    case "IPv4-Addr":
+                        octi_objects = self.ipv4_enricher.process_ipv4_enrichment(
+                            observable
+                        )
                     # case "Domain-Name" | "Hostname":
-                    #     octi_objects = self.file_enricher.process_domain_enrichment(
+                    #     octi_objects = self.domain_enricher.process_domain_enrichment(
                     #         observable
                     #     )
                     # case "Url":
-                    #     octi_objects = self.file_enricher.process_url_enrichment(
+                    #     octi_objects = self.url_enricher.process_url_enrichment(
                     #         observable
                     #     )
                     case _:
