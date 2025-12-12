@@ -30,7 +30,7 @@ crowdsec:
   labels_reputation: true # Enable/disable reputation labels
   labels_reputation_malicious_color: '#FF0000' # Color of malicious reputation label (default: red)
   labels_reputation_suspicious_color: '#FFA500' # Color of suspicious reputation label (default: orange)
-  labels_reputation_safe_color': '#00BFFF' # Color of safe reputation label (default: deep sky blue)
+  labels_reputation_safe_color: '#00BFFF' # Color of safe reputation label (default: deep sky blue)
   labels_reputation_known_color: '#808080' # Color of known reputation label (default: gray)
   indicator_create_from: 'malicious,suspicious,known' # List of reputations to create indicators from (malicious, suspicious, known, safe) separated by comma
   attack_pattern_create_from_mitre: true # Enable/disable creation of attack patterns from MITRE techniques

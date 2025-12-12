@@ -2,10 +2,11 @@ import logging
 
 import pytest
 from intelfinder.api import Intelfinder
-from intelfinder.tests.constants import generate_random_key, load_fixture
 from intelfinder.utils import create_author, get_cursor_id, get_tlp_marking
 from pycti import CustomObjectCaseIncident, CustomObjectTask
 from stix2 import URL, DomainName, IPv4Address, IPv6Address, Note
+
+from .constants import generate_random_key, load_fixture
 
 LOGGER = logging.getLogger(__name__)
 DEFAULT_TLP = "TLP:WHITE"
