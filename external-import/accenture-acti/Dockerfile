@@ -1,4 +1,5 @@
 FROM python:3.12-alpine
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 # Copy the connector
@@ -10,7 +11,7 @@ RUN apk update && apk upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 
 RUN cd /opt/opencti-connector-accenture-acti && \
-    pip3 install --no-cache-dir -r requirements.txt && \
+    uv pip install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
 # Expose and entrypoint
