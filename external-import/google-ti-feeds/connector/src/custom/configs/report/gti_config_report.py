@@ -12,7 +12,7 @@ from connector.src.custom.configs.gti_config_common import (
     validate_origins_list,
     validate_report_types_list,
 )
-from connectors_sdk.core.pydantic import ListFromString
+from connectors_sdk import ListFromString
 from pydantic import Field, field_validator
 
 

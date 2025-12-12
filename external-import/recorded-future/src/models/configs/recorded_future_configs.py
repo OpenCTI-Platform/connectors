@@ -1,6 +1,6 @@
 from typing import Literal, Optional
 
-from connectors_sdk.core.pydantic import ListFromString
+from connectors_sdk import ListFromString
 from models.configs.base_settings import ConfigBaseSettings
 from pydantic import Field, PositiveInt, SecretStr, field_validator
 

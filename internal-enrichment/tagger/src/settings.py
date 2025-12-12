@@ -1,7 +1,10 @@
 from typing import Any
 
-from connectors_sdk import BaseConnectorSettings, BaseInternalEnrichmentConnectorConfig
-from connectors_sdk.core.pydantic import ListFromString
+from connectors_sdk import (
+    BaseConnectorSettings,
+    BaseInternalEnrichmentConnectorConfig,
+    ListFromString,
+)
 from pydantic import BaseModel, Field, Json
 from pydantic_settings import BaseSettings
 

@@ -4,8 +4,8 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    ListFromString,
 )
-from connectors_sdk.core.pydantic import ListFromString
 from pydantic import (
     AfterValidator,
     Field,

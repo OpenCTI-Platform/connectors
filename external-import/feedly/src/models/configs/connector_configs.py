@@ -1,6 +1,6 @@
 from typing import Annotated, Literal
 
-from connectors_sdk.core.pydantic import ListFromString
+from connectors_sdk import ListFromString
 from models.configs import ConfigBaseSettings
 from pydantic import (
     Field,

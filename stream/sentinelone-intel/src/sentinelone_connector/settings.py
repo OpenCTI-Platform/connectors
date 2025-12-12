@@ -4,8 +4,8 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseStreamConnectorConfig,
+    ListFromString,
 )
-from connectors_sdk.core.pydantic import ListFromString
 from pydantic import (
     AliasChoices,
     Field,

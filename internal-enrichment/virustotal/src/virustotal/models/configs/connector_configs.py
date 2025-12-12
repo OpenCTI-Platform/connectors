@@ -1,6 +1,6 @@
 from typing import Annotated, Literal
 
-from connectors_sdk.core.pydantic import ListFromString
+from connectors_sdk import ListFromString
 from pydantic import Field, HttpUrl, PlainSerializer, field_validator
 from virustotal.models.configs.base_settings import ConfigBaseSettings
 
