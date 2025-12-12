@@ -45,13 +45,22 @@ class ConversionError(Exception):
 class RFStixEntity:
     """Parent class"""
 
-    def __init__(self, name, _type, author=None, tlp="amber+strict", first_seen=None):
+    def __init__(
+        self,
+        name,
+        _type,
+        author=None,
+        tlp="amber+strict",
+        first_seen=None,
+        last_seen=None,
+    ):
         self.name = name
         self.type = _type
         self.author = author or self._create_author()
         self.tlp = TLP_MAP.get(tlp, None)
         self.stix_obj = None
         self.first_seen = first_seen
+        self.last_seen = last_seen
 
     def to_stix_objects(self):
         """Returns a list of STIX objects"""
@@ -83,7 +92,7 @@ class RFStixEntity:
 class Indicator(RFStixEntity):
     """Base class for Indicators of Compromise (IP, Hash, URL, Domain)"""
 
-    def __init__(self, name, _type, author, tlp, first_seen=None):
+    def __init__(self, name, _type, author, tlp, first_seen=None, last_seen=None):
         super().__init__(name, _type, author, tlp)
         self.stix_indicator = None
         self.stix_observable = None
@@ -94,6 +103,7 @@ class Indicator(RFStixEntity):
         self.tlp = TLP_MAP.get(tlp, None)
         self.description = None
         self.first_seen = first_seen
+        self.last_seen = last_seen
         self.labels = []
 
     def to_stix_objects(self):
@@ -120,7 +130,7 @@ class Indicator(RFStixEntity):
             description=self.description,
             labels=self.labels,
             pattern_type="stix",
-            valid_from=self.first_seen,
+            valid_from=self.last_seen,
             pattern=self._create_pattern(),
             created_by_ref=self.author.id,
             object_marking_refs=self.tlp,
@@ -235,8 +245,10 @@ class Indicator(RFStixEntity):
 
 
 class IPAddress(Indicator):
-    def __init__(self, name, _type, author=None, tlp=None, first_seen=None):
-        super().__init__(name, _type, author, tlp, first_seen)
+    def __init__(
+        self, name, _type, author=None, tlp=None, first_seen=None, last_seen=None
+    ):
+        super().__init__(name, _type, author, tlp, first_seen, last_seen)
 
     """Converts IP address to IP indicator and observable"""
 
@@ -292,8 +304,10 @@ class IPAddress(Indicator):
 class Domain(Indicator):
     """Converts Domain to Domain indicator and observable"""
 
-    def __init__(self, name, _type, author=None, tlp=None, first_seen=None):
-        super().__init__(name, _type, author, tlp, first_seen)
+    def __init__(
+        self, name, _type, author=None, tlp=None, first_seen=None, last_seen=None
+    ):
+        super().__init__(name, _type, author, tlp, first_seen, last_seen)
 
     def _create_pattern(self):
         return f"[domain-name:value = '{self.name}']"
@@ -309,8 +323,10 @@ class Domain(Indicator):
 class URL(Indicator):
     """Converts URL to URL indicator and observable"""
 
-    def __init__(self, name, _type, author=None, tlp=None, first_seen=None):
-        super().__init__(name, _type, author, tlp, first_seen)
+    def __init__(
+        self, name, _type, author=None, tlp=None, first_seen=None, last_seen=None
+    ):
+        super().__init__(name, _type, author, tlp, first_seen, last_seen)
 
     def _create_pattern(self):
         ioc = self.name.replace("\\", "\\\\")
@@ -328,8 +344,10 @@ class URL(Indicator):
 class FileHash(Indicator):
     """Converts Hash to File indicator and observable"""
 
-    def __init__(self, name, _type, author=None, tlp=None, first_seen=None):
-        super().__init__(name, _type, author, tlp, first_seen)
+    def __init__(
+        self, name, _type, author=None, tlp=None, first_seen=None, last_seen=None
+    ):
+        super().__init__(name, _type, author, tlp, first_seen, last_seen)
         self.algorithm = self._determine_algorithm()
 
     def _determine_algorithm(self):
