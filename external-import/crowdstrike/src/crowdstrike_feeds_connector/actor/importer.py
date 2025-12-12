@@ -33,13 +33,11 @@ class ActorImporter(BaseImporter):
         author: Identity,
         default_latest_timestamp: int,
         tlp_marking: MarkingDefinition,
-        indicator_config: Optional[dict[str, Any]] = None,
     ) -> None:
         """Initialize CrowdStrike actor importer."""
         super().__init__(helper, author, tlp_marking)
         self.actors_api_cs = ActorsAPI(helper)
         self.default_latest_timestamp = default_latest_timestamp
-        self.indicator_config: dict[str, Any] = indicator_config or {}
 
     def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Run importer."""
