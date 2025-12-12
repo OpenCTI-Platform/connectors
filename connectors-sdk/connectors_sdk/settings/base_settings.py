@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Literal, Self
 
 import __main__
-from connectors_sdk.core.pydantic import ListFromString
+from connectors_sdk.settings.annotated_types import ListFromString
 from connectors_sdk.settings.exceptions import ConfigValidationError
 from pydantic import (
     BaseModel,

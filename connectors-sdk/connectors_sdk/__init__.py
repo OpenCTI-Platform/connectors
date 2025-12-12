@@ -2,6 +2,10 @@
 
 __version__ = "0.1.0"
 
+from connectors_sdk.settings.annotated_types import (
+    DatetimeFromIsoString,
+    ListFromString,
+)
 from connectors_sdk.settings.base_settings import (
     BaseConfigModel,
     BaseConnectorSettings,
@@ -29,4 +33,7 @@ __all__ = [
     # Exceptions
     "ConfigError",
     "ConfigValidationError",
+    # Annotated types
+    "DatetimeFromIsoString",
+    "ListFromString",
 ]
