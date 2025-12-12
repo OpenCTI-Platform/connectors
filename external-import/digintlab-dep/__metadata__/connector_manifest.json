@@ -1,0 +1,21 @@
+{
+    "title": "DigIntLab DEP",
+    "slug": "digintlab-dep",
+    "description": "In a world awash with data, Digital Intelligence Lab focuses on ways to unlock a wealth of insights. With us, you gain the power to pinpoint organizations hit by major cyber assaults, acquiring strategically pivotal intelligence that's invaluable for businesses focused on vigilant risk management.\n\nThe Double Extortion (DE) Platform has curated an array of cutting-edge tools and invaluable insights, meticulously crafted to empower businesses in navigating the ever-evolving cyber threat landscape with confidence and resilience.",
+    "short_description": "Digital Intelligence Lab's Double Extortion Platform tracks and monitors the cyber space to pinpoint organizations hit by major attacks, delivering business cyber intelligence for risk-focused teams.",
+    "logo": "external-import/digintlab-dep/__metadata__/logo.png",
+    "use_cases": [
+        "Commercial Threat Intelligence"
+    ],
+    "verified": false,
+    "last_verified_date": null,
+    "playbook_supported": false,
+    "max_confidence_level": 70,
+    "support_version": ">= 6.8.13",
+    "subscription_link": "https://doubleextortion.com/",
+    "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/digintlab-dep/",
+    "manager_supported": false,
+    "container_version": "rolling",
+    "container_image": "opencti/connector-digintlab-dep",
+    "container_type": "EXTERNAL_IMPORT"
+}
