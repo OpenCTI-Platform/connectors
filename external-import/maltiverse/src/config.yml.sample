@@ -11,7 +11,7 @@ connector:
   log_level: 'info'
 
 maltiverse:
-  user:MAIL
-  passwd:CHANGEME
-  feeds:"VdhZV34B4jHUXfKt_gDi"
-  poll_interval:4
+  user: MAIL
+  passwd: CHANGEME
+  feeds: "VdhZV34B4jHUXfKt_gDi"
+  poll_interval: 4

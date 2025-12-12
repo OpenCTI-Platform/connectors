@@ -3,7 +3,6 @@ from datetime import datetime
 
 import pytest
 from intelfinder.api import Intelfinder
-from intelfinder.tests.constants import generate_random_key, load_fixture
 from intelfinder.transform import TransformIntelFinder2Stix
 from intelfinder.utils import (
     create_author,
@@ -13,6 +12,8 @@ from intelfinder.utils import (
 )
 from pycti import CustomObjectCaseIncident, CustomObjectTask
 from stix2 import URL, DomainName, IPv4Address, IPv6Address, Note, UserAccount
+
+from .constants import generate_random_key, load_fixture
 
 LOGGER = logging.getLogger(__name__)
 DEFAULT_TLP = "TLP:WHITE"
