@@ -22,5 +22,5 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | INTEL471_INITIAL_HISTORY_CVES | `integer` |  | integer | `0` | Initial date in epoch milliseconds UTC, such as `1643989649000`, the CVE reports should be fetched from on the connector's first run. If not set, they will be fetched from the connector's start date. Excludes historical dates. |
 | INTEL471_INTERVAL_REPORTS | `integer` |  | integer | `0` | How often reports should be fetched in minutes. If not set, the stream will not be enabled. |
 | INTEL471_INITIAL_HISTORY_REPORTS | `integer` |  | integer | `0` | Initial date in epoch milliseconds UTC, such as `1643989649000`, the reports should be fetched from on the connector's first run. If not set, they will be fetched from the connector's start date. Excludes historical dates. |
-| INTEL471_PROXY | `string` |  | string | `null` | Optional Proxy URL, for example `http://user:pass@localhost:3128` |
+| INTEL471_PROXY | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `null` | Optional Proxy URL, for example `http://user:pass@localhost:3128` |
 | INTEL471_IOC_SCORE | `integer` |  | integer | `70` | Indicator score. Defaults to `70`. |

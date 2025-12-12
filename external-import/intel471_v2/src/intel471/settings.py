@@ -3,7 +3,7 @@ from connectors_sdk import (
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
 )
-from pydantic import Field, SecretStr
+from pydantic import Field, HttpUrl, SecretStr
 from pydantic.json_schema import SkipJsonSchema
 
 
@@ -75,7 +75,7 @@ class Intel471_V2Config(BaseConfigModel):
         "If not set, they will be fetched from the connector's start date. Excludes historical dates.",
         default=0,
     )
-    proxy: str | None = Field(
+    proxy: HttpUrl | None = Field(
         description="Optional Proxy URL, for example `http://user:pass@localhost:3128`",
         default=None,
     )

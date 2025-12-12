@@ -96,6 +96,9 @@
     "INTEL471_PROXY": {
       "default": null,
       "description": "Optional Proxy URL, for example `http://user:pass@localhost:3128`",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     },
     "INTEL471_IOC_SCORE": {
