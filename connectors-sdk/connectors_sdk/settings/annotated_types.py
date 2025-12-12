@@ -118,20 +118,21 @@ def parse_iso_string(value: str | datetime) -> datetime:
         > value = parse_iso_string("P30D")
         > print(value) # 2023-09-01 00:00:00+00:00
     """
-    if isinstance(value, str):
-        try:
-            # Convert presumed ISO string to datetime object
-            parsed_datetime = datetime.fromisoformat(value)
-            if parsed_datetime.tzinfo:
-                return parsed_datetime.astimezone(tz=timezone.utc)
-            else:
-                return parsed_datetime.replace(tzinfo=timezone.utc)
-        except ValueError:
-            # If not a datetime ISO string, try to parse it as timedelta with pydantic first
-            duration = TypeAdapter(timedelta).validate_python(value)
-            # Then return a datetime minus the value
-            return datetime.now(timezone.utc) - duration
-    return value
+    if not isinstance(value, str):
+        return value
+
+    try:
+        # Convert presumed ISO string to datetime object
+        parsed_datetime = datetime.fromisoformat(value)
+        if parsed_datetime.tzinfo:
+            return parsed_datetime.astimezone(tz=timezone.utc)
+        else:
+            return parsed_datetime.replace(tzinfo=timezone.utc)
+    except ValueError:
+        # If not a datetime ISO string, try to parse it as timedelta with pydantic first
+        duration = TypeAdapter(timedelta).validate_python(value)
+        # Then return a datetime minus the value
+        return datetime.now(timezone.utc) - duration
 
 
 DatetimeFromIsoString = Annotated[
