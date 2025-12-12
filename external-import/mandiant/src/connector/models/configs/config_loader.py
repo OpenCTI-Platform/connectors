@@ -7,7 +7,7 @@ from connector.models.configs import (
     ConfigLoaderMandiant,
     ConfigLoaderOCTI,
 )
-from connectors_sdk.core.pydantic import ListFromString
+from connectors_sdk import ListFromString
 from pydantic import Field
 from pydantic_settings import (
     BaseSettings,
