@@ -4,8 +4,8 @@ jobs:
 {% for top_dir, sub_dirs in dirs.items() -%}
 {% for sub_dir in sub_dirs %}
   build_{{top_dir}}_{{sub_dir}}:
-    machine:
-      image: ubuntu-2004:202111-02
+    docker:
+      - image: cimg/base:stable-20.04
     steps:
       - checkout
       - setup_remote_docker
