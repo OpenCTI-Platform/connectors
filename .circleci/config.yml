@@ -254,7 +254,7 @@ workflows:
               only:
                 - master
       - build:
-          name: "debug_6.9.1_5399"
+          name: "debug_6.9.1_5399_"
           ci_executor:
             name: ci_environment
             tags: "debug_6.9.1_5399"
