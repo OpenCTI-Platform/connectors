@@ -129,6 +129,7 @@ class ObjectConverter:
                             created_by_ref=author["id"],
                             source_ref=observable["id"],
                             target_ref=attribute_observable["id"],
+                            object_marking_refs=markings,
                             allow_custom=True,
                         )
                     )

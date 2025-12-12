@@ -612,6 +612,7 @@ class AttributeConverter:
                         created_by_ref=author.id,
                         source_ref=indicator.id,
                         target_ref=observable.id,
+                        object_marking_refs=attribute_markings,
                         allow_custom=True,
                     )
                 )

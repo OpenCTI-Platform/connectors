@@ -440,6 +440,7 @@ class EventConverter:
                                     + object_reference["comment"],
                                     source_ref=src_result["entity"]["id"],
                                     target_ref=target_result["entity"]["id"],
+                                    object_marking_refs=event_markings,
                                     allow_custom=True,
                                 )
                             )
