@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-dogesec-ctibutler:
-    image: opencti/connector-dogesec-ctibutler:rolling
+    image: opencti/connector-dogesec-ctibutler:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME

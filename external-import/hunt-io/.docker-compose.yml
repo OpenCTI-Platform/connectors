@@ -1,6 +1,6 @@
 services:
   connector-hunt-io:
-    image: opencti/connector-hunt-io:rolling
+    image: opencti/connector-hunt-io:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_TOKEN}

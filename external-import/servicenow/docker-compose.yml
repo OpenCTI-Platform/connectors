@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-servicenow:
-    image: opencti/connector-servicenow:rolling
+    image: opencti/connector-servicenow:latest
     environment:
       # OpenCTI parameters - REQUIRED
       - OPENCTI_URL=CHANGEME

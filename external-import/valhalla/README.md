@@ -14,7 +14,7 @@ Full access to the rule database requires an active subscription. Subscriptions 
 
 ## Installation
 
-Enabling this connector could be done by launching the Python process directly after providing the correct configuration in the `config.yml` file or within a Docker with the image `opencti/connector-valhalla:rolling` (replace `rolling` with the latest OpenCTI release version for production usage).
+Enabling this connector could be done by launching the Python process directly after providing the correct configuration in the `config.yml` file or within a Docker with the image `opencti/connector-valhalla:latest` (replace `rolling` with the latest OpenCTI release version for production usage).
 
 We provide an example of [`docker-compose.yml`](docker-compose.yml) file that could be used independently or integrated to the global `docker-compose.yml` file of OpenCTI.
 
