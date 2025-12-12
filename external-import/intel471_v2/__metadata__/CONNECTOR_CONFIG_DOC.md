@@ -14,7 +14,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_NAME | `string` |  | string | `"Intel471 v2"` | The name of the connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` | `"EXTERNAL_IMPORT"` |  |
-| CONNECTOR_DURATION_PERIOD | `null` |  | null | `null` | Dot not use. Not implemented in the connector yet. |
 | INTEL471_INTERVAL_INDICATORS | `integer` |  | integer | `0` | How often malware indicators should be fetched in minutes. If not set, the stream will not be enabled. |
 | INTEL471_INITIAL_HISTORY_INDICATORS | `integer` |  | integer | `0` | Initial date in epoch milliseconds UTC, such as `1643989649000`, the malware indicators should be fetched from on the connector's first run. If not set, they will be fetched from the connector's start date. Excludes historical dates. |
 | INTEL471_INTERVAL_YARA | `integer` |  | integer | `0` | How often YARA rules should be fetched in minutes. If not set, the stream will not be enabled. |

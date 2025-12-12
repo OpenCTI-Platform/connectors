@@ -43,11 +43,6 @@
       "default": "EXTERNAL_IMPORT",
       "type": "string"
     },
-    "CONNECTOR_DURATION_PERIOD": {
-      "default": null,
-      "description": "Dot not use. Not implemented in the connector yet.",
-      "type": "null"
-    },
     "INTEL471_API_USERNAME": {
       "description": "Titan API username",
       "type": "string"

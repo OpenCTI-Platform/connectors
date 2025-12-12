@@ -4,6 +4,7 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
 )
 from pydantic import Field, SecretStr
+from pydantic.json_schema import SkipJsonSchema
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -17,7 +18,7 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
         default="Intel471 v2",
     )
     # Override `BaseExternalImportConnectorConfig.duration_period` as `pycti`'s scheduler is not implemented yet
-    duration_period: None = Field(
+    duration_period: SkipJsonSchema[None] = Field(
         description="Dot not use. Not implemented in the connector yet.",
         default=None,
     )
