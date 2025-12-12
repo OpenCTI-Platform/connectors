@@ -1,3 +1,6 @@
+from datetime import datetime, timezone
+
+
 def check_quota(entity_info: dict) -> bool:
     """
     Return True if quota is exceeded.
@@ -33,3 +36,7 @@ def resolve_file_hash(observable: dict) -> str:
     raise ValueError(
         "Unable to enrich the observable, the observable does not have an SHA256, SHA1, or MD5"
     )
+
+
+def string_to_datetime(value: str, format: str) -> datetime:
+    return datetime.strptime(value, format).replace(tzinfo=timezone.utc)
