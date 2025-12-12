@@ -4,6 +4,7 @@
 from typing import Any, Dict, List, NamedTuple, Optional, Set
 
 from crowdstrike_feeds_services.client.indicators import IndicatorsAPI
+from crowdstrike_feeds_services.client.actors import ActorsAPI
 from crowdstrike_feeds_services.utils import (
     datetime_to_timestamp,
     timestamp_to_datetime,
@@ -57,6 +58,7 @@ class IndicatorImporter(BaseImporter):
         )
 
         self.indicators_api_cs = IndicatorsAPI(config.helper)
+        self.actors_api_cs = ActorsAPI(config.helper)
         self.create_observables = config.create_observables
         self.create_indicators = config.create_indicators
         self.default_latest_timestamp = config.default_latest_timestamp
@@ -219,6 +221,42 @@ class IndicatorImporter(BaseImporter):
 
     def _create_indicator_bundle(self, indicator: dict) -> Optional[Bundle]:
         try:
+            # Resolve CrowdStrike actor slugs to proper actor names before building the bundle.
+            # The indicator payload contains 'actors' as slugs (e.g., ['LABYRINTHCHOLLIMA', 'WICKEDPANDA']).
+            # We want to use the human-readable actor names when creating IntrusionSet objects.
+            actor_slugs = indicator.get("actors") or []
+            if actor_slugs:
+                try:
+                    response = self.actors_api_cs.get_actors_by_slugs(actor_slugs)
+                    resources = response.get("resources", [])
+                    resolved_actor_names: List[str] = []
+                    for actor in resources:
+                        # Prefer canonical name, fall back to slug if needed.
+                        name = actor.get("name") or actor.get("slug")
+                        if name:
+                            resolved_actor_names.append(name)
+                    if resolved_actor_names:
+                        indicator["actors"] = resolved_actor_names
+                        self.helper.connector_logger.debug(
+                            "Resolved actor slugs to names for indicator.",
+                            {
+                                "indicator_id": indicator.get("id"),
+                                "actor_slugs": actor_slugs,
+                                "actor_names": resolved_actor_names,
+                            },
+                        )
+                except Exception as err:
+                    # Do not fail the whole indicator if actor resolution fails.
+                    # Keep existing 'actors' field (slugs) and log a warning.
+                    self.helper.connector_logger.warning(
+                        "[WARNING] Failed to resolve actor slugs to names, using slugs as-is.",
+                        {
+                            "indicator_id": indicator.get("id"),
+                            "actor_slugs": actor_slugs,
+                            "error": str(err),
+                        },
+                    )
+
             bundle_builder_config = IndicatorBundleBuilderConfig(
                 indicator=indicator,
                 author=self.author,

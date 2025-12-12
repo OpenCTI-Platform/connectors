@@ -322,6 +322,7 @@ class ReportImporter(BaseImporter):
             related_indicators_with_related_entities,
             self.report_guess_relations,
             malwares_from_field=malwares_from_field,
+            actor_resolver=self.reports_api_cs.get_actor_entity_by_id,
         )
         return bundle_builder.build()
 

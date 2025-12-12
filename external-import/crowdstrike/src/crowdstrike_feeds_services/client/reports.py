@@ -25,7 +25,7 @@ class ReportsAPI(BaseCrowdstrikeClient):
         )
 
         self.handle_api_error(response)
-        self.helper.connector_logger.info("Getting combined actor entities...")
+        self.helper.connector_logger.info("Getting combined report entities...")
 
         return response["body"]
 
@@ -58,3 +58,38 @@ class ReportsAPI(BaseCrowdstrikeClient):
         self.helper.connector_logger.info("Getting report PDF...")
 
         return response
+
+    def get_actor_entity_by_id(self, actor_id: str) -> dict | None:
+        """Resolve a CrowdStrike actor identifier into an actor entity.
+
+        Reports/indicators may reference actors as identifiers (e.g. "LABYRINTHCHOLLIMA").
+        This method queries Intel actor entities and returns the first matching resource.
+        """
+        if actor_id is None or not str(actor_id).strip():
+            return None
+
+        # NOTE: FalconPy Intel exposes GetIntelActorEntities; the underlying client is `self.cs_intel`.
+        # The response is expected to be a dict with a `body` that contains `resources`.
+        response = self.cs_intel.get_intel_actor_entities(
+            ids=[str(actor_id)], fields=["__full__"]
+        )
+        self.handle_api_error(response)
+
+        body = response.get("body") or {}
+        resources = body.get("resources") or []
+        if not resources:
+            return None
+
+        # Normalize: some responses return a list, some return a dict keyed by id.
+        if isinstance(resources, dict):
+            # Try exact match key first
+            actor = resources.get(str(actor_id))
+            if actor:
+                return actor
+            # Otherwise return first value
+            for _, value in resources.items():
+                return value
+            return None
+
+        # List case
+        return resources[0]
