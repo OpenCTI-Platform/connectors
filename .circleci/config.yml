@@ -253,6 +253,20 @@ workflows:
             branches:
               only:
                 - master
+      - build:
+          name: "debug_6.9.1_5399"
+          ci_executor:
+            name: ci_environment
+            tags: "debug_6.9.1_5399"
+          requires:
+            - ensure_formatting
+            - base_linter
+            - linter
+            - test
+          filters:
+            branches:
+              only:
+                - feature/5399-build-multiarch-images
       - notify:
           name: "send_notifications_release"
           notification_executor:
