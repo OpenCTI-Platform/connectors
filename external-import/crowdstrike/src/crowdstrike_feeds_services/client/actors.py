@@ -1,5 +1,6 @@
-from .base_api import BaseCrowdstrikeClient
 from typing import List, Optional
+
+from .base_api import BaseCrowdstrikeClient
 
 
 class ActorsAPI(BaseCrowdstrikeClient):

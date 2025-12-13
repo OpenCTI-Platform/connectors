@@ -3,8 +3,8 @@
 
 from typing import Any, Dict, List, NamedTuple, Optional, Set
 
-from crowdstrike_feeds_services.client.indicators import IndicatorsAPI
 from crowdstrike_feeds_services.client.actors import ActorsAPI
+from crowdstrike_feeds_services.client.indicators import IndicatorsAPI
 from crowdstrike_feeds_services.utils import (
     datetime_to_timestamp,
     timestamp_to_datetime,
