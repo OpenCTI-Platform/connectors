@@ -11,7 +11,7 @@ RUN apk update && apk upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 
 RUN cd /opt/opencti-connector-accenture-acti && \
-    uv pip install --no-cache-dir -r requirements.txt && \
+    uv pip install --system --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
 # Expose and entrypoint
