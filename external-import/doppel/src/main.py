@@ -1,8 +1,9 @@
 import traceback
 
+from pycti import OpenCTIConnectorHelper
+
 from doppel.config_loader import ConfigDoppel
 from doppel.connector import DoppelConnector
-from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
     try:
