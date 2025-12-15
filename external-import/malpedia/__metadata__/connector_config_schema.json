@@ -20,7 +20,8 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "default": "malpedia",
+      "description": "The scope of the connector.",
       "items": {
         "type": "string"
       },
@@ -44,22 +45,17 @@
       "type": "string"
     },
     "CONNECTOR_DURATION_PERIOD": {
-      "default": "PT1H",
+      "default": "P1D",
       "description": "The period of time to await between two runs of the connector.",
       "format": "duration",
       "type": "string"
     },
     "MALPEDIA_AUTH_KEY": {
-      "default": "",
+      "default": null,
       "description": "API authentication key",
       "format": "password",
       "type": "string",
       "writeOnly": true
-    },
-    "MALPEDIA_INTERVAL_SEC": {
-      "default": 86400,
-      "description": "Interval in seconds before a new import is considered",
-      "type": "integer"
     },
     "MALPEDIA_IMPORT_INTRUSION_SETS": {
       "default": true,
@@ -82,15 +78,21 @@
       "type": "boolean"
     },
     "MALPEDIA_DEFAULT_MARKING": {
-      "default": "TLP:CLEAR",
-      "description": "If not defined in config, an authenticated user will have TLP:AMBER, otherwise TLP:CLEAR",
+      "default": null,
+      "description": "The default TLP marking to apply to entities created by the connector. If not defined, the default when an API key is provided is `TLP:AMBER`, otherwise `TLP:WHITE`.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:RED"
+      ],
       "type": "string"
     }
   },
   "required": [
     "OPENCTI_URL",
-    "OPENCTI_TOKEN",
-    "CONNECTOR_SCOPE"
+    "OPENCTI_TOKEN"
   ],
   "additionalProperties": true
 }
