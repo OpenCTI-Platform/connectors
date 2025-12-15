@@ -1,5 +1,4 @@
 FROM python:3.12-alpine
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
 
 # Copy the worker
@@ -12,7 +11,7 @@ RUN apk update && apk upgrade && \
 
 # Install Python modules
 RUN cd /opt/opencti-connector-attribution-tools && \
-    uv pip install --system --no-cache-dir -r requirements.txt && \
+    pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
 # Expose and entrypoint
