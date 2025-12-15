@@ -5,6 +5,8 @@ Simplified implementation following OpenCTI connector patterns
 
 import json
 import os
+import sys
+import time
 from datetime import datetime, timedelta, timezone
 
 import isodate
@@ -1717,5 +1719,10 @@ class SublimeConnector:
 
 
 if __name__ == "__main__":
-    connector = SublimeConnector()
-    connector.run()
+    try:
+        connector = SublimeConnector()
+        connector.run()
+    except Exception as e:
+        print("[ERROR] Sublime Security Connector failed: {}".format(e))
+        time.sleep(10)
+        sys.exit(1)
