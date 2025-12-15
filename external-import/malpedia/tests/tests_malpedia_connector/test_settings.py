@@ -19,7 +19,7 @@ from malpedia_connector import ConnectorSettings
                     "duration_period": "PT5M",
                 },
                 "malpedia": {
-                    "auth_key": "SecretStr",
+                    "auth_key": "test-api-key",
                     "interval_sec": 42,
                     "import_intrusion_sets": True,
                     "import_yara": True,
@@ -35,7 +35,7 @@ from malpedia_connector import ConnectorSettings
                 "opencti": {"url": "http://localhost:8080", "token": "test-token"},
                 "connector": {"id": "connector-id", "scope": "test, connector"},
                 "malpedia": {
-                    "auth_key": "SecretStr",
+                    "auth_key": "test-api-key",
                     "interval_sec": 42,
                     "import_intrusion_sets": True,
                     "import_yara": True,
@@ -88,7 +88,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "duration_period": "PT5M",
                 },
                 "malpedia": {
-                    "auth_key": "SecretStr",
+                    "auth_key": "test-api-key",
                     "interval_sec": 42,
                     "import_intrusion_sets": True,
                     "import_yara": True,
@@ -110,7 +110,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "duration_period": "PT5M",
                 },
                 "malpedia": {
-                    "auth_key": "SecretStr",
+                    "auth_key": "test-api-key",
                     "interval_sec": 42,
                     "import_intrusion_sets": True,
                     "import_yara": True,

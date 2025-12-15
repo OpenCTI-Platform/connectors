@@ -20,6 +20,15 @@ def mock_opencti_connector_helper(monkeypatch):
     monkeypatch.setattr(f"{module_import_path}.PingAlive", MagicMock())
 
 
+@pytest.fixture
+def mock_malpedia_client(monkeypatch):
+    """Mock authentication request of MalpediaClient."""
+
+    monkeypatch.setattr(
+        f"malpedia_services.client.MalpediaClient.token_check", MagicMock()
+    )
+
+
 class StubConnectorSettings(ConnectorSettings):
     """
     Subclass of `ConnectorSettings` (implementation of `BaseConnectorSettings`) for testing purpose.
@@ -42,7 +51,7 @@ class StubConnectorSettings(ConnectorSettings):
                     "duration_period": "PT5M",
                 },
                 "malpedia": {
-                    "auth_key": "SecretStr",
+                    "auth_key": "test-api-key",
                     "interval_sec": 42,
                     "import_intrusion_sets": True,
                     "import_yara": True,
@@ -86,13 +95,14 @@ def test_opencti_connector_helper_is_instantiated(mock_opencti_connector_helper)
     assert helper.connect_duration_period == "PT5M"
 
 
-def test_connector_is_instantiated(mock_opencti_connector_helper):
+def test_connector_is_instantiated(mock_opencti_connector_helper, mock_malpedia_client):
     """
     Test that the connector's main class can be instantiated successfully:
         - the connector's main class MUST be able to access env/config vars through `self.config`
         - the connector's main class MUST be able to access `pycti` API through `self.helper`
 
     :param mock_opencti_connector_helper: `OpenCTIConnectorHelper` is mocked during this test to avoid any external calls to OpenCTI API
+    :param mock_malpedia_client: `MalpediaClient` is mocked during this test to avoid real authentication request
     """
     settings = StubConnectorSettings()
     helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
