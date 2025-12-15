@@ -10,7 +10,10 @@ from malpedia_connector import ConnectorSettings
     [
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
                 "connector": {
                     "id": "connector-id",
                     "name": "Test Connector",
@@ -20,29 +23,23 @@ from malpedia_connector import ConnectorSettings
                 },
                 "malpedia": {
                     "auth_key": "test-api-key",
-                    "interval_sec": 42,
                     "import_intrusion_sets": True,
                     "import_yara": True,
                     "create_indicators": True,
                     "create_observables": True,
-                    "default_marking": "str",
+                    "default_marking": "TLP:AMBER",
                 },
             },
             id="full_valid_settings_dict",
         ),
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
-                "connector": {"id": "connector-id", "scope": "test, connector"},
-                "malpedia": {
-                    "auth_key": "test-api-key",
-                    "interval_sec": 42,
-                    "import_intrusion_sets": True,
-                    "import_yara": True,
-                    "create_indicators": True,
-                    "create_observables": True,
-                    "default_marking": "str",
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
                 },
+                "connector": {},
+                "malpedia": {},
             },
             id="minimal_valid_settings_dict",
         ),
@@ -79,7 +76,10 @@ def test_settings_should_accept_valid_input(settings_dict):
         pytest.param({}, "settings", id="empty_settings_dict"),
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:PORT", "token": "test-token"},
+                "opencti": {
+                    "url": "http://localhost:PORT",
+                    "token": "test-token",
+                },
                 "connector": {
                     "id": "connector-id",
                     "name": "Test Connector",
@@ -89,12 +89,11 @@ def test_settings_should_accept_valid_input(settings_dict):
                 },
                 "malpedia": {
                     "auth_key": "test-api-key",
-                    "interval_sec": 42,
                     "import_intrusion_sets": True,
                     "import_yara": True,
                     "create_indicators": True,
                     "create_observables": True,
-                    "default_marking": "str",
+                    "default_marking": "TLP:AMBER",
                 },
             },
             "opencti.url",
@@ -102,8 +101,12 @@ def test_settings_should_accept_valid_input(settings_dict):
         ),
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
                 "connector": {
+                    "id": "connector-id",
                     "name": "Test Connector",
                     "scope": "test, connector",
                     "log_level": "error",
@@ -111,16 +114,15 @@ def test_settings_should_accept_valid_input(settings_dict):
                 },
                 "malpedia": {
                     "auth_key": "test-api-key",
-                    "interval_sec": 42,
                     "import_intrusion_sets": True,
                     "import_yara": True,
                     "create_indicators": True,
                     "create_observables": True,
-                    "default_marking": "str",
+                    "default_marking": "any str",
                 },
             },
-            "connector.id",
-            id="missing_connector_id",
+            "malpedia.default_marking",
+            id="invalid_malpedia_default_marking",
         ),
     ],
 )

@@ -32,21 +32,30 @@ class MalpediaConnector:
         self.config = config
         self.helper = helper
         self.api_client = MalpediaClient(
-            self.helper, self.config.malpedia.auth_key.get_secret_value()
+            self.helper,
+            (
+                self.config.malpedia.auth_key.get_secret_value()
+                if self.config.malpedia.auth_key
+                else None
+            ),
         )
         self.helper.metric.state("idle")
-        "\n        If the default_marking environment variable does not exist,\n        then if we run without API key we can assume all data is TLP:WHITE \n        else we default to TLP:AMBER to be safe.\n        "
+
+        """
+        If the default_marking environment variable does not exist,
+        then if we run without API key we can assume all data is TLP:WHITE 
+        else we default to TLP:AMBER to be safe.
+        """
         self.default_marking = self.config.malpedia.default_marking
         if self.default_marking is not None:
-            default_marking_normalized = self.default_marking.strip().upper()
-            if default_marking_normalized in TLP_MAPPING:
-                self.default_marking = TLP_MAPPING[default_marking_normalized]
+            if self.default_marking in TLP_MAPPING:
+                self.default_marking = TLP_MAPPING[self.default_marking]
             else:
                 self.helper.connector_logger.info(
-                    "[INFO] Default marking defined in config is not supported by stix2, TLP marking will be defined by default TLP:CLEAR",
+                    "[INFO] Default marking defined in config is not supported by stix2, TLP marking will be defined by default TLP:WHITE",
                     {
                         "default_marking_in_config": self.default_marking,
-                        "TLP_availables": "TLP:CLEAR, TLP:GREEN, TLP:AMBER, TLP:RED",
+                        "TLP_availables": "TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:RED",
                     },
                 )
                 self.default_marking = stix2.TLP_WHITE
@@ -54,8 +63,10 @@ class MalpediaConnector:
             self.default_marking = (
                 stix2.TLP_WHITE if self.api_client.unauthenticated else stix2.TLP_AMBER
             )
+        self.interval_sec = self.config.connector.duration_period.total_seconds()
+
         self.models = MalpediaModels()
-        self.utils = MalpediaUtils(self.helper, self.config.malpedia.interval_sec)
+        self.utils = MalpediaUtils(self.helper, self.interval_sec)
         self.converter = MalpediaConverter(self.helper, self.default_marking)
         self.work_id = None
         self.stix_objects = []
@@ -64,7 +75,7 @@ class MalpediaConnector:
     def run(self):
         self.helper.schedule_unit(
             message_callback=self.start,
-            duration_period=self.config.malpedia.interval_sec,
+            duration_period=self.interval_sec,
             time_unit=self.helper.TimeUnit.SECONDS,
         )
 
@@ -113,17 +124,13 @@ class MalpediaConnector:
                 self.helper.connector_logger.info(msg, {"new_state": new_state})
                 self.helper.api.work.to_processed(self.work_id, msg)
                 self.helper.set_state(new_state)
-                new_interval_in_hours = round(
-                    self.config.malpedia.interval_sec / 60 / 60, 2
-                )
+                new_interval_in_hours = round(self.interval_sec / 60 / 60, 2)
                 self.helper.connector_logger.info(
                     "[CONNECTOR] State stored, next run in hours.",
                     {"next_run": new_interval_in_hours},
                 )
             else:
-                new_interval = self.config.malpedia.interval_sec - (
-                    timestamp - last_run
-                )
+                new_interval = self.interval_sec - (timestamp - last_run)
                 if new_interval < 0:
                     next_run = "waiting for a new version"
                 else:
@@ -131,7 +138,7 @@ class MalpediaConnector:
                 self.helper.connector_logger.info(
                     "[CONNECTOR] The connector will not run, next run in hours.",
                     {
-                        "config_interval_sec": self.config.malpedia.interval_sec,
+                        "config_interval_sec": self.interval_sec,
                         "next_run": str(next_run),
                     },
                 )

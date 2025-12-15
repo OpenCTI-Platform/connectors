@@ -25,7 +25,7 @@ def mock_malpedia_client(monkeypatch):
     """Mock authentication request of MalpediaClient."""
 
     monkeypatch.setattr(
-        f"malpedia_services.client.MalpediaClient.token_check", MagicMock()
+        "malpedia_services.client.MalpediaClient.token_check", MagicMock()
     )
 
 
@@ -52,12 +52,11 @@ class StubConnectorSettings(ConnectorSettings):
                 },
                 "malpedia": {
                     "auth_key": "test-api-key",
-                    "interval_sec": 42,
                     "import_intrusion_sets": True,
                     "import_yara": True,
                     "create_indicators": True,
                     "create_observables": True,
-                    "default_marking": "str",
+                    "default_marking": "TLP:AMBER",
                 },
             }
         )
