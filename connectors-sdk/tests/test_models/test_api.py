@@ -79,6 +79,7 @@ def test_public_models_are_present():
         "KillChainPhase",
         "Malware",
         "Note",
+        "ObservedData",
         "Organization",
         "OrganizationAuthor",
         "Region",
