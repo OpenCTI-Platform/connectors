@@ -284,7 +284,7 @@ class ONYPHEConnector:
                         self.stix_entity, STIX_EXT_OCTI_SCO, "labels", tag, True
                     )
             return list(labels)
-        except:
+        except Exception:
             return list(labels)
 
     def _generate_stix_external_reference(
@@ -847,7 +847,7 @@ class ONYPHEConnector:
                 bundle_objects = []
                 number_processed = 1
 
-                if not "category:" in ctifilter:
+                if "category:" not in ctifilter:
                     ctifilter = f"category:{self.onyphe_category} " + ctifilter
 
                 # TODO : Check to see if user has passed time functions
