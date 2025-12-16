@@ -92,6 +92,10 @@ DEBUG:root:Text: 'executed with arp.exe and cmd.exe to run it' -> extracts {'cmd
 | Domain Name | DomainName.value| :heavy_check_mark: | |
 | EMail Address | EMail-Addr.value | :heavy_check_mark: ||
 | EMail Message | - | :x: | |
+| Phone Number | Phone-Number.value | :heavy_check_mark: ||
+| IMEI | IMEI.value | :heavy_check_mark: | |
+| ICCID | ICCID.value | :heavy_check_mark: | |
+| IMSI | IMSI.value | :heavy_check_mark: | |
 | File | File.name, File.hashes (MD5, SHA-1, SHA-256) | :heavy_plus_sign: | |
 | IPv4 Address | IPv4-Addr.value| :heavy_check_mark: ||
 | IPv6 Address | IPv6-Addr.value| :heavy_check_mark: ||
