@@ -1,11 +1,71 @@
+import warnings
 from datetime import timedelta
+from typing import Annotated, Any, Literal
 
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    DatetimeFromIsoString,
+    ListFromString,
 )
-from pydantic import Field, SecretStr
+from pydantic import (
+    BeforeValidator,
+    Field,
+    HttpUrl,
+    PlainSerializer,
+    SecretStr,
+    SerializationInfo,
+    field_validator,
+    model_validator,
+)
+
+
+def comma_separated_dict_validator(value: str | dict[str, str]) -> dict[str, str]:
+    """
+    Convert comma-separated string into a dict.
+
+    Example:
+        > values = comma_separated_dict_validator("key_1=value_1,key_2=value_2")
+        > print(values) # { "key_1": "value_1", "key_2"="value_2" }
+    """
+    if isinstance(value, str):
+        parsed_dict = {}
+        if len(value):
+            entries = [string.strip() for string in value.split(",")]
+            for entry in entries:
+                entry_key, entry_value = entry.split("=")
+                parsed_dict[entry_key] = entry_value
+        return parsed_dict
+    return value
+
+
+def pycti_dict_serializer(value: list[str], info: SerializationInfo) -> str | list[str]:
+    """
+    Serialize dict as comma-separated string.
+
+    Example:
+        > serialized_values = pycti_dict_serializer({ "key_1": "value_1", "key_2"="value_2" })
+        > print(serialized_values) # "key_1=value_1,key_2=value_2"
+    """
+    if (
+        isinstance(value, dict)
+        and info.context
+        and (info.context.get("mode") == "pycti")
+    ):
+        entries = [
+            f"{entry_key}={entry_value}"
+            for entry_key, entry_value in list(value.items())
+        ]
+        return ",".join(entries)
+    return value
+
+
+DictFromString = Annotated[
+    dict[str, str],
+    BeforeValidator(comma_separated_dict_validator),
+    PlainSerializer(pycti_dict_serializer, when_used="json"),
+]
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -14,13 +74,21 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     to the configuration for connectors of type `EXTERNAL_IMPORT`.
     """
 
+    id: str = Field(
+        description="The UUID of the connector.",
+        default="fae73097-aa2c-4460-96ee-1aa975ce1945",
+    )
     name: str = Field(
         description="The name of the connector.",
-        default="Misp",
+        default="MISP",
+    )
+    scope: ListFromString = Field(
+        description="The scope of the connector.",
+        default=["misp"],
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
-        default=timedelta(hours=1),
+        default=timedelta(minutes=5),
     )
 
 
@@ -29,33 +97,23 @@ class MispConfig(BaseConfigModel):
     Define config specific to MISP connector.
     """
 
-    url: str = Field(
+    url: HttpUrl = Field(
         description="MISP instance URL",
-        default="http://localhost",
-    )
-    reference_url: str = Field(
-        description="MISP base URL used for External References",
-        default="",
     )
     key: SecretStr = Field(
         description="MISP instance API key.",
-        default=SecretStr("ChangeMe"),
     )
     ssl_verify: bool = Field(
         description="Whether to check if the SSL certificate is valid when using `HTTPS` protocol or not.",
         default=False,
     )
-    client_cert: str = Field(
+    client_cert: str | None = Field(
         description="Filepath to the client certificate to use for MISP API calls. Required if `ssl_verify` is enabled.",
-        default="",
+        default=None,
     )
-    date_filter_field: str = Field(
-        description="The attribute to use as filter to query new MISP events by date.",
-        default="timestamp",
-    )
-    datetime_attribute: str = Field(
-        description="The attribute to use as MISP events date.",
-        default="timestamp",
+    reference_url: HttpUrl | None = Field(
+        description="MISP base URL used for External References",
+        default=None,
     )
     create_reports: bool = Field(
         description="Whether to create reports for each imported MISP event or not.",
@@ -73,9 +131,27 @@ class MispConfig(BaseConfigModel):
         description="Whether to create a text observable for each MISP Event's object or not.",
         default=False,
     )
-    report_description_attribute_filter: str = Field(
+    datetime_attribute: Literal[
+        "date",
+        "timestamp",
+        "publish_timestamp",
+        "sighting_timestamp",
+    ] = Field(
+        description="The attribute to use as MISP events date.",
+        default="timestamp",
+    )
+    date_filter_field: Literal[
+        "date_from",
+        "timestamp",
+        "publish_timestamp",
+    ] = Field(
+        description="The attribute to use as filter to query new MISP events by date.",
+        default="timestamp",
+    )
+    report_description_attribute_filters: DictFromString = Field(
         description="Filter to use to find the attribute that will be used for report description (example: 'type=comment,category=Internal reference')",
-        default="",
+        default={},
+        alias="report_description_attribute_filter",  # backward compatibility with mispelled env var
     )
     create_tags_as_labels: bool = Field(
         description="Whether to create labels from MISP tags or not.",
@@ -84,6 +160,7 @@ class MispConfig(BaseConfigModel):
     guess_threats_from_tags: bool = Field(
         description="Whether to **guess** and create Threats from MISP tags or not.",
         default=False,
+        alias="guess_threat_from_tags",  # backward compatibility with mispelled env var
     )
     author_from_tags: bool = Field(
         description="Whether to create Authors from MISP tags or not.",
@@ -93,9 +170,9 @@ class MispConfig(BaseConfigModel):
         description="Whether to create Markings from MISP tags or not.",
         default=False,
     )
-    keep_original_tags_as_label: str = Field(
+    keep_original_tags_as_label: ListFromString = Field(
         description="List of original MISP tags to keep as labels.",
-        default="",
+        default=[],
     )
     enforce_warning_list: bool = Field(
         description="Whether to enforce the warning list for MISP events or not.",
@@ -105,49 +182,45 @@ class MispConfig(BaseConfigModel):
         description="The type of report to create on OpenCTI from MISP events.",
         default="misp-event",
     )
-    report_status: str = Field(
-        description="The status of report to create on OpenCTI from MISP events.",
-        default="New",
-    )
-    import_from_date: str = Field(
+    import_from_date: DatetimeFromIsoString | None = Field(
         description="A date (ISO-8601) from which to start importing MISP events (based on events creation date).",
-        default="2010-01-01",
+        default=None,
     )
-    import_tags: str = Field(
+    import_tags: ListFromString = Field(
         description="List of tags to filter MISP events to import, **including** only events with these tags.",
-        default="",
+        default=[],
     )
-    import_tags_not: str = Field(
+    import_tags_not: ListFromString = Field(
         description="List of tags to filter MISP events to import, **excluding** events with these tags.",
-        default="",
+        default=[],
     )
-    import_creator_orgs: str = Field(
+    import_creator_orgs: ListFromString = Field(
         description="List of organization identifiers to filter MISP events to import, **including** only events created by these organizations.",
-        default="",
+        default=[],
     )
-    import_creator_orgs_not: str = Field(
+    import_creator_orgs_not: ListFromString = Field(
         description="List of organization identifiers to filter MISP events to import, **excluding** events created by these organizations.",
-        default="",
+        default=[],
     )
-    import_owner_orgs: str = Field(
+    import_owner_orgs: ListFromString = Field(
         description="List of organization identifiers to filter MISP events to import, **including** only events owned by these organizations.",
-        default="",
+        default=[],
     )
-    import_owner_orgs_not: str = Field(
+    import_owner_orgs_not: ListFromString = Field(
         description="List of organization identifiers to filter MISP events to import, **excluding** events owned by these organizations.",
-        default="",
+        default=[],
     )
-    import_keyword: str = Field(
+    import_keyword: str | None = Field(
         description="Keyword to use as filter to import MISP events.",
-        default="",
+        default=None,
     )
-    import_distribution_levels: str = Field(
+    import_distribution_levels: ListFromString = Field(
         description="List of distribution levels to filter MISP events to import, **including** only events with these distribution levels.",
-        default="0,1,2,3",
+        default=[],
     )
-    import_threat_levels: str = Field(
+    import_threat_levels: ListFromString = Field(
         description="List of threat levels to filter MISP events to import, **including** only events with these threat levels.",
-        default="1,2,3,4",
+        default=[],
     )
     import_only_published: bool = Field(
         description="Whether to only import published MISP events or not.",
@@ -157,9 +230,9 @@ class MispConfig(BaseConfigModel):
         description="Whether to import attachment attribute content as a file (works only with PDF).",
         default=False,
     )
-    import_to_ids_no_score: int = Field(
+    import_to_ids_no_score: int | None = Field(
         description="A score value for the indicator/observable if the attribute `to_ids` value is no.",
-        default=40,
+        default=None,
     )
     import_unsupported_observables_as_text: bool = Field(
         description="Whether to import unsupported observable as x_opencti_text or not.",
@@ -173,11 +246,14 @@ class MispConfig(BaseConfigModel):
         description="Whether to apply labels from MISP events to OpenCTI observables on top of MISP Attribute labels or not.",
         default=False,
     )
-    interval: int = Field(
-        description="The period of time to await between two runs of the connector.",
-        default=5,
-        deprecated=True,
-    )
+
+    @field_validator("reference_url", mode="before")
+    @classmethod
+    def validate_reference_url(cls, value: Any) -> Any:
+        """Replace empty string with `None` before validation."""
+        if isinstance(value, str):
+            return value or None
+        return value
 
 
 class ConnectorSettings(BaseConnectorSettings):
@@ -189,3 +265,19 @@ class ConnectorSettings(BaseConnectorSettings):
         default_factory=ExternalImportConnectorConfig
     )
     misp: MispConfig = Field(default_factory=MispConfig)
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_deprecated_interval(cls, data: dict) -> dict:
+        """
+        Env var `MISP_INTERVAL` is deprecated.
+        This is a workaround to keep the old config working while we migrate to `CONNECTOR_DURATION_PERIOD`.
+        """
+        connector_data: dict = data.get("connector", {})
+        misp_data: dict = data.get("misp", {})
+        if interval := misp_data.pop("interval", None):
+            warnings.warn(
+                "Env var 'MISP_INTERVAL' is deprecated. Use 'CONNECTOR_DURATION_PERIOD' instead."
+            )
+            connector_data["duration_period"] = timedelta(minutes=int(interval))
+        return data

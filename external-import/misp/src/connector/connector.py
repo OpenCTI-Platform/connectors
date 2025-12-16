@@ -22,7 +22,7 @@ class Misp:
         )
         self.converter = EventConverter(
             report_type=self.config.misp.report_type,
-            report_description_attribute_filters=self.config.misp.report_description_attribute_filter,
+            report_description_attribute_filters=self.config.misp.report_description_attribute_filters,
             external_reference_base_url=self.config.misp.reference_url
             or self.config.misp.url,
             convert_event_to_report=self.config.misp.create_reports,

@@ -49,11 +49,11 @@ class StubConnectorSettings(ConnectorSettings):
                     "duration_period": "PT5M",
                 },
                 "misp": {
-                    "url": "http://localhost",
-                    "reference_url": "",
-                    "key": "ChangeMe",
+                    "url": "http://test.com",
+                    "reference_url": "http://test.com",
+                    "key": "test-api-key",
                     "ssl_verify": False,
-                    "client_cert": "",
+                    "client_cert": None,
                     "date_filter_field": "timestamp",
                     "datetime_attribute": "timestamp",
                     "create_reports": True,
@@ -68,7 +68,6 @@ class StubConnectorSettings(ConnectorSettings):
                     "keep_original_tags_as_label": "",
                     "enforce_warning_list": False,
                     "report_type": "misp-event",
-                    "report_status": "New",
                     "import_from_date": "2010-01-01",
                     "import_tags": "",
                     "import_tags_not": "",
@@ -85,7 +84,7 @@ class StubConnectorSettings(ConnectorSettings):
                     "import_unsupported_observables_as_text": False,
                     "import_unsupported_observables_as_text_transparent": True,
                     "propagate_labels": False,
-                    "import_keyword": "",
+                    "import_keyword": None,
                 },
             }
         )
