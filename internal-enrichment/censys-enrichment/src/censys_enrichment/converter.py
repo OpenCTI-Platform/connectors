@@ -467,3 +467,32 @@ class Converter:
             yield from self.generate_octi_objects(
                 stix_entity=ip_stix.to_stix2_object(), data=host
             )
+
+    def generate_octi_objects_from_domain_certs(
+        self, stix_entity: dict[str, Any], certs: list[Certificate]
+    ) -> Generator[BaseObject, None, None]:
+        """Generate OpenCTI objects from certificates associated with a domain
+
+        Args:
+            stix_entity: The domain STIX entity
+            certs: List of Certificate objects from Censys
+
+        Yields:
+            BaseObject: STIX objects representing certificates and their relationships
+        """
+        observable = EmbeddedIdentifiedStixObject(stix_object=stix_entity)
+
+        yield from [
+            self.author,
+            self.marking,
+        ]
+
+        for cert in certs:
+            certificate = yield from self._generate_certificate(cert=cert)
+            if certificate:
+                yield Relationship(
+                    source=certificate,
+                    target=observable,
+                    type=RelationshipType.RELATED_TO,
+                    **self._common_props,
+                )

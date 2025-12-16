@@ -62,6 +62,34 @@ The connector can be configured via `config.yml`, `.env` or environment variable
 - The connector will fetch matching infrastructure and push it into OpenCTI.
 
 ## Behavior
+  The connector enriches the following observable types:
+
+  ### IPv4/IPv6 Addresses
+  - Retrieves host information including geolocation, ASN, and services
+  - Creates location entities (City, Country, Region, Administrative Area)
+  - Links autonomous systems and organizations
+  - Extracts DNS names associated with the IP
+  - Creates software entities for detected services
+  - Includes service banners as notes
+
+  ### Domain Names
+  - Searches for hosts with the domain in their DNS records
+  - Creates IP address observables for discovered hosts
+  - **Discovers X.509 certificates** that reference the domain in their Subject Alternative Names (SANs) or Common Name (CN)
+  - Creates certificate entities with full metadata (issuer, validity, extensions)
+  - Links certificates to the domain for infrastructure mapping
+
+  This comprehensive domain enrichment is particularly useful for:
+  - Certificate transparency monitoring
+  - Threat actor infrastructure discovery
+  - Identifying shared hosting or certificate patterns
+  - Detecting potential phishing domains using similar certificates
+
+  ### X.509 Certificates
+  - Enriches certificates by their hash values (MD5, SHA-1, SHA-256)
+  - Extracts detailed certificate metadata including extensions and key information
+
+  **Note**: Certificate discovery for domains adds an additional API call per domain enrichment. Be mindful of Censys API rate limits.
 
 ## Additional information
 
