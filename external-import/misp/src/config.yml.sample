@@ -10,6 +10,7 @@ connector:
   log_level: 'info'
   expose_metrics: False
   duration_period: PT5M # Required, interval given for scheduler process in ISO-8601 format.
+# batch_size: 5000 # Optional, number of entities to process in a single batch
 
 misp:
   url: 'http://localhost' # Required

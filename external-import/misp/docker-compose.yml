@@ -11,6 +11,7 @@ services:
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_EXPOSE_METRICS=false
       - CONNECTOR_DURATION_PERIOD=PT5M # Required
+#      - CONNECTOR_BATCH_SIZE=5000 #Optional, number of events to process by batch
       - MISP_URL=http://localhost # Required
       - MISP_REFERENCE_URL= # Optional, will be used to create external reference to MISP event (default is "url")
       - MISP_KEY=ChangeMe # Required
