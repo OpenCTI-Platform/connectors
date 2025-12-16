@@ -20,6 +20,13 @@ def mock_opencti_connector_helper(monkeypatch):
     monkeypatch.setattr(f"{module_import_path}.PingAlive", MagicMock())
 
 
+@pytest.fixture
+def mock_py_misp(monkeypatch):
+    """Mock MISP client, to avoid real requests to MISP API."""
+
+    monkeypatch.setattr("api_client.client.PyMISP", MagicMock())
+
+
 class StubConnectorSettings(ConnectorSettings):
     """
     Subclass of `ConnectorSettings` (implementation of `BaseConnectorSettings`) for testing purpose.
@@ -116,13 +123,14 @@ def test_opencti_connector_helper_is_instantiated(mock_opencti_connector_helper)
     assert helper.connect_duration_period == "PT5M"
 
 
-def test_connector_is_instantiated(mock_opencti_connector_helper):
+def test_connector_is_instantiated(mock_opencti_connector_helper, mock_py_misp):
     """
     Test that the connector's main class can be instantiated successfully:
         - the connector's main class MUST be able to access env/config vars through `self.config`
         - the connector's main class MUST be able to access `pycti` API through `self.helper`
 
     :param mock_opencti_connector_helper: `OpenCTIConnectorHelper` is mocked during this test to avoid any external calls to OpenCTI API
+    :param mock_py_misp: `PyMISP` is mocked during this test to avoid any external calls to MISP API
     """
     settings = StubConnectorSettings()
     helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
