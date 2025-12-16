@@ -77,16 +77,21 @@ TYPE_HANDLERS = {
     ),
     "x509-certificate": (
         lambda h: (
-            f"https://search.onyphe.io/search?q=category%3Actiscan+"
-            f"cert.fingerprint.{HASH_KEY_MAP[next(iter(h.keys())).upper()]}%3A{next(iter(h.values()))}"
-        ) if isinstance(h, dict) and h else None,
+            (
+                f"https://search.onyphe.io/search?q=category%3Actiscan+"
+                f"cert.fingerprint.{HASH_KEY_MAP[next(iter(h.keys())).upper()]}%3A{next(iter(h.values()))}"
+            )
+            if isinstance(h, dict) and h
+            else None
+        ),
         "ONYPHE search for certificate fingerprint ({algo})",
         lambda h: next(iter(h.values())) if isinstance(h, dict) and h else None,
     ),
     "text": (
         lambda v, lp: (
             f"https://search.onyphe.io/search?q=category%3Actiscan+{REVERSE_PIVOT_MAP.get(next((l for l in lp if l in REVERSE_PIVOT_MAP), None))}%3A{v}"
-            if (lp and any(l in REVERSE_PIVOT_MAP for l in lp)) else None
+            if (lp and any(l in REVERSE_PIVOT_MAP for l in lp))
+            else None
         ),
         "ONYPHE search for analytical pivot {pivot_label} = {value}",
         lambda v: v,
