@@ -1,0 +1,19 @@
+{
+  "title": "Kaspersky Enrichment",
+  "slug": "kaspersky-enrichment",
+  "description": "The OpenCTI Kaspersky enrichment connector allows you to enrich your observables with intelligence from the Kaspersky Threat Intelligence Portal. The connector queries the Kaspersky API to retrieve contextual information and threat data associated with your indicators/observables.\n\nAt this time, the connector supports file observables enrichment with Kaspersky's threat intelligence. Support for additional observable types (IP addresses, domains, and URLs) will be added in future releases.",
+  "short_description": "The OpenCTI Kaspersky enrichment connector allows you to enrich your observables with intelligence from the Kaspersky Threat Intelligence Portal. The connector queries the Kaspersky API to retrieve contextual information and threat data associated with your indicators/observables.\n\nAt this time, the connector supports file observables enrichment with Kaspersky's threat intelligence. Support for additional observable types (IP addresses, domains, and URLs) will be added in future releases.",
+  "logo": "internal-enrichment/joe-sandbox/__metadata__/logo.png",
+  "use_cases" : ["Enrichment & Analysis"],
+  "verified": true,
+  "last_verified_date": "2025-11-28",
+  "playbook_supported": true,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.14",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/kaspersky-enrichment",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-kaspersky-enrichment",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

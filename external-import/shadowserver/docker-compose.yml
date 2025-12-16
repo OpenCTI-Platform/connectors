@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-shadowserver:
-    image: opencti/connector-shadowserver:rolling
+    image: opencti/connector-shadowserver:latest
     environment:
       # OpenCTI configuration
       OPENCTI_URL: ${OPENCTI_URL}

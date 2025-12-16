@@ -23,6 +23,11 @@ In the Azure portal, you need to set :
 Home > Application Registration > OpenCTI (your name) > API Permissions
 and prioritize the "ThreatIndicators.ReadWrite.OwnedBy" permissions.
 ![Sentinel_permission](./doc/permission_mandatory.png)
+
+In the Log Analytics Workspace where Microsoft Sentinel is deployed : 
+Access Control (IAM) > Add > Add Role Assignment  and look for the "Microsoft Sentinel Contributor"
+role, click Next and assign it to the Entra Application used to authenticate on Azure.
+
 You will then be able to view the data (indicators) in :
 Home > Microsoft Sentinel > OpenCTI (Your Name) > Threat Indicators
 
@@ -37,7 +42,7 @@ Another interesting link:
 
 ### Requirements
 
-- OpenCTI Platform >= 6.8.12
+- OpenCTI Platform >= 6.9.1
 
 ### Configuration variables
 
@@ -79,6 +84,8 @@ Below are the parameters you'll need to set for Sentinel Connector:
 
 ### Known Behavior
 
+- Applying a new role on a Log Analytics Workspace can take a certain amount of time to be correctly
+propagated and applied
 - When creating, updating or deleting and IOC, it can take few minutes before seeing it into Microsoft Sentinel TI
 - Deleting indicators is supported using
   the [management API](https://learn.microsoft.com/en-us/rest/api/securityinsights/threat-intelligence-indicator/delete?view=rest-securityinsights-2025-03-01&tabs=HTTP).

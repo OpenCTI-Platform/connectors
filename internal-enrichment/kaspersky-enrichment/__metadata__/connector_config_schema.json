@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/kaspersky-enrichment_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Kaspersky Enrichment",
+      "description": "Name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "StixFile"
+      ],
+      "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": true,
+      "description": "If True, the connector will automatically import data from the API.",
+      "type": "boolean"
+    },
+    "KASPERSKY_API_BASE_URL": {
+      "default": "https://tip.kaspersky.com/",
+      "description": "Kaspersky API base URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "KASPERSKY_API_KEY": {
+      "description": "API key used to authenticate requests to the Kaspersky service.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "KASPERSKY_ZONE_OCTI_SCORE_MAPPING": {
+      "default": "red:100,orange:80,yellow:60,gray:20,green:0",
+      "description": "Zone to score mapping. Only the numerical value need to be changed if necessary. See https://tip.kaspersky.com/Help/Doc_data/en-US/AboutZones.htm for further explanations",
+      "type": "string"
+    },
+    "KASPERSKY_FILE_SECTIONS": {
+      "default": "LicenseInfo,Zone,FileGeneralInfo",
+      "description": "Sections wanted to investigate for the requested hash. LicenseInfo, Zone and FileGeneralInfo are always set, can't be disabled. Only DetectionsInfo, FileDownloadedFromUrls, Industries and FileNames are currently supported",
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "KASPERSKY_API_KEY"
+  ],
+  "additionalProperties": true
+}

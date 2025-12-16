@@ -53,7 +53,7 @@ This has a direct impact: since the new container is NOT defined in the same `do
 
 To be consistent with the original deployment, we are assuming the the original network is created using the official OpenCTI project (note that credentials may be set manually):
 
-```
+```shell
 git clone https://github.com/OpenCTI-Platform/docker
 cd docker
 (cat << EOF
@@ -109,6 +109,8 @@ INFO:root:Starting ping alive thread
 ...
 ```
 
+<br>
+
 ## How to create a new connector
 
 First, identify what type of connector you need. To develop a connector, you have to start by defining the use case—ask yourself, "What do I want to achieve with this connector?"
@@ -118,24 +120,23 @@ First, identify what type of connector you need. To develop a connector, you hav
 You MUST be on templates folder.
 You can create a new connector by simply running the following command:
 
-```commandline
+```shell
 sh create_connector_dir.sh -t <TYPE> -n <NAME>
 ```
 
 Where `<TYPE>` is the type of connector you want to create (`external-import`,`internal-enrichment`,`stream`, `internal-import-file`, `internal-export-file`) and `<NAME>` is the name of the connector.
 
-
 ### Manual creation
 
 Copy the folder contents of the corresponding template in the suitable folder:
 
-```
+```shell
 cp templates/external-import external-import/[CONNECTOR_NAME]
 ```
 
-Complete environment variables in docker-compose.yml file (for Docker container deployment) or config.yml file (for local deployment) and test it before going on:
+Complete environment variables in `docker-compose.yml file` (for Docker container deployment) or `config.yml` file (for local deployment) and test it before going on:
 
-```
+```shell
 cd external-import/[CONNECTOR_NAME]
 
 # If working with docker
@@ -157,82 +158,88 @@ There are a few files in the template we need to change for our connector to be 
 $ grep -Ri template
 
 # Output
-./docker-compose.yml:  connector-template:
-./docker-compose.yml:    image: opencti/connector-template:6.8.12
-./docker-compose.yml:      - CONNECTOR_TEMPLATE_API_BASE_URL=CHANGEME
-./docker-compose.yml:      - CONNECTOR_TEMPLATE_API_KEY=CHANGEME
+./config.yml:  id: 'external-import-template'
+./config.yml:  name: 'Template Connector'
+./config.yml:template:
+./config.yml.sample:  name: 'External Import Template Connector'
+./docker-compose.yml:  connector-template-connector:
+./docker-compose.yml:    image: opencti/connector-template:6.8.13
+./docker-compose.yml:      - TEMPLATE_API_BASE_URL=CHANGEME
+./docker-compose.yml:      - TEMPLATE_API_KEY=CHANGEME
 ./Dockerfile:COPY src /opt/opencti-connector-template
 ./Dockerfile:RUN cd /opt/opencti-connector-template && \
 ./entrypoint.sh:cd /opt/opencti-connector-template
-./README.md:# OpenCTI External Ingestion Connector Template
-./README.md:- [OpenCTI External Ingestion Connector Template](#opencti-external-ingestion-connector-template)
-./src/config.yml:  id: 'external-import-template'
-./src/config.yml:  name: 'Connector Template'
-./src/config.yml:connector_template:
-./src/config.yml.sample:  name: 'External Import Connector Template'
-./src/external_import_connector/__init__.py:__all__ = ["ConnectorTemplate"]
-./src/external_import_tests/test_template_connector.py:class TestTemplateConnector(object):
-./src/main.py:from external_import_connector import ConnectorTemplate
-./src/main.py:        connector = ConnectorTemplate()
+./README.md:# OpenCTI External Ingestion Template Connector
+./README.md:- [OpenCTI External Ingestion Template Connector](#opencti-external-ingestion-connector-template)
+./src/connector/__init__.py:__all__ = ["TemplateConnector"]
+./src/main.py:from connector import TemplateConnector
+./src/main.py:        connector = TemplateConnector()
+./tests/test_main.py:from connector import TemplateConnector
 ```
 
 Required changes:
 
-1. Change `Template` or `template` mentions to your connector name e.g. `ImportCsv` or `importcsv`
+1. Change `Template` or `template` mentions to your connector name e.g. `ImportCsv` or `import_csv`/`import-csv`
 2. Change `TEMPLATE` mentions to your connector name e.g. `IMPORTCSV`
 3. Change `Template_Scope` mentions to the required scope of your connector. For processing imported files, that can be the Mime type e.g. `application/pdf` or for enriching existing information in OpenCTI, define the STIX object's name e.g. Report. Multiple scopes can be separated by a simple ,
-4. Change `Template_Type` to the connector type you wish to develop. The OpenCTI types are defined hereafter:
-   - EXTERNAL_IMPORT
-   - INTERNAL_ENRICHMENT
-   - INTERNAL_EXPORT_FILE
-   - INTERNAL_IMPORT_FILE
-   - STREAM
+
+<br>
 
 ### Files and folder structure
 
 Below is an example of a straightforward structure:
 
-- **main.py**: The entry point of the connector.
+- **\_\_metadata\_\_**: Folder containing the connector's metadata (for documentation/deployment).
+- **src**: Folder containing the deployable code.
+- **src/main.py**: The entry point of the connector.
+- **src/connector**: Folder holding the main logic of the connector.
+- **src/connector/connector.py**: The core process of the connector.
+- **src/connector/converter_to_stix.py**: Converts imported data into STIX objects.
+- **src/connector/settings.py**: Defines and validates the configuration variables.
+- **src/template_client/api_client.py**: Manages API calls.
 - **tests**: Folder containing test cases.
-- **connector**: Folder holding the main logic of the connector.
-- **connector.py**: The core process of the connector.
-- **config_loader.py**: Contains all necessary configuration variables.
-- **client_api.py**: Manages API calls.
-- **converter_to_stix.py**: Converts imported data into STIX objects.
 
 Our goal is to keep concepts clearly separated.
 
 ```
 external-import
-└── src
-    ├── external_import_connector
-    │   ├── __init__.py
-    │   ├── client_api.py
-    │   ├── config_loader.py
-    │   ├── connector.py
-    │   ├── converter_to_stix.py
-    │   └── utils.py
-    ├── config.yml.sample
-    ├── main.py
-    ├── requirements.txt
+├── __metadata__
+|   ├── connector_manifest.json
+|   ├── connector_config_schema.json
+|   └── logo.png
+├── src
+|   ├── connector
+|   │   ├── __init__.py
+|   │   ├── connector.py
+|   │   ├── converter_to_stix.py
+|   │   ├── settings.py
+|   │   └── utils.py
+|   ├── template_client
+|   │   ├── __init__.py
+|   │   └── api_client.py
+|   ├── main.py
+|   └── requirements.txt
 ├── tests
-│   ├── __init__.py
-│   ├── common_fixtures.py
-│   ├── fixtures
-│   └── test_template_connector.py
-    └── test-requirements.txt
-├── Dockerfile
+│   ├── tests_connector
+|   │   └── test_settings.py
+│   ├── conftest.py
+│   ├── test_main.py
+|   └── test-requirements.txt
+├── config.yml.sample
 ├── docker-compose.yml
+├── Dockerfile
 ├── entrypoint.sh
 ├── README.md
 
 ```
 
+<br>
+
 ### Development
 
 Afterward, locate the following sections which can be located in `def process_message(self, data)` or in `def _collect_intelligence(self)` depending on the type of connector.
 
-```
+```python
         # ===========================
         # === Add your code below ===
         # ===========================
@@ -244,24 +251,52 @@ Afterward, locate the following sections which can be located in `def process_me
 
 #### Common
 
-When logging a message, use the helper:
+##### When logging a message, use the helper:
 
-```shell
+```python
 self.helper.connector_logger.[info/debug/warning/error]
 ```
 
-To create a bundle, use the helper:
+##### To create a bundle, use the helper:
 
-```shell
+```python
 self.helper.stix2_create_bundle(stix_objects)
 ```
 
-To send the bundle to RabbitMQ, use the helper:
+##### To send the bundle to RabbitMQ, use the helper:
 
-```shell
+```python
 self.helper.send_stix2_bundle(stix_objects_bundle)
 ```
 
+##### To create objects to ingest:
+
+**[NEW]**  
+To create an OpenCTI object (STIX2.1 compliant object), use our [`connectors-sdk`](https://github.com/OpenCTI-Platform/connectors/tree/master/connectors-sdk) library:
+
+```python
+from connectors_sdk.models import Indicator, OrganizationAuthor, TLPMarking
+
+author = OrganizationAuthor(name="author")
+tlp_marking = TLPMarking(level="green")
+
+indicator = Indicator(
+  # id is automatically generated, no need create one
+  name="name",
+  description="description",
+  pattern="pattern",
+  pattern_type="pattern_type",
+  valid_from="valid_from",
+  labels=["label_1", "label_2"],
+  markings=[tlp_marking],
+  author=author,
+  # custom properties (extension of STIX2.1 spec)
+  score=50,
+)
+stix_indicator = indicator.to_stix2_object()
+```
+
+**[DEPRECATED]**  
 To create a STIX object, use stix2 library and ⚠️ Always generate ID to have a predictive ID, use pycti library:
 
 ```python
@@ -281,6 +316,10 @@ indicator = stix2.Indicator(
   custom_properties="custom_properties",
 )
 ```
+
+<br>
+
+#### Formatting / Linting
 
 ⚠️ Any connector **should be validated** through pylint for linter. Example of commands:
 
@@ -307,14 +346,20 @@ PYTHONPATH=. python -m pylint <path_to_my_code> --disable=all --enable=no_genera
 
 Note: no_generated_id_stix is a custom checker available in [shared tools](../shared/README.md)
 
+<br>
+
 ⚠️ Any connector **should be formatted** through black and isort:
 
 ```commandline
 black .
-isort --profile black . 
+isort --profile black .
 ```
 
+<br>
+
 ⚠️ Any commits **should be signed and verified** through GPG signature.
+
+<br>
 
 #### External import connectors specifications
 
@@ -329,22 +374,21 @@ Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minute
 
 Configurations
 
-```
+```yml
 connector:
-  id: 'external-import-template'
-  type: 'EXTERNAL_IMPORT'
-  name: 'Connector Template'
-  scope: 'ChangeMe'
-  log_level: 'info'
-  duration_period: 'PT10S'
+  id: "external-import-template"
+  name: "Template Connector"
+  scope: "ChangeMe"
+  log_level: "info"
+  duration_period: "PT10S"
 ```
 
 Code
 
-```
+```python
 self.helper.schedule_iso(
     message_callback=self.process_message,
-    duration_period=self.config.duration_period,
+    duration_period=self.config.connector.duration_period,
 )
 ```
 
@@ -352,7 +396,7 @@ self.helper.schedule_iso(
 
 Initialize a new job and process it once data is imported
 
-```
+```python
 work_id = self.helper.api.work.initiate_work(
     self.helper.connect_id, friendly_name
 )
@@ -362,13 +406,13 @@ self.helper.api.work.to_processed(work_id, message)
 
 Get current state
 
-```
+```python
 current_state = self.helper.get_state()
 ```
 
 Set new state
 
-```
+```python
 self.helper.set_state()
 ```
 
@@ -376,7 +420,7 @@ self.helper.set_state()
 
 Listen to event triggered on OpenCTI
 
-```
+```python
 self.helper.listen(message_callback=self.process_message)
 ```
 
@@ -388,7 +432,7 @@ The method continuously monitors messages from the platform
 The connector have the capability to listen a live stream from the platform.
 The helper provide an easy way to listen to the events.
 
-```
+```python
 self.helper.listen_stream(message_callback=self.process_message)
 ```
 
@@ -401,6 +445,40 @@ Testing is crucial for several reasons:
 3. **Facilitating Collaboration**: Tests act as documentation and enable safe code refactoring.
 4. **Increasing Confidence**: Thorough testing ensures the code is reliable and ready for release.
 5. **Efficiency**: Early bug detection reduces costs and time in the long run.
+
+### Metadata
+
+Metadata allows some automations to be executed on the connector:
+
+- automatically add the connector to the XTM Hub connectors catalog
+- generate essential parts of the connector's documentation (in its README, XTM Hub, OpenCTI, etc...)
+
+The connector's manifest must contain the info below (all fields are required):
+
+```json
+{
+  "title": "Template Connector", # Official name of the connector
+  "slug": "template", # name of the connector's directory
+  "description": "Template description of the connector",
+  "short_description": "Template short description (summary) of the connector",
+  "logo": "external-import/template/__metadata__/logo.png", # Path of the logo if it exists, otherwise `null`
+  "use_cases" : ["Open Source Threat Intel"],
+  "verified": false, # DO NOT CHANGE - FOR INTERNAL USE ONLY
+  "last_verified_date": null, # DO NOT CHANGE - FOR INTERNAL USE ONLY
+  "playbook_supported": false, # Whether the connector is compatible with playbooks on OpenCTI (for connectors of type `INTERNAL_ENRICHMENT` only)
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.12",
+  "subscription_link": null, # Link to subscribe to the external service
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/template",
+  "manager_supported": false, # DO NOT CHANGE - FOR INTERNAL USE ONLY
+  "container_version": "rolling",
+  "container_image": "opencti/connector-template", # Docker image name
+  "container_type": "EXTERNAL_IMPORT" # Type of the connector (`EXTERNAL_IMPORT`, `INTERNAL_ENRICHMENT`, `INTERNAL_EXPORT_FILE`, `INTERNAL_IMPORT_FILE` or `STREAM`)
+}
+
+```
+
+<br>
 
 ## Useful Resources
 

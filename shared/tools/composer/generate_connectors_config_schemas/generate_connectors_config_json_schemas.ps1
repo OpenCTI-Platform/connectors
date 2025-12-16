@@ -127,15 +127,15 @@ foreach ($connector_directory in $connector_directories) {
             Write-Host "Connector is not supported: $connector_path"
         } else {
             Write-Host "Changes in: $connector_path"
-            Write-Host "> Looking for a config loader in $connector_path"
+            Write-Host "> Looking for a config model in $connector_path"
             
             $requirements_file = Find-RequirementsTxt -Path $connector_path
             if ($requirements_file) {
                 Write-Host "Found requirements.txt: $requirements_file"
                 
-                # Check if requirements file contains pydantic-settings
+                # Check if requirements file contains pydantic-settings or connectors-sdk
                 $requirementsContent = Get-Content $requirements_file -Raw
-                if ($requirementsContent -match "pydantic-settings") {
+                if ($requirementsContent -match "pydantic-settings" -or $requirementsContent -match "connectors-sdk") {
                     # Create a new PowerShell session to isolate the virtual environment
                     $scriptBlock = {
                         param($ConnectorPath, $VENV_NAME)
