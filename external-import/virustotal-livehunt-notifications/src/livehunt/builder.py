@@ -21,7 +21,6 @@ from pycti import (
     OpenCTIConnectorHelper,
     StixCoreRelationship,
 )
-from pycti.utils.constants import CustomObservableHostname
 
 logging.getLogger("plyara").setLevel(logging.ERROR)
 
@@ -114,12 +113,14 @@ class LivehuntBuilder:
 
         counter = 0
 
-        self.helper.connector_logger.info("Starting processing of VT Livehunt notifications")
+        self.helper.connector_logger.info(
+            "Starting processing of VT Livehunt notifications"
+        )
 
         for vtobj in files_iterator:
-            
+
             counter += 1
-            
+
             if self.delete_notification:
                 self.delete_livehunt_notification(vtobj.id)
 
@@ -486,7 +487,9 @@ class LivehuntBuilder:
                     self.helper.connector_logger.debug(
                         f"Created IPv6 observable for value {observable_value}"
                     )
-                elif observable_type == "Domain-Name" and self._is_valid_domain_name(observable_value): # Non active domain names are ignored
+                elif observable_type == "Domain-Name" and self._is_valid_domain_name(
+                    observable_value
+                ):  # Non active domain names are ignored
                     observable = stix2.DomainName(
                         value=observable_value,
                         object_marking_refs=self.tlp,
@@ -532,10 +535,13 @@ class LivehuntBuilder:
                     )
                     self.bundle.append(relationship)
                     if (
-                        (observable_type == "Domain-Name" and self.domain_name_indicators) or 
-                        (observable_type == "IPv4-Addr" and self.ip_indicators) or 
-                        (observable_type == "IPv6-Addr" and self.ip_indicators) or 
-                        (observable_type == "Url" and self.url_indicators)
+                        (
+                            observable_type == "Domain-Name"
+                            and self.domain_name_indicators
+                        )
+                        or (observable_type == "IPv4-Addr" and self.ip_indicators)
+                        or (observable_type == "IPv6-Addr" and self.ip_indicators)
+                        or (observable_type == "Url" and self.url_indicators)
                     ):
                         indicator = stix2.Indicator(
                             id=Indicator.generate_id(
