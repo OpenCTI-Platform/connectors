@@ -1,0 +1,21 @@
+{
+  "title": "VMRay",
+  "slug": "VMRay",
+  "description": "VMRay provides advanced threat analysis and detection by integrating its unique agentless hypervisor-based sandbox with a real-time analysis. \n\nThis connector enables the ingestion and correlation of VMRay analysis data including IOCs, VTIs, and MITRE ATT&CK techniques for faster detection and response.",
+  "short_description": "VMRay provides advanced threat analysis and detection by integrating its unique agentless hypervisor-based sandbox with a real-time analysis.",
+  "logo": "external-import/vmray-platform/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 100,
+  "support_version": ">= 6.9.0",
+  "subscription_link": "https://www.vmray.com/vmray-platform/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/vmray-platform",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-vmray-platform",
+  "container_type": "EXTERNAL_IMPORT"
+}
