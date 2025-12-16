@@ -48,9 +48,10 @@ class ReportBundleBuilder:
         report_status: int,
         report_type: str,
         confidence_level: int,
-        guessed_malwares: Mapping[str, str],
         report_file: Optional[Mapping[str, str]] = None,
         related_indicators: Optional = None,
+        report_guess_relations: bool = False,
+        malwares_from_field: Optional[List[dict]] = None,
     ) -> None:
         """Initialize report bundle builder."""
         self.report = report
@@ -61,8 +62,9 @@ class ReportBundleBuilder:
         self.report_status = report_status
         self.report_type = report_type
         self.report_file = report_file
-        self.guessed_malwares = guessed_malwares
         self.related_indicators = related_indicators
+        self.report_guess_relations = report_guess_relations
+        self.malwares_from_field = malwares_from_field if malwares_from_field else []
 
         # Use report dates for start time and stop time.
         start_time = timestamp_to_datetime(self.report["created_date"])
@@ -78,19 +80,21 @@ class ReportBundleBuilder:
     def _create_malwares(self) -> List[Malware]:
         malwares = []
 
-        for name, malware_id in self.guessed_malwares.items():
-            logger.info("Creating guessed malware '%s' (%s)...", name, malware_id)
-
-            malware = self._create_malware(malware_id, name)
-            malwares.append(malware)
+        if self.malwares_from_field:
+            for malware_item in self.malwares_from_field:
+                family_name = malware_item.get("family_name")
+                if family_name:
+                    logger.info("Creating malware from field '%s'...", family_name)
+                    malware = self._create_malware(family_name, is_family=True)
+                    malwares.append(malware)
 
         return malwares
 
-    def _create_malware(self, malware_id: str, name: str) -> Malware:
+    def _create_malware(self, name: str, is_family: bool = False) -> Malware:
         return create_malware(
-            name,
-            malware_id=malware_id,
+            name=name,
             created_by=self.author,
+            is_family=is_family,
             confidence=self.confidence_level,
             object_markings=self.object_markings,
         )
@@ -230,76 +234,85 @@ class ReportBundleBuilder:
         malwares = self._create_malwares()
         bundle_objects.extend(malwares)
 
-        # Intrusion sets use malwares and add to bundle.
-        intrusion_sets_use_malwares = self._create_uses_relationships(
-            intrusion_sets, malwares
-        )
-        bundle_objects.extend(intrusion_sets_use_malwares)
-
         # Create target sectors and add to bundle.
         target_sectors = self._create_targeted_sectors()
         bundle_objects.extend(target_sectors)
-
-        # Intrusion sets target sectors and add to bundle.
-        intrusion_sets_target_sectors = self._create_targets_relationships(
-            intrusion_sets, target_sectors
-        )
-        bundle_objects.extend(intrusion_sets_target_sectors)
-
-        # Malwares target sectors and add to bundle.
-        malwares_target_sectors = self._create_targets_relationships(
-            malwares, target_sectors
-        )
-        bundle_objects.extend(malwares_target_sectors)
 
         # Create targeted countries and regions and add to bundle.
         target_regions, target_countries = self._create_targeted_regions_and_countries()
         bundle_objects.extend(target_regions)
         bundle_objects.extend(target_countries)
 
-        # Intrusion sets target regions and add to bundle.
-        intrusion_sets_target_regions = self._create_targets_relationships(
-            intrusion_sets, target_regions
-        )
-        bundle_objects.extend(intrusion_sets_target_regions)
+        intrusion_sets_use_malwares = []
+        intrusion_sets_target_sectors = []
+        malwares_target_sectors = []
+        intrusion_sets_target_regions = []
+        intrusion_sets_target_countries = []
+        malwares_target_regions = []
+        malwares_target_countries = []
 
-        # Intrusion sets target countries and add to bundle.
-        intrusion_sets_target_countries = self._create_targets_relationships(
-            intrusion_sets, target_countries
-        )
-        bundle_objects.extend(intrusion_sets_target_countries)
+        if self.report_guess_relations:
+            intrusion_sets_use_malwares = self._create_uses_relationships(
+                intrusion_sets, malwares
+            )
+            bundle_objects.extend(intrusion_sets_use_malwares)
 
-        # Malwares target regions and add to bundle.
-        malwares_target_regions = self._create_targets_relationships(
-            malwares, target_regions
-        )
-        bundle_objects.extend(malwares_target_regions)
+            intrusion_sets_target_sectors = self._create_targets_relationships(
+                intrusion_sets, target_sectors
+            )
+            bundle_objects.extend(intrusion_sets_target_sectors)
 
-        # Malwares target countries and add to bundle.
-        malwares_target_countries = self._create_targets_relationships(
-            malwares, target_countries
-        )
-        bundle_objects.extend(malwares_target_countries)
+            malwares_target_sectors = self._create_targets_relationships(
+                malwares, target_sectors
+            )
+            bundle_objects.extend(malwares_target_sectors)
+
+            intrusion_sets_target_regions = self._create_targets_relationships(
+                intrusion_sets, target_regions
+            )
+            bundle_objects.extend(intrusion_sets_target_regions)
+
+            intrusion_sets_target_countries = self._create_targets_relationships(
+                intrusion_sets, target_countries
+            )
+            bundle_objects.extend(intrusion_sets_target_countries)
+
+            malwares_target_regions = self._create_targets_relationships(
+                malwares, target_regions
+            )
+            bundle_objects.extend(malwares_target_regions)
+
+            malwares_target_countries = self._create_targets_relationships(
+                malwares, target_countries
+            )
+            bundle_objects.extend(malwares_target_countries)
 
         # Indicators linked to the report and add to bundle
         indicators_linked = self.related_indicators
         bundle_objects.extend(indicators_linked)
 
         # Create object references for the report.
+        # Always include entities in object refs
         object_refs = create_object_refs(
             intrusion_sets,
             malwares,
-            intrusion_sets_use_malwares,
             target_sectors,
-            intrusion_sets_target_sectors,
-            malwares_target_sectors,
             target_regions,
             target_countries,
-            intrusion_sets_target_regions,
-            intrusion_sets_target_countries,
-            malwares_target_regions,
-            malwares_target_countries,
         )
+
+        # Add relationships to object refs when guessing is enabled
+        if self.report_guess_relations:
+            object_refs = create_object_refs(
+                object_refs,
+                intrusion_sets_use_malwares,
+                intrusion_sets_target_sectors,
+                malwares_target_sectors,
+                intrusion_sets_target_regions,
+                intrusion_sets_target_countries,
+                malwares_target_regions,
+                malwares_target_countries,
+            )
 
         # TODO: Ignore reports without any references or not?
         # Hack, the report must have at least on object reference.

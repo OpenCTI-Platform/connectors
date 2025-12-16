@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-misp:
-    image: opencti/connector-misp:rolling
+    image: opencti/connector-misp:latest
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -10,6 +10,7 @@ services:
       - CONNECTOR_SCOPE=misp
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_EXPOSE_METRICS=false
+      - CONNECTOR_DURATION_PERIOD=PT5M # Required
       - MISP_URL=http://localhost # Required
       - MISP_REFERENCE_URL= # Optional, will be used to create external reference to MISP event (default is "url")
       - MISP_KEY=ChangeMe # Required
@@ -42,6 +43,5 @@ services:
       - MISP_IMPORT_TO_IDS_NO_SCORE=40 # Optional, use as a score for the indicator/observable if the attribute to_ids is no
       - MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT=false #  Optional, import unsupported observable as x_opencti_text
       - MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT=true #  Optional, import unsupported observable as x_opencti_text just with the value
-      - MISP_INTERVAL=5 # Required, in minutes
       - MISP_PROPAGATE_LABELS=false # Optional, propagate labels to the observables
     restart: always

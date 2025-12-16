@@ -18,7 +18,7 @@ The connectors adds the following Entities:
 ## Installation
 
 Enabling this connector could be done by launching the Python process directly after providing the correct configuration in the `config.yml` file or within a
-Docker with the image `opencti/connector-malpedia:rolling` (replace `rolling` with the latest OpenCTI release version for production usage).
+Docker with the image `opencti/connector-malpedia:latest` (replace `rolling` with the latest OpenCTI release version for production usage).
 
 We provide an example of [`docker-compose.yml`](docker-compose.yml) file that could be used independently or integrated to the global `docker-compose.yml`file of OpenCTI.
 

@@ -13,31 +13,41 @@ __CONNECTOR_CONFIG_JSON_SCHEMA_FILENAME__ = "connector_config_schema.json"
 __CATALOG_ID__ = "filigran-catalog-id"
 
 
+REPOSITORY_SUBDIRECTORIES_TO_INCLUDE = [
+    "external-import",
+    "internal-enrichment",
+    "internal-export-file",
+    "internal-import-file",
+    "stream",
+]
+
+
 class ManifestGenerator:
     @staticmethod
     def get_connector___metadata___files_path() -> Generator[str, None, None]:
         """
         Gather all connector contract paths
         """
-        for root, _, files in os.walk("."):
-            if os.path.basename(root) == __CONNECTOR_METADATA_DIRECTORY__:
-                connector_manifest_file_path = None
-                connector_config_json_schema_file_path = None
-                for file in files:
-                    if file.endswith(__CONNECTOR_MANIFEST_FILENAME__):
-                        connector_manifest_file_path = os.path.join(root, file)
-                    if file.endswith(__CONNECTOR_CONFIG_JSON_SCHEMA_FILENAME__):
-                        connector_config_json_schema_file_path = os.path.join(
-                            root, file
+        for repository_subdirectory in REPOSITORY_SUBDIRECTORIES_TO_INCLUDE:
+            for root, _, files in os.walk(repository_subdirectory):
+                if os.path.basename(root) == __CONNECTOR_METADATA_DIRECTORY__:
+                    connector_manifest_file_path = None
+                    connector_config_json_schema_file_path = None
+                    for file in files:
+                        if file.endswith(__CONNECTOR_MANIFEST_FILENAME__):
+                            connector_manifest_file_path = os.path.join(root, file)
+                        if file.endswith(__CONNECTOR_CONFIG_JSON_SCHEMA_FILENAME__):
+                            connector_config_json_schema_file_path = os.path.join(
+                                root, file
+                            )
+                    if (
+                        connector_manifest_file_path
+                        or connector_config_json_schema_file_path
+                    ):
+                        yield (
+                            connector_manifest_file_path,
+                            connector_config_json_schema_file_path,
                         )
-                if (
-                    connector_manifest_file_path
-                    or connector_config_json_schema_file_path
-                ):
-                    yield (
-                        connector_manifest_file_path,
-                        connector_config_json_schema_file_path,
-                    )
 
     def find_logo_file(self, metadata_dir: str) -> str:
         """

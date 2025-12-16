@@ -78,19 +78,19 @@ There are a number of configuration options, which are set either in `docker-com
 
 ### Docker Deployment
 
-1. Ensure `pycti` version in `requirements.txt` matches your OpenCTI version (e.g., `pycti==6.8.10`).
+1. Ensure `pycti` version in `requirements.txt` matches your OpenCTI version (e.g., `pycti==6.9.0`).
 
 2. Build Docker image:
 
 ```bash
-docker build -t opencti/connector-doppel:rolling .
+docker build -t opencti/connector-doppel:latest .
 ```
 
 3. Register connector in the **main** OpenCTI `docker-compose.yml`:
 
 ```yaml
   connector-doppel:
-    image: opencti/connector-doppel:rolling
+    image: opencti/connector-doppel:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=changeme

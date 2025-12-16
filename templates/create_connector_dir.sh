@@ -127,11 +127,22 @@ CAPITALIZED_NAME=$(echo "$NAME" |  sed 's/.*/\U&/' | sed -E 's/-/_/g')
 
 find "$NEW_CONNECTOR_DIR" -type f -exec sed -i \
     -e "s/template/$NAME/g" \
-    -e "s/ConnectorTemplate/Connector${PYTHON_NAME}/g" \
+    -e "s/TemplateConnector/${PYTHON_NAME}Connector/g" \
+    -e "s/TemplateConfig/${PYTHON_NAME}Config/g" \
+    -e "s/TemplateClient/${PYTHON_NAME}Client/g" \
     -e "s/TEMPLATE/${CAPITALIZED_NAME}/g" {} +
 
-sed -i -e "s/$NAME/${NAME//-/_}/g" "$NEW_CONNECTOR_DIR/src/config.yml.sample"
-sed -i -e "s/$NAME/${NAME//-/_}/g" "$NEW_CONNECTOR_DIR/src/${TYPE//-/_}_connector/config_loader.py"
+sed -i -e "s/$NAME/${NAME//-/_}/g" "$NEW_CONNECTOR_DIR/config.yml.sample"
+sed -i -e "s/$NAME/${NAME//-/_}/g" "$NEW_CONNECTOR_DIR/src/connector/__init__.py"
+sed -i -e "s/$NAME/${NAME//-/_}/g" "$NEW_CONNECTOR_DIR/src/connector/connector.py"
+sed -i -e "s/$NAME/${NAME//-/_}/g" "$NEW_CONNECTOR_DIR/src/connector/settings.py"
+sed -i -e "s/$NAME/${NAME//-/_}/g" "$NEW_CONNECTOR_DIR/src/template_client/__init__.py"
+sed -i -e "s/$NAME/${NAME//-/_}/g" "$NEW_CONNECTOR_DIR/tests/tests_connector/test_settings.py"
+sed -i -e "s/$NAME/${NAME//-/_}/g" "$NEW_CONNECTOR_DIR/tests/test_main.py"
+
+if [ -d "$NEW_CONNECTOR_DIR/src/template_client" ]; then
+    mv "$NEW_CONNECTOR_DIR/src/template_client" "$NEW_CONNECTOR_DIR/src/${NAME//-/_}_client"
+fi
 
 echo "Connector '$NAME' of type '$TYPE' created successfully!"
 echo "Navigate to $NEW_CONNECTOR_DIR to start development."

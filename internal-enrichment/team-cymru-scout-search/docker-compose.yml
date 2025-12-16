@@ -1,0 +1,23 @@
+services:
+  connector-team-cymru-scout-search:
+    image: opencti/connector-team-cymru-scout-search:rolling
+    environment:
+      - OPENCTI_URL=${OPENCTI_URL:-http://opencti:8080}
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN:-}
+      - CONNECTOR_ID=${CONNECTOR_ID:-scout-search-connector}
+      - CONNECTOR_TYPE=${CONNECTOR_TYPE:-INTERNAL_ENRICHMENT}
+      - CONNECTOR_NAME=${CONNECTOR_NAME:-Scout Search Connector}
+      - CONNECTOR_SCOPE=${CONNECTOR_SCOPE:-Text}
+      - CONNECTOR_CONFIDENCE_LEVEL=${CONNECTOR_CONFIDENCE_LEVEL:-100}
+      - CONNECTOR_LOG_LEVEL=${CONNECTOR_LOG_LEVEL:-error}
+      - PURE_SIGNAL_SCOUT_API_URL=${PURE_SIGNAL_SCOUT_API_URL:-https://taxii.cymru.com/api/scout}
+      - PURE_SIGNAL_SCOUT_API_TOKEN=${PURE_SIGNAL_SCOUT_API_TOKEN:-}
+      - PURE_SIGNAL_SCOUT_MAX_TLP=${PURE_SIGNAL_SCOUT_MAX_TLP:-TLP:AMBER}
+      - PURE_SIGNAL_SCOUT_SEARCH_INTERVAL=${PURE_SIGNAL_SCOUT_SEARCH_INTERVAL:-1}
+    restart: always
+    networks:
+      - docker_default
+
+networks:
+  docker_default:
+    external: true

@@ -1,8 +1,8 @@
 {
   "title": "Google Safe Browsing",
   "slug": "google-safebrowsing",
-  "description": "-->",
-  "short_description": "-->",
+  "description": "This connector enriches domain names and URLs with threat intelligence from Google Safe Browsing. Google Safe Browsing maintains a list of websites that might pose risks for malware, abusive extensions, phishing, malicious and intrusive ads, and social engineering attacks.",
+  "short_description": "This connector enriches domain names and URLs with threat intelligence from Google Safe Browsing. Google Safe Browsing maintains a list of websites that might pose risks for malware, abusive extensions, phishing, malicious and intrusive ads, and social engineering attacks.",
   "logo": "internal-enrichment/google-safebrowsing/__metadata__/logo.png",
   "use_cases": [
     "Enrichment & Analysis"

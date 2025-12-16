@@ -24,6 +24,14 @@ TLP_MAP = {
     "white": stix2.TLP_WHITE,
     "green": stix2.TLP_GREEN,
     "amber": stix2.TLP_AMBER,
+    "amber+strict": stix2.MarkingDefinition(
+        id=pycti.MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+        definition_type="statement",
+        definition={"statement": "custom"},
+        allow_custom=True,
+        x_opencti_definition_type="TLP",
+        x_opencti_definition="TLP:AMBER+STRICT",
+    ),
     "red": stix2.TLP_RED,
 }
 
@@ -37,13 +45,22 @@ class ConversionError(Exception):
 class RFStixEntity:
     """Parent class"""
 
-    def __init__(self, name, _type, author=None, tlp="red", first_seen=None):
+    def __init__(
+        self,
+        name,
+        _type,
+        author=None,
+        tlp="amber+strict",
+        first_seen=None,
+        last_seen=None,
+    ):
         self.name = name
         self.type = _type
         self.author = author or self._create_author()
         self.tlp = TLP_MAP.get(tlp, None)
         self.stix_obj = None
         self.first_seen = first_seen
+        self.last_seen = last_seen
 
     def to_stix_objects(self):
         """Returns a list of STIX objects"""
@@ -75,7 +92,7 @@ class RFStixEntity:
 class Indicator(RFStixEntity):
     """Base class for Indicators of Compromise (IP, Hash, URL, Domain)"""
 
-    def __init__(self, name, _type, author, tlp, first_seen=None):
+    def __init__(self, name, _type, author, tlp, first_seen=None, last_seen=None):
         super().__init__(name, _type, author, tlp)
         self.stix_indicator = None
         self.stix_observable = None
@@ -86,6 +103,7 @@ class Indicator(RFStixEntity):
         self.tlp = TLP_MAP.get(tlp, None)
         self.description = None
         self.first_seen = first_seen
+        self.last_seen = last_seen
         self.labels = []
 
     def to_stix_objects(self):
@@ -112,7 +130,7 @@ class Indicator(RFStixEntity):
             description=self.description,
             labels=self.labels,
             pattern_type="stix",
-            valid_from=self.first_seen,
+            valid_from=self.last_seen,
             pattern=self._create_pattern(),
             created_by_ref=self.author.id,
             object_marking_refs=self.tlp,
@@ -200,7 +218,7 @@ class Indicator(RFStixEntity):
                 for element in rf_related_entities:
                     if element["type"]["name"] in handled_related_entities_types:
                         for rf_related_element in element["entities"]:
-                            type_ = rf_related_element["type"]
+                            type_ = element["type"]["name"]
                             name_ = rf_related_element["name"]
                             related_element = ENTITY_TYPE_MAPPER[type_](
                                 name_, type_, self.author, tlp
@@ -227,8 +245,10 @@ class Indicator(RFStixEntity):
 
 
 class IPAddress(Indicator):
-    def __init__(self, name, _type, author=None, tlp=None, first_seen=None):
-        super().__init__(name, _type, author, tlp, first_seen)
+    def __init__(
+        self, name, _type, author=None, tlp=None, first_seen=None, last_seen=None
+    ):
+        super().__init__(name, _type, author, tlp, first_seen, last_seen)
 
     """Converts IP address to IP indicator and observable"""
 
@@ -284,8 +304,10 @@ class IPAddress(Indicator):
 class Domain(Indicator):
     """Converts Domain to Domain indicator and observable"""
 
-    def __init__(self, name, _type, author=None, tlp=None, first_seen=None):
-        super().__init__(name, _type, author, tlp, first_seen)
+    def __init__(
+        self, name, _type, author=None, tlp=None, first_seen=None, last_seen=None
+    ):
+        super().__init__(name, _type, author, tlp, first_seen, last_seen)
 
     def _create_pattern(self):
         return f"[domain-name:value = '{self.name}']"
@@ -301,8 +323,10 @@ class Domain(Indicator):
 class URL(Indicator):
     """Converts URL to URL indicator and observable"""
 
-    def __init__(self, name, _type, author=None, tlp=None, first_seen=None):
-        super().__init__(name, _type, author, tlp, first_seen)
+    def __init__(
+        self, name, _type, author=None, tlp=None, first_seen=None, last_seen=None
+    ):
+        super().__init__(name, _type, author, tlp, first_seen, last_seen)
 
     def _create_pattern(self):
         ioc = self.name.replace("\\", "\\\\")
@@ -320,8 +344,10 @@ class URL(Indicator):
 class FileHash(Indicator):
     """Converts Hash to File indicator and observable"""
 
-    def __init__(self, name, _type, author=None, tlp=None, first_seen=None):
-        super().__init__(name, _type, author, tlp, first_seen)
+    def __init__(
+        self, name, _type, author=None, tlp=None, first_seen=None, last_seen=None
+    ):
+        super().__init__(name, _type, author, tlp, first_seen, last_seen)
         self.algorithm = self._determine_algorithm()
 
     def _determine_algorithm(self):
@@ -742,6 +768,10 @@ class Malware(RFStixEntity):
 class Vulnerability(RFStixEntity):
     """Converts a CyberVulnerability to a Vulnerability SDO"""
 
+    def __init__(self, name, _type, author=None, tlp=None, display_name=None):
+        super().__init__(name, _type, author, tlp)
+        self.display_name = display_name
+
     # TODO: add vuln descriptions
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
@@ -985,7 +1015,7 @@ class StixNote:
         self.ta_to_intrusion_set = ta_to_intrusion_set
         self.risk_as_score = risk_as_score
         self.risk_threshold = risk_threshold
-        self.tlp = stix2.TLP_RED
+        self.tlp = TLP_MAP["amber+strict"]
         self.rfapi = rfapi
         self.attachments = None
         self.analyst_notes_guess_relationships = analyst_notes_guess_relationships
@@ -1235,22 +1265,27 @@ class StixNote:
     def create_adversary_capabilities_relations(self, adversary, event_attr):
         """
         Create relation between adversary and capabilities
-        Adversary (Intrusion Set) -> Uses -> "capabilities" data in event (Attack Pattern / Malware)
+        Adversary (Intrusion Set) -> Uses -> "capabilities" data in event (Attack Pattern / Malware /Vulnerability)
         """
         event_objects = []
         for event_capability in event_attr["capabilities"]:
 
-            # Get or create capability (AttackPattern or Malware)
+            # Get or create capability (AttackPattern or Malware or Vulnerability)
             capability_name = event_capability["name"]
+            capability_type = event_capability["type"]
             capability_obj = [
                 obj for obj in self.objects if obj.get("name") == capability_name
             ]
             if len(capability_obj) > 0:
                 capability = capability_obj[0]
             else:
-                capability_type = event_capability["type"]
                 if capability_type == "Malware":
                     capability_obj = Malware(
+                        name=capability_name,
+                        _type=capability_type,
+                    )
+                elif capability_type == "CyberVulnerability":
+                    capability_obj = Vulnerability(
                         name=capability_name,
                         _type=capability_type,
                     )
@@ -1264,13 +1299,22 @@ class StixNote:
                 event_objects.append(capability)
 
             # Create relation adversary-capability
-            event_objects.append(
-                self._create_rel(
-                    from_id=adversary.id,
-                    to_id=capability.id,
-                    relation="uses",
+            if capability_type == "CyberVulnerability":
+                event_objects.append(
+                    self._create_rel(
+                        from_id=adversary.id,
+                        to_id=capability.id,
+                        relation="targets",
+                    )
                 )
-            )
+            else:
+                event_objects.append(
+                    self._create_rel(
+                        from_id=adversary.id,
+                        to_id=capability.id,
+                        relation="uses",
+                    )
+                )
 
         return event_objects
 
@@ -1284,7 +1328,9 @@ class StixNote:
             if event.get("type") == "CyberAttack" and event.get("attributes"):
                 event_attr = event["attributes"]
 
-                if event_attr.get("adversary"):
+                if event_attr.get("adversary") and event_attr["adversary"][0][
+                    "type"
+                ] in ["Organization", "Person"]:
 
                     # Retrieve adversary in self.objects depending on adversary name in event
                     # self.objects contains all IntrusionSet, Malware, Identity, AttackPattern et ThreatActor linked to note

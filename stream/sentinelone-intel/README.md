@@ -22,6 +22,12 @@ Table of Contents
     - [Debugging](#debugging)
     - [Additional information](#additional-information)
 
+## Status Filigran
+
+| Status            | Date | Comment |
+|-------------------|------|---------|
+| Filigran Verified | -    | -       |
+
 ## Introduction
 
 The SentinelOne Intel Stream Connector enables real-time synchronization of threat intelligence indicators from OpenCTI to SentinelOne's threat intelligence platform as Indicators of compromise. Upon the creation of Indicators within the OpenCTI platform, the connector automatically evaluates their STIX patterns and pushes compatible indicators to a SentinelOne Instance. 
@@ -79,16 +85,16 @@ Below are the parameters you'll need to set for OpenCTI:
 
 Below are the parameters you'll need to set for running the connector properly:
 
-| Parameter                             | config.yml                  | Docker environment variable             | Default         | Mandatory | Description                                                                                                                                            |
-|---------------------------------------|-----------------------------|-----------------------------------------|-----------------|-----------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Connector ID                          | id                          | `CONNECTOR_ID`                          | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                                                                              |
-| Connector Type                        | type                        | `CONNECTOR_TYPE`                        | STREAM          | Yes       | Should always be set to `STREAM` for this connector.                                                                                                   |
+| Parameter                             | config.yml                  | Docker environment variable             | Default                            | Mandatory | Description                                                                                                                                            |
+|---------------------------------------|-----------------------------|-----------------------------------------|------------------------------------|-----------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Connector ID                          | id                          | `CONNECTOR_ID`                          | /                                  | Yes       | A unique `UUIDv4` identifier for this connector instance.                                                                                              |
+| Connector Type                        | type                        | `CONNECTOR_TYPE`                        | STREAM                             | Yes       | Should always be set to `STREAM` for this connector.                                                                                                   |
 | Connector Name                        | name                        | `CONNECTOR_NAME`                        | SentinelOne Intel Stream Connector | Yes       | Name of the connector.                                                                                                                                 |
-| Connector Scope                       | scope                       | `CONNECTOR_SCOPE`                       | all             | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object.                                                               |
-| Log Level                             | log_level                   | `CONNECTOR_LOG_LEVEL`                   | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.                                                                 |
-| Connector Live Stream ID              | live_stream_id              | `CONNECTOR_LIVE_STREAM_ID`              | live            | Yes       | ID of the live stream created in the OpenCTI UI                                                                                                        |
-| Connector Live Stream Listen Delete   | live_stream_listen_delete   | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | true            | Yes       | Listen to all delete events concerning the entity, depending on the filter set for the OpenCTI stream.                                                 |
-| Connector Live Stream No dependencies | live_stream_no_dependencies | `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES` | true            | Yes       | Always set to `True` unless you are synchronizing 2 OpenCTI platforms and you want to get an entity and all context (relationships and related entity) |
+| Connector Scope                       | scope                       | `CONNECTOR_SCOPE`                       | sentinelone                                | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object.                                                               |
+| Log Level                             | log_level                   | `CONNECTOR_LOG_LEVEL`                   | info                               | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.                                                                 |
+| Connector Live Stream ID              | live_stream_id              | `CONNECTOR_LIVE_STREAM_ID`              | live                               | Yes       | ID of the live stream created in the OpenCTI UI                                                                                                        |
+| Connector Live Stream Listen Delete   | live_stream_listen_delete   | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | true                               | Yes       | Listen to all delete events concerning the entity, depending on the filter set for the OpenCTI stream.                                                 |
+| Connector Live Stream No dependencies | live_stream_no_dependencies | `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES` | true                               | Yes       | Always set to `True` unless you are synchronizing 2 OpenCTI platforms and you want to get an entity and all context (relationships and related entity) |
 
 ### Connector extra parameters environment variables
 
@@ -96,13 +102,13 @@ Below are the parameters you'll need to set for the connector:
 
 > **Note:** At least one scope ID (Account, Site, or Group) must be configured. Account ID and Site ID cannot be used together.
 
-| Parameter    | config.yml   | Docker environment variable | Mandatory | Description |
-|--------------|--------------|-----------------------------|-----------|-----------| 
-| API URL      | url      | `SENTINELONE_INTEL_URL` | Yes       | The base URL of your SentinelOne management console (e.g., https://your-console.sentinelone.net) |
-| API Key      | api_key      | `SENTINELONE_INTEL_API_KEY` | Yes       | SentinelOne API token for authentication |
-| Account ID   | account_id   | `SENTINELONE_INTEL_ACCOUNT_ID` | No        | SentinelOne Account ID for scoping indicators (at least one ID required) |
-| Site ID      | site_id      | `SENTINELONE_INTEL_SITE_ID` | No        | SentinelOne Site ID for scoping indicators (cannot be used with Account ID) |
-| Group ID     | group_id     | `SENTINELONE_INTEL_SITE_ID` | No        | SentinelOne Group ID for scoping indicators |
+| Parameter    | config.yml | Docker environment variable    | Mandatory | Description                                                                                      |
+|--------------|------------|--------------------------------|-----------|--------------------------------------------------------------------------------------------------| 
+| API URL      | api_url        | `SENTINELONE_INTEL_API_URL`        | Yes       | The base URL of your SentinelOne management console (e.g., https://your-console.sentinelone.net) |
+| API Key      | api_key    | `SENTINELONE_INTEL_API_KEY`    | Yes       | SentinelOne API token for authentication                                                         |
+| Account ID   | account_id | `SENTINELONE_INTEL_ACCOUNT_ID` | No        | SentinelOne Account ID for scoping indicators (at least one ID required)                         |
+| Site ID      | site_id    | `SENTINELONE_INTEL_SITE_ID`    | No        | SentinelOne Site ID for scoping indicators (cannot be used with Account ID)                      |
+| Group ID     | group_id   | `SENTINELONE_INTEL_GROUP_ID`   | No        | SentinelOne Group ID for scoping indicators                                                      |
 
 ## Deployment
 
@@ -203,3 +209,4 @@ Compound patterns containing logical operators (AND, OR, FOLLOWEDBY, etc.) or mu
 The connector can be debugged by setting the appropiate log level.
 Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
 e., `self.helper.connector_logger.error("An error message")`.
+
