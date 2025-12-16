@@ -34,7 +34,6 @@ def fake_valid_associated_files() -> list[AssociatedFile]:
             content=b"content",
             mime_type="text/plain",
             markings=[TLPMarking(level="white")],
-            author=OrganizationAuthor(name="Example Corp"),
             version="1.0.0",
         ),
         AssociatedFile(
@@ -44,7 +43,6 @@ def fake_valid_associated_files() -> list[AssociatedFile]:
             mime_type="application/pdf",
             markings=[TLPMarking(level="amber")],
             version="1.0.0",
-            author=OrganizationAuthor(name="Example Corp"),
         ),
     ]
 
