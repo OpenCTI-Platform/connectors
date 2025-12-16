@@ -1,4 +1,4 @@
-pycti==6.9.0
+pycti==6.9.1
 weasyprint==66.0
 html2text==2025.4.15
 pdfminer.six==20251107

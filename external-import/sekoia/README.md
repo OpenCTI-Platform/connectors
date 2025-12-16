@@ -29,7 +29,7 @@ Find all the configuration variables available (default/required) here: [Connect
 
 ```
 connector-sekoia:
-    image: opencti/connector-sekoia:6.9.0
+    image: opencti/connector-sekoia:6.9.1
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
