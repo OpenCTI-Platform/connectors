@@ -301,16 +301,24 @@ class ONYPHEConnector:
         # Generate URL, description, and external_id
         if type == "x509-certificate":
             if not x509_hashes or not isinstance(x509_hashes, dict):
-                return self.helper.log_error("No supported hash found in x509-certificate")
+                return self.helper.log_error(
+                    "No supported hash found in x509-certificate"
+                )
             url = url_func(x509_hashes)
             description = desc_template.format(algo=next(iter(x509_hashes.keys())))
             external_id = id_func(x509_hashes)
         elif type == "text":
             if not label_pivots or not value:
-                return self.helper.log_debug("No matching ONYPHE analytical pivot label found or value missing.")
-            pivot_label = next((l for l in label_pivots if l in REVERSE_PIVOT_MAP), None)
+                return self.helper.log_debug(
+                    "No matching ONYPHE analytical pivot label found or value missing."
+                )
+            pivot_label = next(
+                (l for l in label_pivots if l in REVERSE_PIVOT_MAP), None
+            )
             if not pivot_label:
-                return self.helper.log_debug("No matching ONYPHE analytical pivot label found or value missing.")
+                return self.helper.log_debug(
+                    "No matching ONYPHE analytical pivot label found or value missing."
+                )
             url = url_func(value, label_pivots)
             description = desc_template.format(pivot_label=pivot_label, value=value)
             external_id = id_func(value)
@@ -322,7 +330,9 @@ class ONYPHEConnector:
             external_id = id_func(value)
 
         if not url or not external_id:
-            return self.helper.log_debug("Could not construct ONYPHE external reference for entity")
+            return self.helper.log_debug(
+                "Could not construct ONYPHE external reference for entity"
+            )
 
         self.helper.log_debug(f"External reference: {url}")
         external_reference = stix2.ExternalReference(
@@ -723,7 +733,7 @@ class ONYPHEConnector:
         """
         self._extract_and_check_markings(opencti_entity)
 
-        entity_value = self._safe_get(stix_entity,"value")
+        entity_value = self._safe_get(stix_entity, "value")
         is_observable = False
         ctifilter = ""
 
@@ -732,7 +742,9 @@ class ONYPHEConnector:
             ctifilter += f"ip.dest:{entity_value}"
             is_observable = True
         elif stix_entity["type"] == "hostname":
-            ctifilter += f"( ?dns.hostname:{entity_value} ?cert.hostname:{entity_value}) "
+            ctifilter += (
+                f"( ?dns.hostname:{entity_value} ?cert.hostname:{entity_value}) "
+            )
             is_observable = True
         elif stix_entity["type"] == "x509-certificate":
             if "hashes" in stix_entity:
@@ -765,7 +777,8 @@ class ONYPHEConnector:
                     field
                     for field, entity_value in PIVOT_MAP.items()
                     if any(
-                        label.strip().lower() == entity_value.lower() for label in labels
+                        label.strip().lower() == entity_value.lower()
+                        for label in labels
                     )
                 ),
                 None,
@@ -779,7 +792,9 @@ class ONYPHEConnector:
 
         if is_observable:
             try:
-                self.helper.log_info(f"Processing {stix_entity["type"]} observable: {entity_value}")
+                self.helper.log_info(
+                    f"Processing {stix_entity['type']} observable: {entity_value}"
+                )
                 # Get ONYPHE ctiscan API Response
                 oql = f"category:{self.onyphe_category} {ctifilter} -since:{self.config.time_since}"
 
