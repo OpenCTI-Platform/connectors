@@ -358,7 +358,7 @@ class VMRayConnector:
 
         try:
             submission_data = self.vmray_analyzer_client.call(
-                "GET", f"/rest/submission", params=params
+                "GET", "/rest/submission", params=params
             )
             if submission_data:
                 all_submissions.extend(submission_data)
@@ -790,7 +790,7 @@ class VMRayConnector:
                 observable_type="process",
                 observable_value=cmd_line,
                 labels=colored["threat_names"] + colored["classifications"],
-                description=f"Primary Process IOC from VMRay",
+                description="Primary Process IOC from VMRay",
                 created_by_ref=self.identity,
                 score=confidence,
                 markings=self.default_markings,
@@ -861,7 +861,7 @@ class VMRayConnector:
             domain_obs = VMRayObservableTransform(
                 observable_type="domain",
                 observable_value=domain_ioc["domain"],
-                description=f"Primary Domain IOC from VMRay",
+                description="Primary Domain IOC from VMRay",
                 labels=labels,
                 created_by_ref=self.identity,
                 score=confidence,
@@ -906,7 +906,7 @@ class VMRayConnector:
                 ip_obs = VMRayObservableTransform(
                     observable_type="ip",
                     observable_value=ip,
-                    description=f"IP IOC from VMRay",
+                    description="IP IOC from VMRay",
                     labels=labels,
                     created_by_ref=self.identity,
                     score=confidence,
@@ -964,7 +964,7 @@ class VMRayConnector:
             url_obs = VMRayObservableTransform(
                 observable_type="url",
                 observable_value=url_ioc["url"],
-                description=f"Primary URL IOC from VMRay",
+                description="Primary URL IOC from VMRay",
                 labels=None,
                 created_by_ref=self.identity,
                 score=confidence,
@@ -1008,7 +1008,7 @@ class VMRayConnector:
                 ip_obs = VMRayObservableTransform(
                     observable_type="ip",
                     observable_value=ip,
-                    description=f"IP IOC from VMRay",
+                    description="IP IOC from VMRay",
                     labels=labels,
                     created_by_ref=self.identity,
                     score=confidence,
@@ -1080,7 +1080,7 @@ class VMRayConnector:
                 observable_type="mutex",
                 observable_value=mutex_ioc["mutex_name"],
                 labels=colored["threat_names"] + colored["classifications"],
-                description=f"Primary Mutex IOC from VMRay",
+                description="Primary Mutex IOC from VMRay",
                 created_by_ref=self.identity,
                 score=confidence,
                 observable=mutex_ioc,
@@ -1162,7 +1162,7 @@ class VMRayConnector:
             reg_obs = VMRayObservableTransform(
                 observable_type="registry",
                 observable_value=reg_ioc["reg_key_name"],
-                description=f"Primary Registry Key IOC from VMRay",
+                description="Primary Registry Key IOC from VMRay",
                 labels=colored["threat_names"] + colored["classifications"],
                 created_by_ref=self.identity,
                 score=confidence,
@@ -1254,7 +1254,7 @@ class VMRayConnector:
             email_obs = VMRayObservableTransform(
                 observable_type="email_address",
                 observable_value=observable_value,
-                description=f"Primary Email IOC from VMRay",
+                description="Primary Email IOC from VMRay",
                 labels=email_labels,
                 created_by_ref=self.identity,
                 score=confidence,
@@ -1326,7 +1326,7 @@ class VMRayConnector:
             ip_obs = VMRayObservableTransform(
                 observable_type="ip",
                 observable_value=ip_ioc["ip_address"],
-                description=f"Primary IP IOC from VMRay",
+                description="Primary IP IOC from VMRay",
                 labels=labels,
                 created_by_ref=self.identity,
                 score=confidence,
@@ -1359,7 +1359,7 @@ class VMRayConnector:
                 domain_obs = VMRayObservableTransform(
                     observable_type="domain",
                     observable_value=domain,
-                    description=f"Domain IOC from VMRay",
+                    description="Domain IOC from VMRay",
                     labels=labels,
                     created_by_ref=self.identity,
                     score=confidence,
