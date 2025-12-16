@@ -10,6 +10,7 @@ import stix2
 import yaml
 from alienvault.client import AlienVaultClient
 from alienvault.importer import PulseImporter, PulseImporterConfig
+from alienvault.settings import ConnectorSettings
 from alienvault.utils import (
     convert_comma_separated_str_to_list,
     create_organization,
@@ -27,7 +28,6 @@ class AlienVault:
 
     _CONFIG_CONNECTOR_NAMESPACE = "connector"
     _CONFIG_NAMESPACE = "alienvault"
-
     _CONFIG_DURATION_PERIOD = f"{_CONFIG_CONNECTOR_NAMESPACE}.duration_period"
     _CONFIG_INTERVAL_SEC = f"{_CONFIG_NAMESPACE}.interval_sec"
     _CONFIG_BASE_URL = f"{_CONFIG_NAMESPACE}.base_url"
@@ -48,14 +48,12 @@ class AlienVault:
         f"{_CONFIG_NAMESPACE}.enable_attack_patterns_indicates"
     )
     _CONFIG_FILTER_INDICATORS = f"{_CONFIG_NAMESPACE}.filter_indicators"
-
     _CONFIG_REPORT_STATUS_MAPPING = {
         "new": 0,
         "in progress": 1,
         "analyzed": 2,
         "closed": 3,
     }
-
     _CONFIG_DEFAULT_X_OPENCTI_SCORE = f"{_CONFIG_NAMESPACE}.default_x_opencti_score"
     _CONFIG_X_OPENCTI_SCORE_IP = f"{_CONFIG_NAMESPACE}.x_opencti_score_ip"
     _CONFIG_X_OPENCTI_SCORE_DOMAIN = f"{_CONFIG_NAMESPACE}.x_opencti_score_domain"
@@ -67,7 +65,6 @@ class AlienVault:
     _CONFIG_X_OPENCTI_SCORE_CRYPTOCURRENCY_WALLET = (
         f"{_CONFIG_NAMESPACE}.x_opencti_score_cryptocurrency_wallet"
     )
-
     _DEFAULT_CREATE_OBSERVABLES = True
     _DEFAULT_CREATE_INDICATORS = True
     _DEFAULT_FILTER_INDICATORS = False
@@ -76,65 +73,33 @@ class AlienVault:
     _DEFAULT_ENABLE_ATTACK_PATTERNS_INDICATES = True
     _DEFAULT_INTERVAL_SEC = 1800
     _DEFAULT_DEFAULT_X_OPENCTI_SCORE = 50
-
     _STATE_LAST_RUN = "last_run"
 
-    def __init__(self) -> None:
+    def __init__(
+        self, config: ConnectorSettings, helper: OpenCTIConnectorHelper
+    ) -> None:
         """Initialize AlienVault connector."""
-        config = self._read_configuration()
-
-        # AlienVault connector configuration
-        base_url = self._get_configuration(config, self._CONFIG_BASE_URL)
-        api_key = self._get_configuration(config, self._CONFIG_API_KEY)
-
-        tlp = self._get_configuration(config, self._CONFIG_TLP)
+        self.config = config
+        self.helper = helper
+        base_url = self.config.alienvault.base_url
+        api_key = self.config.alienvault.api_key.get_secret_value()
+        tlp = self.config.alienvault.tlp
         tlp_marking = self._convert_tlp_to_marking_definition(tlp)
-
-        create_observables = self._get_configuration(
-            config, self._CONFIG_CREATE_OBSERVABLES
-        )
-        if create_observables is None:
-            create_observables = self._DEFAULT_CREATE_OBSERVABLES
-        else:
-            create_observables = bool(create_observables)
-
-        create_indicators = self._get_configuration(
-            config, self._CONFIG_CREATE_INDICATORS
-        )
-        if create_indicators is None:
-            create_indicators = self._DEFAULT_CREATE_INDICATORS
-        else:
-            create_indicators = bool(create_indicators)
-
-        filter_indicators = self._get_configuration(
-            config, self._CONFIG_FILTER_INDICATORS
-        )
-        if filter_indicators is None:
-            filter_indicators = self._DEFAULT_FILTER_INDICATORS
-        else:
-            filter_indicators = bool(filter_indicators)
-
-        default_latest_pulse_timestamp = self._get_configuration(
-            config, self._CONFIG_PULSE_START_TIMESTAMP
-        )
-
-        report_status_str = self._get_configuration(config, self._CONFIG_REPORT_STATUS)
+        create_observables = self.config.alienvault.create_observables
+        create_indicators = self.config.alienvault.create_indicators
+        filter_indicators = self.config.alienvault.filter_indicators
+        default_latest_pulse_timestamp = self.config.alienvault.pulse_start_timestamp
+        report_status_str = self.config.alienvault.report_status
         report_status = self._convert_report_status_str_to_report_status_int(
             report_status_str
         )
-
-        report_type = self._get_configuration(config, self._CONFIG_REPORT_TYPE)
+        report_type = self.config.alienvault.report_type
         if not report_type:
             report_type = self._DEFAULT_REPORT_TYPE
-
-        guess_malware = bool(
-            self._get_configuration(config, self._CONFIG_GUESS_MALWARE)
-        )
-
-        guess_cve = bool(self._get_configuration(config, self._CONFIG_GUESS_CVE))
-
-        excluded_pulse_indicator_types_str = self._get_configuration(
-            config, self._CONFIG_EXCLUDED_PULSE_INDICATOR_TYPES
+        guess_malware = self.config.alienvault.guess_malware
+        guess_cve = self.config.alienvault.guess_cve
+        excluded_pulse_indicator_types_str = (
+            self.config.alienvault.excluded_pulse_indicator_types
         )
         excluded_pulse_indicator_types = set()
         if excluded_pulse_indicator_types_str is not None:
@@ -142,105 +107,27 @@ class AlienVault:
                 excluded_pulse_indicator_types_str
             )
             excluded_pulse_indicator_types = set(excluded_pulse_indicator_types_list)
-
-        enable_relationships = self._get_configuration(
-            config, self._CONFIG_ENABLE_RELATIONSHIPS
+        enable_relationships = self.config.alienvault.enable_relationships
+        enable_attack_patterns_indicates = (
+            self.config.alienvault.enable_attack_patterns_indicates
         )
-        if enable_relationships is None:
-            enable_relationships = self._DEFAULT_ENABLE_RELATIONSHIPS
-        else:
-            enable_relationships = bool(enable_relationships)
-
-        enable_attack_patterns_indicates = self._get_configuration(
-            config, self._CONFIG_ENABLE_ATTACK_PATTERNS_INDICATES
-        )
-        if enable_attack_patterns_indicates is None:
-            enable_attack_patterns_indicates = (
-                self._DEFAULT_ENABLE_ATTACK_PATTERNS_INDICATES
-            )
-        else:
-            enable_attack_patterns_indicates = bool(enable_attack_patterns_indicates)
-
-        # Set x_opencti_score(s)
-        default_x_opencti_score = (
-            self._get_configuration(
-                config, self._CONFIG_DEFAULT_X_OPENCTI_SCORE, is_number=True
-            )
-            or self._DEFAULT_DEFAULT_X_OPENCTI_SCORE
-        )
-        x_opencti_score_ip = (
-            self._get_configuration(
-                config, self._CONFIG_X_OPENCTI_SCORE_IP, is_number=True
-            )
-            or default_x_opencti_score
-        )
-        x_opencti_score_domain = (
-            self._get_configuration(
-                config, self._CONFIG_X_OPENCTI_SCORE_DOMAIN, is_number=True
-            )
-            or default_x_opencti_score
-        )
-        x_opencti_score_hostname = (
-            self._get_configuration(
-                config, self._CONFIG_X_OPENCTI_SCORE_HOSTNAME, is_number=True
-            )
-            or default_x_opencti_score
-        )
-        x_opencti_score_email = (
-            self._get_configuration(
-                config, self._CONFIG_X_OPENCTI_SCORE_EMAIL, is_number=True
-            )
-            or default_x_opencti_score
-        )
-        x_opencti_score_file = (
-            self._get_configuration(
-                config, self._CONFIG_X_OPENCTI_SCORE_FILE, is_number=True
-            )
-            or default_x_opencti_score
-        )
-        x_opencti_score_url = (
-            self._get_configuration(
-                config, self._CONFIG_X_OPENCTI_SCORE_URL, is_number=True
-            )
-            or default_x_opencti_score
-        )
-        x_opencti_score_mutex = (
-            self._get_configuration(
-                config, self._CONFIG_X_OPENCTI_SCORE_MUTEX, is_number=True
-            )
-            or default_x_opencti_score
-        )
+        default_x_opencti_score = self.config.alienvault.default_x_opencti_score
+        x_opencti_score_ip = self.config.alienvault.x_opencti_score_ip
+        x_opencti_score_domain = self.config.alienvault.x_opencti_score_domain
+        x_opencti_score_hostname = self.config.alienvault.x_opencti_score_hostname
+        x_opencti_score_email = self.config.alienvault.x_opencti_score_email
+        x_opencti_score_file = self.config.alienvault.x_opencti_score_file
+        x_opencti_score_url = self.config.alienvault.x_opencti_score_url
+        x_opencti_score_mutex = self.config.alienvault.x_opencti_score_mutex
         x_opencti_score_cryptocurrency_wallet = (
-            self._get_configuration(
-                config,
-                self._CONFIG_X_OPENCTI_SCORE_CRYPTOCURRENCY_WALLET,
-                is_number=True,
-            )
-            or default_x_opencti_score
+            self.config.alienvault.x_opencti_score_cryptocurrency_wallet
         )
-
-        # Create OpenCTI connector helper
-        self.helper = OpenCTIConnectorHelper(config)
-
-        # Get OpenCTI connector duration period
-        self.duration_period = self._get_configuration(
-            config, self._CONFIG_DURATION_PERIOD
-        )
-        self.interval_sec = self._get_configuration(
-            config,
-            self._CONFIG_INTERVAL_SEC,
-            is_number=True,
-        )
+        self.duration_period = self.config.connector.duration_period
+        self.interval_sec = self.config.alienvault.interval_sec
         if not self.interval_sec:
             self.interval_sec = self._DEFAULT_INTERVAL_SEC
-
-        # Create AlienVault author
         author = self._create_author()
-
-        # Create AlienVault client
         client = AlienVaultClient(base_url, api_key)
-
-        # Create pulse importer
         pulse_importer_config = PulseImporterConfig(
             helper=self.helper,
             client=client,
@@ -267,7 +154,6 @@ class AlienVault:
             x_opencti_score_mutex=x_opencti_score_mutex,
             x_opencti_score_cryptocurrency_wallet=x_opencti_score_cryptocurrency_wallet,
         )
-
         self.pulse_importer = PulseImporter(pulse_importer_config)
 
     @staticmethod
@@ -313,7 +199,6 @@ class AlienVault:
         return cls._CONFIG_REPORT_STATUS_MAPPING[report_status.lower()]
 
     def run(self):
-
         if self.duration_period:
             self.helper.schedule_iso(
                 message_callback=self.process_message,
@@ -329,13 +214,10 @@ class AlienVault:
     def process_message(self):
         """Run AlienVault connector."""
         self._info("Starting AlienVault connector...")
-
         try:
             timestamp = self._current_unix_timestamp()
             current_state = self._load_state()
-
             self._info("Loaded state: {0}", current_state)
-
             now = datetime.datetime.utcfromtimestamp(timestamp)
             friendly_name = "AlienVault run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
             work_id = self.helper.api.work.initiate_work(
@@ -345,22 +227,18 @@ class AlienVault:
             new_state = current_state.copy()
             new_state.update(pulse_import_state)
             new_state[self._STATE_LAST_RUN] = self._current_unix_timestamp()
-
             self._info("Storing new state: {0}", new_state)
             self.helper.set_state(new_state)
-
             message = (
                 f"{self.helper.connect_name} connector successfully run, storing last_run as "
                 + str(timestamp)
             )
             self.helper.api.work.to_processed(work_id, message)
             self._info(message)
-
         except (KeyboardInterrupt, SystemExit):
             self._info("Connector stopping...")
             sys.exit(0)
-
-        except Exception as e:  # noqa: B902
+        except Exception as e:
             self._error("AlienVault connector internal error: {0}", str(e))
 
     @staticmethod
