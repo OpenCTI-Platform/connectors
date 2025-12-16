@@ -23,6 +23,7 @@ from connectors_sdk.models.ipv6_address import IPV6Address
 from connectors_sdk.models.kill_chain_phase import KillChainPhase
 from connectors_sdk.models.malware import Malware
 from connectors_sdk.models.note import Note
+from connectors_sdk.models.observed_data import ObservedData
 from connectors_sdk.models.organization import Organization
 from connectors_sdk.models.organization_author import OrganizationAuthor
 from connectors_sdk.models.region import Region
@@ -62,6 +63,7 @@ __all__ = [
     "KillChainPhase",
     "Malware",
     "Note",
+    "ObservedData",
     "Organization",
     "OrganizationAuthor",
     "Region",
