@@ -1,2 +1,2 @@
-pycti==6.9.1
+pycti==6.9.2
 html2text==2025.4.15
