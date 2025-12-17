@@ -2,16 +2,6 @@ from datetime import datetime
 from typing import Dict
 
 import stix2
-from pycti import (
-    STIX_EXT_OCTI_SCO,
-    CustomObservableHostname,
-    CustomObservableText,
-    Identity,
-    Note,
-    OpenCTIConnectorHelper,
-    StixCoreRelationship,
-)
-
 from internal_enrichment_connector.config_loader import ConfigConnector
 from onyphe_api import APIError, Onyphe
 from onyphe_references import (
@@ -22,6 +12,15 @@ from onyphe_references import (
     SUMMARY_TITLES,
     SUMMARYS,
     TYPE_HANDLERS,
+)
+from pycti import (
+    STIX_EXT_OCTI_SCO,
+    CustomObservableHostname,
+    CustomObservableText,
+    Identity,
+    Note,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
 )
 
 
@@ -70,7 +69,6 @@ class ONYPHEConnector:
         )
 
     def _pattern_type_create(self, pattern_type="onyphe"):
-
         VOCAB_KEY = "pattern_type_ov"
         try:
             self.vocabulary_list = []
@@ -223,15 +221,15 @@ class ONYPHEConnector:
                     service_data = (raw_text.strip())[0:2048]
 
                 if ojson["app"]["tls"]:
-                    protocol_string = f'{str(ojson["app"]["transport"])}/{str(ojson["app"]["protocol"])}/tls'
+                    protocol_string = f"{str(ojson['app']['transport'])}/{str(ojson['app']['protocol'])}/tls"
                 else:
-                    protocol_string = f'{str(ojson["app"]["transport"])}/{str(ojson["app"]["protocol"])}'
+                    protocol_string = f"{str(ojson['app']['transport'])}/{str(ojson['app']['protocol'])}"
 
                 if isinstance(ojson["scanner"], dict):
                     services_desc = (
                         services_desc
-                        + f'\n**{str(ojson["ip"]["dest"])}:{str(ojson[str(ojson["app"]["transport"])]["dest"])} '
-                        + f'{protocol_string} seen from {str(ojson["scanner"]["country"])} at {str(ojson["@timestamp"])} :**\n'
+                        + f"\n**{str(ojson['ip']['dest'])}:{str(ojson[str(ojson['app']['transport'])]['dest'])} "
+                        + f"{protocol_string} seen from {str(ojson['scanner']['country'])} at {str(ojson['@timestamp'])} :**\n"
                         + f"```\n{service_data}\n```"
                     )
 
@@ -488,7 +486,6 @@ class ONYPHEConnector:
                     text_dict[value] = type
 
         def text_processor(value, type_):
-
             external_reference = self._generate_stix_external_reference(
                 "text", value=value, label_pivots=[type_]
             )
@@ -937,7 +934,7 @@ class ONYPHEConnector:
                                     )
                                     bundle_objects.append(rel)
                                     self.helper.log_debug(
-                                        f'New relationship appended for {target_id} - related-to - {threat["id"]}'
+                                        f"New relationship appended for {target_id} - related-to - {threat['id']}"
                                     )
                     bundle_objects = bundle_objects + bundle
                 # send stix2 bundle
