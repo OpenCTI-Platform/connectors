@@ -72,14 +72,15 @@ class Intel471Stream(ABC):
                 self.api_config.proxy_headers = make_headers(
                     proxy_basic_auth=proxy_auth
                 )
-            self.ioc_score = ioc_score
-            self.update_existing_data = update_existing_data
-            if initial_history:
-                self.initial_history = initial_history
-            else:
-                self.initial_history = int(
-                    (datetime.datetime.utcnow()).timestamp() * 1000
-                )
+
+        self.ioc_score = ioc_score
+        self.update_existing_data = update_existing_data
+        if initial_history:
+            self.initial_history = initial_history
+        else:
+            self.initial_history = int(
+                (datetime.datetime.now(datetime.UTC)).timestamp() * 1000
+            )
 
     @property
     def cursor_name(self) -> str:
