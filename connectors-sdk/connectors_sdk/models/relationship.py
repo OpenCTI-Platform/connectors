@@ -1,7 +1,5 @@
 """Relationship."""
 
-from typing import Union
-
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.enums import RelationshipType
 from connectors_sdk.models.reference import Reference
@@ -16,10 +14,10 @@ class Relationship(BaseIdentifiedEntity):
     type: RelationshipType = Field(
         description="Type of the relationship.",
     )
-    source: Union[BaseIdentifiedEntity, Reference] = Field(
+    source: BaseIdentifiedEntity | Reference = Field(
         description="The source entity of the relationship.",
     )
-    target: Union[BaseIdentifiedEntity, Reference] = Field(
+    target: BaseIdentifiedEntity | Reference = Field(
         description="The target entity of the relationship.",
     )
     description: str | None = Field(

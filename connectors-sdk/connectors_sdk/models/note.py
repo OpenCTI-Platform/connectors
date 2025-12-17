@@ -1,7 +1,6 @@
 """Note."""
 
 from collections import OrderedDict
-from typing import Union
 
 import stix2.properties
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
@@ -52,7 +51,7 @@ class Note(BaseIdentifiedEntity):
         default=None,
         description="The name of the author(s) of this note (e.g., the analyst(s) that created it).",
     )
-    objects: list[Union[BaseIdentifiedEntity, Reference]] | None = Field(
+    objects: list[BaseIdentifiedEntity | Reference] | None = Field(
         default=None,
         description="OCTI objects this note applies to.",
     )

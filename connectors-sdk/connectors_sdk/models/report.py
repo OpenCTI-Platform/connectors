@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections import OrderedDict
-from typing import Union
 
 import stix2.properties
 from connectors_sdk.models.associated_file import AssociatedFile
@@ -60,7 +59,7 @@ class Report(BaseIdentifiedEntity):
         default=None,
         description="Reliability of the report.",
     )
-    objects: list[Union[BaseIdentifiedEntity, Reference]] | None = Field(
+    objects: list[BaseIdentifiedEntity | Reference] | None = Field(
         default=None,
         description="Objects of the report.",
     )
