@@ -24,6 +24,10 @@ from stix2 import (
     Relationship,
     WindowsRegistryKey,
 )
+from pycti import StixCoreRelationship
+from pycti import Indicator as PyctiIndicator
+from pycti import Malware as PyctiMalware
+from pycti import Location as PyctiLocation
 
 from .vmray_observable_transform import VMRayObservableTransform
 
@@ -108,6 +112,7 @@ class VMRaySTIXBuilder:
             "email-addr": "Email-Addr",
         }
         indicator = Indicator(
+            id=PyctiIndicator.generate_id(pattern),
             name=name,
             description=description,
             pattern_type="stix",
@@ -122,14 +127,19 @@ class VMRaySTIXBuilder:
             x_opencti_main_observable_type=OPENCTI_MAIN_TYPE_MAP.get(
                 getattr(observable, "type")
             ),
-            allow_custom=True,
+            allow_custom=True
         )
         relationship = Relationship(
+            id=StixCoreRelationship.generate_id(
+                "based-on", indicator.id, observable.id
+            ),
             relationship_type="based-on",
             source_ref=indicator.id,
             target_ref=observable.id,
             created_by_ref=created_by_ref or self.identity,
             object_marking_refs=self.default_markings,
+            allow_custom=True
+
         )
         return indicator, relationship
 
@@ -159,6 +169,7 @@ class VMRaySTIXBuilder:
         labels = labels or []
         for name in threat_names:
             malware_obj = Malware(
+                id=PyctiMalware.generate_id(name),
                 name=name,
                 description="Malware created from VMRay IOC",
                 malware_types=classifications,
@@ -166,6 +177,7 @@ class VMRaySTIXBuilder:
                 created_by_ref=self.identity,
                 labels=labels,
                 object_marking_refs=self.default_markings,
+                allow_custom=True
             )
             observables.append(malware_obj)
             rel = obs.create_relationship(
@@ -206,12 +218,14 @@ class VMRaySTIXBuilder:
         for i, country in enumerate(countries):
             code = country_codes[i] if i < len(country_codes) else country
             loc_obj = Location(
+                id=PyctiLocation.generate_id(country, "country"),
                 name=country,
                 description="Country created from VMRay IOC",
                 country=code,
                 created_by_ref=self.identity,
                 labels=labels,
                 object_marking_refs=self.default_markings,
+                allow_custom=True
             )
             observables.append(loc_obj)
             rel = obs.create_relationship(
