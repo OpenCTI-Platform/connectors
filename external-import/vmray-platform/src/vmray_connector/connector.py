@@ -20,6 +20,9 @@ from requests.exceptions import (
     TooManyRedirects,
 )
 from stix2 import AttackPattern, Relationship, Report
+from pycti import AttackPattern as PyctiAttackPattern
+from pycti import StixCoreRelationship
+from pycti import Report as PyctiReport
 from vmray.rest_api import VMRayRESTAPI, VMRayRESTAPIError
 
 from .config_loader import ConfigConnector
@@ -1449,6 +1452,7 @@ class VMRayConnector:
             ]
 
             attack_pattern = AttackPattern(
+                id=PyctiAttackPattern.generate_id(tname),
                 name=tname,
                 description="Attack Pattern identified VMRay",
                 created_by_ref=self.identity,
@@ -1558,8 +1562,10 @@ class VMRayConnector:
             "Marks one or more indicators and cyber observables that "
             "originate from a common analysis such as a detonation."
         )
+        rep_name = f"VMRay Platform STIX 2.1 Analysis Report - report--{uuid4()}"
         report = Report(
-            name=f"VMRay Platform STIX 2.1 Analysis Report - report--{uuid4()}",
+            id=PyctiReport.generate_id(rep_name, published_date),
+            name=rep_name,
             description=description,
             published=published_date,
             labels=all_labels,
@@ -1599,11 +1605,17 @@ class VMRayConnector:
                 if child_report:
                     relationships.append(
                         Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to",
+                                parent_report.id,
+                                child_report.id
+                            ),
                             source_ref=parent_report.id,
                             target_ref=child_report.id,
                             relationship_type="related-to",
                             created_by_ref=self.identity,
                             object_marking_refs=self.default_markings,
+                            allow_custom=True
                         )
                     )
         return relationships
