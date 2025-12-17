@@ -10,7 +10,10 @@ from sys import exit
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 from uuid import uuid4
 
+from pycti import AttackPattern as PyctiAttackPattern
 from pycti import OpenCTIConnectorHelper
+from pycti import Report as PyctiReport
+from pycti import StixCoreRelationship
 from requests.exceptions import (
     ConnectionError,
     ProxyError,
@@ -20,9 +23,6 @@ from requests.exceptions import (
     TooManyRedirects,
 )
 from stix2 import AttackPattern, Relationship, Report
-from pycti import AttackPattern as PyctiAttackPattern
-from pycti import StixCoreRelationship
-from pycti import Report as PyctiReport
 from vmray.rest_api import VMRayRESTAPI, VMRayRESTAPIError
 
 from .config_loader import ConfigConnector
@@ -1606,16 +1606,14 @@ class VMRayConnector:
                     relationships.append(
                         Relationship(
                             id=StixCoreRelationship.generate_id(
-                                "related-to",
-                                parent_report.id,
-                                child_report.id
+                                "related-to", parent_report.id, child_report.id
                             ),
                             source_ref=parent_report.id,
                             target_ref=child_report.id,
                             relationship_type="related-to",
                             created_by_ref=self.identity,
                             object_marking_refs=self.default_markings,
-                            allow_custom=True
+                            allow_custom=True,
                         )
                     )
         return relationships
