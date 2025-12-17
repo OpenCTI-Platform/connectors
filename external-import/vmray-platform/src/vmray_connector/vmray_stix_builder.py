@@ -8,6 +8,10 @@ for ingestion into OpenCTI, including indicators, malware, locations, and relati
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple, Union
 
+from pycti import Indicator as PyctiIndicator
+from pycti import Location as PyctiLocation
+from pycti import Malware as PyctiMalware
+from pycti import StixCoreRelationship
 from stix2 import (
     URL,
     DomainName,
@@ -24,10 +28,6 @@ from stix2 import (
     Relationship,
     WindowsRegistryKey,
 )
-from pycti import StixCoreRelationship
-from pycti import Indicator as PyctiIndicator
-from pycti import Malware as PyctiMalware
-from pycti import Location as PyctiLocation
 
 from .vmray_observable_transform import VMRayObservableTransform
 
@@ -127,7 +127,7 @@ class VMRaySTIXBuilder:
             x_opencti_main_observable_type=OPENCTI_MAIN_TYPE_MAP.get(
                 getattr(observable, "type")
             ),
-            allow_custom=True
+            allow_custom=True,
         )
         relationship = Relationship(
             id=StixCoreRelationship.generate_id(
@@ -138,8 +138,7 @@ class VMRaySTIXBuilder:
             target_ref=observable.id,
             created_by_ref=created_by_ref or self.identity,
             object_marking_refs=self.default_markings,
-            allow_custom=True
-
+            allow_custom=True,
         )
         return indicator, relationship
 
@@ -177,7 +176,7 @@ class VMRaySTIXBuilder:
                 created_by_ref=self.identity,
                 labels=labels,
                 object_marking_refs=self.default_markings,
-                allow_custom=True
+                allow_custom=True,
             )
             observables.append(malware_obj)
             rel = obs.create_relationship(
@@ -225,7 +224,7 @@ class VMRaySTIXBuilder:
                 created_by_ref=self.identity,
                 labels=labels,
                 object_marking_refs=self.default_markings,
-                allow_custom=True
+                allow_custom=True,
             )
             observables.append(loc_obj)
             rel = obs.create_relationship(
