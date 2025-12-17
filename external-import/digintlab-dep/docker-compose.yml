@@ -1,6 +1,6 @@
 services:
   connector-digintlab-dep:
-    # image: opencti/connector-digintlab-dep:rolling
+    # image: opencti/connector-digintlab-dep:6.9.2
     build:
       context: .
     environment:
