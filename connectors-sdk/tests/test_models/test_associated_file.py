@@ -96,3 +96,41 @@ def test_associated_file_to_stix2_object() -> None:
         mime_type="text/plain",
         version="1.0",
     )
+
+
+def test_associated_file_to_stix2_object_returns_valid_stix_object_with_reference_object(
+    fake_valid_reference_with_tlp_id,
+):
+    """Test that AssociatedFile to_stix2_object method returns a valid STIX2.1
+    AssociatedFile with reference object.
+    """
+    # Given: A valid AssociatedFile instance
+    associated_file = AssociatedFile(
+        name="example_file.txt",
+        markings=[fake_valid_reference_with_tlp_id],
+    )
+    # When: calling to_stix2_object method
+    stix2_obj = associated_file.to_stix2_object()
+    # Then: A valid STIX2.1 AssociatedFileStix is returned
+    # object_marking_refs should be a Reference model id
+    assert isinstance(stix2_obj, AssociatedFileStix)
+    assert stix2_obj.object_marking_refs == [fake_valid_reference_with_tlp_id.id]
+
+
+def test_associated_file_to_stix2_object_returns_valid_stix_object_with_tlp_marking_object(
+    fake_valid_tlp_markings,
+):
+    """Test that AssociatedFile to_stix2_object method returns a valid STIX2.1
+    AssociatedFile with TlpMarking object.
+    """
+    # Given: A valid AssociatedFile instance
+    associated_file = AssociatedFile(
+        name="example_file.txt",
+        markings=[fake_valid_tlp_markings],
+    )
+    # When: calling to_stix2_object method
+    stix2_obj = associated_file.to_stix2_object()
+    # Then: A valid STIX2.1 AssociatedFileStix is returned
+    # object_marking_refs should be a TlpMarking model id
+    assert isinstance(stix2_obj, AssociatedFileStix)
+    assert stix2_obj.object_marking_refs == [fake_valid_tlp_markings.id]
