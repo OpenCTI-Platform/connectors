@@ -1,9 +1,8 @@
 import traceback
 
-from pycti import OpenCTIConnectorHelper
-
 from internal_enrichment_connector.config_loader import ConfigConnector
 from onyphe_import import ONYPHEConnector
+from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
     """
