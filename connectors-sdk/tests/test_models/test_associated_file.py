@@ -126,11 +126,11 @@ def test_associated_file_to_stix2_object_returns_valid_stix_object_with_tlp_mark
     # Given: A valid AssociatedFile instance
     associated_file = AssociatedFile(
         name="example_file.txt",
-        markings=[fake_valid_tlp_markings],
+        markings=fake_valid_tlp_markings,
     )
     # When: calling to_stix2_object method
     stix2_obj = associated_file.to_stix2_object()
     # Then: A valid STIX2.1 AssociatedFileStix is returned
     # object_marking_refs should be a TlpMarking model id
     assert isinstance(stix2_obj, AssociatedFileStix)
-    assert stix2_obj.object_marking_refs == [fake_valid_tlp_markings.id]
+    assert stix2_obj.object_marking_refs == [fake_valid_tlp_markings[0].id]
