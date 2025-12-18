@@ -1121,8 +1121,7 @@ class StixNote:
                     _type=attachment["type"],
                     content=attachment["content"],
                     author=self.author,
-                    tlp=tlp
-
+                    tlp=tlp,
                 )
                 self.objects.extend(rule.to_stix_objects())
 
