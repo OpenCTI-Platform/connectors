@@ -14,6 +14,7 @@ from connectors_sdk.models import (
     ExternalReference,
     OrganizationAuthor,
     TLPMarking,
+    Reference,
 )
 
 
@@ -100,3 +101,15 @@ def pytest_sessionfinish(session, exitstatus):
     finally:
         # Restore the original CWD
         os.chdir(original_cwd)
+
+
+@pytest.fixture
+def fake_valid_reference() -> Reference:
+    """Fixture to create a fake valid Reference with an File id."""
+    return Reference(id="file--fe6ebd9d-1a4a-4c2b-8ae9-dac8918f52a9")
+
+
+@pytest.fixture
+def fake_valid_reference_with_tlp_id() -> Reference:
+    """Fixture to create a fake valid Reference with a TlpMarking id."""
+    return Reference(id="marking-definition--fe6ebd9d-1a4a-4c2b-8ae9-dac8918f52a9")
