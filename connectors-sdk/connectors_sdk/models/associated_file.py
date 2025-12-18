@@ -5,6 +5,7 @@ from typing import OrderedDict
 
 import stix2.properties
 from connectors_sdk.models.base_object import BaseObject
+from connectors_sdk.models.reference import Reference
 from connectors_sdk.models.tlp_marking import TLPMarking
 from pydantic import Field
 
@@ -75,7 +76,7 @@ class AssociatedFile(BaseObject):
         default=None,
         description="File mime type.",
     )
-    markings: list[TLPMarking] | None = Field(
+    markings: list[TLPMarking | Reference] | None = Field(
         default=None,
         description="References for object marking.",
     )

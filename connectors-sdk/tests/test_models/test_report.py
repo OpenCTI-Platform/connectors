@@ -51,3 +51,21 @@ def test_report_to_stix2_object_returns_valid_stix_object(
     # Then: A valid STIX2.1 Report is returned
     assert isinstance(stix2_obj, Stix2Report)
     assert isinstance(stix2_obj, Stix2Report)
+
+
+def test_report_to_stix2_object_returns_valid_stix_object_with_reference_object(
+    fake_valid_reference,
+):
+    """Test that Report to_stix2_object method returns a valid STIX2.1 Note with reference object."""
+    # Given: A valid Report instance
+    report = Report(
+        name="Test report",
+        publication_date="2025-01-01T12:00:00Z",
+        objects=[fake_valid_reference],
+    )
+    # When: calling to_stix2_object method
+    stix2_obj = report.to_stix2_object()
+    # Then: A valid STIX2.1 Report is returned
+    # object_refs should be a Reference model id
+    assert isinstance(stix2_obj, Stix2Report)
+    assert stix2_obj.object_refs == [fake_valid_reference.id]
