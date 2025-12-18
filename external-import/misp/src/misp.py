@@ -10,7 +10,9 @@ from connector.threats_guesser import ThreatsGuesser
 from connector.use_cases import ConverterError, EventConverter
 from connector.work_manager import WorkManager
 from exceptions.work_processing_error import WorkProcessingError
+from humanfriendly import parse_size
 from pycti import OpenCTIConnectorHelper
+from pympler import asizeof
 
 LOG_PREFIX = "[Connector]"
 
@@ -56,7 +58,7 @@ class Misp:
         )
         if self.config.connector.batch_size:
             processor_config = GenericBatchProcessorConfig(
-                batch_size=self.config.connector.batch_size,
+                batch_size=parse_size(self.config.connector.batch_size, binary=True),
                 work_name_template="MISP run - Batch #{batch_num}",
                 state_key="event_id",
                 entity_type="stix_objects",
@@ -134,7 +136,8 @@ class Misp:
                     + " - Batch #{batch_num}"
                 )
                 if (
-                    self.processor.get_current_batch_size() + len(bundle_objects)
+                    self.processor.get_current_batch_size()
+                    + asizeof.asizeof(bundle_objects)
                 ) >= self.processor.config.batch_size * 2:
                     self._logger.info(
                         "Need to Flush before adding next items to preserve consistency of the bundle",

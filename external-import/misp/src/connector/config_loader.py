@@ -203,7 +203,7 @@ class _ConnectorConfig(_ConfigBaseModel):
         "warning",
         "error",
     ] = Field(default="error")
-    batch_size: int | None = Field(
+    batch_size: str | None = Field(
         description="The number of entities to process by batch.",
         default=None,
     )

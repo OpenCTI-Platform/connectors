@@ -12,6 +12,8 @@ from batch_processor.generic_batch_processor_config import (
     GenericBatchProcessorConfig,
 )
 from connector.work_manager import WorkManager
+from humanfriendly import format_size
+from pympler import asizeof
 from stix2.v21 import _STIXBase21  # type: ignore[import-untyped]
 
 LOG_PREFIX = "[GenericBatchProcessor]"
@@ -91,14 +93,16 @@ class GenericBatchProcessor:
             "Added item to batch",
             {
                 "prefix": LOG_PREFIX,
-                "current_size": len(self._current_batch),
-                "batch_size": self.config.batch_size,
+                "current_size": format_size(
+                    asizeof.asizeof(self._current_batch), binary=True
+                ),
+                "batch_size_limit": format_size(self.config.batch_size, binary=True),
             },
         )
 
         if (
             self.config.auto_process
-            and len(self._current_batch) >= self.config.batch_size
+            and asizeof.asizeof(self._current_batch) >= self.config.batch_size
         ):
             self.process_current_batch()
 
@@ -166,7 +170,9 @@ class GenericBatchProcessor:
             {
                 "prefix": LOG_PREFIX,
                 "batch_num": batch_num,
-                "batch_size": len(batch_items),
+                "batch_size": format_size(
+                    asizeof.asizeof(self._current_batch), binary=True
+                ),
                 "display_name": self.config.display_name,
                 "total_processed": self._total_items_processed + len(batch_items),
             },
@@ -245,7 +251,9 @@ class GenericBatchProcessor:
             "total_items_processed": self._total_items_processed,
             "total_batches_processed": self._total_batches_processed,
             "total_items_sent": self._total_items_sent,
-            "current_batch_size": len(self._current_batch),
+            "current_batch_size": format_size(
+                asizeof.asizeof(self._current_batch), binary=True
+            ),
             "failed_items_count": len(self._failed_items),
             "latest_date": self._latest_date,
             "batch_size_limit": self.config.batch_size,
@@ -258,7 +266,7 @@ class GenericBatchProcessor:
             Number of items in current batch
 
         """
-        return len(self._current_batch)
+        return asizeof.asizeof(self._current_batch)
 
     def get_failed_items(self) -> list[Any]:
         """Get list of items that failed processing.
