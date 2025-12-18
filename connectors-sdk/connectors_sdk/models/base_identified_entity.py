@@ -8,6 +8,7 @@ from typing import Any
 from connectors_sdk.models.base_author_entity import BaseAuthorEntity
 from connectors_sdk.models.base_identified_object import BaseIdentifiedObject
 from connectors_sdk.models.external_reference import ExternalReference
+from connectors_sdk.models.reference import Reference
 from connectors_sdk.models.tlp_marking import TLPMarking
 from pydantic import (
     Field,
@@ -20,12 +21,12 @@ class BaseIdentifiedEntity(BaseIdentifiedObject, ABC):
 
     _stix2_id: str | None = PrivateAttr(default=None)
 
-    author: BaseAuthorEntity | None = Field(
+    author: BaseAuthorEntity | Reference | None = Field(
         default=None,
         description="The Author reporting this Observable.",
     )
 
-    markings: list[TLPMarking] | None = Field(
+    markings: list[TLPMarking | Reference] | None = Field(
         default=None,
         description="References for object marking.",
     )

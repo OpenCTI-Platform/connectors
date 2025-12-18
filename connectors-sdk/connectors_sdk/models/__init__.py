@@ -26,6 +26,7 @@ from connectors_sdk.models.note import Note
 from connectors_sdk.models.observed_data import ObservedData
 from connectors_sdk.models.organization import Organization
 from connectors_sdk.models.organization_author import OrganizationAuthor
+from connectors_sdk.models.reference import Reference
 from connectors_sdk.models.region import Region
 from connectors_sdk.models.relationship import Relationship
 from connectors_sdk.models.report import Report
@@ -66,6 +67,7 @@ __all__ = [
     "ObservedData",
     "Organization",
     "OrganizationAuthor",
+    "Reference",
     "Region",
     "Relationship",
     "Report",
