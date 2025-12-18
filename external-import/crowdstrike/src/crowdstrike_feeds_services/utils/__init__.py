@@ -20,12 +20,12 @@ from typing import (
     Union,
 )
 
+import stix2
 from lxml.html import fromstring  # type: ignore
 from pycti import AttackPattern, Identity, Indicator, IntrusionSet, Location, Malware
 from pycti import Report as PyCTIReport
 from pycti import StixCoreRelationship, Vulnerability
 from pycti.utils.constants import LocationTypes  # type: ignore
-import stix2
 from stix2.v21 import _DomainObject, _Observable, _RelationshipObject  # type: ignore
 
 from .constants import (
