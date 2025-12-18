@@ -133,6 +133,13 @@ class _ConfigLoaderPlaybookAlert(ConfigBaseSettings):
         default=False,
         description="Whether to enable fetching Recorded Future playbook alerts.",
     )
+    categories: Optional[ListFromString] = Field(
+        default=["domain_abuse", "identity_novel_exposures", "code_repo_leakage"],
+        description=(
+            "Comma-separated list of Playbook Alert categories to import. Leave blank to fetch all categories available to your licence."
+            "Supported values: 'domain_abuse', 'identity_novel_exposures', 'code_repo_leakage'."
+        ),
+    )
     severity_threshold_domain_abuse: Literal["Informational", "Moderate", "High"] = (
         Field(
             default="Informational",
