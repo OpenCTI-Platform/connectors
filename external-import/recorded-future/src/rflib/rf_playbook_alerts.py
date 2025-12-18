@@ -19,6 +19,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
         severity_threshold_domain_abuse,
         severity_threshold_identity_novel_exposures,
         severity_threshold_code_repo_leakage,
+        severity_threshold_cyber_vulnerability,
         debug,
         tlp,
     ):
@@ -39,12 +40,14 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
             severity_threshold_identity_novel_exposures
         )
         self.threshold_code_repo_leakage = severity_threshold_code_repo_leakage
+        self.threshold_cyber_vulnerability = severity_threshold_cyber_vulnerability
         self.debug_var = debug
 
         self.playbook_alert_priority_threshold = {
             "identity_novel_exposures": self.threshold_identity_novel_exposure,
             "domain_abuse": self.threshold_domain_abuse,
             "code_repo_leakage": self.threshold_code_repo_leakage,
+            "cyber_vulnerability": self.threshold_cyber_vulnerability,
         }
 
         self.api_recorded_future = rf_alerts_api
@@ -103,7 +106,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                 self.api_recorded_future.get_playbook_id(
                     category=playbook_type,
                     trigger_from=(
-                        datetime.datetime.today() - datetime.timedelta(days=1)
+                        datetime.datetime.today() - datetime.timedelta(days=30)
                     ).strftime("%Y-%m-%dT%H:%M:%S"),
                     trigger_to=timestamp.strftime("%Y-%m-%dT%H:%M:%S"),
                     priority_threshold=self.playbook_alert_priority_threshold[
@@ -130,6 +133,10 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                             )
                         elif plb_alert.category == "code_repo_leakage":
                             self.create_incident_from_playbook_alert_code_repo_leakage(
+                                playbook_alert
+                            )
+                        elif plb_alert.category == "cyber_vulnerability":
+                            self.create_incident_from_playbook_alert_cyber_vulnerability(
                                 playbook_alert
                             )
                     else:
@@ -179,6 +186,163 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
             )
 
             self.helper.set_state(current_state)
+
+    def create_incident_from_playbook_alert_cyber_vulnerability(self, playbook_alert):
+        bundle_objects = []
+
+        playbook_alert_summary = make_markdown_table(
+            [
+                ["Attribute", "Value"],
+                ["Vulnerability", playbook_alert["data"]["panel_status"]["entity_name"]],
+                ["Alert category", playbook_alert["data"]["panel_status"]["case_rule_label"]],
+                ["Alert created", playbook_alert["data"]["panel_status"]["created"]],
+                ["Alert updated", playbook_alert["data"]["panel_status"]["updated"]],
+                [
+                    "Alert priority",
+                    self.severity_links[
+                        playbook_alert["data"]["panel_status"]["priority"]
+                    ],
+                ],
+                ["Alert ID", playbook_alert["data"]["playbook_alert_id"]],
+            ]
+        )
+
+        targets = []
+        for target in playbook_alert["data"]["panel_evidence_summary"]["summary"]["targets"]:
+            targets.append(target.get("name"))
+        playbook_alert_evidence = make_markdown_table(
+            [
+                ["Attribute", "Value"],
+                ["Targets", targets],
+                ["Lifecycle Stage", playbook_alert["data"]["panel_evidence_summary"]["summary"]["lifecycle_stage"]],
+            ]
+        )
+        playbook_alert_description = f"""
+### Metadata \n
+{playbook_alert_summary} \n
+
+### Evidence \n
+{playbook_alert_evidence} \n
+        """
+
+        playbook_alert_name = str(
+            "["
+            + playbook_alert["data"]["panel_status"]["case_rule_label"]
+            + "] "
+            + playbook_alert["data"]["panel_status"]["entity_name"]
+        )
+        stix_external_ref = stix2.ExternalReference(
+            source_name="Recorded Future",
+            url=str(playbook_alert["data"]["panel_status"]["entity_name"]),
+        )
+        stix_incident = stix2.Incident(
+            id=pycti.Incident.generate_id(
+                playbook_alert_name, playbook_alert["data"]["panel_status"]["created"]
+            ),
+            name=playbook_alert_name,
+            object_marking_refs=self.tlp,
+            description=playbook_alert_description,
+            first_seen=playbook_alert["data"]["panel_status"]["created"],
+            last_seen=playbook_alert["data"]["panel_status"]["updated"],
+            created=playbook_alert["data"]["panel_status"]["created"],
+            modified=playbook_alert["data"]["panel_status"]["updated"],
+            allow_custom=True,
+            severity=self.severity_links[
+                playbook_alert["data"]["panel_status"]["priority"]
+            ],
+            source="Playbook Alerts",
+            incident_type=playbook_alert["data"]["panel_status"]["case_rule_label"],
+            labels=[str(playbook_alert["data"]["panel_status"]["case_rule_label"])],
+            external_references=[stix_external_ref],
+            created_by_ref=self.author["id"],
+        )
+        bundle_objects.append(stix_incident)
+
+        stix_vulnerability = stix2.Vulnerability(
+            name=playbook_alert["data"]["panel_status"]["entity_name"],
+        )
+        bundle_objects.append(stix_vulnerability)
+
+        relationship = stix2.Relationship(
+            source_ref=stix_incident.id,
+            target_ref=stix_vulnerability.id,
+            relationship_type="related-to",
+        )
+        bundle_objects.append(relationship)
+
+        """
+        summary_content = ""
+
+        for i in range(
+                len(playbook_alert["data"]["panel_evidence_summary"]["evidence"])
+        ):
+            summary_content = summary_content + "\n ## Evidence " + str(i + 1)
+            for key in playbook_alert["data"]["panel_evidence_summary"]["evidence"][i]:
+                summary_content = summary_content + "\n" + "### " + key + "\n"
+                if isinstance(
+                        playbook_alert["data"]["panel_evidence_summary"]["evidence"][i][
+                            key
+                        ],
+                        str,
+                ):
+                    summary_content = (
+                            summary_content
+                            + "\n"
+                            + make_markdown_table(
+                        [
+                            [
+                                key,
+                                playbook_alert["data"]["panel_evidence_summary"][
+                                    "evidence"
+                                ][i][key],
+                            ]
+                        ]
+                    )
+                    )
+                else:
+                    table_markdown = []
+                    for j in range(
+                            len(
+                                playbook_alert["data"]["panel_evidence_summary"][
+                                    "evidence"
+                                ][i][key]
+                            )
+                    ):
+                        for subkey in playbook_alert["data"]["panel_evidence_summary"][
+                            "evidence"
+                        ][i][key][j]:
+                            table_markdown.append(
+                                [
+                                    subkey,
+                                    playbook_alert["data"]["panel_evidence_summary"][
+                                        "evidence"
+                                    ][i][key][j][subkey],
+                                ]
+                            )
+                    if len(table_markdown) > 0:
+                        summary_content = (
+                                summary_content + "\n" + make_markdown_table(table_markdown)
+                        )
+        """
+        """
+        stix_note = stix2.Note(
+            id=pycti.Note.generate_id(
+                summary_content,
+                datetime.datetime.now(pytz.timezone("UTC")).strftime(
+                    "%Y-%m-%dT%H:%M:%S"
+                ),
+            ),
+            object_marking_refs=self.tlp,
+            abstract="# Evidence summary panel",
+            content=summary_content,
+            object_refs=[stix_incident.id],
+            created_by_ref=self.author["id"],
+        )
+        
+        bundle_objects.append(stix_note)
+        """
+        bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
+        self.helper.send_stix2_bundle(bundle, update=True, work_id=self.work_id)
 
     def create_incident_from_playbook_alert_code_repo_leakage(self, playbook_alert):
         bundle_objects = []

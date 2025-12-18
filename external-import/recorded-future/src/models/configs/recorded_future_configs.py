@@ -158,6 +158,12 @@ class _ConfigLoaderPlaybookAlert(ConfigBaseSettings):
         default="Informational",
         description="Minimum severity threshold for code repository leakage playbook alerts.",
     )
+    severity_threshold_cyber_vulnerability: Literal[
+        "Informational", "Moderate", "High"
+    ] = Field(
+        default="Informational",
+        description="Minimum severity threshold for cyber vulnerabilities playbook alerts.",
+    )
     debug: bool = Field(
         default=False,
         description="Whether to enable debug logging for playbook alerts.",
