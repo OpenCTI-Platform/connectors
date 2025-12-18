@@ -121,9 +121,9 @@ class RecordedFutureApiClient:
             return
 
         # If the response doesn't contain data, log the error
-        if not data.get("data"):
+        if "data" not in data:
             self.helper.connector_logger.error(
-                "No rules returned from Recorded Future API"
+                "No data returned from Recorded Future API"
             )
             return
 
