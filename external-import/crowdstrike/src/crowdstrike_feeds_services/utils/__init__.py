@@ -20,12 +20,12 @@ from typing import (
     Union,
 )
 
-import stix2
 from lxml.html import fromstring  # type: ignore
 from pycti import AttackPattern, Identity, Indicator, IntrusionSet, Location, Malware
 from pycti import Report as PyCTIReport
 from pycti import StixCoreRelationship, Vulnerability
 from pycti.utils.constants import LocationTypes  # type: ignore
+import stix2
 from stix2.v21 import _DomainObject, _Observable, _RelationshipObject  # type: ignore
 
 from .constants import (
@@ -79,12 +79,7 @@ from .observables import (
     create_observable_x509_certificate_serial_number,
     create_observable_x509_certificate_subject,
 )
-from .labels import (
-    ParsedLabels,
-    extract_label_names,
-    parse_crowdstrike_labels,
-    parse_crowdstrike_labels_from_raw,
-)
+
 
 logger = logging.getLogger(__name__)
 

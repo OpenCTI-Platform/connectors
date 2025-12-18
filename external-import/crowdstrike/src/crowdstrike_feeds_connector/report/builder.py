@@ -2,7 +2,7 @@
 """OpenCTI CrowdStrike report builder module."""
 
 import logging
-from typing import Callable, Dict, List, Mapping, Optional, Tuple, Union
+from typing import List, Mapping, Optional, Tuple, Union
 
 from crowdstrike_feeds_services.utils import (
     create_external_reference,
