@@ -6,7 +6,7 @@ from typing import Callable, Dict, List, Mapping, Optional, Tuple, Union
 
 from crowdstrike_feeds_services.utils import (
     create_external_reference,
-    create_intrusion_set_from_name,
+    create_intrusion_set_from_actor_entity,
     create_malware,
     create_object_refs,
     create_organization,
@@ -52,7 +52,6 @@ class ReportBundleBuilder:
         related_indicators: Optional = None,
         report_guess_relations: bool = False,
         malwares_from_field: Optional[List[dict]] = None,
-        actor_resolver: Optional[Callable[[str], Optional[dict]]] = None,
     ) -> None:
         """Initialize report bundle builder."""
         self.report = report
@@ -66,11 +65,6 @@ class ReportBundleBuilder:
         self.related_indicators = related_indicators
         self.report_guess_relations = report_guess_relations
         self.malwares_from_field = malwares_from_field if malwares_from_field else []
-
-        # Optional resolver to convert CrowdStrike actor identifiers into actor entities
-        # (e.g. "LABYRINTHCHOLLIMA" -> {"id": ..., "name": ..., "url": ...}).
-        self.actor_resolver = actor_resolver
-        self._actor_cache: Dict[str, Optional[dict]] = {}
 
         # Use report dates for start time and stop time.
         start_time = timestamp_to_datetime(self.report["created_date"])
@@ -106,64 +100,40 @@ class ReportBundleBuilder:
         )
 
     def _create_intrusion_sets(self) -> List[IntrusionSet]:
-        report_actors = self.report.get("actors")
+        report_actors = self.report.get("actors") or []
         if not report_actors:
             return []
 
         intrusion_sets: List[IntrusionSet] = []
 
         for actor in report_actors:
-            intrusion_set = self._create_intrusion_set_from_actor(actor)
-            if intrusion_set is not None:
-                intrusion_sets.append(intrusion_set)
+            try:
+                # crowdstrike_feeds_connector/report/builder.py inside _create_intrusion_sets loop
+                if isinstance(actor, dict):
+                    logger.debug(
+                        "Report actor entity before IntrusionSet creation",
+                        extra={
+                            "actor_name": actor.get("name"),
+                            "actor_slug": actor.get("slug"),
+                            "actor": actor,
+                        },
+                    )
+                    intrusion_sets.append(
+                        create_intrusion_set_from_actor_entity(
+                            actor,
+                            created_by=self.author,
+                            confidence=self.confidence_level,
+                            object_markings=self.object_markings,
+                        )
+                    )
+                    continue
+
+            except Exception:
+                logger.exception(
+                    "Failed to create IntrusionSet from report actor '%s'", actor
+                )
 
         return intrusion_sets
-
-    def _create_intrusion_set_from_actor(
-        self, actor: Union[dict, str]
-    ) -> Optional[IntrusionSet]:
-        # Reports may provide actors as either full actor entities (dict) or as
-        # CrowdStrike actor identifiers (str). For identifiers, resolve via the
-        # provided resolver (if any) to get the canonical actor name.
-        actor_entity: Optional[dict] = None
-
-        if isinstance(actor, dict):
-            actor_entity = actor
-        elif isinstance(actor, str) and actor:
-            if actor in self._actor_cache:
-                actor_entity = self._actor_cache[actor]
-            elif self.actor_resolver is not None:
-                try:
-                    actor_entity = self.actor_resolver(actor)
-                except Exception:
-                    logger.exception("Failed to resolve actor identifier '%s'", actor)
-                    actor_entity = None
-                self._actor_cache[actor] = actor_entity
-
-        if not actor_entity:
-            return None
-
-        actor_name = actor_entity.get("name")
-        if actor_name is None or not str(actor_name).strip():
-            return None
-
-        external_references: List[ExternalReference] = []
-
-        actor_url = actor_entity.get("url")
-        actor_id = actor_entity.get("id")
-        if actor_url and actor_id:
-            external_reference = self._create_external_reference(
-                str(actor_id), str(actor_url)
-            )
-            external_references.append(external_reference)
-
-        return create_intrusion_set_from_name(
-            str(actor_name),
-            self.author,
-            self.confidence_level,
-            external_references,
-            self.object_markings,
-        )
 
     def _create_external_reference(
         self, external_id: str, url: str

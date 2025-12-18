@@ -4,6 +4,7 @@
 from datetime import datetime
 from typing import Any, Generator, List, Mapping, Optional
 
+from crowdstrike_feeds_services.client.actors import ActorsAPI
 from crowdstrike_feeds_services.client.indicators import IndicatorsAPI
 from crowdstrike_feeds_services.client.reports import ReportsAPI
 from crowdstrike_feeds_services.utils import (
@@ -56,6 +57,7 @@ class ReportImporter(BaseImporter):
         self.guess_malware = guess_malware
         self.report_guess_relations = report_guess_relations
         self.indicators_api_cs = IndicatorsAPI(helper)
+        self.actors_api_cs = ActorsAPI(helper)
         self.indicator_config = indicator_config
         self.no_file_trigger_import = no_file_trigger_import
 
@@ -301,13 +303,54 @@ class ReportImporter(BaseImporter):
         confidence_level = self._confidence_level()
         related_indicators_with_related_entities = []
 
+        # Resolve CrowdStrike actor slugs/identifiers to proper actor names before building the bundle.
+        # Reports may include `actors` as internal CrowdStrike identifiers (e.g., ['LABYRINTHCHOLLIMA']).
+        # We want to use the human-readable actor names when creating IntrusionSet objects.
+        actor_slugs = report.get("actors") or []
+        self.helper.connector_logger.debug(f"Actor slugs for report: {actor_slugs}")
+        if actor_slugs:
+            try:
+                response = self.actors_api_cs.get_actors_by_slugs(actor_slugs)
+                self.helper.connector_logger.debug(
+                    "Response from actors API: {response}"
+                )
+                resources = response.get("resources", [])
+                resolved_actor_names: List[str] = []
+                for actor in resources:
+                    # Prefer canonical name, fall back to slug if needed.
+                    name = actor.get("name") or actor.get("slug")
+                    if name:
+                        resolved_actor_names.append(name)
+                if resolved_actor_names:
+                    report["actors"] = resources
+                    self.helper.connector_logger.debug(
+                        "Resolved actor slugs to names for report.",
+                        {
+                            "report_id": report.get("id"),
+                            "report_slug": report.get("slug"),
+                            "actor_slugs": actor_slugs,
+                            "actor_names": resolved_actor_names,
+                        },
+                    )
+            except Exception as err:
+                # Do not fail the whole report if actor resolution fails.
+                # Keep existing 'actors' field (slugs) and log a warning.
+                self.helper.connector_logger.warning(
+                    "[WARNING] Failed to resolve actor slugs to names for report, using slugs as-is.",
+                    {
+                        "report_id": report.get("id"),
+                        "report_slug": report.get("slug"),
+                        "actor_slugs": actor_slugs,
+                        "error": str(err),
+                    },
+                )
+
         report_slug = report["slug"]
         if report_slug is not None:
             report_name = report_slug.upper()
             related_indicators_with_related_entities = self._get_related_iocs(
                 report_name
             )
-
         malwares_from_field = report.get("malware", [])
 
         bundle_builder = ReportBundleBuilder(
@@ -322,7 +365,6 @@ class ReportImporter(BaseImporter):
             related_indicators_with_related_entities,
             self.report_guess_relations,
             malwares_from_field=malwares_from_field,
-            actor_resolver=self.reports_api_cs.get_actor_entity_by_id,
         )
         return bundle_builder.build()
 
