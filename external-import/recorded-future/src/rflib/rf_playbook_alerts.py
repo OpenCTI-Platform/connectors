@@ -6,7 +6,7 @@ import pytz
 import stix2
 from pycti import StixCoreRelationship
 
-from .constants import TLP_MAP
+from .constants import TLP_MAP, SUPPORTED_PLAYBOOK_ALERT_CATEGORIES
 from .utils import make_markdown_table
 
 
@@ -15,6 +15,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
         self,
         helper,
         rf_alerts_api,
+        categories,
         severity_threshold_domain_abuse,
         severity_threshold_identity_novel_exposures,
         severity_threshold_code_repo_leakage,
@@ -32,6 +33,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
         self.work_id = None
         self.author = self._create_author()
         self.tlp = self.tlp = TLP_MAP.get(tlp, None)
+        self.playbook_categories = []
         self.threshold_domain_abuse = severity_threshold_domain_abuse
         self.threshold_identity_novel_exposure = (
             severity_threshold_identity_novel_exposures
@@ -53,6 +55,16 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
             "Informational": "low",
         }
 
+        # option categories is empty means all supported categories
+        if not categories:
+            self.playbook_categories = SUPPORTED_PLAYBOOK_ALERT_CATEGORIES
+        else:
+            for category in categories:
+                if category in SUPPORTED_PLAYBOOK_ALERT_CATEGORIES:
+                    self.playbook_categories.append(category)
+                else:
+                    self.helper.connector_logger.error(f"Invalid or unsupported playbook alert category: {category}")
+
     @staticmethod
     def _create_author():
         """Creates Recorded Future Author"""
@@ -69,12 +81,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
             "Recorded Future Playbook Alerts",
         )
         current_state = self.helper.get_state()
-        playbook_types = [
-            "domain_abuse",
-            "identity_novel_exposures",
-            "code_repo_leakage",
-        ]
-        for playbook_type in playbook_types:
+        for playbook_type in self.playbook_categories:
             self.api_recorded_future.playbook_alerts_summaries = []
             if (
                 current_state is not None
@@ -134,7 +141,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                     self.helper.connector_logger.error(err)
                 self.update_state(plb_alert.category)
 
-        for playbook_type in playbook_types:
+        for playbook_type in self.playbook_categories:
             self.update_state(playbook_type)
 
         message = (

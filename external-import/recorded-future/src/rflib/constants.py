@@ -40,3 +40,9 @@ TLP_MAP = {
     ),
     "red": stix2.TLP_RED,
 }
+
+SUPPORTED_PLAYBOOK_ALERT_CATEGORIES = [
+    "domain_abuse",
+    "identity_novel_exposures",
+    "code_repo_leakage"
+]
