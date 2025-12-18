@@ -33,8 +33,7 @@ class ConverterToStix:
         self.helper = helper
         self.author = self.create_author()
 
-    @staticmethod
-    def create_author() -> OrganizationAuthor:
+    def create_author(self) -> OrganizationAuthor:
         """
         Create Author
         """
@@ -42,6 +41,9 @@ class ConverterToStix:
         return author
 
     def create_autonomous_system(self, number: str) -> AutonomousSystem:
+        """
+        Create an AutonomousSystem object
+        """
         return AutonomousSystem(
             number=number,
             author=self.author,
@@ -53,16 +55,24 @@ class ConverterToStix:
         """
         return Country(
             name=country_name,
+            author=self.author,
         )
 
     def create_domain(self, name: str, score: int) -> DomainName:
+        """
+        Create a Domain object
+        """
         return DomainName(value=name, score=score, author=self.author)
 
     def create_file(self, hashes: dict, score: int) -> File:
         """
         Create a File object
         """
-        file = File(hashes=hashes, score=score)
+        file = File(
+            hashes=hashes,
+            score=score,
+            author=self.author,
+        )
         return file
 
     def create_note(self, observable: Reference, content: str) -> Note:
@@ -71,8 +81,8 @@ class ConverterToStix:
         """
         return Note(
             abstract="Kaspersky Detections Info",
-            content=content,
             objects=[observable],
+            content=content,
             author=self.author,
             publication_date=datetime.datetime.now().astimezone(pytz.UTC),
         )
@@ -117,6 +127,7 @@ class ConverterToStix:
         Create an URL object
         """
         return URL(
-            value=url_info["Url"],
             score=obs_url_score,
+            value=url_info["Url"],
+            author=self.author,
         )

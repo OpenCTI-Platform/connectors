@@ -1,5 +1,5 @@
 from connector.converter_to_stix import ConverterToStix
-from connector.utils import check_quota, resolve_file_hash
+from connector.utils import is_quota_exceeded, resolve_file_hash
 from kaspersky_client import KasperskyClient
 from pycti import STIX_EXT_OCTI_SCO, OpenCTIConnectorHelper, OpenCTIStix2
 
@@ -36,7 +36,7 @@ class FileEnricher:
         entity_data = self.client.get_file_info(obs_hash, self.sections)
 
         # Check Quota
-        if check_quota(entity_data["LicenseInfo"]):
+        if is_quota_exceeded(entity_data["LicenseInfo"]):
             self.helper.connector_logger.warning(
                 "[CONNECTOR] The daily quota has been exceeded",
                 {
@@ -56,7 +56,7 @@ class FileEnricher:
         # Score
         if entity_data.get("Zone"):
             score = self.zone_octi_score_mapping[entity_data["Zone"].lower()]
-            OpenCTIStix2.put_attribute_in_extension(
+            observable = OpenCTIStix2.put_attribute_in_extension(
                 observable, STIX_EXT_OCTI_SCO, "score", score
             )
 
@@ -76,12 +76,11 @@ class FileEnricher:
 
         # Labels
         if entity_file_general_info.get("Categories"):
-            observable["labels"] = []
-            if observable.get("x_opencti_labels"):
-                observable["labels"] = observable["x_opencti_labels"]
+            observable["labels"] = observable.get("x_opencti_labels", [])
             for label in entity_file_general_info["Categories"]:
-                if label not in observable["labels"]:
-                    observable["labels"].append(label)
+                pretty_label = label.replace("CATEGORY_", "").replace("_", "")
+                if pretty_label not in observable["labels"]:
+                    observable["labels"].append(pretty_label)
 
         # Manage FileNames data
 
@@ -95,9 +94,7 @@ class FileEnricher:
             )
             for filename in entity_data["FileNames"]:
                 if filename["FileName"] not in observable["additional_names"]:
-                    observable["additional_names"].append(f" {filename["FileName"]}")
-                else:
-                    observable["additional_names"] = filename["FileName"]
+                    observable["additional_names"].append(filename["FileName"])
 
         # Prepare author object
         author = self.converter_to_stix.create_author()

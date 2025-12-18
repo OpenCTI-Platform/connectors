@@ -1,48 +1,42 @@
 from datetime import datetime, timezone
 
 
-def check_quota(entity_info: dict) -> bool:
+def is_quota_exceeded(entity_info: dict) -> bool:
     """
     Return True if quota is exceeded.
     """
-    if entity_info["DayRequests"] >= entity_info["DayQuota"]:
-        return True
-    return False
+    return entity_info["DayRequests"] >= entity_info["DayQuota"]
 
 
-def entity_in_scope(connect_scope, obs_type: str) -> bool:
+def entity_in_scope(connect_scope: bool | int | str | None, obs_type: str) -> bool:
     """
     Security to limit playbook triggers to something other than the initial scope
-    :param data: Dictionary of data
-    :return: boolean
     """
     scopes = connect_scope.lower().replace(" ", "").split(",")
     entity_split = obs_type.split("--")
     entity_type = entity_split[0].lower()
 
-    if entity_type in scopes:
-        return True
-    else:
-        return False
+    return entity_type in scopes
 
 
 def resolve_file_hash(observable: dict) -> str:
-    if "hashes" in observable and "SHA-256" in observable["hashes"]:
-        return observable["hashes"]["SHA-256"]
-    if "hashes" in observable and "SHA-1" in observable["hashes"]:
-        return observable["hashes"]["SHA-1"]
-    if "hashes" in observable and "MD5" in observable["hashes"]:
-        return observable["hashes"]["MD5"]
+    """Retrieve hash from observable in this order:
+    sha-256 then sha-1 and at last md5.
+    """
+    hashes = observable.get("hashes", {})
+    for hash in ("SHA-256", "SHA-1", "MD5"):
+        if hash in hashes:
+            return hashes[hash]
     raise ValueError(
         "Unable to enrich the observable, the observable does not have an SHA256, SHA1, or MD5"
     )
 
 
 def string_to_datetime(value: str, format: str) -> datetime:
+    """Format string to a datetime with specific timezone"""
     return datetime.strptime(value, format).replace(tzinfo=timezone.utc)
 
 
 def is_last_seen_equal_to_first_seen(first_seen: datetime, last_seen: datetime) -> bool:
-    if last_seen == first_seen:
-        return True
-    return False
+    """Check if last_seen datetime is same as first_seen"""
+    return last_seen == first_seen

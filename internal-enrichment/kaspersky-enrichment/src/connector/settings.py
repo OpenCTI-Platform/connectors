@@ -29,7 +29,7 @@ def parse_string_to_dict(value: str) -> dict:
     return value_dict
 
 
-def pycti_list_serializer(v: dict, info: SerializationInfo) -> str:
+def pycti_dict_serializer(v: dict, info: SerializationInfo) -> str | dict:
     """Serialize a dict as a comma-separated string when the Pydantic
     serialization context requests "pycti" mode; otherwise, return the list
     unchanged.
@@ -42,7 +42,7 @@ def pycti_list_serializer(v: dict, info: SerializationInfo) -> str:
 DictFromString = Annotated[
     str,
     AfterValidator(parse_string_to_dict),
-    PlainSerializer(pycti_list_serializer, when_used="json"),
+    PlainSerializer(pycti_dict_serializer, when_used="json"),
 ]
 
 
