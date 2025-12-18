@@ -36,5 +36,6 @@ services:
       - PLAYBOOK_ALERT_SEVERITY_THRESHOLD_DOMAIN_ABUSE=Informational # OPTIONAL - default: Informational
       - PLAYBOOK_ALERT_SEVERITY_THRESHOLD_IDENTITY_NOVEL_EXPOSURES=Informational # OPTIONAL - default: Informational
       - PLAYBOOK_ALERT_SEVERITY_THRESHOLD_CODE_REPO_LEAKAGE=Informational # OPTIONAL - default: Informational
+      - PLAYBOOK_ALERT_SEVERITY_THRESHOLD_CYBER_VULNERABILITIES=Informational # OPTIONAL - default: Informational
       - PLAYBOOK_ALERT_DEBUG=False # OPTIONAL - default: False
     restart: always
