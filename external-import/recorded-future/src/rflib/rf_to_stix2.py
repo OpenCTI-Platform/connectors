@@ -1117,10 +1117,11 @@ class StixNote:
         for attachment in self.attachments:
             if attachment["type"] != "pdf":
                 rule = DetectionRule(
-                    attachment["name"],
-                    attachment["type"],
-                    attachment["content"],
-                    self.author,
+                    name=attachment["name"],
+                    _type=attachment["type"],
+                    content=attachment["content"],
+                    author=self.author,
+                    tlp=tlp,
                 )
                 self.objects.extend(rule.to_stix_objects())
 
