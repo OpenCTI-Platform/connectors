@@ -20,7 +20,6 @@ import re
 from dataclasses import dataclass
 from typing import Any, Iterable, List, Mapping, Optional
 
-
 _CAMEL_SPLIT_RE = re.compile(r"(?<=[a-z])(?=[A-Z])")
 
 

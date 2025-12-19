@@ -80,7 +80,6 @@ from .observables import (
     create_observable_x509_certificate_subject,
 )
 
-
 logger = logging.getLogger(__name__)
 
 
