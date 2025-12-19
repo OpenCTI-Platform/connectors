@@ -6,9 +6,10 @@ COPY src /opt/opencti-connector-import-document
 
 # Install Python modules
 # hadolint ignore=DL3003
-RUN apk --no-cache add libmagic libffi-dev libxml2-dev libxslt-dev libffi-dev openssl-dev && \
+RUN apk --no-cache add git libmagic libffi-dev libxml2-dev libxslt-dev libffi-dev openssl-dev && \
     cd /opt/opencti-connector-import-document && \
-    pip3 install --no-cache-dir -r requirements.txt
+    pip3 install --no-cache-dir -r requirements.txt && \
+    apk del git
 
 # Expose and entrypoint
 COPY entrypoint.sh /
