@@ -2,6 +2,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 import requests
+from doppel.constants import RETRYABLE_REQUEST_ERRORS
 from tenacity import (
     retry,
     retry_if_exception,
@@ -9,8 +10,6 @@ from tenacity import (
     wait_exponential_jitter,
     wait_fixed,
 )
-
-from doppel.constants import RETRYABLE_REQUEST_ERRORS
 
 
 class ConnectorClient:

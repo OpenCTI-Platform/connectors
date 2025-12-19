@@ -1,6 +1,17 @@
 from datetime import datetime
 from uuid import NAMESPACE_URL, uuid5
 
+from doppel.constants import STIX_VERSION
+from doppel.stix_helpers import (
+    build_custom_properties,
+    build_description,
+    build_external_references,
+    build_labels,
+    calculate_priority,
+    is_reverted_state,
+    is_takedown_state,
+)
+from doppel.utils import parse_iso_datetime
 from pycti import Identity as PyCTIIdentity
 from pycti import MarkingDefinition
 from stix2 import (
@@ -17,18 +28,6 @@ from stix2 import (
 from stix2 import MarkingDefinition as Stix2MarkingDefinition
 from stix2 import Note
 from stix2 import Relationship as StixCoreRelationship
-
-from doppel.constants import STIX_VERSION
-from doppel.stix_helpers import (
-    build_custom_properties,
-    build_description,
-    build_external_references,
-    build_labels,
-    calculate_priority,
-    is_reverted_state,
-    is_takedown_state,
-)
-from doppel.utils import parse_iso_datetime
 
 
 class ConverterToStix:
