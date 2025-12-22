@@ -67,10 +67,6 @@ class Ipv4Enricher:
         self.helper.connector_logger.info(
             "[CONNECTOR] Process enrichment from IpGeneralInfo data..."
         )
-
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from IpGeneralInfo data..."
-        )
         entity_general_info = entity_data["IpGeneralInfo"]
 
         # Score
