@@ -1,7 +1,10 @@
+from typing import Literal
+
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    ListFromString,
 )
 from pydantic import Field, SecretStr
 
@@ -12,9 +15,17 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     to the configuration for connectors of type `INTERNAL_ENRICHMENT`.
     """
 
+    id: str = Field(
+        description="The ID of the connector.",
+        default="82b58916-a654-4cd4-81de-700eb72a5c94",
+    )
     name: str = Field(
         description="The name of the connector.",
         default="Shodan",
+    )
+    scope: ListFromString = Field(
+        description="The scope of the connector.",
+        default=["ipv4-addr", "indicator"],
     )
 
 
@@ -26,7 +37,14 @@ class ShodanConfig(BaseConfigModel):
     token: SecretStr = Field(
         description="The token of the Shodan",
     )
-    max_tlp: str = Field(
+    max_tlp: Literal[
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED",
+    ] = Field(
         description="The maximal TLP of the observable being enriched.",
         default="TLP:AMBER",
     )

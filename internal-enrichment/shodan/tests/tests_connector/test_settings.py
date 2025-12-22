@@ -10,7 +10,10 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
     [
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
                 "connector": {
                     "id": "connector-id",
                     "name": "Test Connector",
@@ -20,7 +23,7 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                 },
                 "shodan": {
                     "token": "SecretStr",
-                    "max_tlp": "str",
+                    "max_tlp": "TLP:CLEAR",
                     "default_score": 42,
                     "import_search_results": True,
                     "create_note": True,
@@ -31,8 +34,11 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
         ),
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
-                "connector": {"id": "connector-id", "scope": "test, connector"},
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {},
                 "shodan": {"token": "SecretStr"},
             },
             id="minimal_valid_settings_dict",
@@ -80,7 +86,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                 },
                 "shodan": {
                     "token": "SecretStr",
-                    "max_tlp": "str",
+                    "max_tlp": "TLP:CLEAR",
                     "default_score": 42,
                     "import_search_results": True,
                     "create_note": True,
@@ -92,24 +98,27 @@ def test_settings_should_accept_valid_input(settings_dict):
         ),
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
                 "connector": {
+                    "id": "connector-id",
                     "name": "Test Connector",
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
                 },
                 "shodan": {
-                    "token": "SecretStr",
-                    "max_tlp": "str",
+                    "max_tlp": "TLP:CLEAR",
                     "default_score": 42,
                     "import_search_results": True,
                     "create_note": True,
                     "use_isp_name_for_asn": True,
                 },
             },
-            "connector.id",
-            id="missing_connector_id",
+            "shodan.token",
+            id="missing_shodan_token",
         ),
     ],
 )

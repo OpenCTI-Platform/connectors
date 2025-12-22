@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-shodan
 
 # Launch the worker
-python3 shodanImport.py
+python3 main.py
