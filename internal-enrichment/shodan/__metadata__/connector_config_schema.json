@@ -20,7 +20,11 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "default": [
+        "ipv4-addr",
+        "indicator"
+      ],
+      "description": "The scope of the connector.",
       "items": {
         "type": "string"
       },
@@ -57,6 +61,14 @@
     "SHODAN_MAX_TLP": {
       "default": "TLP:AMBER",
       "description": "The maximal TLP of the observable being enriched.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
       "type": "string"
     },
     "SHODAN_DEFAULT_SCORE": {
@@ -83,7 +95,6 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "CONNECTOR_SCOPE",
     "SHODAN_TOKEN"
   ],
   "additionalProperties": true
