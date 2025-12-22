@@ -12,7 +12,7 @@ General description of the connector
 ## Installation
 
 IPQS Fraud and Risk Scoring connector provides enterprise grade fraud prevention, risk analysis, and threat detection. 
-Analyze IP addresses, Email addresses, Phone Numbers,  URLs and Domains to identify sophisticated bad actors and high risk behavior.
+Analyze IP addresses, Email addresses, Phone Numbers,  URLs, Domains, Leaked Emails, Leaked username and Leaked passwords to identify sophisticated bad actors and high risk behavior.
 
 The OpenCTI IPQS Fraud and Risk Scoring connector is a standalone Python process that must have access to the OpenCTI 
 platform and the RabbitMQ. RabbitMQ credentials and connection parameters are provided by the API directly, as 
