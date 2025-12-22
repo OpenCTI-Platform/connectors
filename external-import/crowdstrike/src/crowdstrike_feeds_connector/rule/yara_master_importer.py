@@ -7,8 +7,8 @@ from datetime import datetime
 from io import BytesIO
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple
 
-from crowdstrike_feeds_services.client.rules import RulesAPI
 from crowdstrike_feeds_services.client.actors import ActorsAPI
+from crowdstrike_feeds_services.client.rules import RulesAPI
 from crowdstrike_feeds_services.utils import (
     datetime_to_timestamp,
     timestamp_to_datetime,

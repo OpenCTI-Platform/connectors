@@ -352,7 +352,6 @@ class ReportImporter(BaseImporter):
                     {
                         "report_id": report.get("id"),
                         "report_slug": report.get("slug"),
-                        "actor_slugs": actor_slugs,
                         "input_actors": raw_actors,
                         "error": str(err),
                     },
