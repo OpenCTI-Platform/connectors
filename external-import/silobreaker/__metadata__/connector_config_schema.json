@@ -20,7 +20,10 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "default": [
+        "silobreaker"
+      ],
+      "description": "The scope of the connector.",
       "items": {
         "type": "string"
       },
@@ -50,8 +53,11 @@
       "type": "string"
     },
     "SILOBREAKER_API_URL": {
-      "default": "https://api.silobreaker.com",
+      "default": "https://api.silobreaker.com/",
       "description": "The URL of the Silobreaker API.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     },
     "SILOBREAKER_API_KEY": {
@@ -67,25 +73,29 @@
       "writeOnly": true
     },
     "SILOBREAKER_LISTS": {
-      "default": "138809,96910,36592,55112,50774",
+      "default": [
+        "138809",
+        "96910",
+        "36592",
+        "55112",
+        "50774"
+      ],
       "description": "The lists of Silobreaker to import.",
-      "type": "string"
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "SILOBREAKER_IMPORT_START_DATE": {
-      "default": "2024-09-01",
+      "default": "2024-09-01T00:00:00Z",
       "description": "The start date for importing Silobreaker data.",
+      "format": "date-time",
       "type": "string"
-    },
-    "SILOBREAKER_INTERVAL": {
-      "default": 60,
-      "description": "The interval in minutes for importing Silobreaker data.",
-      "type": "integer"
     }
   },
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "CONNECTOR_SCOPE",
     "SILOBREAKER_API_KEY",
     "SILOBREAKER_API_SHARED"
   ],
