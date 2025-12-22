@@ -113,6 +113,23 @@ class KasperskyConnector:
             observable = data["stix_entity"]
             obs_type = opencti_entity["entity_type"]
 
+            tlp = "TLP:CLEAR"
+            for object_marking in opencti_entity["objectMarking"]:
+                if object_marking["definition_type"] == "TLP":
+                    tlp = object_marking["definition"]
+
+            if not self.helper.check_max_tlp(tlp, self.config.kaspersky.max_tlp):
+                message = f"""Do not send any data, TLP of the entity is ({tlp}), which
+                  is greater than MAX TLP: ({self.config.kaspersky.max_tlp})"""
+                self.helper.connector_logger.warning(
+                    message,
+                    {
+                        "entity_type": obs_type,
+                        "entity_stix_id": observable["id"],
+                    },
+                )
+                return message
+
             info_msg = (
                 "[CONNECTOR] Processing observable for the following entity type: "
             )

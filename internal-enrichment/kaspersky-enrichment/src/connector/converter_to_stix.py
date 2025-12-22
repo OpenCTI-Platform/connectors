@@ -13,6 +13,7 @@ from connectors_sdk.models import (
     Reference,
     Relationship,
     Sector,
+    TLPMarking,
 )
 from pycti import OpenCTIConnectorHelper
 
@@ -32,6 +33,8 @@ class ConverterToStix:
         """
         self.helper = helper
         self.author = self.create_author()
+        self.tlp_clear = TLPMarking(level="clear")
+        self.tlp_amber = TLPMarking(level="amber")
 
     def create_author(self) -> OrganizationAuthor:
         """
@@ -45,33 +48,29 @@ class ConverterToStix:
         Create an AutonomousSystem object
         """
         return AutonomousSystem(
-            number=number,
-            author=self.author,
+            number=number, author=self.author, markings=[self.tlp_clear]
         )
 
     def create_country(self, country_name: str) -> Country:
         """
         Create a Country object
         """
-        return Country(
-            name=country_name,
-            author=self.author,
-        )
+        return Country(name=country_name, author=self.author, markings=[self.tlp_clear])
 
     def create_domain(self, name: str, score: int) -> DomainName:
         """
         Create a Domain object
         """
-        return DomainName(value=name, score=score, author=self.author)
+        return DomainName(
+            value=name, score=score, author=self.author, markings=[self.tlp_amber]
+        )
 
     def create_file(self, hashes: dict, score: int) -> File:
         """
         Create a File object
         """
         file = File(
-            hashes=hashes,
-            score=score,
-            author=self.author,
+            hashes=hashes, score=score, author=self.author, markings=[self.tlp_amber]
         )
         return file
 
@@ -85,6 +84,7 @@ class ConverterToStix:
             content=content,
             author=self.author,
             publication_date=datetime.datetime.now().astimezone(pytz.UTC),
+            markings=[self.tlp_amber],
         )
 
     def create_reference(self, obs_id: str) -> Reference:
@@ -111,16 +111,14 @@ class ConverterToStix:
             author=self.author,
             start_time=start_time,
             stop_time=stop_time,
+            markings=[self.tlp_amber],
         )
 
     def create_sector(self, industry: str) -> Sector:
         """
         Create a Sector object
         """
-        return Sector(
-            name=industry,
-            author=self.author,
-        )
+        return Sector(name=industry, author=self.author, markings=[self.tlp_clear])
 
     def create_url(self, obs_url_score: int, url_info: dict) -> URL:
         """
@@ -130,4 +128,5 @@ class ConverterToStix:
             score=obs_url_score,
             value=url_info["Url"],
             author=self.author,
+            markings=[self.tlp_amber],
         )

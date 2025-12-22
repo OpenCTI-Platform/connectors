@@ -15,6 +15,7 @@ services:
       # Connector's custom execution parameters
       # - KASPERSKY_API_BASE_URL=https://tip.kaspersky.com
       - KASPERSKY_API_KEY=CHANGEME
+      # - KASPERSKY_MAX_TLP=TLP:AMBER
       # - KASPERSKY_ZONE_OCTI_SCORE_MAPPING=red:100,orange:80,yellow:60,gray:20,green:0
       # - KASPERSKY_FILE_SECTIONS=LicenseInfo,Zone,FileGeneralInfo
       # - KASPERSKY_IPV4_SECTIONS=LicenseInfo,Zone,IpGeneralInfo

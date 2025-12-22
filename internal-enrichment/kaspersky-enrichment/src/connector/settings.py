@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 
 from connector.constants import SECTIONS
 from connectors_sdk import (
@@ -82,6 +82,18 @@ class KasperskyConfig(BaseConfigModel):
 
     api_key: SecretStr = Field(
         description="API key used to authenticate requests to the Kaspersky service.",
+    )
+
+    max_tlp: Literal[
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED",
+    ] = Field(
+        description="Max TLP marking of the entity to enrich (inclusive).",
+        default="TLP:AMBER",
     )
 
     zone_octi_score_mapping: DictFromString = Field(
