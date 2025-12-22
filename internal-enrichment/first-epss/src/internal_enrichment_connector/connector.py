@@ -48,7 +48,9 @@ class FirstEPSSConnector:
         """
         self.config = config
         self.helper = helper
-        self.api = ConnectorClient(self.helper, self.config.first_epss.api_base_url)
+        self.api = ConnectorClient(
+            self.helper, base_url=self.config.first_epss.api_base_url
+        )
         self.converter_to_stix = ConverterToStix(self.helper)
         self.author = None
         self.tlp = None

@@ -10,7 +10,10 @@ from internal_enrichment_connector import ConnectorSettings
     [
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
                 "connector": {
                     "id": "connector-id",
                     "name": "Test Connector",
@@ -27,12 +30,12 @@ from internal_enrichment_connector import ConnectorSettings
         ),
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
-                "connector": {"id": "connector-id", "scope": "test, connector"},
-                "first_epss": {
-                    "api_base_url": "https://api.first.org/data/v1/epss",
-                    "max_tlp": "TLP:AMBER",
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
                 },
+                "connector": {},
+                "first_epss": {},
             },
             id="minimal_valid_settings_dict",
         ),
@@ -69,7 +72,10 @@ def test_settings_should_accept_valid_input(settings_dict):
         pytest.param({}, "settings", id="empty_settings_dict"),
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:PORT", "token": "test-token"},
+                "opencti": {
+                    "url": "http://localhost:PORT",
+                    "token": "test-token",
+                },
                 "connector": {
                     "id": "connector-id",
                     "name": "Test Connector",
@@ -87,7 +93,10 @@ def test_settings_should_accept_valid_input(settings_dict):
         ),
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
                 "connector": {
                     "name": "Test Connector",
                     "scope": "test, connector",
@@ -95,12 +104,12 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "auto": True,
                 },
                 "first_epss": {
-                    "api_base_url": "https://api.first.org/data/v1/epss",
+                    "api_base_url": "not a url",
                     "max_tlp": "TLP:AMBER",
                 },
             },
-            "connector.id",
-            id="missing_connector_id",
+            "first_epss.api_base_url",
+            id="invalid_first_epps_api_base_url",
         ),
     ],
 )

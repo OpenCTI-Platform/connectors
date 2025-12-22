@@ -1,9 +1,12 @@
+from typing import Literal
+
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    ListFromString,
 )
-from pydantic import Field
+from pydantic import Field, HttpUrl
 
 
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
@@ -12,9 +15,17 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     to the configuration for connectors of type `INTERNAL_ENRICHMENT`.
     """
 
+    id: str = Field(
+        description="The ID of the connector.",
+        default="18f1a9e6-a82b-4ef4-9699-ae406fe4a1a6",
+    )
     name: str = Field(
         description="The name of the connector.",
-        default="FirstEpss",
+        default="First EPSS",
+    )
+    scope: ListFromString = Field(
+        description="The scope of the connector.",
+        default=["vulneribility"],
     )
 
 
@@ -23,11 +34,18 @@ class FirstEpssConfig(BaseConfigModel):
     Define parameters and/or defaults for the configuration specific to the `FirstEpssConnector`.
     """
 
-    api_base_url: str = Field(
+    api_base_url: HttpUrl = Field(
         description="The base URL of the FIRST EPSS API.",
-        default="https://api.first.org/data/v1/epss",
+        default=HttpUrl("https://api.first.org/data/v1/epss"),
     )
-    max_tlp: str = Field(
+    max_tlp: Literal[
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED",
+    ] = Field(
         description="The maximum TLP level for the connector.",
         default="TLP:AMBER",
     )
