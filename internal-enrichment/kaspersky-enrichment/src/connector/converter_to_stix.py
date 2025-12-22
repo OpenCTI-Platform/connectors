@@ -33,8 +33,15 @@ class ConverterToStix:
         """
         self.helper = helper
         self.author = self.create_author()
-        self.tlp_clear = TLPMarking(level="clear")
-        self.tlp_amber = TLPMarking(level="amber")
+        self.tlp_clear = self.create_tlp_marking("clear")
+        self.tlp_amber = self.create_tlp_marking("amber")
+
+    def create_tlp_marking(self, level: str) -> TLPMarking:
+        """
+        Create TLPMarking object
+        """
+        tlp_marking = TLPMarking(level=level)
+        return tlp_marking
 
     def create_author(self) -> OrganizationAuthor:
         """

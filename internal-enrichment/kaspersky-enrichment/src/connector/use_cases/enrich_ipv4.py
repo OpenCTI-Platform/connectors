@@ -52,6 +52,16 @@ class Ipv4Enricher:
                 },
             )
 
+        # Prepare author object
+        author = self.converter_to_stix.create_author()
+        octi_objects.append(author.to_stix2_object())
+
+        # Prepare TLPMarkings
+        tlp_clear = self.converter_to_stix.create_tlp_marking("clear")
+        octi_objects.append(tlp_clear.to_stix2_object())
+        tlp_amber = self.converter_to_stix.create_tlp_marking("amber")
+        octi_objects.append(tlp_amber.to_stix2_object())
+
         # Manage IpGeneralInfo data
 
         self.helper.connector_logger.info(
