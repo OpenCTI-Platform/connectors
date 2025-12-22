@@ -109,10 +109,6 @@ class Ipv4Enricher:
             "[CONNECTOR] Process enrichment from FilesDownloadedFromIp data..."
         )
 
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from FilesDownloadedFromIp data..."
-        )
-
         if entity_data.get("FilesDownloadedFromIp"):
             for file in entity_data["FilesDownloadedFromIp"]:
                 obs_file = self.converter_to_stix.create_file(

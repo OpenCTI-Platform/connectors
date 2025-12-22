@@ -112,7 +112,7 @@ class KasperskyConfig(BaseConfigModel):
         default="LicenseInfo,Zone,IpGeneralInfo",
         description="Sections wanted to investigate for the requested IPV4. "
         "LicenseInfo, Zone and IpGeneralInfo are always set, can't be disabled. "
-        "Only DetectionsInfo, FileDownloadedFromUrls, Industries and FileNames are currently supported",
+        "Only FilesDownloadedFromIp, HostedUrls, IpWhoIs, IpDnsResolutions and Industries are currently supported",
     )
     domain_sections: str = Field(
         default="LicenseInfo,Zone,DomainGeneralInfo",
