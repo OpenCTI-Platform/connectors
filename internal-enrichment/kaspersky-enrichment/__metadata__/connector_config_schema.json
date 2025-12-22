@@ -21,7 +21,8 @@
     },
     "CONNECTOR_SCOPE": {
       "default": [
-        "StixFile"
+        "StixFile",
+        "IPv4-Addr"
       ],
       "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
       "items": {
@@ -65,6 +66,19 @@
       "type": "string",
       "writeOnly": true
     },
+    "KASPERSKY_MAX_TLP": {
+      "default": "TLP:AMBER",
+      "description": "Max TLP marking of the entity to enrich (inclusive).",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
+    },
     "KASPERSKY_ZONE_OCTI_SCORE_MAPPING": {
       "default": "red:100,orange:80,yellow:60,gray:20,green:0",
       "description": "Zone to score mapping. Only the numerical value need to be changed if necessary. See https://tip.kaspersky.com/Help/Doc_data/en-US/AboutZones.htm for further explanations",
@@ -73,7 +87,11 @@
     "KASPERSKY_FILE_SECTIONS": {
       "default": "LicenseInfo,Zone,FileGeneralInfo",
       "description": "Sections wanted to investigate for the requested hash. LicenseInfo, Zone and FileGeneralInfo are always set, can't be disabled. Only DetectionsInfo, FileDownloadedFromUrls, Industries and FileNames are currently supported",
-      "minLength": 1,
+      "type": "string"
+    },
+    "KASPERSKY_IPV4_SECTIONS": {
+      "default": "LicenseInfo,Zone,IpGeneralInfo",
+      "description": "Sections wanted to investigate for the requested IPV4. LicenseInfo, Zone and IpGeneralInfo are always set, can't be disabled. Only DetectionsInfo, FileDownloadedFromUrls, Industries and FileNames are currently supported",
       "type": "string"
     }
   },
