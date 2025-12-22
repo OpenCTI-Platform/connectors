@@ -11,6 +11,7 @@ import html2text
 import pytz
 import stix2
 from connector.settings import ConnectorSettings
+from connectors_sdk.models import OrganizationAuthor
 from dateutil.parser import parse
 from pycti import (
     AttackPattern,
@@ -32,16 +33,15 @@ class Silobreaker:
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         self.config = config
         self.helper = helper
-        self.identity = self.helper.api.identity.create(
-            type="Organization",
-            name="Silobreaker",
-            description="Silobreaker helps security, business and intelligence professionals make sense of the overwhelming amount of data on the web.",
-        )
-        self.auth_token = None
-        self.cache = {}
 
-    def get_interval(self):
-        return int(self.config.silobreaker.interval) * 60
+        self.api_base_url = str(self.config.silobreaker.api_url).strip("/")
+        self.auth_token = None
+
+        self.identity = OrganizationAuthor(
+            name="Silobreaker",
+            description="Silobreaker helps security, business and intelligence professionals "
+            "make sense of the overwhelming amount of data on the web.",
+        )
 
     def _query(self, method, url, body=None):
         try:
@@ -178,7 +178,7 @@ class Silobreaker:
                     for entity in entities:
                         enrichment = self._query(
                             "GET",
-                            self.config.silobreaker.api_url
+                            self.api_base_url
                             + "/v2/enrichments?type="
                             + entity["Type"]
                             + "&description="
@@ -196,7 +196,7 @@ class Silobreaker:
                                     score = module["risk"]["riskScore"]
                         custom_properties = {
                             "x_opencti_score": score,
-                            "created_by_ref": self.identity["standard_id"],
+                            "created_by_ref": self.identity.id,
                             "external_references": external_references,
                         }
                         if entity["Type"] == "ThreatActor":
@@ -204,7 +204,7 @@ class Silobreaker:
                                 id=IntrusionSet.generate_id(entity["Description"]),
                                 name=entity["Description"],
                                 description=entity["Description"],
-                                created_by_ref=self.identity["standard_id"],
+                                created_by_ref=self.identity.id,
                                 object_marking_refs=[stix2.TLP_GREEN.get("id")],
                             )
                             objects.append(actor_stix)
@@ -215,7 +215,7 @@ class Silobreaker:
                                 id=Malware.generate_id(entity["Description"]),
                                 name=entity["Description"],
                                 description=entity["Description"],
-                                created_by_ref=self.identity["standard_id"],
+                                created_by_ref=self.identity.id,
                                 object_marking_refs=[stix2.TLP_GREEN.get("id")],
                                 is_family=True,
                             )
@@ -227,7 +227,7 @@ class Silobreaker:
                                 id=AttackPattern.generate_id(entity["Description"]),
                                 name=entity["Description"],
                                 description=entity["Description"],
-                                created_by_ref=self.identity["standard_id"],
+                                created_by_ref=self.identity.id,
                                 object_marking_refs=[stix2.TLP_GREEN.get("id")],
                             )
                             objects.append(attack_pattern_stix)
@@ -240,7 +240,7 @@ class Silobreaker:
                                 name=entity["Description"],
                                 identity_class="individual",
                                 description=entity["Description"],
-                                created_by_ref=self.identity["standard_id"],
+                                created_by_ref=self.identity.id,
                                 object_marking_refs=[stix2.TLP_GREEN.get("id")],
                             )
                             objects.append(individual_stix)
@@ -252,7 +252,7 @@ class Silobreaker:
                                 name=entity["Description"],
                                 description=entity["Description"],
                                 country=entity["Description"],
-                                created_by_ref=self.identity["standard_id"],
+                                created_by_ref=self.identity.id,
                                 allow_custom=True,
                                 custom_properties={
                                     "x_opencti_location_type": "Country"
@@ -266,7 +266,7 @@ class Silobreaker:
                                 name=entity["Description"],
                                 description=entity["Description"],
                                 country=entity["Description"],
-                                created_by_ref=self.identity["standard_id"],
+                                created_by_ref=self.identity.id,
                                 allow_custom=True,
                                 custom_properties={"x_opencti_location_type": "City"},
                             )
@@ -280,7 +280,7 @@ class Silobreaker:
                                 name=entity["Description"],
                                 identity_class="organization",
                                 description=entity["Description"],
-                                created_by_ref=self.identity["standard_id"],
+                                created_by_ref=self.identity.id,
                             )
                             objects.append(organization_stix)
                         if entity["Type"] == "Organization":
@@ -291,7 +291,7 @@ class Silobreaker:
                                 name=entity["Description"],
                                 identity_class="organization",
                                 description=entity["Description"],
-                                created_by_ref=self.identity["standard_id"],
+                                created_by_ref=self.identity.id,
                             )
                             objects.append(organization_stix)
                         if entity["Type"] == "GovernmentBody":
@@ -302,7 +302,7 @@ class Silobreaker:
                                 name=entity["Description"],
                                 identity_class="organization",
                                 description=entity["Description"],
-                                created_by_ref=self.identity["standard_id"],
+                                created_by_ref=self.identity.id,
                             )
                             objects.append(organization_stix)
                         if entity["Type"] == "Vulnerability":
@@ -310,7 +310,7 @@ class Silobreaker:
                                 id=Vulnerability.generate_id(entity["Description"]),
                                 name=entity["Description"],
                                 description=entity["Description"],
-                                created_by_ref=self.identity["standard_id"],
+                                created_by_ref=self.identity.id,
                             )
                             objects.append(vulnerability_stix)
                             victims.append(vulnerability_stix)
@@ -332,7 +332,7 @@ class Silobreaker:
                                 pattern_type="stix",
                                 pattern=pattern,
                                 object_marking_refs=[stix2.TLP_GREEN.get("id")],
-                                created_by_ref=self.identity["standard_id"],
+                                created_by_ref=self.identity.id,
                                 custom_properties={
                                     "x_opencti_score": score,
                                     "x_opencti_main_observable_type": "Domain-Name",
@@ -369,7 +369,7 @@ class Silobreaker:
                                 pattern_type="stix",
                                 pattern=pattern,
                                 object_marking_refs=[stix2.TLP_GREEN.get("id")],
-                                created_by_ref=self.identity["standard_id"],
+                                created_by_ref=self.identity.id,
                                 custom_properties={
                                     "x_opencti_score": score,
                                     "x_opencti_main_observable_type": "IPv4-Addr",
@@ -406,7 +406,7 @@ class Silobreaker:
                                 pattern_type="stix",
                                 pattern=pattern,
                                 object_marking_refs=[stix2.TLP_GREEN.get("id")],
-                                created_by_ref=self.identity["standard_id"],
+                                created_by_ref=self.identity.id,
                                 custom_properties={
                                     "x_opencti_score": score,
                                     "x_opencti_main_observable_type": "Hostname",
@@ -445,7 +445,7 @@ class Silobreaker:
                                 pattern_type="stix",
                                 pattern=pattern,
                                 object_marking_refs=[stix2.TLP_GREEN.get("id")],
-                                created_by_ref=self.identity["standard_id"],
+                                created_by_ref=self.identity.id,
                                 custom_properties={
                                     "x_opencti_score": score,
                                     "x_opencti_main_observable_type": "Hostname",
@@ -478,7 +478,7 @@ class Silobreaker:
                                 source_ref=threat.get("id"),
                                 target_ref=victim.get("id"),
                                 object_marking_refs=[stix2.TLP_GREEN.get("id")],
-                                created_by_ref=self.identity["standard_id"],
+                                created_by_ref=self.identity.id,
                                 start_time=item["PublicationDate"],
                             )
                             objects.append(relationship_stix)
@@ -496,7 +496,7 @@ class Silobreaker:
                                 source_ref=user.get("id"),
                                 target_ref=use.get("id"),
                                 object_marking_refs=[stix2.TLP_GREEN.get("id")],
-                                created_by_ref=self.identity["standard_id"],
+                                created_by_ref=self.identity.id,
                                 start_time=item["PublicationDate"],
                             )
                             objects.append(relationship_stix)
@@ -514,7 +514,7 @@ class Silobreaker:
                                 source_ref=observable.get("id"),
                                 target_ref=threat.get("id"),
                                 object_marking_refs=[stix2.TLP_GREEN.get("id")],
-                                created_by_ref=self.identity["standard_id"],
+                                created_by_ref=self.identity.id,
                                 start_time=item["PublicationDate"],
                             )
                             objects.append(relationship_stix)
@@ -529,7 +529,7 @@ class Silobreaker:
                                 source_ref=indicator.get("id"),
                                 target_ref=threat.get("id"),
                                 object_marking_refs=[stix2.TLP_GREEN.get("id")],
-                                created_by_ref=self.identity["standard_id"],
+                                created_by_ref=self.identity.id,
                             )
                             objects.append(relationship_stix)
                 if len(objects) > 0:
@@ -570,7 +570,7 @@ class Silobreaker:
                         published=item["PublicationDate"],
                         created=item["PublicationDate"],
                         modified=item["PublicationDate"],
-                        created_by_ref=self.identity["standard_id"],
+                        created_by_ref=self.identity.id,
                         object_marking_refs=[stix2.TLP_GREEN.get("id")],
                         object_refs=[object["id"] for object in objects],
                         external_references=external_references,
@@ -581,12 +581,14 @@ class Silobreaker:
                         },
                     )
                     objects.append(report_stix)
+                    objects.insert(0, self.identity.to_stix2_object())
+
                     bundle = stix2.Bundle(objects=objects, allow_custom=True)
                     self.helper.send_stix2_bundle(bundle.serialize(), work_id=work_id)
 
     def _import_documents(self, list, work_id, delta_days):
         url = (
-            self.config.silobreaker.api_url
+            self.api_base_url
             + '/v2/documents/search?query=list:"'
             + urllib.parse.quote(list)
             + '"%20fromdate:-'
@@ -613,7 +615,7 @@ class Silobreaker:
                         + str(page_number * 100 + 100)
                     )
                     url = (
-                        self.config.silobreaker.api_url
+                        self.api_base_url
                         + '/v2/documents/search?query=list:"'
                         + urllib.parse.quote(list)
                         + '"%20fromdate:-'
@@ -626,8 +628,8 @@ class Silobreaker:
                     data = self._query("GET", url)
 
     def _process_lists(self, work_id, delta_days):
-        for list in self.config.silobreaker.lists.split(","):
-            url = self.config.silobreaker.api_url + "/v2/lists/15_" + list
+        for list in self.config.silobreaker.lists:
+            url = self.api_base_url + "/v2/lists/15_" + list
             data = self._query("GET", url)
             if data and data.get("Description"):
                 self._import_documents(data["Description"], work_id, delta_days)
@@ -642,11 +644,13 @@ class Silobreaker:
             current_state = self.helper.get_state()
             if current_state is None or "last_run" not in current_state:
                 self.helper.set_state(
-                    {"last_run": self.config.silobreaker.import_start_date}
+                    {
+                        "last_run": self.config.silobreaker.import_start_date.isoformat(
+                            timespec="seconds"
+                        )
+                    }
                 )
-                last_run = parse(self.config.silobreaker.import_start_date).astimezone(
-                    pytz.UTC
-                )
+                last_run = self.config.silobreaker.import_start_date
             else:
                 last_run = parse(current_state["last_run"]).astimezone(pytz.UTC)
             now = datetime.now().astimezone(pytz.UTC)
@@ -683,14 +687,7 @@ class Silobreaker:
             self.helper.connector_logger.error(str(err))
 
     def run(self):
-        if self.config.connector.duration_period:
-            self.helper.schedule_iso(
-                message_callback=self.process_message,
-                duration_period=self.config.connector.duration_period,
-            )
-        else:
-            self.helper.schedule_unit(
-                message_callback=self.process_message,
-                duration_period=self.config.silobreaker.interval,
-                time_unit=self.helper.TimeUnit.MINUTES,
-            )
+        self.helper.schedule_process(
+            message_callback=self.process_message,
+            duration_period=self.config.connector.duration_period.total_seconds(),
+        )

@@ -10,7 +10,10 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
     [
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
                 "connector": {
                     "id": "connector-id",
                     "name": "Test Connector",
@@ -24,22 +27,26 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "api_shared": "test-api-shared",
                     "lists": "138809,96910,36592,55112,50774",
                     "import_start_date": "2024-09-01",
-                    "interval": 60,
                 },
             },
             id="full_valid_settings_dict",
         ),
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
-                "connector": {"id": "connector-id", "scope": "test, connector"},
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "test, connector",
+                },
                 "silobreaker": {
                     "api_url": "https://api.silobreaker.com",
                     "api_key": "test-api-key",
                     "api_shared": "test-api-shared",
                     "lists": "138809,96910,36592,55112,50774",
                     "import_start_date": "2024-09-01",
-                    "interval": 60,
                 },
             },
             id="minimal_valid_settings_dict",
@@ -77,7 +84,10 @@ def test_settings_should_accept_valid_input(settings_dict):
         pytest.param({}, "settings", id="empty_settings_dict"),
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:PORT", "token": "test-token"},
+                "opencti": {
+                    "url": "http://localhost:PORT",
+                    "token": "test-token",
+                },
                 "connector": {
                     "id": "connector-id",
                     "name": "Test Connector",
@@ -91,7 +101,6 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "api_shared": "test-api-shared",
                     "lists": "138809,96910,36592,55112,50774",
                     "import_start_date": "2024-09-01",
-                    "interval": 60,
                 },
             },
             "opencti.url",
@@ -99,8 +108,12 @@ def test_settings_should_accept_valid_input(settings_dict):
         ),
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
                 "connector": {
+                    "id": "connector-id",
                     "name": "Test Connector",
                     "scope": "test, connector",
                     "log_level": "error",
@@ -109,14 +122,12 @@ def test_settings_should_accept_valid_input(settings_dict):
                 "silobreaker": {
                     "api_url": "https://api.silobreaker.com",
                     "api_key": "test-api-key",
-                    "api_shared": "test-api-shared",
                     "lists": "138809,96910,36592,55112,50774",
                     "import_start_date": "2024-09-01",
-                    "interval": 60,
                 },
             },
-            "connector.id",
-            id="missing_connector_id",
+            "silobreaker.api_shared",
+            id="missing_silobreaker_api_shared",
         ),
     ],
 )

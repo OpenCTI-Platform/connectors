@@ -47,7 +47,6 @@ class StubConnectorSettings(ConnectorSettings):
                     "api_shared": "test-api-shared",
                     "lists": "138809,96910,36592,55112,50774",
                     "import_start_date": "2024-09-01",
-                    "interval": 60,
                 },
             }
         )
