@@ -87,13 +87,14 @@ class ActorsAPI(BaseCrowdstrikeClient):
                 if item.get("id") is not None:
                     try:
                         ids.append(int(item.get("id")))
+                        continue
                     except Exception:
                         pass
 
                 slug_val = (item.get("slug") or "").strip()
                 if slug_val:
                     slugs_list.append(slug_val)
-
+                    continue
                 name_val = (item.get("name") or "").strip()
                 if name_val:
                     names.append(name_val)

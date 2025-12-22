@@ -8,6 +8,7 @@ from io import BytesIO
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple
 
 from crowdstrike_feeds_services.client.rules import RulesAPI
+from crowdstrike_feeds_services.client.actors import ActorsAPI
 from crowdstrike_feeds_services.utils import (
     datetime_to_timestamp,
     timestamp_to_datetime,
@@ -57,6 +58,9 @@ class YaraMasterImporter(BaseImporter):
         super().__init__(helper, author, tlp_marking)
 
         self.rules_api_cs = RulesAPI(helper)
+        self.actors_api_cs = ActorsAPI(helper)
+        # Simple per-run cache to avoid repeated actor resolution calls.
+        self._resolved_actor_name_cache: Dict[str, str] = {}
         self.report_status = report_status
         self.report_type = report_type
         self.no_file_trigger_import = no_file_trigger_import
@@ -150,6 +154,70 @@ class YaraMasterImporter(BaseImporter):
     def _clear_report_fetcher_cache(self) -> None:
         self._info("Clearing report fetcher cache...")
         self.report_fetcher.clear_cache()
+
+    def _normalize_actor_names(self, actor_tokens: List[str]) -> List[str]:
+        """Normalize actor tokens (often internal IDs) into human-readable names.
+
+        YARA rules often reference actors as strings (e.g., LABYRINTHCHOLLIMA). We only
+        want stable naming for Intrusion Sets; we are NOT enriching full actor profiles.
+        """
+        if not actor_tokens:
+            return []
+
+        # Separate cached vs uncached tokens.
+        normalized: List[str] = []
+        to_resolve: List[str] = []
+        for token in actor_tokens:
+            if not token:
+                continue
+            cached = self._resolved_actor_name_cache.get(token)
+            if cached:
+                normalized.append(cached)
+            else:
+                to_resolve.append(token)
+
+        if not to_resolve:
+            return normalized
+
+        try:
+            response = self.actors_api_cs.get_actors_by_slugs(to_resolve)
+            resources = (
+                response.get("resources", []) if isinstance(response, dict) else []
+            )
+
+            # Build a lookup from likely keys (slug/name) to canonical name.
+            lookup: Dict[str, str] = {}
+            for actor in resources:
+                name = actor.get("name") or actor.get("slug")
+                if not name:
+                    continue
+                slug = actor.get("slug")
+                if slug:
+                    lookup[slug] = name
+                # Also map the name itself for safety.
+                lookup[name] = name
+
+            # Preserve input ordering; fall back to original token if not resolved.
+            for token in to_resolve:
+                canon = lookup.get(token)
+                if not canon:
+                    # Try some common normalizations.
+                    canon = lookup.get(token.lower()) or lookup.get(token.upper())
+                canon = canon or token
+                self._resolved_actor_name_cache[token] = canon
+                normalized.append(canon)
+
+        except Exception as err:
+            self._error(
+                "Failed to resolve YARA actor tokens; using raw values as-is: {0}",
+                str(err),
+            )
+            # If resolution fails, keep raw tokens.
+            for token in to_resolve:
+                self._resolved_actor_name_cache[token] = token
+                normalized.append(token)
+
+        return normalized
 
     def _fetch_yara_master(
         self, e_tag: Optional[str] = None, last_modified: Optional[datetime] = None
@@ -384,6 +452,16 @@ class YaraMasterImporter(BaseImporter):
         confidence_level = self._confidence_level()
         report_status = self.report_status
         report_type = self.report_type
+
+        # Normalize actor tokens to stable human-readable names for Intrusion Set creation.
+        # We only affect the naming used in the YARA bundle; the Actor feed/enrichment owns the full actor profile.
+        try:
+            if getattr(rule, "actors", None):
+                rule.actors = self._normalize_actor_names(list(rule.actors))
+        except Exception as e:
+            self._error(
+                "Failed normalizing YARA rule actors for '{0}': {1}", rule.name, e
+            )
 
         bundle_builder = YaraRuleBundleBuilder(
             rule,

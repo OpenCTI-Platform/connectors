@@ -303,44 +303,57 @@ class ReportImporter(BaseImporter):
         confidence_level = self._confidence_level()
         related_indicators_with_related_entities = []
 
-        # Resolve CrowdStrike actor slugs/identifiers to proper actor names before building the bundle.
-        # Reports may include `actors` as internal CrowdStrike identifiers (e.g., ['LABYRINTHCHOLLIMA']).
-        # We want to use the human-readable actor names when creating IntrusionSet objects.
-        actor_slugs = report.get("actors") or []
-        self.helper.connector_logger.debug(f"Actor slugs for report: {actor_slugs}")
-        if actor_slugs:
+        # Resolve CrowdStrike actor identifiers to proper actor entities before building the bundle.
+        # Important: Reports often already include actor stubs as dicts with `id`, `name`, and `slug`.
+        # In that case we should NOT perform additional API lookups (Romain's point).
+        raw_actors = report.get("actors") or []
+
+        self.helper.connector_logger.debug(
+            "Report actors field (raw)",
+            {"report_id": report.get("id"), "actors": raw_actors},
+        )
+
+        # If the report already contains actor dict stubs with IDs, trust them and skip resolution.
+        # (We only resolve when we receive string tokens / identifiers.)
+        should_resolve = False
+        if raw_actors:
+            for a in raw_actors:
+                if not isinstance(a, dict):
+                    should_resolve = True
+                    break
+                if a.get("id") is None:
+                    # Dict without ID: treat as ambiguous, allow resolution.
+                    should_resolve = True
+                    break
+
+        if should_resolve:
             try:
-                response = self.actors_api_cs.get_actors_by_slugs(actor_slugs)
-                self.helper.connector_logger.debug(
-                    "Response from actors API: {response}"
-                )
+                response = self.actors_api_cs.get_actors_by_slugs(raw_actors)
                 resources = response.get("resources", [])
-                resolved_actor_names: List[str] = []
-                for actor in resources:
-                    # Prefer canonical name, fall back to slug if needed.
-                    name = actor.get("name") or actor.get("slug")
-                    if name:
-                        resolved_actor_names.append(name)
-                if resolved_actor_names:
+
+                self.helper.connector_logger.debug(
+                    "Resolved report actors via CrowdStrike Actors API",
+                    {
+                        "report_id": report.get("id"),
+                        "report_slug": report.get("slug"),
+                        "input_actors": raw_actors,
+                        "resolved_count": len(resources),
+                    },
+                )
+
+                if resources:
+                    # Replace the report actors list with the resolved actor entities.
                     report["actors"] = resources
-                    self.helper.connector_logger.debug(
-                        "Resolved actor slugs to names for report.",
-                        {
-                            "report_id": report.get("id"),
-                            "report_slug": report.get("slug"),
-                            "actor_slugs": actor_slugs,
-                            "actor_names": resolved_actor_names,
-                        },
-                    )
             except Exception as err:
                 # Do not fail the whole report if actor resolution fails.
-                # Keep existing 'actors' field (slugs) and log a warning.
+                # Keep existing 'actors' field and log a warning.
                 self.helper.connector_logger.warning(
-                    "[WARNING] Failed to resolve actor slugs to names for report, using slugs as-is.",
+                    "[WARNING] Failed to resolve report actors; using report-provided values as-is.",
                     {
                         "report_id": report.get("id"),
                         "report_slug": report.get("slug"),
                         "actor_slugs": actor_slugs,
+                        "input_actors": raw_actors,
                         "error": str(err),
                     },
                 )
