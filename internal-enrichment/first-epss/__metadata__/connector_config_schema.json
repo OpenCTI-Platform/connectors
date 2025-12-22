@@ -15,12 +15,15 @@
       "type": "string"
     },
     "CONNECTOR_NAME": {
-      "default": "FirstEpss",
+      "default": "First EPSS",
       "description": "The name of the connector.",
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "default": [
+        "vulneribility"
+      ],
+      "description": "The scope of the connector.",
       "items": {
         "type": "string"
       },
@@ -51,18 +54,28 @@
     "FIRST_EPSS_API_BASE_URL": {
       "default": "https://api.first.org/data/v1/epss",
       "description": "The base URL of the FIRST EPSS API.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     },
     "FIRST_EPSS_MAX_TLP": {
       "default": "TLP:AMBER",
       "description": "The maximum TLP level for the connector.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
       "type": "string"
     }
   },
   "required": [
     "OPENCTI_URL",
-    "OPENCTI_TOKEN",
-    "CONNECTOR_SCOPE"
+    "OPENCTI_TOKEN"
   ],
   "additionalProperties": true
 }
