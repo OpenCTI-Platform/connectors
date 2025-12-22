@@ -100,7 +100,7 @@ class DiodeImport:
             self.helper.connect_validate_before_import = connector.get(
                 "validate_before_import", False
             )
-            self.helper.applicant_id = self.applicant_mappings.get(applicant_id)
+            self.helper.applicant_id = self.applicant_mappings.get(applicant_id, None)
             # endregion
             # region Send data to the correct queue with the correct options
             friendly_name = f"{connector.get('name')} run @ {time.ctime(ti_m)}"
