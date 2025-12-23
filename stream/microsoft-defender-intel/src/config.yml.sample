@@ -3,12 +3,18 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  type: 'STREAM'
-  id: 'ChangeMe'
-  name: 'Microsoft Defender Intel'
-  live_stream_id: 'ChangeMe'
+  id: '4aa40d9f-bee0-466e-a72e-6878c13bde08' # Optional (default: '4aa40d9f-bee0-466e-a72e-6878c13bde08')
+  name: 'Microsoft Defender Intel' # Optional (default: 'Microsoft Defender Intel')
+  scope: 'defender' # Optional (default: 'defender')
+  live_stream_id: 'ChangeMe' # Optional (default: 'live')
+  log_level: 'error' # Optional (default: 'error')
 
 microsoft_defender_intel:
   tenant_id: 'ChangeMe'
-  client_id: 'ChangeMe' 
+  client_id: 'ChangeMe'
   client_secret: 'ChangeMe'
+  base_url: 'https://api.securitycenter.microsoft.com' # Optional (default: 'https://api.securitycenter.microsoft.com')
+  resource_path: '/api/indicators' # Optional (default: '/api/indicators')
+  action: 'Alert' # Optional (default: 'Alert')
+  expire_time: 30 # Optional (default: 30)
+  passive_only: false # Optional (default: false)
