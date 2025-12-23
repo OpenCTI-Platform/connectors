@@ -13,13 +13,31 @@ function Find-RequirementsTxt {
     
     # Find all requirements.txt files recursively
     # Sort by path depth (number of backslashes) and take the first one (shortest path)
-    $files = Get-ChildItem -Path $Path -Filter "requirements.txt" -Recurse |
+    $file = Get-ChildItem -Path $Path -Filter "requirements.txt" -Recurse |
         Select-Object @{Name='Depth';Expression={($_.FullName -split '\\').Count}}, FullName |
         Sort-Object Depth |
         Select-Object -First 1
     
-    if ($files) {
-        return $files.FullName
+    if ($file) {
+        return $file.FullName
+    }
+    return $null
+}
+
+function Find-PyprojectToml {
+    param(
+        [string]$Path
+    )
+    
+    # Find all pyproject.toml files recursively
+    # Sort by path depth (number of backslashes) and take the first one (shortest path)
+    $file = Get-ChildItem -Path $Path -Filter "pyproject.toml" -Recurse |
+        Select-Object @{Name='Depth';Expression={($_.FullName -split '\\').Count}}, FullName |
+        Sort-Object Depth |
+        Select-Object -First 1
+    
+    if ($file) {
+        return $file.FullName
     }
     return $null
 }
@@ -29,9 +47,9 @@ function Activate-Venv {
         [string]$ConnectorPath
     )
     
-    $requirements_file = Find-RequirementsTxt -Path $ConnectorPath
+    $requirementsFile = Find-RequirementsTxt -Path $ConnectorPath
     
-    if (-not $requirements_file) {
+    if (-not $requirementsFile) {
         Write-Host "No requirements.txt found in $ConnectorPath" -ForegroundColor Yellow
         return $false
     }
@@ -52,7 +70,7 @@ function Activate-Venv {
     Write-Host "> Installing requirements in: $ConnectorPath"
     
     # Install requirements quietly
-    & python -m pip install -q -r $requirements_file
+    & python -m pip install -q -r $requirementsFile
     
     # Check if venv is well created
     if (Test-Path $venvPath) {
@@ -99,7 +117,6 @@ foreach ($connector_directory in $connector_directories) {
     if (Test-Path $connector_path) {
         # Check if directory has changed (simplified for local development)
         $hasChanges = $true  # Default to true for local development
-        
         if ($CIRCLE_BRANCH) {
             # CI environment logic
             if ($CIRCLE_BRANCH -eq "master") {
@@ -128,21 +145,40 @@ foreach ($connector_directory in $connector_directories) {
         } else {
             Write-Host "Changes in: $connector_path"
             Write-Host "> Looking for a config model in $connector_path"
+
+            $requirementsFile = Find-RequirementsTxt -Path $connector_path
+            $pyprojectToml = Find-PyprojectToml -Path $connector_path
             
-            $requirements_file = Find-RequirementsTxt -Path $connector_path
-            if ($requirements_file) {
-                Write-Host "Found requirements.txt: $requirements_file"
-                
+            if ($requirementsFile) {
+                Write-Host "Found requirements.txt: $requirementsFile"
+
                 # Check if requirements file contains pydantic-settings or connectors-sdk
-                $requirementsContent = Get-Content $requirements_file -Raw
+                # If not found in requirements.txt and pyproject.toml exists, try to find connectors-sdk in pyproject.toml
+                $hasRequiredProperty = $false
+                $requirementsContent = Get-Content $requirementsFile -Raw
                 if ($requirementsContent -match "pydantic-settings" -or $requirementsContent -match "connectors-sdk") {
+                    $hasRequiredProperty = $true
+                } elseif ($pyprojectToml) {
+                    $pyprojectTomlContent = Get-Content $pyprojectToml -Raw
+                    if ($pyprojectTomlContent -match "connectors-sdk") {
+                        $hasRequiredProperty = $true
+                    }
+                }
+                
+                if ($hasRequiredProperty) {
                     # Create a new PowerShell session to isolate the virtual environment
                     $scriptBlock = {
                         param($ConnectorPath, $VENV_NAME)
-                        
+            
                         # Recreate functions in the new session
                         function Activate-Venv {
                             param([string]$ConnectorPath)
+                        
+                            # Save the current directory
+                            $currentDir = Get-Location
+                            
+                            # Change to the connector directory for all operations
+                            Set-Location -Path $ConnectorPath
                             
                             # Find requirements.txt
                             $requirements = Get-ChildItem -Path $ConnectorPath -Filter "requirements.txt" -Recurse | 
@@ -156,9 +192,17 @@ foreach ($connector_directory in $connector_directories) {
                                 if (Test-Path $activateScript) {
                                     & $activateScript
                                     & python -m pip install -q -r $requirements.FullName
+
+                                    # Return to original directory
+                                    Set-Location -Path $currentDir
+
                                     return $true
                                 }
                             }
+
+                            # Return to original directory
+                            Set-Location -Path $currentDir
+
                             return $false
                         }
                         
