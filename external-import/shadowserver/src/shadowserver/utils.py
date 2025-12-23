@@ -1,6 +1,8 @@
 import hashlib
+import io
 import ipaddress
 from datetime import datetime
+from math import isnan
 from typing import Dict, List, Optional, Union
 
 import pandas as pd
@@ -101,6 +103,8 @@ def note_timestamp_to_datetime(date_string: str) -> datetime:
     Returns:
         datetime: The datetime object representing the input timestamp.
     """
+    if not date_string.endswith("Z"):
+        date_string += "Z"
     return datetime.strptime(date_string, "%Y-%m-%d %H:%M:%SZ")
 
 
@@ -203,6 +207,30 @@ def from_list_to_csv(data_list: List[Dict]) -> str:
     clean_list = clean_list_of_dicts(data_list)
     df = pd.DataFrame(clean_list)
     return df.to_csv(index=False)
+
+
+def from_csv_to_list(csv_content: bytes) -> List[Dict]:
+    """
+    Convert CSV content (bytes) to a list of dictionaries.
+
+    Args:
+        csv_content (bytes): The CSV content as bytes.
+
+    Returns:
+        list of dict: A list of dictionaries parsed from the CSV.
+    """
+    df = pd.read_csv(io.BytesIO(csv_content))
+    csv_list = df.to_dict("records")[:10]
+
+    def replace_nan_with_none(value):
+        if isinstance(value, float) and isnan(value):
+            return None
+        return value
+
+    csv_list = [
+        {k: replace_nan_with_none(v) for k, v in record.items()} for record in csv_list
+    ]
+    return csv_list
 
 
 def get_stix_id_precedence(stix_id_list: List[str]) -> Optional[str]:

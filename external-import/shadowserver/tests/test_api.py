@@ -6,6 +6,7 @@ import pytest
 import requests
 from pycti import OpenCTIConnectorHelper
 from shadowserver.api import ShadowserverAPI
+from shadowserver.utils import from_list_to_csv
 
 FIXTURES_DIR = "fixtures"
 
@@ -96,34 +97,34 @@ class TestShadowserverAPI:
 
     def test_get_report(self, shadow_server_api, mocker):
         """Test the get_report method."""
-        self.shadowserver_fixture(
-            "report_type_blocklist.json",
-            fixture_mocker=mocker,
-            shadow_server_api=shadow_server_api,
-        )
-        reports = shadow_server_api.get_report(
-            report_id="test_report_id", report="blocklist"
-        )
+        # Load the fixture and convert to CSV
+        fixture_data = self.load_fixture("report_type_blocklist.json")
+        csv_content = from_list_to_csv(fixture_data).encode("utf-8")
+
+        # Mock the session.get to return CSV content
+        mock_response = MagicMock()
+        mock_response.content = csv_content
+        mock_response.raise_for_status = MagicMock()
+        mock_get = mocker.patch.object(shadow_server_api.session, "get")
+        mock_get.return_value = mock_response
+
+        reports = shadow_server_api.get_report(report_id="test_report_id")
+        assert reports == csv_content
         assert len(reports) > 0
-        assert len(reports) == 5
 
     def test_get_report_id_invalid(self, shadow_server_api, mocker):
         """Test the get_report method with an invalid report ID."""
-        mock_request = mocker.patch.object(shadow_server_api, "_request")
-        mock_request.side_effect = requests.exceptions.HTTPError
-        with pytest.raises(requests.exceptions.HTTPError):
-            shadow_server_api.get_report(
-                report_id="invalid_report_id", report="blocklist"
-            )
+        # Mock session.get to raise HTTPError
+        mock_response = MagicMock()
+        mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError(
+            "404 Not Found"
+        )
+        mock_get = mocker.patch.object(shadow_server_api.session, "get")
+        mock_get.return_value = mock_response
 
-    def test_get_report_type_invalid(self, shadow_server_api, mocker):
-        """Test the get_report method with an invalid report type."""
-        mock_request = mocker.patch.object(shadow_server_api, "_request")
-        mock_request.side_effect = requests.exceptions.HTTPError
-        with pytest.raises(requests.exceptions.HTTPError):
-            shadow_server_api.get_report(
-                report_id="test_report_id", report="invalid_report"
-            )
+        # get_report logs the error and returns empty bytes
+        result = shadow_server_api.get_report(report_id="invalid_report_id")
+        assert result == b""
 
     def test_all_fixture_types(self, shadow_server_api, mocker):
 
@@ -138,11 +139,14 @@ class TestShadowserverAPI:
         for report_file in report_files:
             report_type = report_file.replace("report_type_", "").replace(".json", "")
 
-            self.shadowserver_fixture(
-                report_file,
-                fixture_mocker=mocker,
-                shadow_server_api=shadow_server_api,
-            )
+            # Load the JSON fixture and convert to CSV
+            fixture_data = self.load_fixture(report_file)
+
+            csv_content = from_list_to_csv(fixture_data).encode("utf-8")
+
+            # Mock get_report to return CSV content
+            mock_get_report = mocker.patch.object(shadow_server_api, "get_report")
+            mock_get_report.return_value = csv_content
 
             report = {"id": "test_report_id", "report": report_type}
 
