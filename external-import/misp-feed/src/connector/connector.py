@@ -10,7 +10,7 @@ import boto3
 import pytz
 import requests
 import stix2
-import yaml
+from connector.settings import ConnectorSettings
 from dateutil.parser import parse
 from pycti import (
     AttackPattern,
@@ -29,7 +29,6 @@ from pycti import (
     StixCoreRelationship,
     StixSightingRelationship,
     Tool,
-    get_config_variable,
 )
 
 PATTERNTYPES = ["yara", "sigma", "pcre", "snort", "suricata"]
@@ -78,136 +77,13 @@ FILETYPES = ["file-name", "file-md5", "file-sha1", "file-sha256"]
 
 
 class MispFeed:
-    def __init__(self):
-        # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config)
-        # Extra config
 
-        self.source_type = get_config_variable(
-            "MISP_FEED_SOURCE_TYPE",
-            ["misp_feed", "source_type"],
-            config,
-            False,
-            default="url",
-        )
-        if self.source_type == "url":
-            self.misp_feed_url = get_config_variable(
-                "MISP_FEED_URL", ["misp_feed", "url"], config
-            )
-            self.misp_feed_ssl_verify = get_config_variable(
-                "MISP_FEED_SSL_VERIFY", ["misp_feed", "ssl_verify"], config, False, True
-            )
-        self.misp_feed_import_from_date = get_config_variable(
-            "MISP_FEED_IMPORT_FROM_DATE", ["misp_feed", "import_from_date"], config
-        )
-        self.misp_feed_create_reports = get_config_variable(
-            "MISP_FEED_CREATE_REPORTS",
-            ["misp_feed", "create_reports"],
-            config,
-            False,
-            True,
-        )
-        self.misp_feed_report_type = get_config_variable(
-            "MISP_FEED_REPORT_TYPE",
-            ["misp_feed", "report_type"],
-            config,
-            False,
-            "misp-event",
-        )
-        self.misp_feed_create_indicators = get_config_variable(
-            "MISP_FEED_CREATE_INDICATORS", ["misp_feed", "create_indicators"], config
-        )
-        self.misp_feed_create_observables = get_config_variable(
-            "MISP_FEED_CREATE_OBSERVABLES", ["misp_feed", "create_observables"], config
-        )
-        self.misp_feed_create_tags_as_labels = get_config_variable(
-            "MISP_CREATE_TAGS_AS_LABELS",
-            ["misp_feed", "create_tags_as_labels"],
-            config,
-            default=True,
-        )
-        self.misp_feed_guess_threats_from_tags = get_config_variable(
-            "MISP_FEED_GUESS_THREAT_FROM_TAGS",
-            ["misp_feed", "guess_threats_from_tags"],
-            config,
-            default=False,
-        )
-        self.misp_feed_author_from_tags = get_config_variable(
-            "MISP_FEED_AUTHOR_FROM_TAGS",
-            ["misp_feed", "author_from_tags"],
-            config,
-            default=False,
-        )
-        self.misp_feed_markings_from_tags = get_config_variable(
-            "MISP_FEED_MARKINGS_FROM_TAGS",
-            ["misp_feed", "markings_from_tags"],
-            config,
-            default=False,
-        )
-        self.misp_feed_create_object_observables = get_config_variable(
-            "MISP_FEED_CREATE_OBJECT_OBSERVABLES",
-            ["misp_feed", "create_object_observables"],
-            config,
-            False,
-            False,
-        )
-        self.misp_feed_import_to_ids_no_score = get_config_variable(
-            "MISP_FEED_IMPORT_TO_IDS_NO_SCORE",
-            ["misp_feed", "import_to_ids_no_score"],
-            config,
-            True,
-        )
-        self.misp_feed_import_with_attachments = bool(
-            get_config_variable(
-                "MISP_FEED_IMPORT_WITH_ATTACHMENTS",
-                ["misp_feed", "import_with_attachments"],
-                config,
-                isNumber=False,
-                default=False,
-            )
-        )
-        self.misp_feed_import_unsupported_observables_as_text = bool(
-            get_config_variable(
-                "MISP_FEED_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT",
-                ["misp_feed", "import_unsupported_observables_as_text"],
-                config,
-                isNumber=False,
-                default=False,
-            )
-        )
-        self.misp_feed_import_unsupported_observables_as_text_transparent = bool(
-            get_config_variable(
-                "MISP_FEED_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT",
-                ["misp_feed", "import_unsupported_observables_as_text_transparent"],
-                config,
-                isNumber=False,
-                default=True,
-            )
-        )
-        self.misp_feed_interval = get_config_variable(
-            "MISP_FEED_INTERVAL", ["misp_feed", "interval"], config, True
-        )
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+        self.config = config
+        self.helper = helper
 
-        # Initialize MISP
-        if self.source_type == "s3":
-            bucket_name = get_config_variable(
-                "MISP_BUCKET_NAME", ["misp_feed", "bucket_name"], config, False
-            )
-
-            self.bucket_prefix = get_config_variable(
-                "MISP_BUCKET_PREFIX", ["misp_feed", "bucket_prefix"], config, False
-            )
-
-            self.s3 = boto3.resource("s3").Bucket(bucket_name)
-
-    def _get_interval(self):
-        return int(self.misp_feed_interval) * 60
+        if self.config.misp_feed.source_type == "s3":
+            self.s3 = boto3.resource("s3").Bucket(self.config.misp_feed.bucket_name)
 
     def _retrieve_data(self, url: str) -> Optional[str]:
         """
@@ -224,7 +100,7 @@ class MispFeed:
             A string with the content or None in case of failure.
         """
         try:
-            response = requests.get(url, verify=self.misp_feed_ssl_verify)
+            response = requests.get(url, verify=self.config.misp_feed.ssl_verify)
             response.raise_for_status()
             return response.text
         except (
@@ -238,10 +114,7 @@ class MispFeed:
 
     def _send_bundle(self, work_id: str, serialized_bundle: str) -> None:
         try:
-            self.helper.send_stix2_bundle(
-                serialized_bundle,
-                work_id=work_id,
-            )
+            self.helper.send_stix2_bundle(serialized_bundle, work_id=work_id)
         except Exception as e:
             self.helper.log_error(f"Error while sending bundle: {e}")
 
@@ -250,38 +123,24 @@ class MispFeed:
         for tag in tags:
             tag_name = tag["name"]
             tag_name_lower = tag["name"].lower()
-            if self.misp_feed_markings_from_tags:
+            if self.config.misp_feed.markings_from_tags:
                 if (
                     ":" in tag_name
                     and "=" in tag_name
                     and tag_name_lower.startswith("marking")
                 ):
                     marking_definition_split = tag_name.split(":")
-                    # Check if second part also contains ":"
                     if len(marking_definition_split) > 2:
-                        # Example: marking:PAP=PAP:RED
-                        # "PAP=PAP" + "RED"
                         marking_definition = (
                             marking_definition_split[1]
                             + ":"
                             + marking_definition_split[2]
                         )
                     else:
-                        # Example: marking:CLASSIFICATION=DIFFUSION RESTREINTE
-                        # CLASSIFICATION=DIFFUSION RESTREINTE
                         marking_definition = marking_definition_split[1]
-
-                    # Split on the equal
                     marking_definition_split2 = marking_definition.split("=")
-
-                    # PAP
-                    # CLASSIFICATION
                     marking_type = marking_definition_split2[0]
-
-                    # PAP:RED
-                    # DIFFUSION RESTREINTE
                     marking_name = marking_definition_split2[1]
-
                     marking = stix2.MarkingDefinition(
                         id=MarkingDefinition.generate_id(marking_type, marking_name),
                         definition_type="statement",
@@ -329,12 +188,9 @@ class MispFeed:
             if "namespace" not in galaxy:
                 self.helper.log_info("Skipping galaxy without namespace")
                 continue
-            # Get the linked intrusion sets
             if (
-                (
-                    galaxy["namespace"] == "mitre-attack"
-                    and galaxy["name"] == "Intrusion Set"
-                )
+                galaxy["namespace"] == "mitre-attack"
+                and galaxy["name"] == "Intrusion Set"
                 or (galaxy["namespace"] == "misp" and galaxy["name"] == "Threat Actor")
                 or (
                     galaxy["namespace"] == "misp"
@@ -365,7 +221,6 @@ class MispFeed:
                             )
                         )
                         added_names.append(name)
-            # Get the linked tools
             if galaxy["namespace"] == "mitre-attack" and galaxy["name"] == "Tool":
                 for galaxy_entity in galaxy["GalaxyCluster"]:
                     if " - S" in galaxy_entity["value"]:
@@ -390,9 +245,9 @@ class MispFeed:
                             )
                         )
                         added_names.append(name)
-            # Get the linked malwares
             if (
-                (galaxy["namespace"] == "mitre-attack" and galaxy["name"] == "Malware")
+                galaxy["namespace"] == "mitre-attack"
+                and galaxy["name"] == "Malware"
                 or (galaxy["namespace"] == "misp" and galaxy["name"] == "Tool")
                 or (galaxy["namespace"] == "misp" and galaxy["name"] == "Ransomware")
                 or (galaxy["namespace"] == "misp" and galaxy["name"] == "Android")
@@ -422,7 +277,6 @@ class MispFeed:
                             )
                         )
                         added_names.append(name)
-            # Get the linked attack_patterns
             if (
                 galaxy["namespace"] == "mitre-attack"
                 and galaxy["name"] == "Attack Pattern"
@@ -456,7 +310,6 @@ class MispFeed:
                             )
                         )
                         added_names.append(name)
-            # Get the linked sectors
             if galaxy["namespace"] == "misp" and galaxy["name"] == "Sector":
                 for galaxy_entity in galaxy["GalaxyCluster"]:
                     name = galaxy_entity["value"]
@@ -473,7 +326,6 @@ class MispFeed:
                             )
                         )
                         added_names.append(name)
-            # Get the linked countries
             if galaxy["namespace"] == "misp" and galaxy["name"] == "Country":
                 for galaxy_entity in galaxy["GalaxyCluster"]:
                     name = galaxy_entity["description"]
@@ -491,8 +343,7 @@ class MispFeed:
                         )
                         added_names.append(name)
         for tag in tags:
-            # Try to guess from tags
-            if self.misp_feed_guess_threats_from_tags:
+            if self.config.misp_feed.guess_threats_from_tags:
                 tag_value_split = tag["name"].split("=")
                 if len(tag_value_split) == 1:
                     tag_value = tag_value_split[0]
@@ -569,7 +420,6 @@ class MispFeed:
                                 )
                             )
                             added_names.append(threat["name"])
-            # Get the linked intrusion sets
             if (
                 tag["name"].startswith("misp-galaxy:threat-actor")
                 or tag["name"].startswith(
@@ -612,7 +462,6 @@ class MispFeed:
                             )
                         )
                         added_names.append(name)
-            # Get the linked tools
             if (
                 tag["name"].startswith("misp-galaxy:mitre-tool")
                 or tag["name"].startswith("misp-galaxy:mitre-enterprise-attack-tool")
@@ -642,7 +491,6 @@ class MispFeed:
                             )
                         )
                         added_names.append(name)
-            # Get the linked malwares
             if (
                 tag["name"].startswith("misp-galaxy:mitre-malware")
                 or tag["name"].startswith("misp-galaxy:mitre-enterprise-attack-malware")
@@ -677,7 +525,6 @@ class MispFeed:
                             )
                         )
                         added_names.append(name)
-            # Get the linked attack_patterns
             if (
                 tag["name"].startswith("misp-galaxy:mitre-attack-pattern")
                 or tag["name"].startswith("misp-galaxy:attack-pattern")
@@ -708,7 +555,6 @@ class MispFeed:
                             )
                         )
                         added_names.append(name)
-            # Get the linked sectors
             if tag["name"].startswith("misp-galaxy:sector"):
                 tag_value_split = tag["name"].split('="')
                 if len(tag_value_split) > 1 and len(tag_value_split[1]) > 0:
@@ -729,50 +575,58 @@ class MispFeed:
 
     def _resolve_tags(self, tags):
         opencti_tags = []
-
-        if not self.misp_feed_create_tags_as_labels:
+        if not self.config.misp_feed.create_tags_as_labels:
             return opencti_tags
-
         for tag in tags:
             if (
                 tag["name"] != "tlp:white"
                 and tag["name"] != "tlp:green"
-                and tag["name"] != "tlp:amber"
-                and tag["name"] != "tlp:amber+strict"
-                and tag["name"] != "tlp:red"
-                and not tag["name"].startswith("misp-galaxy:threat-actor")
-                and not tag["name"].startswith("misp-galaxy:mitre-threat-actor")
-                and not tag["name"].startswith("misp-galaxy:microsoft-activity-group")
-                and not tag["name"].startswith(
-                    "misp-galaxy:mitre-enterprise-attack-threat-actor"
+                and (tag["name"] != "tlp:amber")
+                and (tag["name"] != "tlp:amber+strict")
+                and (tag["name"] != "tlp:red")
+                and (not tag["name"].startswith("misp-galaxy:threat-actor"))
+                and (not tag["name"].startswith("misp-galaxy:mitre-threat-actor"))
+                and (not tag["name"].startswith("misp-galaxy:microsoft-activity-group"))
+                and (
+                    not tag["name"].startswith(
+                        "misp-galaxy:mitre-enterprise-attack-threat-actor"
+                    )
                 )
-                and not tag["name"].startswith(
-                    "misp-galaxy:mitre-mobile-attack-intrusion-set"
+                and (
+                    not tag["name"].startswith(
+                        "misp-galaxy:mitre-mobile-attack-intrusion-set"
+                    )
                 )
-                and not tag["name"].startswith("misp-galaxy:mitre-intrusion-set")
-                and not tag["name"].startswith(
-                    "misp-galaxy:mitre-enterprise-attack-intrusion-set"
+                and (not tag["name"].startswith("misp-galaxy:mitre-intrusion-set"))
+                and (
+                    not tag["name"].startswith(
+                        "misp-galaxy:mitre-enterprise-attack-intrusion-set"
+                    )
                 )
-                and not tag["name"].startswith("misp-galaxy:mitre-malware")
-                and not tag["name"].startswith(
-                    "misp-galaxy:mitre-enterprise-attack-malware"
+                and (not tag["name"].startswith("misp-galaxy:mitre-malware"))
+                and (
+                    not tag["name"].startswith(
+                        "misp-galaxy:mitre-enterprise-attack-malware"
+                    )
                 )
-                and not tag["name"].startswith("misp-galaxy:mitre-attack-pattern")
-                and not tag["name"].startswith(
-                    "misp-galaxy:mitre-enterprise-attack-attack-pattern"
+                and (not tag["name"].startswith("misp-galaxy:mitre-attack-pattern"))
+                and (
+                    not tag["name"].startswith(
+                        "misp-galaxy:mitre-enterprise-attack-attack-pattern"
+                    )
                 )
-                and not tag["name"].startswith("misp-galaxy:mitre-tool")
-                and not tag["name"].startswith("misp-galaxy:tool")
-                and not tag["name"].startswith("misp-galaxy:ransomware")
-                and not tag["name"].startswith("misp-galaxy:malpedia")
-                and not tag["name"].startswith("misp-galaxy:sector")
-                and not tag["name"].startswith("misp-galaxy:country")
-                and not tag["name"].startswith("marking")
-                and not tag["name"].startswith("creator")
-                and not tag["name"].startswith("intrusion-set")
-                and not tag["name"].startswith("malware")
-                and not tag["name"].startswith("tool")
-                and not tag["name"].startswith("mitre")
+                and (not tag["name"].startswith("misp-galaxy:mitre-tool"))
+                and (not tag["name"].startswith("misp-galaxy:tool"))
+                and (not tag["name"].startswith("misp-galaxy:ransomware"))
+                and (not tag["name"].startswith("misp-galaxy:malpedia"))
+                and (not tag["name"].startswith("misp-galaxy:sector"))
+                and (not tag["name"].startswith("misp-galaxy:country"))
+                and (not tag["name"].startswith("marking"))
+                and (not tag["name"].startswith("creator"))
+                and (not tag["name"].startswith("intrusion-set"))
+                and (not tag["name"].startswith("malware"))
+                and (not tag["name"].startswith("tool"))
+                and (not tag["name"].startswith("mitre"))
             ):
                 tag_value = tag["name"]
                 if '="' in tag["name"]:
@@ -896,8 +750,7 @@ class MispFeed:
                         else None
                     )
                 return [{"resolver": resolver_0, "type": type_0, "value": value}]
-        # If not found, return text observable as a fallback
-        if self.misp_feed_import_unsupported_observables_as_text:
+        if self.config.misp_feed.import_unsupported_observables_as_text:
             return [
                 {
                     "resolver": "text",
@@ -910,7 +763,7 @@ class MispFeed:
 
     def _detect_ip_version(self, value, type=False):
         if re.match(
-            r"^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}(\/([1-9]|[1-2]\d|3[0-2]))?$",
+            "^((25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)\\.?\\b){4}(\\/([1-9]|[1-2]\\d|3[0-2]))?$",
             value,
         ):
             if type:
@@ -922,20 +775,16 @@ class MispFeed:
             return "ipv6-addr"
 
     def _get_pdf_file(self, attribute):
-        if not self.misp_feed_import_with_attachments:
+        if not self.config.misp_feed.import_with_attachments:
             return None
-
         attr_type = attribute["type"]
         attr_category = attribute["category"]
         if not (attr_type == "attachment" and attr_category == "External analysis"):
             return None
-
         attr_value = attribute["value"]
         if not attr_value.endswith((".pdf", ".PDF")):
             return None
-
         attr_uuid = attribute["uuid"]
-
         attr_data = attribute.get("data")
         if attr_data is None:
             self.helper.log_error(
@@ -944,13 +793,11 @@ class MispFeed:
                 )
             )
             return None
-
         self.helper.log_info(
             "Found PDF '{0}' for attribute: {1} ({2}:{3})".format(
                 attr_value, attr_uuid, attr_type, attr_category
             )
         )
-
         return {
             "name": attr_value,
             "data": attr_data,
@@ -986,15 +833,11 @@ class MispFeed:
         resolved_attributes = self._resolve_type(attribute["type"], attribute["value"])
         if resolved_attributes is None:
             return None
-
         file_name = None
         for resolved_attribute in resolved_attributes:
             if resolved_attribute["resolver"] == "file-name":
                 file_name = resolved_attribute["value"]
-
         for resolved_attribute in resolved_attributes:
-            ### Pre-process
-            # Markings & Tags
             attribute_tags = event_labels
             if "Tag" in attribute:
                 attribute_markings = self._resolve_markings(
@@ -1005,16 +848,12 @@ class MispFeed:
                     attribute_markings = event_markings
             else:
                 attribute_markings = event_markings
-
-            # Elements
             attribute_elements = self._prepare_elements(
                 attribute.get("Galaxy", []),
                 attribute.get("Tag", []),
                 author,
                 attribute_markings,
             )
-
-            ### Create the indicator
             observable_resolver = resolved_attribute["resolver"]
             observable_type = resolved_attribute["type"]
             observable_value = resolved_attribute["value"]
@@ -1029,7 +868,6 @@ class MispFeed:
             )
             pattern_type = "stix"
             pattern = None
-            # observable type is yara or sigma for instance
             if observable_resolver in PATTERNTYPES:
                 pattern_type = observable_resolver
                 pattern = observable_value
@@ -1038,10 +876,8 @@ class MispFeed:
                     if len(attribute["comment"]) > 2
                     else observable_type
                 )
-            # observable type is not in stix 2
             elif observable_resolver not in OPENCTISTIX2:
                 return None
-            # observable type is in stix
             elif "path" in OPENCTISTIX2[observable_resolver]:
                 if "transform" in OPENCTISTIX2[observable_resolver]:
                     if (
@@ -1049,8 +885,7 @@ class MispFeed:
                         == "remove_string"
                     ):
                         observable_value = observable_value.replace(
-                            OPENCTISTIX2[observable_resolver]["transform"]["value"],
-                            "",
+                            OPENCTISTIX2[observable_resolver]["transform"]["value"], ""
                         )
                 lhs = stix2.ObjectPath(
                     OPENCTISTIX2[observable_resolver]["type"],
@@ -1062,14 +897,14 @@ class MispFeed:
                     )
                 )
                 pattern = genuine_pattern
-
             to_ids = attribute["to_ids"]
             score = self._threat_level_to_score(event_threat_level)
-            if self.misp_feed_import_to_ids_no_score is not None and not to_ids:
-                score = self.misp_feed_import_to_ids_no_score
-
+            if self.config.misp_feed.import_to_ids_no_score is not None and (
+                not to_ids
+            ):
+                score = self.config.misp_feed.import_to_ids_no_score
             indicator = None
-            if self.misp_feed_create_indicators and pattern is not None:
+            if self.config.misp_feed.create_indicators and pattern is not None:
                 try:
                     indicator = stix2.Indicator(
                         id=Indicator.generate_id(pattern),
@@ -1099,7 +934,7 @@ class MispFeed:
                 except Exception as e:
                     self.helper.log_error(f"Error processing indicator {name}: {e}")
             observable = None
-            if self.misp_feed_create_observables and observable_type is not None:
+            if self.config.misp_feed.create_observables and observable_type is not None:
                 try:
                     custom_properties = {
                         "x_opencti_description": attribute["comment"],
@@ -1287,7 +1122,6 @@ class MispFeed:
                         identities.append(sighted_by)
                     else:
                         sighted_by = None
-
                     if indicator is not None and sighted_by is not None:
                         sighting = stix2.Sighting(
                             id=StixSightingRelationship.generate_id(
@@ -1312,23 +1146,6 @@ class MispFeed:
                             ),
                         )
                         sightings.append(sighting)
-                    # if observable is not None:
-                    #     sighting = Sighting(
-                    #         id=OpenCTIStix2Utils.generate_random_stix_id("sighting"),
-                    #         sighting_of_ref=observable["id"],
-                    #         first_seen=datetime.utcfromtimestamp(
-                    #             int(misp_sighting["date_sighting"])
-                    #         ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    #         last_seen=datetime.utcfromtimestamp(
-                    #             int(misp_sighting["date_sighting"])
-                    #         ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    #         where_sighted_refs=[sighted_by]
-                    #         if sighted_by is not None
-                    #         else None,
-                    #     )
-                    #     sightings.append(sighting)
-
-            ### Create the relationships
             relationships = []
             if not create_relationships:
                 return {
@@ -1353,10 +1170,7 @@ class MispFeed:
                         allow_custom=True,
                     )
                 )
-
-            # Create relationship between MISP attribute (indicator or observable) and MISP object (observable)
             if object_observable is not None:
-
                 indicator_id = indicator.get("id") if indicator else None
                 observable_id = observable.get("id") if observable else None
                 source_id = object_observable.get("id")
@@ -1365,14 +1179,11 @@ class MispFeed:
                     if observable_id is not None and observable_id != source_id
                     else indicator_id
                 )
-
                 if target_id is not None:
                     relationships.append(
                         stix2.Relationship(
                             id=StixCoreRelationship.generate_id(
-                                "related-to",
-                                source_id,
-                                target_id,
+                                "related-to", source_id, target_id
                             ),
                             relationship_type="related-to",
                             created_by_ref=author["id"],
@@ -1381,8 +1192,6 @@ class MispFeed:
                             allow_custom=True,
                         )
                     )
-
-            # Event threats
             threat_names = {}
             for threat in (
                 event_elements["intrusion_sets"]
@@ -1420,8 +1229,6 @@ class MispFeed:
                             allow_custom=True,
                         )
                     )
-
-            # Attribute threats
             for threat in (
                 attribute_elements["intrusion_sets"]
                 + attribute_elements["malwares"]
@@ -1461,7 +1268,6 @@ class MispFeed:
                             allow_custom=True,
                         )
                     )
-            # Event Attack Patterns
             for attack_pattern in event_elements["attack_patterns"]:
                 if len(event_elements["malwares"]) > 0:
                     threats = event_elements["malwares"]
@@ -1487,34 +1293,6 @@ class MispFeed:
                         allow_custom=True,
                     )
                     relationships.append(relationship_uses)
-                    # if indicator is not None:
-                    #     relationship_indicates = Relationship(
-                    #         id=OpenCTIStix2Utils.generate_random_stix_id(
-                    #             "relationship"
-                    #         ),
-                    #         relationship_type="indicates",
-                    #         created_by_ref=author["id"],
-                    #         source_ref=indicator.id,
-                    #         target_ref=relationship_uses.id,
-                    #         description=attribute["comment"],
-                    #         object_marking_refs=attribute_markings,
-                    #     )
-                    #     relationships.append(relationship_indicates)
-                    # if observable is not None:
-                    #     relationship_indicates = Relationship(
-                    #         id=OpenCTIStix2Utils.generate_random_stix_id(
-                    #             "relationship"
-                    #         ),
-                    #         relationship_type="related-to",
-                    #         created_by_ref=author["id"],
-                    #         source_ref=observable.id,
-                    #         target_ref=relationship_uses.id,
-                    #         description=attribute["comment"],
-                    #         object_marking_refs=attribute_markings,
-                    #     )
-                    #     relationships.append(relationship_indicates)
-
-            # Attribute Attack Patterns
             for attack_pattern in attribute_elements["attack_patterns"]:
                 if len(attribute_elements["malwares"]) > 0:
                     threats = attribute_elements["malwares"]
@@ -1540,32 +1318,6 @@ class MispFeed:
                         allow_custom=True,
                     )
                     relationships.append(relationship_uses)
-                    # if indicator is not None:
-                    #    relationship_indicates = Relationship(
-                    #        id=OpenCTIStix2Utils.generate_random_stix_id(
-                    #            "relationship"
-                    #        ),
-                    #        relationship_type="indicates",
-                    #        created_by_ref=author["id"],
-                    #        source_ref=indicator.id,
-                    #        target_ref=relationship_uses.id,
-                    #        description=attribute["comment"],
-                    #        object_marking_refs=attribute_markings,
-                    #    )
-                    #    relationships.append(relationship_indicates)
-                    # if observable is not None:
-                    #    relationship_indicates = Relationship(
-                    #        id=OpenCTIStix2Utils.generate_random_stix_id(
-                    #            "relationship"
-                    #        ),
-                    #        relationship_type="indicates",
-                    #        created_by_ref=author["id"],
-                    #        source_ref=observable.id,
-                    #        target_ref=relationship_uses.id,
-                    #        description=attribute["comment"],
-                    #        object_marking_refs=attribute_markings,
-                    #    )
-                    #    relationships.append(relationship_indicates)
             for sector in attribute_elements["sectors"]:
                 if indicator is not None:
                     relationships.append(
@@ -1597,7 +1349,6 @@ class MispFeed:
                             allow_custom=True,
                         )
                     )
-
             for country in attribute_elements["countries"]:
                 if indicator is not None:
                     relationships.append(
@@ -1640,19 +1391,14 @@ class MispFeed:
             }
 
     def _find_type_by_uuid(self, uuid, bundle_objects):
-        # filter by uuid
         i_result = list(filter(lambda o: o.id.endswith("--" + uuid), bundle_objects))
-
         if len(i_result) > 0:
             uuid = i_result[0]["id"]
-            return {
-                "entity": i_result[0],
-                "type": uuid[: uuid.index("--")],
-            }
+            return {"entity": i_result[0], "type": uuid[: uuid.index("--")]}
         return None
 
-    # Markdown object, attribute & tag links should be converted from MISP links to OpenCTI links
     def _process_note(self, content, bundle_objects):
+
         def reformat(match):
             type = match.group(1)
             uuid = match.group(2)
@@ -1667,24 +1413,18 @@ class MispFeed:
                 type, name, result["entity"]["id"]
             )
 
-        r_object = r"@\[(object|attribute)\]\(([a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12})\)"
-        r_tag = r'@\[tag\]\(([a-zA-Z:"\'0-9\-=]+)\)'
-
+        r_object = "@\\[(object|attribute)\\]\\(([a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12})\\)"
+        r_tag = "@\\[tag\\]\\(([a-zA-Z:\"\\'0-9\\-=]+)\\)"
         content = re.sub(r_object, reformat, content, flags=re.MULTILINE)
-        content = re.sub(r_tag, r"tag:\1", content, flags=re.MULTILINE)
+        content = re.sub(r_tag, "tag:\\1", content, flags=re.MULTILINE)
         return content
 
     def _process_event(self, event) -> str:
-        # Check the event is a list or not
-        ## It may be an illegal case if the length is not 1
-
         if isinstance(event, list):
             if len(event) == 1:
                 event = event[0]
             else:
                 raise ValueError("The list of is too long.")
-
-        ### Default variables
         added_markings = []
         added_entities = []
         added_object_refs = []
@@ -1692,11 +1432,8 @@ class MispFeed:
         added_files = []
         added_observables = []
         added_relationships = []
-
-        ### Pre-process
-        # Author
         author = None
-        if self.misp_feed_author_from_tags:
+        if self.config.misp_feed.author_from_tags:
             if "Tag" in event["Event"]:
                 event_tags = event["Event"]["Tag"]
                 for tag in event_tags:
@@ -1714,28 +1451,21 @@ class MispFeed:
                 name=event["Event"]["Orgc"]["name"],
                 identity_class="organization",
             )
-        # Markings
         if "Tag" in event["Event"]:
             event_markings = self._resolve_markings(event["Event"]["Tag"])
         else:
             event_markings = [stix2.TLP_WHITE]
-
-        # Elements
         event_elements = self._prepare_elements(
             event["Event"].get("Galaxy", []),
             event["Event"].get("Tag", []),
             author,
             event_markings,
         )
-        # Tags
         event_tags = []
         if "Tag" in event["Event"]:
             event_tags = self._resolve_tags(event["Event"]["Tag"])
-
-        ### Get indicators
         event_external_references = []
         indicators = []
-        # Get attributes of event
         create_relationships = len(event["Event"].get("Attribute", [])) < 10000
         for attribute in event["Event"].get("Attribute", []):
             indicator = self._process_attribute(
@@ -1762,12 +1492,9 @@ class MispFeed:
                 )
             if indicator is not None:
                 indicators.append(indicator)
-
             pdf_file = self._get_pdf_file(attribute)
             if pdf_file is not None:
                 added_files.append(pdf_file)
-
-        # Get attributes of objects
         indicators_relationships = []
         objects_relationships = []
         objects_observables = []
@@ -1786,14 +1513,14 @@ class MispFeed:
                             url=attribute["value"],
                         )
                     )
-
                 pdf_file = self._get_pdf_file(attribute)
                 if pdf_file is not None:
                     added_files.append(pdf_file)
-
             object_observable = None
-            if self.misp_feed_create_object_observables:
-                if self.misp_feed_import_unsupported_observables_as_text_transparent:
+            if self.config.misp_feed.create_object_observables:
+                if (
+                    self.config.misp_feed.import_unsupported_observables_as_text_transparent
+                ):
                     if len(object["Attribute"]) > 0:
                         value = object["Attribute"][0]["value"]
                         object_observable = CustomObservableText(
@@ -1853,23 +1580,20 @@ class MispFeed:
                     if (
                         indicator["indicator"] is not None
                         and object["meta-category"] == "file"
-                        and indicator["indicator"].get(
-                            "x_opencti_main_observable_type", "Unknown"
+                        and (
+                            indicator["indicator"].get(
+                                "x_opencti_main_observable_type", "Unknown"
+                            )
+                            in FILETYPES
                         )
-                        in FILETYPES
                     ):
                         object_attributes.append(indicator)
-            # TODO Extend observable
-
-        ### Prepare the bundle
         bundle_objects = [author]
         object_refs = []
-        # Add event markings
         for event_marking in event_markings:
             if event_marking["id"] not in added_markings:
                 bundle_objects.append(event_marking)
                 added_markings.append(event_marking["id"])
-        # Add event elements
         all_event_elements = (
             event_elements["intrusion_sets"]
             + event_elements["malwares"]
@@ -1885,7 +1609,6 @@ class MispFeed:
             if event_element["id"] not in added_entities:
                 bundle_objects.append(event_element)
                 added_entities.append(event_element["id"])
-        # Add indicators
         for indicator in indicators:
             if indicator["indicator"] is not None:
                 if indicator["indicator"]["id"] not in added_object_refs:
@@ -1901,23 +1624,18 @@ class MispFeed:
                 if indicator["observable"]["id"] not in added_entities:
                     bundle_objects.append(indicator["observable"])
                     added_entities.append(indicator["observable"]["id"])
-
-            # Add attribute markings
             for attribute_marking in indicator["markings"]:
                 if attribute_marking["id"] not in added_markings:
                     bundle_objects.append(attribute_marking)
                     added_markings.append(attribute_marking["id"])
-            # Add attribute sightings identities
             for attribute_identity in indicator["identities"]:
                 if attribute_identity["id"] not in added_entities:
                     bundle_objects.append(attribute_identity)
                     added_entities.append(attribute_identity["id"])
-            # Add attribute sightings
             for attribute_sighting in indicator["sightings"]:
                 if attribute_sighting["id"] not in added_sightings:
                     bundle_objects.append(attribute_sighting)
                     added_sightings.append(attribute_sighting["id"])
-            # Add attribute elements
             all_attribute_elements = (
                 indicator["attribute_elements"]["intrusion_sets"]
                 + indicator["attribute_elements"]["malwares"]
@@ -1933,14 +1651,10 @@ class MispFeed:
                 if attribute_element["id"] not in added_entities:
                     bundle_objects.append(attribute_element)
                     added_entities.append(attribute_element["id"])
-            # Add attribute relationships
             for relationship in indicator["relationships"]:
                 indicators_relationships.append(relationship)
-
-        # We want to make sure these are added as lasts, so we're sure all the related objects are created
         for indicator_relationship in indicators_relationships:
             objects_relationships.append(indicator_relationship)
-        # Add MISP objects_observables
         for object_observable in objects_observables:
             if object_observable["id"] not in added_object_refs:
                 object_refs.append(object_observable)
@@ -1948,8 +1662,6 @@ class MispFeed:
             if object_observable["id"] not in added_observables:
                 bundle_objects.append(object_observable)
                 added_observables.append(object_observable["id"])
-
-        # Link all objects with each other, now so we can find the correct entity type prefix in bundle_objects
         for object in event["Event"].get("Object", []):
             for ref in object.get("ObjectReference", []):
                 ref_src = ref.get("source_uuid")
@@ -1976,7 +1688,6 @@ class MispFeed:
                                 allow_custom=True,
                             )
                         )
-        # Add object_relationships
         for object_relationship in objects_relationships:
             if (
                 object_relationship["source_ref"] + object_relationship["target_ref"]
@@ -1996,13 +1707,8 @@ class MispFeed:
                     object_relationship["source_ref"]
                     + object_relationship["target_ref"]
                 )
-
-        # Create the report if needed
-        # Report in STIX must have at least one object_refs
-        if self.misp_feed_create_reports:
-            # Report in STIX lib must have at least one object_refs
+        if self.config.misp_feed.create_reports:
             if len(object_refs) == 0:
-                # Put a fake ID in the report
                 object_refs.append(
                     "intrusion-set--fc5ee88d-7987-4c00-991e-a863e9aa8a0e"
                 )
@@ -2036,15 +1742,13 @@ class MispFeed:
                 modified=datetime.utcfromtimestamp(
                     int(event["Event"]["timestamp"])
                 ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                report_types=[self.misp_feed_report_type],
+                report_types=[self.config.misp_feed.report_type],
                 created_by_ref=author["id"],
                 object_marking_refs=event_markings,
                 labels=event_tags,
                 object_refs=object_refs,
                 external_references=event_external_references,
-                custom_properties={
-                    "x_opencti_files": added_files,
-                },
+                custom_properties={"x_opencti_files": added_files},
                 allow_custom=True,
             )
             bundle_objects.append(report)
@@ -2080,13 +1784,13 @@ class MispFeed:
                 self.helper.connect_id, friendly_name
             )
             current_state = self.helper.get_state()
-
-            if self.source_type == "s3":
-                if self.bucket_prefix is not None:
-                    objects = self.s3.objects.filter(Prefix=self.bucket_prefix)
+            if self.config.misp_feed.source_type == "s3":
+                if self.config.misp_feed.bucket_prefix is not None:
+                    objects = self.s3.objects.filter(
+                        Prefix=self.config.misp_feed.bucket_prefix
+                    )
                 else:
                     objects = self.s3.objects.all()
-
                 number_events = 0
                 file_name = None
                 for obj in objects:
@@ -2101,10 +1805,8 @@ class MispFeed:
                         os.remove(file_name)
                         self.helper.set_state({"last_file": file_name})
                         self.helper.log_info("Sending event STIX2 bundle...")
-
                     except Exception as e:
                         self.helper.log_error(str(e))
-
                 message = (
                     "Connector successfully run ("
                     + str(number_events)
@@ -2112,13 +1814,12 @@ class MispFeed:
                     + str(file_name)
                     + ")"
                 )
-
-            if self.source_type == "url":
+            if self.config.misp_feed.source_type == "url":
                 if (
                     current_state is not None
                     and "last_run" in current_state
-                    and "last_event_timestamp" in current_state
-                    and "last_event" in current_state
+                    and ("last_event_timestamp" in current_state)
+                    and ("last_event" in current_state)
                 ):
                     last_run = parse(current_state["last_run"])
                     last_event = parse(current_state["last_event"])
@@ -2144,17 +1845,18 @@ class MispFeed:
                         + last_event.astimezone(pytz.UTC).isoformat()
                     )
                 else:
-                    if self.misp_feed_import_from_date is not None:
-                        last_event = parse(self.misp_feed_import_from_date)
+                    if self.config.misp_feed.import_from_date is not None:
+                        last_event = self.config.misp_feed.import_from_date
                         last_event_timestamp = int(last_event.timestamp())
                     else:
                         last_event_timestamp = int(now.timestamp())
                     self.helper.log_info("Connector has never run")
-
                 number_events = 0
                 try:
                     manifest_data = json.loads(
-                        self._retrieve_data(self.misp_feed_url + "/manifest.json")
+                        self._retrieve_data(
+                            self.config.misp_feed.url + "/manifest.json"
+                        )
                     )
                     items = []
                     for key, value in manifest_data.items():
@@ -2175,10 +1877,9 @@ class MispFeed:
                                 .isoformat()
                                 + ")"
                             )
-
                             event = json.loads(
                                 self._retrieve_data(
-                                    self.misp_feed_url
+                                    self.config.misp_feed.url
                                     + "/"
                                     + item["event_key"]
                                     + ".json"
@@ -2212,8 +1913,6 @@ class MispFeed:
                             self.helper.log_info(message)
                 except Exception as e:
                     self.helper.log_error(str(e))
-
-                # Store the current timestamp as a last run
                 message = (
                     "Connector successfully run ("
                     + str(number_events)
@@ -2229,9 +1928,7 @@ class MispFeed:
                 )
             self.helper.log_info(message)
             self.helper.api.work.to_processed(work_id, message)
-
-            # Sleep
-            time.sleep(self._get_interval())
+            time.sleep(self.config.connector.duration_period.total_seconds())
         except (KeyboardInterrupt, SystemExit):
             self.helper.log_info("Connector stop")
             sys.exit(0)
@@ -2252,13 +1949,3 @@ class MispFeed:
         except Exception as e:
             self.helper.log_error(str(e))
             raise e
-
-
-if __name__ == "__main__":
-    try:
-        mispFeedConnector = MispFeed()
-        mispFeedConnector.run()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        sys.exit(0)
