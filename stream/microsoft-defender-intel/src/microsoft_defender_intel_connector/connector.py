@@ -1,11 +1,17 @@
 import json
 from json import JSONDecodeError
 
+from microsoft_defender_intel_connector.api_handler import (
+    DefenderApiHandler,
+    DefenderApiHandlerError,
+)
 from microsoft_defender_intel_connector.settings import ConnectorSettings
+from microsoft_defender_intel_connector.utils import (
+    FILE_HASH_TYPES_MAPPER,
+    is_observable,
+    is_stix_indicator,
+)
 from pycti import OpenCTIConnectorHelper
-
-from .api_handler import DefenderApiHandler, DefenderApiHandlerError
-from .utils import FILE_HASH_TYPES_MAPPER, is_observable, is_stix_indicator
 
 
 class MicrosoftDefenderIntelConnector:
@@ -41,7 +47,16 @@ class MicrosoftDefenderIntelConnector:
         """
         self.config = config
         self.helper = helper
-        self.api = DefenderApiHandler(self.helper, self.config.microsoft_defender_intel)
+        self.api = DefenderApiHandler(
+            self.helper,
+            base_url=self.config.microsoft_defender_intel.base_url,
+            tenant_id=self.config.microsoft_defender_intel.tenant_id,
+            client_id=self.config.microsoft_defender_intel.client_id,
+            client_secret=self.config.microsoft_defender_intel.client_secret.get_secret_value(),
+            resource_path=self.config.microsoft_defender_intel.resource_path,
+            action=self.config.microsoft_defender_intel.action,
+            expired_after=self.config.microsoft_defender_intel.expire_time,
+        )
 
     def _check_stream_id(self) -> None:
         """

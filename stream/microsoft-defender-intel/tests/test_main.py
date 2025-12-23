@@ -47,9 +47,9 @@ class StubConnectorSettings(ConnectorSettings):
                     "live_stream_no_dependencies": True,
                 },
                 "microsoft_defender_intel": {
-                    "tenant_id": "str",
-                    "client_id": "str",
-                    "client_secret": "SecretStr",
+                    "tenant_id": "test-tenant-id",
+                    "client_id": "test-client-id",
+                    "client_secret": "test-client-secret",
                     "login_url": "https://login.microsoft.com",
                     "base_url": "https://api.securitycenter.microsoft.com",
                     "resource_path": "/api/indicators",
