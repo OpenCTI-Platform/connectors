@@ -1,12 +1,5 @@
-from datetime import datetime, timedelta
-
-from connector.constants import DATETIME_FORMAT
 from connector.converter_to_stix import ConverterToStix
-from connector.utils import (
-    is_last_seen_equal_to_first_seen,
-    is_quota_exceeded,
-    string_to_datetime,
-)
+from connector.utils import get_first_and_last_seen_datetime, is_quota_exceeded
 from kaspersky_client import KasperskyClient
 from pycti import STIX_EXT_OCTI_SCO, OpenCTIConnectorHelper, OpenCTIStix2
 
@@ -107,7 +100,7 @@ class DomainEnricher:
                 if obs_file:
                     octi_objects.append(obs_file.to_stix2_object())
                     file_first_seen_datetime, file_last_seen_datetime = (
-                        self.get_first_and_last_seen_datetime(
+                        get_first_and_last_seen_datetime(
                             file_downloaded_entity["FirstSeen"],
                             file_downloaded_entity["LastSeen"],
                         )
@@ -132,7 +125,7 @@ class DomainEnricher:
                 if obs_url:
                     octi_objects.append(obs_url.to_stix2_object())
                     file_first_seen_datetime, file_last_seen_datetime = (
-                        self.get_first_and_last_seen_datetime(
+                        get_first_and_last_seen_datetime(
                             file_downloaded_entity["FirstSeen"],
                             file_downloaded_entity["LastSeen"],
                         )
@@ -147,17 +140,3 @@ class DomainEnricher:
                     octi_objects.append(file_relation.to_stix2_object())
 
         return octi_objects
-
-    def get_first_and_last_seen_datetime(
-        self, first_seen: str, last_seen: str
-    ) -> datetime:
-        """
-        Convert first and last seen string to datetime.
-        If last==first, add one minute to last seen value.
-        """
-        first_seen_datetime = string_to_datetime(first_seen, DATETIME_FORMAT)
-        last_seen_datetime = string_to_datetime(last_seen, DATETIME_FORMAT)
-        if is_last_seen_equal_to_first_seen(first_seen_datetime, last_seen_datetime):
-            last_seen_datetime = last_seen_datetime + timedelta(minutes=1)
-
-        return first_seen_datetime, last_seen_datetime
