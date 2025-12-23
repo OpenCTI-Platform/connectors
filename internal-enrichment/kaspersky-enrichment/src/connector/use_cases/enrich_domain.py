@@ -139,4 +139,36 @@ class DomainEnricher:
                     )
                     octi_objects.append(file_relation.to_stix2_object())
 
+        # Manage FilesAccessed
+
+        if entity_data.get("FilesAccessed"):
+            files_accessed = entity_data["FilesAccessed"]
+            for file_accessed in files_accessed:
+                obs_file_accessed = self.converter_to_stix.create_file(
+                    hashes={"MD5": file_accessed["Md5"]},
+                    score=self.zone_octi_score_mapping[file_accessed["Zone"].lower()],
+                )
+
+                if obs_file_accessed:
+                    octi_objects.append(obs_file_accessed.to_stix2_object())
+                    file_first_seen_datetime, file_last_seen_datetime = (
+                        get_first_and_last_seen_datetime(
+                            file_accessed["FirstSeen"],
+                            file_accessed["LastSeen"],
+                        )
+                    )
+                    relation_type = (
+                        "communicates-with"
+                        if observable["x_opencti_type"] == "Domain-Name"
+                        else "related-to"
+                    )
+                    file_accessed_relation = self.converter_to_stix.create_relationship(
+                        source_obj=obs_file_accessed,
+                        relationship_type=relation_type,
+                        target_obj=observable_to_ref,
+                        start_time=file_first_seen_datetime,
+                        stop_time=file_last_seen_datetime,
+                    )
+                    octi_objects.append(file_accessed_relation.to_stix2_object())
+
         return octi_objects
