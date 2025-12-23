@@ -4,16 +4,25 @@ from datetime import datetime, timedelta, timezone
 
 from api_client.client import MISPClient, MISPClientError
 from api_client.models import EventRestSearchListItem
+from batch_processor import GenericBatchProcessor, GenericBatchProcessorConfig
 from connector.config_loader import ConfigLoader
 from connector.threats_guesser import ThreatsGuesser
 from connector.use_cases import ConverterError, EventConverter
+from connector.work_manager import WorkManager
+from exceptions.work_processing_error import WorkProcessingError
+from humanfriendly import parse_size
 from pycti import OpenCTIConnectorHelper
+from pympler import asizeof
+
+LOG_PREFIX = "[Connector]"
 
 
 class Misp:
     def __init__(self):
         self.config = ConfigLoader()
         self.helper = OpenCTIConnectorHelper(self.config.model_dump_pycti())
+        self._logger = self.helper.connector_logger
+        self.work_manager = WorkManager(self.config, self.helper, self._logger)
 
         self.client = MISPClient(
             url=self.config.misp.url,
@@ -47,6 +56,20 @@ class Misp:
                 else None
             ),
         )
+        if self.config.connector.batch_size:
+            processor_config = GenericBatchProcessorConfig(
+                batch_size=parse_size(self.config.connector.batch_size, binary=True),
+                work_name_template="MISP run - Batch #{batch_num}",
+                state_key="event_id",
+                entity_type="stix_objects",
+                display_name="STIX objects",
+                empty_batch_behavior="skip",
+            )
+            self.processor = GenericBatchProcessor(
+                work_manager=self.work_manager,
+                config=processor_config,
+                logger=self._logger,
+            )
 
     def process_event(self, event: EventRestSearchListItem):
         # Check against filter
@@ -106,29 +129,50 @@ class Misp:
         if bundle_objects:
             now = datetime.now(tz=timezone.utc)
 
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id,
-                friendly_name="MISP run @ " + now.isoformat(timespec="seconds"),
-            )
+            if self.config.connector.batch_size:
+                self.processor.config.work_name_template = (
+                    "MISP run @ "
+                    + now.isoformat(timespec="seconds")
+                    + " - Batch #{batch_num}"
+                )
+                if (
+                    self.processor.get_current_batch_size()
+                    + asizeof.asizeof(bundle_objects)
+                ) >= self.processor.config.batch_size * 2:
+                    self._logger.info(
+                        "Need to Flush before adding next items to preserve consistency of the bundle",
+                        {"prefix": LOG_PREFIX},
+                    )
+                    if self.processor.get_current_batch_size() > 0:
+                        self.processor.flush()
+                self.processor.add_items(bundle_objects)
+            else:
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id,
+                    friendly_name="MISP run @ " + now.isoformat(timespec="seconds"),
+                )
 
-            bundle = self.helper.stix2_create_bundle(bundle_objects)
-            sent_bundles = self.helper.send_stix2_bundle(
-                bundle,
-                work_id=work_id,
-                cleanup_inconsistent_bundle=True,
-            )
-            self.helper.connector_logger.info(
-                "Sent STIX2 bundles:", {"sent_bundles_count": len(sent_bundles)}
-            )
-            self.helper.metric.inc("record_send", len(bundle_objects))
+                bundle = self.helper.stix2_create_bundle(bundle_objects)
+                sent_bundles = self.helper.send_stix2_bundle(
+                    bundle,
+                    work_id=work_id,
+                    cleanup_inconsistent_bundle=True,
+                )
+                self.helper.connector_logger.info(
+                    "Sent STIX2 bundles:", {"sent_bundles_count": len(sent_bundles)}
+                )
+                self.helper.metric.inc("record_send", len(bundle_objects))
 
-            self.helper.api.work.to_processed(
-                work_id,
-                f"MISP event successfully imported (event id = {event.Event.id})",
-            )
+                self.helper.api.work.to_processed(
+                    work_id,
+                    f"MISP event successfully imported (event id = {event.Event.id})",
+                )
 
     def process(self):
         """Connector main process to collect intelligence."""
+        error_flag = False
+        error_message = None
+
         try:
             now = datetime.now(tz=timezone.utc)
 
@@ -142,8 +186,8 @@ class Misp:
                 self.helper.connector_logger.info(
                     "Current state of the connector:",
                     {
-                        "last_run": current_state["last_run"],
-                        "last_event": current_state["last_event"],
+                        "last_run": last_run,
+                        "last_event": last_event,
                     },
                 )
 
@@ -153,8 +197,8 @@ class Misp:
                 self.helper.connector_logger.info(
                     "Current state of the connector:",
                     {
-                        "last_run": current_state["last_run"],
-                        "last_event": current_state["last_run"],
+                        "last_run": last_run,
+                        "last_event": last_event,
                     },
                 )
             else:
@@ -212,6 +256,22 @@ class Misp:
                         {"event_id": event.Event.id, "event_uuid": event.Event.uuid},
                     )
                     continue
+                finally:
+                    if self.config.connector.batch_size:
+                        try:
+                            if self.processor.get_current_batch_size() > 0:
+                                work_id = self.processor.flush()
+                                if work_id:
+                                    self._logger.info(
+                                        "Batch processor: Flushed remaining items",
+                                        {"prefix": LOG_PREFIX},
+                                    )
+                            self.processor.update_final_state()
+                        except Exception as e:
+                            self._logger.error(
+                                "Failed to flush batch processor",
+                                {"prefix": LOG_PREFIX, "error": str(e)},
+                            )
 
                 # Line below will raise if `self.config.misp.datetime_attribute`` is not a valid field (i.e. defined in MISP models)
                 # This behavior is expected as it would mean that config/env vars are not validated correctly
@@ -262,29 +322,66 @@ class Misp:
             )
 
         except MISPClientError as err:
+            error_message = f"MISP Client error: {str(err)}"
             self.helper.connector_logger.error(err)
             self.helper.metric.inc("client_error_count")
+            error_flag = True
+
+        except WorkProcessingError as work_err:
+            error_message = f"Work processing error: {str(work_err)}"
+            work_id = getattr(
+                work_err, "work_id", self.work_manager.get_current_work_id()
+            )
+            self._logger.warning(
+                "Work processing error",
+                meta={
+                    "prefix": LOG_PREFIX,
+                    "error": str(work_err),
+                    "work_id": work_id,
+                },
+            )
+            error_flag = True
 
         except (KeyboardInterrupt, SystemExit):
+            error_message = "Connector stopped by user or system"
             self.helper.connector_logger.info(
                 "Connector stopped by user or system",
                 {"connector_name": self.helper.connect_name},
             )
-            sys.exit(0)
+            error_flag = True
+            raise
         except Exception as err:
+            error_message = f"Unexpected error: {str(err)}"
             self.helper.connector_logger.error(
                 "Unexpected error. See connector's log for more details.",
                 {"error": err},
             )
+            error_flag = True
 
         finally:
             self.helper.metric.state("idle")
+            self._logger.info(
+                "Connector stopped",
+                {"prefix": LOG_PREFIX, "connector_name": self.helper.connect_name},
+            )
+            try:
+                self.work_manager.process_all_remaining_works(
+                    error_flag=error_flag, error_message=error_message
+                )
+                self._logger.info(
+                    "All remaining works marked to process", {"prefix": LOG_PREFIX}
+                )
+            except Exception as cleanup_err:
+                self._logger.error(
+                    "Error during cleanup",
+                    meta={"prefix": LOG_PREFIX, "error": str(cleanup_err)},
+                )
 
     def run(self) -> None:
         """
         Run the main process encapsulated in a scheduler
         It allows you to schedule the process to run at a certain intervals
-        This specific scheduler from the pycti connector helper will also check the queue size of a connector
+        This specific scheduler from the pycti connector helper will also check the queue size of a connector.
         If `CONNECTOR_QUEUE_THRESHOLD` is set, if the connector's queue size exceeds the queue threshold,
         the connector's main process will not run until the queue is ingested and reduced sufficiently,
         allowing it to restart during the next scheduler check. (default is 500MB)
