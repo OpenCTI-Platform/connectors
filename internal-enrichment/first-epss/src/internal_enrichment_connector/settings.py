@@ -25,7 +25,7 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     )
     scope: ListFromString = Field(
         description="The scope of the connector.",
-        default=["vulneribility"],
+        default=["vulnerability"],
     )
 
 
