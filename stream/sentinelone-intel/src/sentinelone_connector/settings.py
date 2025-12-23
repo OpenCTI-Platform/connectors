@@ -28,7 +28,7 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
     )
     scope: ListFromString = Field(
         description="The scope of the connector, e.g. 'sentinelone'.",
-        default="sentinelone",
+        default=["sentinelone"],
     )
     log_level: Literal["debug", "info", "warn", "warning", "error"] = Field(
         description="The minimum level of logs to display.",
