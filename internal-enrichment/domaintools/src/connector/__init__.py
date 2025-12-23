@@ -1,6 +1,6 @@
 """DomainTools connector module."""
 
-from connector.connector import DomainToolsConnector
-from connector.settings import ConnectorSettings
+from .connector import DomainToolsConnector
+from .settings import ConnectorSettings
 
 __all__ = ["DomainToolsConnector", "ConnectorSettings"]

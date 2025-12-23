@@ -4,10 +4,9 @@ from datetime import datetime
 from typing import Dict
 
 import domaintools
-import stix2
 import validators
-from connector.settings import ConnectorSettings
-from pycti import Identity, OpenCTIConnectorHelper
+from connectors_sdk.models import OrganizationAuthor
+from pycti import OpenCTIConnectorHelper
 
 from .builder import DtBuilder
 from .constants import DEFAULT_RISK_SCORE, DOMAIN_FIELDS, EMAIL_FIELDS, EntityType
@@ -19,19 +18,19 @@ class DomainToolsConnector:
     _DEFAULT_AUTHOR = "DomainTools"
     _CONNECTOR_RUN_INTERVAL_SEC = 60 * 60
 
-    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+    def __init__(self, config, helper: OpenCTIConnectorHelper):
         self.config = config
         self.helper = helper
-        self.api = domaintools.API(
-            self.config.domaintools.api_username, self.config.domaintools.api_key
+        self.api = domaintools.api.API(
+            self.config.domaintools.api_username,
+            self.config.domaintools.api_key.get_secret_value(),
         )
         self.max_tlp = self.config.domaintools.max_tlp
-        self.author = stix2.Identity(
-            id=Identity.generate_id(self._DEFAULT_AUTHOR, "organization"),
+        self.author = OrganizationAuthor(
             name=self._DEFAULT_AUTHOR,
-            identity_class="organization",
-            description=" DomainTools is a leading provider of Whois and other DNS profile data for threat intelligence enrichment. It is a part of the Datacenter Group (DCL Group SA). DomainTools data helps security analysts investigate malicious activity on their networks.",
-            confidence=self.helper.connect_confidence_level,
+            description="DomainTools is a leading provider of Whois and other DNS profile data for "
+            "threat intelligence enrichment. It is a part of the Datacenter Group (DCL Group SA). "
+            "DomainTools data helps security analysts investigate malicious activity on their networks.",
         )
         self.helper.metric.state("idle")
 
