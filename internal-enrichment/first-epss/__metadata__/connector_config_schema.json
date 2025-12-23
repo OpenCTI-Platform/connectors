@@ -21,7 +21,7 @@
     },
     "CONNECTOR_SCOPE": {
       "default": [
-        "vulneribility"
+        "vulnerability"
       ],
       "description": "The scope of the connector.",
       "items": {
