@@ -2,7 +2,7 @@ version: "3"
 services:
   connector-sublime:
     build: .
-    image: opencti/connector-sublime:rolling
+    image: opencti/connector-sublime:6.9.4
     container_name: connector-sublime
     environment:
       - OPENCTI_URL=http://opencti:8080
