@@ -6,6 +6,7 @@
 |-------------------|------------|---------|
 | Filigran Verified | 2025-12-10 | -       |
 
+
 ----
 
 This internal enrichment connector lowers the score for IP addresses that are 

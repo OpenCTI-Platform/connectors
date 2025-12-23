@@ -1,5 +1,6 @@
 # OpenCTI Intel 471 Connector v2
 
+
 ## Description
 
 Intel 471 delivers structured technical and non-technical data and intelligence on cyber threats.

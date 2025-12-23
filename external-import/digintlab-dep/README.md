@@ -2,6 +2,7 @@
 
 The Double Extortion connector ingests ransomware and data leak announcements published on the DoubleExtortion platform and converts them into STIX entities inside OpenCTI.
 
+
 ## Features
 
 - Authenticates against the DoubleExtortion AWS Cognito identity provider.

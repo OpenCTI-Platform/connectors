@@ -4,6 +4,7 @@
 |-------------------|------|---------|
 | Filigran Verified |      | -       |
 
+
 The integration uses Shadowservers reports API to query the available Shadowserver reports and transform them into Stix
 objects making them available within OpenCTI. All available reports are downloaded and an `Artifact` object is created
 with the original file. Stix `Note` objects are added to both the `Report` and the `CustomObjectCaseIncident` with a

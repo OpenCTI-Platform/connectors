@@ -4,6 +4,7 @@
 | ----------------- | ---------- | ------- |
 | Filigran Verified | 2025-03-06 | -       |
 
+
 This connector connects to the Silobreaker and gather all data from a given date.
 
 ## Configuration variables

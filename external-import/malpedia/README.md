@@ -15,6 +15,7 @@ The connectors adds the following Entities:
 - Intrusion-Set
 - External References
 
+
 ## Installation
 
 Enabling this connector could be done by launching the Python process directly after providing the correct configuration in the `config.yml` file or within a
