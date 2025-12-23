@@ -171,4 +171,19 @@ class DomainEnricher:
                     )
                     octi_objects.append(file_accessed_relation.to_stix2_object())
 
+        # Manage Industries data
+
+        if entity_data.get("Industries"):
+            for industry in entity_data["Industries"]:
+                industry_object = self.converter_to_stix.create_sector(industry)
+
+                if industry_object:
+                    octi_objects.append(industry_object.to_stix2_object())
+                    industry_relation = self.converter_to_stix.create_relationship(
+                        relationship_type="related-to",
+                        source_obj=observable_to_ref,
+                        target_obj=industry_object,
+                    )
+                    octi_objects.append(industry_relation.to_stix2_object())
+
         return octi_objects
