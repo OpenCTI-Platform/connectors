@@ -9,7 +9,7 @@ services:
       - CONNECTOR_NAME=Shodan # Optional (default: 'Shodan')
       - CONNECTOR_SCOPE=ipv4-addr,indicator # Optional (default: ['ipv4-addr', 'indicator'])
       - CONNECTOR_AUTO=true # Optional (default: false)
-      - CONNECTOR_LOG_LEVEL=error # Optional (default: false)
+      - CONNECTOR_LOG_LEVEL=info # Optional (default: error)
       - SHODAN_TOKEN=ChangeMe
       - SHODAN_MAX_TLP=TLP:AMBER # Optional (default: 'TLP:AMBER')
       - SHODAN_DEFAULT_SCORE=50 # Optional (default: 50)
