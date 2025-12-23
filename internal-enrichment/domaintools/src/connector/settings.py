@@ -2,6 +2,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    ListFromString,
 )
 from pydantic import Field, SecretStr
 
@@ -16,6 +17,10 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         description="The name of the connector.",
         default="Domaintools",
     )
+    scope: ListFromString = Field(
+        description="The scope of the connector.",
+        default=["Domain-Name,Ipv4-Addr"],
+    )
 
 
 class DomaintoolsConfig(BaseConfigModel):
@@ -25,11 +30,9 @@ class DomaintoolsConfig(BaseConfigModel):
 
     api_username: str = Field(
         description="The username required for the authentication on DomainTools API.",
-        default="ChangeMe",
     )
     api_key: SecretStr = Field(
         description="The password required for the authentication on DomainTools API.",
-        default="ChangeMe",
     )
     max_tlp: str = Field(
         description="The maximal TLP of the observable being enriched.",

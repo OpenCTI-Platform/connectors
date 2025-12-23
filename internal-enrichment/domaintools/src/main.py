@@ -1,6 +1,7 @@
 import traceback
 
-from connector import ConnectorSettings, DomainToolsConnector
+from connector.connector import DomainToolsConnector
+from connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
