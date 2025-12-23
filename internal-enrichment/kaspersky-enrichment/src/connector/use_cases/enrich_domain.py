@@ -24,6 +24,9 @@ class DomainEnricher:
         Collect intelligence from the source for a Domain-Name/Hostname type
         """
         octi_objects = []
+        observable_to_ref = self.converter_to_stix.create_reference(
+            obs_id=observable["id"]
+        )
         self.helper.connector_logger.info("[CONNECTOR] Starting enrichment...")
 
         # Retrieve domain
@@ -53,7 +56,7 @@ class DomainEnricher:
         if entity_general_info.get("Categories"):
             observable["labels"] = observable.get("x_opencti_labels", [])
             for label in entity_general_info["Categories"]:
-                pretty_label = label.replace("CATEGORY_", "").replace("_", "")
+                pretty_label = label.replace("CATEGORY_", "").replace("_", " ")
                 if pretty_label not in observable["labels"]:
                     observable["labels"].append(pretty_label)
 
@@ -64,5 +67,21 @@ class DomainEnricher:
             observable = OpenCTIStix2.put_attribute_in_extension(
                 observable, STIX_EXT_OCTI_SCO, "score", score
             )
+
+        # Manage DomainDnsResolutions
+
+        if entity_data.get("DomainDnsResolutions"):
+            ipv4_entities = entity_data["DomainDnsResolutions"]
+            for ipv4_entity in ipv4_entities:
+                obs_ipv4 = self.converter_to_stix.create_ipv4(ipv4_entity["Ip"])
+
+                if obs_ipv4:
+                    octi_objects.append(obs_ipv4.to_stix2_object())
+                    asn_relation = self.converter_to_stix.create_relationship(
+                        source_obj=observable_to_ref,
+                        relationship_type="resolves-to",
+                        target_obj=obs_ipv4,
+                    )
+                    octi_objects.append(asn_relation.to_stix2_object())
 
         return octi_objects
