@@ -75,8 +75,6 @@ do
 
     if [ -z "$directory_has_changed" ] ; then
       echo "Nothing has changed in: " "$connector_directory_path"
-    elif grep -q '"manager_supported": false,' "$connector_directory_path"/"$CONNECTOR_METADATA_DIRECTORY"/connector_manifest.json; then
-      echo "Connector is not supported: " "$connector_directory_path"
     else
       echo "Changes in: " "$connector_directory_path"
       echo "> Looking for a config model in " "$connector_directory_path"

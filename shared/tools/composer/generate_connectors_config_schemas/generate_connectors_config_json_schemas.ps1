@@ -111,20 +111,8 @@ foreach ($connector_directory in $connector_directories) {
             $hasChanges = -not [string]::IsNullOrEmpty($gitDiff)
         }
         
-        # Check if connector is supported
-        $manifestPath = Join-Path $connector_path "$CONNECTOR_METADATA_DIRECTORY\connector_manifest.json"
-        $isNotSupported = $false
-        if (Test-Path $manifestPath) {
-            $manifestContent = Get-Content $manifestPath -Raw
-            if ($manifestContent -match '"manager_supported":\s*false') {
-                $isNotSupported = $true
-            }
-        }
-        
         if (-not $hasChanges) {
             Write-Host "Nothing has changed in: $connector_path"
-        } elseif ($isNotSupported) {
-            Write-Host "Connector is not supported: $connector_path"
         } else {
             Write-Host "Changes in: $connector_path"
             Write-Host "> Looking for a config model in $connector_path"
