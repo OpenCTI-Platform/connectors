@@ -5,6 +5,7 @@ from connectors_sdk import (
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
 )
+from connectors_sdk.core.pydantic import ListFromString
 from pydantic import Field, HttpUrl
 
 
@@ -17,6 +18,10 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     name: str = Field(
         description="The name of the connector.",
         default="ShadowTrackrConnector",
+    )
+    scope: ListFromString = Field(
+        description="The scope of the connector, e.g. 'IPv4-Addr,IPv6-Addr,Indicator'.",
+        default=["IPv4-Addr", "IPv6-Addr", "Indicator"],
     )
 
 
