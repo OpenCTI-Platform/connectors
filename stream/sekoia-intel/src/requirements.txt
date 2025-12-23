@@ -1,4 +1,4 @@
-pycti==6.9.3
+pycti==6.9.4
 validators==0.35.0
 stix-shifter==7.1.4
 stix-shifter-utils==7.1.4
