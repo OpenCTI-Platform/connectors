@@ -3,23 +3,15 @@ services:
   connector-first-epss:
     image: opencti/connector-first-epss:latest
     environment:
-      # Connector's generic execution parameters
-      - OPENCTI_URL=http://localhost
+      - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGEME
-      # Connector's definition parameters REQUIRED
-      - CONNECTOR_ID=CHANGEME
-      - "CONNECTOR_NAME=FIRST EPSS"
-      - CONNECTOR_SCOPE=vulnerability
-      - CONNECTOR_AUTO=false
-
-      # Connector's custom execution parameters
-      - FIRST_EPSS_API_BASE_URL=https://api.first.org/data/v1/epss
-      - FIRST_EPSS_MAX_TLP=TLP:CLEAR # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
-
-      # Add proxy parameters below if needed
-      # - HTTP_PROXY=CHANGEME
-      # - HTTPS_PROXY=CHANGEME
-      # - NO_PROXY=CHANGEME
+      - CONNECTOR_ID=18f1a9e6-a82b-4ef4-9699-ae406fe4a1a6 # Optional (default: '18f1a9e6-a82b-4ef4-9699-ae406fe4a1a6')
+      - "CONNECTOR_NAME=Internal Enrichment Connector FIRST" # Optional (default: 'First EPSS') 
+      - CONNECTOR_SCOPE=vulnerability # Optional (default: ['vulnerability'])
+      - CONNECTOR_LOG_LEVEL=error # Optional (default: 'error')
+      - CONNECTOR_AUTO=false # Optional (default: false)
+      - FIRST_EPSS_API_BASE_URL=https://api.first.org/data/v1/epss # Optional (default: 'https://api.first.org/data/v1/epss')
+      - FIRST_EPSS_MAX_TLP=TLP:AMBER # Optional (default: 'TLP:AMBER')
     restart: always
     # networks:
     #   - docker_default
@@ -27,5 +19,4 @@ services:
 # networks:
 #   default:
 #     external: true
-#     name: docker_default
 
