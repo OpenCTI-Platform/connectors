@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike indicator importer module."""
 
-from typing import Any, Dict, List, NamedTuple, Optional, Set
+from typing import Any, Dict, Generator, Iterator, List, NamedTuple, Optional, Set
 
 from crowdstrike_feeds_services.client.indicators import IndicatorsAPI
 from crowdstrike_feeds_services.utils import (
@@ -90,36 +90,46 @@ class IndicatorImporter(BaseImporter):
             self._LATEST_INDICATOR_TIMESTAMP, self.default_latest_timestamp
         )
 
-        latest_indicator_updated_datetime = None
+        new_state = state.copy()
 
-        indicator_batch = self._fetch_indicators(fetch_timestamp)
-        if indicator_batch:
-            latest_batch_updated_datetime = self._process_indicators(indicator_batch)
+        latest_indicator_updated_timestamp = None
 
-            if latest_batch_updated_datetime is not None and (
-                latest_indicator_updated_datetime is None
-                or latest_batch_updated_datetime > latest_indicator_updated_datetime
-            ):
-                latest_indicator_updated_datetime = latest_batch_updated_datetime
+        for indicators_batch in self._fetch_indicators_batched(fetch_timestamp):
+            if not indicators_batch:
+                break
 
-        latest_indicator_updated_timestamp = fetch_timestamp
-
-        if latest_indicator_updated_datetime is not None:
-            latest_indicator_updated_timestamp = datetime_to_timestamp(
-                latest_indicator_updated_datetime
+            latest_indicator_updated_datetime = self._process_indicators(
+                indicators_batch
             )
+
+            if latest_indicator_updated_datetime is not None:
+                latest_indicator_updated_timestamp = datetime_to_timestamp(
+                    latest_indicator_updated_datetime
+                )
+
+                new_state[self._LATEST_INDICATOR_TIMESTAMP] = (
+                    latest_indicator_updated_timestamp
+                )
+                self._set_state(new_state)
+
+        latest_indicator_timestamp = (
+            latest_indicator_updated_timestamp or fetch_timestamp
+        )
 
         self._info(
             "Indicator importer completed, latest fetch {0}.",
-            timestamp_to_datetime(latest_indicator_updated_timestamp),
+            timestamp_to_datetime(latest_indicator_timestamp),
         )
 
-        return {self._LATEST_INDICATOR_TIMESTAMP: latest_indicator_updated_timestamp}
+        return {self._LATEST_INDICATOR_TIMESTAMP: latest_indicator_timestamp}
 
     def _clear_report_fetcher_cache(self) -> None:
         self.report_fetcher.clear_cache()
 
-    def _fetch_indicators(self, fetch_timestamp: int) -> [List, None, None]:
+    def _fetch_indicators_batched(
+        self, fetch_timestamp: int
+    ) -> Generator[List[Dict[str, Any]], None, None]:
+        """Fetch indicators in batches with pagination support."""
         limit = 1000
         sort = "last_updated|asc"
         fql_filter = f"last_updated:>{fetch_timestamp}"
@@ -127,45 +137,89 @@ class IndicatorImporter(BaseImporter):
         if self.exclude_types:
             fql_filter = f"{fql_filter}+type:!{self.exclude_types}"
 
-        return self._query_indicators(limit, sort, fql_filter)
+        current_batch = []
+        batch_size = 1000  # Process in batches to match other importers
 
-    def _query_indicators(self, limit, sort, fql_filter) -> [List]:
-        _limit = limit
-        _sort = sort
-        _fql_filter = fql_filter
+        for indicator in self._paginated_query_indicators(limit, sort, fql_filter):
+            current_batch.append(indicator)
 
-        response = self.indicators_api_cs.get_combined_indicator_entities(
-            limit=_limit, sort=_sort, fql_filter=_fql_filter, deep_pagination=True
-        )
+            if len(current_batch) >= batch_size:
+                yield current_batch
+                current_batch = []
 
-        # Add info to know how much data needs to be retrieved until now
-        meta = response["meta"]
-        _meta_total = None
+        # Yield any remaining indicators
+        if current_batch:
+            yield current_batch
 
-        if meta["pagination"] is not None:
-            pagination = meta["pagination"]
+    def _paginated_query_indicators(
+        self, limit: int, sort: str, fql_filter: str
+    ) -> Iterator[Dict[str, Any]]:
+        """Generator that yields indicators from all pages."""
+        next_page_params = None
+        total_fetched = 0
 
-            _meta_total = pagination["total"]
-
-            self.helper.connector_logger.info(
-                "Indicator total resources to query until now", {"total": _meta_total}
+        while True:
+            response = self._query_indicators_page(
+                limit, sort, fql_filter, next_page_params
             )
 
-        resources = response["resources"]
-        resources_count = len(resources)
-        remaining_resources = None
-        if _meta_total is not None:
-            remaining_resources = _meta_total - resources_count
+            if not response or not response.get("resources"):
+                break
 
-        self.helper.connector_logger.info(
-            "Indicators fetched to be processed (Crowdstrike max limit = 10000)",
-            {
-                "resources_count": resources_count,
-                "remaining_resources": remaining_resources,
-            },
+            resources = response["resources"]
+            batch_size = len(resources)
+            total_fetched += batch_size
+
+            # Log progress
+            meta = response.get("meta", {})
+            pagination = meta.get("pagination", {})
+            total_available = pagination.get("total", 0)
+
+            self.helper.connector_logger.info(
+                "Fetched indicator batch",
+                {
+                    "batch_size": batch_size,
+                    "total_fetched": total_fetched,
+                    "total_available": total_available,
+                    "remaining": max(0, total_available - total_fetched),
+                },
+            )
+
+            # Yield each indicator
+            yield from resources
+
+            # Check for next page
+            next_page_details = response.get("next_page_details")
+            if not next_page_details:
+                break
+
+            next_page_params = next_page_details
+
+    def _query_indicators_page(
+        self,
+        limit: int,
+        sort: str,
+        fql_filter: str,
+        next_page_params: Optional[Dict] = None,
+    ) -> Dict[str, Any]:
+        """Query a single page of indicators from the CrowdStrike API."""
+        next_page = None
+        if next_page_params and "next_page" in next_page_params:
+            next_page = (
+                next_page_params["next_page"][0]
+                if isinstance(next_page_params["next_page"], list)
+                else next_page_params["next_page"]
+            )
+
+        response = self.indicators_api_cs.get_combined_indicator_entities(
+            limit=limit,
+            sort=sort,
+            fql_filter=fql_filter,
+            deep_pagination=True,
+            next_page=next_page,
         )
 
-        return resources
+        return response
 
     def _process_indicators(self, indicators: List) -> Optional[int]:
         indicator_count = len(indicators)

@@ -1,3 +1,4 @@
+from typing import Optional
 from urllib.parse import parse_qs, urlparse
 
 from .base_api import BaseCrowdstrikeClient
@@ -9,7 +10,12 @@ class IndicatorsAPI(BaseCrowdstrikeClient):
         super().__init__(helper)
 
     def get_combined_indicator_entities(
-        self, limit: int, sort: str, fql_filter: str, deep_pagination: bool
+        self,
+        limit: int,
+        sort: str,
+        fql_filter: str,
+        deep_pagination: bool,
+        next_page: Optional[str] = None,
     ) -> dict:
         """
         Get info about indicators that match provided FQL filters.
@@ -17,11 +23,20 @@ class IndicatorsAPI(BaseCrowdstrikeClient):
         :param sort: The property to sort by. (Ex: created_date|desc) in str
         :param fql_filter: FQL query expression that should be used to limit the results in str
         :param deep_pagination: Boolean
+        :param next_page: Next page URL for pagination
         :return: Dict object containing API response
         """
-        response = self.cs_intel.query_indicator_entities(
-            limit=limit, sort=sort, filter=fql_filter, deep_pagination=deep_pagination
-        )
+        kwargs = {
+            "limit": limit,
+            "sort": sort,
+            "filter": fql_filter,
+            "deep_pagination": deep_pagination,
+        }
+
+        if next_page:
+            kwargs["next_page"] = next_page
+
+        response = self.cs_intel.query_indicator_entities(**kwargs)
 
         response_body = response["body"]
         response_body["next_page_details"] = None
