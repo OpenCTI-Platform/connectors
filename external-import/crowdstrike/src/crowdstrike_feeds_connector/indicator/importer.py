@@ -3,6 +3,7 @@
 
 from typing import Any, Dict, List, NamedTuple, Optional, Set
 
+from crowdstrike_feeds_services.client.actors import ActorsAPI
 from crowdstrike_feeds_services.client.indicators import IndicatorsAPI
 from crowdstrike_feeds_services.utils import (
     datetime_to_timestamp,
@@ -57,6 +58,9 @@ class IndicatorImporter(BaseImporter):
         )
 
         self.indicators_api_cs = IndicatorsAPI(config.helper)
+        self.actors_api_cs = ActorsAPI(config.helper)
+        # Simple per-run cache to avoid repeated actor resolution calls.
+        self._resolved_actor_name_cache: Dict[str, str] = {}
         self.create_observables = config.create_observables
         self.create_indicators = config.create_indicators
         self.default_latest_timestamp = config.default_latest_timestamp
@@ -219,6 +223,79 @@ class IndicatorImporter(BaseImporter):
 
     def _create_indicator_bundle(self, indicator: dict) -> Optional[Bundle]:
         try:
+            # Normalize CrowdStrike actor tokens to stable human-readable names before building the bundle.
+            # Indicators frequently contain actor values as strings (internal tokens / slugs). We only
+            # normalize the names for stable Intrusion Set creation; the Actor feed/enrichment owns the full profile.
+            actor_tokens = indicator.get("actors") or []
+            if actor_tokens:
+                # Use cache first.
+                normalized: List[str] = []
+                to_resolve: List[str] = []
+
+                for token in actor_tokens:
+                    if not token:
+                        continue
+                    cached = self._resolved_actor_name_cache.get(token)
+                    if cached:
+                        normalized.append(cached)
+                    else:
+                        to_resolve.append(token)
+
+                if to_resolve:
+                    try:
+                        response = self.actors_api_cs.get_actors_by_slugs(to_resolve)
+                        resources = (
+                            response.get("resources", [])
+                            if isinstance(response, dict)
+                            else []
+                        )
+
+                        # Build lookup from slug/name -> canonical name.
+                        lookup: Dict[str, str] = {}
+                        for actor in resources:
+                            name = actor.get("name") or actor.get("slug")
+                            if not name:
+                                continue
+                            slug = actor.get("slug")
+                            if slug:
+                                lookup[slug] = name
+                            lookup[name] = name
+
+                        for token in to_resolve:
+                            canon = lookup.get(token)
+                            if not canon:
+                                canon = lookup.get(token.lower()) or lookup.get(
+                                    token.upper()
+                                )
+                            canon = canon or token
+                            self._resolved_actor_name_cache[token] = canon
+                            normalized.append(canon)
+
+                        self.helper.connector_logger.debug(
+                            "Normalized indicator actors via CrowdStrike Actors API.",
+                            {
+                                "indicator_id": indicator.get("id"),
+                                "input_actors": actor_tokens,
+                                "normalized_actors": normalized,
+                                "resolved_count": len(resources),
+                            },
+                        )
+                    except Exception as err:
+                        # Do not fail the whole indicator if actor normalization fails.
+                        # Keep existing 'actors' field (tokens) and log a warning.
+                        self.helper.connector_logger.warning(
+                            "[WARNING] Failed to normalize indicator actors; using raw values as-is.",
+                            {
+                                "indicator_id": indicator.get("id"),
+                                "actor_tokens": actor_tokens,
+                                "error": str(err),
+                            },
+                        )
+                        normalized = actor_tokens
+
+                # Replace with normalized list (preserves ordering; falls back to raw token when unresolved).
+                indicator["actors"] = normalized
+
             bundle_builder_config = IndicatorBundleBuilderConfig(
                 indicator=indicator,
                 author=self.author,

@@ -6,7 +6,7 @@ from typing import List, Mapping, Optional, Tuple, Union
 
 from crowdstrike_feeds_services.utils import (
     create_external_reference,
-    create_intrusion_set_from_name,
+    create_intrusion_set_from_actor_entity,
     create_malware,
     create_object_refs,
     create_organization,
@@ -100,39 +100,40 @@ class ReportBundleBuilder:
         )
 
     def _create_intrusion_sets(self) -> List[IntrusionSet]:
-        report_actors = self.report["actors"]
-        if report_actors is None:
+        report_actors = self.report.get("actors") or []
+        if not report_actors:
             return []
 
-        intrusion_sets = []
+        intrusion_sets: List[IntrusionSet] = []
 
         for actor in report_actors:
-            intrusion_set = self._create_intrusion_set_from_actor(actor)
-            intrusion_sets.append(intrusion_set)
+            try:
+                # crowdstrike_feeds_connector/report/builder.py inside _create_intrusion_sets loop
+                if isinstance(actor, dict):
+                    logger.debug(
+                        "Report actor entity before IntrusionSet creation",
+                        extra={
+                            "actor_name": actor.get("name"),
+                            "actor_slug": actor.get("slug"),
+                            "actor": actor,
+                        },
+                    )
+                    intrusion_sets.append(
+                        create_intrusion_set_from_actor_entity(
+                            actor,
+                            created_by=self.author,
+                            confidence=self.confidence_level,
+                            object_markings=self.object_markings,
+                        )
+                    )
+                    continue
+
+            except Exception:
+                logger.exception(
+                    "Failed to create IntrusionSet from report actor '%s'", actor
+                )
 
         return intrusion_sets
-
-    def _create_intrusion_set_from_actor(self, actor: dict) -> Optional[IntrusionSet]:
-        actor_name = actor["name"]
-        if actor_name is None or not actor_name:
-            return None
-
-        external_references = []
-
-        actor_url = actor["url"]
-        if actor_url is not None and actor_url:
-            external_reference = self._create_external_reference(
-                str(actor["id"]), actor_url
-            )
-            external_references.append(external_reference)
-
-        return create_intrusion_set_from_name(
-            actor_name,
-            self.author,
-            self.confidence_level,
-            external_references,
-            self.object_markings,
-        )
 
     def _create_external_reference(
         self, external_id: str, url: str
@@ -288,7 +289,7 @@ class ReportBundleBuilder:
             bundle_objects.extend(malwares_target_countries)
 
         # Indicators linked to the report and add to bundle
-        indicators_linked = self.related_indicators
+        indicators_linked = self.related_indicators or []
         bundle_objects.extend(indicators_linked)
 
         # Create object references for the report.
