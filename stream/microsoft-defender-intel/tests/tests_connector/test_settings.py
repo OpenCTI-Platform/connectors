@@ -10,7 +10,10 @@ from microsoft_defender_intel_connector import ConnectorSettings
     [
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
                 "connector": {
                     "id": "connector-id",
                     "name": "Test Connector",
@@ -21,9 +24,9 @@ from microsoft_defender_intel_connector import ConnectorSettings
                     "live_stream_no_dependencies": True,
                 },
                 "microsoft_defender_intel": {
-                    "tenant_id": "str",
-                    "client_id": "str",
-                    "client_secret": "SecretStr",
+                    "tenant_id": "test-tenant-id",
+                    "client_id": "test-client-id",
+                    "client_secret": "test-client-secret",
                     "login_url": "https://login.microsoft.com",
                     "base_url": "https://api.securitycenter.microsoft.com",
                     "resource_path": "/api/indicators",
@@ -36,16 +39,15 @@ from microsoft_defender_intel_connector import ConnectorSettings
         ),
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
-                "connector": {
-                    "id": "connector-id",
-                    "scope": "test, connector",
-                    "log_level": "error",
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
                 },
+                "connector": {},
                 "microsoft_defender_intel": {
-                    "tenant_id": "str",
-                    "client_id": "str",
-                    "client_secret": "SecretStr",
+                    "tenant_id": "test-tenant-id",
+                    "client_id": "test-client-id",
+                    "client_secret": "test-client-secret",
                 },
             },
             id="minimal_valid_settings_dict",
@@ -94,9 +96,9 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "live_stream_no_dependencies": True,
                 },
                 "microsoft_defender_intel": {
-                    "tenant_id": "str",
-                    "client_id": "str",
-                    "client_secret": "SecretStr",
+                    "tenant_id": "test-tenant-id",
+                    "client_id": "test-client-id",
+                    "client_secret": "test-client-secret",
                     "login_url": "https://login.microsoft.com",
                     "base_url": "https://api.securitycenter.microsoft.com",
                     "resource_path": "/api/indicators",
@@ -110,8 +112,12 @@ def test_settings_should_accept_valid_input(settings_dict):
         ),
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
                 "connector": {
+                    "id": "connector-id",
                     "name": "Test Connector",
                     "scope": "test, connector",
                     "log_level": "error",
@@ -120,13 +126,12 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "live_stream_no_dependencies": True,
                 },
                 "microsoft_defender_intel": {
-                    "tenant_id": "str",
-                    "client_id": "str",
-                    "client_secret": "SecretStr",
+                    "client_id": "test-client-id",
+                    "client_secret": "test-client-secret",
                 },
             },
-            "connector.id",
-            id="missing_connector_id",
+            "microsoft_defender_intel.tenant_id",
+            id="missing_microsoft_defender_intel_tenant_id",
         ),
     ],
 )
