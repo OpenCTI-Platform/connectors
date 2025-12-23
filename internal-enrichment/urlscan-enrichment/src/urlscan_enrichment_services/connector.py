@@ -16,8 +16,20 @@ class UrlscanConnector:
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         self.config = config
         self.helper = helper
-        self.client = UrlscanClient(self.helper)
-        self.converter = UrlscanConverter(self.helper)
+
+        self.client = UrlscanClient(
+            self.helper,
+            api_key=(
+                self.config.urlscan_enrichment.api_key.get_secret_value()
+                if self.config.urlscan_enrichment.api_key
+                else None
+            ),
+            default_scan_visibility=self.config.urlscan_enrichment.visibility,
+        )
+        self.converter = UrlscanConverter(
+            self.helper,
+            external_reference_date_filter=self.config.urlscan_enrichment.search_filtered_by_date,
+        )
         self.constants = UrlscanConstants
         self.utils = UrlscanUtils
         self.identity = None

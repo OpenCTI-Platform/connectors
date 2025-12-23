@@ -10,7 +10,10 @@ from urlscan_enrichment_services import ConnectorSettings
     [
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
                 "connector": {
                     "id": "connector-id",
                     "name": "Test Connector",
@@ -19,12 +22,11 @@ from urlscan_enrichment_services import ConnectorSettings
                     "auto": True,
                 },
                 "urlscan_enrichment": {
-                    "api_key": "SecretStr",
-                    "api_base_url": "str",
+                    "api_key": "test-api-key",
                     "import_screenshot": True,
-                    "visibility": "str",
+                    "visibility": "public",
                     "search_filtered_by_date": "str",
-                    "max_tlp": "str",
+                    "max_tlp": "TLP:CLEAR",
                     "create_indicator": True,
                 },
             },
@@ -32,17 +34,12 @@ from urlscan_enrichment_services import ConnectorSettings
         ),
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
-                "connector": {"id": "connector-id", "scope": "test, connector"},
-                "urlscan_enrichment": {
-                    "api_key": "SecretStr",
-                    "api_base_url": "str",
-                    "import_screenshot": True,
-                    "visibility": "str",
-                    "search_filtered_by_date": "str",
-                    "max_tlp": "str",
-                    "create_indicator": True,
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
                 },
+                "connector": {},
+                "urlscan_enrichment": {},
             },
             id="minimal_valid_settings_dict",
         ),
@@ -79,7 +76,10 @@ def test_settings_should_accept_valid_input(settings_dict):
         pytest.param({}, "settings", id="empty_settings_dict"),
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:PORT", "token": "test-token"},
+                "opencti": {
+                    "url": "http://localhost:PORT",
+                    "token": "test-token",
+                },
                 "connector": {
                     "id": "connector-id",
                     "name": "Test Connector",
@@ -88,12 +88,11 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "auto": True,
                 },
                 "urlscan_enrichment": {
-                    "api_key": "SecretStr",
-                    "api_base_url": "str",
+                    "api_key": "test-api-key",
                     "import_screenshot": True,
-                    "visibility": "str",
+                    "visibility": "public",
                     "search_filtered_by_date": "str",
-                    "max_tlp": "str",
+                    "max_tlp": "TLP:CLEAR",
                     "create_indicator": True,
                 },
             },
@@ -102,7 +101,10 @@ def test_settings_should_accept_valid_input(settings_dict):
         ),
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
                 "connector": {
                     "name": "Test Connector",
                     "scope": "test, connector",
@@ -110,17 +112,16 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "auto": True,
                 },
                 "urlscan_enrichment": {
-                    "api_key": "SecretStr",
-                    "api_base_url": "str",
+                    "api_key": "test-api-key",
                     "import_screenshot": True,
-                    "visibility": "str",
+                    "visibility": "public",
                     "search_filtered_by_date": "str",
-                    "max_tlp": "str",
+                    "max_tlp": "any str",
                     "create_indicator": True,
                 },
             },
-            "connector.id",
-            id="missing_connector_id",
+            "urlscan_enrichment.max_tlp",
+            id="invalid_urlscan_enrichment_max_tlp",
         ),
     ],
 )

@@ -43,7 +43,6 @@ class StubConnectorSettings(ConnectorSettings):
                 },
                 "urlscan_enrichment": {
                     "api_key": "test-api-key",
-                    "api_base_url": "http://test.com",
                     "import_screenshot": True,
                     "visibility": "public",
                     "search_filtered_by_date": ">now-1y",
