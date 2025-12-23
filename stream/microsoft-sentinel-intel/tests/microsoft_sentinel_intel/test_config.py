@@ -1,5 +1,5 @@
 import pytest
-from microsoft_sentinel_intel.config import ConnectorSettings
+from microsoft_sentinel_intel.settings import ConnectorSettings
 from pydantic import HttpUrl
 
 
@@ -18,7 +18,7 @@ def test_config() -> None:
     microsoft_sentinel_intel = config["microsoft_sentinel_intel"]
     assert len(microsoft_sentinel_intel) == 12
     assert microsoft_sentinel_intel["client_id"] == "ChangeMe"
-    assert microsoft_sentinel_intel["client_secret"] == "ChangeMe"
+    assert microsoft_sentinel_intel["client_secret"].get_secret_value() == "ChangeMe"
     assert microsoft_sentinel_intel["delete_extensions"] == True
     assert microsoft_sentinel_intel["extra_labels"] == ["label"]
     assert microsoft_sentinel_intel["management_api_version"] == "2025-03-01"
