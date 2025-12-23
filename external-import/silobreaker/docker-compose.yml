@@ -3,16 +3,16 @@ services:
   connector-silobreaker:
     image: opencti/connector-silobreaker:latest
     environment:
-      - OPENCTI_URL=http://localhost
+      - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
-      - CONNECTOR_ID=ChangeMe
-      - "CONNECTOR_NAME=Silobreaker Cyber Threat Intelligence"
-      - CONNECTOR_SCOPE=silobreaker
-      - CONNECTOR_LOG_LEVEL=error
-      - SILOBREAKER_API_URL=https://api.silobreaker.com
+      - CONNECTOR_ID=e84df642-f33b-4c73-877f-dd4b0093fd09 # Optional (default: 'e84df642-f33b-4c73-877f-dd4b0093fd09')
+      - "CONNECTOR_NAME=Silobreaker Cyber Threat Intelligence" # Optional (default: Silobreaker)
+      - CONNECTOR_SCOPE=silobreaker # Optional (default: 'silobreaker')
+      - CONNECTOR_LOG_LEVEL=error # Optional (default: 'error')
+      - CONNECTOR_DURATION_PERIOD=PT60M # Optional (default: 1 hour)
+      - SILOBREAKER_API_URL=https://api.silobreaker.com # Optional (default: https://api.silobreaker.com)
       - SILOBREAKER_API_KEY=ChangeMe
       - SILOBREAKER_API_SHARED=ChangeMe
-      - SILOBREAKER_LISTS=138809,96910,36592,55112,50774 # Infostealers and Keyloggers, RAT Malware, Ransomware, APTs, Threat Publications
-      - SILOBREAKER_IMPORT_START_DATE=2024-09-01
-      - SILOBREAKER_INTERVAL=60 # Required, in minutes
+      - SILOBREAKER_LISTS=138809,96910,36592,55112,50774 # Optional (default: 138809(Infostealers and Keyloggers), 96910(RAT Malware), 36592(Ransomware), 55112(APTs), 50774(Threat Publications))
+      - SILOBREAKER_IMPORT_START_DATE=2024-09-01 # Optional (default: 2024-09-01)
     restart: always
