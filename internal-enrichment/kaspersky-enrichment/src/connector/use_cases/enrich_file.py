@@ -132,7 +132,9 @@ class FileEnricher:
 
             for url_info in entity_data["FileDownloadedFromUrls"]:
                 obs_url_score = self.zone_octi_score_mapping[url_info["Zone"].lower()]
-                url_object = self.converter_to_stix.create_url(obs_url_score, url_info)
+                url_object = self.converter_to_stix.create_url(
+                    obs_url_score, url_info["Url"]
+                )
 
                 if url_object:
                     octi_objects.append(url_object.to_stix2_object())

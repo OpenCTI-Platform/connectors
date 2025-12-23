@@ -116,10 +116,10 @@ class DomainEnricher:
 
                 # Create Url object and relation
                 obs_url = self.converter_to_stix.create_url(
-                    url_info=file_downloaded_entity,
                     obs_url_score=self.zone_octi_score_mapping[
                         file_downloaded_entity["Zone"].lower()
                     ],
+                    url_info=file_downloaded_entity["Url"],
                 )
 
                 if obs_url:

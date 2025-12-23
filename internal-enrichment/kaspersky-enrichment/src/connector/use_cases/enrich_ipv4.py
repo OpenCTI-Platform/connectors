@@ -133,10 +133,10 @@ class Ipv4Enricher:
         if entity_data.get("HostedUrls"):
             for url_entity in entity_data["HostedUrls"]:
                 obs_url = self.converter_to_stix.create_url(
-                    url_info=url_entity,
                     obs_url_score=self.zone_octi_score_mapping[
                         url_entity["Zone"].lower()
                     ],
+                    url_info=url_entity["Url"],
                 )
 
                 if obs_url:

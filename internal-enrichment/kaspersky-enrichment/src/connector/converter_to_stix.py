@@ -134,13 +134,13 @@ class ConverterToStix:
         """
         return Sector(name=industry, author=self.author, markings=[self.tlp_clear])
 
-    def create_url(self, obs_url_score: int, url_info: dict) -> URL:
+    def create_url(self, obs_url_score: int, url_info: str) -> URL:
         """
         Create an URL object
         """
         return URL(
             score=obs_url_score,
-            value=url_info["Url"],
+            value=url_info,
             author=self.author,
             markings=[self.tlp_amber],
         )
