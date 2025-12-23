@@ -15,12 +15,17 @@
       "type": "string"
     },
     "CONNECTOR_NAME": {
-      "default": "UrlscanEnrichment",
+      "default": "Urlscan Enrichment",
       "description": "The name of the connector.",
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "default": [
+        "url",
+        "ipv4-addr",
+        "ipv6-addr"
+      ],
+      "description": "The scope of the connector. Availables: `url or hostname or domain-name` (scope-submission), `ipv4-addr` and `ipv6-addr` (scope-search)",
       "items": {
         "type": "string"
       },
@@ -49,14 +54,11 @@
       "type": "boolean"
     },
     "URLSCAN_ENRICHMENT_API_KEY": {
+      "default": null,
       "description": "URLScan API Key",
       "format": "password",
       "type": "string",
       "writeOnly": true
-    },
-    "URLSCAN_ENRICHMENT_API_BASE_URL": {
-      "description": "URLScan Base Url",
-      "type": "string"
     },
     "URLSCAN_ENRICHMENT_IMPORT_SCREENSHOT": {
       "default": true,
@@ -79,7 +81,16 @@
       "type": "string"
     },
     "URLSCAN_ENRICHMENT_MAX_TLP": {
+      "default": "TLP:AMBER",
       "description": "Do not send any data to URLScan if the TLP of the observable is greater than MAX_TLP",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
       "type": "string"
     },
     "URLSCAN_ENRICHMENT_CREATE_INDICATOR": {
@@ -90,11 +101,7 @@
   },
   "required": [
     "OPENCTI_URL",
-    "OPENCTI_TOKEN",
-    "CONNECTOR_SCOPE",
-    "URLSCAN_ENRICHMENT_API_KEY",
-    "URLSCAN_ENRICHMENT_API_BASE_URL",
-    "URLSCAN_ENRICHMENT_MAX_TLP"
+    "OPENCTI_TOKEN"
   ],
   "additionalProperties": true
 }
