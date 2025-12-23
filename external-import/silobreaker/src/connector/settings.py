@@ -55,8 +55,8 @@ class SilobreakerConfig(BaseConfigModel):
         default=["138809", "96910", "36592", "55112", "50774"],
     )
     import_start_date: DatetimeFromIsoString = Field(
-        description="The start date for importing Silobreaker data.",
-        default=datetime(2024, 9, 1, tzinfo=timezone.utc),
+        description="The start date for importing Silobreaker data. (Default: 01/12/2025).",
+        default=datetime(2025, 12, 1, tzinfo=timezone.utc),
     )
 
 
