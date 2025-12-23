@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import json
 import sys
+import time
 import urllib.parse
 import urllib.request
 from datetime import datetime
@@ -29,6 +30,8 @@ from pycti import (
 
 
 class Silobreaker:
+    RETRY_QUERY_DELAY = 30
+    POST_QUERY_DELAY = 0.5
 
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         self.config = config
@@ -36,6 +39,8 @@ class Silobreaker:
 
         self.api_base_url = str(self.config.silobreaker.api_url).strip("/")
         self.auth_token = None
+
+        self.retry_query = False
 
         self.identity = OrganizationAuthor(
             name="Silobreaker",
@@ -102,13 +107,22 @@ class Silobreaker:
                     + urllib.parse.quote(digest.decode())
                 )
                 req = urllib.request.Request(final_url)
+
             if method == "DOWNLOAD":
-                return base64.b64encode(urllib.request.urlopen(req).read()).decode(
+                dl_data = base64.b64encode(urllib.request.urlopen(req).read()).decode(
                     "utf-8"
                 )
+                self.retry_query = False
+                # Add a small delay to avoid rate limiting
+                time.sleep(self.POST_QUERY_DELAY)
+                return dl_data
+
             else:
                 with urllib.request.urlopen(req) as response:
                     responseJson = response.read()
+                self.retry_query = False
+                # Add a small delay to avoid rate limiting
+                time.sleep(self.POST_QUERY_DELAY)
                 return json.loads(responseJson.decode("utf-8"))
         except urllib.request.HTTPError as err:
             error_metadata = {
@@ -116,12 +130,26 @@ class Silobreaker:
                 "error_status": str(err.status),
                 "url": err.url,
             }
-            self.helper.connector_logger.error(
-                "[API] An error occurred while trying to request the list",
-                error_metadata,
-            )
-            return {}
+            if err.status == 429 and not self.retry_query:
+                # Too many requests, waiting for 30 seconds before retrying
+                self.helper.connector_logger.info(
+                    f"[API] Too many requests, waiting for {self.RETRY_QUERY_DELAY} seconds before retrying",
+                    error_metadata,
+                )
+                self.retry_query = True
+                time.sleep(self.RETRY_QUERY_DELAY)
+                return self._query(method, url, body)
+
+            else:
+                self.helper.connector_logger.error(
+                    "[API] An error occurred while trying to request the list",
+                    error_metadata,
+                )
+                self.retry_query = False
+                return {}
+
         except Exception as err:
+            self.retry_query = False
             error_metadata = {"error": err}
             self.helper.connector_logger.error(
                 "[API] An error occurred while trying to request the list",
