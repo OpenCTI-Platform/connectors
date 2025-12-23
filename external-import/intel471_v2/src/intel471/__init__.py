@@ -1,18 +1,5 @@
-from enum import Enum
+from intel471.common import HelperRequest
+from intel471.connector import Intel471Connector
+from intel471.settings import ConnectorSettings
 
-
-class HelperRequest:
-    class Operation(Enum):
-        GET = "get"
-        UPDATE = "update"
-        KILL = "kill"
-
-    def __init__(
-        self, operation: Operation, stream: str = None, data: dict = None
-    ) -> None:
-        self.stream = stream
-        self.operation = operation
-        self.data = data
-
-    def __repr__(self) -> str:
-        return f"HelperRequest<stream={self.stream}, operation={self.operation}, data={str(self.data)}>"
+__all__ = ["ConnectorSettings", "Intel471Connector", "HelperRequest"]
