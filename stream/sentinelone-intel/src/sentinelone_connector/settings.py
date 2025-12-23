@@ -24,7 +24,7 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
 
     name: str = Field(
         description="The name of the connector.",
-        default="SentinelOne Intel Stream Connector",
+        default="SentinelOne Intel",
     )
     scope: ListFromString = Field(
         description="The scope of the connector, e.g. 'sentinelone'.",
