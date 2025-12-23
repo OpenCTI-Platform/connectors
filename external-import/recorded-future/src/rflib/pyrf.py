@@ -121,9 +121,9 @@ class RecordedFutureApiClient:
             return
 
         # If the response doesn't contain data, log the error
-        if not data.get("data"):
+        if "data" not in data:
             self.helper.connector_logger.error(
-                "No rules returned from Recorded Future API"
+                "'data' field is missing from the response returned by Recorded Future API"
             )
             return
 
@@ -131,8 +131,7 @@ class RecordedFutureApiClient:
             # If the response does not contain mandatory fields, log the error
             if "status" not in data:
                 self.helper.connector_logger.error(
-                    "Response does not contain mandatory status field",
-                    {"mandatory_field": "status"},
+                    "'status' field is missing from the response returned by Recorded Future API"
                 )
                 return
 
