@@ -2,6 +2,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseStreamConnectorConfig,
+    ListFromString,
 )
 from pydantic import Field, SecretStr
 
@@ -16,9 +17,21 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
         description="The name of the connector.",
         default="MicrosoftSentinelIntel",
     )
+    scope: ListFromString = Field(
+        description="The scope of the stream connector.",
+        default="sentinel",
+    )
     live_stream_id: str = Field(
         description="The ID of the live stream to connect to.",
         default="live",  # listen the global stream (not filtered)
+    )
+    live_stream_listen_delete: bool = Field(
+        description="Whether to listen for delete events in the live stream.",
+        default=True,
+    )
+    live_stream_no_dependencies: bool = Field(
+        description="Whether to avoid fetching dependencies for the objects received in the live stream.",
+        default=True,
     )
 
 
@@ -58,7 +71,7 @@ class MicrosoftSentinelIntelConfig(BaseConfigModel):
         description="Delete the extensions in the stix bundle sent to the SIEM",
         default=True,
     )
-    extra_labels: list[str] = Field(
+    extra_labels: ListFromString = Field(
         description="Extra labels added to the bundle sent. String separated by comma",
         default=[],
     )

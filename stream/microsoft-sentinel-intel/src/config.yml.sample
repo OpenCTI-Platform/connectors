@@ -5,12 +5,12 @@ opencti:
 connector:
   type: 'STREAM'
   id: 'ChangeMe'
-  name: 'Microsoft Sentinel Intel'
-  scope: 'sentinel' # MIME type or SCO
-  log_level: 'info'
-  live_stream_id: 'ChangeMe'
-  live_stream_listen_delete: true
-  live_stream_no_dependencies: true
+  #name: 'Microsoft Sentinel Intel'
+  #scope: 'sentinel' # MIME type or SCO
+  #log_level: 'info'
+  #live_stream_id: 'ChangeMe'
+  #live_stream_listen_delete: true
+  #live_stream_no_dependencies: true
 
 microsoft_sentinel_intel:
   tenant_id: 'ChangeMe'

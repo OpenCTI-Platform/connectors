@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from microsoft_sentinel_intel import Connector, ConnectorSettings
+from microsoft_sentinel_intel.client import ConnectorClient
 from pycti import OpenCTIConnectorHelper
 
 
@@ -106,7 +107,8 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
     settings = StubConnectorSettings()
     helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
 
-    connector = Connector(config=settings, helper=helper)
+    client = ConnectorClient(helper=helper, config=settings)
+    connector = Connector(config=settings, helper=helper, client=client)
 
     assert connector.config == settings
     assert connector.helper == helper
