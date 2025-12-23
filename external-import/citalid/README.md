@@ -10,7 +10,7 @@ Follow this guide to deploy the connector: https://github.com/OpenCTI-Platform/c
 
 ### Requirements
 
-- OpenCTI Platform >= 6.9.3
+- OpenCTI Platform >= 6.9.4
 
 ### Configuration
 
