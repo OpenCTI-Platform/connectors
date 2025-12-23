@@ -1284,25 +1284,6 @@ class StixNote:
                 self.helper.connector_logger.warning(msg)
                 continue
 
-                if capability_type == "Malware":
-                    capability_obj = Malware(
-                        name=capability_name,
-                        _type=capability_type,
-                    )
-                elif capability_type == "CyberVulnerability":
-                    capability_obj = Vulnerability(
-                        name=capability_name,
-                        _type=capability_type,
-                    )
-                else:
-                    capability_obj = TTP(
-                        name=capability_name,
-                        _type=capability_type,
-                    )
-                capability_obj.create_stix_objects()
-                capability = capability_obj.stix_obj
-                event_objects.append(capability)
-
             # Create relation adversary-capability
             if capability_type == "CyberVulnerability":
                 event_objects.append(
