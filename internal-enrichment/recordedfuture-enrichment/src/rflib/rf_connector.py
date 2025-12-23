@@ -1,6 +1,7 @@
 """Connector to enrich IOCs with Recorded Future data"""
 
 from connectors_sdk.models import octi
+from connectors_sdk.models.octi.enums import TLPLevel
 from pycti import OpenCTIConnectorHelper
 from rf_client import RFClient, RFClientError, RFClientNotFoundError
 from rflib import APP_VERSION
@@ -26,8 +27,9 @@ class RFEnrichmentConnector:
         self.vulnerability_enricher = VulnerabilityEnricher(helper=self.helper)
         self.observable_enricher = ObservableEnricher(
             helper=self.helper,
-            tlp_level="amber+strict",
+            tlp_level=TLPLevel.AMBER_STRICT,
             indicator_creation_threshold=self.config.recorded_future.create_indicator_threshold,
+            threat_actor_to_intrusion_set=self.config.recorded_future.threat_actor_to_intrusion_set,
         )
 
     @staticmethod

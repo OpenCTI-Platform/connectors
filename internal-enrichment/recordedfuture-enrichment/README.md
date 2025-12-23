@@ -28,7 +28,7 @@ Their equivalent OpenCTI models are
   - Mitre T codes-> Attack Patterns
   - Indicators -> Indicators and Observables
   - Malware -> Malware
-  - Threat Actors -> Threat Actors
+  - Threat Actors -> Threat Actors or Intrusion Sets
   - Organization-> Organization
 
 Please note that not every link type from Recorded Future is supported at this time
@@ -55,7 +55,7 @@ Please note that if you don't want to use an optional variable, best practice is
 Below are the parameters you'll need to set for OpenCTI:
 
 | Parameter     | Config variable (`config.yml`) | Env variable (`docker-compose.yml` or `.env`) | Default | Mandatory | Description                                          |
-| ------------- | ------------------------------ | --------------------------------------------- | ------- | --------- | ---------------------------------------------------- |
+|---------------|--------------------------------|-----------------------------------------------|---------|-----------|------------------------------------------------------|
 | OpenCTI URL   | url                            | `OPENCTI_URL`                                 | /       | yes       | The URL of the OpenCTI platform.                     |
 | OpenCTI Token | token                          | `OPENCTI_TOKEN`                               | /       | yes       | The default admin token set in the OpenCTI platform. |
 
@@ -64,7 +64,7 @@ Below are the parameters you'll need to set for OpenCTI:
 Below are the parameters you'll need to set for running an internal-enrichment connector properly:
 
 | Parameter           | Config variable (`config.yml`) | Env variable (`docker-compose.yml` or `.env`) | Default                                                      | Mandatory | Description                                                                                                                                                |
-| ------------------- | ------------------------------ | --------------------------------------------- | ------------------------------------------------------------ | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|---------------------|--------------------------------|-----------------------------------------------|--------------------------------------------------------------|-----------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Connector ID        | id                             | `CONNECTOR_ID`                                | /                                                            | yes       | A unique `UUIDv4` identifier for this connector instance.                                                                                                  |
 | Connector Name      | name                           | `CONNECTOR_NAME`                              | `Recorded Future Enrichment`                                 | no        | Name of the connector.                                                                                                                                     |
 | Connector Scope     | scope                          | `CONNECTOR_SCOPE`                             | `ipv4-addr,ipv6-addr,domain-name,url,stixfile,vulnerability` | no        | Comma-separated list of OCTI entities the connector is enriching. Options are `ipv4-addr`, `ipv6-addr`, `domain-name`, `url`, `stixfile`, `vulnerability`. |
@@ -76,11 +76,12 @@ Below are the parameters you'll need to set for running an internal-enrichment c
 Below are the parameters you'll need to set for this connector:
 
 | Parameter                                | Config variable (`config.yml`)           | Env variable (`docker-compose.yml` or `.env`)              | Default     | Mandatory | Description                                                                                                                                                                                                                                                                                   |
-| ---------------------------------------- | ---------------------------------------- | ---------------------------------------------------------- | ----------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|------------------------------------------|------------------------------------------|------------------------------------------------------------|-------------|-----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Recorded Future API token                | token                                    | `RECORDED_FUTURE_TOKEN`                                    | /           | yes       | API Token for Recorded Future.                                                                                                                                                                                                                                                                |
 | Max TLP                                  | info_max_tlp                             | `RECORDED_FUTURE_INFO_MAX_TLP`                             | `TLP:AMBER` | no        | Max TLP marking of the entity to enrich (inclusive). One of `TLP:CLEAR`, `TLP:WHITE`, `TLP:GREEN`, `TLP:AMBER`, `TLP:AMBER+STRICT`, `TLP:RED`.                                                                                                                                                |
 | Indicator creation threshold             | create_indicator_threshold               | `RECORDED_FUTURE_CREATE_INDICATOR_THRESHOLD`               | `0`         | no        | The risk score threshold at which an indicator will be created for enriched observables. If set to zero, all enriched observables will automatically create an indicator. If set to 100, no enriched observables will create an indicator. Reccomended thresholds are: `0`, `25`, `65`, `100` |
 | Vulnerability enrichment optional fields | vulnerability_enrichment_optional_fields | `RECORDED_FUTURE_VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS` | `''`        | no        | A comma-separated list of optional fields to enrich vulnerabilities with. Currently, available fields are `aiInsights`, `cpe`and `risk`. See [RecordedFuture enrichment fields doc](https://docs.recordedfuture.com/reference/enrichment-field-attributes) for more details.                  |
+| Theat Actor to Intrusion Set             | threat_actor_to_intrusion_set            | `RECORDED_FUTURE_THREAT_ACTOR_TO_INTRUSION_SET`            | `False`     | no        | Converts all Recorded Future Threat Actors to STIX Object "Intrusion Set" instead of "Threat Actor". DO NOT USE unless you **really** know what you're doing.                                                                                                                                 |
 
 Notes:
 

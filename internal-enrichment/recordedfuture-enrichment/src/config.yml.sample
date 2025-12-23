@@ -13,3 +13,4 @@ recorded_future:
   create_indicator_threshold: 0
   info_max_tlp: 'TLP:AMBER'
   vulnerability_enrichment_optional_fields: 'aiInsights,cpe,risk'
+  #threat_actor_to_intrusion_set: False
