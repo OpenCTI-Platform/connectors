@@ -1,9 +1,13 @@
+from ipaddress import IPv4Address
+
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseStreamConnectorConfig,
+    ListFromString,
 )
 from pydantic import Field, SecretStr
+from pydantic.networks import HttpUrl
 
 
 class StreamConnectorConfig(BaseStreamConnectorConfig):
@@ -16,6 +20,10 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
         description="The name of the connector.",
         default="CrowdstrikeEndpointSecurity",
     )
+    scope: ListFromString = Field(
+        description="The scope of the connector",
+        default=["crowdstrike-endpoint-security"],
+    )
     live_stream_id: str = Field(
         description="The ID of the live stream to connect to.",
         default="live",  # listen the global stream (not filtered)
@@ -27,7 +35,7 @@ class CrowdstrikeEndpointSecurityConfig(BaseConfigModel):
     Define parameters and/or defaults for the configuration specific to the `CrowdstrikeEndpointSecurityConnector`.
     """
 
-    api_base_url: str = Field(
+    api_base_url: HttpUrl = Field(
         description="Crowdstrike base url.",
         default="https://api.crowdstrike.com",
     )
@@ -45,15 +53,24 @@ class CrowdstrikeEndpointSecurityConfig(BaseConfigModel):
         description="Crowdstrike client secret used to connect to the API.",
         default=False,
     )
+
+
+class MetricsConfig(BaseConfigModel):
+    """
+    Define parameters and/or defaults for the configuration specific to the `Prometheus Metrics`.
+    """
+
     enable: bool = Field(
         description="Whether or not Prometheus metrics should be enabled.",
         default=False,
     )
     port: int = Field(
         description="Port to use for metrics endpoint.",
+        default=9113,
     )
-    addr: str = Field(
+    addr: IPv4Address = Field(
         description="Bind IP address to use for metrics endpoint.",
+        default="0.0.0.0",
     )
 
 
@@ -63,6 +80,7 @@ class ConnectorSettings(BaseConnectorSettings):
     """
 
     connector: StreamConnectorConfig = Field(default_factory=StreamConnectorConfig)
-    crowdstrike_endpoint_security: CrowdstrikeEndpointSecurityConfig = Field(
+    crowdstrike: CrowdstrikeEndpointSecurityConfig = Field(
         default_factory=CrowdstrikeEndpointSecurityConfig
     )
+    metrics: MetricsConfig = Field(default_factory=MetricsConfig)

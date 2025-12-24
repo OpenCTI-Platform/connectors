@@ -43,12 +43,14 @@ class StubConnectorSettings(ConnectorSettings):
                     "live_stream_listen_delete": True,
                     "live_stream_no_dependencies": True,
                 },
-                "crowdstrike_endpoint_security": {
+                "crowdstrike": {
                     "api_base_url": "https://api.crowdstrike.com",
                     "client_id": "test-client-id",
                     "client_secret": "test-client-secret",
                     "permanent_delete": False,
                     "falcon_for_mobile_active": False,
+                },
+                "metrics": {
                     "enable": False,
                     "port": 9113,
                     "addr": "0.0.0.0",
@@ -87,8 +89,8 @@ def test_opencti_connector_helper_is_instantiated(mock_opencti_connector_helper)
     assert helper.connect_scope == "test,connector"
     assert helper.log_level == "ERROR"
     assert helper.connect_live_stream_id == "live"
-    assert helper.connect_live_stream_listen_delete == True
-    assert helper.connect_live_stream_no_dependencies == True
+    assert helper.connect_live_stream_listen_delete is True
+    assert helper.connect_live_stream_no_dependencies is True
 
 
 def test_connector_is_instantiated(mock_opencti_connector_helper):

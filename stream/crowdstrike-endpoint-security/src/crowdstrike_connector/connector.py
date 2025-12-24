@@ -19,23 +19,13 @@ class CrowdstrikeConnector:
         """
         self.config = config
         self.helper = helper
-        self.client = CrowdstrikeClient(self.helper)
+        self.client = CrowdstrikeClient(helper)
         self.metrics = Metrics(
-            self.helper.connect_name,
-            self.config.crowdstrike_endpoint_security.addr,
-            self.config.crowdstrike_endpoint_security.port,
+            helper.connect_name,
+            config.metrics.addr,
+            config.metrics.port,
         )
-
-    def check_stream_id(self) -> None:
-        """
-        In case of stream_id configuration is missing, raise Value Error
-        :return: None
-        """
-        if (
-            self.helper.connect_live_stream_id is None
-            or self.helper.connect_live_stream_id == "ChangeMe"
-        ):
-            raise ValueError("Missing stream ID, please check your configurations.")
+        self.metrics_enabled = config.metrics.enable
 
     def handle_logger_info(self, action: str, data: dict) -> None:
         """
@@ -45,7 +35,7 @@ class CrowdstrikeConnector:
         :return: None
         """
         self.helper.connector_logger.info(
-            action + " Processing indicator",
+            f"{action} Processing indicator",
             {"Indicator ID": self.helper.get_attribute_in_extension("id", data)},
         )
 
@@ -56,12 +46,13 @@ class CrowdstrikeConnector:
         :return: None
         """
         try:
-            self.check_stream_id()
-            self.metrics.handle_metrics(msg)
+            if self.metrics_enabled:
+                self.metrics.handle_metrics(msg)
             data = json.loads(msg.data)["data"]
         except Exception:
             raise ValueError("Cannot process the message")
-        "\n        Extract data and handle only entity type 'Indicator' from stream\n        "
+
+        # Extract data and handle only entity type 'Indicator' from stream
         if data["type"] == "indicator" and data["pattern_type"] in ["stix"]:
             self.helper.connector_logger.info(
                 "Starting to extract data...", {"pattern_type": data["pattern_type"]}
@@ -84,6 +75,7 @@ class CrowdstrikeConnector:
         """
         Start main execution loop procedure for connector
         """
-        self.helper.listen_stream(self._process_message)
-        if self.config.crowdstrike_endpoint_security.enable:
+        # Start getting metrics if metrics_enabled is true
+        if self.metrics_enabled:
             self.metrics.start_server()
+        self.helper.listen_stream(self._process_message)

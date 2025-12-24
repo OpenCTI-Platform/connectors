@@ -20,12 +20,14 @@ from crowdstrike_connector import ConnectorSettings
                     "live_stream_listen_delete": True,
                     "live_stream_no_dependencies": True,
                 },
-                "crowdstrike_endpoint_security": {
+                "crowdstrike": {
                     "api_base_url": "https://api.crowdstrike.com",
                     "client_id": "test-client-id",
                     "client_secret": "test-client-secret",
                     "permanent_delete": False,
                     "falcon_for_mobile_active": False,
+                },
+                "metrics": {
                     "enable": False,
                     "port": 9113,
                     "addr": "0.0.0.0",
@@ -41,7 +43,7 @@ from crowdstrike_connector import ConnectorSettings
                     "scope": "test, connector",
                     "log_level": "error",
                 },
-                "crowdstrike_endpoint_security": {
+                "crowdstrike": {
                     "api_base_url": "https://api.crowdstrike.com",
                     "client_id": "test-client-id",
                     "client_secret": "test-client-secret",
@@ -73,7 +75,7 @@ def test_settings_should_accept_valid_input(settings_dict):
     settings = FakeConnectorSettings()
     assert isinstance(settings.opencti, BaseConfigModel) is True
     assert isinstance(settings.connector, BaseConfigModel) is True
-    assert isinstance(settings.crowdstrike_endpoint_security, BaseConfigModel) is True
+    assert isinstance(settings.crowdstrike, BaseConfigModel) is True
 
 
 @pytest.mark.parametrize(
@@ -92,12 +94,14 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "live_stream_listen_delete": True,
                     "live_stream_no_dependencies": True,
                 },
-                "crowdstrike_endpoint_security": {
+                "crowdstrike": {
                     "api_base_url": "https://api.crowdstrike.com",
                     "client_id": "test-client-id",
                     "client_secret": "test-client-secret",
                     "permanent_delete": False,
                     "falcon_for_mobile_active": False,
+                },
+                "metrics": {
                     "enable": False,
                     "port": 9113,
                     "addr": "0.0.0.0",
@@ -117,12 +121,14 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "live_stream_listen_delete": True,
                     "live_stream_no_dependencies": True,
                 },
-                "crowdstrike_endpoint_security": {
+                "crowdstrike": {
                     "api_base_url": "https://api.crowdstrike.com",
                     "client_id": "test-client-id",
                     "client_secret": "test-client-secret",
                     "permanent_delete": False,
                     "falcon_for_mobile_active": False,
+                },
+                "metrics": {
                     "enable": False,
                     "port": 9113,
                     "addr": "0.0.0.0",
@@ -130,6 +136,26 @@ def test_settings_should_accept_valid_input(settings_dict):
             },
             "connector.id",
             id="missing_connector_id",
+        ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "test, connector",
+                    "log_level": "error",
+                },
+                "crowdstrike": {
+                    "api_base_url": "https://api.crowdstrike.com",
+                    "client_id": "test-client-id",
+                    "client_secret": "test-client-secret",
+                },
+                "metrics": {
+                    "addr": "invalid-ip",
+                },
+            },
+            "metrics.addr",
+            id="invalid_metrics_addr",
         ),
     ],
 )
