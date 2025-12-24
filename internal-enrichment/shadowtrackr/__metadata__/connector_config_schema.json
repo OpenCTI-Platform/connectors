@@ -63,7 +63,9 @@
     },
     "SHADOWTRACKR_API_KEY": {
       "description": "API key for authentication.",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "SHADOWTRACKR_MAX_TLP": {
       "default": "TLP:AMBER",
