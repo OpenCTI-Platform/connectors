@@ -7,7 +7,7 @@ services:
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=Virustotal_Livehunt_Notifications
       - "CONNECTOR_NAME=VirusTotal Livehunt Notifications"
-      - CONNECTOR_SCOPE=StixFile,Indicator,Incident
+      - CONNECTOR_SCOPE=StixFile,Indicator,Incident,Domain-Name,URL,IPv4-Addr, IPv6-Addr
       - CONNECTOR_LOG_LEVEL=error
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_API_KEY=ChangeMe # Private API Key
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_INTERVAL_SEC=300 # Time to wait in seconds between subsequent requests
@@ -22,4 +22,12 @@ services:
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_YARA_RULE=True # Set to true to create yara rule linked to the alert and the file
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_DELETE_NOTIFICATION=False # Set to true to remove livehunt notifications
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_FILTER_WITH_TAG="mytag" # Filter livehunt notifications with this tag
+      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_GET_MALWARE_CONFIG=False # (Optional) Set to true to add config data of malware files like IPs and domains, if present. Only works if file creation is enabled. Default is false
+      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_TLP=GREEN # (Optional) Set the TLP level for created entities, e.g. WHITE, GREEN, AMBER, AMBER_STRICT or RED
+      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_FILE_INDICATORS=False # (Optional) Set to true to create file indicators from the matched file. Default is false
+      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_DOMAIN_NAME_INDICATORS=False # (Optional) Set to true to create indicators from the domain names extracted from the malware config. Default is false
+      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_IP_INDICATORS=False # (Optional) Set to true to create indicators from the IP addresses extracted from the malware config. Default is false
+      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_URL_INDICATORS=False # (Optional) Set to true to create indicators from the URLs extracted from the malware config. Default is false
+      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_LIMIT=100 # (Optional) Maximum number of notifications to process per run
+
     restart: always
