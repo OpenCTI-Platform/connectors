@@ -1,10 +1,10 @@
 import json
 import time
+from typing import Literal
 
 import requests
-
-from .config_variables import UrlscanConfig
-from .constants import UrlscanConstants
+from pycti import OpenCTIConnectorHelper
+from urlscan_enrichment_services.constants import UrlscanConstants
 
 
 class UrlscanClient:
@@ -12,12 +12,20 @@ class UrlscanClient:
     Working with URLScan API
     """
 
-    def __init__(self, helper):
-        self.config = UrlscanConfig()
-        self.constants = UrlscanConstants
+    def __init__(
+        self,
+        helper: OpenCTIConnectorHelper,
+        api_key: str | None,
+        default_scan_visibility: Literal["public", "unlisted", "private"],
+    ):
         self.helper = helper
+
+        self.base_url = "https://urlscan.io/api/v1/"
+        self.api_key = api_key
+        self.default_visibility = default_scan_visibility
+        self.constants = UrlscanConstants
         # Define headers in session and update when needed
-        headers = {"API-Key": self.config.api_key, "Content-Type": "application/json"}
+        headers = {"API-Key": self.api_key, "Content-Type": "application/json"}
         self.session = requests.Session()
         self.session.headers.update(headers)
 
@@ -30,9 +38,9 @@ class UrlscanClient:
         :return: List | None
         """
         try:
-            data = {"url": entity_value, "visibility": self.config.visibility}
+            data = {"url": entity_value, "visibility": self.default_visibility}
             response = self.session.post(
-                (self.config.api_base_url + self.constants.SCAN), data=json.dumps(data)
+                (self.base_url + self.constants.SCAN), data=json.dumps(data)
             )
             response.raise_for_status()
             return response.json()
@@ -124,9 +132,7 @@ class UrlscanClient:
             max_retries = 12
             retry_delay = 10  # in second
 
-            response = self.session.get(
-                self.config.api_base_url + self.constants.RESULT + uuid
-            )
+            response = self.session.get(self.base_url + self.constants.RESULT + uuid)
 
             if response.status_code != 200:
                 json_response = response.json()
@@ -140,7 +146,7 @@ class UrlscanClient:
                         # error 404 -> https://urlscan.io/docs/api/ between 10s - 30s
                         time.sleep(retry_delay)
                         new_attempt = self.session.get(
-                            self.config.api_base_url + self.constants.RESULT + uuid
+                            self.base_url + self.constants.RESULT + uuid
                         )
                         if new_attempt.status_code == 200:
                             json_new_attempt = new_attempt.json()

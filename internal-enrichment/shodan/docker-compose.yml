@@ -3,17 +3,17 @@ services:
   connector-shodan:
     image: opencti/connector-shodan:latest
     environment:
-      - OPENCTI_URL=http://localhost
+      - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
-      - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_NAME=Shodan
-      - CONNECTOR_SCOPE=IPv4-Addr,Indicator
-      - CONNECTOR_AUTO=true
-      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_ID=82b58916-a654-4cd4-81de-700eb72a5c94 # Optional (default: '82b58916-a654-4cd4-81de-700eb72a5c94')
+      - CONNECTOR_NAME=Shodan # Optional (default: 'Shodan')
+      - CONNECTOR_SCOPE=ipv4-addr,indicator # Optional (default: ['ipv4-addr', 'indicator'])
+      - CONNECTOR_AUTO=true # Optional (default: false)
+      - CONNECTOR_LOG_LEVEL=info # Optional (default: error)
       - SHODAN_TOKEN=ChangeMe
-      - SHODAN_MAX_TLP=TLP:AMBER
-      - SHODAN_DEFAULT_SCORE=50
-      - SHODAN_IMPORT_SEARCH_RESULTS=true
-      - SHODAN_CREATE_NOTE=true # Add results to note rather than description
-      - SHODAN_USE_ISP_NAME_FOR_ASN=false
+      - SHODAN_MAX_TLP=TLP:AMBER # Optional (default: 'TLP:AMBER')
+      - SHODAN_DEFAULT_SCORE=50 # Optional (default: 50)
+      - SHODAN_IMPORT_SEARCH_RESULTS=true # Optional (default: true)
+      - SHODAN_CREATE_NOTE=true # Optional (default: true)
+      - SHODAN_USE_ISP_NAME_FOR_ASN=false # Optional (default: false)
     restart: always

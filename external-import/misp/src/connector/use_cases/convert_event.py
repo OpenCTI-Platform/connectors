@@ -6,6 +6,7 @@ import stix2
 import stix2.exceptions
 from api_client.models import EventRestSearchListItem, ExtendedAttributeItem
 from connector.threats_guesser import ThreatsGuesser
+from pydantic import HttpUrl
 
 from .common import TLP_CLEAR, ConverterConfig, ConverterConfigError, ConverterError
 from .convert_attribute import AttributeConverter
@@ -57,9 +58,9 @@ class EventConverter:
 
     def __init__(
         self,
+        external_reference_base_url: HttpUrl,
         report_type: str = "misp-event",
         report_description_attribute_filters: dict = {},
-        external_reference_base_url: str = None,
         convert_event_to_report: bool = True,
         convert_attribute_to_associated_file: bool = False,
         convert_attribute_to_indicator: bool = True,
@@ -72,9 +73,9 @@ class EventConverter:
         convert_tag_to_marking: bool = False,
         propagate_report_labels: bool = False,
         original_tags_to_keep_as_labels: list[str] = [],
-        default_attribute_score: int = None,
+        default_attribute_score: int | None = None,
         guess_threats_from_tags: bool = False,
-        threats_guesser: ThreatsGuesser = None,
+        threats_guesser: ThreatsGuesser | None = None,
     ):
         self.config = ConverterConfig(
             report_type=report_type,

@@ -15,7 +15,7 @@
       "type": "string"
     },
     "CONNECTOR_NAME": {
-      "default": "SentinelOne Intel Stream Connector",
+      "default": "SentinelOne Intel",
       "description": "The name of the connector.",
       "type": "string"
     },

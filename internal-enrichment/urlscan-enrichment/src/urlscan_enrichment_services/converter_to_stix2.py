@@ -1,9 +1,13 @@
 import stix2
-from pycti import CustomObservableHostname, Identity, Indicator, StixCoreRelationship
-
-from .config_variables import UrlscanConfig
-from .constants import UrlscanConstants
-from .utils import UrlscanUtils
+from pycti import (
+    CustomObservableHostname,
+    Identity,
+    Indicator,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
+)
+from urlscan_enrichment_services.constants import UrlscanConstants
+from urlscan_enrichment_services.utils import UrlscanUtils
 
 
 class UrlscanConverter:
@@ -11,12 +15,16 @@ class UrlscanConverter:
     Convert data from Urlscan to STIX 2 object
     """
 
-    def __init__(self, helper):
+    def __init__(
+        self, helper: OpenCTIConnectorHelper, external_reference_date_filter: str
+    ):
         self.helper = helper
-        self.config = UrlscanConfig()
+
         self.identity = self.generate_urlscan_stix_identity()
         self.constants = UrlscanConstants
         self.utils = UrlscanUtils
+
+        self.external_reference_date_filter = external_reference_date_filter
 
     def generate_urlscan_stix_identity(self) -> dict:
         """
@@ -103,7 +111,7 @@ class UrlscanConverter:
                     + search_entity_type
                     + entity_value
                     + " AND date:"
-                    + self.config.search_filtered_by_date
+                    + self.external_reference_date_filter
                 )
             else:
                 return []
