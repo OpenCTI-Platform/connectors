@@ -1,5 +1,6 @@
 import pycti
 import stix2
+from pydantic import HttpUrl
 
 TLP_CLEAR = stix2.MarkingDefinition(
     id=pycti.MarkingDefinition.generate_id("TLP", "TLP:CLEAR"),
@@ -67,9 +68,9 @@ class ConverterConfigError(Exception):
 class ConverterConfig:
     def __init__(
         self,
+        external_reference_base_url: HttpUrl,
         report_type: str = "misp-event",
         report_description_attribute_filters: dict = {},
-        external_reference_base_url: str = None,
         convert_event_to_report: bool = True,
         convert_attribute_to_associated_file: bool = False,
         convert_attribute_to_indicator: bool = True,
@@ -82,7 +83,7 @@ class ConverterConfig:
         convert_tag_to_marking: bool = False,
         propagate_report_labels: bool = False,
         original_tags_to_keep_as_labels: list[str] = [],
-        default_attribute_score: int = None,
+        default_attribute_score: int | None = None,
         guess_threats_from_tags: bool = False,
     ):
         self.report_type = report_type
