@@ -20,7 +20,9 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": "malpedia",
+      "default": [
+        "malpedia"
+      ],
       "description": "The scope of the connector.",
       "items": {
         "type": "string"
