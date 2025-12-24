@@ -14,7 +14,9 @@ from .constants import URLS_MAPPING
 class MalpediaClient:
     """Malpedia client."""
 
-    def __init__(self, helper: OpenCTIConnectorHelper, api_key: str) -> None:
+    def __init__(
+        self, helper: OpenCTIConnectorHelper, api_key: str | None = None
+    ) -> None:
         """Initialize Malpedia api client."""
         self.helper = helper
         self.api_key = api_key
@@ -31,8 +33,8 @@ class MalpediaClient:
                     "run the connector in unauthenticated mode (no value)."
                 )
 
-    def api_response(self, url: str, retry_delay: int, auth: bool):
-        if not auth:
+    def api_response(self, url: str, retry_delay: int):
+        if self.unauthenticated:
             response = requests.get(url, timeout=30)
         else:
             prepared_headers = {"Authorization": "apitoken " + self.api_key}
@@ -102,16 +104,10 @@ class MalpediaClient:
             retry_delay = 65  # in second
 
             for _ in range(max_retries):
-                if self.unauthenticated:
-                    data = self.api_response(url, retry_delay, False)
-                    if data is None:
-                        continue
-                    return data
-                else:
-                    data = self.api_response(url, retry_delay, True)
-                    if data is None:
-                        continue
-                    return data
+                data = self.api_response(url, retry_delay)
+                if data is None:
+                    continue
+                return data
 
         except requests.exceptions.RequestException as e:
             self.helper.connector_logger.error(

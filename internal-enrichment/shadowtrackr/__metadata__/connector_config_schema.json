@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/shadowtrackr_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "ShadowTrackr",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "IPv4-Addr",
+        "IPv6-Addr",
+        "Indicator"
+      ],
+      "description": "The scope of the connector, e.g. 'IPv4-Addr,IPv6-Addr,Indicator'.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Whether the connector should run automatically when an entity is created or updated.",
+      "type": "boolean"
+    },
+    "SHADOWTRACKR_BASE_URL": {
+      "default": "https://shadowtrackr.com/api/v3",
+      "description": "Base URL of the ShadowTrackr API.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "SHADOWTRACKR_API_KEY": {
+      "description": "API key for authentication.",
+      "type": "string"
+    },
+    "SHADOWTRACKR_MAX_TLP": {
+      "default": "TLP:AMBER",
+      "description": "Max TLP level of the entities to enrich.",
+      "enum": [
+        "TLP:WHITE",
+        "TLP:CLEAR",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
+    },
+    "SHADOWTRACKR_REPLACE_WITH_LOWER_SCORE": {
+      "default": false,
+      "description": "Replace the score with a lower score based on the ShadowTrackr false positive estimate.",
+      "type": "boolean"
+    },
+    "SHADOWTRACKR_REPLACE_VALID_TO_DATE": {
+      "default": false,
+      "description": "Set the valid to date to tomorrow for CDNs, Clouds and VPNs.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "SHADOWTRACKR_API_KEY"
+  ],
+  "additionalProperties": true
+}
