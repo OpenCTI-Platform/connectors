@@ -1,19 +1,18 @@
-version: '3'
 services:
   connector-urlscan-enrichment:
     image: opencti/connector-urlscan-enrichment:latest
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
-      - CONNECTOR_ID=496df155-c2f0-43b3-ab46-4352e68989d8 # Optional (default: '496df155-c2f0-43b3-ab46-4352e68989d8')
-      - CONNECTOR_NAME=UrlScan # Optional (default: 'Urlscan Enrichment')
-      - CONNECTOR_SCOPE=url,ipv4-addr,ipv6-addr # Optional (default: 'url,ipv4-addr,ipv6-addr')
-      - CONNECTOR_AUTO=false # Optional (default: false)
-      - CONNECTOR_LOG_LEVEL=error # Optional (default: 'error')
-      - URLSCAN_ENRICHMENT_API_KEY= # Optional (default: empty)
-      - URLSCAN_ENRICHMENT_IMPORT_SCREENSHOT=false # Optional (default: true)
-      - URLSCAN_ENRICHMENT_VISIBILITY=public # Optional (default: 'public')
-      - URLSCAN_ENRICHMENT_SEARCH_FILTERED_BY_DATE=>now-2d # Optional (default: '>now-1d')
-      - URLSCAN_ENRICHMENT_MAX_TLP=TLP:AMBER # Optional (default: 'TLP:AMBER')
-      - URLSCAN_ENRICHMENT_CREATE_INDICATOR=true # Optional (default: true)
+      #- CONNECTOR_ID=496df155-c2f0-43b3-ab46-4352e68989d8 # Optional (default: '496df155-c2f0-43b3-ab46-4352e68989d8')
+      #- CONNECTOR_NAME=UrlScan # Optional (default: 'Urlscan Enrichment')
+      #- CONNECTOR_SCOPE=url,ipv4-addr,ipv6-addr # Optional (default: 'url,ipv4-addr,ipv6-addr')
+      #- CONNECTOR_AUTO=false # Optional (default: false)
+      #- CONNECTOR_LOG_LEVEL=error # Optional (default: 'error')
+      #- URLSCAN_ENRICHMENT_API_KEY= # Optional (default: empty)
+      #- URLSCAN_ENRICHMENT_IMPORT_SCREENSHOT=false # Optional (default: true)
+      #- URLSCAN_ENRICHMENT_VISIBILITY=public # Optional (default: 'public')
+      #- URLSCAN_ENRICHMENT_SEARCH_FILTERED_BY_DATE=>now-2d # Optional (default: '>now-1d')
+      #- URLSCAN_ENRICHMENT_MAX_TLP=TLP:AMBER # Optional (default: 'TLP:AMBER')
+      #- URLSCAN_ENRICHMENT_CREATE_INDICATOR=true # Optional (default: true)
     restart: always

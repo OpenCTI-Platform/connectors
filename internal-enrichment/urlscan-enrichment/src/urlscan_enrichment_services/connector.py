@@ -19,11 +19,7 @@ class UrlscanConnector:
 
         self.client = UrlscanClient(
             self.helper,
-            api_key=(
-                self.config.urlscan_enrichment.api_key.get_secret_value()
-                if self.config.urlscan_enrichment.api_key
-                else None
-            ),
+            api_key=self.config.urlscan_enrichment.api_key.get_secret_value(),
             default_scan_visibility=self.config.urlscan_enrichment.visibility,
         )
         self.converter = UrlscanConverter(
