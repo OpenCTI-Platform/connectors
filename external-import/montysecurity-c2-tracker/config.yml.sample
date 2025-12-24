@@ -1,0 +1,15 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  name: 'Template Connector' # optional (default: 'Template Connector')
+  scope: 'ChangeMe'
+  log_level: 'error' # optional (default: 'error')
+  duration_period: 'PT1H' #  # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+
+montysecurity_c2_tracker:
+  api_base_url: 'ChangeMe'
+  api_key: 'ChangeMe'
+  tlp_level: 'clear' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
