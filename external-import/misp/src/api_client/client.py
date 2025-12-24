@@ -3,7 +3,7 @@ from typing import Generator, Optional
 from warnings import warn
 
 from api_client.models import EventRestSearchListItem
-from pydantic import ValidationError
+from pydantic import HttpUrl, ValidationError
 from pymisp import PyMISP, PyMISPError
 from requests.adapters import HTTPAdapter, Retry
 
@@ -17,7 +17,7 @@ class MISPClient:
 
     def __init__(
         self,
-        url: str,
+        url: HttpUrl,
         key: str,
         verify_ssl: bool = False,
         certificate: Optional[str] = None,
@@ -37,7 +37,7 @@ class MISPClient:
         http_adapter = HTTPAdapter(max_retries=retry_strategy)
 
         self._client = PyMISP(
-            url=url,
+            url=str(url),
             key=key,
             cert=certificate,
             ssl=verify_ssl,
