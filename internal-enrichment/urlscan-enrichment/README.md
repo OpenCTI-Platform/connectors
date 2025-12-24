@@ -12,41 +12,12 @@ URLScan (https://urlscan.io/) is an online service that allows you to scan URLs 
 
 There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
 
-## OpenCTI environment variables
+## Configuration variables
 
-Below are the parameters you'll need to set for OpenCTI:
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-Below are the parameters you'll need to set for running the connector properly:
-
-| Parameter         | config.yml        | Docker environment variable     | Default   | Mandatory | Description                                                                                      |
-|-------------------|-------------------|---------------------------------|-----------|-----------|--------------------------------------------------------------------------------------------------|
-| Connector ID      | id                | `CONNECTOR_ID`                  | /         | Yes       | A unique `UUIDv4` identifier for this connector instance.                                        |
-| Connector Name    | name              | `CONNECTOR_NAME`                | `URLScan` | Yes       | Name of the connector.                                                                           |
-| Connector Scope   | scope             | `CONNECTOR_SCOPE`               | /         | Yes       | Scope of the connector. Availables: `url or hostname or domain-name`, `ipv4-addr`, `ipv6-addr`   |
-| Run and Terminate | run_and_terminate | `CONNECTOR_RUN_AND_TERMINATE`   | `False`   | No        | Launch the connector once if set to True. Takes 2 available values: `True` or `False`            |
-| Log Level         | log_level         | `CONNECTOR_LOG_LEVEL`           | /         | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.           |
-
-### URLScan Enrichment connector environment variables
-
-Below are the parameters you'll need to set for URLScan Enrichment connector:
-
-| Parameter                            | config.yml              | Docker environment variable                       | Default   | Mandatory  | Description                                                                                                             |
-|--------------------------------------|-------------------------|---------------------------------------------------|-----------|------------|-------------------------------------------------------------------------------------------------------------------------|
-| URLScan Enr. Api Key                 | api_key                 | `URLSCAN_ENRICHMENT_API_KEY`                      | /         | Yes        | URLScan API Key                                                                                                         |
-| URLScan Enr. Api Base Url            | api_base_url            | `URLSCAN_ENRICHMENT_API_BASE_URL`                 | /         | Yes        | URLScan Base Url                                                                                                        |
-| URLScan Enr. Import Screenshot       | import_screenshot       | `URLSCAN_ENRICHMENT_IMPORT_SCREENSHOT`            | `true`    | Yes        | Allows or not the import of the screenshot of the scan submitted in URLScan to OpenCTI.                                 |
-| URLScan Enr. Visibility              | visibility              | `URLSCAN_ENRICHMENT_VISIBILITY`                   | `public`  | Yes        | URLScan offers several levels of visibility for submitted scans: `public`, `unlisted`, `private`                        |
-| URLScan Enr. Search filtered by date | search_filtered_by_date | `URLSCAN_ENRICHMENT_SEARCH_FILTERED_BY_DATE`      | `>now-1y` | Yes        | Allows you to filter by date available: `>now-1h`, `>now-1d`, `>now-1y`, `[2022 TO 2023]`, `[2022/01/01 TO 2023/12/01]` |
-| URLScan Enr. Max TLP                 | max_tlp                 | `URLSCAN_ENRICHMENT_MAX_TLP`                      | /         | Yes        | Do not send any data to URLScan if the TLP of the observable is greater than MAX_TLP                                    |
-| URLScan Enr. Create Indicator        | create_indicator        | `URLSCAN_ENRICHMENT_CREATE_INDICATOR`             | `true`    | No         | Decide whether or not to create an indicator based on this observable
-
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding these variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 
@@ -97,7 +68,8 @@ After installation, the connector should require minimal interaction to use, and
 ## Warnings
 
 - If you have the variable auto set to true, then it is important to choose the correct scope by selecting only one type of scope-submission (url or hostname or domain-name) to avoid looping ingestions.
-    - This is an example of looping ingestion: you have set a scope submission of URL and Domain name. When you will search for URL, it will retrieve lots of entities, including some domain names. These domain names will then be searched too. However, they can bring you some URLs too, creating this infinite loop.
+
+  - This is an example of looping ingestion: you have set a scope submission of URL and Domain name. When you will search for URL, it will retrieve lots of entities, including some domain names. These domain names will then be searched too. However, they can bring you some URLs too, creating this infinite loop.
 
 - If you enrich IPv4 and IPv6 observables, only a link to URLScan search in external reference (OpenCTI) will be generated, but you can play with the search period with the environment variable search_filtered_by_date to refine the search.
 
