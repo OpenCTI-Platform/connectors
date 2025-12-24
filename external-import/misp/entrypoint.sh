@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-misp
 
 # Start the connector
-python3 misp.py
+python3 main.py
