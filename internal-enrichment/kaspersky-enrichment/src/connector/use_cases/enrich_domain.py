@@ -1,10 +1,11 @@
 from connector.converter_to_stix import ConverterToStix
-from connector.utils import get_first_and_last_seen_datetime, is_quota_exceeded
+from connector.use_cases.common import BaseUseCases
+from connector.utils import get_first_and_last_seen_datetime
 from kaspersky_client import KasperskyClient
-from pycti import STIX_EXT_OCTI_SCO, OpenCTIConnectorHelper, OpenCTIStix2
+from pycti import OpenCTIConnectorHelper
 
 
-class DomainEnricher:
+class DomainEnricher(BaseUseCases):
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
@@ -13,6 +14,7 @@ class DomainEnricher:
         zone_octi_score_mapping: dict,
         converter_to_stix: ConverterToStix,
     ):
+        BaseUseCases.__init__(self, helper, converter_to_stix)
         self.helper = helper
         self.client = client
         self.sections = sections
@@ -36,20 +38,21 @@ class DomainEnricher:
         entity_data = self.client.get_domain_info(obs_domain, self.sections)
 
         # Check Quota
-        if is_quota_exceeded(entity_data["LicenseInfo"]):
-            self.helper.connector_logger.warning(
-                "[CONNECTOR] The daily quota has been exceeded",
-                {
-                    "day_requests": entity_data["LicenseInfo"]["DayRequests"],
-                    "day_quota": entity_data["LicenseInfo"]["DayQuota"],
-                },
-            )
+        self.check_quota(entity_data["LicenseInfo"])
+
+        # Create and add author, TLP clear and TLP amber to octi_objects
+        octi_objects += self.generate_author_and_tlp_markings()
 
         # Manage DomainGeneralInfo data
 
         self.helper.connector_logger.info(
             "[CONNECTOR] Process enrichment from DomainGeneralInfo data..."
         )
+
+        # Score
+        if entity_data.get("Zone"):
+            observable = self.update_observable_score(entity_data["Zone"], observable)
+
         entity_general_info = entity_data["DomainGeneralInfo"]
 
         # Labels
@@ -60,15 +63,11 @@ class DomainEnricher:
                 if pretty_label not in observable["labels"]:
                     observable["labels"].append(pretty_label)
 
-        # Manage Zone data
-
-        if entity_data.get("Zone"):
-            score = self.zone_octi_score_mapping[entity_data["Zone"].lower()]
-            observable = OpenCTIStix2.put_attribute_in_extension(
-                observable, STIX_EXT_OCTI_SCO, "score", score
-            )
-
         # Manage DomainDnsResolutions
+
+        self.helper.connector_logger.info(
+            "[CONNECTOR] Process enrichment from DomainDnsResolutions data..."
+        )
 
         if entity_data.get("DomainDnsResolutions"):
             ipv4_entities = entity_data["DomainDnsResolutions"]
@@ -85,6 +84,10 @@ class DomainEnricher:
                     octi_objects.append(ipv4_relation.to_stix2_object())
 
         # Manage FilesDownloaded
+
+        self.helper.connector_logger.info(
+            "[CONNECTOR] Process enrichment from FilesDownloaded data..."
+        )
 
         if entity_data.get("FilesDownloaded"):
             files_downloaded = entity_data["FilesDownloaded"]
@@ -141,6 +144,10 @@ class DomainEnricher:
 
         # Manage FilesAccessed
 
+        self.helper.connector_logger.info(
+            "[CONNECTOR] Process enrichment from FilesAccessed data..."
+        )
+
         if entity_data.get("FilesAccessed"):
             files_accessed = entity_data["FilesAccessed"]
             for file_accessed in files_accessed:
@@ -172,6 +179,10 @@ class DomainEnricher:
                     octi_objects.append(file_accessed_relation.to_stix2_object())
 
         # Manage Industries data
+
+        self.helper.connector_logger.info(
+            "[CONNECTOR] Process enrichment from Industries data..."
+        )
 
         if entity_data.get("Industries"):
             for industry in entity_data["Industries"]:
