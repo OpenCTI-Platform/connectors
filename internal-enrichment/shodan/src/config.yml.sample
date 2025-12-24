@@ -3,16 +3,16 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  id: '82b58916-a654-4cd4-81de-700eb72a5c94' # Optional (default: '82b58916-a654-4cd4-81de-700eb72a5c94')
-  name: 'Shodan' # Optional (default: 'Shodan')
-  scope: 'ipv4-addr,indicator' # Optional (default: ['ipv4-addr', 'indicator'])
-  auto: true # Optional (default: false)
-  log_level: 'error' # Optional (default: false)
+  #id: '82b58916-a654-4cd4-81de-700eb72a5c94' # Optional (default: '82b58916-a654-4cd4-81de-700eb72a5c94')
+  #name: 'Shodan' # Optional (default: 'Shodan')
+  #scope: 'ipv4-addr,indicator' # Optional (default: ['ipv4-addr', 'indicator'])
+  #auto: true # Optional (default: false)
+  #log_level: 'error' # Optional (default: false)
 
 shodan:
   token: 'ChangeMe'
-  max_tlp: 'TLP:AMBER' # Optional (default: 'TLP:AMBER')
-  default_score: 50 # Optional (default: 50)
-  import_search_results: true # Optional (default: true)
-  create_note: true # Optional (default: true)
-  use_isp_name_for_asn: false # Optional (default: false)
+  #max_tlp: 'TLP:AMBER' # Optional (default: 'TLP:AMBER')
+  #default_score: 50 # Optional (default: 50)
+  #import_search_results: true # Optional (default: true)
+  #create_note: true # Optional (default: true)
+  #use_isp_name_for_asn: false # Optional (default: false)
