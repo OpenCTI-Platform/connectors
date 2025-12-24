@@ -35,7 +35,7 @@ class ShodanConfig(BaseConfigModel):
     """
 
     token: SecretStr = Field(
-        description="The token of the Shodan",
+        description="Shodan API Key",
     )
     max_tlp: Literal[
         "TLP:CLEAR",
