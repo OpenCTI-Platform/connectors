@@ -35,9 +35,8 @@ class UrlscanEnrichmentConfig(BaseConfigModel):
     Define parameters and/or defaults for the configuration specific to the `UrlscanEnrichmentConnector`.
     """
 
-    api_key: SecretStr | None = Field(
+    api_key: SecretStr = Field(
         description="URLScan API Key",
-        default=None,
     )
     import_screenshot: bool = Field(
         description="Allows or not the import of the screenshot of the scan submitted in URLScan to OpenCTI.",
