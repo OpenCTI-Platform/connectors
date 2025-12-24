@@ -341,7 +341,7 @@ class ShodanConnector:
                 object_refs=self.stix_entity["id"],
                 custom_properties={
                     "note_types": ["external"],
-                }
+                },
             )
             self.stix_objects.append(stix_note)
         return stix_observable
