@@ -6,7 +6,7 @@ from connectors_sdk import (
     BaseInternalEnrichmentConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, HttpUrl
+from pydantic import Field, HttpUrl, SecretStr
 
 
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
@@ -34,7 +34,7 @@ class ShadowTrackrConfig(BaseConfigModel):
         description="Base URL of the ShadowTrackr API.",
         default="https://shadowtrackr.com/api/v3",
     )
-    api_key: str = Field(description="API key for authentication.")
+    api_key: SecretStr = Field(description="API key for authentication.")
     max_tlp: Literal[
         "TLP:WHITE",
         "TLP:CLEAR",

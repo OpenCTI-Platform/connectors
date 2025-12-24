@@ -8,7 +8,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
 | OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |
-| SHADOWTRACKR_API_KEY | `string` | ✅ | string |  | API key for authentication. |
+| SHADOWTRACKR_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | API key for authentication. |
 | CONNECTOR_NAME | `string` |  | string | `"ShadowTrackr"` | The name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["IPv4-Addr", "IPv6-Addr", "Indicator"]` | The scope of the connector, e.g. 'IPv4-Addr,IPv6-Addr,Indicator'. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
