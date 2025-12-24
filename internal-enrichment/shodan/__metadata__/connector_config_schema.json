@@ -53,7 +53,7 @@
       "type": "boolean"
     },
     "SHODAN_TOKEN": {
-      "description": "The token of the Shodan",
+      "description": "Shodan API Key",
       "format": "password",
       "type": "string",
       "writeOnly": true
