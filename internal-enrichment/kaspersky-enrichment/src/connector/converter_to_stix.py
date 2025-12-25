@@ -8,6 +8,7 @@ from connectors_sdk.models import (
     Country,
     DomainName,
     File,
+    IPV4Address,
     Note,
     OrganizationAuthor,
     Reference,
@@ -81,6 +82,12 @@ class ConverterToStix:
         )
         return file
 
+    def create_ipv4(self, ip: str) -> IPV4Address:
+        """
+        Create an IPv4 object
+        """
+        return IPV4Address(value=ip, author=self.author, markings=[self.tlp_amber])
+
     def create_note(self, observable: Reference, content: str) -> Note:
         """
         Create a note associated to the file observable
@@ -127,13 +134,13 @@ class ConverterToStix:
         """
         return Sector(name=industry, author=self.author, markings=[self.tlp_clear])
 
-    def create_url(self, obs_url_score: int, url_info: dict) -> URL:
+    def create_url(self, obs_url_score: int, url_info: str) -> URL:
         """
         Create an URL object
         """
         return URL(
             score=obs_url_score,
-            value=url_info["Url"],
+            value=url_info,
             author=self.author,
             markings=[self.tlp_amber],
         )

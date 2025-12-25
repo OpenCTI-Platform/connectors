@@ -1,4 +1,6 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+
+from connector.constants import DATETIME_FORMAT
 
 
 def is_quota_exceeded(entity_info: dict) -> bool:
@@ -40,3 +42,16 @@ def string_to_datetime(value: str, format: str) -> datetime:
 def is_last_seen_equal_to_first_seen(first_seen: datetime, last_seen: datetime) -> bool:
     """Check if last_seen datetime is same as first_seen"""
     return last_seen == first_seen
+
+
+def get_first_and_last_seen_datetime(first_seen: str, last_seen: str) -> datetime:
+    """
+    Convert first and last seen string to datetime.
+    If last==first, add one minute to last seen value.
+    """
+    first_seen_datetime = string_to_datetime(first_seen, DATETIME_FORMAT)
+    last_seen_datetime = string_to_datetime(last_seen, DATETIME_FORMAT)
+    if is_last_seen_equal_to_first_seen(first_seen_datetime, last_seen_datetime):
+        last_seen_datetime = last_seen_datetime + timedelta(minutes=1)
+
+    return first_seen_datetime, last_seen_datetime

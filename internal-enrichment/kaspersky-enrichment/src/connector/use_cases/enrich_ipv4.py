@@ -1,17 +1,11 @@
-from datetime import datetime, timedelta
-
-from connector.constants import DATETIME_FORMAT
 from connector.converter_to_stix import ConverterToStix
-from connector.utils import (
-    is_last_seen_equal_to_first_seen,
-    is_quota_exceeded,
-    string_to_datetime,
-)
+from connector.use_cases.common import BaseUseCases
+from connector.utils import get_first_and_last_seen_datetime
 from kaspersky_client import KasperskyClient
-from pycti import STIX_EXT_OCTI_SCO, OpenCTIConnectorHelper, OpenCTIStix2
+from pycti import OpenCTIConnectorHelper
 
 
-class Ipv4Enricher:
+class Ipv4Enricher(BaseUseCases):
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
@@ -20,6 +14,7 @@ class Ipv4Enricher:
         zone_octi_score_mapping: dict,
         converter_to_stix: ConverterToStix,
     ):
+        BaseUseCases.__init__(self, helper, converter_to_stix)
         self.helper = helper
         self.client = client
         self.sections = sections
@@ -43,24 +38,10 @@ class Ipv4Enricher:
         entity_data = self.client.get_ipv4_info(obs_ipv4, self.sections)
 
         # Check Quota
-        if is_quota_exceeded(entity_data["LicenseInfo"]):
-            self.helper.connector_logger.warning(
-                "[CONNECTOR] The daily quota has been exceeded",
-                {
-                    "day_requests": entity_data["LicenseInfo"]["DayRequests"],
-                    "day_quota": entity_data["LicenseInfo"]["DayQuota"],
-                },
-            )
+        self.check_quota(entity_data["LicenseInfo"])
 
-        # Prepare author object
-        author = self.converter_to_stix.create_author()
-        octi_objects.append(author.to_stix2_object())
-
-        # Prepare TLPMarkings
-        tlp_clear = self.converter_to_stix.create_tlp_marking("clear")
-        octi_objects.append(tlp_clear.to_stix2_object())
-        tlp_amber = self.converter_to_stix.create_tlp_marking("amber")
-        octi_objects.append(tlp_amber.to_stix2_object())
+        # Create and add author, TLP clear and TLP amber to octi_objects
+        octi_objects += self.generate_author_and_tlp_markings()
 
         # Manage IpGeneralInfo data
 
@@ -68,17 +49,11 @@ class Ipv4Enricher:
             "[CONNECTOR] Process enrichment from IpGeneralInfo data..."
         )
 
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from IpGeneralInfo data..."
-        )
-        entity_general_info = entity_data["IpGeneralInfo"]
-
         # Score
         if entity_data.get("Zone"):
-            score = self.zone_octi_score_mapping[entity_data["Zone"].lower()]
-            observable = OpenCTIStix2.put_attribute_in_extension(
-                observable, STIX_EXT_OCTI_SCO, "score", score
-            )
+            observable = self.update_observable_score(entity_data["Zone"], observable)
+
+        entity_general_info = entity_data["IpGeneralInfo"]
 
         # Labels
         if entity_general_info.get("Categories"):
@@ -109,10 +84,6 @@ class Ipv4Enricher:
             "[CONNECTOR] Process enrichment from FilesDownloadedFromIp data..."
         )
 
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from FilesDownloadedFromIp data..."
-        )
-
         if entity_data.get("FilesDownloadedFromIp"):
             for file in entity_data["FilesDownloadedFromIp"]:
                 obs_file = self.converter_to_stix.create_file(
@@ -123,7 +94,7 @@ class Ipv4Enricher:
                 if obs_file:
                     octi_objects.append(obs_file.to_stix2_object())
                     file_first_seen_datetime, file_last_seen_datetime = (
-                        self.get_first_and_last_seen_datetime(
+                        get_first_and_last_seen_datetime(
                             file["FirstSeen"], file["LastSeen"]
                         )
                     )
@@ -145,16 +116,16 @@ class Ipv4Enricher:
         if entity_data.get("HostedUrls"):
             for url_entity in entity_data["HostedUrls"]:
                 obs_url = self.converter_to_stix.create_url(
-                    url_info=url_entity,
                     obs_url_score=self.zone_octi_score_mapping[
                         url_entity["Zone"].lower()
                     ],
+                    url_info=url_entity["Url"],
                 )
 
                 if obs_url:
                     octi_objects.append(obs_url.to_stix2_object())
                     url_first_seen_datetime, url_last_seen_datetime = (
-                        self.get_first_and_last_seen_datetime(
+                        get_first_and_last_seen_datetime(
                             url_entity["FirstSeen"], url_entity["LastSeen"]
                         )
                     )
@@ -205,7 +176,7 @@ class Ipv4Enricher:
                 if obs_domain:
                     octi_objects.append(obs_domain.to_stix2_object())
                     domain_first_seen_datetime, domain_last_seen_datetime = (
-                        self.get_first_and_last_seen_datetime(
+                        get_first_and_last_seen_datetime(
                             resolution["FirstSeen"], resolution["LastSeen"]
                         )
                     )
@@ -238,17 +209,3 @@ class Ipv4Enricher:
                     octi_objects.append(industry_relation.to_stix2_object())
 
         return octi_objects
-
-    def get_first_and_last_seen_datetime(
-        self, first_seen: str, last_seen: str
-    ) -> datetime:
-        """
-        Convert first and last seen string to datetime.
-        If last==first, add one minute to last seen value.
-        """
-        first_seen_datetime = string_to_datetime(first_seen, DATETIME_FORMAT)
-        last_seen_datetime = string_to_datetime(last_seen, DATETIME_FORMAT)
-        if is_last_seen_equal_to_first_seen(first_seen_datetime, last_seen_datetime):
-            last_seen_datetime = last_seen_datetime + timedelta(minutes=1)
-
-        return first_seen_datetime, last_seen_datetime
