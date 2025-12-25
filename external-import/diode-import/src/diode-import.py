@@ -44,6 +44,13 @@ class DiodeImport:
             True,
             7,
         )
+        self.delete_after_import = get_config_variable(
+            "DIODE_IMPORT_DELETE_AFTER_IMPORT",
+            ["diode_import", "delete_after_import"],
+            config,
+            False,
+            True,
+        )
         self.connectors_cache = {}
         self.helper = OpenCTIConnectorHelper(config)
 
@@ -53,15 +60,15 @@ class DiodeImport:
         path = os.path.join(self.get_from_directory_path, "*.json")
         # Prints all types of txt files present in a Path
         file_paths = glob.glob(path, recursive=True)
-        file_paths.sort(key=os.path.getctime)
+        file_paths.sort(key=os.path.getmtime)  # Use mtime consistently
         for file_path in file_paths:
             # Fetch file content
             file = open(file_path, mode="r")
             file_content = file.read()
             file.close()
-            ti_m = os.path.getctime(file_path)
-            # Check current state to prevent duplication
-            if current_state and current_state.get("last_run", 0) >= ti_m:
+            ti_m = os.path.getmtime(file_path)  # Use mtime consistently
+            # Check current state to prevent duplication (use > not >= to handle same-timestamp files)
+            if current_state and current_state.get("last_run", 0) > ti_m:
                 continue
             # region Parse and handle
             json_content = json.loads(file_content)
@@ -113,12 +120,22 @@ class DiodeImport:
                 work_id=work_id,
             )
             self.helper.api.work.to_processed(work_id, "Connector successfully run")
-            self.helper.set_state({"last_run": ti_m})
+            # Use current time for state to avoid issues with files having older timestamps
+            self.helper.set_state({"last_run": time.time()})
+            # Delete file immediately after successful processing to prevent re-ingestion
+            if self.delete_after_import:
+                os.remove(file_path)
+                self.helper.connector_logger.info(
+                    f"Successfully processed and deleted file: {file_path}"
+                )
             # endregion
-        # Remove files
+        # Remove expired files (retention-based cleanup for files not deleted above)
         if self.get_from_directory_retention > 0:  # If 0, disable the auto remove
             current_time = time.time()
             for delete_file in file_paths:
+                # Skip files already deleted by delete_after_import
+                if not os.path.exists(delete_file):
+                    continue
                 file_time = os.stat(delete_file).st_mtime
                 is_expired_file = (
                     file_time < current_time - 86400 * self.get_from_directory_retention
