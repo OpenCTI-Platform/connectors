@@ -6,16 +6,17 @@ connector:
   id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
   name: 'S3 Bucket'
+  log_level: 'error'
 
 s3:
   region: 'us-east-1'
-  # endpoint_url: ''  # Optional, for S3-compatible services
-  access_key_id: ''
-  secret_access_key: ''
-  bucket_name: ''
+  endpoint_url: '' # Optional, for S3-compatible services
+  access_key_id: 'ChangeMe'
+  secret_access_key: 'ChangeMe'
+  bucket_name: 'ChangeMe'
   bucket_prefixes: 'ACI_TI,ACI_Vuln'
-  # author: ''  # Optional, organization name for created_by_ref
-  # marking: 'TLP:GREEN'  # Optional, default marking
-  interval: 30  # Polling interval in seconds
-  attach_original_file: false  # Attach original JSON to vulnerabilities
-  delete_after_import: true  # Delete files from S3 after processing (set to false for debugging)
+  author: '' # Optional, organization name for created_by_ref
+  marking: 'TLP:GREEN' # Optional, default marking
+  interval: 30 # Polling interval in seconds
+  attach_original_file: false # Attach original JSON to vulnerabilities
+  delete_after_import: true # Delete files from S3 after processing
