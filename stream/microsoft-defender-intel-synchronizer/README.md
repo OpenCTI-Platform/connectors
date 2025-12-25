@@ -8,13 +8,23 @@ If you don't know how to get the `tenant_id`, `client_id`, and `client_secret` i
 help !
 ![Sentinel_variables](doc/sentinel_info_variables.png)
 
-It's also important to define the necessary permissions in Sentinel for the connector to work.
+It's also important to define the necessary permissions in Microsoft Entra ID (formerly Azure AD) for the connector to work.
 
-In the Entra portal, you need to set :
-Home > Application Registration > OpenCTI (your name) > API Permissions
-and prioritize the "Ti.ReadWrite.All" permissions.
-![Sentinel_permission](doc/permission_mandatory.png)
-You will then be able to view the data (indicators) in :
+In the Entra portal, set:
+
+Home > Application registrations > OpenCTI (your app name) > API permissions
+
+The connector requires the following application permissions for Microsoft Defender XDR / Microsoft 365 Defender APIs:
+
+| Permission                 | Purpose                                                                                                         |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `Ti.ReadWrite.All`         | Create, update, and delete indicators.                                                                          |
+| `Indicators.ReadWrite.All` | (Equivalent to above; exact name depends on portal version.)                                                    |
+| `Score.Read.All`           | Required for RBAC-scoped synchronization — used to list device groups via `/api/exposureScore/ByMachineGroups`. |
+
+After adding these permissions, click Grant admin consent.
+
+You will then be able to view the data (indicators) in:
 Home > Microsoft Defender > Settings > Endpoints > Indicators
 
 For more information, visit:
@@ -60,12 +70,28 @@ Below are the parameters you'll need to set for Sentinel Connector:
 | Resource Url Path                                 | `resource_path`     | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_RESOURCE_PATH`           | /        | No        | `/api/indicators`                          | The request URL that will be used which is `/api/indicators`                                                                                                                                                                                                                                                                                                      |
 | Expire Time                                       | `expire_time`       | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_EXPIRE_TIME`             | /        | Yes       | `30`                                       | Number of days for your indicator to expire in Sentinel. Suggestion of `30` as a default                                                                                                                                                                                                                                                                          |
 | Action                                            | `action`            | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_ACTION`                  | /        | No        | `Audit`                                    | The action to apply if the indicator is matched from within the targetProduct security tool. Possible values are: `Allowed`, `Audit`, `Block`, `BlockAndRemediate`, `Warn`.                                                                                                                                                                                                              |
-| Passive Only                                      | `passive_only`      | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_PASSIVE_ONLY`            | /        | No        | `true`                                     | Determines if the indicator should trigger an event that is visible to an end-user. When set to `True` security tools will not notify the end user that a ‘hit’ has occurred. This is most often treated as audit or silent mode by security products where they will simply log that a match occurred but will not perform the action. Default value is `False`. |
-| TAXII Collections                                 | `taxii_collections` | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_TAXII_COLLECTIONS`       | /        | Yes       | `ID1,ID2`                                  | List of TAXII collections, separated by commas.                                                                                                                                                                                                                                                                                                                   |
+| Passive Only                                      | `passive_only`      | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_PASSIVE_ONLY`            | /        | No        | `true`                                     | Run without modifying Defender. When true the connector performs full planning and logging but skips POST/PUT/PATCH/DELETE calls. |
+| TAXII Collections | `taxii_collections` | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_TAXII_COLLECTIONS` | / | Yes | `ID1,ID2` or `{"COLL1":{"action":"Block","expire_time":30,"rbac_group_names":["Linux"]},"COLL2":{}}` | Comma-separated list of TAXII collection IDs or a JSON object map for per-collection overrides. |
 | Interval                                          | `interval`          | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_INTERVAL`                | /        | No        | `300`                                      | Interval for pulling TAXII collections and sync to Defender.                                                                                                                                                                                                                                                                                                      |
 | Recommended Actions                                 | `recommended_actions` | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_RECOMMENDED_ACTIONS` | /        | No        | `Block immediately`                           | Recommended actions for the TI indicator alert. |
 | RBAC Group Names                                   | `rbac_group_names`    | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_RBAC_GROUP_NAMES`    | `[]`     | No        | `["group1", "group2"]`                        | JSON array of RBAC group names. Example: `["My Team", "The Other Team - Linux Servers"]`. |
 | Educate URL                                        | `educate_url`         | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_EDUCATE_URL`         | /        | No        | `https://support.example.com`                  | Custom notification/support URL for Block/Warn actions. |
+| Update Only Owned Indicators                        | `update_only_owned`  | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_UPDATE_ONLY_OWNED`   | 'true'   | No        | `true`                  | Controls whether the connector will manage only owned indicators. |
+
+`taxii_collections` supports:
+
+- **Simple list:** `COLL1,COLL2` (or `["COLL1","COLL2"]`) to use global defaults.
+- **Advanced map:** JSON (or YAML) object where each key is a collection ID and the value is a policy override, e.g.:
+
+```json
+  {
+    "COLL1": { "action": "Block", "expire_time": 30, "recommended_actions": "Block immediately", "educate_url": "https://support.example.com", "rbac_group_names": ["Linux","Servers"] },
+    "COLL2": {}
+  }
+```
+
+Supported keys: `action`, `expire_time`, `recommended_actions`, `educate_url`, and `rbac_group_names`.
+Per-collection overrides always take precedence over global settings.
 
 ### Important Note on Permissions
 
@@ -76,6 +102,14 @@ ValueError: {'name': 'FORBIDDEN_ACCESS', 'error_message': 'You are not allowed t
 ```
 
 Please ensure the connector's user has this permission assigned, in addition to the usual required permissions.
+
+### Common issues
+
+**401 Unauthorized during RBAC group lookup**
+
+Ensure the application has the `Score.Read.All` permission and admin consent has been granted.
+Without this permission, the `/api/exposureScore/ByMachineGroups` endpoint cannot be accessed,
+and RBAC-scoped indicator synchronization will fail.
 
 ### Known Behavior
 
