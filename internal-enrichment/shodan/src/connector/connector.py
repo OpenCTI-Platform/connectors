@@ -83,7 +83,7 @@ class ShodanConnector:
         for service in data["data"]:
             service_data = service["data"].strip()
             services_desc = (
-                f"{services_desc}\n**{service['port']}**:```\n{service_data}\n```"
+                f"{services_desc}\n**{service['port']}**:\n```\n{service_data}\n```"
             )
             if "opts" in service:
                 if "heartbleed" in service["opts"]:
@@ -335,10 +335,13 @@ class ShodanConnector:
             stix_note = stix2.Note(
                 type="note",
                 id=Note.generate_id(now, description),
-                abstract="Shodan Results",
+                abstract=f"Shodan Results for {self.stix_entity['value']}",
                 content=description,
                 created_by_ref=self.shodan_identity.id,
                 object_refs=self.stix_entity["id"],
+                custom_properties={
+                    "note_types": ["external"],
+                },
             )
             self.stix_objects.append(stix_note)
         return stix_observable
