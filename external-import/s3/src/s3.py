@@ -12,6 +12,7 @@ from pycti import (
     CourseOfAction,
     Identity,
     Infrastructure,
+    Malware,
     Note,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
@@ -167,6 +168,11 @@ class S3Connector:
                 new_id = CourseOfAction.generate_id(obj["name"], obj.get("x_mitre_id"))
                 id_mapping[old_id] = new_id
 
+            if obj_type == "malware":
+                old_id = obj["id"]
+                new_id = Malware.generate_id(obj["name"])
+                id_mapping[old_id] = new_id
+
         # Second pass: Update all objects with new IDs and references
         for obj in objects:
             obj_type = obj.get("type")
@@ -201,6 +207,7 @@ class S3Connector:
                 "identity",
                 "course-of-action",
                 "vulnerability",
+                "malware",
             ):
                 # Update the object's ID from the mapping
                 old_id = obj["id"]

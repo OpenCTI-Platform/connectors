@@ -11,5 +11,6 @@ connector:
 
 diode_import:
   get_from_directory_path: '/path'
-  get_from_directory_retention: 7
+  get_from_directory_retention: 7 # Days to keep files before cleanup (0 = disable)
+  delete_after_import: true # Delete files immediately after successful processing
   applicant_mappings: "source_user_id1:target_user_id1,source_user_id2:target_user_id2"
