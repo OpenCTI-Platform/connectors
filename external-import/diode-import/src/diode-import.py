@@ -71,7 +71,14 @@ class DiodeImport:
             if current_state and current_state.get("last_run", 0) > ti_m:
                 continue
             # region Parse and handle
-            json_content = json.loads(file_content)
+            try:
+                json_content = json.loads(file_content)
+            except json.JSONDecodeError as e:
+                self.helper.connector_logger.warning(
+                    f"Invalid JSON in file '{file_path}', deleting: {e}"
+                )
+                os.remove(file_path)
+                continue
 
             connector = json_content.get("connector")
             applicant_id = json_content.get("applicant_id")
