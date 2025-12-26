@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Pattern
 
 from pycti import OpenCTIConnectorHelper
 from pydantic.v1 import BaseModel, validator
+
 from reportimporter.constants import (
     COMMENT_INDICATOR,
     CONFIG_PATH,
