@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-crowdsec-import:
-    image: opencti/connector-crowdsec-import:6.7.4
+    image: opencti/connector-crowdsec-import:6.9.4
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://opencti:8080 # OpenCTI API URL
