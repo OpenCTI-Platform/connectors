@@ -3,34 +3,33 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
-  name: 'AlienVault'
-  scope: 'alienvault'
-  log_level: 'info'
-  duration_period: 'PT30M' # ISO8601 Format starting with "P" for Period ex: "PT30M" // Period time of 30 minutes
+  id: '8bbae241-6289-4faf-b7d6-7503bed50bbc'  # Optional (default: 8bbae241-6289-4faf-b7d6-7503bed50bbc)
+  name: 'AlienVault'  # Optional (default: AlienVault)
+  scope: 'alienvault'  # Optional (default: alienvault)
+  log_level: 'error' #Optional (default: error)
+  duration_period: 'PT30M'  # Optional (default: PT30M) - ISO8601 Format starting with "P" for Period ex: "PT30M" // Period time of 30 minutes
 
 alienvault:
-  base_url: 'https://otx.alienvault.com'
+  base_url: 'https://otx.alienvault.com'  # Optional (default: https://otx.alienvault.com)
   api_key: 'ChangeMe'
-  tlp: 'White'
-  create_observables: true
-  create_indicators: true
-  pulse_start_timestamp: '2020-05-01T00:00:00'  # ISO 8601
-  report_type: 'threat-report'
-  report_status: 'New'                                          # New, In progress, Analyzed and Closed
-  guess_malware: false                                          # Use tags to guess malware
-  guess_cve: false                                              # Use tags to guess CVE
-  excluded_pulse_indicator_types: 'FileHash-MD5,FileHash-SHA1'  # Excluded Pulse indicator types
-  enable_relationships: true                                    # Enable/Disable relationship creation between SDOs
-  enable_attack_patterns_indicates: false                       # Enable/Disable "indicates" relationships between indicators and attack patterns
-  filter_indicators: false                                      # Filter indicators by their created datetime
-  default_x_opencti_score: 50                                   # The default x_opencti_score to use for indicators. If a per indicator type score is not set, this is used.
-  x_opencti_score_ip: 60                                        # (Optional): The x_opencti_score to use for IP indicators. 
-  x_opencti_score_domain: 70                                    # (Optional): The x_opencti_score to use for Domain indicators
-  x_opencti_score_hostname: 75                                  # (Optional): The x_opencti_score to use for Hostname indicators.
-  x_opencti_score_email: 70                                     # (Optional): The x_opencti_score to use for Email indicators. 
-  x_opencti_score_file: 80                                      # (Optional): The x_opencti_score to use for StixFile indicators
-  x_opencti_score_url: 80                                       # (Optional): The x_opencti_score to use for URL indicators.
-  x_opencti_score_mutex: 60                                     # (Optional): The x_opencti_score to use for Mutex indicators. 
-  x_opencti_score_cryptocurrency_wallet: 80                     # (Optional): The x_opencti_score to use for Cryptocurrency Wallet indicators
+  tlp: 'White'  # Optional (default: White)
+  create_observables: true  # Optional (default: true)
+  create_indicators: true  # Optional (default: true)
+  pulse_start_timestamp: '2020-05-01T00:00:00'  # Optional (default: 2020-05-01T00:00:00) - ISO 8601 format, UTC
+  report_type: 'threat-report'  # Optional (default: threat-report)
+  report_status: 'New'  # Optional (default: New) - New, In progress, Analyzed and Closed
+  guess_malware: false  # Optional (default: false) - Use tags to guess malware
+  guess_cve: false  # Optional (default: false) - Use tags to guess CVE
+  excluded_pulse_indicator_types: 'FileHash-MD5,FileHash-SHA1'  # Optional (default: "") - Comma-separated list of Pulse indicator types to exclude
+  enable_relationships: true  # Optional (default: true) - Enable/Disable relationship creation between SDOs
+  enable_attack_patterns_indicates: true  # Optional (default: true) - Enable/Disable "indicates" relationships between indicators and attack patterns
+  filter_indicators: false  # Optional (default: false) - Filter indicators by their created datetime
+  default_x_opencti_score: 50  # Optional (default: 50) - The default x_opencti_score to use for indicators. If a per indicator type score is not set, this is used.
+  x_opencti_score_ip: 60  # Optional (default: uses default_x_opencti_score) - The x_opencti_score to use for IP indicators
+  x_opencti_score_domain: 70  # Optional (default: uses default_x_opencti_score) - The x_opencti_score to use for Domain indicators
+  x_opencti_score_hostname: 75  # Optional (default: uses default_x_opencti_score) - The x_opencti_score to use for Hostname indicators
+  x_opencti_score_email: 70  # Optional (default: uses default_x_opencti_score) - The x_opencti_score to use for Email indicators
+  x_opencti_score_file: 80  # Optional (default: uses default_x_opencti_score) - The x_opencti_score to use for StixFile indicators
+  x_opencti_score_url: 80  # Optional (default: uses default_x_opencti_score) - The x_opencti_score to use for URL indicators
+  x_opencti_score_mutex: 60  # Optional (default: uses default_x_opencti_score) - The x_opencti_score to use for Mutex indicators
+  x_opencti_score_cryptocurrency_wallet: 80  # Optional (default: uses default_x_opencti_score) - The x_opencti_score to use for Cryptocurrency Wallet indicators
