@@ -29,7 +29,6 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
     )
     live_stream_id: str = Field(
         description="The ID of the live stream to connect to.",
-        default="live",  # listen the global stream (not filtered)
     )
 
 
@@ -56,8 +55,8 @@ class MicrosoftDefenderIntelConfig(BaseConfigModel):
         default=HttpUrl("https://api.securitycenter.microsoft.com"),
     )
     resource_path: str = Field(
-        description="The request URL that will be used which is `/api/indicators`",
-        default="/api/indicators",
+        description="The request URL that will be used which is `api/indicators`",
+        default="api/indicators",
     )
     expire_time: int = Field(
         description="Number of days for your indicator to expire in Sentinel.",
