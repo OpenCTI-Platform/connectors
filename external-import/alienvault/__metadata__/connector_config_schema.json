@@ -15,12 +15,15 @@
       "type": "string"
     },
     "CONNECTOR_NAME": {
-      "default": "Alienvault",
+      "default": "AlienVault",
       "description": "The name of the connector.",
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "default": [
+        "alienvault"
+      ],
+      "description": "The scope of the connector.",
       "items": {
         "type": "string"
       },
@@ -44,7 +47,7 @@
       "type": "string"
     },
     "CONNECTOR_DURATION_PERIOD": {
-      "default": "PT1H",
+      "default": "PT30M",
       "description": "The period of time to await between two runs of the connector.",
       "format": "duration",
       "type": "string"
@@ -52,10 +55,12 @@
     "ALIENVAULT_BASE_URL": {
       "default": "https://otx.alienvault.com",
       "description": "The base URL for the OTX DirectConnect API.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     },
     "ALIENVAULT_API_KEY": {
-      "default": "**********",
       "description": "The OTX Key.",
       "format": "password",
       "type": "string",
@@ -102,9 +107,12 @@
       "type": "boolean"
     },
     "ALIENVAULT_EXCLUDED_PULSE_INDICATOR_TYPES": {
-      "default": "FileHash-MD5,FileHash-SHA1",
+      "default": [],
       "description": "The Pulse indicator types that will be excluded from the import.",
-      "type": "string"
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "ALIENVAULT_ENABLE_RELATIONSHIPS": {
       "default": true,
@@ -112,7 +120,7 @@
       "type": "boolean"
     },
     "ALIENVAULT_ENABLE_ATTACK_PATTERNS_INDICATES": {
-      "default": false,
+      "default": true,
       "description": "If true then the relationships `indicates` will be created between indicators and attack patterns.",
       "type": "boolean"
     },
@@ -127,55 +135,56 @@
       "type": "integer"
     },
     "ALIENVAULT_X_OPENCTI_SCORE_IP": {
-      "default": 60,
+      "default": null,
       "description": "(Optional): The x_opencti_score to use for IP indicators.",
       "type": "integer"
     },
     "ALIENVAULT_X_OPENCTI_SCORE_DOMAIN": {
-      "default": 70,
+      "default": null,
       "description": "(Optional): The x_opencti_score to use for Domain indicators.",
       "type": "integer"
     },
     "ALIENVAULT_X_OPENCTI_SCORE_HOSTNAME": {
-      "default": 75,
+      "default": null,
       "description": "(Optional): The x_opencti_score to use for Hostname indicators.",
       "type": "integer"
     },
     "ALIENVAULT_X_OPENCTI_SCORE_EMAIL": {
-      "default": 70,
+      "default": null,
       "description": "(Optional): The x_opencti_score to use for Email indicators.",
       "type": "integer"
     },
     "ALIENVAULT_X_OPENCTI_SCORE_FILE": {
-      "default": 80,
+      "default": null,
       "description": "(Optional): The x_opencti_score to use for StixFile indicators.",
       "type": "integer"
     },
     "ALIENVAULT_X_OPENCTI_SCORE_URL": {
-      "default": 80,
+      "default": null,
       "description": "(Optional): The x_opencti_score to use for URL indicators.",
       "type": "integer"
     },
     "ALIENVAULT_X_OPENCTI_SCORE_MUTEX": {
-      "default": 60,
+      "default": null,
       "description": "(Optional): The x_opencti_score to use for Mutex indicators.",
       "type": "integer"
     },
     "ALIENVAULT_X_OPENCTI_SCORE_CRYPTOCURRENCY_WALLET": {
-      "default": 80,
+      "default": null,
       "description": "(Optional): The x_opencti_score to use for Cryptocurrency Wallet indicators.",
       "type": "integer"
     },
     "ALIENVAULT_INTERVAL_SEC": {
-      "default": "1800",
+      "default": 1800,
+      "deprecated": true,
       "description": "The interval in seconds between each run of the connector.",
-      "type": "string"
+      "type": "integer"
     }
   },
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "CONNECTOR_SCOPE"
+    "ALIENVAULT_API_KEY"
   ],
   "additionalProperties": true
 }
