@@ -14,7 +14,7 @@ microsoft_defender_intel:
   client_id: 'ChangeMe'
   client_secret: 'ChangeMe'
   #base_url: 'https://api.securitycenter.microsoft.com' # Optional (default: 'https://api.securitycenter.microsoft.com')
-  #resource_path: '/api/indicators' # Optional (default: '/api/indicators')
+  #resource_path: 'api/indicators' # Optional (default: '/api/indicators')
   #action: 'Alert' # Optional (default: 'Alert')
   #expire_time: 30 # Optional (default: 30)
   #passive_only: false # Optional (default: false)

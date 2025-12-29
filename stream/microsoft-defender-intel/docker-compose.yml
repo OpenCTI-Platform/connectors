@@ -6,13 +6,13 @@ services:
       - OPENCTI_TOKEN=ChangeMe
       #- CONNECTOR_ID=4aa40d9f-bee0-466e-a72e-6878c13bde08 # Optional (default: '4aa40d9f-bee0-466e-a72e-6878c13bde08')
       #- CONNECTOR_NAME=Microsoft Defender Intel # Optional (default: 'Microsoft Defender Intel')
-      #- CONNECTOR_LIVE_STREAM_ID=live # Optional (default: 'live')
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe
       #- CONNECTOR_LOG_LEVEL=info # Optional (default: 'error')
       - MICROSOFT_DEFENDER_INTEL_TENANT_ID=ChangeMe
       - MICROSOFT_DEFENDER_INTEL_CLIENT_ID=ChangeMe
       - MICROSOFT_DEFENDER_INTEL_CLIENT_SECRET=ChangeMe
       #- MICROSOFT_DEFENDER_INTEL_BASE_URL=https://api.securitycenter.microsoft.com # Optional (default: 'https://api.securitycenter.microsoft.com')
-      #- MICROSOFT_DEFENDER_INTEL_RESOURCE_PATH=/api/indicators # Optional (default: '/api/indicators')
+      #- MICROSOFT_DEFENDER_INTEL_RESOURCE_PATH=api/indicators # Optional (default: 'api/indicators')
       #- MICROSOFT_DEFENDER_INTEL_ACTION=Alert # Optional (default: 'Alert')
       #- MICROSOFT_DEFENDER_INTEL_EXPIRE_TIME=30 # Optional (default: 30)
       #- MICROSOFT_DEFENDER_INTEL_PASSIVE_ONLY=false # Optional (default: false)
