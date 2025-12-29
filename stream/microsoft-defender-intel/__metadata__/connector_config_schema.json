@@ -47,7 +47,6 @@
       "type": "string"
     },
     "CONNECTOR_LIVE_STREAM_ID": {
-      "default": "live",
       "description": "The ID of the live stream to connect to.",
       "type": "string"
     },
@@ -92,8 +91,8 @@
       "type": "string"
     },
     "MICROSOFT_DEFENDER_INTEL_RESOURCE_PATH": {
-      "default": "/api/indicators",
-      "description": "The request URL that will be used which is `/api/indicators`",
+      "default": "api/indicators",
+      "description": "The request URL that will be used which is `api/indicators`",
       "type": "string"
     },
     "MICROSOFT_DEFENDER_INTEL_EXPIRE_TIME": {
@@ -124,6 +123,7 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
+    "CONNECTOR_LIVE_STREAM_ID",
     "MICROSOFT_DEFENDER_INTEL_TENANT_ID",
     "MICROSOFT_DEFENDER_INTEL_CLIENT_ID",
     "MICROSOFT_DEFENDER_INTEL_CLIENT_SECRET"
