@@ -20,7 +20,10 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "default": [
+        "crowdstrike-endpoint-security"
+      ],
+      "description": "The scope of the connector",
       "items": {
         "type": "string"
       },
@@ -58,53 +61,56 @@
       "description": "Whether to ignore dependencies when processing events from the live stream.",
       "type": "boolean"
     },
-    "CROWDSTRIKE_ENDPOINT_SECURITY_API_BASE_URL": {
+    "CROWDSTRIKE_API_BASE_URL": {
       "default": "https://api.crowdstrike.com",
       "description": "Crowdstrike base url.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     },
-    "CROWDSTRIKE_ENDPOINT_SECURITY_CLIENT_ID": {
+    "CROWDSTRIKE_CLIENT_ID": {
       "description": "Crowdstrike client ID used to connect to the API.",
       "type": "string"
     },
-    "CROWDSTRIKE_ENDPOINT_SECURITY_CLIENT_SECRET": {
+    "CROWDSTRIKE_CLIENT_SECRET": {
       "description": "Crowdstrike client secret used to connect to the API.",
       "format": "password",
       "type": "string",
       "writeOnly": true
     },
-    "CROWDSTRIKE_ENDPOINT_SECURITY_PERMANENT_DELETE": {
+    "CROWDSTRIKE_PERMANENT_DELETE": {
       "default": false,
       "description": "Select whether or not to permanently delete data in Crowdstrike when data is deleted in OpenCTI. If set to `True`, `CONNECTOR_LIVE_STREAM_LISTEN_DELETE` must be set to `True`.",
       "type": "boolean"
     },
-    "CROWDSTRIKE_ENDPOINT_SECURITY_FALCON_FOR_MOBILE_ACTIVE": {
+    "CROWDSTRIKE_FALCON_FOR_MOBILE_ACTIVE": {
       "default": false,
       "description": "Crowdstrike client secret used to connect to the API.",
       "type": "boolean"
     },
-    "CROWDSTRIKE_ENDPOINT_SECURITY_ENABLE": {
+    "METRICS_ENABLE": {
       "default": false,
       "description": "Whether or not Prometheus metrics should be enabled.",
       "type": "boolean"
     },
-    "CROWDSTRIKE_ENDPOINT_SECURITY_PORT": {
+    "METRICS_PORT": {
+      "default": 9113,
       "description": "Port to use for metrics endpoint.",
       "type": "integer"
     },
-    "CROWDSTRIKE_ENDPOINT_SECURITY_ADDR": {
+    "METRICS_ADDR": {
+      "default": "0.0.0.0",
       "description": "Bind IP address to use for metrics endpoint.",
+      "format": "ipv4",
       "type": "string"
     }
   },
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "CONNECTOR_SCOPE",
-    "CROWDSTRIKE_ENDPOINT_SECURITY_CLIENT_ID",
-    "CROWDSTRIKE_ENDPOINT_SECURITY_CLIENT_SECRET",
-    "CROWDSTRIKE_ENDPOINT_SECURITY_PORT",
-    "CROWDSTRIKE_ENDPOINT_SECURITY_ADDR"
+    "CROWDSTRIKE_CLIENT_ID",
+    "CROWDSTRIKE_CLIENT_SECRET"
   ],
   "additionalProperties": true
 }

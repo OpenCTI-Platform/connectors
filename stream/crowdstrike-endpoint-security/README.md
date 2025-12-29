@@ -54,51 +54,10 @@ To use the connector, you need to have a Crowdstrike account.
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-Below are the parameters you'll need to set for OpenCTI:
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-| ------------- | ---------- | --------------------------- | --------- | ---------------------------------------------------- |
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-
-### Base connector environment variables
-
-Below are the parameters you'll need to set for running the connector properly:
-
-| Parameter                             | config.yml                  | Docker environment variable             | Default                           | Mandatory | Description                                                                                                                                            |
-| ------------------------------------- | --------------------------- | --------------------------------------- | --------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Connector ID                          | id                          | `CONNECTOR_ID`                          | /                                 | Yes       | A unique `UUIDv4` identifier for this connector instance.                                                                                              |
-| Connector Type                        | type                        | `CONNECTOR_TYPE`                        | EXTERNAL_IMPORT                   | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                                                                                          |
-| Connector Name                        | name                        | `CONNECTOR_NAME`                        | CrowdStrike Endpoint Security     | Yes       | Name of the connector.                                                                                                                                 |
-| Connector Scope                       | scope                       | `CONNECTOR_SCOPE`                       | crowdstrike                       | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. Here it is a reserved scope for stream.                       |
-| Log Level                             | log_level                   | `CONNECTOR_LOG_LEVEL`                   | info                              | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.                                                                 |
-| Connector Live Stream ID              | live_stream_id              | `CONNECTOR_LIVE_STREAM_ID`              | /                                 | Yes       | ID of the live stream created in the OpenCTI UI                                                                                                        |
-| Connector Live Stream Listen Delete   | live_stream_listen_delete   | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | true                              | Yes       | Listen to all delete events concerning the entity, depending on the filter set for the OpenCTI stream.                                                 |
-| Connector Live Stream No dependencies | live_stream_no_dependencies | `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES` | true                              | Yes       | Always set to `True` unless you are synchronizing 2 OpenCTI platforms and you want to get an entity and all context (relationships and related entity) |
-| Consumer Count                        | consumer_count              | `CONNECTOR_CONSUMER_COUNT`              | 10                                | No        | Number of consumers/workers used to push data                                                                                                          |
-| Ignore Types                          | ignore_types                | `CONNECTOR_IGNORE_TYPES`                | label,marking-definition,identity | No        | Ignoring types from OpenCTI                                                                                                                            |
-
-### Crowdstrike Endpoint Security connector environment variables
-
-Below are the parameters you'll need to set for Crowdstrike Endpoint Security connector:
-
-
-| Parameter | config.yml                 | Docker environment variable            | Default | Mandatory | Description                                                                                                                                                                     |
-| --------- | -------------------------- | -------------------------------------- | ------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|           | `api_base_url`             | `CROWDSTRIKE_API_BASE_URL`             | /       | Yes       | Crowdstrike base url.                                                                                                                                                           |
-|           | `client_id`                | `CROWDSTRIKE_CLIENT_ID`                | /       | Yes       | Crowdstrike client ID used to connect to the API.                                                                                                                               |
-|           | `client_secret`            | `CROWDSTRIKE_CLIENT_SECRET`            | /       | Yes       | Crowdstrike client secret used to connect to the API.                                                                                                                           |
-|           | `permanent_delete`         | `CROWDSTRIKE_PERMANENT_DELETE`         | False   | Yes       | Select whether or not to permanently delete data in Crowdstrike when data is deleted in OpenCTI. If set to `True`, `CONNECTOR_LIVE_STREAM_LISTEN_DELETE` must be set to `True`⚠️ |
-|           | `falcon_for_mobile_active` | `CROWDSTRIKE_FALCON_FOR_MOBILE_ACTIVE` | False   | Yes       | Crowdstrike client secret used to connect to the API.                                                                                                                           |
-|           | `enable`                   | `METRICS_ENABLE`                       | False   | No        | Whether or not Prometheus metrics should be enabled.                                                                                                                            |
-|           | `addr`                     | `METRICS_ADDR`                         | /       | No        | Bind IP address to use for metrics endpoint.                                                                                                                                    |
-|           | `port`                     | `METRICS_PORT`                         | /       | No        | Port to use for metrics endpoint.                                                                                                                                               |
-
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding these variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 
