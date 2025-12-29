@@ -42,7 +42,7 @@ class StubConnectorSettings(ConnectorSettings):
                     "name": "Test Connector",
                     "scope": "test, connector",
                     "log_level": "error",
-                    "live_stream_id": "live",
+                    "live_stream_id": "fake_id--66bd9a11-02e1-47c1-995a-f152caa5866",
                     "live_stream_listen_delete": True,
                     "live_stream_no_dependencies": True,
                 },
@@ -52,7 +52,7 @@ class StubConnectorSettings(ConnectorSettings):
                     "client_secret": "test-client-secret",
                     "login_url": "https://login.microsoft.com",
                     "base_url": "https://api.securitycenter.microsoft.com",
-                    "resource_path": "/api/indicators",
+                    "resource_path": "api/indicators",
                     "expire_time": 30,
                     "action": "Alert",
                     "passive_only": False,
@@ -90,7 +90,9 @@ def test_opencti_connector_helper_is_instantiated(mock_opencti_connector_helper)
     assert helper.connect_name == "Test Connector"
     assert helper.connect_scope == "test,connector"
     assert helper.log_level == "ERROR"
-    assert helper.connect_live_stream_id == "live"
+    assert (
+        helper.connect_live_stream_id == "fake_id--66bd9a11-02e1-47c1-995a-f152caa5866"
+    )
     assert helper.connect_live_stream_listen_delete == True
     assert helper.connect_live_stream_no_dependencies == True
 
