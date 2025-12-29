@@ -18,7 +18,7 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
 
     name: str = Field(
         description="The name of the connector.",
-        default="CrowdStrike Endpoint Security",
+        default="CrowdstrikeEndpointSecurity",
     )
     scope: ListFromString = Field(
         description="The scope of the connector",

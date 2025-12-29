@@ -19,10 +19,10 @@ class CrowdstrikeConnector:
         """
         self.config = config
         self.helper = helper
-        self.client = CrowdstrikeClient(helper)
+        self.client = CrowdstrikeClient(config.crowdstrike, helper)
         self.metrics = Metrics(
-            helper.connect_name,
-            config.metrics.addr,
+            config.connector.name,
+            str(config.metrics.addr),
             config.metrics.port,
         )
         self.metrics_enabled = config.metrics.enable
@@ -70,7 +70,7 @@ class CrowdstrikeConnector:
 
             # Handle delete
             if msg.event == "delete":
-                if self.config.crowdstrike_endpoint_security.permanent_delete:
+                if self.config.crowdstrike.permanent_delete:
                     self.handle_logger_info("[DELETE]", data)
                     self.client.delete_indicator(data)
                 else:
@@ -84,4 +84,6 @@ class CrowdstrikeConnector:
         # Start getting metrics if metrics_enabled is true
         if self.metrics_enabled:
             self.metrics.start_server()
+
+        # Start listening to the stream
         self.helper.listen_stream(self._process_message)
