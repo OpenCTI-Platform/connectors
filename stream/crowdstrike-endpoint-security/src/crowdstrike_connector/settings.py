@@ -26,7 +26,6 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
     )
     live_stream_id: str = Field(
         description="The ID of the live stream to connect to.",
-        default="live",  # listen the global stream (not filtered)
     )
 
 
