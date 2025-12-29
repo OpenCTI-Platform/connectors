@@ -42,6 +42,7 @@ from crowdstrike_connector import ConnectorSettings
                     "id": "connector-id",
                     "scope": "test, connector",
                     "log_level": "error",
+                    "live_stream_id": "live",
                 },
                 "crowdstrike": {
                     "api_base_url": "https://api.crowdstrike.com",
