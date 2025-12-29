@@ -57,12 +57,18 @@ class CrowdstrikeConnector:
             self.helper.connector_logger.info(
                 "Starting to extract data...", {"pattern_type": data["pattern_type"]}
             )
+
+            # Handle creation
             if msg.event == "create":
                 self.handle_logger_info("[CREATE]", data)
                 self.client.create_indicator(data, msg.event)
+
+            # Handle update
             if msg.event == "update":
                 self.handle_logger_info("[UPDATE]", data)
                 self.client.update_indicator(data)
+
+            # Handle delete
             if msg.event == "delete":
                 if self.config.crowdstrike_endpoint_security.permanent_delete:
                     self.handle_logger_info("[DELETE]", data)
