@@ -19,7 +19,7 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     )
     scope: ListFromString = Field(
         description="The scope of the connector.",
-        default=["Domain-Name,Ipv4-Addr"],
+        default=["Domain-Name", "Ipv4-Addr"],
     )
 
 
