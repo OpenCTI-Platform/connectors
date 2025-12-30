@@ -6,7 +6,7 @@ from connectors_sdk import (
     BaseStreamConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator
 from pydantic.networks import HttpUrl
 
 
@@ -67,10 +67,17 @@ class MetricsConfig(BaseConfigModel):
         description="Port to use for metrics endpoint.",
         default=9113,
     )
-    addr: IPv4Address = Field(
+    addr: str = Field(
         description="Bind IP address to use for metrics endpoint.",
         default="0.0.0.0",
     )
+
+    @field_validator("addr", mode="after")
+    @classmethod
+    def validate_addr(cls, v: str) -> str:
+        # Will raise ValueError if invalid
+        IPv4Address(v)
+        return v
 
 
 class ConnectorSettings(BaseConnectorSettings):
