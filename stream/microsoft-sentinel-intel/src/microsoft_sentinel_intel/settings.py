@@ -24,14 +24,6 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
     live_stream_id: str = Field(
         description="The ID of the live stream to connect to.",
     )
-    live_stream_listen_delete: bool = Field(
-        description="Whether to listen for delete events in the live stream.",
-        default=True,
-    )
-    live_stream_no_dependencies: bool = Field(
-        description="Whether to avoid fetching dependencies for the objects received in the live stream.",
-        default=True,
-    )
 
 
 class MicrosoftSentinelIntelConfig(BaseConfigModel):
