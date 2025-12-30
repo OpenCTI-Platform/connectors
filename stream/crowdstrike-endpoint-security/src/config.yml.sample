@@ -10,8 +10,8 @@ connector:
 #   live_stream_listen_delete: true
 #   live_stream_no_dependencies: true
 #   log_level: 'error'
-#   consumer_count: 5 # number of consumer/worker used to push data
-#   ignore_types: 'label,marking-definition,identity'
+#   consumer_count: 10
+#   ignore_types: label,marking-definition,identity
 
 crowdstrike:
 #   api_base_url: 'https://api.crowdstrike.com'

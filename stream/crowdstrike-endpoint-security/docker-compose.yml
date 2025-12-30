@@ -12,9 +12,11 @@ services:
       # - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       # - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
       # - CONNECTOR_LOG_LEVEL=error
-      # - CROWDSTRIKE_API_BASE_URL=FIXME
-      - CROWDSTRIKE_CLIENT_ID=FIXME
-      - CROWDSTRIKE_CLIENT_SECRET=FIXME
+      # - CONNECTOR_CONSUMER_COUNT=10
+      # - CONNECTOR_IGNORE_TYPES=label,marking-definition,identity
+      # - CROWDSTRIKE_API_BASE_URL=https://api.crowdstrike.com
+      - CROWDSTRIKE_CLIENT_ID=ChangeMe
+      - CROWDSTRIKE_CLIENT_SECRET=ChangeMe
       # - CROWDSTRIKE_PERMANENT_DELETE=False # optional
       # - CROWDSTRIKE_FALCON_FOR_MOBILE_ACTIVE=False # optional
       # - METRICS_ENABLE=False # optional
