@@ -21,7 +21,8 @@
     },
     "CONNECTOR_SCOPE": {
       "default": [
-        "Domain-Name,Ipv4-Addr"
+        "Domain-Name",
+        "Ipv4-Addr"
       ],
       "description": "The scope of the connector.",
       "items": {
