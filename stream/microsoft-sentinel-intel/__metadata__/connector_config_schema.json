@@ -20,7 +20,9 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": "sentinel",
+      "default": [
+        "sentinel"
+      ],
       "description": "The scope of the stream connector.",
       "items": {
         "type": "string"
@@ -45,18 +47,17 @@
       "type": "string"
     },
     "CONNECTOR_LIVE_STREAM_ID": {
-      "default": "live",
       "description": "The ID of the live stream to connect to.",
       "type": "string"
     },
     "CONNECTOR_LIVE_STREAM_LISTEN_DELETE": {
       "default": true,
-      "description": "Whether to listen for delete events in the live stream.",
+      "description": "Whether to listen for delete events on the live stream.",
       "type": "boolean"
     },
     "CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES": {
       "default": true,
-      "description": "Whether to avoid fetching dependencies for the objects received in the live stream.",
+      "description": "Whether to ignore dependencies when processing events from the live stream.",
       "type": "boolean"
     },
     "MICROSOFT_SENTINEL_INTEL_TENANT_ID": {
@@ -123,6 +124,7 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
+    "CONNECTOR_LIVE_STREAM_ID",
     "MICROSOFT_SENTINEL_INTEL_TENANT_ID",
     "MICROSOFT_SENTINEL_INTEL_CLIENT_ID",
     "MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET",
