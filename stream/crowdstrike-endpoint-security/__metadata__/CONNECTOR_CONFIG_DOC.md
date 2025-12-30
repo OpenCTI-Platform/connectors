@@ -20,6 +20,8 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CROWDSTRIKE_API_BASE_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"https://api.crowdstrike.com"` | Crowdstrike base url. |
 | CROWDSTRIKE_PERMANENT_DELETE | `boolean` |  | boolean | `false` | Select whether or not to permanently delete data in Crowdstrike when data is deleted in OpenCTI. If set to `True`, `CONNECTOR_LIVE_STREAM_LISTEN_DELETE` must be set to `True`. |
 | CROWDSTRIKE_FALCON_FOR_MOBILE_ACTIVE | `boolean` |  | boolean | `false` | Crowdstrike client secret used to connect to the API. |
+| CROWDSTRIKE_CONSUMER_COUNT | `integer` |  | integer | `10` | Number of consumer/worker used to push data |
+| CROWDSTRIKE_IGNORE_TYPES | `array` |  | string | `["label", "marking-definition", "identity"]` | Ignoring types from OpenCTI |
 | METRICS_ENABLE | `boolean` |  | boolean | `false` | Whether or not Prometheus metrics should be enabled. |
 | METRICS_PORT | `integer` |  | integer | `9113` | Port to use for metrics endpoint. |
-| METRICS_ADDR | `string` |  | Format: [`ipv4`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"0.0.0.0"` | Bind IP address to use for metrics endpoint. |
+| METRICS_ADDR | `string` |  | string | `"0.0.0.0"` | Bind IP address to use for metrics endpoint. |

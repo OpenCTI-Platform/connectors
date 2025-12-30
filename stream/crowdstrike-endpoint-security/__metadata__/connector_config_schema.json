@@ -88,6 +88,23 @@
       "description": "Crowdstrike client secret used to connect to the API.",
       "type": "boolean"
     },
+    "CROWDSTRIKE_CONSUMER_COUNT": {
+      "default": 10,
+      "description": "Number of consumer/worker used to push data",
+      "type": "integer"
+    },
+    "CROWDSTRIKE_IGNORE_TYPES": {
+      "default": [
+        "label",
+        "marking-definition",
+        "identity"
+      ],
+      "description": "Ignoring types from OpenCTI",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
     "METRICS_ENABLE": {
       "default": false,
       "description": "Whether or not Prometheus metrics should be enabled.",
@@ -101,7 +118,6 @@
     "METRICS_ADDR": {
       "default": "0.0.0.0",
       "description": "Bind IP address to use for metrics endpoint.",
-      "format": "ipv4",
       "type": "string"
     }
   },
