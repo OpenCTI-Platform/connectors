@@ -23,7 +23,6 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
     )
     live_stream_id: str = Field(
         description="The ID of the live stream to connect to.",
-        default="live",  # listen the global stream (not filtered)
     )
     live_stream_listen_delete: bool = Field(
         description="Whether to listen for delete events in the live stream.",

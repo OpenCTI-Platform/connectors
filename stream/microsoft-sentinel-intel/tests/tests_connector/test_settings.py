@@ -44,6 +44,7 @@ from microsoft_sentinel_intel import ConnectorSettings
                     "id": "connector-id",
                     "scope": "test, connector",
                     "log_level": "error",
+                    "live_stream_id": "live",
                 },
                 "microsoft_sentinel_intel": {
                     "tenant_id": "ChangeMe",
