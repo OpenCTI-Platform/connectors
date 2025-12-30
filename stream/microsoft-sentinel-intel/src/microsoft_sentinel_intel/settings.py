@@ -19,7 +19,7 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
     )
     scope: ListFromString = Field(
         description="The scope of the stream connector.",
-        default="sentinel",
+        default=["sentinel"],
     )
     live_stream_id: str = Field(
         description="The ID of the live stream to connect to.",
