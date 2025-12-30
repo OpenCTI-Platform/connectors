@@ -23,7 +23,7 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     )
     scope: ListFromString = Field(
         description="The scope of the connector.",
-        default=["Domain-Name,Ipv4-Addr"],
+        default=["Domain-Name", "Ipv4-Addr"],
     )
 
 
@@ -49,5 +49,7 @@ class ConnectorSettings(BaseConnectorSettings):
     Override `BaseConnectorSettings` to include `InternalEnrichmentConnectorConfig` and `DomaintoolsConfig`.
     """
 
-    connector: InternalEnrichmentConnectorConfig = Field(default_factory=InternalEnrichmentConnectorConfig)
+    connector: InternalEnrichmentConnectorConfig = Field(
+        default_factory=InternalEnrichmentConnectorConfig
+    )
     domaintools: DomaintoolsConfig = Field(default_factory=DomaintoolsConfig)
