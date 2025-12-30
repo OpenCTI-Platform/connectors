@@ -52,6 +52,10 @@ class CrowdstrikeEndpointSecurityConfig(BaseConfigModel):
         description="Crowdstrike client secret used to connect to the API.",
         default=False,
     )
+    consumer_count: int = Field(
+        description="Number of consumer/worker used to push data",
+        default=10,
+    )
 
 
 class MetricsConfig(BaseConfigModel):
