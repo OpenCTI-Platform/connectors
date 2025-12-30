@@ -16,7 +16,7 @@ from crowdstrike_connector import ConnectorSettings
                     "name": "Test Connector",
                     "scope": "test, connector",
                     "log_level": "error",
-                    "live_stream_id": "live",
+                    "live_stream_id": "E6EA6EE6-14A2-4EF9-B709-7C7524DB2A4F",
                     "live_stream_listen_delete": True,
                     "live_stream_no_dependencies": True,
                 },
@@ -42,7 +42,7 @@ from crowdstrike_connector import ConnectorSettings
                     "id": "connector-id",
                     "scope": "test, connector",
                     "log_level": "error",
-                    "live_stream_id": "live",
+                    "live_stream_id": "D5685291-70A3-47D2-AB3A-FEB0F7DA9257",
                 },
                 "crowdstrike": {
                     "api_base_url": "https://api.crowdstrike.com",

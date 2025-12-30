@@ -39,7 +39,7 @@ class StubConnectorSettings(ConnectorSettings):
                     "name": "Test Connector",
                     "scope": "test, connector",
                     "log_level": "error",
-                    "live_stream_id": "live",
+                    "live_stream_id": "A2626721-31ED-441E-9C87-28AD1139D2AB",
                     "live_stream_listen_delete": True,
                     "live_stream_no_dependencies": True,
                 },
@@ -88,7 +88,7 @@ def test_opencti_connector_helper_is_instantiated(mock_opencti_connector_helper)
     assert helper.connect_name == "Test Connector"
     assert helper.connect_scope == "test,connector"
     assert helper.log_level == "ERROR"
-    assert helper.connect_live_stream_id == "live"
+    assert helper.connect_live_stream_id == "A2626721-31ED-441E-9C87-28AD1139D2AB"
     assert helper.connect_live_stream_listen_delete is True
     assert helper.connect_live_stream_no_dependencies is True
 
