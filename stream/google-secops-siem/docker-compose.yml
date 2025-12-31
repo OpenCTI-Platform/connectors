@@ -10,7 +10,7 @@ services:
       - CONNECTOR_ID=CHANGEME
       - "CONNECTOR_NAME=Google SecOps SIEM"
       - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_LIVE_STREAM_ID=live # ID of the live stream created in the OpenCTI UI
+      - CONNECTOR_LIVE_STREAM_ID=changeme # ID of the live stream created in the OpenCTI UI
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
 
