@@ -4,6 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 from crowdstrike_services import CrowdstrikeClient
+from pydantic import SecretStr
 
 
 @pytest.fixture(scope="class")
@@ -16,7 +17,7 @@ def setup_config(request):
     request.cls.mock_config = Mock(
         api_base_url="https://api.crowdstrike.com",
         client_id="test-client-id",
-        client_secret="test-client-secret",
+        client_secret=SecretStr("test-client-secret"),
     )
 
     request.cls.mock_client = CrowdstrikeClient(
