@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-alienvault
 
 # Start the connector
-python -m alienvault
+python __main__.py

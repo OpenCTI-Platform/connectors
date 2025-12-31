@@ -1,5 +1,6 @@
 """OpenCTI AlienVault connector module."""
 
-from alienvault.core import AlienVault
+from alienvault.connector import AlienVault
+from alienvault.settings import ConnectorSettings
 
-__all__ = ["AlienVault"]
+__all__ = ["AlienVault", "ConnectorSettings"]
