@@ -23,7 +23,7 @@ class CrowdstrikeClient:
         self.config = config
         self.cs = CrowdstrikeIOC(
             client_id=self.config.client_id,
-            client_secret=self.config.client_secret,
+            client_secret=self.config.client_secret.get_secret_value(),
             # Convert HttpUrl to string
             base_url=str(self.config.api_base_url),
         )
