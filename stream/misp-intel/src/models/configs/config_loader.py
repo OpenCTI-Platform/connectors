@@ -35,7 +35,6 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
         description="The scope or type of data the connector is processing.",
     )
     live_stream_id: str = Field(
-        default="live",
         alias="CONNECTOR_LIVE_STREAM_ID",
         description="The ID of the live stream to listen to.",
     )
