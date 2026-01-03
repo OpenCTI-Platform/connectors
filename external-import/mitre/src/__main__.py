@@ -7,7 +7,6 @@ import urllib
 from typing import Optional
 
 from pycti import OpenCTIConnectorHelper
-
 from src import ConfigLoader
 
 from .constants import (
