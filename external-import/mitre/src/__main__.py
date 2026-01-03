@@ -1,19 +1,29 @@
+import datetime
 import json
 import ssl
 import sys
 import time
 import urllib
-import datetime
 from typing import Optional
+
 from pycti import OpenCTIConnectorHelper
+
 from src import ConfigLoader
-from .constants import ENTERPRISE_ATTACK_KILL_CHAIN_PHASES, MOBILE_ATTACK_KILL_CHAIN_PHASES, ICS_ATTACK_KILL_CHAIN_PHASES, STATEMENT_MARKINGS
+
+from .constants import (
+    ENTERPRISE_ATTACK_KILL_CHAIN_PHASES,
+    ICS_ATTACK_KILL_CHAIN_PHASES,
+    MOBILE_ATTACK_KILL_CHAIN_PHASES,
+    STATEMENT_MARKINGS,
+)
 
 
 def time_from_unixtime(timestamp):
     if not timestamp:
         return None
-    return datetime.datetime.fromtimestamp(timestamp, datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.datetime.fromtimestamp(timestamp, datetime.timezone.utc).strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
 
 
 def get_unixtime_now():
@@ -150,23 +160,22 @@ class Mitre:
                 self.helper.api.kill_chain_phase.create(
                     kill_chain_name="mitre-attack",
                     phase_name=phase.get("name"),
-                    x_opencti_order=phase.get("order")
+                    x_opencti_order=phase.get("order"),
                 )
         if matrix == "mobile-attack":
             for phase in MOBILE_ATTACK_KILL_CHAIN_PHASES:
                 self.helper.api.kill_chain_phase.create(
                     kill_chain_name="mitre-mobile-attack",
                     phase_name=phase.get("name"),
-                    x_opencti_order=phase.get("order")
+                    x_opencti_order=phase.get("order"),
                 )
         if matrix == "ics-attack":
             for phase in ICS_ATTACK_KILL_CHAIN_PHASES:
                 self.helper.api.kill_chain_phase.create(
                     kill_chain_name="mitre-ics-attack",
                     phase_name=phase.get("name"),
-                    x_opencti_order=phase.get("order")
+                    x_opencti_order=phase.get("order"),
                 )
-
 
     def process_data(self):
         unixtime_now = get_unixtime_now()
@@ -192,9 +201,13 @@ class Mitre:
         self.helper.log_info("Fetching MITRE datasets...")
         for url in self.mitre_urls:
             try:
-                self.create_kill_chain_phase_and_order(url.split("/")[-1].split(".json")[0])
+                self.create_kill_chain_phase_and_order(
+                    url.split("/")[-1].split(".json")[0]
+                )
             except Exception as ex:
-                self.helper.log_error(f"Unable to create kill chain phases and orders. Verify the connector service account has the 'Manage kill chain phases' capability. Exception: {ex}")
+                self.helper.log_error(
+                    f"Unable to create kill chain phases and orders. Verify the connector service account has the 'Manage kill chain phases' capability. Exception: {ex}"
+                )
                 pass
             self.helper.log_debug(f"Fetching {url}...")
             data = self.retrieve_data(url)

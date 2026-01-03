@@ -17,7 +17,7 @@ ENTERPRISE_ATTACK_KILL_CHAIN_PHASES = [
     {"name": "collection", "order": 10},
     {"name": "command-and-control", "order": 11},
     {"name": "exfiltration", "order": 12},
-    {"name": "impact", "order": 13}
+    {"name": "impact", "order": 13},
 ]
 
 MOBILE_ATTACK_KILL_CHAIN_PHASES = [
@@ -32,7 +32,7 @@ MOBILE_ATTACK_KILL_CHAIN_PHASES = [
     {"name": "collection", "order": 8},
     {"name": "command-and-control", "order": 9},
     {"name": "exfiltration", "order": 10},
-    {"name": "impact", "order": 11}
+    {"name": "impact", "order": 11},
 ]
 
 ICS_ATTACK_KILL_CHAIN_PHASES = [
@@ -47,5 +47,5 @@ ICS_ATTACK_KILL_CHAIN_PHASES = [
     {"name": "command-and-control", "order": 8},
     {"name": "inhibit-response-function", "order": 9},
     {"name": "impair-process-control", "order": 10},
-    {"name": "impact", "order": 11}
+    {"name": "impact", "order": 11},
 ]
