@@ -3,29 +3,17 @@ import ssl
 import sys
 import time
 import urllib
-from datetime import datetime
+import datetime
 from typing import Optional
-
 from pycti import OpenCTIConnectorHelper
 from src import ConfigLoader
-
-MITRE_ENTERPRISE_FILE_URL = "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json"
-MITRE_MOBILE_ATTACK_FILE_URL = "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/mobile-attack/mobile-attack.json"
-MITRE_ICS_ATTACK_FILE_URL = "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/ics-attack/ics-attack.json"
-MITRE_CAPEC_FILE_URL = (
-    "https://raw.githubusercontent.com/mitre/cti/master/capec/2.1/stix-capec.json"
-)
-
-STATEMENT_MARKINGS = [
-    "marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168",
-    "marking-definition--17d82bb2-eeeb-4898-bda5-3ddbcd2b799d",
-]
+from .constants import ENTERPRISE_ATTACK_KILL_CHAIN_PHASES, MOBILE_ATTACK_KILL_CHAIN_PHASES, ICS_ATTACK_KILL_CHAIN_PHASES, STATEMENT_MARKINGS
 
 
 def time_from_unixtime(timestamp):
     if not timestamp:
         return None
-    return datetime.utcfromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.datetime.fromtimestamp(timestamp, datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def get_unixtime_now():
@@ -139,7 +127,8 @@ class Mitre:
             self.helper.metric.inc("client_error_count")
         return None
 
-    def remove_statement_marking(self, stix_bundle: dict):
+    @staticmethod
+    def remove_statement_marking(stix_bundle: dict):
         for obj in stix_bundle["objects"]:
             if "object_marking_refs" in obj:
                 new_markings = []
@@ -150,6 +139,34 @@ class Mitre:
                     del obj["object_marking_refs"]
                 else:
                     obj["object_marking_refs"] = new_markings
+
+    def create_kill_chain_phase_and_order(self, matrix):
+        """
+        :param matrix:
+        :return:
+        """
+        if matrix == "enterprise-attack":
+            for phase in ENTERPRISE_ATTACK_KILL_CHAIN_PHASES:
+                self.helper.api.kill_chain_phase.create(
+                    kill_chain_name="mitre-attack",
+                    phase_name=phase.get("name"),
+                    x_opencti_order=phase.get("order")
+                )
+        if matrix == "mobile-attack":
+            for phase in MOBILE_ATTACK_KILL_CHAIN_PHASES:
+                self.helper.api.kill_chain_phase.create(
+                    kill_chain_name="mitre-mobile-attack",
+                    phase_name=phase.get("name"),
+                    x_opencti_order=phase.get("order")
+                )
+        if matrix == "ics-attack":
+            for phase in ICS_ATTACK_KILL_CHAIN_PHASES:
+                self.helper.api.kill_chain_phase.create(
+                    kill_chain_name="mitre-ics-attack",
+                    phase_name=phase.get("name"),
+                    x_opencti_order=phase.get("order")
+                )
+
 
     def process_data(self):
         unixtime_now = get_unixtime_now()
@@ -174,6 +191,11 @@ class Mitre:
 
         self.helper.log_info("Fetching MITRE datasets...")
         for url in self.mitre_urls:
+            try:
+                self.create_kill_chain_phase_and_order(url.split("/")[-1].split(".json")[0])
+            except Exception as ex:
+                self.helper.log_error(f"Unable to create kill chain phases and orders. Verify the connector service account has the 'Manage kill chain phases' capability. Exception: {ex}")
+                pass
             self.helper.log_debug(f"Fetching {url}...")
             data = self.retrieve_data(url)
 
