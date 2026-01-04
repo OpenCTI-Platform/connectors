@@ -123,6 +123,11 @@ class ConverterToStix:
 
         for related_technique in related_techniques:
             relation = stix2.Relationship(
+                id=pycti.StixCoreRelationship.generate_id(
+                    relationship_type="indicates",
+                    source_ref=indicator.id,
+                    target_ref=related_technique.id,
+                ),
                 source_ref=indicator.id,
                 target_ref=related_technique.id,
                 relationship_type="indicates",
@@ -131,6 +136,11 @@ class ConverterToStix:
 
         for related_vulnerability in related_vulnerabilities:
             relation = stix2.Relationship(
+                id=pycti.StixCoreRelationship.generate_id(
+                    relationship_type="indicates",
+                    source_ref=indicator.id,
+                    target_ref=related_vulnerability.id,
+                ),
                 source_ref=indicator.id,
                 target_ref=related_vulnerability.id,
                 relationship_type="indicates",
