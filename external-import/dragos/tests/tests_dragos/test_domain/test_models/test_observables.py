@@ -4,14 +4,13 @@ from datetime import datetime, timezone
 
 import pytest
 import stix2
-from pydantic import ValidationError
-
 from dragos.domain.models import octi
 from dragos.domain.models.octi.enums import (
     ObservableType,
     PatternType,
     TLPLevel,
 )
+from pydantic import ValidationError
 
 
 def fake_valid_organization_author():

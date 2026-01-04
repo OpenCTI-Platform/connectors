@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import Annotated, Iterator, Literal, Optional
 
+from dragos.interfaces.common import DataRetrievalError, FrozenBaseModel
 from pydantic import (
     AfterValidator,
     AwareDatetime,
@@ -10,8 +11,6 @@ from pydantic import (
     ValidationError,
     ValidationInfo,
 )
-
-from dragos.interfaces.common import DataRetrievalError, FrozenBaseModel
 
 
 class ReportRetrievalError(DataRetrievalError):

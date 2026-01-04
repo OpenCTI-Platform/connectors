@@ -2,9 +2,8 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from pycti import OpenCTIConnectorHelper
-
 from alienvault import AlienVault, ConnectorSettings
+from pycti import OpenCTIConnectorHelper
 
 
 @pytest.fixture

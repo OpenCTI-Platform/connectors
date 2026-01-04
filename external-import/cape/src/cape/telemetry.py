@@ -1,5 +1,17 @@
 from datetime import datetime
 
+from cape.cape import (
+    cuckooPayload,
+    cuckooReport,
+    cuckooReportDomain,
+    cuckooReportHost,
+    cuckooReportICMP,
+    cuckooReportNetwork,
+    cuckooReportProcess,
+    cuckooReportTCPUDP,
+    cuckooReportTTP,
+    cuckooTarget,
+)
 from pycti import Indicator as pyctiIndicator
 from pycti import Malware as pyctiMalware
 from pycti import Note as pyctiNote
@@ -24,19 +36,6 @@ from stix2.v21 import (
     Relationship,
     Report,
     WindowsRegistryKey,
-)
-
-from cape.cape import (
-    cuckooPayload,
-    cuckooReport,
-    cuckooReportDomain,
-    cuckooReportHost,
-    cuckooReportICMP,
-    cuckooReportNetwork,
-    cuckooReportProcess,
-    cuckooReportTCPUDP,
-    cuckooReportTTP,
-    cuckooTarget,
 )
 
 

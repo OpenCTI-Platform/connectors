@@ -1,7 +1,6 @@
 """Tests for the Geocoding interface."""
 
 import pytest
-
 from dragos.interfaces.geocoding import (
     Area,
     City,
