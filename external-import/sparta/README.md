@@ -106,7 +106,7 @@ Scope:
 
 ## Debugging
 
-The connector can be debugged by setting the appropiate log level.
+The connector can be debugged by setting the appropriate log level.
 Note that logging messages can be added using `self.helper.connector_logger.{LOG_LEVEL}("Sample message")`, i.
 e., `self.helper.connector_logger.error("An error message")`.
 
