@@ -2,9 +2,8 @@ from datetime import UTC, datetime, timedelta
 
 from lib.external_import import ExternalImportConnector
 from pycti import OpenCTIConnectorHelper
-from shadowserver.config import ConnectorSettings
-
 from shadowserver import ShadowserverAPI, remove_duplicates
+from shadowserver.config import ConnectorSettings
 
 # Lookback in days
 LOOKBACK = 3

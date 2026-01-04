@@ -1,8 +1,7 @@
 import traceback
 
-from pycti import OpenCTIConnectorHelper
-
 from intel471 import ConnectorSettings, Intel471Connector
+from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
     """

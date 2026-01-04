@@ -2,6 +2,7 @@ import sys
 import time
 from os import environ
 
+from intelfinder import Intelfinder
 from intelfinder.utils import (
     create_author,
     format_labels,
@@ -10,8 +11,6 @@ from intelfinder.utils import (
     validate_tlp_marking,
 )
 from lib.external_import import ExternalImportConnector
-
-from intelfinder import Intelfinder
 
 
 class IntelfinderConnector(ExternalImportConnector):

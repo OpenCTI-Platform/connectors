@@ -2,7 +2,6 @@ from typing import Any
 
 import pytest
 from connectors_sdk import BaseConfigModel, ConfigValidationError
-
 from intel471 import ConnectorSettings
 
 INITIAL_HISTORY_TIMESTAMP = 1696156471  # 2023-10-01
