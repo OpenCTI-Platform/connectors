@@ -4,14 +4,16 @@ from typing import Literal
 import pycti
 import stix2
 from pycti import (
+    AttackPattern,
     Identity,
     MarkingDefinition,
     OpenCTIConnectorHelper,
-    AttackPattern,
     Vulnerability,
 )
 from sigma.rule import SigmaRule
+
 from .utils import is_valid_technique_id
+
 
 class ConverterToStix:
     """

@@ -5,6 +5,7 @@ from typing import Any
 import requests
 from pycti import OpenCTIConnectorHelper
 
+
 class SigmaHQClient:
 
     def __init__(self, helper: OpenCTIConnectorHelper):

@@ -1,7 +1,8 @@
 import traceback
 
-from connector import ConnectorSettings, SigmaHQConnector
 from pycti import OpenCTIConnectorHelper
+
+from connector import ConnectorSettings, SigmaHQConnector
 
 if __name__ == "__main__":
     """
