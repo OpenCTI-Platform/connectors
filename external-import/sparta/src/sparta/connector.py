@@ -243,7 +243,7 @@ class Sparta:
                 self._create_kill_chain_phase_and_order()
             except Exception as ex:
                 self.helper.connector_logger.error(
-                    f"Unable to create kill chain phases and orders. Verify the connector service account has the 'Manage kill chain phases' capability.",
+                    "Unable to create kill chain phases and orders. Verify the connector service account has the 'Manage kill chain phases' capability.",
                     {"exception": ex},
                 )
                 pass
