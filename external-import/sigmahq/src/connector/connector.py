@@ -71,7 +71,7 @@ class SigmaHQConnector:
             current_state = self.helper.get_state()
 
             rule_package_version = None
-            if "rule_package_version" in current_state:
+            if current_state and "rule_package_version" in current_state:
                 rule_package_version = current_state["rule_package_version"]
 
                 self.helper.connector_logger.info(
