@@ -52,7 +52,7 @@ class ConverterToStix:
         author = stix2.Identity(
             id=Identity.generate_id(name="SigmaHQ", identity_class="organization"),
             name="SigmaHQ",
-            identity_class="organization"
+            identity_class="organization",
         )
         return author
 
@@ -94,15 +94,14 @@ class ConverterToStix:
                     technique = stix2.AttackPattern(
                         id=AttackPattern.generate_id(name, name),
                         name=name,
-                        custom_properties={"x_mitre_id": name}
+                        custom_properties={"x_mitre_id": name},
                     )
                     related_techniques.append(technique)
                     stix_objects.append(technique)
             if tag.namespace == "cve":
-                name = "CVE-"+tag.name
+                name = "CVE-" + tag.name
                 vulnerability = stix2.Vulnerability(
-                    id=Vulnerability.generate_id(name),
-                    name=name
+                    id=Vulnerability.generate_id(name), name=name
                 )
                 related_vulnerabilities.append(vulnerability)
                 stix_objects.append(vulnerability)
@@ -126,7 +125,7 @@ class ConverterToStix:
             relation = stix2.Relationship(
                 source_ref=indicator.id,
                 target_ref=related_technique.id,
-                relationship_type="indicates"
+                relationship_type="indicates",
             )
             stix_objects.append(relation)
 
@@ -134,8 +133,7 @@ class ConverterToStix:
             relation = stix2.Relationship(
                 source_ref=indicator.id,
                 target_ref=related_vulnerability.id,
-                relationship_type="indicates"
+                relationship_type="indicates",
             )
             stix_objects.append(relation)
         return stix_objects
-

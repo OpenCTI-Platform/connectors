@@ -23,18 +23,21 @@ class SigmaHQClient:
         :return:
         """
         try:
-           response = self.session.get(self.base_url)
-           response.raise_for_status()
-           release = response.json()
-           return {
-               "tag": release["tag_name"],
-               "name": release["name"],
-               "url": release["url"],
-               "published_at": release["published_at"],
-               "assets": release["assets"],
-           }
+            response = self.session.get(self.base_url)
+            response.raise_for_status()
+            release = response.json()
+            return {
+                "tag": release["tag_name"],
+                "name": release["name"],
+                "url": release["url"],
+                "published_at": release["published_at"],
+                "assets": release["assets"],
+            }
         except Exception as err:
-            self.helper.connector_logger.error("An error occurred while getting latest published version of SigmaHQ rule package", err)
+            self.helper.connector_logger.error(
+                "An error occurred while getting latest published version of SigmaHQ rule package",
+                err,
+            )
 
     def download_package(self, url):
         """
@@ -46,7 +49,9 @@ class SigmaHQClient:
             response.raise_for_status()
             return response.content
         except Exception as err:
-            self.helper.connector_logger.error("An error occurred while downloading latest SigmaHQ rule package", err)
+            self.helper.connector_logger.error(
+                "An error occurred while downloading latest SigmaHQ rule package", err
+            )
 
     def download_and_convert_package(self, url):
 
@@ -58,17 +63,18 @@ class SigmaHQClient:
             with zipfile.ZipFile(zip_content) as zip_ref:
                 for filename in zip_ref.namelist():
                     # ignore folder
-                    if filename.endswith('/'):
+                    if filename.endswith("/"):
                         continue
-                    if filename.endswith('.yml'):
+                    if filename.endswith(".yml"):
                         with zip_ref.open(filename) as file:
                             content = file.read()
                             rule = {
                                 "filename": filename,
-                                "rule_content": content.decode("utf-8")
+                                "rule_content": content.decode("utf-8"),
                             }
                             sigma_rules.append(rule)
             return sigma_rules
         except Exception as err:
-            self.helper.connector_logger.error("An error occurred while downloading latest SigmaHQ rule package", err)
-
+            self.helper.connector_logger.error(
+                "An error occurred while downloading latest SigmaHQ rule package", err
+            )

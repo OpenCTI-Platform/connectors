@@ -3,4 +3,4 @@ import re
 
 
 def is_valid_technique_id(id_string):
-    return bool(re.match(r'^t\d{4}(?:\.\d{3})?$', id_string))
+    return bool(re.match(r"^t\d{4}(?:\.\d{3})?$", id_string))

@@ -34,14 +34,19 @@ class SigmaHQConnector:
         rules = None
         for asset in release_metadata["assets"]:
             if rule_package in asset["name"]:
-                rules = self.client.download_and_convert_package(asset["browser_download_url"])
+                rules = self.client.download_and_convert_package(
+                    asset["browser_download_url"]
+                )
 
         for rule in rules:
             try:
                 stix_entities = self.converter_to_stix.convert_sigma_rule(rule)
                 stix_objects.extend(stix_entities)
             except Exception as err:
-                self.helper.connector_logger.error(f"An exception occurred while converting SigmaHQ rule: {rule.filename}", err)
+                self.helper.connector_logger.error(
+                    f"An exception occurred while converting SigmaHQ rule: {rule.filename}",
+                    err,
+                )
                 pass
 
         # Ensure consistent bundle by adding the author and TLP marking
@@ -94,8 +99,13 @@ class SigmaHQConnector:
             # get latest rule package version
             release_metadata = self.client.get_lastest_published_version()
             latest_version = release_metadata.get("tag").lower()
-            if rule_package_version is None or latest_version.lower() != rule_package_version.lower():
-                stix_objects = self._collect_intelligence(release_metadata, self.config.sigmahq.rule_package)
+            if (
+                rule_package_version is None
+                or latest_version.lower() != rule_package_version.lower()
+            ):
+                stix_objects = self._collect_intelligence(
+                    release_metadata, self.config.sigmahq.rule_package
+                )
 
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
                 bundles_sent = self.helper.send_stix2_bundle(

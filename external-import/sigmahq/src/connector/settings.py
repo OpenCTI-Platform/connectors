@@ -29,16 +29,18 @@ class SigmaHQConfig(BaseConfigModel):
     """
     Define parameters and/or defaults for the configuration specific to the `SigmaHQConnector`.
     """
+
     rule_package: Literal[
         "sigma_all_rules",
         "sigma_core++",
         "sigma_core+",
         "sigma_core",
-        "sigma_emerging_threats_addon"
+        "sigma_emerging_threats_addon",
     ] = Field(
         description="Rule package to import",
         default="sigma_all_rules",
     )
+
 
 class ConnectorSettings(BaseConnectorSettings):
     """
