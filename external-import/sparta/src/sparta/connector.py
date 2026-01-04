@@ -20,6 +20,7 @@ SPARTA_KILL_CHAIN_PHASES = [
     {"name": "Impact", "order": 8},
 ]
 
+
 class Sparta:
     """
     Specifications of the external import connector
@@ -166,16 +167,26 @@ class Sparta:
                 stix_object["created_by_ref"] = author["id"]
                 stix_object["object_marking_refs"] = [str(TLP_WHITE.id)]
                 if stix_object["type"] == "attack-pattern":
-                    if "x_sparta_is_subtechnique" in stix_object and stix_object["x_sparta_is_subtechnique"]:
+                    if (
+                        "x_sparta_is_subtechnique" in stix_object
+                        and stix_object["x_sparta_is_subtechnique"]
+                    ):
                         attack_pattern_subtechnique_ids.append(stix_object["id"])
 
             # going to process some relationships between objects (subtechniques-of and mitigates)
             for stix_object in stix_objects:
                 if stix_object["type"] == "relationship":
-                    #fix 'related-to' to 'subtechnique-of' relationship
-                    if "attack-pattern--" in stix_object['source_ref'] and "attack-pattern--" in stix_object['target_ref'] and stix_object['source_ref'] in attack_pattern_subtechnique_ids:
+                    # fix 'related-to' to 'subtechnique-of' relationship
+                    if (
+                        "attack-pattern--" in stix_object["source_ref"]
+                        and "attack-pattern--" in stix_object["target_ref"]
+                        and stix_object["source_ref"] in attack_pattern_subtechnique_ids
+                    ):
                         stix_object["relationship_type"] = "subtechnique-of"
-                    if "course-of-action--" in stix_object['source_ref'] and "attack-pattern--" in stix_object['target_ref']:
+                    if (
+                        "course-of-action--" in stix_object["source_ref"]
+                        and "attack-pattern--" in stix_object["target_ref"]
+                    ):
                         stix_object["relationship_type"] = "mitigates"
 
             stix_objects.append(json.loads(author.serialize()))
@@ -232,7 +243,8 @@ class Sparta:
                 self._create_kill_chain_phase_and_order()
             except Exception as ex:
                 self.helper.connector_logger.error(
-                    f"Unable to create kill chain phases and orders. Verify the connector service account has the 'Manage kill chain phases' capability.", {"exception": ex},
+                    f"Unable to create kill chain phases and orders. Verify the connector service account has the 'Manage kill chain phases' capability.",
+                    {"exception": ex},
                 )
                 pass
 
