@@ -1,7 +1,7 @@
 # OpenCTI Cluster25 Connector
 
 The OpenCTI Cluster25 connector can be used to import indicators from the C25 platform into OpenCTI.
-It uses che current V1 public APIs to get a valid token and import the supported indicators.
+It uses the current V1 public APIs to get a valid token and import the supported indicators.
 In the current implementation, the connector is able to import indicators only.
 With future releases, it would be possible to import observables, threat actors and various contents as well.
 

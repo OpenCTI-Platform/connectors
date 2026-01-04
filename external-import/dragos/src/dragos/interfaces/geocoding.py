@@ -3,11 +3,12 @@
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
-from dragos.interfaces.common import DataRetrievalError, FrozenBaseModel
 from pydantic import (
     Field,
     ValidationError,
 )
+
+from dragos.interfaces.common import DataRetrievalError, FrozenBaseModel
 
 
 class GeocodingRetrievalError(DataRetrievalError):

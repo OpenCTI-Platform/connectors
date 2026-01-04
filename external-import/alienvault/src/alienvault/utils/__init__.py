@@ -113,7 +113,7 @@ def get_tlp_string_marking_definition(tlp: str) -> stix2.MarkingDefinition:
 
 
 def iso_datetime_str_to_datetime(string):
-    """Concert ISO datetime string to datetime object."""
+    """Convert ISO datetime string to datetime object."""
     try:
         return datetime.strptime(string, "%Y-%m-%dT%H:%M:%S.%f")
     except ValueError:

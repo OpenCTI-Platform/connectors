@@ -3,8 +3,9 @@ from typing import Any
 
 import pytest
 from connectors_sdk import BaseConfigModel, ConfigValidationError
-from dragos.settings import ConnectorSettings
 from freezegun import freeze_time
+
+from dragos.settings import ConnectorSettings
 
 
 def fake_connector_settings(settings_dict: dict[str, dict]) -> type[ConnectorSettings]:

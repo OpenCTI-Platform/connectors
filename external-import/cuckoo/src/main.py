@@ -1,15 +1,16 @@
 import os
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 import yaml
-from cuckoo.cuckoo import cuckoo
 from cuckoo.telemetry import openCTIInterface
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
+from cuckoo.cuckoo import cuckoo
 
-class cuckooConnector:
+
+class CuckooConnector:
     """Connector object"""
 
     def __init__(self):
@@ -107,8 +108,8 @@ class cuckooConnector:
                     current_task = self.start_id
                     self.helper.set_state({"task": self.start_id})
             else:
-                last_run = datetime.utcfromtimestamp(
-                    self.helper.get_state()["last_run"]
+                last_run = datetime.fromtimestamp(
+                    self.helper.get_state()["last_run"], tz=timezone.utc
                 ).strftime("%Y-%m-%d %H:%M:%S")
                 self.helper.log_info("Connector last run: " + last_run)
 
@@ -148,7 +149,7 @@ class cuckooConnector:
                     if task["id"] > current_task:
                         taskSummary = self.cuckoo_api.getTaskSummary(
                             task["id"]
-                        )  # Pull Cuckoo Report and Searilize
+                        )  # Pull Cuckoo Report and Serialize
                         if not taskSummary:
                             continue  # If no report continue
                         if not taskSummary.info:
@@ -158,6 +159,7 @@ class cuckooConnector:
                         # Process and submit cuckoo task as stix bundle
                         openCTIInterface(
                             taskSummary,
+                            self.helper.connect_id,
                             self.helper,
                             self.update_existing_data,
                             [],
@@ -173,7 +175,7 @@ class cuckooConnector:
                         self.helper.log_info(f"Synced task {task['id']}")
                 except Exception as e:
                     self.helper.log_error(
-                        f"An error Occured fetching task {task['id']}; {str(e)}"
+                        f"An error occurred fetching task {task['id']}; {str(e)}"
                     )
 
             self.helper.log_info("Finished grabbing Cuckoo Reports")
@@ -192,7 +194,7 @@ class cuckooConnector:
 
 if __name__ == "__main__":
     try:
-        CONNECTOR = cuckooConnector()
+        CONNECTOR = CuckooConnector()
         CONNECTOR.run()
     except Exception as e:
         raise e

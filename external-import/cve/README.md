@@ -100,7 +100,7 @@ docker compose up -d
 Create a file `config.yml` based on the provided `config.yml.sample`.
 
 Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
+your environment.
 
 Install the required python dependencies (preferably in a virtual environment):
 

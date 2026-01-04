@@ -16,7 +16,6 @@ from connector.src.octi.exceptions.configuration_error import ConfigurationError
 from connector.src.octi.global_config import GlobalConfig
 from pycti import OpenCTIConnectorHelper  # type: ignore
 from pydantic import HttpUrl, SecretStr
-
 from tests.conftest import mock_env_vars
 
 # =====================

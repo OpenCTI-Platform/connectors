@@ -1,8 +1,9 @@
 from typing import Any
 
 import pytest
-from alienvault import ConnectorSettings
 from connectors_sdk import BaseConfigModel, ConfigValidationError
+
+from alienvault import ConnectorSettings
 
 
 @pytest.mark.parametrize(

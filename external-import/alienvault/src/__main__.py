@@ -1,7 +1,8 @@
 import traceback
 
-from alienvault import AlienVault, ConnectorSettings
 from pycti import OpenCTIConnectorHelper
+
+from alienvault import AlienVault, ConnectorSettings
 
 if __name__ == "__main__":
     """

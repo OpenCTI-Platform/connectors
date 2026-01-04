@@ -1,8 +1,9 @@
 import traceback
 
 from pycti import OpenCTIConnectorHelper
-from teamt5 import TeamT5Connector
 from teamt5.config_loader import ConfigConnector
+
+from teamt5 import TeamT5Connector
 
 if __name__ == "__main__":
 

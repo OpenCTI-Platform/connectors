@@ -1,6 +1,6 @@
 # OpenCTI Citalid Connector
 
-The OpenCTI Citalid connector allows you to import latest Citaalid CTI dataset. The connector leverages the Citalid API to retrieve the latest dataset in stix bundle format.
+The OpenCTI Citalid connector allows you to import the latest Citalid CTI dataset. The connector leverages the Citalid API to retrieve the latest dataset in stix bundle format.
 
 **Disclaimer** You will need to have access to Citalid API. To learn more about our product you can book a demo on https://citalid.com/book-a-demo/. 
 

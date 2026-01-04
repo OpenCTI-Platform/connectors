@@ -1,7 +1,8 @@
 import pytest
 from pydantic import HttpUrl
-from socprime import SocprimeConnector
 from socprime.config import ConnectorSettings
+
+from socprime import SocprimeConnector
 
 pytestmark = pytest.mark.usefixtures(
     "mocked_opencti_helper",

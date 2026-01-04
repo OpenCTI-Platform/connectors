@@ -9,6 +9,9 @@ from client_api.errors import DragosAPIError
 from client_api.v1 import DragosClientAPIV1
 from client_api.v1.indicator import IndicatorResponse, IndicatorsResponse
 from client_api.v1.product import ProductResponse, TagResponse
+from pydantic import SecretStr
+from yarl import URL
+
 from dragos.adapters.report.dragos_v1 import (
     ExtendedProductResponse,
     IndicatorAPIV1,
@@ -17,8 +20,6 @@ from dragos.adapters.report.dragos_v1 import (
     TagAPIV1,
 )
 from dragos.interfaces.report import IncompleteReportWarning
-from pydantic import SecretStr
-from yarl import URL
 
 
 def fake_tag_response():

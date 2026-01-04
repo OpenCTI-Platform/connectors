@@ -4,15 +4,16 @@ import traceback
 from datetime import timedelta
 from logging import getLogger
 
-from dragos.adapters.geocoding.octi import OctiGeocoding
-from dragos.adapters.report.dragos_v1 import ReportsAPIV1
-from dragos.connector import Connector
-from dragos.settings import ConnectorSettings
 from limiter import Limiter  # type: ignore[import-untyped]  # Limiter is not typed
 from pycti import (  # type: ignore[import-untyped]  # PyCTI is not typed
     OpenCTIConnectorHelper,
 )
 from yarl import URL
+
+from dragos.adapters.geocoding.octi import OctiGeocoding
+from dragos.adapters.report.dragos_v1 import ReportsAPIV1
+from dragos.connector import Connector
+from dragos.settings import ConnectorSettings
 
 logger = getLogger(__name__)
 
