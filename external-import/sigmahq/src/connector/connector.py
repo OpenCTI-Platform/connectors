@@ -119,7 +119,7 @@ class SigmaHQConnector:
                     {"bundles_sent": {str(len(bundles_sent))}},
                 )
 
-                # Store the current timestamp as a last run of the connector
+                # Store the last rule package version as a last run of the connector
                 self.helper.connector_logger.debug(
                     "Getting current state and update it with last rule package version",
                     {"rule_package_version": release_metadata.get("tag")},
@@ -130,6 +130,10 @@ class SigmaHQConnector:
                 else:
                     current_state = {"rule_package_version": latest_version}
                 self.helper.set_state(current_state)
+
+            else:
+                self.helper.connector_logger.info(
+                    "Nothing to do, latest rule package version already ingested")
 
             message = f"{self.helper.connect_name} connector successfully run"
 

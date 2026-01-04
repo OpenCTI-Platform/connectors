@@ -39,12 +39,10 @@ class ConverterToStix:
             tlp_level (str): The TLP level to add to the created STIX entities.
         """
         self.helper = helper
-
-        self.author = self.create_author()
         self.tlp_marking = self._create_tlp_marking(level=tlp_level.lower())
+        self.author = self.create_author()
 
-    @staticmethod
-    def create_author() -> dict:
+    def create_author(self) -> dict:
         """
         Create Author
         :return: Author in Stix2 object
@@ -53,6 +51,7 @@ class ConverterToStix:
             id=Identity.generate_id(name="SigmaHQ", identity_class="organization"),
             name="SigmaHQ",
             identity_class="organization",
+            object_marking_refs=[self.tlp_marking.id]
         )
         return author
 
@@ -131,6 +130,7 @@ class ConverterToStix:
                 source_ref=indicator.id,
                 target_ref=related_technique.id,
                 relationship_type="indicates",
+                object_marking_refs=[self.tlp_marking.id]
             )
             stix_objects.append(relation)
 
@@ -144,6 +144,7 @@ class ConverterToStix:
                 source_ref=indicator.id,
                 target_ref=related_vulnerability.id,
                 relationship_type="indicates",
+                object_marking_refs=[self.tlp_marking.id]
             )
             stix_objects.append(relation)
         return stix_objects
