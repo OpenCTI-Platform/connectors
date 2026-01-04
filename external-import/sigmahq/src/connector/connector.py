@@ -133,7 +133,8 @@ class SigmaHQConnector:
 
             else:
                 self.helper.connector_logger.info(
-                    "Nothing to do, latest rule package version already ingested")
+                    "Nothing to do, latest rule package version already ingested"
+                )
 
             message = f"{self.helper.connect_name} connector successfully run"
 

@@ -51,7 +51,7 @@ class ConverterToStix:
             id=Identity.generate_id(name="SigmaHQ", identity_class="organization"),
             name="SigmaHQ",
             identity_class="organization",
-            object_marking_refs=[self.tlp_marking.id]
+            object_marking_refs=[self.tlp_marking.id],
         )
         return author
 
@@ -130,7 +130,7 @@ class ConverterToStix:
                 source_ref=indicator.id,
                 target_ref=related_technique.id,
                 relationship_type="indicates",
-                object_marking_refs=[self.tlp_marking.id]
+                object_marking_refs=[self.tlp_marking.id],
             )
             stix_objects.append(relation)
 
@@ -144,7 +144,7 @@ class ConverterToStix:
                 source_ref=indicator.id,
                 target_ref=related_vulnerability.id,
                 relationship_type="indicates",
-                object_marking_refs=[self.tlp_marking.id]
+                object_marking_refs=[self.tlp_marking.id],
             )
             stix_objects.append(relation)
         return stix_objects
