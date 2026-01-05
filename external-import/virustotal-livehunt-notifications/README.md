@@ -1,10 +1,10 @@
 # OpenCTI VirusTotal Livehunt Notifications Connector
 
-The VirusTotal Livehunt Notifications connector imports malware samples matching YARA rules from VirusTotal Livehunt into OpenCTI.
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
+The VirusTotal Livehunt Notifications connector imports malware samples matching YARA rules from VirusTotal Livehunt into OpenCTI.
 
 ## Table of Contents
 
@@ -206,4 +206,3 @@ CONNECTOR_LOG_LEVEL=debug
 - **API Quota**: Each notification fetch consumes API quota
 - **File Download**: Enable `UPLOAD_ARTIFACT` to store actual malware samples
 - **Reference**: [VirusTotal Livehunt](https://support.virustotal.com/hc/en-us/articles/360001315857-Livehunt)
-

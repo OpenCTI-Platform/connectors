@@ -1,5 +1,9 @@
 # OpenCTI Google SecOps SIEM connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
 Table of Contents
 
 - [OpenCTI Google SecOps SIEM Intel Stream Connector](#opencti-stream-google-secops-siem-intel)
@@ -21,7 +25,6 @@ Table of Contents
 
 This connector enables the dissemination of OpenCTI STIX indicators into Google SecOps SIEM.
 The connector consumes indicators from an OpenCTI stream, convert them as [UDM entities](https://cloud.google.com/chronicle/docs/reference/udm-field-list#securityresult) and push them into Google SecOps SIEM using the ["entities.import"](https://cloud.google.com/chronicle/docs/reference/rest/v1alpha/projects.locations.instances.entities/import) API.
-
 
 OpenCTI data is coming from import connectors. Once this data is ingested in OpenCTI, it is pushed to a Redis event
 stream. This stream is consumed by the connector to insert intel (IOCs) in the
@@ -146,7 +149,6 @@ It is therefore recommended to configure the OpenCTI stream so that it only expo
 
 ![Stream configuration](./__docs__/media/stream-configuration.png)
 
-
 ### Field Mappings
 
 The following field mappings are implemented by default within the connector:
@@ -208,4 +210,3 @@ The tests cover in first place if the connector converter handle properly the UD
 The connector can be debugged by setting the appropriate log level.
 Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
 e., `self.helper.connector_logger.error("An error message")`.
-

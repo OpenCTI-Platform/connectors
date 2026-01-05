@@ -1,10 +1,10 @@
 # OpenCTI CVE Connector
 
-The CVE connector imports Common Vulnerabilities and Exposures (CVE) data from the NIST National Vulnerability Database (NVD) into OpenCTI.
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
-| Status            | Date       | Comment |
-|-------------------|------------|---------|
-| Filigran Verified | 2023-12-15 | -       |
+The CVE connector imports Common Vulnerabilities and Exposures (CVE) data from the NIST National Vulnerability Database (NVD) into OpenCTI.
 
 ## Table of Contents
 

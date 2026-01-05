@@ -1,10 +1,10 @@
 # OpenCTI RiskIQ Connector
 
-The RiskIQ connector imports threat intelligence articles and indicators from RiskIQ PassiveTotal into OpenCTI.
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
+The RiskIQ connector imports threat intelligence articles and indicators from RiskIQ PassiveTotal into OpenCTI.
 
 ## Table of Contents
 

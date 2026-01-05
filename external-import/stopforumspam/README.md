@@ -1,7 +1,7 @@
 # OpenCTI StopForumSpam Connector
 
-| Status    | Date | Comment |
-|-----------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Community | -    | -       |
 
 This connector retrieves domain names of suspected spammers on forums, blogs and wikis from stopforumspam.com.

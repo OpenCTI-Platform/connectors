@@ -1,4 +1,8 @@
-# OpenCTI Malbeacon Internal Enrichment Connector
+# OpenCTI Malbeacon Connector
+
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
 ## Table of Contents
 

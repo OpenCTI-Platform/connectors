@@ -1,10 +1,10 @@
 # OpenCTI Hunt.io Connector
 
-The Hunt.io connector imports threat intelligence from Hunt.io's threat intelligence platform into OpenCTI.
-
-| Status  | Date | Comment |
-|---------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Partner | -    | -       |
+
+The Hunt.io connector imports threat intelligence from Hunt.io's threat intelligence platform into OpenCTI.
 
 ## Table of Contents
 

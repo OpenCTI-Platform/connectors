@@ -1,10 +1,10 @@
 # OpenCTI Google Drive Connector
 
-The Google Drive connector imports documents from a Google Drive folder and creates reports in OpenCTI.
-
-| Status            | Date | Comment |
-|-------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Filigran Verified | -    | -       |
+
+The Google Drive connector imports documents from a Google Drive folder and creates reports in OpenCTI.
 
 ## Table of Contents
 

@@ -1,7 +1,7 @@
 # OpenCTI NTI Connector
 
-| Status    | Date | Comment |
-|-----------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Community | -    | -       |
 
 The OpenCTI NTI Connector can be used to import knowledge from NSFOCUS Threat Intelligence feed. 
@@ -85,7 +85,6 @@ Below are the parameters you'll need to set for the connector:
 | Create File     | create_file   | `NTI_CREATE_FILE`           | `False`                                 | Yes       | A boolean (`True` or `False`), if true then File observables will be created for each import.        |
 | Create URL      | create_url    | `NTI_CREATE_URL`            | `False`                                 | Yes       | A boolean (`True` or `False`), if true then URL observables will be created for each import.         |
 | PACKAGE TYPE    | package_type  | `NTI_PACKAGE_TYPE`          | `updated`                               | Yes       | NTI data package control. Only support `updated` for now.                                            |
-
 
 ## Deployment
 

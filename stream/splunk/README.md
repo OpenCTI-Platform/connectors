@@ -1,5 +1,9 @@
 # OpenCTI Splunk connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
 This connector allows organizations to feed a **Splunk** KV Store using OpenCTI knowledge.
 
 ## Installation

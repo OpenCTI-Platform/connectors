@@ -1,10 +1,10 @@
 # OpenCTI CRITs Connector
 
-The CRITs connector imports threat intelligence data from a CRITs (Collaborative Research Into Threats) database into OpenCTI, facilitating migration from CRITs to OpenCTI.
-
-| Status    | Date | Comment |
-|-----------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Community | -    | -       |
+
+The CRITs connector imports threat intelligence data from a CRITs (Collaborative Research Into Threats) database into OpenCTI, facilitating migration from CRITs to OpenCTI.
 
 ## Table of Contents
 

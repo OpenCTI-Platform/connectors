@@ -1,5 +1,9 @@
 # Splunk SOAR Push Stream Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
+
 This connector pushes threat intelligence from OpenCTI to Splunk SOAR (formerly Phantom), creating:
 - **Events** from OpenCTI Incidents
 - **Cases** from OpenCTI Containers (Reports, Groupings, Case-Incident, Case-RFI, Case-RFT)

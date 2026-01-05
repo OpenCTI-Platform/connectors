@@ -1,10 +1,10 @@
 # OpenCTI AlienVault OTX Connector
 
-The AlienVault OTX connector imports threat intelligence "Pulses" from AlienVault's Open Threat Exchange (OTX) DirectConnect API into OpenCTI.
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
+The AlienVault OTX connector imports threat intelligence "Pulses" from AlienVault's Open Threat Exchange (OTX) DirectConnect API into OpenCTI.
 
 ## Table of Contents
 

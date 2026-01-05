@@ -1,5 +1,9 @@
 # OpenCTI MISP Intel Stream Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
 This connector streams threat intelligence from OpenCTI to MISP, automatically creating, updating, and deleting MISP events based on OpenCTI containers (reports, groupings, and case management objects).
 
 ## Overview

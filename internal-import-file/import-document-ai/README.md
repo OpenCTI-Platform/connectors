@@ -1,8 +1,8 @@
 # AI based OpenCTI Document Import Connector (Powered by Ariane)
 
-| Status            | Date       | Comment |
-| ----------------- |------------| ------- |
-| Filigran Verified | 2025-03-18 |    -    |
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
 This connector allows Enterprise Edition Organizations to feed information from documents to OpenCTI, with more capabilities than regular Import Document connector.
 

@@ -1,10 +1,10 @@
 # OpenCTI Comlaude Connector
 
-The Comlaude connector imports domain information from the Comlaude API into OpenCTI for CTI allowlist management.
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
-| Status            | Date       | Comment |
-|-------------------|------------|---------|
-| Filigran Verified | 2025-04-17 | -       |
+The Comlaude connector imports domain information from the Comlaude API into OpenCTI for CTI allowlist management.
 
 ## Table of Contents
 

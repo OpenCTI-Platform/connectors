@@ -1,10 +1,10 @@
 # OpenCTI DNSTwist Connector
 
-The DNSTwist connector enriches Domain-Name observables by generating and detecting typosquatting domains using the DNSTwist library, discovering potential phishing domains, brand impersonation attempts, and domain squatting.
-
-| Status            | Date | Comment |
-|-------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Filigran Verified | -    | -       |
+
+The DNSTwist connector enriches Domain-Name observables by generating and detecting typosquatting domains using the DNSTwist library, discovering potential phishing domains, brand impersonation attempts, and domain squatting.
 
 ## Table of Contents
 

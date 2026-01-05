@@ -1,10 +1,10 @@
 # OpenCTI IPsum Connector
 
-The IPsum connector imports malicious IP addresses from the IPsum threat intelligence feed into OpenCTI.
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
+The IPsum connector imports malicious IP addresses from the IPsum threat intelligence feed into OpenCTI.
 
 ## Table of Contents
 

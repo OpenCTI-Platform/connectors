@@ -1,10 +1,10 @@
 # OpenCTI CAPEv2 Sandbox Connector
 
-The CAPEv2 Sandbox connector enriches File and Artifact observables by submitting them to a CAPEv2 malware analysis sandbox, importing behavioral analysis results, extracted configurations, MITRE ATT&CK mappings, and network IOCs.
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
+The CAPEv2 Sandbox connector enriches File and Artifact observables by submitting them to a CAPEv2 malware analysis sandbox, importing behavioral analysis results, extracted configurations, MITRE ATT&CK mappings, and network IOCs.
 
 ## Table of Contents
 
@@ -304,4 +304,3 @@ Log output includes:
 - **Try Extract**: Experimental static extraction mode; may be buggy in some CAPEv2 versions
 - **TLP Handling**: Files above `MAX_TLP` will not be submitted to the sandbox
 - **Organization Identity**: Creates a "CAPEv2 Sandbox" organization identity for attribution
-

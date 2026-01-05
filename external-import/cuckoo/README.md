@@ -1,10 +1,10 @@
 # OpenCTI Cuckoo Sandbox Connector
 
-The Cuckoo Sandbox connector imports malware analysis reports and IOCs from Cuckoo Sandbox into OpenCTI.
-
-| Status    | Date | Comment |
-|-----------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Community | -    | -       |
+
+The Cuckoo Sandbox connector imports malware analysis reports and IOCs from Cuckoo Sandbox into OpenCTI.
 
 ## Table of Contents
 

@@ -1,4 +1,8 @@
-# OpenCTI IPQS Fraud and Risk Scoring Internal Enrichment Connector
+# OpenCTI IPQS Fraud and Risk Scoring Connector
+
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
 ## Table of Contents
 

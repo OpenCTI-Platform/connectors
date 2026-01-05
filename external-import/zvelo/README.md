@@ -1,10 +1,10 @@
 # OpenCTI Zvelo CTI Connector
 
-The Zvelo connector imports indicators of compromise (IOCs) from Zvelo Cyber Threat Intelligence feeds into OpenCTI.
-
-| Status            | Date | Comment |
-|-------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Filigran Verified | -    | -       |
+
+The Zvelo connector imports indicators of compromise (IOCs) from Zvelo Cyber Threat Intelligence feeds into OpenCTI.
 
 ## Table of Contents
 

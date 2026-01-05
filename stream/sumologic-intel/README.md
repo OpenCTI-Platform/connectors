@@ -1,5 +1,9 @@
 # OpenCTI Sumo Logic Intelligence Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
 Table of Contents
 
 - [Introduction](#introduction)
@@ -23,7 +27,6 @@ This OpenCTI connector allows the ability to create, update and delete STIX indi
 The connector used the following Sumo Logic APIs:
 - [Uploads indicators in a STIX 2.x json format](https://api.sumologic.com/docs/#operation/uploadStixIndicators) API to create/update STIX indicators.
 - [Removes indicators by their IDS](https://api.sumologic.com/docs/#operation/removeIndicators) API to remove expired STIX indicators.
-
 
 ## Installation
 

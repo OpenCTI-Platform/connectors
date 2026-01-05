@@ -1,5 +1,9 @@
 # OpenCTI SophosLabs Intelix Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
+
 ## Table of Contents
 
 - [Introduction](#introduction)

@@ -1,8 +1,8 @@
 # OpenCTI Elastic Security Incidents Connector
 
-| Status            | Date       | Comment |
-|-------------------|------------|---------|
-| Filigran Verified | 2025-09-16 | -       |
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
 ## Table of Contents
 

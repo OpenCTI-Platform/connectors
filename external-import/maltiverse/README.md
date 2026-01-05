@@ -1,10 +1,10 @@
 # OpenCTI Maltiverse Connector
 
-The Maltiverse connector imports threat intelligence data from the Maltiverse platform via TAXII 2.1 into OpenCTI.
-
-| Status    | Date | Comment |
-|-----------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Community | -    | -       |
+
+The Maltiverse connector imports threat intelligence data from the Maltiverse platform via TAXII 2.1 into OpenCTI.
 
 ## Table of Contents
 

@@ -1,10 +1,10 @@
 # OpenCTI CrowdSec Connector
 
-The CrowdSec connector enriches IPv4 and IPv6 address observables with threat intelligence from CrowdSec's Cyber Threat Intelligence (CTI) API, providing reputation scores, attack behaviors, MITRE ATT&CK mappings, CVEs, and targeted country information.
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner Verified | -    | -       |
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
+The CrowdSec connector enriches IPv4 and IPv6 address observables with threat intelligence from CrowdSec's Cyber Threat Intelligence (CTI) API, providing reputation scores, attack behaviors, MITRE ATT&CK mappings, CVEs, and targeted country information.
 
 ## Table of Contents
 

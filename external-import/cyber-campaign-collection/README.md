@@ -1,10 +1,10 @@
 # OpenCTI Cyber Campaign Collection Connector
 
-The Cyber Campaign Collection connector imports APT and cybercriminal campaign reports from the CyberMonitor GitHub repository into OpenCTI.
-
-| Status    | Date | Comment |
-|-----------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Community | -    | -       |
+
+The Cyber Campaign Collection connector imports APT and cybercriminal campaign reports from the CyberMonitor GitHub repository into OpenCTI.
 
 ## Table of Contents
 

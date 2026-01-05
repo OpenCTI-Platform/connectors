@@ -1,12 +1,12 @@
 # OpenCTI FIRST EPSS Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
 > **Warning**: This connector is not the recommended way to enrich vulnerabilities with EPSS information. It is strongly advised to use the `internal/enrichment-connector` for FIRST EPSS instead, as it provides a more robust and integrated solution.
 
 The FIRST EPSS connector imports EPSS (Exploit Prediction Scoring System) scores for CVE vulnerabilities into OpenCTI.
-
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
 
 ## Table of Contents
 

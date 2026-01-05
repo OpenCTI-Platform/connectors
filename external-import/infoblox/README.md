@@ -1,10 +1,10 @@
 # OpenCTI Infoblox TIDE Connector
 
-The Infoblox connector imports threat intelligence data from the Infoblox Threat Intelligence Data Exchange (TIDE) into OpenCTI.
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
+The Infoblox connector imports threat intelligence data from the Infoblox Threat Intelligence Data Exchange (TIDE) into OpenCTI.
 
 ## Table of Contents
 

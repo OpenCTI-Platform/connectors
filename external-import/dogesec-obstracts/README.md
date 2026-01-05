@@ -1,7 +1,7 @@
 # OpenCTI Obstracts Connector
 
-| Status  | Date | Comment |
-|---------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Partner | -    | -       |
 
 ## Table of Contents

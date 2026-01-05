@@ -1,10 +1,10 @@
 # OpenCTI CATALYST Connector
 
-The CATALYST connector imports threat intelligence data from the CATALYST platform (provided by PRODAFT) into OpenCTI.
-
-| Status    | Date | Comment |
-|-----------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Community | -    | -       |
+
+The CATALYST connector imports threat intelligence data from the CATALYST platform (provided by PRODAFT) into OpenCTI.
 
 ## Table of Contents
 

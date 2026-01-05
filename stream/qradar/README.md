@@ -1,5 +1,9 @@
 # OpenCTI qradar connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
 This connector allows organizations to feed a **qradar** referencer sets using OpenCTI knowledge.
 
 ## Installation

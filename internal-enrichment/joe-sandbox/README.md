@@ -1,4 +1,8 @@
-# OpenCTI Joe Sandbox Internal Enrichment Connector
+# OpenCTI Joe Sandbox Connector
+
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
 ## Table of Contents
 

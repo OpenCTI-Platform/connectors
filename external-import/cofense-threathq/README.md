@@ -1,10 +1,10 @@
 # OpenCTI Cofense ThreatHQ Connector
 
-The Cofense ThreatHQ connector imports threat intelligence data from the Cofense ThreatHQ platform into OpenCTI, including phishing campaign reports, malware indicators, and associated observables.
-
-| Status            | Date | Comment |
-|-------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Filigran Verified | -    | -       |
+
+The Cofense ThreatHQ connector imports threat intelligence data from the Cofense ThreatHQ platform into OpenCTI, including phishing campaign reports, malware indicators, and associated observables.
 
 ## Table of Contents
 

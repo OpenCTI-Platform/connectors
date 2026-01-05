@@ -1,5 +1,9 @@
 # OpenCTI Zscaler Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
+
 This connector integrates **OpenCTI** threat intelligence into the **Zscaler** environment.
 
 ## Overview
@@ -45,7 +49,6 @@ This connector integrates **OpenCTI** threat intelligence into the **Zscaler** e
 | `ZSCALER_USERNAME`                      | `ZSCALER_USERNAME`                              | Yes        | Zscaler username.                                                                              |
 | `ZSCALER_PASSWORD`                      | `ZSCALER_PASSWORD`                              | Yes        | Zscaler password.                                                                              |
 | `ZSCALER_BLACKLIST_NAME`                | `ZSCALER_BLACKLIST_NAME`                        | Yes        | The name of the Zscaler blacklist to use.                        |
-
 
 ## Usage
 
@@ -108,7 +111,6 @@ services:
 networks:
   opencti_network:
     external: true
-
 
 More information : 
 What happens if a domain is already in the blacklist?

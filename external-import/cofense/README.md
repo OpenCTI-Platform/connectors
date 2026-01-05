@@ -1,10 +1,10 @@
 # OpenCTI Cofense Intelligence Connector
 
-The Cofense Intelligence connector imports threat intelligence data from the Cofense Intelligence platform into OpenCTI, including malware threat reports and associated indicators.
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
-| Status    | Date | Comment |
-|-----------|------|---------|
-| Community | -    | -       |
+The Cofense Intelligence connector imports threat intelligence data from the Cofense Intelligence platform into OpenCTI, including malware threat reports and associated indicators.
 
 ## Table of Contents
 

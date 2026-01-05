@@ -1,10 +1,10 @@
 # OpenCTI AbuseIPDB IP Blacklist Connector
 
-The AbuseIPDB connector imports IP addresses from the AbuseIPDB blacklist API into OpenCTI as observables, with optional indicator creation.
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
+The AbuseIPDB connector imports IP addresses from the AbuseIPDB blacklist API into OpenCTI as observables, with optional indicator creation.
 
 ## Table of Contents
 

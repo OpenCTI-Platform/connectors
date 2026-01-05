@@ -1,10 +1,10 @@
 # OpenCTI Shadowserver Connector
 
-The Shadowserver connector imports security reports from The Shadowserver Foundation into OpenCTI.
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
+The Shadowserver connector imports security reports from The Shadowserver Foundation into OpenCTI.
 
 ## Table of Contents
 

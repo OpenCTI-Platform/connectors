@@ -1,10 +1,10 @@
 # OpenCTI CrowdStrike Connector
 
-The CrowdStrike connector imports threat intelligence from CrowdStrike Falcon Intelligence into OpenCTI, including actors, reports, indicators, and detection rules.
-
-| Status            | Date | Comment |
-|-------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Filigran Verified | -    | -       |
+
+The CrowdStrike connector imports threat intelligence from CrowdStrike Falcon Intelligence into OpenCTI, including actors, reports, indicators, and detection rules.
 
 ## Table of Contents
 

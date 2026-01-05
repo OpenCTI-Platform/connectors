@@ -1,5 +1,9 @@
 # OpenCTI GreyNoise Internal Enrichment Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner Verified | -    | -       |
+
 ## Table of Contents
 
 - [Introduction](#introduction)

@@ -1,10 +1,10 @@
 # OpenCTI Intelfinder Connector
 
-The Intelfinder connector imports security alerts from the Intelfinder platform into OpenCTI as case incidents with associated observables and notes.
-
-| Status    | Date | Comment |
-|-----------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Community | -    | -       |
+
+The Intelfinder connector imports security alerts from the Intelfinder platform into OpenCTI as case incidents with associated observables and notes.
 
 ## Table of Contents
 

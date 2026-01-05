@@ -1,11 +1,10 @@
 # Proofpoint TAP Connector
 
-The Proofpoint TAP connector imports phishing campaign data, events, and threat intelligence from Proofpoint Targeted Attack Protection (TAP) into OpenCTI.
-
-| Status            | Date | Comment |
-|-------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Filigran Verified | -    | -       |
 
+The Proofpoint TAP connector imports phishing campaign data, events, and threat intelligence from Proofpoint Targeted Attack Protection (TAP) into OpenCTI.
 See: https://www.proofpoint.com/us/products/threat-defense
 
 ## Table of Contents
@@ -36,7 +35,6 @@ into OpenCTI for further analysis and correlation with other threat intelligence
 The connector should be configured via environment variables.
 
 For instance using `shell`
-
 
 directly
 ```shell
@@ -91,7 +89,6 @@ Below are the parameters you'll need to set for running the connector properly:
 | Directory Path | `CONNECTOR_SEND_TO_DIRECTORY_PATH` | CHANGEME | No | The path to the directory where data will be sent if `CONNECTOR_SEND_TO_DIRECTORY` is True. |
 | Directory Retention | `CONNECTOR_SEND_TO_DIRECTORY_RETENTION` | 7 | No | The number of days to retain data in the directory. Default is 7 days. |
 
-
 ### Connector extra parameters environment variables
 
 Below are the parameters you'll need to set for the connector:
@@ -108,7 +105,6 @@ Below are the parameters you'll need to set for the connector:
 | Export Campaigns                        | `TAP_EXPORT_CAMPAIGNS`           | False   | No        | Export campaigns to OpenCTI                                                  |
 | Export Events                          | `TAP_EXPORT_EVENTS`               | False   | No        | Export events to OpenCTI                                                     |
 | Events type                           | `TAP_EVENTS_TYPE  `                |         | No        | Events types to export (all, issues,messages_blocked,messages_delivered,clicks_blocked,clicks_permitted ) |
-
 
 ## Deployment
 
@@ -157,6 +153,7 @@ Find the connector, and click on the refresh button to reset the connector's sta
 download of data by re-running the connector.
 
 ## Behavior
+
 ### Mapping details
 The retrieved data are mapped as follows:
 ```mermaid

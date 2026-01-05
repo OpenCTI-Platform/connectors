@@ -1,10 +1,10 @@
 # OpenCTI Aerospace SPARTA Connector
 
-The SPARTA connector imports Space Attack Research and Tactic Analysis (SPARTA) framework data from The Aerospace Corporation into OpenCTI.
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
-| Status            | Date       | Comment |
-|-------------------|------------|---------|
-| Filigran Verified | 2025-11-07 | -       |
+The SPARTA connector imports Space Attack Research and Tactic Analysis (SPARTA) framework data from The Aerospace Corporation into OpenCTI.
 
 ## Table of Contents
 

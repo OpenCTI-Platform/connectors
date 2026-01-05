@@ -1,10 +1,10 @@
 # OpenCTI FIRST EPSS Connector
 
-The FIRST EPSS connector enriches CVE Vulnerability entities with Exploit Prediction Scoring System (EPSS) scores and percentiles from the FIRST.org API, helping prioritize vulnerability remediation efforts.
-
-| Status            | Date | Comment |
-|-------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Filigran Verified | -    | -       |
+
+The FIRST EPSS connector enriches CVE Vulnerability entities with Exploit Prediction Scoring System (EPSS) scores and percentiles from the FIRST.org API, helping prioritize vulnerability remediation efforts.
 
 ## Table of Contents
 

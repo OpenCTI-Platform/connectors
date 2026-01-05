@@ -1,4 +1,8 @@
-# OpenCTI IPinfo Internal Enrichment Connector
+# OpenCTI IPinfo Connector
+
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
 ## Table of Contents
 

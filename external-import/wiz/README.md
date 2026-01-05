@@ -1,10 +1,10 @@
 # OpenCTI Wiz Connector
 
-The Wiz connector imports cloud security threat intelligence from Wiz Research into OpenCTI.
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
-| Status            | Date       | Comment |
-|-------------------|------------|---------|
-| Filigran Verified | 2025-04-09 | -       |
+The Wiz connector imports cloud security threat intelligence from Wiz Research into OpenCTI.
 
 ## Table of Contents
 

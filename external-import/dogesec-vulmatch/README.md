@@ -1,7 +1,7 @@
 # OpenCTI Vulmatch Connector
 
-| Status  | Date | Comment |
-|---------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Partner | -    | -       |
 
 ## Table of Contents

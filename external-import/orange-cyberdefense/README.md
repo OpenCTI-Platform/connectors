@@ -1,7 +1,7 @@
 # CERT Orange Cyberdefense CTI Connector
 
-| Status  | Date | Comment |
-|---------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Partner | -    | -       |
 
 ## Objective

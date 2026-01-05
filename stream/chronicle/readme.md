@@ -1,6 +1,11 @@
- OpenCTI Chronicle connector
+# OpenCTI Chronicle connector
+
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
 This connector allows organizations to relay events to Google Chronicle
+
 ## Installation
 
 ### Requirements

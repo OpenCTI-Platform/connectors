@@ -1,5 +1,9 @@
 # OpenCTI ReversingLabs Spectra Analyze Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner Verified | -    | -       |
+
 ## Table of Contents
 
 - [Introduction](#introduction)
@@ -190,9 +194,3 @@ Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug` to see:
 
 - [ReversingLabs](https://www.reversinglabs.com/)
 - [Spectra Analyze](https://www.reversinglabs.com/products/spectra-analyze)
-
-### Filigran Verification
-
-| Status            | Date     | Comment |
-|-------------------|----------|---------|
-| Filigran Verified | 30-11-25 |         |

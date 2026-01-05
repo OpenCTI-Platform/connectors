@@ -1,10 +1,10 @@
 # OpenCTI Mandiant Connector
 
-The Mandiant connector imports threat intelligence from Mandiant Advantage into OpenCTI.
-
-| Status            | Date | Comment |
-|-------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Filigran Verified | -    | -       |
+
+The Mandiant connector imports threat intelligence from Mandiant Advantage into OpenCTI.
 
 ## Table of Contents
 

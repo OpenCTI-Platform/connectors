@@ -1,10 +1,10 @@
 # OpenCTI ANY.RUN Task Connector
 
-The ANY.RUN Task connector analyzes URL and Artifact observables in the ANY.RUN Interactive Online Malware Sandbox, enriching them with sandbox analysis results including threat scores, tags, IOCs, and MITRE ATT&CK patterns.
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
+The ANY.RUN Task connector analyzes URL and Artifact observables in the ANY.RUN Interactive Online Malware Sandbox, enriching them with sandbox analysis results including threat scores, tags, IOCs, and MITRE ATT&CK patterns.
 
 ## Table of Contents
 

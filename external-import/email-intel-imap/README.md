@@ -1,8 +1,8 @@
 # 📬 Email Intel IMAP Connector
 
-| Status            | Date       | Comment |
-|-------------------|------------|---------|
-| Filigran Verified | 2025-05-23 | -       |
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
 The **Email Intel IMAP Connector** enables the ingestion of cyber threat intelligence reports received via email into
 the OpenCTI platform using the IMAP protocol. This connector allows organizations to automate the collection of

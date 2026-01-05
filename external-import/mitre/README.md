@@ -1,10 +1,10 @@
 # OpenCTI MITRE ATT&CK Connector
 
-The MITRE connector imports the complete MITRE ATT&CK framework datasets (Enterprise, Mobile, ICS, and CAPEC) into OpenCTI.
-
-| Status            | Date | Comment |
-|-------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Filigran Verified | -    | -       |
+
+The MITRE connector imports the complete MITRE ATT&CK framework datasets (Enterprise, Mobile, ICS, and CAPEC) into OpenCTI.
 
 ## Table of Contents
 

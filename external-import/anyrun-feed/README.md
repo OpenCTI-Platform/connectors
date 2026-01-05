@@ -1,10 +1,10 @@
 # OpenCTI ANY.RUN Feed Connector
 
-The ANY.RUN connector imports threat intelligence feed data from the ANY.RUN Interactive Online Malware Sandbox into OpenCTI.
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
+The ANY.RUN connector imports threat intelligence feed data from the ANY.RUN Interactive Online Malware Sandbox into OpenCTI.
 
 ## Table of Contents
 

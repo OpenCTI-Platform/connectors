@@ -1,10 +1,10 @@
 # OpenCTI Fortinet FortiGuard Threat Intelligence Connector
 
-The Fortinet connector imports threat intelligence indicators from the Fortinet FortiGuard Threat Intelligence feed into OpenCTI.
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
+The Fortinet connector imports threat intelligence indicators from the Fortinet FortiGuard Threat Intelligence feed into OpenCTI.
 
 ## Table of Contents
 

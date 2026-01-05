@@ -1,5 +1,8 @@
 # OpenCTI Import ATT&CK Navigator TTPs
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
 Table of Contents
 
@@ -66,7 +69,6 @@ Below are the parameters you'll need to set for running the connector properly:
 | Connector Name  | name       | `CONNECTOR_NAME`            | ImportTTPsFileNavigator | Yes       | Name of the connector.                                                                                                                                  |
 | Connector Scope | scope      | `CONNECTOR_SCOPE`           | application/json        | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. <br/>This connector support only "application/json" file type. |
 | Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | error                   | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.                                                                  |
-
 
 ## Deployment
 

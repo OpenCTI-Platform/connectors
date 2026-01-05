@@ -1,5 +1,9 @@
 # OpenCTI Infoblox Threat Defense connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
+
 This connector allows organizations to stream OpenCTI indicators to Infoblox Threat Defense (BloxOne). This will stream all active indicators to a custom list within Infoblox Threat Defense and remove any revoked indicators.
 
 ## Installation
@@ -26,7 +30,6 @@ This connector allows organizations to stream OpenCTI indicators to Infoblox Thr
 | `infoblox_api_key`                      | `INFOBLOX_API_KEY`                      | Yes       | This is the API key you generated in the Infoblox Threat Defense console                      |
 | `infoblox_verify_ssl`                   | `INFOBLOX_VERIFY_SSL`                   | Yes       | This is tell the connector to verify SSL or not.                                              |
 | `infoblox_custom_list_id`               | `INFOBLOX_CUSTOM_LIST_ID`               | Yes       | This is the custom list id that OpenCTI will add/remove indicators from.                      |
-
 
 ### Usage
 

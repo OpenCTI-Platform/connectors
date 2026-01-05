@@ -1,10 +1,10 @@
 # OpenCTI Recorded Future Connector
 
-The Recorded Future connector imports threat intelligence from Recorded Future's Intelligence Cloud into OpenCTI.
-
-| Status            | Date | Comment |
-|-------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Filigran Verified | -    | -       |
+
+The Recorded Future connector imports threat intelligence from Recorded Future's Intelligence Cloud into OpenCTI.
 
 ## Table of Contents
 

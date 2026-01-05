@@ -1,10 +1,10 @@
 # OpenCTI Google Safe Browsing Connector
 
-The Google Safe Browsing connector enriches Domain-Name, URL, and Hostname observables by checking them against Google's Safe Browsing threat lists, identifying malware, phishing, and unwanted software threats.
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
+The Google Safe Browsing connector enriches Domain-Name, URL, and Hostname observables by checking them against Google's Safe Browsing threat lists, identifying malware, phishing, and unwanted software threats.
 
 ## Table of Contents
 
