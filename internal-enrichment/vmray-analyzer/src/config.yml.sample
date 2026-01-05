@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'VMRay_Analyzer'
-  type: 'INTERNAL_ENRICHMENT'
   name: 'VMRay Analyzer'
   scope: 'Artifact'
   auto: false # Enable/disable auto-enrichment of observables

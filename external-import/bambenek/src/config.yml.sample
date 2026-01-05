@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'Bambenek CTI'
   scope: 'ipv4-addr,ipv6-addr,domain,url,indicator'
   log_level: 'info'

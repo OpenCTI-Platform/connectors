@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'Hatching_Triage_Sandbox'
-  type: 'INTERNAL_ENRICHMENT'
   name: 'Hatching Triage Sandbox'
   scope: 'Artifact,Url'
   auto: false # Enable/disable auto-enrichment of observables

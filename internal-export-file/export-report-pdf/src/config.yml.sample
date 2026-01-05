@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ExportReportPdf'
-  type: 'INTERNAL_EXPORT_FILE'
   name: 'ExportReportPdf'
   scope: 'application/pdf'
   log_level: 'info'

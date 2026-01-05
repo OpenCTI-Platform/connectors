@@ -1,4 +1,4 @@
-version: "3"
+version: '3'
 services:
   connector-tweetfeed:
     image: opencti/connector-tweetfeed:latest

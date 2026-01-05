@@ -6,7 +6,7 @@ services:
     environment:
       # Connector's definition parameters:
       - CONNECTOR_NAME=${CONNECTOR_NAME}
-      - CONNECTOR_SCOPE={CONNECTOR_SCOPE}
+      - CONNECTOR_SCOPE=${CONNECTOR_SCOPE}
       # Connector's generic execution parameters:
       - OPENCTI_URL=${OPENCTI_URL}
       - OPENCTI_TOKEN=${OPENCTI_TOKEN}

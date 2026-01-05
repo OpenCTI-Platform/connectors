@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'STREAM'
   name: 'Splunk SOAR Push'
   scope: 'splunk-soar-push'
   confidence_level: 100

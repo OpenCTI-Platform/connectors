@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe' # Valid UUIDv4
-  type: 'EXTERNAL_IMPORT'
   name: 'Criminal IP C2 Daily Feed'
   scope: 'ipv4-addr'
   log_level: 'debug'

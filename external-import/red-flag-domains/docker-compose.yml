@@ -1,3 +1,4 @@
+version: '3'
   connector-redflag-domains:
     image: opencti/connector-red-flag-domains:latest
     environment:

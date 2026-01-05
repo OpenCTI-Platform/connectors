@@ -1,5 +1,6 @@
 """IronNet connector"""
 
+import sys
 import traceback
 
 from ironnet.connector import IronNetConnector
@@ -9,4 +10,4 @@ if __name__ == "__main__":
         IronNetConnector().start()
     except Exception:
         traceback.print_exc()
-        exit(1)
+        sys.exit(1)

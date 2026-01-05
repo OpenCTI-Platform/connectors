@@ -5,7 +5,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'Fortinet-TI'
   scope: 'Fortinet'
   log_level: 'info'

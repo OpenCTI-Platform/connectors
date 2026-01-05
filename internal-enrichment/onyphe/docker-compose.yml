@@ -6,7 +6,6 @@ services:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
       - CONNECTOR_ID=${CONNECTOR_ONYPHE_ID} # Valid UUIDv4
-      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - CONNECTOR_NAME=ONYPHE
       - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,indicator,hostname,x509-certificate,text
       - CONNECTOR_AUTO=false # Enable/disable auto-enrichment of observables. WARNING: potential impact on API quota
