@@ -1,4 +1,4 @@
-# OpenCTI GreyNoise Internal Enrichment Connector
+# OpenCTI GreyNoise Connector
 
 | Status | Date | Comment |
 |--------|------|---------|

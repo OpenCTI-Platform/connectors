@@ -1,4 +1,4 @@
-# OpenCTI Hybrid Analysis Sandbox Internal Enrichment Connector
+# OpenCTI Hybrid Analysis Sandbox Connector
 
 | Status | Date | Comment |
 |--------|------|---------|

@@ -1,4 +1,4 @@
-# OpenCTI Intezer Sandbox Internal Enrichment Connector
+# OpenCTI Intezer Sandbox Connector
 
 | Status | Date | Comment |
 |--------|------|---------|

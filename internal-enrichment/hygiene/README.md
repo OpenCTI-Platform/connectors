@@ -1,4 +1,4 @@
-# OpenCTI Hygiene Internal Enrichment Connector
+# OpenCTI Hygiene Connector
 
 | Status | Date | Comment |
 |--------|------|---------|

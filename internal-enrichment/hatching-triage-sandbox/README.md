@@ -1,4 +1,4 @@
-# OpenCTI Hatching Triage Sandbox Internal Enrichment Connector
+# OpenCTI Hatching Triage Sandbox Connector
 
 | Status | Date | Comment |
 |--------|------|---------|

@@ -1,4 +1,4 @@
-# OpenCTI Censys Enrichment Connector
+# OpenCTI Censys Connector
 
 | Status | Date | Comment |
 |--------|------|---------|
@@ -8,7 +8,7 @@ The Censys Enrichment connector enriches IP addresses, domains, and certificates
 
 ## Table of Contents
 
-- [OpenCTI Censys Enrichment Connector](#opencti-censys-enrichment-connector)
+- [OpenCTI Censys Connector](#opencti-censys-connector)
   - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
   - [Installation](#installation)
