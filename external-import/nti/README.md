@@ -6,7 +6,7 @@
 
 The OpenCTI NTI Connector can be used to import knowledge from NSFOCUS Threat Intelligence feed. 
 
-Table of Contents
+## Table of Contents
 
 - [OpenCTI NTI Connector](#opencti-nti-connector)
   - [Introduction](#introduction)

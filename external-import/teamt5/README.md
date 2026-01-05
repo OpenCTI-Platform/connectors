@@ -7,9 +7,9 @@
 A connector enabling the automatic ingestion of Reports and Indicator Bundles from the Team T5 Platform to an OpenCTI Instance.
 
 
-Table of Contents
+## Table of Contents
 
-- [OpenCTI TeamT5 External Import Connector](#opencti-teamt5-external-Import-connector)
+- [OpenCTI TeamT5 External Import Connector](#opencti-teamt5-external-import-connector)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)

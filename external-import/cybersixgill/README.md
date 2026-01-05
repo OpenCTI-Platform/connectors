@@ -1,45 +1,41 @@
 # OpenCTI Cybersixgill Connector
 
+The Cybersixgill Darkfeed connector imports threat intelligence data from Cybersixgill's underground monitoring platform into OpenCTI.
+
 | Status    | Date | Comment |
 |-----------|------|---------|
 | Community | -    | -       |
 
 ## Table of Contents
 
-- [Introduction](#introduction)
-- [Installation](#installation)
-  - [Requirements](#requirements)
-- [Configuration](#configuration)
-  - [Configuration Variables](#configuration-variables)
-- [Deployment](#deployment)
-  - [Docker Deployment](#docker-deployment)
-  - [Manual Deployment](#manual-deployment)
-- [Behavior](#behavior)
-  - [Data Flow](#data-flow)
-  - [Entity Mapping](#entity-mapping)
-- [Debugging](#debugging)
-- [Additional Information](#additional-information)
-
----
+- [OpenCTI Cybersixgill Connector](#opencti-cybersixgill-connector)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction](#introduction)
+  - [Installation](#installation)
+    - [Requirements](#requirements)
+  - [Configuration variables](#configuration-variables)
+    - [OpenCTI environment variables](#opencti-environment-variables)
+    - [Base connector environment variables](#base-connector-environment-variables)
+    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
+  - [Deployment](#deployment)
+    - [Docker Deployment](#docker-deployment)
+    - [Manual Deployment](#manual-deployment)
+  - [Usage](#usage)
+  - [Behavior](#behavior)
+  - [Debugging](#debugging)
+  - [Additional information](#additional-information)
 
 ## Introduction
 
-The Cybersixgill Darkfeed connector imports threat intelligence data from [Cybersixgill's](https://www.cybersixgill.com/) underground monitoring platform into OpenCTI. The Darkfeed provides IOCs (Indicators of Compromise) automatically extracted from Cybersixgill's comprehensive collection of deep and dark web sources.
+[Cybersixgill](https://www.cybersixgill.com/) provides real-time threat intelligence from the deep and dark web. The Darkfeed provides IOCs (Indicators of Compromise) automatically extracted from Cybersixgill's comprehensive collection of underground sources.
 
-### What it does
+This connector imports IOCs including file hashes, IP addresses, domains, and URLs, providing early warning of emerging threats from underground sources. The data includes:
 
-- Imports IOCs including file hashes, IP addresses, domains, and URLs
-- Provides early warning of emerging threats from underground sources
-- Includes compromised domains, domains sold on dark web, malware file links, malware hashes, and malicious C&C IPs
-
-### Use Cases
-
-- Automated IOC integration into security infrastructure
-- Threat hunting within your network
-- Understanding emerging malware trends, tactics, techniques, and procedures
-- Machine-to-machine threat blocking with no human involvement
-
----
+- Compromised domains
+- Domains sold on dark web
+- Malware file links
+- Malware hashes
+- Malicious C&C IPs
 
 ## Installation
 
@@ -48,137 +44,138 @@ The Cybersixgill Darkfeed connector imports threat intelligence data from [Cyber
 - OpenCTI Platform >= 6.9.5
 - Cybersixgill Client ID and Client Secret (contact Cybersixgill for access)
 
----
+## Configuration variables
 
-## Configuration
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
 
-### Configuration Variables
+### OpenCTI environment variables
 
-#### OpenCTI Parameters
+| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
+|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
+| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
+| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| OpenCTI URL | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
-| OpenCTI Token | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
+### Base connector environment variables
 
-#### Base Connector Parameters
+| Parameter        | config.yml | Docker environment variable | Default      | Mandatory | Description                                                              |
+|------------------|------------|-----------------------------|--------------|-----------|--------------------------------------------------------------------------|
+| Connector ID     | id         | `CONNECTOR_ID`              |              | Yes       | A unique `UUIDv4` identifier for this connector instance.                |
+| Connector Scope  | scope      | `CONNECTOR_SCOPE`           | cybersixgill | Yes       | The scope or type of data the connector is importing.                    |
+| Log Level        | log_level  | `CONNECTOR_LOG_LEVEL`       | info         | No        | Determines the verbosity of logs: `debug`, `info`, `warn`, or `error`.   |
 
-| Parameter | Docker envvar | Mandatory | Default | Description |
-|-----------|---------------|-----------|---------|-------------|
-| Connector ID | `CONNECTOR_ID` | Yes | - | A unique `UUIDv4` for this connector |
-| Connector Scope | `CONNECTOR_SCOPE` | Yes | - | Supported scope (MIME Type or STIX Object) |
-| Log Level | `CONNECTOR_LOG_LEVEL` | No | `info` | Log level: `debug`, `info`, `warn`, or `error` |
+### Connector extra parameters environment variables
 
-#### Connector Extra Parameters
-
-| Parameter | Docker envvar | Mandatory | Default | Description |
-|-----------|---------------|-----------|---------|-------------|
-| Client ID | `CYBERSIXGILL_CLIENT_ID` | Yes | - | Cybersixgill API Client ID |
-| Client Secret | `CYBERSIXGILL_CLIENT_SECRET` | Yes | - | Cybersixgill API Client Secret |
-| Create Observables | `CYBERSIXGILL_CREATE_OBSERVABLES` | No | `true` | Create observables from indicators |
-| Create Indicators | `CYBERSIXGILL_CREATE_INDICATORS` | No | `true` | Create STIX indicators |
-| Fetch Size | `CYBERSIXGILL_FETCH_SIZE` | No | `2000` | Number of indicators to fetch per run |
-| Enable Relationships | `CYBERSIXGILL_ENABLE_RELATIONSHIPS` | No | `true` | Create relationships between SDOs |
-| Interval | `CYBERSIXGILL_INTERVAL_SEC` | No | `300` | Import interval in seconds |
-
----
+| Parameter            | config.yml                      | Docker environment variable          | Default | Mandatory | Description                                                    |
+|----------------------|---------------------------------|--------------------------------------|---------|-----------|----------------------------------------------------------------|
+| Client ID            | cybersixgill.client_id          | `CYBERSIXGILL_CLIENT_ID`             |         | Yes       | Cybersixgill API Client ID.                                    |
+| Client Secret        | cybersixgill.client_secret      | `CYBERSIXGILL_CLIENT_SECRET`         |         | Yes       | Cybersixgill API Client Secret.                                |
+| Create Observables   | cybersixgill.create_observables | `CYBERSIXGILL_CREATE_OBSERVABLES`    | true    | No        | Create observables from indicators.                            |
+| Create Indicators    | cybersixgill.create_indicators  | `CYBERSIXGILL_CREATE_INDICATORS`     | true    | No        | Create STIX indicators.                                        |
+| Fetch Size           | cybersixgill.fetch_size         | `CYBERSIXGILL_FETCH_SIZE`            | 2000    | No        | Number of indicators to fetch per run.                         |
+| Enable Relationships | cybersixgill.enable_relationships | `CYBERSIXGILL_ENABLE_RELATIONSHIPS` | true    | No        | Create relationships between SDOs.                             |
+| Interval             | cybersixgill.interval_sec       | `CYBERSIXGILL_INTERVAL_SEC`          | 300     | No        | Import interval in seconds.                                    |
 
 ## Deployment
 
 ### Docker Deployment
 
-Use the following `docker-compose.yml`:
+Build the Docker image:
+
+```bash
+docker build -t opencti/connector-cybersixgill:latest .
+```
+
+Configure the connector in `docker-compose.yml`:
 
 ```yaml
-services:
   connector-cybersixgill:
     image: opencti/connector-cybersixgill:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
-      - CONNECTOR_ID=${CONNECTOR_CYBERSIXGILL_ID}
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
       - CONNECTOR_SCOPE=cybersixgill
       - CONNECTOR_LOG_LEVEL=info
-      - CYBERSIXGILL_CLIENT_ID=${CYBERSIXGILL_CLIENT_ID}
-      - CYBERSIXGILL_CLIENT_SECRET=${CYBERSIXGILL_CLIENT_SECRET}
+      - CYBERSIXGILL_CLIENT_ID=ChangeMe
+      - CYBERSIXGILL_CLIENT_SECRET=ChangeMe
       - CYBERSIXGILL_CREATE_OBSERVABLES=true
       - CYBERSIXGILL_CREATE_INDICATORS=true
       - CYBERSIXGILL_FETCH_SIZE=2000
       - CYBERSIXGILL_ENABLE_RELATIONSHIPS=true
       - CYBERSIXGILL_INTERVAL_SEC=300
     restart: always
-    depends_on:
-      - opencti
+```
+
+Start the connector:
+
+```bash
+docker compose up -d
 ```
 
 ### Manual Deployment
 
-1. Clone the repository and navigate to the connector directory
-2. Install dependencies: `pip install -r requirements.txt`
-3. Configure `config.yml`:
+1. Create `config.yml` based on `config.yml.sample`.
 
-```yaml
-opencti:
-  url: 'http://localhost:8080'
-  token: 'your-token'
+2. Install dependencies:
 
-connector:
-  id: 'your-uuid'
-  scope: 'cybersixgill'
-  log_level: 'info'
-
-cybersixgill:
-  client_id: 'your-client-id'
-  client_secret: 'your-client-secret'
-  create_observables: true
-  create_indicators: true
-  fetch_size: 2000
-  enable_relationships: true
-  interval_sec: 300
+```bash
+pip3 install -r requirements.txt
 ```
 
-4. Run: `python main.py`
+3. Start the connector:
 
----
+```bash
+python3 main.py
+```
+
+## Usage
+
+The connector runs automatically at the interval defined by `CYBERSIXGILL_INTERVAL_SEC`. To force an immediate run:
+
+**Data Management → Ingestion → Connectors**
+
+Find the connector and click the refresh button to reset the state and trigger a new data fetch.
 
 ## Behavior
+
+The connector fetches IOCs from Cybersixgill Darkfeed and imports them as STIX 2.1 objects.
 
 ### Data Flow
 
 ```mermaid
-graph TB
+graph LR
     subgraph Cybersixgill
+        direction TB
         API[Darkfeed API]
         Underground[Deep/Dark Web Sources]
     end
-    
+
+    subgraph OpenCTI
+        direction LR
+        Identity[Identity - Cybersixgill]
+        Indicator[Indicator]
+        Observable[Observable]
+        Relationship[Relationship]
+    end
+
     Underground --> API
-    
-    subgraph Processing
-        API --> Client[Cybersixgill Client]
-        Client --> Importer[Indicator Importer]
-    end
-    
-    subgraph OpenCTI Entities
-        Importer --> Identity[Identity - Cybersixgill]
-        Importer --> Indicator[Indicator]
-        Importer --> Observable[Observable]
-        Importer --> Relationship[Relationship]
-    end
-    
+    API --> Identity
+    API --> Indicator
+    API --> Observable
     Indicator -- based-on --> Observable
 ```
 
 ### Entity Mapping
 
-| Cybersixgill Data | OpenCTI Entity | Notes |
-|-------------------|----------------|-------|
-| File Hash (MD5, SHA1, SHA256) | File Observable + Indicator | Malware samples from underground sources |
-| IP Address | IPv4-Addr/IPv6-Addr Observable + Indicator | C&C servers, malicious infrastructure |
-| Domain | Domain-Name Observable + Indicator | Compromised/malicious domains |
-| URL | URL Observable + Indicator | Phishing links, malware distribution |
-| - | Identity | "Cybersixgill" as author |
-| - | Relationship | `based-on` between Indicator and Observable |
+| Cybersixgill Data              | OpenCTI Entity      | Description                                          |
+|--------------------------------|---------------------|------------------------------------------------------|
+| File Hash (MD5, SHA1, SHA256)  | File Observable     | Malware samples from underground sources             |
+| File Hash                      | Indicator           | STIX indicator with pattern                          |
+| IP Address                     | IPv4-Addr/IPv6-Addr | C&C servers, malicious infrastructure                |
+| Domain                         | Domain-Name         | Compromised/malicious domains                        |
+| URL                            | URL                 | Phishing links, malware distribution                 |
+| -                              | Identity            | "Cybersixgill" as author                             |
+| -                              | Relationship        | `based-on` between Indicator and Observable          |
 
 ### Processing Details
 
@@ -211,18 +208,15 @@ graph TB
 6. **Author Identity**:
    - All objects created by this connector reference "Cybersixgill" organization identity
 
-### State Management
-
-| State Key | Description |
-|-----------|-------------|
-| `last_run` | Unix timestamp of last successful run |
-
----
-
 ## Debugging
 
-Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug`. Common issues:
+Enable verbose logging:
 
+```env
+CONNECTOR_LOG_LEVEL=debug
+```
+
+Common issues:
 - **Authentication failures**: Verify Client ID and Client Secret
 - **API rate limits**: Increase `CYBERSIXGILL_INTERVAL_SEC` if hitting limits
 - **Large batch sizes**: Reduce `CYBERSIXGILL_FETCH_SIZE` if experiencing timeouts
@@ -234,9 +228,7 @@ For assistance, bug reports, or feature requests:
 - **Support Portal**: https://www.cybersixgill.com/contact-us/
 - **Email**: support@cybersixgill.com
 
----
-
-## Additional Information
+## Additional information
 
 ### Data Sources
 
@@ -249,11 +241,18 @@ Cybersixgill collects intelligence from:
 
 ### Recommended Configuration
 
-| Deployment | Interval | Fetch Size | Notes |
-|------------|----------|------------|-------|
-| Production | 300-600s | 2000 | Standard setup |
-| High-volume | 600-900s | 5000 | For large deployments |
-| Testing | 60s | 100 | For development |
+| Deployment   | Interval    | Fetch Size | Notes              |
+|--------------|-------------|------------|--------------------|
+| Production   | 300-600s    | 2000       | Standard setup     |
+| High-volume  | 600-900s    | 5000       | For large deployments |
+| Testing      | 60s         | 100        | For development    |
+
+### Use Cases
+
+- Automated IOC integration into security infrastructure
+- Threat hunting within your network
+- Understanding emerging malware trends, tactics, techniques, and procedures
+- Machine-to-machine threat blocking with no human involvement
 
 ### API Documentation
 

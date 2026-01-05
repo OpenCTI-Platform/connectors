@@ -1,7 +1,8 @@
-# OpenCTI External Ingestion Connector ServiceNow
-Table of Contents
+# OpenCTI ServiceNow Connector
 
-- [OpenCTI External Ingestion Connector ServiceNow](#opencti-external-ingestion-connector-servicenow)
+## Table of Contents
+
+- [OpenCTI ServiceNow Connector](#opencti-servicenow-connector)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)

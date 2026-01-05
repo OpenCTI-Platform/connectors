@@ -10,7 +10,7 @@ into the OpenCTI platform.
 See : https://fr.tenable.com/products/security-center
 
 
-Table of Contents
+## Table of Contents
 
 - [Tenable Security Center Connector](#tenable-security-center-connector)
   - [Introduction](#introduction)

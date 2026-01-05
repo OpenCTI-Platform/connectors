@@ -4,7 +4,7 @@
 |-------------------|------|---------|
 | Filigran Verified | -    | -       |
 
-Table of Contents
+## Table of Contents
 
 - [OpenCTI Microsoft Sentinel Incidents Connector](#opencti-microsoft-sentinel-incidents-connector)
     - [Introduction](#introduction)

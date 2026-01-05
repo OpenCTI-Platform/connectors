@@ -1,6 +1,6 @@
-# Spycloud OpenCTI External Import connector
+# OpenCTI SpyCloud Connector
 
-The Spycloud connector imports breach records and compromised data from Spycloud's threat intelligence platform into OpenCTI as incidents and observables.
+The SpyCloud connector imports breach records and compromised data from SpyCloud's threat intelligence platform into OpenCTI as incidents and observables.
 
 | Status            | Date | Comment |
 |-------------------|------|---------|
@@ -8,14 +8,15 @@ The Spycloud connector imports breach records and compromised data from Spycloud
 
 ## Table of Contents
 
-- [pycloud OpenCTI External Import connector](#opencti-external-ingestion-connector-template)
+- [OpenCTI SpyCloud Connector](#opencti-spycloud-connector)
+  - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
     - [OpenCTI environment variables](#opencti-environment-variables)
-    - [External import connector environment variables](#external-import-connector-environment-variables)
-    - [Spycloud environment variables](#spycloud-environment-variables)
+    - [Base connector environment variables](#base-connector-environment-variables)
+    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -26,184 +27,225 @@ The Spycloud connector imports breach records and compromised data from Spycloud
 
 ## Introduction
 
-This connector allows organizations to feed OpenCTI using **Spycloud** knowledge.
+[SpyCloud](https://spycloud.com/) monitors and tracks compromised data, such as login credentials and personal information, across the web and other sources. This connector imports breach records from SpyCloud into OpenCTI as incidents and observables.
 
-Spycloud monitors and tracks compromised data, such as login credentials and personal information, across the web and other sources.
-This connector imports such data, aka _breach records_, from Spycloud into OpenCTI as incidents and observables.
-
-[Documentation about Spycloud API](https://spycloud-external.readme.io/sc-enterprise-api/docs/getting-started) is available on their platform.
+[Documentation about SpyCloud API](https://spycloud-external.readme.io/sc-enterprise-api/docs/getting-started) is available on their platform.
 
 ## Installation
 
 ### Requirements
 
-- OpenCTI Platform >= 6.5.X
+- OpenCTI Platform >= 6.5.x
+- SpyCloud subscription with API access
+- IP address whitelisting on SpyCloud platform
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
-in `config.yml` (for manual deployment).
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+
+> **Note**: All environment variables' values are strings (e.g., stringified numbers, dates in ISO format, comma-separated lists).
 
 ### OpenCTI environment variables
 
-Below are the parameters you'll need to set for OpenCTI.  
-**We assume that all environment variables' values are strings (e.g. stringified numbers, dates in ISO format, comma-separated lists, ...)**
-
 | Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-| ------------- | ---------- | --------------------------- | --------- | ---------------------------------------------------- |
+|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
 | OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
 | OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
 
-### External import connector environment variables
+### Base connector environment variables
 
-Below are the parameters you'll need to set for running the connector properly:
+| Parameter       | config.yml      | Docker environment variable   | Default  | Mandatory | Description                                                              |
+|-----------------|-----------------|-------------------------------|----------|-----------|--------------------------------------------------------------------------|
+| Connector ID    | id              | `CONNECTOR_ID`                |          | Yes       | A unique `UUIDv4` identifier for this connector instance.                |
+| Connector Name  | name            | `CONNECTOR_NAME`              | SpyCloud | No        | Name of the connector.                                                   |
+| Connector Scope | scope           | `CONNECTOR_SCOPE`             | spycloud | No        | The scope or type of data the connector is importing.                    |
+| Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`         | info     | No        | Determines the verbosity of logs: `debug`, `info`, `warn`, or `error`.   |
+| Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD`   |          | Yes       | Interval between runs in ISO 8601 format (e.g., `PT1H`).                 |
 
-| Parameter       | config.yml      | Docker environment variable | Default    | Mandatory | Description                                                                              |
-| --------------- | --------------- | --------------------------- | ---------- | --------- | ---------------------------------------------------------------------------------------- |
-| Connector ID    | id              | `CONNECTOR_ID`              | /          | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Name  | name            | `CONNECTOR_NAME`            | /          | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope           | `CONNECTOR_SCOPE`           | "spycloud" | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`       | "info"     | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
-| Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD` | /          | Yes       | Period of time to wait between two connector's runs (in ISO-8601 format)                 |
+### Connector extra parameters environment variables
 
-### Spycloud environment variables
-
-Below are the parameters you'll need to set for the connector:
-
-| Parameter         | config.yml        | Docker environment variable  | Default             | Mandatory | Description                                                                                                                                                     |
-| ----------------- | ----------------- | ---------------------------- | ------------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| API base URL      | api_base_url      | `SPYCLOUD_API_BASE_URL`      | /                   | Yes       | Spycloud API base url                                                                                                                                           |
-| API key           | api_key           | `SPYCLOUD_API_KEY`           | /                   | Yes       | Spycloud API key                                                                                                                                                |
-| Severity levels   | severity_levels   | `SPYCLOUD_SEVERITY_LEVELS`   | /                   | No        | List of severity levels to filter breach records by. Allowed values are ["2", "5", "20", "25"]. If not set, all breach records will be returned                 |
-| Watchlist types   | watchlist_types   | `SPYCLOUD_WATCHLIST_TYPES`   | /                   | No        | List of watchlist types to filter breach records by. Allowed values are ["email", "domain", "subdomain", "ip"]. If not set, all breach records will be returned |
-| TLP Level         | tlp_level         | `SPYCLOUD_TLP_LEVEL`         | "amber+strict"      | No        | TLP level to set on imported entities (allowed values are ['white', 'green', 'amber', 'amber+strict', 'red'])                                                   |
-| Import start date | import_start_date | `SPYCLOUD_IMPORT_START_DATE` | "1970-01-01T00:00Z" | No        | Date to start import from (in ISO-8601 format) if connector's state doesn't contain last imported incident(s) datetime.                                         |
-
-Please find further details about Spycloud filters in their [API documentation](https://spycloud-external.readme.io/sc-enterprise-api/reference/data-watchlist)
+| Parameter         | config.yml        | Docker environment variable  | Default             | Mandatory | Description                                                    |
+|-------------------|-------------------|------------------------------|---------------------|-----------|----------------------------------------------------------------|
+| API Base URL      | api_base_url      | `SPYCLOUD_API_BASE_URL`      |                     | Yes       | SpyCloud API base URL.                                         |
+| API Key           | api_key           | `SPYCLOUD_API_KEY`           |                     | Yes       | SpyCloud API key.                                              |
+| Severity Levels   | severity_levels   | `SPYCLOUD_SEVERITY_LEVELS`   |                     | No        | Filter by severity: `2`, `5`, `20`, `25` (comma-separated).    |
+| Watchlist Types   | watchlist_types   | `SPYCLOUD_WATCHLIST_TYPES`   |                     | No        | Filter by type: `email`, `domain`, `subdomain`, `ip`.          |
+| TLP Level         | tlp_level         | `SPYCLOUD_TLP_LEVEL`         | amber+strict        | No        | TLP marking: `white`, `green`, `amber`, `amber+strict`, `red`. |
+| Import Start Date | import_start_date | `SPYCLOUD_IMPORT_START_DATE` | 1970-01-01T00:00Z   | No        | Starting date in ISO 8601 format if state is not set.          |
 
 ## Deployment
 
 ### Docker Deployment
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
-sometimes the OpenCTI SDK fails to initialize.
+Build the Docker image:
 
-Build a Docker Image using the provided `Dockerfile`.
-
-Example:
-
-```shell
-# Replace the IMAGE NAME with the appropriate value
-docker build . -t [IMAGE NAME]:latest
+```bash
+docker build -t opencti/connector-spycloud:latest .
 ```
 
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
-environment. Then, start the docker container with the provided docker-compose.yml
+Configure the connector in `docker-compose.yml`:
 
-```shell
+```yaml
+  connector-spycloud:
+    image: opencti/connector-spycloud:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=SpyCloud
+      - CONNECTOR_SCOPE=spycloud
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT1H
+      - SPYCLOUD_API_BASE_URL=ChangeMe
+      - SPYCLOUD_API_KEY=ChangeMe
+      - SPYCLOUD_TLP_LEVEL=amber+strict
+    restart: always
+```
+
+Start the connector:
+
+```bash
 docker compose up -d
-# -d for detached
 ```
 
 ### Manual Deployment
 
-Create a file `config.yml` based on the provided `config.yml.sample`.
+1. Create `config.yml` based on `config.yml.sample`.
 
-Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
+2. Install dependencies:
 
-Install the required python dependencies (preferably in a virtual environment):
-
-```shell
+```bash
 pip install .
 ```
 
-Then, start the connector from recorded-future/src:
+3. Start the connector:
 
-```shell
+```bash
 python main.py
 ```
 
 ## Usage
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at a
-regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
+The connector runs automatically at the interval defined by `CONNECTOR_DURATION_PERIOD`. To force an immediate run:
 
-However, if you would like to force an immediate download of a new batch of entities, navigate to:
+**Data Management → Ingestion → Connectors**
 
-`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform.
-
-Find the connector, and click on the refresh button to reset the connector's state and force a new
-download of data by re-running the connector.
+Find the connector and click the refresh button to reset the state and trigger a new data fetch.
 
 ## Behavior
 
-<!--
-Describe how the connector functions:
-* What data is ingested, updated, or modified
-* Important considerations for users when utilizing this connector
-* Additional relevant details
--->
+The connector fetches breach records from SpyCloud API and transforms them into OpenCTI incidents with associated observables.
 
-### General
-
-This connector leverages OpenCTI connector _scheduler_, so it imports Spycloud breach records and create corresponding incidents and their related observables in OpenCTI at a defined periodicity.  
-General documentation about connectors and the scheduler can be found on [Filigran's official doc](https://filigran.io/auto-backpressue-control-octi-connectors/#h-purpose-of-the-scheduler).
-
-### Authentication
-
-In order to authenticate the connector and access Spycloud API, an account with an API key must be set on their platform _and_ the IP address of the running connector must be whitelisted. More information is available in [Spycloud documentation](https://spycloud-external.readme.io/sc-enterprise-api/docs/getting-started#authentication).
-
-### Data
-
-The graph below describes all the different entities that can be created and/or updated by the connector in OpenCTI from
-Spycloud's breach records.
-
-| As each breach record can contain a lot of heterogeneous information, all fields are gathered into incident's description as a markdown table.
-| These fields are saved as they are returned by Spycloud API.
+### Data Flow
 
 ```mermaid
 graph LR
-    subgraph Spycloud
+    subgraph SpyCloud
         direction TB
-        SpycloudBreachCatalog[BreachCatalog]
-        SpycloudBreachRecord[BreachRecord]
+        API[SpyCloud API]
+        BreachCatalog[Breach Catalog]
+        BreachRecord[Breach Record]
     end
 
     subgraph OpenCTI
-        direction TB
-        subgraph Events
-            direction TB
-            OpenCTIIncident[Incident]
-            OpenCTIObservable[Observable]
-        end
+        direction LR
+        Incident[Incident]
+        UserAccount[User-Account Observable]
+        EmailAddress[Email-Addr Observable]
+        URL[URL Observable]
+        Domain[Domain-Name Observable]
+        IPv4[IPv4-Addr Observable]
+        IPv6[IPv6-Addr Observable]
+        MAC[MAC-Addr Observable]
+        File[File Observable]
+        Directory[Directory Observable]
+        UserAgent[User-Agent Observable]
     end
 
-%% BreachCatalog includes BreachRecord
-    SpycloudBreachCatalog -.->|has many| SpycloudBreachRecord
-%% BreachRecord generates Incident
-    SpycloudBreachRecord ==>|looping over found records| OpenCTIIncident & OpenCTIObservable
-%% Observables are related-to Incident
-    OpenCTIObservable -.->|related-to| OpenCTIIncident
-
+    API --> BreachCatalog
+    BreachCatalog --> BreachRecord
+    BreachRecord --> Incident
+    BreachRecord --> UserAccount
+    BreachRecord --> EmailAddress
+    BreachRecord --> URL
+    BreachRecord --> Domain
+    BreachRecord --> IPv4
+    BreachRecord --> IPv6
+    BreachRecord --> MAC
+    BreachRecord --> File
+    BreachRecord --> Directory
+    BreachRecord --> UserAgent
+    
+    UserAccount -- related-to --> Incident
+    EmailAddress -- related-to --> Incident
+    URL -- related-to --> Incident
+    Domain -- related-to --> Incident
+    IPv4 -- related-to --> Incident
+    IPv6 -- related-to --> Incident
 ```
+
+### Entity Mapping
+
+| SpyCloud Field       | OpenCTI Entity      | Description                                      |
+|----------------------|---------------------|--------------------------------------------------|
+| Breach Record        | Incident            | Data breach incident with severity               |
+| email                | Email-Addr          | Compromised email address                        |
+| username             | User-Account        | Compromised username                             |
+| user_hostname        | User-Account        | User hostname                                    |
+| target_url           | URL                 | Target URL in breach                             |
+| target_domain        | Domain-Name         | Target domain                                    |
+| target_subdomain     | Domain-Name         | Target subdomain                                 |
+| ip_addresses         | IPv4/IPv6-Addr      | Associated IP addresses                          |
+| mac_address          | MAC-Addr            | MAC address                                      |
+| infected_path        | File + Directory    | Infected file path                               |
+| user_agent           | User-Agent          | Browser user agent                               |
+
+### Severity Mapping
+
+| SpyCloud Code | SpyCloud Level | OpenCTI Severity |
+|---------------|----------------|------------------|
+| 2             | Low            | low              |
+| 5             | Medium         | medium           |
+| 20            | High           | high             |
+| 25            | Critical       | critical         |
+
+### Incident Properties
+
+| SpyCloud Field        | OpenCTI Property     | Description                          |
+|-----------------------|----------------------|--------------------------------------|
+| breach_catalog.title  | source               | Source of the breach                 |
+| severity              | severity             | Incident severity                    |
+| spycloud_publish_date | created_at           | Incident creation date               |
+| spycloud_publish_date | first_seen           | First seen timestamp                 |
+| All fields            | description          | Markdown table of breach details     |
+
+### Relationships Created
+
+| Source        | Relationship | Target          | Description                           |
+|---------------|--------------|-----------------|---------------------------------------|
+| Observable    | related-to   | Incident        | Observable related to breach incident |
+| Email-Addr    | belongs-to   | User-Account    | Email belongs to user account         |
 
 ## Debugging
 
-The connector can be debugged by setting the appropiate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
-e., `self.helper.connector_logger.error("An error message")`.
+Enable verbose logging:
 
-### Known issues
+```env
+CONNECTOR_LOG_LEVEL=debug
+```
 
-- 403 - Unauthorized:  
-   Spycloud requires client to authenticate with an API key, but also to whitelist the IP addresses accessing their services.  
-   If this issue occurs, please double-check whitelisted IP addresses on Spycloud platform.
+### Known Issues
 
-- 504 - Gateway Timeout:  
-   Timeouts can occur using some combination of filters (e.g. `severity_levels = '5,20'` resulted in many timeouts during connector's development - it's depending on Spycloud data).  
-   To mitigate timeout issues, a retry strategy has been implemented though it rarely solves the issue. Please choose wisely the combination of filters used.  
-   If the issue still occurs, and/or a specific combination of filters is required, please reach out to Spycloud support for further help.
+| Issue                  | Description                                                    | Solution                                         |
+|------------------------|----------------------------------------------------------------|--------------------------------------------------|
+| 403 - Unauthorized     | IP address not whitelisted on SpyCloud platform                | Whitelist connector IP in SpyCloud settings      |
+| 504 - Gateway Timeout  | Some filter combinations cause timeouts                        | Choose different filter combinations             |
 
-Some [other limitations](https://spycloud-external.readme.io/sc-enterprise-api/docs/getting-started#limitations) are documented by Spycloud on their platform.
+Additional [limitations](https://spycloud-external.readme.io/sc-enterprise-api/docs/getting-started#limitations) are documented by SpyCloud.
+
+## Additional information
+
+- **Authentication**: Requires API key + IP whitelisting
+- **Scheduler**: Uses OpenCTI connector scheduler for periodic imports
+- **Incident Type**: All incidents created with type `data-breach`
+- **Reference**: [SpyCloud API Documentation](https://spycloud-external.readme.io/sc-enterprise-api/docs/getting-started)
