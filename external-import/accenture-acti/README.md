@@ -144,7 +144,7 @@ Find the connector and click the refresh button to reset the state and trigger a
 
 ## Behavior
 
-The connector fetches STIX-formatted reports from the Accenture ACTI platform and imports them into OpenCTI.
+The connector fetches STIX-formatted reports from the Accenture ACTI platform and imports them into OpenCTI. It processes data in 30-minute intervals to handle large date ranges efficiently.
 
 ### Data Flow
 
@@ -158,56 +158,119 @@ graph LR
 
     subgraph OpenCTI
         direction LR
+        Identity[Identity - Accenture]
+        Marking[Marking Definition - TLP]
         Report[Report]
         Indicator[Indicator]
+        Observable[Observable]
         Country[Location - Country]
         Region[Location - Region]
         Sector[Identity - Sector]
         AttackPattern[Attack Pattern]
+        File[File - Images]
     end
 
     API --> Report
     API --> Indicator
-    S3 --> Report
+    S3 --> File
+    Report -- created_by_ref --> Identity
+    Report -- object_marking_refs --> Marking
     Report -- object_refs --> Indicator
     Report -- object_refs --> Country
     Report -- object_refs --> Region
     Report -- object_refs --> Sector
     Report -- object_refs --> AttackPattern
+    Report -- x_opencti_files --> File
+    Indicator -- x_opencti_create_observables --> Observable
 ```
 
 ### Entity Mapping
 
-The connector processes STIX bundles from ACTI and enriches them with additional entity extraction from report labels:
+| ACTI STIX Data       | OpenCTI Entity Type | STIX Type        | Description                                                                 |
+|----------------------|---------------------|------------------|-----------------------------------------------------------------------------|
+| Report               | Report              | report           | Intelligence report with HTML converted to Markdown                         |
+| Indicator            | Indicator           | indicator        | IOCs with `x_opencti_create_observables=true` to auto-create observables     |
+| Observable           | Observable          | Various          | Auto-created from indicators (IPv4-Addr, Domain-Name, URL, File, etc.)      |
+| Country label        | Location            | location         | Country location extracted from taxonomy mapping (x_opencti_location_type: Country) |
+| Region label         | Location            | location         | Region location extracted from taxonomy mapping (x_opencti_location_type: Region) |
+| Industry label       | Identity            | identity         | Sector identity extracted from taxonomy mapping (identity_class: class)      |
+| MITRE ATT&CK label   | Attack Pattern      | attack-pattern   | Attack pattern with x_mitre_id extracted from taxonomy mapping              |
+| x_severity           | Report Label        | label            | Severity value converted to report label                                    |
+| x_threat_type        | Report Labels       | label            | Threat types array converted to report labels                               |
+| Image (SHA256)       | File                | artifact         | Image file downloaded from S3 bucket and attached to report                 |
+| Image (Base64)       | File                | artifact         | Base64-embedded image extracted from HTML and attached to report            |
+| Author                | Identity            | identity         | Accenture organization identity (created_by_ref on all objects)            |
+| TLP Marking          | Marking Definition  | marking-definition | TLP marking applied to all objects (white, green, amber, amber+strict, red) |
 
-| ACTI Data            | OpenCTI Entity      | Description                                      |
-|----------------------|---------------------|--------------------------------------------------|
-| Report               | Report              | Intelligence report (HTML converted to Markdown) |
-| Indicator            | Indicator           | IOCs with `x_opencti_create_observables=true`    |
-| Country label        | Location (Country)  | Extracted from taxonomy mapping                  |
-| Region label         | Location (Region)   | Extracted from taxonomy mapping                  |
-| Industry label       | Identity (Sector)   | Extracted from taxonomy mapping                  |
-| MITRE ATT&CK label   | Attack Pattern      | Extracted from taxonomy mapping                  |
-| x_severity           | Report Label        | Severity converted to label                      |
-| x_threat_type        | Report Labels       | Threat types converted to labels                 |
+### Data Modelization Schema
+
+The connector processes STIX bundles with the following structure:
+
+```
+STIX Bundle
+├── Identity (Accenture)
+│   └── id: Identity.generate_id("Accenture", "organization")
+├── Marking Definition (TLP)
+│   └── id: MarkingDefinition.generate_id("TLP", "TLP:{LEVEL}")
+├── Report
+│   ├── created_by_ref: Identity.id
+│   ├── object_marking_refs: [MarkingDefinition.id]
+│   ├── object_refs: [Indicator.id, Location.id, Identity.id, AttackPattern.id]
+│   ├── labels: [processed labels + x_severity + x_threat_type]
+│   ├── description: HTML → Markdown converted
+│   └── x_opencti_files: [File objects from S3/base64]
+├── Indicator
+│   ├── created_by_ref: Identity.id
+│   ├── object_marking_refs: [MarkingDefinition.id]
+│   ├── x_opencti_create_observables: true
+│   └── pattern: STIX pattern expression
+├── Observable (auto-created)
+│   ├── type: IPv4-Addr, Domain-Name, URL, File, etc.
+│   └── value: Observable value
+├── Location (Country)
+│   ├── id: Location.generate_id(name, "Country")
+│   ├── country: Country name
+│   ├── x_opencti_location_type: "Country"
+│   └── x_opencti_aliases: [original label]
+├── Location (Region)
+│   ├── id: Location.generate_id(name, "Region")
+│   ├── region: Region name
+│   ├── x_opencti_location_type: "Region"
+│   └── x_opencti_aliases: [original label, region variant]
+├── Identity (Sector)
+│   ├── id: Identity.generate_id(name, "class")
+│   ├── identity_class: "class"
+│   └── x_opencti_aliases: [original label, industry variants]
+└── Attack Pattern
+    ├── id: AttackPattern.generate_id(name)
+    ├── x_mitre_id: MITRE ATT&CK ID
+    └── aliases: [original label]
+```
 
 ### Processing Details
 
-1. **Reports are fetched in 30-minute intervals** to handle large date ranges
-2. **Images are processed** from two sources:
-   - SHA256-referenced images downloaded from S3 bucket
-   - Base64-embedded images extracted from HTML
-3. **Report descriptions** are converted from HTML to Markdown
-4. **Labels are mapped** to OpenCTI entities using a taxonomy file
-5. **`related-to` relationships** are converted to `object_refs` on reports
+1. **Interval Processing**: Data is fetched and processed in 30-minute intervals to avoid API overload
+2. **Image Processing**: 
+   - SHA256-referenced images: Downloaded from S3 bucket using hash value
+   - Base64-embedded images: Extracted from HTML and converted to file objects
+   - Images are attached to reports via `x_opencti_files`
+3. **Description Conversion**: HTML content is converted to Markdown for better readability
+4. **Label Mapping**: Report labels are processed through taxonomy mapping to generate:
+   - Location entities (Country/Region)
+   - Identity entities (Sector/Industry)
+   - Attack Pattern entities (MITRE ATT&CK)
+5. **Relationship Conversion**: `related-to` relationships from reports are converted to `object_refs`
+6. **Custom Extensions**: `x_severity` and `x_threat_type` are converted to report labels
+7. **Author Attribution**: All objects are attributed to Accenture Identity via `created_by_ref`
+8. **TLP Marking**: All objects receive TLP marking based on configuration
 
-### Features
+### Relationships Created
 
-- **Incremental Updates**: Processes data in 30-minute intervals since last run
-- **Historical Import**: Configurable lookback period with `relative_import_start_date`
-- **Image Handling**: Downloads and embeds images from S3 and inline base64
-- **Taxonomy Mapping**: Converts ACTI labels to OpenCTI entities (countries, regions, sectors, attack patterns)
-- **HTML to Markdown**: Report descriptions are converted for better readability
+- Report → `object_refs` → Indicator, Location, Identity (Sector), Attack Pattern
+- Indicator → `based-on` → Observable (auto-created when `x_opencti_create_observables=true`)
+- Report → `x_opencti_files` → File (images from S3/base64)
+- All objects → `created_by_ref` → Identity (Accenture)
+- All objects → `object_marking_refs` → Marking Definition (TLP)
 
 ## Debugging
 
