@@ -22,7 +22,7 @@
 #          sudo python3 /opt/CAPEv2/web/manage.py migrate
 
 opencti:
-  url: 'ChangeMe'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:

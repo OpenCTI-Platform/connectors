@@ -4,7 +4,7 @@ services:
     image: opencti/connector-socradar:latest
     environment:
       # Connector's generic execution parameters
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
 
       # Connector's definition parameters REQUIRED
@@ -26,8 +26,4 @@ services:
       - RADAR_BASE_FEED_URL=https://platform.socradar.com/api/threat/intelligence/feed_list/ # required
       - RADAR_SOCRADAR_KEY=ChangeMe
       - 'RADAR_FEED_LISTS={"feed_list_1":"ID_1","feed_list_2":"ID_2"}'
-
-      # Add proxy parameters below if needed
-      # - HTTP_PROXY=ChangeMe
-      # - HTTPS_PROXY=ChangeMe
-      # - NO_PROXY=ChangeMe
+    restart: always

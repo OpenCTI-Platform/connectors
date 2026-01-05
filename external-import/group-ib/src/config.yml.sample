@@ -1,6 +1,6 @@
 opencti:
   # http://opencti:8080 - for docker deployment, http://localhost:8080 - for manual deployment
-  url: "http://opencti:8080"
+  url: 'http://localhost'
   # Use one as provided by the OpenCTI platform
   token: ""
 

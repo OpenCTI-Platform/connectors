@@ -4,7 +4,7 @@ services:
     image: opencti/eset-enrichment-connector:latest
     environment:
       # Connector's generic execution parameters
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       # Connector's definition parameters REQUIRED
       - CONNECTOR_ID=ChangeMe

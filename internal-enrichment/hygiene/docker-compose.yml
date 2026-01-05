@@ -3,7 +3,7 @@ services:
   connector-hygiene:
     image: opencti/connector-hygiene:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - HYGIENE_MAX_WORKERS=100 # Number of parallel workers (default: 100)
     restart: always

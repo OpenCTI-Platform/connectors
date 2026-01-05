@@ -3,7 +3,7 @@ services:
   connector-virustotal-livehunt-notifications:
     image: opencti/connector-virustotal-livehunt-notifications:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=Virustotal_Livehunt_Notifications
       - "CONNECTOR_NAME=VirusTotal Livehunt Notifications"

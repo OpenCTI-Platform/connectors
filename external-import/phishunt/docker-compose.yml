@@ -4,7 +4,7 @@ services:
     image: opencti/connector-phishunt:latest
     environment:
       # Connector's generic execution parameters
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe(UUIDv4 token)
 
       # Connector's definition parameters REQUIRED

@@ -7,7 +7,7 @@ services:
       - CONNECTOR_NAME=Google Safe Browsing
       - CONNECTOR_SCOPE=Url,Domain-Name,Hostname
       # Connector's generic execution parameters:
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN= # Your Connector's token
       - CONNECTOR_ID= # Your connector UUID
       - CONNECTOR_LOG_LEVEL=info 
