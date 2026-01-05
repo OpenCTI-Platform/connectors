@@ -1,10 +1,9 @@
 opencti:
-  url: 'http://localhost:8080'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'Google Drive'
   scope: 'google-drive'
   confidence_level: 30 # From 0 (Unknown) to 100 (Fully trusted)

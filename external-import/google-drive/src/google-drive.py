@@ -2,6 +2,7 @@ import io
 import os
 import sys
 import time
+import traceback
 from base64 import b64encode
 from datetime import datetime
 from pathlib import Path
@@ -19,11 +20,10 @@ class GoogleDrive:
     def __init__(self):
         # Instantiate the connector helper from config
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
+        config = {}
+        if os.path.isfile(config_file_path):
+            with open(config_file_path, encoding="utf-8") as f:
+                config = yaml.load(f, Loader=yaml.FullLoader)
         self.helper = OpenCTIConnectorHelper(config)
         # Extra config
         self.google_drive_project_id = get_config_variable(
@@ -279,9 +279,8 @@ class GoogleDrive:
 
 if __name__ == "__main__":
     try:
-        googleDriveConnector = GoogleDrive()
-        googleDriveConnector.run()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        sys.exit(0)
+        connector = GoogleDrive()
+        connector.run()
+    except Exception:
+        traceback.print_exc()
+        sys.exit(1)

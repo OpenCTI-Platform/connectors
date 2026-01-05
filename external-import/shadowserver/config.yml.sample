@@ -1,5 +1,5 @@
 opencti:
-  url: 'http://localhost:PORT'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
@@ -10,8 +10,8 @@ connector:
   duration_period: 'P1D'
 
 shadowserver:
-  api_key: 'CHANGEME'
-  api_secret: 'CHANGEME'
+  api_key: 'ChangeMe'
+  api_secret: 'ChangeMe'
   marking: 'TLP:CLEAR'
   create_incident: 'true'
   incident_severity: 'low'

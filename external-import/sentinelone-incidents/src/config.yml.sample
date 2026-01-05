@@ -1,10 +1,9 @@
 opencti:
-  url: 'http://localhost:PORT'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'SentinelOne Incident External Import Connector'
   scope: 'ChangeMe'
   log_level: 'info'

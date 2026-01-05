@@ -1,5 +1,5 @@
 opencti:
-  url: 'opencti_url'
+  url: 'http://localhost'
   token: 'opencti_token'
   ssl_verify: false
 

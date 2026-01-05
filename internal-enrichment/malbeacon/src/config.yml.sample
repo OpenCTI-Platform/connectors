@@ -1,10 +1,9 @@
 opencti:
-  url: "http://localhost:8080"
+  url: 'http://localhost'
   token: "ChangeMe"
 
 connector:
   id: "ChangeMe"
-  type: "INTERNAL_ENRICHMENT"
   name: "Malbeacon"
   scope: "IPv4-Addr,IPv6-Addr,Domain-Name"
   auto: false # Enable/disable auto-enrichment of observables

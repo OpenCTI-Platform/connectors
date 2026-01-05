@@ -1,4 +1,4 @@
-version: "3"
+version: '3'
 services:
   connector-pan-cortex-xsoar-intel:
     image: opencti/connector-pan-cortex-xsoar-intel:latest

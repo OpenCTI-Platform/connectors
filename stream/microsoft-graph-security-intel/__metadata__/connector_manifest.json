@@ -1,8 +1,8 @@
 {
-  "title": "Microsoft Graph Security Intel",
+  "title": "Microsoft Graph Security Intel (Deprecated)",
   "slug": "microsoft-graph-security-intel",
-  "description": "This OpenCTI connector allows the ability to create or delete data from your OpenCTI platform to either the Microsoft Sentinel or Microsoft Defender for Endpoint platform utilizing the Microsoft Graph API Threat Intelligence Indicator.",
-  "short_description": "This OpenCTI connector allows the ability to create or delete data from your OpenCTI platform to either the Microsoft Sentinel or Microsoft Defender for Endpoint platform utilizing the Microsoft Graph API Threat Intelligence Indicator.",
+  "description": "This connector is obsolete and should no longer be used (please consult the README). This OpenCTI connector allows the ability to create or delete data from your OpenCTI platform to either the Microsoft Sentinel or Microsoft Defender for Endpoint platform utilizing the Microsoft Graph API Threat Intelligence Indicator.",
+  "short_description": "This connector is obsolete and should no longer be used (please consult the README). This OpenCTI connector allows the ability to create or delete data from your OpenCTI platform to either the Microsoft Sentinel or Microsoft Defender for Endpoint platform utilizing the Microsoft Graph API Threat Intelligence Indicator.",
   "logo": "stream/microsoft-graph-security-intel/__metadata__/logo.png",
   "use_cases": [
     "SIEM & Analytics"

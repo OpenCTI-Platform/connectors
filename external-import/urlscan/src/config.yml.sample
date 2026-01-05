@@ -1,12 +1,11 @@
 ---
 
 opencti:
-  url: "http://localhost:8080"
+  url: 'http://localhost'
   token: "ChangeMe"
 
 connector:
   id: "ChangeMe"
-  type: "EXTERNAL_IMPORT"
   name: "Urlscan"
   scope: "urlscan"
   log_level: "info"
