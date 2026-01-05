@@ -4,8 +4,6 @@ from datetime import datetime, timezone
 
 import pytest
 import stix2
-from pydantic import ValidationError
-
 from dragos.domain.models.octi import (
     ExternalReference,
     IndicatorBasedOnObservable,
@@ -14,6 +12,7 @@ from dragos.domain.models.octi import (
     Url,
 )
 from dragos.domain.models.octi.enums import TLPLevel
+from pydantic import ValidationError
 
 
 def fake_valid_organization_author():

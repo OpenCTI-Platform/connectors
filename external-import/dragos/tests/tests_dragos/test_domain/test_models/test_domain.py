@@ -2,12 +2,11 @@
 
 from datetime import datetime, timezone
 
+import dragos.domain.models.octi as octi
+import dragos.domain.models.octi.enums as octi_enums
 import pytest
 import stix2
 from pydantic import ValidationError
-
-import dragos.domain.models.octi as octi
-import dragos.domain.models.octi.enums as octi_enums
 
 
 def fake_valid_organization_author():

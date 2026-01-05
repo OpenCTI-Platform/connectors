@@ -3,12 +3,11 @@
 import logging
 from typing import TYPE_CHECKING, Any, Generator, Literal, Optional
 
-from markdownify import markdownify
-
 from dragos.domain.models import octi
 from dragos.domain.models.octi.enums import OrganizationType
 from dragos.domain.use_cases.common import BaseUseCase, UseCaseError
 from dragos.interfaces import Area, City, Country, Position, Region
+from markdownify import markdownify
 
 if TYPE_CHECKING:
     from dragos.interfaces import Geocoding, Indicator, Report, Tag

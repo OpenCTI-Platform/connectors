@@ -6,12 +6,6 @@ from typing import Any, Optional
 
 import pycti  # type: ignore[import-untyped]  # pycti does not provide stubs
 import stix2  # type: ignore[import-untyped] # stix2 does not provide stubs
-from pydantic import AwareDatetime, Field, PrivateAttr
-from stix2.properties import (  # type: ignore[import-untyped]
-    ListProperty,
-    ReferenceProperty,
-)
-
 from dragos.domain.models.octi.common import (
     Author,
     BaseEntity,
@@ -39,6 +33,11 @@ from dragos.domain.models.octi.enums import (
     Region,
     Reliability,
     ReportType,
+)
+from pydantic import AwareDatetime, Field, PrivateAttr
+from stix2.properties import (  # type: ignore[import-untyped]
+    ListProperty,
+    ReferenceProperty,
 )
 
 

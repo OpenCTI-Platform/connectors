@@ -4,8 +4,6 @@ from typing import Any, Literal, Optional
 
 import pycti  # type: ignore[import-untyped]  # pycti does not provide stubs
 import stix2  # type: ignore[import-untyped] # stix2 does not provide stubs
-from pydantic import AwareDatetime, Field, PrivateAttr
-
 from dragos.domain.models.octi.common import (
     Author,
     BaseEntity,
@@ -14,6 +12,7 @@ from dragos.domain.models.octi.common import (
 )
 from dragos.domain.models.octi.domain import Indicator
 from dragos.domain.models.octi.observables import Observable
+from pydantic import AwareDatetime, Field, PrivateAttr
 
 
 class Relationship(BaseEntity):
