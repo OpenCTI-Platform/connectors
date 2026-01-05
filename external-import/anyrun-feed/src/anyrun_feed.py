@@ -31,7 +31,7 @@ class AnyrunFeed(ExternalImportConnector):
             )
         return json.loads(response.text)
 
-    def _collect_intelligence(self) -> []:
+    def _collect_intelligence(self) -> list:
         self.helper.log_debug(
             f"{self.helper.connect_name} connector is starting the collection of objects..."
         )
@@ -51,6 +51,6 @@ if __name__ == "__main__":
         connector = AnyrunFeed()
         connector.run()
     except Exception as e:
-        print(e)
+        ExternalImportConnector.log_error(str(e))
         time.sleep(10)
-        sys.exit(0)
+        sys.exit(1)

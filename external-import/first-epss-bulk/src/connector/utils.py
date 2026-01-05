@@ -1,7 +1,7 @@
 """Connector Utils."""
 
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def is_cve_format(string: str) -> bool:
@@ -18,4 +18,4 @@ def is_cve_format(string: str) -> bool:
 
 
 def time_from_unixtime(timestamp: int):
-    return datetime.utcfromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.fromtimestamp(timestamp, timezone.utc).strftime("%Y-%m-%d %H:%M:%S")

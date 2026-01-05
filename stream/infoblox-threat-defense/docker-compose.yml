@@ -4,9 +4,8 @@ services:
     image: opencti/connector-infoblox-threat-defense:latest
     environment:
       - OPENCTI_URL=http://localhost
-      - OPENCTI_TOKEN=CHANGEME
-      - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_TYPE=stream
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
       - CONNECTOR_LIVE_STREAM_ID=live # ID of the live stream created in the OpenCTI UI
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
@@ -14,7 +13,7 @@ services:
       - CONNECTOR_SCOPE=Infoblox Threat Defense
       - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
-      - INFOBLOX_API_KEY=CHANGEME # Infoblox Threat Defense API Key
+      - INFOBLOX_API_KEY=ChangeMe # Infoblox Threat Defense API Key
       - INFOBLOX_VERIFY_SSL=true # Determine if you want to verify the SSL on requests
-      - INFOBLOX_CUSTOM_LIST_ID=CHANGEME # This is the specific custom list id you will be updating
+      - INFOBLOX_CUSTOM_LIST_ID=ChangeMe # This is the specific custom list id you will be updating
     restart: always

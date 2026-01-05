@@ -1,10 +1,9 @@
 opencti:
-  url: 'http://localhost:8080'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
   id: 'ChangeMe'
-  type: 'INTERNAL_ENRICHMENT'
   name: 'IVRE-ChangeMeInstanceName'
   auto: true
   scope: 'autonomous-system,domain-name,ipv4-addr,ipv6-addr,mac-addr,x509-certificate'
