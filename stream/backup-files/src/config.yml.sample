@@ -4,7 +4,7 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  live_stream_id: 'live' # ID of the live stream created in the OpenCTI UI
+  live_stream_id: 'ChangeMe' # ID of the live stream created in the OpenCTI UI
   live_stream_listen_delete: true
   name: 'BackupFiles'
   scope: 'backup'
