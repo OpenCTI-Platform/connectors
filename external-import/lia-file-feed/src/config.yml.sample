@@ -1,10 +1,9 @@
 opencti:
-  url: 'http://opencti:8080'
+  url: 'http://localhost'
   token: 'Changeme'
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'Loader Insight Agency File Feed'
   scope: 'stix2'
   log_level: 'info'

@@ -1,54 +1,48 @@
-version: "3"
+version: '3'
 services:
   connector-misp:
-    # image: opencti/connector-misp:latest
-    build: .
+    image: opencti/connector-misp:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=d434ce02-e58e-4cac-8b4c-42bf16748e88
-      - CONNECTOR_ID=fae73097-aa2c-4460-96ee-1aa975ce1945 # Optional (default: 'fae73097-aa2c-4460-96ee-1aa975ce1945')
-      - CONNECTOR_NAME=MISP # Optional (default: 'MISP')
-      - CONNECTOR_SCOPE=misp # Optional (default: 'misp')
-      - CONNECTOR_LOG_LEVEL=info # Optional (default: 'error')
-      - CONNECTOR_DURATION_PERIOD=PT5M # Optional (default: 5 minutes)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=MISP
+      - CONNECTOR_SCOPE=misp
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT5M
       - MISP_URL=http://example.com
       - MISP_KEY=ChangeMe
-      - MISP_SSL_VERIFY=true # Optional (default: false)
-      - MISP_CLIENT_CERT= # Optional (default: '')
-      - MISP_REFERENCE_URL= # Optional (default: value of `url`)
-      - MISP_DATE_FILTER_FIELD=date_from # Optional (default: 'timestamp')
-      - MISP_DATETIME_ATTRIBUTE=date # Optional (default: 'timestamp')
-      - MISP_CREATE_REPORTS=true # Optional (default: true)
-      - MISP_CREATE_INDICATORS=true # Optional (default: true)
-      - MISP_CREATE_OBSERVABLES=true # Optional (default: true)
-      - MISP_CREATE_OBJECT_OBSERVABLES=true # Optional (default: false)
-      - MISP_REPORT_DESCRIPTION_ATTRIBUTE_FILTER= # Optional (default: '', example: "type=comment,category=Internal reference")
-      - MISP_CREATE_TAGS_AS_LABELS=true # Optional (default: true)
-      - MISP_GUESS_THREATS_FROM_TAGS=false # Optional (default: false)
-      - MISP_AUTHOR_FROM_TAGS=false # Optional (default: false)
-      - MISP_MARKINGS_FROM_TAGS=false # Optional (default: false)
-      - MISP_KEEP_ORIGINAL_TAGS_AS_LABEL="" # Optional (default: '')
-      - MISP_ENFORCE_WARNING_LIST=false # Optional (default: false)
-      - MISP_REPORT_TYPE=misp-event # Optional (default: 'misp-event')
-      - MISP_IMPORT_FROM_DATE=2010-01-01 # Optional (default: '')
-      - MISP_IMPORT_TAGS= # Optional (default: '')
-      - MISP_IMPORT_TAGS_NOT= # Optional (default: '')
-      - MISP_IMPORT_CREATOR_ORGS= # Optional (default: '')
-      - MISP_IMPORT_CREATOR_ORGS_NOT= # Optional (default: '')
-      - MISP_IMPORT_OWNER_ORGS= # Optional (default: '')
-      - MISP_IMPORT_OWNER_ORGS_NOT= # Optional (default: '')
-      - MISP_IMPORT_KEYWORD= # Optional (default: '')
-      - MISP_IMPORT_DISTRIBUTION_LEVELS=0,1,2,3 # Optional (default: '')
-      - MISP_IMPORT_THREAT_LEVELS=1,2,3,4 # Optional (default: '')
-      - MISP_IMPORT_ONLY_PUBLISHED=false # Optional (default: false)
-      - MISP_IMPORT_WITH_ATTACHMENTS=false # Optional (default: false)
-      - MISP_IMPORT_TO_IDS_NO_SCORE=40 # Optional (default: '')
-      - MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT=false # Optional (default: false)
-      - MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT=true # Optional (default: true)
-      - MISP_PROPAGATE_LABELS=false # Optional (default: false)
+      - MISP_SSL_VERIFY=true
+      - MISP_CLIENT_CERT=
+      - MISP_REFERENCE_URL=
+      - MISP_DATE_FILTER_FIELD=date_from
+      - MISP_DATETIME_ATTRIBUTE=date
+      - MISP_CREATE_REPORTS=true
+      - MISP_CREATE_INDICATORS=true
+      - MISP_CREATE_OBSERVABLES=true
+      - MISP_CREATE_OBJECT_OBSERVABLES=true
+      - MISP_REPORT_DESCRIPTION_ATTRIBUTE_FILTER=
+      - MISP_CREATE_TAGS_AS_LABELS=true
+      - MISP_GUESS_THREATS_FROM_TAGS=false
+      - MISP_AUTHOR_FROM_TAGS=false
+      - MISP_MARKINGS_FROM_TAGS=false
+      - MISP_KEEP_ORIGINAL_TAGS_AS_LABEL=
+      - MISP_ENFORCE_WARNING_LIST=false
+      - MISP_REPORT_TYPE=misp-event
+      - MISP_IMPORT_FROM_DATE=2010-01-01
+      - MISP_IMPORT_TAGS=
+      - MISP_IMPORT_TAGS_NOT=
+      - MISP_IMPORT_CREATOR_ORGS=
+      - MISP_IMPORT_CREATOR_ORGS_NOT=
+      - MISP_IMPORT_OWNER_ORGS=
+      - MISP_IMPORT_OWNER_ORGS_NOT=
+      - MISP_IMPORT_KEYWORD=
+      - MISP_IMPORT_DISTRIBUTION_LEVELS=0,1,2,3
+      - MISP_IMPORT_THREAT_LEVELS=1,2,3,4
+      - MISP_IMPORT_ONLY_PUBLISHED=false
+      - MISP_IMPORT_WITH_ATTACHMENTS=false
+      - MISP_IMPORT_TO_IDS_NO_SCORE=40
+      - MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT=false
+      - MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT=true
+      - MISP_PROPAGATE_LABELS=false
     restart: always
-    networks:
-      - filigran_default
-networks:
-  filigran_default:
-    external: true

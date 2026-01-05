@@ -1,10 +1,9 @@
 opencti:
-  url: 'http://localhost:8080'
+  url: 'http://localhost'
   token: ChangeMe
 
 connector:
   id: 'ChangeMe'
-  type: 'INTERNAL_ENRICHMENT'
   name: 'attribution-tools'
   scope: 'Incident'
   auto: false # Enable/disable auto-enrichment of observables

@@ -35,7 +35,7 @@ The Accenture ACTI connector ingests reports and related entities exposed by the
 
 ### Requirements
 
-- OpenCTI Platform >= 6.9.4
+- OpenCTI Platform >= 6.9.5
 
 ## Configuration variables
 
@@ -72,10 +72,10 @@ Below are the parameters you'll need to set for the connector:
 |----------------------------|----------------------------|---------------------------------------------|---------|-----------|---------------------------------------------------------------------------------------------------------------|
 | Accenture ACTI username    | username                   | `ACCENTURE_ACTI_USERNAME`                   | /       | Yes       | Accenture ACTI Username                                                                                       |
 | Accenture ACTI password    | password                   | `ACCENTURE_ACTI_PASSWORD`                   | /       | Yes       | Accenture ACTI Password                                                                                       |
-| Accenture User Pool ID     | password                   | `ACCENTURE_ACTI_USER_POOL_ID`               | /       | Yes       | Accenture AWS Cognito User Pool Id                                                                            |
-| Accenture Client Id        | password                   | `ACCENTURE_ACTI_CLIENT_ID`                  | /       | Yes       | Accenture AWS Cognito Client Id                                                                               |
+| Accenture User Pool ID     | user_pool_id               | `ACCENTURE_ACTI_USER_POOL_ID`               | /       | Yes       | Accenture AWS Cognito User Pool Id                                                                            |
+| Accenture Client Id        | client_id                  | `ACCENTURE_ACTI_CLIENT_ID`                  | /       | Yes       | Accenture AWS Cognito Client Id                                                                               |
 | TLP Level                  | tlp_level                  | `ACCENTURE_ACTI_CLIENT_TLP_LEVEL`           | amber   | Yes       | TLP level to set on imported entities (allowed values are ['white', 'green', 'amber', 'amber+strict', 'red']) |
-| Relative Import start date | relative_import_start_date | `ACCENTURE_ACTI_RELATIVE_IMPORT_START_DATE` | P30D    | Yes       | Relative sate to start import from (in ISO-8601 format). Example: P30D for last 30 days                       |
+| Relative Import start date | relative_import_start_date | `ACCENTURE_ACTI_RELATIVE_IMPORT_START_DATE` | P30D    | Yes       | Relative date to start import from (in ISO-8601 format). Example: P30D for last 30 days                       |
 
 ## Deployment
 
@@ -107,7 +107,7 @@ docker compose up -d
 Create a file `config.yml` based on the provided `config.yml.sample`.
 
 Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
+your environment.
 
 Install the required python dependencies (preferably in a virtual environment):
 
@@ -115,7 +115,7 @@ Install the required python dependencies (preferably in a virtual environment):
 pip3 install -r requirements.txt
 ```
 
-Then, start the connector from recorded-future/src:
+Then, start the connector from accenture-acti/src:
 
 ```shell
 python3 main.py
@@ -144,9 +144,8 @@ Describe how the connector functions:
 
 ## Debugging
 
-The connector can be debugged by setting the appropiate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
-e., `self.helper.connector_logger.error("An error message")`.
+The connector can be debugged by setting the appropriate log level.
+Note that logging messages can be added using `self.helper.connector_logger.{LOG_LEVEL}("Sample message")`, i.e., `self.helper.connector_logger.error("An error message")`.
 
 <!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
 

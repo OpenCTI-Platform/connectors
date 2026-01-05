@@ -1,11 +1,10 @@
 opencti:
-  url: 'opencti_url'
+  url: 'http://localhost'
   token: 'opencti_token'
   ssl_verify: false
 
 connector:
   id: 'bddfd745-040a-4cc3-9ed9-f5bc751f272b'
-  type: 'STREAM'
   live_stream_id: 'IDHERE' # ID of the live stream created in the OpenCTI UI
   live_stream_listen_delete: true
   live_stream_no_dependencies: true

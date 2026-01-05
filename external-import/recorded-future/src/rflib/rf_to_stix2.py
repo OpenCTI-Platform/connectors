@@ -1271,33 +1271,19 @@ class StixNote:
         event_objects = []
         for event_capability in event_attr["capabilities"]:
 
-            # Get or create capability (AttackPattern or Malware or Vulnerability)
+            # Get capability (AttackPattern,  Malware, Vulnerability, Indicator)
             capability_name = event_capability["name"]
             capability_type = event_capability["type"]
+
             capability_obj = [
                 obj for obj in self.objects if obj.get("name") == capability_name
             ]
             if len(capability_obj) > 0:
                 capability = capability_obj[0]
             else:
-                if capability_type == "Malware":
-                    capability_obj = Malware(
-                        name=capability_name,
-                        _type=capability_type,
-                    )
-                elif capability_type == "CyberVulnerability":
-                    capability_obj = Vulnerability(
-                        name=capability_name,
-                        _type=capability_type,
-                    )
-                else:
-                    capability_obj = TTP(
-                        name=capability_name,
-                        _type=capability_type,
-                    )
-                capability_obj.create_stix_objects()
-                capability = capability_obj.stix_obj
-                event_objects.append(capability)
+                msg = f"[ANALYST NOTES] Process capability name: '{capability_name}' (type: {capability_type}) conversion skipped. Not found from previous converted entities"
+                self.helper.connector_logger.warning(msg)
+                continue
 
             # Create relation adversary-capability
             if capability_type == "CyberVulnerability":
@@ -1308,7 +1294,15 @@ class StixNote:
                         relation="targets",
                     )
                 )
-            else:
+            elif capability_type == "Hash":
+                event_objects.append(
+                    self._create_rel(
+                        from_id=capability.id,
+                        to_id=adversary.id,
+                        relation="indicates",
+                    )
+                )
+            elif capability_type in ["Malware", "MitreAttackIdentifier"]:
                 event_objects.append(
                     self._create_rel(
                         from_id=adversary.id,
@@ -1316,6 +1310,12 @@ class StixNote:
                         relation="uses",
                     )
                 )
+            elif capability_type in ["AttackVector"]:
+                continue
+            else:
+                msg = f"[ANALYST NOTES] Cannot convert capability when processing analyst note diamond model, unsupported capability type: {capability_type}, skipping"
+                self.helper.connector_logger.warning(msg)
+                continue
 
         return event_objects
 
