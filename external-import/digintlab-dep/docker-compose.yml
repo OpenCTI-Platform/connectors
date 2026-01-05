@@ -9,7 +9,7 @@ services:
       - CONNECTOR_NAME=DEP Connector
       - CONNECTOR_SCOPE=ChangeMe
       - CONNECTOR_LOG_LEVEL=info
-      - CONNECTOR_RUN_INTERVAL=3600 # In seconds
+      - CONNECTOR_RUN_INTERVAL=3600
       # Connector's required execution parameters
       - DEP_USERNAME=ChangeMe
       - DEP_PASSWORD=ChangeMe
