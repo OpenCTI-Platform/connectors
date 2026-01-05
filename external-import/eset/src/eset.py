@@ -1,14 +1,13 @@
 import base64
-import datetime
 import json
 import os
 import re
 import sys
 import time
+from datetime import datetime, timezone
 
 import cabby
 import eti_api
-import pytz
 import stix2
 import yaml
 from dateutil.parser import parse
@@ -113,7 +112,7 @@ class Eset:
             password=self.eset_password,
             host="eti.eset.com",
         )
-        from_date = datetime.datetime.utcfromtimestamp(start_epoch).astimezone(pytz.utc)
+        from_date = datetime.fromtimestamp(start_epoch, timezone.utc)
         i = 0
         for report in connection.list_reports(
             type="all", datetimefrom=from_date.isoformat()
@@ -184,12 +183,8 @@ class Eset:
                 + ", end_epoch="
                 + str(end_epoch)
             )
-            begin_date = datetime.datetime.utcfromtimestamp(start_epoch).astimezone(
-                pytz.utc
-            )
-            end_date = datetime.datetime.utcfromtimestamp(end_epoch).astimezone(
-                pytz.utc
-            )
+            begin_date = datetime.fromtimestamp(start_epoch, timezone.utc)
+            end_date = datetime.fromtimestamp(end_epoch, timezone.utc)
             try:
                 for item in client.poll(
                     collection + " (stix2)", begin_date=begin_date, end_date=end_date
@@ -275,7 +270,9 @@ class Eset:
                                 object["x_opencti_create_observables"] = (
                                     self.eset_create_observables
                                 )
-                        object["where_sighted_refs"] = []
+                            # Clear where_sighted_refs for indicators only
+                            # (this property is not valid for other STIX object types)
+                            object["where_sighted_refs"] = []
                         objects.append(object)
                     parsed_content["objects"] = objects
                     self.helper.send_stix2_bundle(
@@ -296,7 +293,7 @@ class Eset:
             try:
                 self.helper.log_info("Synchronizing with ESET API...")
                 timestamp = int(time.time())
-                now = datetime.datetime.utcfromtimestamp(timestamp)
+                now = datetime.fromtimestamp(timestamp, timezone.utc)
                 friendly_name = "ESET run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
                 work_id = self.helper.api.work.initiate_work(
                     self.helper.connect_id, friendly_name
@@ -334,16 +331,16 @@ class Eset:
 
                 if self.helper.connect_run_and_terminate:
                     self.helper.log_info("Connector stop")
-                    sys.exit(0)
+                    sys.exit(1)
 
                 time.sleep(60)
 
 
 if __name__ == "__main__":
     try:
-        esetConnector = Eset()
-        esetConnector.run()
+        eset_connector = Eset()
+        eset_connector.run()
     except Exception as e:
         print(e)
         time.sleep(10)
-        sys.exit(0)
+        sys.exit(1)
