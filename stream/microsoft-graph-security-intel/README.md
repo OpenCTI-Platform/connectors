@@ -1,5 +1,17 @@
 # OpenCTI Microsoft Graph Security Intel
 
+> [!WARNING]  
+> **This connector is obsolete and should no longer be used.**  
+> This connector relies on Microsoft Graph's Threat Intelligence Indicator API, which uses the tiIndicator entity. Microsoft has officially deprecated this entity, and it will be removed in April 2026.
+> For more information, see the official Microsoft documentation (https://learn.microsoft.com/en-us/graph/api/resources/tiindicator?view=graph-rest-beta&viewFallbackFrom=graph-rest-1.0).
+> Depending on your use case, please migrate to one of the following connectors:
+> To feed Indicators into Azure Sentinel use the Microsoft Sentinel Intel connector:
+> 👉 https://github.com/OpenCTI-Platform/connectors/tree/master/stream/microsoft-sentinel-intel.
+> To feed Indicators into Microsoft Defender Threat Intelligence use the Microsoft Defender Intel connector:
+> 👉 https://github.com/OpenCTI-Platform/connectors/tree/master/stream/microsoft-defender-intel.
+> Please plan your migration as soon as possible to avoid service disruption after April 2026.
+
+
 This OpenCTI connector allows the ability to create or delete data from your OpenCTI platform to either the Microsoft
 Sentinel or Microsoft Defender for Endpoint platform utilizing
 the [Microsoft Graph API Threat Intelligence Indicator](https://learn.microsoft.com/en-us/graph/api/resources/tiindicator?view=graph-rest-beta).
