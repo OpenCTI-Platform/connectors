@@ -1,4 +1,4 @@
-# OpenCTI Host.io Internal Enrichment Connector
+# OpenCTI Host.io Connector
 
 | Status | Date | Comment |
 |--------|------|---------|
