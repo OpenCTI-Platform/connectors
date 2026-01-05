@@ -169,7 +169,7 @@ class Sparta:
                 if stix_object["type"] == "attack-pattern":
                     if (
                         "x_sparta_is_subtechnique" in stix_object
-                        and stix_object["x_sparta_is_subtechnique"]
+                        and stix_object["x_sparta_is_subtechnique"].strip().lower() == 'true'
                     ):
                         attack_pattern_subtechnique_ids.append(stix_object["id"])
 
