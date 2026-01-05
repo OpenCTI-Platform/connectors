@@ -3,7 +3,7 @@ services:
   connector-reversinglabs-spectra-analyze:
     image: opencti/connector-reversinglabs-spectra-analyze:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=Changeme
       - CONNECTOR_ID=Changeme
       - CONNECTOR_NAME=ReversingLabs Spectra Analyze

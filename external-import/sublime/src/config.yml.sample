@@ -4,7 +4,7 @@
 
 # OpenCTI Configuration
 opencti:
-  url: "http://opencti:8080"
+  url: 'http://localhost'
   token: "ChangeMe"
 
 # Connector Configuration

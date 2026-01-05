@@ -7,7 +7,7 @@ services:
       - CONNECTOR_NAME=StreamImporterConnector
       - CONNECTOR_SCOPE=stream-importer
       # Connector's generic execution parameters:
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_LOG_LEVEL=info

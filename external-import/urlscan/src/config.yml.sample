@@ -1,7 +1,7 @@
 ---
 
 opencti:
-  url: "http://localhost:8080"
+  url: 'http://localhost'
   token: "ChangeMe"
 
 connector:

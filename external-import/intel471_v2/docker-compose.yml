@@ -3,7 +3,7 @@ services:
   connector-intel471_v2:
     image: opencti/connector-intel471_v2:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=d5067b93-7f6a-47e2-b76d-bb4ed69e270d # Optional (default: 'd5067b93-7f6a-47e2-b76d-bb4ed69e270d')
       - CONNECTOR_NAME=Intel471 v2 # Optional (default: 'Intel471 v2')

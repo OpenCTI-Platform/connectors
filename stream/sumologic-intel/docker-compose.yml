@@ -19,9 +19,4 @@ services:
       - SUMOLOGIC_INTEL_API_BASE_URL=ChangeMe
       - SUMOLOGIC_INTEL_ACCESS_ID=ChangeMe
       - SUMOLOGIC_INTEL_ACCESS_KEY=ChangeMe
-
-      # Add proxy parameters below if needed
-      # - HTTP_PROXY=ChangeMe
-      # - HTTPS_PROXY=ChangeMe
-      # - NO_PROXY=ChangeMe
     restart: always

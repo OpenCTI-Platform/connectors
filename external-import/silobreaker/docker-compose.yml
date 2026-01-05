@@ -3,7 +3,7 @@ services:
   connector-silobreaker:
     image: opencti/connector-silobreaker:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=e84df642-f33b-4c73-877f-dd4b0093fd09 # Optional (default: 'e84df642-f33b-4c73-877f-dd4b0093fd09')
       - "CONNECTOR_NAME=Silobreaker Cyber Threat Intelligence" # Optional (default: Silobreaker)

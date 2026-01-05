@@ -1,5 +1,5 @@
 opencti:
-  url: 'ChangeMe'  # OpenCTI platform URL
+  url: 'http://localhost'
   token: 'ChangeMe'  # OpenCTI API token
 
 connector:

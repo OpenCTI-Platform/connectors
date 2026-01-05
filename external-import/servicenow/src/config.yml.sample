@@ -1,5 +1,5 @@
 opencti: # OpenCTI Parameters
-  url: 'http://localhost:PORT' # REQUIRED
+  url: 'http://localhost'
   token: 'ChangeMe' # REQUIRED
 
 connector:

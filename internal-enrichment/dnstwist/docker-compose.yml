@@ -6,7 +6,7 @@ services:
       - CONNECTOR_NAME=DNS_TWISTER
       - CONNECTOR_SCOPE=Domain-Name
       # Connector's generic execution parameters:
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN= ## connector token
       - CONNECTOR_ID= # UUID of the connector
       - CONNECTOR_AUTO=false # don't run the connector automatically, you will flood your opencti instance
