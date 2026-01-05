@@ -321,7 +321,8 @@ class KasperskyConnector:
         if not os.path.isfile(config_file_path):
             return {}
 
-        return yaml.load(open(config_file_path), Loader=yaml.FullLoader)
+        with open(config_file_path, encoding="utf-8") as f:
+            return yaml.load(f, Loader=yaml.FullLoader)
 
     @classmethod
     def _get_configuration(

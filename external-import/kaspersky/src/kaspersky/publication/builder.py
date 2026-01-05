@@ -174,13 +174,13 @@ class PublicationBundleBuilder:
         return intrusion_sets
 
     def _create_intrusion_set(self, name: str) -> IntrusionSet:
-        create_by = self.author
+        created_by = self.author
         object_markings = self.object_markings
         confidence = self.confidence_level
 
         return create_intrusion_set(
             name,
-            created_by=create_by,
+            created_by=created_by,
             confidence=confidence,
             object_markings=object_markings,
         )
