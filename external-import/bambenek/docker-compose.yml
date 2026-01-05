@@ -25,16 +25,4 @@ services:
       - BAMBENEK_USERNAME=ChangeMe
       - BAMBENEK_PASSWORD=ChangeMe
       - BAMBENEK_COLLECTIONS=c2_dga,c2_dga_high_conf,c2_domain,c2_domain_highconf,c2_ip,c2_ip_highconf
-
-      # Add proxy parameters below if needed
-      # - HTTP_PROXY=ChangeMe
-      # - HTTPS_PROXY=ChangeMe
-      # - NO_PROXY=ChangeMe
     restart: always
-    # networks:
-    #   - docker_default
-
-# networks:
-#   default:
-#     external: true
-#     name: docker_default

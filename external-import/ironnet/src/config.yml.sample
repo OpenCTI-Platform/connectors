@@ -1,7 +1,7 @@
 ---
 
 opencti:
-  url: ""
+  url: 'http://localhost'
   token: ""
 
 connector:

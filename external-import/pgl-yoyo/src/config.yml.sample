@@ -7,7 +7,7 @@ connector:
   interval: 43200  # 12h
 
 opencti:
-  url: "http://opencti:8080"
+  url: 'http://localhost'
   token: "__OPENCTI_API_KEY__"
 
 pgl:

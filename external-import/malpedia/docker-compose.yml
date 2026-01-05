@@ -3,7 +3,7 @@ services:
   connector-malpedia:
     image: opencti/connector-malpedia:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=8a277536-ca52-4d87-9f8e-4f77e3e6512c # Optional (default: '8a277536-ca52-4d87-9f8e-4f77e3e6512c')
       - CONNECTOR_NAME=Malpedia # Optional (default: 'Malpedia')

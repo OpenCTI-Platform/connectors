@@ -4,7 +4,7 @@ services:
     image: opencti/connector-sparta:latest
     environment:
       # OpenCTI parameters - REQUIRED
-      - OPENCTI_URL=ChangeMe
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
 
       # Connector's definition parameters - REQUIRED

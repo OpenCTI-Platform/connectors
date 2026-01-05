@@ -4,7 +4,7 @@ services:
     image: opencti/connector-silentpush-enrichment:latest
     environment:
       # Generic parameters (connection with OpenCTI)
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       # Common parameters for connectors
       # - CONNECTOR_ID=9955194d-d000-4507-bc9d-19f851c20de9
