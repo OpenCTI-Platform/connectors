@@ -1,8 +1,8 @@
-version: "3"
+version: '3'
 services:
   connector-threatfox:
     image: opencti/connector-threatfox:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
     restart: always

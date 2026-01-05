@@ -1,10 +1,9 @@
 opencti:
-  url: 'http://opencti:8080'
+  url: 'http://localhost'
   token: 'changeMe'
 
 connector:
   id: 'changeMe'      # Valid UUIDv4
-  type: 'EXTERNAL_IMPORT'
   name: 'Doppel Threat Intelligence'
   scope: 'doppel'
   log_level: 'info'

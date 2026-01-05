@@ -31,7 +31,7 @@ Configuration parameters are set using environment variables. Some are set in th
 | `CRTSH_DOMAIN`               | Yes       | Domain to search for e.g., google.com                                                |
 | `CRTSH_LABELS`               | Yes       | Comma separated list of labels e.g., crtsh,osint                                     |
 | `CRTSH_MARKING_REFS`         | Yes       | TLP Marking Refs e.g., TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:RED                      |
-| `CRTSH_IS_EXPIRED`           | Yes       | Filters epired certificates. One of the following: true, false                       |
+| `CRTSH_IS_EXPIRED`           | Yes       | Filters expired certificates. One of the following: true, false                      |
 | `CRTSH_IS_WILDCARD`          | Yes       | Applies a wildcard expression for the Domain. One of the following: true, false      |
 
 ### Additional Information
