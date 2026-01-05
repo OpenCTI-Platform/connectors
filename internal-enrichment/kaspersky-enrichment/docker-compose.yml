@@ -9,7 +9,7 @@ services:
       #  Common parameters for connectors of type INTERNAL_ENRICHMENT
       - CONNECTOR_ID=ChangeMe
       # - CONNECTOR_NAME=Kaspersky Enrichment
-      # - CONNECTOR_SCOPE=StixFile,IPv4-Addr  # Support for additional observable types (domains, and URLs) will be added in future releases.
+      # - CONNECTOR_SCOPE=StixFile,IPv4-Addr,Domain-Name,Hostname  # Support for additional observable types (URLs) will be added in future releases.
       # - CONNECTOR_LOG_LEVEL=error
       # - CONNECTOR_AUTO=true
 
@@ -20,5 +20,6 @@ services:
       # - KASPERSKY_ZONE_OCTI_SCORE_MAPPING=red:100,orange:80,yellow:60,gray:20,green:0
       # - KASPERSKY_FILE_SECTIONS=LicenseInfo,Zone,FileGeneralInfo
       # - KASPERSKY_IPV4_SECTIONS=LicenseInfo,Zone,IpGeneralInfo
+      # - KASPERSKY_DOMAIN_SECTIONS=LicenseInfo,Zone,DomainGeneralInfo
 
     restart: always

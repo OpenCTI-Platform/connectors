@@ -24,7 +24,18 @@ SECTIONS = {
             "Industries",
         ],
     },
-    "domain_sections": {},
+    "domain_sections": {
+        "mandatories_sections": ["LicenseInfo", "Zone", "DomainGeneralInfo"],
+        "supported_sections": [
+            "LicenseInfo",
+            "Zone",
+            "DomainGeneralInfo",
+            "DomainDnsResolutions",
+            "FilesDownloaded",
+            "FilesAccessed",
+            "Industries",
+        ],
+    },
     "url_sections": {},
 }
 
