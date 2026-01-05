@@ -1,30 +1,33 @@
 # OpenCTI Diode Import Connector
 
+The Diode Import connector imports STIX bundles exported using OpenCTI's `send_to_directory` mode, enabling data synchronization between OpenCTI instances or air-gapped environments.
+
 | Status            | Date | Comment |
 |-------------------|------|---------|
 | Filigran Verified | -    | -       |
 
 ## Table of Contents
 
-- [Introduction](#introduction)
-- [Installation](#installation)
-  - [Requirements](#requirements)
-- [Configuration](#configuration)
-  - [Configuration Variables](#configuration-variables)
-- [Deployment](#deployment)
-  - [Docker Deployment](#docker-deployment)
-  - [Manual Deployment](#manual-deployment)
-- [Behavior](#behavior)
-  - [Data Flow](#data-flow)
-  - [Entity Mapping](#entity-mapping)
-- [Debugging](#debugging)
-- [Additional Information](#additional-information)
-
----
+- [OpenCTI Diode Import Connector](#opencti-diode-import-connector)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction](#introduction)
+  - [Installation](#installation)
+    - [Requirements](#requirements)
+  - [Configuration variables](#configuration-variables)
+    - [OpenCTI environment variables](#opencti-environment-variables)
+    - [Base connector environment variables](#base-connector-environment-variables)
+    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
+  - [Deployment](#deployment)
+    - [Docker Deployment](#docker-deployment)
+    - [Manual Deployment](#manual-deployment)
+  - [Usage](#usage)
+  - [Behavior](#behavior)
+  - [Debugging](#debugging)
+  - [Additional information](#additional-information)
 
 ## Introduction
 
-The Diode Import connector enables importing STIX bundles that were exported using OpenCTI's `send_to_directory` mode. This connector acts as a data synchronization bridge between OpenCTI instances or between environments, allowing offline or air-gapped data transfer.
+The Diode Import connector acts as a data synchronization bridge between OpenCTI instances or environments. It reads STIX bundles from a local directory (exported by another connector using `send_to_directory` mode) and imports them into the target OpenCTI platform.
 
 ### Key Features
 
@@ -34,8 +37,6 @@ The Diode Import connector enables importing STIX bundles that were exported usi
 - Supports automatic file cleanup with configurable retention
 - Handles incremental imports without duplicate processing
 
----
-
 ## Installation
 
 ### Requirements
@@ -44,52 +45,53 @@ The Diode Import connector enables importing STIX bundles that were exported usi
 - Shared directory accessible by both source (exporter) and this connector
 - Bundles exported using `send_to_directory` mode from another OpenCTI connector
 
----
+## Configuration variables
 
-## Configuration
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
 
-### Configuration Variables
+### OpenCTI environment variables
 
-#### OpenCTI Parameters
+| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
+|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
+| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
+| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| OpenCTI URL | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
-| OpenCTI Token | `OPENCTI_TOKEN` | Yes | The default admin token set in the OpenCTI platform |
+### Base connector environment variables
 
-#### Base Connector Parameters
+| Parameter         | config.yml        | Docker environment variable   | Default      | Mandatory | Description                                                              |
+|-------------------|-------------------|-------------------------------|--------------|-----------|--------------------------------------------------------------------------|
+| Connector ID      | id                | `CONNECTOR_ID`                |              | Yes       | A unique `UUIDv4` identifier for this connector instance.                |
+| Connector Name    | name              | `CONNECTOR_NAME`              | Diode Import | No        | Name of the connector.                                                   |
+| Run and Terminate | run_and_terminate | `CONNECTOR_RUN_AND_TERMINATE` | false        | No        | Run once and exit if `true`.                                             |
+| Log Level         | log_level         | `CONNECTOR_LOG_LEVEL`         | info         | No        | Determines the verbosity of logs: `debug`, `info`, `warn`, or `error`.   |
 
-| Parameter | Docker envvar | Mandatory | Default | Description |
-|-----------|---------------|-----------|---------|-------------|
-| Connector ID | `CONNECTOR_ID` | Yes | - | A unique `UUIDv4` identifier for this connector |
-| Connector Name | `CONNECTOR_NAME` | Yes | `Diode Import` | Name of the connector |
-| Run and Terminate | `CONNECTOR_RUN_AND_TERMINATE` | No | `False` | Run once and exit if `True` |
-| Log Level | `CONNECTOR_LOG_LEVEL` | Yes | - | Log level: `debug`, `info`, `warn`, or `error` |
+### Connector extra parameters environment variables
 
-#### Connector Extra Parameters
-
-| Parameter | Docker envvar | Mandatory | Default | Description |
-|-----------|---------------|-----------|---------|-------------|
-| Directory Path | `DIODE_IMPORT_GET_FROM_DIRECTORY_PATH` | Yes | - | Path to directory containing exported bundles |
-| Directory Retention | `DIODE_IMPORT_GET_FROM_DIRECTORY_RETENTION` | No | `7` | Days to retain processed files before deletion |
-| Applicant Mappings | `DIODE_IMPORT_APPLICANT_MAPPINGS` | Yes | - | JSON mapping of source applicant IDs to target IDs |
-
----
+| Parameter           | config.yml                             | Docker environment variable                    | Default | Mandatory | Description                                                    |
+|---------------------|----------------------------------------|------------------------------------------------|---------|-----------|----------------------------------------------------------------|
+| Directory Path      | diode_import.get_from_directory_path   | `DIODE_IMPORT_GET_FROM_DIRECTORY_PATH`         |         | Yes       | Path to directory containing exported bundles.                 |
+| Directory Retention | diode_import.get_from_directory_retention | `DIODE_IMPORT_GET_FROM_DIRECTORY_RETENTION` | 7       | No        | Days to retain processed files before deletion.                |
+| Applicant Mappings  | diode_import.applicant_mappings        | `DIODE_IMPORT_APPLICANT_MAPPINGS`              |         | Yes       | JSON mapping of source applicant IDs to target IDs.            |
 
 ## Deployment
 
 ### Docker Deployment
 
-Use the following `docker-compose.yml`:
+Build the Docker image:
+
+```bash
+docker build -t opencti/connector-diode-import:latest .
+```
+
+Configure the connector in `docker-compose.yml`:
 
 ```yaml
-services:
   connector-diode-import:
     image: opencti/connector-diode-import:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
-      - CONNECTOR_ID=${CONNECTOR_DIODE_IMPORT_ID}
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=Diode Import
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_RUN_AND_TERMINATE=false
@@ -99,68 +101,70 @@ services:
     volumes:
       - /path/to/shared/directory:/data/diode
     restart: always
-    depends_on:
-      - opencti
+```
+
+Start the connector:
+
+```bash
+docker compose up -d
 ```
 
 ### Manual Deployment
 
-1. Clone the repository and navigate to the connector directory
-2. Install dependencies: `pip install -r requirements.txt`
-3. Configure `config.yml`:
+1. Create `config.yml` based on `config.yml.sample`.
 
-```yaml
-opencti:
-  url: 'http://localhost:8080'
-  token: 'your-token'
+2. Install dependencies:
 
-connector:
-  id: 'your-uuid'
-  name: 'Diode Import'
-  log_level: 'info'
-  run_and_terminate: false
-
-diode_import:
-  get_from_directory_path: '/data/diode'
-  get_from_directory_retention: 7
-  applicant_mappings:
-    source-user-id-1: target-user-id-1
-    source-user-id-2: target-user-id-2
+```bash
+pip3 install -r requirements.txt
 ```
 
-4. Run: `python main.py`
+3. Start the connector:
 
----
+```bash
+python3 main.py
+```
+
+## Usage
+
+The connector continuously monitors the configured directory for new STIX bundles. To force a re-process:
+
+**Data Management → Ingestion → Connectors**
+
+Find the connector and click the refresh button to reset the connector's state.
 
 ## Behavior
+
+The connector reads STIX bundles from a directory and imports them into OpenCTI.
 
 ### Data Flow
 
 ```mermaid
 graph LR
     subgraph Source OpenCTI
+        direction TB
         SourceConnector[Connector with send_to_directory]
         Directory[Shared Directory]
     end
-    
-    SourceConnector -- exports bundles --> Directory
-    
+
     subgraph Target OpenCTI
+        direction LR
         DiodeImport[Diode Import Connector]
         Platform[OpenCTI Platform]
     end
-    
+
+    SourceConnector -- exports bundles --> Directory
     Directory -- reads bundles --> DiodeImport
     DiodeImport -- imports STIX --> Platform
 ```
 
 ### Entity Mapping
 
-| Source Data | Target Entity | Notes |
-|-------------|---------------|-------|
-| STIX Bundle | STIX Bundle | Direct import of all STIX objects |
-| Source Applicant ID | Target Applicant ID | Mapped via `applicant_mappings` |
-| Source Connector | Impersonated Connector | Connector registration preserved |
+| Source Data           | Target Entity         | Description                                  |
+|-----------------------|-----------------------|----------------------------------------------|
+| STIX Bundle           | STIX Bundle           | Direct import of all STIX objects            |
+| Source Applicant ID   | Target Applicant ID   | Mapped via `applicant_mappings`              |
+| Source Connector      | Impersonated Connector| Connector registration preserved             |
 
 ### Processing Details
 
@@ -197,31 +201,32 @@ Files must be:
 - Valid STIX 2.1 bundle format
 - Named according to OpenCTI export conventions
 
-⚠️ **Warning**: Files added manually or with incorrect format will be ignored.
-
----
+> **Warning**: Files added manually or with incorrect format will be ignored.
 
 ## Debugging
 
-Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug`. Common issues:
+Enable verbose logging:
 
+```env
+CONNECTOR_LOG_LEVEL=debug
+```
+
+Common issues:
 - **Files not processed**: Verify file format and naming convention
 - **User not mapped**: Add missing user to `applicant_mappings`
 - **Permission denied**: Check directory permissions for connector process
 - **Duplicate data**: Check if files were already processed (check state)
 
----
-
-## Additional Information
+## Additional information
 
 ### Use Cases
 
-| Scenario | Description |
-|----------|-------------|
+| Scenario            | Description                                          |
+|---------------------|------------------------------------------------------|
 | Air-gapped Transfer | Move data between isolated networks via removable media |
-| Multi-instance Sync | Synchronize data between OpenCTI instances |
-| Backup Import | Restore data from exported bundles |
-| Data Migration | Migrate data from one OpenCTI instance to another |
+| Multi-instance Sync | Synchronize data between OpenCTI instances           |
+| Backup Import       | Restore data from exported bundles                   |
+| Data Migration      | Migrate data from one OpenCTI instance to another    |
 
 ### Applicant Mappings Format
 
@@ -237,6 +242,7 @@ The `DIODE_IMPORT_APPLICANT_MAPPINGS` parameter accepts JSON format:
 ### Related Configuration
 
 On the source side, ensure the exporting connector has:
+
 ```yaml
 connector:
   send_to_directory: true

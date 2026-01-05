@@ -1,96 +1,98 @@
 # OpenCTI Cuckoo Sandbox Connector
 
+The Cuckoo Sandbox connector imports malware analysis reports and IOCs from Cuckoo Sandbox into OpenCTI.
+
 | Status    | Date | Comment |
 |-----------|------|---------|
 | Community | -    | -       |
 
 ## Table of Contents
 
-- [Introduction](#introduction)
-- [Installation](#installation)
-  - [Requirements](#requirements)
-- [Configuration](#configuration)
-  - [Configuration Variables](#configuration-variables)
-- [Deployment](#deployment)
-  - [Docker Deployment](#docker-deployment)
-  - [Manual Deployment](#manual-deployment)
-- [Behavior](#behavior)
-  - [Data Flow](#data-flow)
-  - [Entity Mapping](#entity-mapping)
-- [Debugging](#debugging)
-- [Additional Information](#additional-information)
-
----
+- [OpenCTI Cuckoo Sandbox Connector](#opencti-cuckoo-sandbox-connector)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction](#introduction)
+  - [Installation](#installation)
+    - [Requirements](#requirements)
+  - [Configuration variables](#configuration-variables)
+    - [OpenCTI environment variables](#opencti-environment-variables)
+    - [Base connector environment variables](#base-connector-environment-variables)
+    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
+  - [Deployment](#deployment)
+    - [Docker Deployment](#docker-deployment)
+    - [Manual Deployment](#manual-deployment)
+  - [Usage](#usage)
+  - [Behavior](#behavior)
+  - [Debugging](#debugging)
+  - [Additional information](#additional-information)
 
 ## Introduction
 
-This connector integrates [Cuckoo Sandbox](https://cuckoosandbox.org/) analysis results with the OpenCTI platform. Cuckoo Sandbox is an open-source automated malware analysis system that executes suspicious files in an isolated environment and monitors their behavior.
+[Cuckoo Sandbox](https://cuckoosandbox.org/) is an open-source automated malware analysis system that executes suspicious files in an isolated environment and monitors their behavior.
 
-The connector polls the Cuckoo API for completed analysis tasks, extracts behavioral indicators (network activity, dropped files, processes, signatures), creates STIX 2.1 objects, and imports them into OpenCTI as comprehensive malware analysis reports.
-
----
+This connector polls the Cuckoo API for completed analysis tasks, extracts behavioral indicators (network activity, dropped files, processes, signatures), creates STIX 2.1 objects, and imports them into OpenCTI as comprehensive malware analysis reports.
 
 ## Installation
 
 ### Requirements
 
-- OpenCTI Platform version 5.11.0 or higher
+- OpenCTI Platform >= 5.11.0
 - Running Cuckoo Sandbox instance with API enabled
 - Network access from connector to Cuckoo API
 
----
+## Configuration variables
 
-## Configuration
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
 
-### Configuration Variables
+### OpenCTI environment variables
 
-#### OpenCTI Parameters
+| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
+|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
+| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
+| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| OpenCTI URL | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
-| OpenCTI Token | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
+### Base connector environment variables
 
-#### Base Connector Parameters
+| Parameter            | config.yml           | Docker environment variable      | Default | Mandatory | Description                                                              |
+|----------------------|----------------------|----------------------------------|---------|-----------|--------------------------------------------------------------------------|
+| Connector ID         | id                   | `CONNECTOR_ID`                   |         | Yes       | A unique `UUIDv4` identifier for this connector instance.                |
+| Connector Name       | name                 | `CONNECTOR_NAME`                 | Cuckoo  | Yes       | Name of the connector.                                                   |
+| Connector Scope      | scope                | `CONNECTOR_SCOPE`                | cuckoo  | Yes       | The scope or type of data the connector is importing.                    |
+| Log Level            | log_level            | `CONNECTOR_LOG_LEVEL`            | info    | No        | Determines the verbosity of logs: `debug`, `info`, `warn`, or `error`.   |
+| Update Existing Data | update_existing_data | `CONNECTOR_UPDATE_EXISTING_DATA` | false   | No        | Whether to update existing data in OpenCTI.                              |
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| Connector ID | `CONNECTOR_ID` | Yes | A unique `UUIDv4` for this connector |
-| Connector Name | `CONNECTOR_NAME` | Yes | Name displayed in OpenCTI (e.g., `Cuckoo`) |
-| Connector Scope | `CONNECTOR_SCOPE` | Yes | Supported scope (e.g., `cuckoo`) |
-| Log Level | `CONNECTOR_LOG_LEVEL` | Yes | Log level: `debug`, `info`, `warn`, or `error` |
-| Update Existing Data | `CONNECTOR_UPDATE_EXISTING_DATA` | No | Whether to update existing data |
+### Connector extra parameters environment variables
 
-#### Connector Extra Parameters
-
-| Parameter | Docker envvar | config.yml | Mandatory | Description |
-|-----------|---------------|------------|-----------|-------------|
-| API URL | `CUCKOO_API_URL` | `api_url` | Yes | The Cuckoo API server endpoint (e.g., `http://cuckoo:8090`) |
-| Base URL | `CUCKOO_BASE_URL` | `base_url` | Yes | The Sandbox web interface URL for external references |
-| Poll Interval | `CUCKOO_INTERVAL` | `interval` | Yes | Polling interval in minutes (e.g., `30`) |
-| Create Indicators | `CUCKOO_CREATE_INDICATORS` | `create_indicators` | No | Create Indicators for Observables (`true`/`false`) |
-| Enable Registry Keys | `CUCKOO_ENABLE_REGISTRY_KEYS` | `enable_registry_keys` | No | Create Registry Key Observables (`true`/`false`) |
-| Enable Network Traffic | `CUCKOO_ENABLE_NETWORK_TRAFFIC` | `enable_network_traffic` | No | Create Network Traffic Observables (`true`/`false`) |
-| Start Task ID | `CUCKOO_START_TASK_ID` | `start_task_id` | No | First Cuckoo Task ID to sync from (default: `0`) |
-| Report Score Threshold | `CUCKOO_REPORT_SCORE` | `report_score` | No | Minimum score to create a Report (default: `0`) |
-| Verify SSL | `VERIFY_SSL` | `verify_ssl` | No | Require SSL/TLS connection (`true`/`false`, default: `true`) |
-
----
+| Parameter              | config.yml             | Docker environment variable   | Default | Mandatory | Description                                                    |
+|------------------------|------------------------|-------------------------------|---------|-----------|----------------------------------------------------------------|
+| API URL                | cuckoo.api_url         | `CUCKOO_API_URL`              |         | Yes       | The Cuckoo API server endpoint (e.g., `http://cuckoo:8090`).   |
+| Base URL               | cuckoo.base_url        | `CUCKOO_BASE_URL`             |         | Yes       | The Sandbox web interface URL for external references.         |
+| Interval               | cuckoo.interval        | `CUCKOO_INTERVAL`             | 30      | Yes       | Polling interval in minutes for new analysis tasks.            |
+| Create Indicators      | cuckoo.create_indicators | `CUCKOO_CREATE_INDICATORS`  | true    | No        | Create Indicators for Observables.                             |
+| Enable Registry Keys   | cuckoo.enable_registry_keys | `CUCKOO_ENABLE_REGISTRY_KEYS` | false | No        | Create Registry Key Observables (can be verbose).              |
+| Enable Network Traffic | cuckoo.enable_network_traffic | `CUCKOO_ENABLE_NETWORK_TRAFFIC` | false | No        | Create Network Traffic Observables (can be verbose).           |
+| Start Task ID          | cuckoo.start_task_id   | `CUCKOO_START_TASK_ID`        | 0       | No        | First Cuckoo Task ID to sync from.                             |
+| Report Score Threshold | cuckoo.report_score    | `CUCKOO_REPORT_SCORE`         | 0       | No        | Minimum score to create a Report (0-10 scale).                 |
+| Verify SSL             | cuckoo.verify_ssl      | `VERIFY_SSL`                  | true    | No        | Require SSL/TLS connection (`true`/`false`).                   |
 
 ## Deployment
 
 ### Docker Deployment
 
-Use the following `docker-compose.yml`:
+Build the Docker image:
+
+```bash
+docker build -t opencti/connector-cuckoo:latest .
+```
+
+Configure the connector in `docker-compose.yml`:
 
 ```yaml
-services:
   connector-cuckoo:
     image: opencti/connector-cuckoo:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
-      - CONNECTOR_ID=${CONNECTOR_CUCKOO_ID}
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=Cuckoo Sandbox
       - CONNECTOR_SCOPE=cuckoo
       - CONNECTOR_LOG_LEVEL=info
@@ -105,94 +107,94 @@ services:
       - CUCKOO_REPORT_SCORE=5
       - VERIFY_SSL=true
     restart: always
-    depends_on:
-      - opencti
+```
+
+Start the connector:
+
+```bash
+docker compose up -d
 ```
 
 ### Manual Deployment
 
-1. Clone the repository and navigate to the connector directory
-2. Install dependencies: `pip install -r requirements.txt`
-3. Configure `config.yml`:
+1. Create `config.yml` based on `config.yml.sample`.
 
-```yaml
-opencti:
-  url: 'http://localhost:8080'
-  token: 'your-token'
+2. Install dependencies:
 
-connector:
-  id: 'your-uuid'
-  name: 'Cuckoo Sandbox'
-  scope: 'cuckoo'
-  log_level: 'info'
-
-cuckoo:
-  api_url: 'http://cuckoo:8090'
-  base_url: 'http://cuckoo:8080'
-  interval: 30
-  create_indicators: true
-  enable_registry_keys: false
-  enable_network_traffic: false
-  start_task_id: 0
-  report_score: 5
-  verify_ssl: true
+```bash
+pip3 install -r requirements.txt
 ```
 
-4. Run: `python main.py`
+3. Start the connector:
 
----
+```bash
+python3 main.py
+```
+
+## Usage
+
+The connector polls the Cuckoo API at the configured interval for new completed analysis tasks. To force an immediate run:
+
+**Data Management → Ingestion → Connectors**
+
+Find the connector and click the refresh button to reset the state and trigger a new sync.
 
 ## Behavior
+
+The connector fetches analysis reports from Cuckoo Sandbox and converts them to STIX 2.1 objects.
 
 ### Data Flow
 
 ```mermaid
-graph TB
+graph LR
     subgraph Cuckoo Sandbox
+        direction TB
         Tasks[Analysis Tasks]
         API[Cuckoo API]
     end
-    
-    subgraph Processing
-        Tasks --> API
-        API --> Summary[Task Summary/Report]
+
+    subgraph OpenCTI
+        direction LR
+        Report[Report]
+        File[File Observable]
+        Indicator[Indicator]
+        IPv4[IPv4-Addr Observable]
+        Domain[Domain-Name Observable]
+        Process[Process Observable]
+        RegKey[Registry Key Observable]
+        NetTraffic[Network Traffic Observable]
+        AttackPattern[Attack Pattern]
     end
-    
-    subgraph OpenCTI Entities
-        Summary --> Report[Report]
-        Summary --> File[File Observable]
-        Summary --> Indicator[Indicator]
-        Summary --> IPv4[IPv4-Addr Observable]
-        Summary --> Domain[Domain-Name Observable]
-        Summary --> Process[Process Observable]
-        Summary --> RegKey[Registry Key Observable]
-        Summary --> NetTraffic[Network Traffic Observable]
-        Summary --> AttackPattern[Attack Pattern]
-    end
-    
+
+    Tasks --> API
+    API --> Report
+    API --> File
+    API --> Indicator
+    API --> IPv4
+    API --> Domain
+    API --> Process
+    API --> RegKey
+    API --> NetTraffic
+    API --> AttackPattern
     File -- based-on --> Indicator
     Domain -- resolves-to --> IPv4
-    File -- related-to --> IPv4
-    File -- related-to --> Domain
-    File -- related-to --> Process
-    File -- related-to --> AttackPattern
 ```
 
 ### Entity Mapping
 
-| Cuckoo Data | OpenCTI Entity | Notes |
-|-------------|----------------|-------|
-| Analysis Task (score >= threshold) | Report | Contains analysis summary, external reference to Cuckoo web UI |
-| Target File | File | Primary analyzed file with hashes (MD5, SHA1, SHA256, SHA512, SSDEEP) |
-| Dropped Files | File | Executable files dropped during analysis |
-| Network Hosts | IPv4-Addr | IP addresses contacted during execution |
-| Network Domains | Domain-Name | DNS requests made during execution |
-| DNS Resolution | Relationship | `resolves-to` relationship between Domain and IP |
-| Process Tree | Process | Spawned processes with PID and command line |
-| Registry Keys Written | Windows-Registry-Key | Registry modifications (optional) |
-| Network Packets | Network-Traffic | TCP/UDP/ICMP traffic (optional) |
-| Signatures/TTPs | Attack Pattern | MITRE ATT&CK techniques from behavioral signatures |
-| - | Indicator | Created for file hashes, IPs, domains (optional) |
+| Cuckoo Data                      | OpenCTI Entity       | Description                                                  |
+|----------------------------------|----------------------|--------------------------------------------------------------|
+| Analysis Task (score >= threshold) | Report             | Contains analysis summary, external reference to Cuckoo web UI |
+| Target File                      | File                 | Primary analyzed file with hashes (MD5, SHA1, SHA256, SHA512, SSDEEP) |
+| Dropped Files                    | File                 | Executable files dropped during analysis                     |
+| Network Hosts                    | IPv4-Addr            | IP addresses contacted during execution                      |
+| Network Domains                  | Domain-Name          | DNS requests made during execution                           |
+| DNS Resolution                   | Relationship         | `resolves-to` relationship between Domain and IP             |
+| Process Tree                     | Process              | Spawned processes with PID and command line                  |
+| Registry Keys Written            | Windows-Registry-Key | Registry modifications (optional)                            |
+| Network Packets                  | Network-Traffic      | TCP/UDP/ICMP traffic (optional)                              |
+| Signatures/TTPs                  | Attack Pattern       | MITRE ATT&CK techniques from behavioral signatures           |
+| -                                | Indicator            | Created for file hashes, IPs, domains (optional)             |
 
 ### Processing Details
 
@@ -226,33 +228,41 @@ graph TB
      - IP addresses: `[ipv4-addr:value='...']`
      - Domains: `[domain-name:value='...']`
 
-6. **Attack Patterns**:
-   - Extracts TTPs from behavioral signatures
-   - Looks up existing MITRE ATT&CK patterns by ID or name
-   - Creates new patterns if not found
-
 ### Relationships Created
 
-| Source | Relationship | Target |
-|--------|--------------|--------|
-| File (primary) | `related-to` | IPv4-Addr, Domain-Name, Process, Attack Pattern |
-| File (primary) | `based-on` | Indicator |
-| Domain-Name | `resolves-to` | IPv4-Addr |
+| Source          | Relationship  | Target                                |
+|-----------------|---------------|---------------------------------------|
+| File (primary)  | `related-to`  | IPv4-Addr, Domain-Name, Process, Attack Pattern |
+| File (primary)  | `based-on`    | Indicator                             |
+| Domain-Name     | `resolves-to` | IPv4-Addr                             |
 
----
+### Score Interpretation
+
+Cuckoo assigns scores based on behavioral analysis:
+
+| Score | Interpretation               |
+|-------|------------------------------|
+| 0-3   | Likely benign                |
+| 4-6   | Suspicious behavior detected |
+| 7-10  | Malicious behavior detected  |
+
+Use `CUCKOO_REPORT_SCORE` to filter which analyses generate Reports in OpenCTI.
 
 ## Debugging
 
-Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug`. Common issues:
+Enable verbose logging:
 
+```env
+CONNECTOR_LOG_LEVEL=debug
+```
+
+Common issues:
 - **Connection refused**: Verify Cuckoo API URL and network connectivity
 - **SSL errors**: Set `VERIFY_SSL=false` for self-signed certificates
 - **No tasks synced**: Check `start_task_id` and ensure tasks have `reported` status
 - **Missing reports**: Verify task score meets `report_score` threshold
 
----
-
-## Additional Information
+## Additional information
 
 ### Supported Cuckoo Versions
 
@@ -267,17 +277,7 @@ Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug`. Common issues:
 
 ### API Endpoints Used
 
-| Endpoint | Purpose |
-|----------|---------|
-| `/tasks/list` | List all analysis tasks |
-| `/tasks/summary/{id}` | Get detailed task summary |
-
-### Score Interpretation
-
-Cuckoo assigns scores based on behavioral analysis:
-- **0-3**: Likely benign
-- **4-6**: Suspicious behavior detected
-- **7-10**: Malicious behavior detected
-
-Use `CUCKOO_REPORT_SCORE` to filter which analyses generate Reports in OpenCTI.
-
+| Endpoint              | Purpose                    |
+|-----------------------|----------------------------|
+| `/tasks/list`         | List all analysis tasks    |
+| `/tasks/summary/{id}` | Get detailed task summary  |

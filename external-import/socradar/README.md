@@ -4,7 +4,7 @@
 
 # OpenCTI SOCRadar Connector
 
-Table of Contents
+## Table of Contents
 
 - [OpenCTI SOCRadar Connector](#opencti-socradar-connector)
   - [Introduction](#introduction)
