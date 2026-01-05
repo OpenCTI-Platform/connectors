@@ -1,4 +1,4 @@
-version: "3"
+version: '3'
 services:
   connector-opencti:
     image: opencti/connector-opencti:latest

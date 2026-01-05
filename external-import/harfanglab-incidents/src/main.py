@@ -1,3 +1,4 @@
+import sys
 import traceback
 
 from harfanglab_incidents_connector import HarfanglabIncidentsConnector
@@ -17,4 +18,4 @@ if __name__ == "__main__":
         connector.run()
     except Exception:
         traceback.print_exc()
-        exit(1)
+        sys.exit(1)

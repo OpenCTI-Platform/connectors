@@ -1,10 +1,9 @@
 opencti:
-  url: 'http://localhost:8080'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
   id: 'ExportReportPdf'
-  type: 'INTERNAL_EXPORT_FILE'
   name: 'ExportReportPdf'
   scope: 'application/pdf'
   log_level: 'info'

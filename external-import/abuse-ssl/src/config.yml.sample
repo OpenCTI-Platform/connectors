@@ -1,10 +1,9 @@
 opencti:
-  url: 'http://localhost:8080'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
   id: 'changeme'
-  type: 'EXTERNAL_IMPORT'
   name: 'Abuse.ch SSL Blacklist'
   scope: 'abuse-ssl'
   log_level: 'info'

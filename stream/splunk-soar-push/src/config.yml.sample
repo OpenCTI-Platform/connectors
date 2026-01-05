@@ -1,10 +1,9 @@
 opencti:
-  url: 'ChangeMe'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
   id: 'ChangeMe'
-  type: 'STREAM'
   name: 'Splunk SOAR Push'
   scope: 'splunk-soar-push'
   confidence_level: 100
@@ -20,7 +19,6 @@ splunk_soar:
   # username: 'ChangeMe' # Alternative: username
   # password: 'ChangeMe' # Alternative: password
   verify_ssl: true
-  # proxy_url: 'http://proxy:8080' # Optional proxy
   delete_on_removal: false # Close SOAR entities when removed from stream
   
   # Mapping configuration
@@ -30,9 +28,3 @@ splunk_soar:
   # Performance settings
   max_artifacts_per_container: 1000
   batch_size: 100
-
-# Optional proxy configuration
-# proxy:
-#   http_proxy: 'http://proxy:8080'
-#   https_proxy: 'http://proxy:8080'
-#   no_proxy: 'localhost,127.0.0.1'
