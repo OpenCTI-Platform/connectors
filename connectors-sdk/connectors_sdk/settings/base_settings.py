@@ -109,7 +109,7 @@ class _SettingsLoader(BaseSettings):
     @classmethod
     def _get_config_yml_file_path(cls) -> Path | None:
         """Locate the `config.yml` file of the running connector."""
-        main_path = _SettingsLoader._get_connector_main_path()
+        main_path = cls._get_connector_main_path()
         config_yml_legacy_file_path = main_path.parent / "config.yml"
         config_yml_file_path = main_path.parent.parent / "config.yml"
 
@@ -122,7 +122,7 @@ class _SettingsLoader(BaseSettings):
     @classmethod
     def _get_dot_env_file_path(cls) -> Path | None:
         """Locate the `.env` file of the running connector."""
-        main_path = _SettingsLoader._get_connector_main_path()
+        main_path = cls._get_connector_main_path()
         dot_env_file_path = main_path.parent.parent / ".env"
 
         return dot_env_file_path if dot_env_file_path.is_file() else None
@@ -149,7 +149,7 @@ class _SettingsLoader(BaseSettings):
             1. If a config.yml file is found, the order will be: `ENV VAR` → config.yml → default value
             2. If a .env file is found, the order will be: `ENV VAR` → .env → default value
         """
-        config_yml_file_path = _SettingsLoader._get_config_yml_file_path()
+        config_yml_file_path = cls._get_config_yml_file_path()
         if config_yml_file_path:
             settings_cls.model_config["yaml_file"] = config_yml_file_path
             return (
@@ -157,7 +157,7 @@ class _SettingsLoader(BaseSettings):
                 YamlConfigSettingsSource(settings_cls),
             )
 
-        dot_env_file_path = _SettingsLoader._get_dot_env_file_path()
+        dot_env_file_path = cls._get_dot_env_file_path()
         if dot_env_file_path:
             settings_cls.model_config["env_file"] = dot_env_file_path
             return (
