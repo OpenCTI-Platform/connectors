@@ -3,23 +3,23 @@ services:
   connector-crowdstrike-endpoint-security:
     image: opencti/connector-crowdstrike-endpoint-security:latest
     environment:
-      - OPENCTI_URL=http://localhost
+      - OPENCTI_URL=http://localhost:8080
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_LIVE_STREAM_ID=live # ID of the live stream created in the OpenCTI UI
-      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
-      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
-      - CONNECTOR_NAME=CrowdStrike Endpoint Security
-      - CONNECTOR_SCOPE=crowdstrike
-      - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_IGNORE_TYPES=label,marking-definition,identity
-      - CONNECTOR_CONSUMER_COUNT=10
-      - CROWDSTRIKE_API_BASE_URL=FIXME
-      - CROWDSTRIKE_CLIENT_ID=FIXME
-      - CROWDSTRIKE_CLIENT_SECRET=FIXME
-      - CROWDSTRIKE_PERMANENT_DELETE=False # optional
-      - CROWDSTRIKE_FALCON_FOR_MOBILE_ACTIVE=False # optional
-      - METRICS_ENABLE=False # optional
-      - METRICS_PORT=FIXME # optional
-      - METRICS_ADDR=FIXME # optional
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
+      # - CONNECTOR_NAME=CrowdStrike Endpoint Security
+      # - CONNECTOR_SCOPE=crowdstrike-endpoint-security
+      # - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
+      # - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_CONSUMER_COUNT=10
+      # - CONNECTOR_IGNORE_TYPES=label,marking-definition,identity
+      # - CROWDSTRIKE_API_BASE_URL=https://api.crowdstrike.com
+      - CROWDSTRIKE_CLIENT_ID=ChangeMe
+      - CROWDSTRIKE_CLIENT_SECRET=ChangeMe
+      # - CROWDSTRIKE_PERMANENT_DELETE=False # optional
+      # - CROWDSTRIKE_FALCON_FOR_MOBILE_ACTIVE=False # optional
+      # - METRICS_ENABLE=False # optional
+      # - METRICS_PORT=9113 # optional
+      # - METRICS_ADDR=0.0.0.0 # optional
     restart: always
