@@ -1,10 +1,9 @@
 opencti:
-  url: 'http://localhost:PORT'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'Zvelo CTI'
   scope: 'ipv4-addr,ipv6-addr,domain,url,indicator,malware'
   log_level: 'info'

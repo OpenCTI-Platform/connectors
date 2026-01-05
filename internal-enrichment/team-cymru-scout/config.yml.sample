@@ -1,10 +1,9 @@
 opencti:
-  url: 'http://opencti:8080'
+  url: 'http://localhost'
   token: 'Changeme'
 
 connector:
   id: 'e0256d06-b97c-416e-adc9-ee29325d8f37'
-  type: 'INTERNAL_ENRICHMENT'
   name: 'PureSignalScout'
   scope: 'IPv4-Addr,IPv6-Addr,Domain-Name'
   auto: true

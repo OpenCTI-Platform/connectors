@@ -5,9 +5,9 @@ services:
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost
-      - OPENCTI_TOKEN=CHANGEME
+      - OPENCTI_TOKEN=ChangeMe
       # Connector's definition parameters REQUIRED
-      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_ID=ChangeMe
       - "CONNECTOR_NAME=Sumo Logic Intel"
       - CONNECTOR_SCOPE=sumologic
       - CONNECTOR_LOG_LEVEL=error
@@ -16,12 +16,7 @@ services:
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
 
       # Connector's custom execution parameters
-      - SUMOLOGIC_INTEL_API_BASE_URL=CHANGEME
-      - SUMOLOGIC_INTEL_ACCESS_ID=CHANGEME
-      - SUMOLOGIC_INTEL_ACCESS_KEY=CHANGEME
-
-      # Add proxy parameters below if needed
-      # - HTTP_PROXY=CHANGEME
-      # - HTTPS_PROXY=CHANGEME
-      # - NO_PROXY=CHANGEME
+      - SUMOLOGIC_INTEL_API_BASE_URL=ChangeMe
+      - SUMOLOGIC_INTEL_ACCESS_ID=ChangeMe
+      - SUMOLOGIC_INTEL_ACCESS_KEY=ChangeMe
     restart: always

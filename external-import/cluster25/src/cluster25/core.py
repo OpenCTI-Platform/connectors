@@ -133,7 +133,7 @@ class Cluster25:
                 f"Unable to retrieve the token from C25 platform, status {r.status_code}"
             )
             self.helper.log_info("Connector stop")
-            sys.exit(0)
+            sys.exit(1)
 
         return r.json()["data"]["token"]
 
@@ -141,9 +141,9 @@ class Cluster25:
         params = {
             "export_format": "stix2",
             "types": self.indicator_types,
-            "start": datetime.datetime.fromtimestamp(timestamp)
-            .replace(tzinfo=self._TZ_INFO)
-            .isoformat(),
+            "start": datetime.datetime.fromtimestamp(
+                timestamp, tz=self._TZ_INFO
+            ).isoformat(),
             "include_info": True,
         }
         headers = {"Authorization": f"Bearer {self.current_token}"}
@@ -161,7 +161,7 @@ class Cluster25:
                 f"Unable to retrieve observables from C25 platform, status {r.status_code}"
             )
             self.helper.log_info("Connector stop")
-            sys.exit(0)
+            sys.exit(1)
 
         return r.json()
 
@@ -190,7 +190,9 @@ class Cluster25:
 
                 last_run = self._get_state_value(current_state, self._STATE_LAST_RUN)
                 if self._is_scheduled(last_run, timestamp):
-                    now = datetime.datetime.utcfromtimestamp(timestamp)
+                    now = datetime.datetime.fromtimestamp(
+                        timestamp, tz=datetime.timezone.utc
+                    )
                     friendly_name = (
                         f"Cluster25 run @ {now.strftime('%Y-%m-%d %H:%M:%S')}"
                     )

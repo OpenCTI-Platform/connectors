@@ -1,4 +1,4 @@
-version: "3"
+version: '3'
 services:
   connector-tanium-intel:
     image: opencti/connector-tanium-intel:latest

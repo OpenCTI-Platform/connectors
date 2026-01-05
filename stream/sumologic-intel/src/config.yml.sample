@@ -1,10 +1,9 @@
 opencti:
-  url: 'http://localhost:PORT'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
   id: 'ChangeMe'
-  type: 'INTERNAL_IMPORT_FILE'
   name: 'Sumo Logic Intel'
   scope: 'sumologic'
   log_level: 'error'

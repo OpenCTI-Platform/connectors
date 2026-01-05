@@ -1,10 +1,11 @@
+version: '3'
 services:
   connector-silentpush:
     image: opencti/connector-silentpush-enrichment:latest
     environment:
       # Generic parameters (connection with OpenCTI)
-      - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=CHANGEME
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
       # Common parameters for connectors
       # - CONNECTOR_ID=9955194d-d000-4507-bc9d-19f851c20de9
       # - CONNECTOR_NAME=Silent Push - Enrichment
@@ -13,7 +14,7 @@ services:
       # - CONNECTOR_AUTO=false
       # Custom parameters for connector-silentpush
       # - SILENTPUSH_API_BASE_URL=https://app.silentpush.com/api/v2/
-      - SILENTPUSH_API_KEY=CHANGEME
+      - SILENTPUSH_API_KEY=ChangeMe
       # - SILENTPUSH_MAX_TLP_LEVEL=TLP:CLEAR # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
       # - SILENTPUSH_VERIFY_CERT=true
     restart: always
