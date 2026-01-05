@@ -2,7 +2,7 @@
 
 | Status     | Date | Comment    |
 |------------|------|------------|
-| Deprecated | -    | See below  |
+| Deprecated | -    | -          |
 
 This connector is deprecated. A mistake has been made as this connector actually pulls incident from Defender and not Sentinel.
 

@@ -2,7 +2,7 @@
 
 | Status    | Date       | Comment                         |
 |-----------|------------|---------------------------------|
-| Community | 2025-01-05 | External import connector       |
+| Community | -          | -                               |
 
 ## Introduction
 
