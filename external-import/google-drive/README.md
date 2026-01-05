@@ -73,7 +73,6 @@ There are a number of configuration options, which are set either in `docker-com
 | Connector Name    | name            | `CONNECTOR_NAME`              | Google Drive   | No        | Name of the connector.                                                      |
 | Connector Scope   | scope           | `CONNECTOR_SCOPE`             | google-drive   | No        | The scope or type of data the connector is importing.                       |
 | Log Level         | log_level       | `CONNECTOR_LOG_LEVEL`         | info           | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
-| Duration Period   | duration_period | `CONNECTOR_DURATION_PERIOD`   | PT1H           | No        | Time interval between connector runs in ISO 8601 format.                    |
 
 ### Connector extra parameters environment variables
 
@@ -81,6 +80,7 @@ There are a number of configuration options, which are set either in `docker-com
 |--------------------|-----------------------------|---------------------------------|---------|-----------|--------------------------------------------------|
 | Folder ID          | google_drive.folder_id      | `GOOGLE_DRIVE_FOLDER_ID`        |         | Yes       | Google Drive folder ID to monitor.               |
 | Service Account    | google_drive.service_account| `GOOGLE_DRIVE_SERVICE_ACCOUNT`  |         | Yes       | Service account JSON (base64 encoded or path).   |
+| Interval           | google_drive.interval       | `GOOGLE_DRIVE_INTERVAL`         | 5       | Yes       | Interval in minutes between connector runs.      |
 
 ## Deployment
 
@@ -104,8 +104,8 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_NAME=Google Drive
       - CONNECTOR_SCOPE=google-drive
       - CONNECTOR_LOG_LEVEL=info
-      - CONNECTOR_DURATION_PERIOD=PT1H
       - GOOGLE_DRIVE_FOLDER_ID=ChangeMe
+      - GOOGLE_DRIVE_INTERVAL=5 # In minutes
       - GOOGLE_DRIVE_SERVICE_ACCOUNT=<base64-encoded-json>
     restart: always
 ```
@@ -134,7 +134,7 @@ python3 main.py
 
 ## Usage
 
-The connector runs automatically at the interval defined by `CONNECTOR_DURATION_PERIOD`. To force an immediate run:
+The connector runs automatically at the interval defined by `GOOGLE_DRIVE_INTERVAL`. To force an immediate run:
 
 **Data Management → Ingestion → Connectors**
 

@@ -63,14 +63,13 @@ There are a number of configuration options, which are set either in `docker-com
 | Connector Name    | name            | `CONNECTOR_NAME`              | MITRE ATT&CK    | No        | Name of the connector.                                                      |
 | Connector Scope   | scope           | `CONNECTOR_SCOPE`             | mitre           | No        | The scope or type of data the connector is importing.                       |
 | Log Level         | log_level       | `CONNECTOR_LOG_LEVEL`         | error           | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
-| Duration Period   | duration_period | `CONNECTOR_DURATION_PERIOD`   | P7D             | No        | Time interval between connector runs in ISO 8601 format.                    |
 
 ### Connector extra parameters environment variables
 
 | Parameter                | config.yml                   | Docker environment variable      | Default                                                                              | Mandatory | Description                                                    |
 |--------------------------|------------------------------|----------------------------------|--------------------------------------------------------------------------------------|-----------|----------------------------------------------------------------|
 | Remove Statement Marking | mitre.remove_statement_marking | `MITRE_REMOVE_STATEMENT_MARKING` | false                                                                              | No        | Remove statement markings from ingested MITRE data.            |
-| Interval (deprecated)    | mitre.interval               | `MITRE_INTERVAL`                 | 7                                                                                    | No        | **[DEPRECATED]** Interval in days. Use `CONNECTOR_DURATION_PERIOD`. |
+| Interval                 | mitre.interval               | `MITRE_INTERVAL`                 | 7                                                                                    | Yes       | Interval in days between connector runs.                       |
 | Enterprise File URL      | mitre.enterprise_file_url    | `MITRE_ENTERPRISE_FILE_URL`      | https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json | No | URL to MITRE Enterprise ATT&CK JSON. |
 | Mobile File URL          | mitre.mobile_attack_file_url | `MITRE_MOBILE_ATTACK_FILE_URL`   | https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/mobile-attack/mobile-attack.json | No | URL to MITRE Mobile ATT&CK JSON. |
 | ICS File URL             | mitre.ics_attack_file_url    | `MITRE_ICS_ATTACK_FILE_URL`      | https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/ics-attack/ics-attack.json | No | URL to MITRE ICS ATT&CK JSON. |
@@ -98,7 +97,7 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_NAME=MITRE ATT&CK
       - CONNECTOR_SCOPE=mitre
       - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_DURATION_PERIOD=P7D
+      - MITRE_INTERVAL=7 # In days
       # - MITRE_REMOVE_STATEMENT_MARKING=true
     restart: always
 ```
@@ -127,7 +126,7 @@ python3 -m __main__
 
 ## Usage
 
-The connector runs automatically at the interval defined by `CONNECTOR_DURATION_PERIOD`. MITRE updates ATT&CK quarterly; weekly polling (`P7D`) is recommended.
+The connector runs automatically at the interval defined by `MITRE_INTERVAL`. MITRE updates ATT&CK quarterly; weekly polling (7 days) is recommended.
 
 To force an immediate run:
 

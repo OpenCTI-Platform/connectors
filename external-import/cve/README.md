@@ -57,7 +57,6 @@ There are a number of configuration options, which are set either in `docker-com
 | Connector Name    | name            | `CONNECTOR_NAME`              | Common Vulnerabilities and Exposures     | No        | Name of the connector.                                                      |
 | Connector Scope   | scope           | `CONNECTOR_SCOPE`             | cve                                      | No        | The scope or type of data the connector is importing.                       |
 | Log Level         | log_level       | `CONNECTOR_LOG_LEVEL`         | error                                    | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
-| Duration Period   | duration_period | `CONNECTOR_DURATION_PERIOD`   | PT2H                                     | No        | Time interval between connector runs in ISO 8601 format.                    |
 
 ### Connector extra parameters environment variables
 
@@ -93,8 +92,8 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_NAME=Common Vulnerabilities and Exposures
       - CONNECTOR_SCOPE=cve
       - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_DURATION_PERIOD=PT2H
       - CVE_API_KEY=ChangeMe
+      - CVE_INTERVAL=6 # In hours, minimum 2 recommended by NIST
       # - CVE_BASE_URL=https://services.nvd.nist.gov/rest/json/cves
       # - CVE_MAX_DATE_RANGE=120
       # - CVE_MAINTAIN_DATA=true
@@ -127,7 +126,7 @@ python3 -m __main__
 
 ## Usage
 
-The connector runs automatically at the interval defined by `CONNECTOR_DURATION_PERIOD`. To force an immediate run:
+The connector runs automatically at the interval defined by `CVE_INTERVAL`. To force an immediate run:
 
 **Data Management → Ingestion → Connectors**
 

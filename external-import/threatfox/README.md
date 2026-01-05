@@ -57,7 +57,6 @@ There are a number of configuration options, which are set either in `docker-com
 | Connector Name    | name            | `CONNECTOR_NAME`              | ThreatFox       | No        | Name of the connector.                                                      |
 | Connector Scope   | scope           | `CONNECTOR_SCOPE`             | threatfox       | No        | The scope or type of data the connector is importing.                       |
 | Log Level         | log_level       | `CONNECTOR_LOG_LEVEL`         | error           | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
-| Duration Period   | duration_period | `CONNECTOR_DURATION_PERIOD`   |                 | No        | Time interval between connector runs in ISO 8601 format.                    |
 
 ### Connector extra parameters environment variables
 
@@ -72,7 +71,7 @@ There are a number of configuration options, which are set either in `docker-com
 | URL Score            | threatfox.x_opencti_score_url | `THREATFOX_X_OPENCTI_SCORE_URL`     | (uses default)                                | No        | x_opencti_score for URL observables.                                        |
 | Hash Score           | threatfox.x_opencti_score_hash | `THREATFOX_X_OPENCTI_SCORE_HASH`   | (uses default)                                | No        | x_opencti_score for Hash observables.                                       |
 | IOC Types            | threatfox.ioc_to_import       | `THREATFOX_IOC_TO_IMPORT`           | all_types                                     | No        | IOC types to import: `all_types`, `ip:port`, `domain`, `url`, `md5_hash`, `sha1_hash`, `sha256_hash`. |
-| Interval (deprecated) | threatfox.interval           | `THREATFOX_INTERVAL`                | 3                                             | No        | **[DEPRECATED]** Interval in days. Use `CONNECTOR_DURATION_PERIOD`.         |
+| Interval             | threatfox.interval            | `THREATFOX_INTERVAL`                | 3                                             | Yes       | Interval in days between connector runs.                                    |
 
 ## Deployment
 
@@ -96,8 +95,8 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_NAME=ThreatFox
       - CONNECTOR_SCOPE=threatfox
       - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_DURATION_PERIOD=PT6H
       - THREATFOX_CSV_URL=https://threatfox.abuse.ch/export/csv/recent/
+      - THREATFOX_INTERVAL=3 # In days
       - THREATFOX_IMPORT_OFFLINE=true
       - THREATFOX_CREATE_INDICATORS=true
       - THREATFOX_DEFAULT_X_OPENCTI_SCORE=50
@@ -129,7 +128,7 @@ python3 -m __main__
 
 ## Usage
 
-The connector runs automatically at the interval defined by `CONNECTOR_DURATION_PERIOD`. To force an immediate run:
+The connector runs automatically at the interval defined by `THREATFOX_INTERVAL`. To force an immediate run:
 
 **Data Management → Ingestion → Connectors**
 

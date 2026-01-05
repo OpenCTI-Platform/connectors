@@ -61,13 +61,12 @@ There are a number of configuration options, which are set either in `docker-com
 | Connector Name    | name            | `CONNECTOR_NAME`              | OpenCTI Datasets | No        | Name of the connector.                                                      |
 | Connector Scope   | scope           | `CONNECTOR_SCOPE`             | opencti          | No        | The scope or type of data the connector is importing.                       |
 | Log Level         | log_level       | `CONNECTOR_LOG_LEVEL`         | info             | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
-| Duration Period   | duration_period | `CONNECTOR_DURATION_PERIOD`   | P7D              | No        | Time interval between connector runs in ISO 8601 format.                    |
 
 ### Connector extra parameters environment variables
 
 | Parameter              | config.yml             | Docker environment variable   | Default                                                                                  | Mandatory | Description                                      |
 |------------------------|------------------------|-------------------------------|------------------------------------------------------------------------------------------|-----------|--------------------------------------------------|
-| Interval (deprecated)  | config.interval        | `CONFIG_INTERVAL`             | 7                                                                                        | No        | **[DEPRECATED]** Days between runs. Use `CONNECTOR_DURATION_PERIOD`. |
+| Interval               | config.interval        | `CONFIG_INTERVAL`             | 7                                                                                        | Yes       | Interval in days between connector runs.         |
 | Remove Creator         | config.remove_creator  | `CONFIG_REMOVE_CREATOR`       | true                                                                                     | No        | Remove creator identity from imported objects.   |
 | Sectors File URL       | config.sectors_file_url| `CONFIG_SECTORS_FILE_URL`     | https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json    | No        | URL to sectors dataset (set to `false` to disable). |
 | Geography File URL     | config.geography_file_url | `CONFIG_GEOGRAPHY_FILE_URL` | https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/geography.json  | No        | URL to geography dataset (set to `false` to disable). |
@@ -94,7 +93,7 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_NAME=OpenCTI Datasets
       - CONNECTOR_SCOPE=opencti
       - CONNECTOR_LOG_LEVEL=info
-      - CONNECTOR_DURATION_PERIOD=P7D
+      - CONFIG_INTERVAL=7 # In days
       - CONFIG_REMOVE_CREATOR=true
       - CONFIG_SECTORS_FILE_URL=https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json
       - CONFIG_GEOGRAPHY_FILE_URL=https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/geography.json
@@ -125,7 +124,7 @@ python3 main.py
 
 ## Usage
 
-The connector runs automatically at the interval defined by `CONNECTOR_DURATION_PERIOD`. Dataset updates are infrequent; weekly polling (`P7D`) is recommended.
+The connector runs automatically at the interval defined by `CONFIG_INTERVAL`. Dataset updates are infrequent; weekly polling (7 days) is recommended.
 
 To force an immediate run:
 

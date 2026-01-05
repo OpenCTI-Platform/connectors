@@ -115,7 +115,7 @@ python3 main.py
 
 ## Usage
 
-The connector runs automatically at the interval defined by `CONNECTOR_DURATION_PERIOD`. To force an immediate run:
+The connector runs automatically at the interval defined by `ESET_INTERVAL`. To force an immediate run:
 
 **Data Management → Ingestion → Connectors**
 
