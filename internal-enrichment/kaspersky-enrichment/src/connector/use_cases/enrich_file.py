@@ -1,10 +1,11 @@
 from connector.converter_to_stix import ConverterToStix
-from connector.utils import is_quota_exceeded, resolve_file_hash
+from connector.use_cases.common import BaseUseCases
+from connector.utils import resolve_file_hash
 from kaspersky_client import KasperskyClient
-from pycti import STIX_EXT_OCTI_SCO, OpenCTIConnectorHelper, OpenCTIStix2
+from pycti import OpenCTIConnectorHelper
 
 
-class FileEnricher:
+class FileEnricher(BaseUseCases):
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
@@ -13,6 +14,7 @@ class FileEnricher:
         zone_octi_score_mapping: dict,
         converter_to_stix: ConverterToStix,
     ):
+        BaseUseCases.__init__(self, helper, converter_to_stix)
         self.helper = helper
         self.client = client
         self.sections = sections
@@ -36,24 +38,10 @@ class FileEnricher:
         entity_data = self.client.get_file_info(obs_hash, self.sections)
 
         # Check Quota
-        if is_quota_exceeded(entity_data["LicenseInfo"]):
-            self.helper.connector_logger.warning(
-                "[CONNECTOR] The daily quota has been exceeded",
-                {
-                    "day_requests": entity_data["LicenseInfo"]["DayRequests"],
-                    "day_quota": entity_data["LicenseInfo"]["DayQuota"],
-                },
-            )
+        self.check_quota(entity_data["LicenseInfo"])
 
-        # Prepare author object
-        author = self.converter_to_stix.create_author()
-        octi_objects.append(author.to_stix2_object())
-
-        # Prepare TLPMarkings
-        tlp_clear = self.converter_to_stix.create_tlp_marking("clear")
-        octi_objects.append(tlp_clear.to_stix2_object())
-        tlp_amber = self.converter_to_stix.create_tlp_marking("amber")
-        octi_objects.append(tlp_amber.to_stix2_object())
+        # Create and add author, TLP clear and TLP amber to octi_objects
+        octi_objects += self.generate_author_and_tlp_markings()
 
         # Manage FileGeneralInfo data
 
@@ -61,14 +49,11 @@ class FileEnricher:
             "[CONNECTOR] Process enrichment from FileGeneralInfo data..."
         )
 
-        entity_file_general_info = entity_data["FileGeneralInfo"]
-
         # Score
         if entity_data.get("Zone"):
-            score = self.zone_octi_score_mapping[entity_data["Zone"].lower()]
-            observable = OpenCTIStix2.put_attribute_in_extension(
-                observable, STIX_EXT_OCTI_SCO, "score", score
-            )
+            observable = self.update_observable_score(entity_data["Zone"], observable)
+
+        entity_file_general_info = entity_data["FileGeneralInfo"]
 
         # Hashes
         if entity_file_general_info.get("Md5"):
@@ -132,7 +117,9 @@ class FileEnricher:
 
             for url_info in entity_data["FileDownloadedFromUrls"]:
                 obs_url_score = self.zone_octi_score_mapping[url_info["Zone"].lower()]
-                url_object = self.converter_to_stix.create_url(obs_url_score, url_info)
+                url_object = self.converter_to_stix.create_url(
+                    obs_url_score, url_info["Url"]
+                )
 
                 if url_object:
                     octi_objects.append(url_object.to_stix2_object())

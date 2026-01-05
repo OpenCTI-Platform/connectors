@@ -7,7 +7,7 @@ connector:
   name: 'Sumo Logic Intel'
   scope: 'sumologic'
   log_level: 'error'
-  live_stream_id: 'live' # ID of the live stream created in the OpenCTI UI
+  live_stream_id: 'changeme' # ID of the live stream created in the OpenCTI UI
   live_stream_listen_delete: true
   live_stream_no_dependencies: true
 
