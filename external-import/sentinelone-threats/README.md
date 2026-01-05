@@ -1,5 +1,9 @@
 # OpenCTI SentinelOne Threats Connector
 
+| Status    | Date | Comment |
+|-----------|------|---------|
+| Community | -    | -       |
+
 The OpenCTI SentinelOne Threats connector can be used to import Artifacts from BinaryVault.
 For more information about BinaryVault and the steps to set it up, see:
 https://success.alienvault.com/s/article/UUID-9bf40076-0ba9-2f93-93bd-b4878bd6c220
