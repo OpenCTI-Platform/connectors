@@ -1,5 +1,9 @@
 # OpenCTI CrowdStrike Endpoint Security connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
 The Crowdstrike Endpoint Security connector is a standalone Python process that monitors events from OpenCTI and executes related actions to create, update or delete a data in Crowdstrike.
 
 Summary
@@ -477,7 +481,6 @@ cs.indicator_delete(
     },
 }
 ```
-
 
 ## IOC supported
 

@@ -1,10 +1,10 @@
 # OpenCTI CAPE Sandbox Connector
 
-The CAPE Sandbox connector imports malware analysis reports and IOCs from CAPE/Cuckoo Sandbox into OpenCTI.
-
-| Status    | Date | Comment |
-|-----------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Community | -    | -       |
+
+The CAPE Sandbox connector imports malware analysis reports and IOCs from CAPE/Cuckoo Sandbox into OpenCTI.
 
 ## Table of Contents
 

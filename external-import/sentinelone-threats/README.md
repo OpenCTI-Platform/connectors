@@ -1,7 +1,7 @@
 # OpenCTI SentinelOne Threats Connector
 
-| Status    | Date | Comment |
-|-----------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Community | -    | -       |
 
 The OpenCTI SentinelOne Threats connector can be used to import Artifacts from BinaryVault.
@@ -26,4 +26,3 @@ integrated to the global `docker-compose.yml` file of OpenCTI.
 
 If you are using it independently, remember that the connector will try to connect to
 the RabbitMQ on the port configured in the OpenCTI platform.
-

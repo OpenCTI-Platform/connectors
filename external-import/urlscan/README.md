@@ -1,8 +1,8 @@
 # OpenCTI Urlscan.io Connector
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
 ## Installation
 

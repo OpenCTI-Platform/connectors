@@ -1,5 +1,9 @@
 # OpenCTI PAN Cortex XSOAR intel
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
 This connector allows organizations to push indicators to PAN Cortex XSOAR.
 
 ## Installation

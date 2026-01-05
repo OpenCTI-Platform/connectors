@@ -1,8 +1,8 @@
 # OpenCTI Red Flag Domains Connector
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
 ## Installation
 

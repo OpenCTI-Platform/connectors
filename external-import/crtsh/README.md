@@ -1,10 +1,10 @@
 # OpenCTI Certificate Search (crt.sh) Connector
 
-The crt.sh connector imports certificate transparency data from crt.sh into OpenCTI, enabling automated discovery and tracking of SSL/TLS certificates issued for monitored domains.
-
-| Status    | Date | Comment |
-|-----------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Community | -    | -       |
+
+The crt.sh connector imports certificate transparency data from crt.sh into OpenCTI, enabling automated discovery and tracking of SSL/TLS certificates issued for monitored domains.
 
 ## Table of Contents
 

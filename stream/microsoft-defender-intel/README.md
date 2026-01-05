@@ -1,5 +1,9 @@
 # OpenCTI Microsoft Defender Intel
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
 This connector allows you to stream indicators from OpenCTI to Microsoft Defender Intelligence utilizing native
 Microsoft Defender APIs.
 

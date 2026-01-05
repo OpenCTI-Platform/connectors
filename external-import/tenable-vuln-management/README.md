@@ -1,7 +1,7 @@
 # OpenCTI Tenable Vulnerability Management Connector
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Filigran Verified | -    | -       |
 
 This connector integrates Tenable Vulnerability Management with the OpenCTI platform. It pulls vulnerability data from Tenable, such as vulnerabilities, severity levels, and asset data, and imports it into OpenCTI to provide comprehensive visibility into security risks.
@@ -236,4 +236,3 @@ test_previous_successful_run -->|NO| start_export
 test_all_jobs_successful -->|YES| update_run_state --> end_run
 test_all_jobs_successful -->|NO| log_error --> end_run
 ```
-

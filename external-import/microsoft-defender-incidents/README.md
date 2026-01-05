@@ -1,7 +1,7 @@
 # OpenCTI Microsoft Defender Incidents Connector
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Filigran Verified | -    | -       |
 
 ## Table of Contents
@@ -157,4 +157,3 @@ download of data by re-running the connector.
 The connector can be debugged by setting the appropiate log level.
 Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
 e., `self.helper.connector_logger.error("An error message")`.
-

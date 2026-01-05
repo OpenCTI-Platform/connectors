@@ -1,5 +1,8 @@
 # OpenCTI Internal Import YARA connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
 Table of Contents
 

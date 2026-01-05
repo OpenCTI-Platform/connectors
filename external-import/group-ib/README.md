@@ -1,10 +1,10 @@
 # OpenCTI Group-IB Connector
 
-The Group-IB connector imports threat intelligence from Group-IB's Threat Intelligence platform into OpenCTI.
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner Verified | -    | -       |
 
-| Status            | Date       | Comment |
-|-------------------|------------|---------|
-| Filigran Verified | 2025-03-10 | -       |
+The Group-IB connector imports threat intelligence from Group-IB's Threat Intelligence platform into OpenCTI.
 
 ## Table of Contents
 

@@ -1,5 +1,9 @@
 # OpenCTI ONYPHE Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
+
 ## Table of Contents
 
 - [Introduction](#introduction)

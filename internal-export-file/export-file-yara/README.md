@@ -1,5 +1,9 @@
 # OpenCTI Export File YARA
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
 <!--
 General description of the connector
 * What it does
@@ -30,7 +34,6 @@ Table of Contents
 The YARA connector enables the export of YARA rules in .yar format. 
 It offers two export modes: exporting a complete set of YARA indicators or exporting a single YARA indicator. 
 This connector ensures efficient management of indicators by facilitating their storage and transfer while ensuring compliance with cybersecurity standards.
-
 
 ## Installation
 
@@ -106,7 +109,6 @@ Then, start the connector from export-file-yara/src:
 ```shell
 python3 main.py
 ```
-
 
 ## Debugging
 

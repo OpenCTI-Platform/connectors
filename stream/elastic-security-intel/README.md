@@ -1,5 +1,9 @@
 # OpenCTI Elastic Security Intel Stream Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
+
 This connector streams threat intelligence from OpenCTI to Elastic Security, creating and managing both threat indicators and SIEM detection rules.
 
 ## Features

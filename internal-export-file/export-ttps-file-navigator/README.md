@@ -1,8 +1,11 @@
 # OpenCTI Export MITRE ATT&CK Navigator
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
+
 This connector allows exporting in the MITRE ATT&CK® format TTPs associated to STIX domain objects (SDOs) present in OpenCTI.
 This connector export files according to version 4.5 of MITRE ATT&CK® layer model (see: https://github.com/mitre-attack/attack-navigator/blob/master/layers/LAYERFORMATv4_5.md).
-
 
 ## How to use it
 
@@ -13,5 +16,3 @@ Once the file is exported, download it and open it in MITRE ATT&CK® Navigator w
 
 This Connector currently only export TTPs associated to the 'Enterprise Matrix' (kill chain name == 'mitre-attack' in OpenCTI). 
 To manage Mobile and ICS matrices, an additional argument must be handled (at user or connector level).
-
-

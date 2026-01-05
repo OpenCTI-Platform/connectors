@@ -1,10 +1,10 @@
 # OpenCTI Diode Import Connector
 
-The Diode Import connector imports STIX bundles exported using OpenCTI's `send_to_directory` mode, enabling data synchronization between OpenCTI instances or air-gapped environments.
-
-| Status            | Date | Comment |
-|-------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Filigran Verified | -    | -       |
+
+The Diode Import connector imports STIX bundles exported using OpenCTI's `send_to_directory` mode, enabling data synchronization between OpenCTI instances or air-gapped environments.
 
 ## Table of Contents
 

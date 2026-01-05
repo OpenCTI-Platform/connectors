@@ -1,10 +1,10 @@
 # OpenCTI Valhalla Connector
 
-The Valhalla connector imports YARA detection rules from Nextron Systems' Valhalla YARA rule feed into OpenCTI.
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
+The Valhalla connector imports YARA detection rules from Nextron Systems' Valhalla YARA rule feed into OpenCTI.
 
 ## Table of Contents
 

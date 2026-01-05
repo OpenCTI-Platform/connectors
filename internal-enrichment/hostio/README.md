@@ -1,5 +1,9 @@
 # OpenCTI Host.io Internal Enrichment Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
+
 ## Table of Contents
 
 - [Introduction](#introduction)

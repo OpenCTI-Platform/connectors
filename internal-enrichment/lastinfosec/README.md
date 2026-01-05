@@ -1,4 +1,8 @@
-# OpenCTI LastInfoSec Internal Enrichment Connector
+# OpenCTI LastInfoSec Connector
+
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner | -    | -       |
 
 ## Table of Contents
 

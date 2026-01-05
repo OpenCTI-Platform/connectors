@@ -1,10 +1,10 @@
 # OpenCTI Censys Enrichment Connector
 
-The Censys Enrichment connector enriches IP addresses, domains, and certificates with internet scanning data from the Censys Search platform, providing geolocation, ASN, services, software, and infrastructure information.
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
+The Censys Enrichment connector enriches IP addresses, domains, and certificates with internet scanning data from the Censys Search platform, providing geolocation, ASN, services, software, and infrastructure information.
 
 ## Table of Contents
 

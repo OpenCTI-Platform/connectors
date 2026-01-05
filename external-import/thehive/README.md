@@ -1,10 +1,10 @@
 # OpenCTI TheHive Connector
 
-The TheHive connector imports cases, alerts, and observables from TheHive incident response platform into OpenCTI.
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
-| Status    | Date | Comment |
-|-----------|------|---------|
-| Community | -    | -       |
+The TheHive connector imports cases, alerts, and observables from TheHive incident response platform into OpenCTI.
 
 ## Table of Contents
 

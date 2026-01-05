@@ -1,4 +1,8 @@
-# OpenCTI IVRE Internal Enrichment Connector
+# OpenCTI IVRE Connector
+
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner | -    | -       |
 
 ## Table of Contents
 

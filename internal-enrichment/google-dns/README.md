@@ -1,10 +1,10 @@
 # OpenCTI Google DNS Connector
 
-The Google DNS connector enriches Domain-Name observables by querying DNS records (A, NS, CNAME, MX, TXT) using Google Public DNS and creating related observables with their relationships.
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
+The Google DNS connector enriches Domain-Name observables by querying DNS records (A, NS, CNAME, MX, TXT) using Google Public DNS and creating related observables with their relationships.
 
 ## Table of Contents
 

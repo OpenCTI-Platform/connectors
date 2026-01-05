@@ -1,5 +1,9 @@
 # OpenCTI Stream Exporter Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
+
 This connector listen to a stream and send the messages to a bucket in Minio. This connector is to be used with the [stream-importer](../../external-import/stream-importer/) connector to synchronize two OpenCTI instances that don't have direct access with each other. The events of the live-stream can be exporter on minio and then re-imported from minio using the stream-importer connector.
 
 ## Installation

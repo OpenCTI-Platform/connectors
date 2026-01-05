@@ -1,4 +1,8 @@
-# OpenCTI Team Cymru Scout Search Internal Enrichment Connector
+# OpenCTI Team Cymru Scout Search Connector
+
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner | -    | -       |
 
 ## Table of Contents
 

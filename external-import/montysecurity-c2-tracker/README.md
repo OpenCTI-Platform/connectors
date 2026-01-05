@@ -1,7 +1,7 @@
 # OpenCTI montysecurity C2-Tracker Connector
 
-| Status    | Date | Comment |
-|-----------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Community | -    | -       |
 
 The connector uses [C2-Tracker](https://github.com/montysecurity/C2-Tracker) from montysecurity to import the latest IOCs.

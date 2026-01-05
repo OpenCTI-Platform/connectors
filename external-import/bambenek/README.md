@@ -1,10 +1,10 @@
 # OpenCTI Bambenek CTI Connector
 
-The Bambenek connector ingests indicators of compromise (IOCs) from Bambenek Consulting Feeds into OpenCTI.
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
+The Bambenek connector ingests indicators of compromise (IOCs) from Bambenek Consulting Feeds into OpenCTI.
 
 ## Table of Contents
 

@@ -1,5 +1,9 @@
 # OpenCTI Jira connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
 This connector allows to consume an OpenCTI Stream and open JIRA issues.
 
 ## Compatible types of entity
@@ -11,7 +15,6 @@ This connector allows to consume an OpenCTI Stream and open JIRA issues.
     - Incidents
     - RFIs
     - RFTs
-
 
 ## Installation
 
@@ -43,7 +46,6 @@ This connector allows to consume an OpenCTI Stream and open JIRA issues.
 | `jira_custom_fields_keys`               | `JIRA_CUSTOM_FIELDS_KEYS`               | Yes*      | System generated key (not ID [2]) as a CSV list for custom fields in issue to be populated    |
 | `jira_custom_fields_values`             | `JIRA_CUSTOM_FIELDS_VALUES`             | Yes*      | Static values to go into the custom fields (same order)                                       |
 
-
 ### Configuration notes
 - The JIRA connector receives events from an OCTI stream, which you must generate in the OCTI UI (currently under Data > Sharing)
 - After creating a stream, the stream ID (connector_live_stream_id) is shown in the UI
@@ -55,13 +57,11 @@ This connector allows to consume an OpenCTI Stream and open JIRA issues.
 -  You can identify the custom fields defined in JIRA and retrieve the ID for a given name using the command:
       `curl -u <email>:<api_token> -X GET -H "Content-Type: application/json" https://<your_jira_instance>.atlassian.net/rest/api/2/field`
 
-
 ### Usage
 - Create a Stream in OpenCTI
 - Adjust the filter in OpenCTI to trigger off the entities that you wish to send to JIRA. Examples might be:
     Entity = Incident Response  AND  Status = NEW
     Entity = Report  AND  Creator = CrowdStrike
-
 
 ### Further notes
 - Currently, although updating or deleting an entity in OpenCTI triggers an update or delete event in the stream, the connector only supports creation events.

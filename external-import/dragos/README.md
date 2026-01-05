@@ -1,8 +1,8 @@
 # Dragos OpenCTI Connector
 
-| Status            | Date       | Comment |
-| ----------------- |------------| ------- |
-| Filigran Verified | 2025-04-22 |    -    |
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
 ## Table of Contents
 

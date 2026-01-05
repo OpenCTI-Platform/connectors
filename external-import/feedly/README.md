@@ -1,10 +1,10 @@
 # OpenCTI Feedly Connector
 
-The Feedly connector imports threat intelligence from Feedly AI-powered news feeds into OpenCTI.
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner Verified | -    | -       |
 
-| Status    | Date | Comment |
-|-----------|------|---------|
-| Community | -    | -       |
+The Feedly connector imports threat intelligence from Feedly AI-powered news feeds into OpenCTI.
 
 ## Table of Contents
 

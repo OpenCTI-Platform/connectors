@@ -1,8 +1,8 @@
 # OpenCTI CTI Butler Connector
 
-| Status  | Date | Comment |
-|---------|------|---------|
-| Partner | -    | -       |
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
 ## Table of Contents
 

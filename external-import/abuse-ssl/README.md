@@ -1,10 +1,10 @@
 # OpenCTI Abuse.ch SSL Blacklist Connector
 
-The Abuse.ch SSL connector imports botnet C&C server IP addresses detected based on SSL certificate signatures from the SSLBL blacklist into OpenCTI.
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
+The Abuse.ch SSL connector imports botnet C&C server IP addresses detected based on SSL certificate signatures from the SSLBL blacklist into OpenCTI.
 
 ## Table of Contents
 

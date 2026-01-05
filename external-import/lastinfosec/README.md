@@ -1,10 +1,10 @@
 # OpenCTI LastInfoSec Connector
 
-The LastInfoSec connector imports threat intelligence from Gatewatcher's LastInfoSec platform into OpenCTI, including CTI feeds, CVE data, and tactical intelligence.
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner | -    | -       |
 
-| Status  | Date       | Comment                   |
-|---------|------------|---------------------------|
-| Partner | -          | -                         |
+The LastInfoSec connector imports threat intelligence from Gatewatcher's LastInfoSec platform into OpenCTI, including CTI feeds, CVE data, and tactical intelligence.
 
 ## Introduction
 

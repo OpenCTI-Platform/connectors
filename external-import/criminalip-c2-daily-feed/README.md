@@ -1,10 +1,10 @@
 # OpenCTI Criminal IP C2 Daily Feed Connector
 
-The Criminal IP C2 Daily Feed connector imports malicious IP addresses from the Criminal IP real-time threat hunting database into OpenCTI.
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner | -    | -       |
 
-| Status    | Date | Comment |
-|-----------|------|---------|
-| Community | -    | -       |
+The Criminal IP C2 Daily Feed connector imports malicious IP addresses from the Criminal IP real-time threat hunting database into OpenCTI.
 
 ## Table of Contents
 

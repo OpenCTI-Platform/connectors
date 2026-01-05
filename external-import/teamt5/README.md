@@ -1,11 +1,10 @@
 # OpenCTI TeamT5 External Import Connector
 
-| Status            | Date       | Comment |
-|-------------------|------------|---------|
-| Filigran Verified | 2025-10-14 | -       |
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
 A connector enabling the automatic ingestion of Reports and Indicator Bundles from the Team T5 Platform to an OpenCTI Instance.
-
 
 ## Table of Contents
 
@@ -43,7 +42,6 @@ There are a number of configuration options, which are set either in `docker-com
 
 ### OpenCTI environment variables
 
-
 | Parameter     | config.yml | Docker environment variable | Description                                          |
 |---------------|------------|-----------------------------|------------------------------------------------------|
 | OpenCTI URL   | opencti.url        | `OPENCTI_URL`               | The URL to your OpenCTI Platform.                     |
@@ -60,7 +58,6 @@ There are a number of configuration options, which are set either in `docker-com
 | Duration Period      | connector.duration_period | `CONNECTOR_DURATION_PERIOD`   | P1D            | Interval for the scheduler process in ISO-8601 format (e.g., P1D for 1 day).        |
 
 ### Connector extra parameters environment variables
-
 
 | Parameter    | config.yml         | Docker environment variable | Default | Description                                                                                      |
 |--------------|-------------------|-----------------------------|---------|--------------------------------------------------------------------------------------------------|
@@ -126,7 +123,6 @@ The TeamT5 connector ingests two types of data from the TeamT5 platform:
 - **Reports**: Fetches new threat intelligence reports, converting them to a STIX format and pushes them to your OpenCTI Instance. This results in the ingestion of all relevant objects, relationships and an External Reference to the PDF of the report for further viewing.
 
 - **Indicator Bundles**: Fetches new Indicator Bundles and pushes them to your OpenCTI Instance.
-
 
 ## Debugging
 

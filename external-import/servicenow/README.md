@@ -1,5 +1,9 @@
 # OpenCTI ServiceNow Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
 ## Table of Contents
 
 - [OpenCTI ServiceNow Connector](#opencti-servicenow-connector)
@@ -19,11 +23,6 @@
   - [Additional information](#additional-information)
 
 ## Status Filigran
-
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
-
 ## Introduction
 
 **Introducing ServiceNow**
@@ -425,5 +424,3 @@ e., `self.helper.connector_logger.error("An error message")`.
 ---
 
 ## Additional information
-
-

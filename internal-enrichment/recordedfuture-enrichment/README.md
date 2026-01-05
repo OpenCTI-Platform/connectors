@@ -1,5 +1,9 @@
 # OpenCTI Recorded Future Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner Verified | -    | -       |
+
 ## Table of Contents
 
 - [Introduction](#introduction)

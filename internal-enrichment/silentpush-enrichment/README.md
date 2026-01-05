@@ -1,5 +1,9 @@
 # OpenCTI Silent Push Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner | -    | -       |
+
 ## Table of Contents
 
 - [Introduction](#introduction)

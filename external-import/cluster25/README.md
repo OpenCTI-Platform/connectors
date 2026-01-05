@@ -1,10 +1,10 @@
 # OpenCTI Cluster25 Connector
 
-The Cluster25 connector imports indicators of compromise (IOCs) from the Cluster25 (C25) threat intelligence platform into OpenCTI.
-
-| Status  | Date | Comment |
-|---------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Partner | -    | -       |
+
+The Cluster25 connector imports indicators of compromise (IOCs) from the Cluster25 (C25) threat intelligence platform into OpenCTI.
 
 ## Table of Contents
 

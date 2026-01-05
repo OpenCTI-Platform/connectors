@@ -1,10 +1,10 @@
 # OpenCTI ChapsVision Connector
 
-The ChapsVision connector imports CTI data from the ChapsVision platform into OpenCTI, collecting social media and web content for threat intelligence analysis.
-
-| Status    | Date | Comment |
-|-----------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Community | -    | -       |
+
+The ChapsVision connector imports CTI data from the ChapsVision platform into OpenCTI, collecting social media and web content for threat intelligence analysis.
 
 ## Table of Contents
 
@@ -218,4 +218,3 @@ Log output includes:
 - **Query Parameters**: The `query_parameter` controls what data is fetched from ChapsVision
 - **Historical Data**: On first run, will process all data from `start_date` to current date
 - **Rate Limiting**: 60-second delay between processing each day to avoid API overload
-

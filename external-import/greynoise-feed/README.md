@@ -1,10 +1,10 @@
 # OpenCTI GreyNoise Feed Connector
 
-The GreyNoise Feed connector imports internet scanner IP addresses from GreyNoise Intelligence into OpenCTI as indicators and observables.
-
-| Status           | Date | Comment |
-|------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Partner Verified | -    | -       |
+
+The GreyNoise Feed connector imports internet scanner IP addresses from GreyNoise Intelligence into OpenCTI as indicators and observables.
 
 ## Table of Contents
 

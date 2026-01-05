@@ -1,10 +1,10 @@
 # OpenCTI Loader Insight Agency (LIA) File Feed Connector
 
-The LIA File Feed connector imports indicators of compromise (IOCs) from the Loader Insight Agency platform into OpenCTI, providing context about malware loader activities and their payloads.
-
-| Status    | Date | Comment |
-|-----------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Community | -    | -       |
+
+The LIA File Feed connector imports indicators of compromise (IOCs) from the Loader Insight Agency platform into OpenCTI, providing context about malware loader activities and their payloads.
 
 ## Table of Contents
 

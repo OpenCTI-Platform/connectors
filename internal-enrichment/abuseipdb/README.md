@@ -1,10 +1,10 @@
 # OpenCTI AbuseIPDB Connector
 
-The AbuseIPDB connector enriches IP address observables in OpenCTI with abuse reports, confidence scores, and category labels from AbuseIPDB's community-driven database.
-
-| Status            | Date | Comment |
-|-------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Filigran Verified | -    | -       |
+
+The AbuseIPDB connector enriches IP address observables in OpenCTI with abuse reports, confidence scores, and category labels from AbuseIPDB's community-driven database.
 
 ## Table of Contents
 
