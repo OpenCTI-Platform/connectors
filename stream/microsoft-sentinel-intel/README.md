@@ -1,7 +1,7 @@
 # OpenCTI Microsoft Sentinel Intelligence Connector
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Filigran Verified | -    | -       |
 
 This OpenCTI connector allows the ability to create, update and delete indicator data from your OpenCTI platform to
@@ -42,7 +42,7 @@ Another interesting link:
 
 ### Requirements
 
-- OpenCTI Platform >= 6.9.4
+- OpenCTI Platform >= 6.9.5
 
 ### Configuration variables
 

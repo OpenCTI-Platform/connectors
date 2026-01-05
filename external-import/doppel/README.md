@@ -1,11 +1,11 @@
 # OpenCTI Doppel Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner Verified | -    | -       |
+
 The Doppel connector integrates OpenCTI with the Doppel Threat Intelligence platform by ingesting alerts as STIX 2.1
 Indicators.
-
-| Status            | Date       | Comment |
-|-------------------|------------|---------|
-| Filigran Verified | 2025-08-18 | -       |
 
 ## Table of Contents
 
@@ -78,7 +78,7 @@ There are a number of configuration options, which are set either in `docker-com
 
 ### Docker Deployment
 
-1. Ensure `pycti` version in `requirements.txt` matches your OpenCTI version (e.g., `pycti==6.9.4`).
+1. Ensure `pycti` version in `requirements.txt` matches your OpenCTI version (e.g., `pycti==6.9.5`).
 
 2. Build Docker image:
 

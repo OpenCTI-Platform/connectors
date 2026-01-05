@@ -1,10 +1,15 @@
 # OpenCTI Logrhythm Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
+
 This connector allows organizations to feed a **logrhythm** lists using OpenCTI knowledge.
 
 Note:
 For a performance reasons, the connector designed to create multiple lists using the base name provided in the configuration `LOGRHYTHM_LIST_NAME: opencti` and the list in Logrhythm will be like that `opencti_Url`.
 It will be better to build a use case for each type.
+
 ## Installation
 
 ### Requirements

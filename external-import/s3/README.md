@@ -1,5 +1,9 @@
 # OpenCTI S3 Import connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
+
 ## Installation
 
 ### Configuration variables

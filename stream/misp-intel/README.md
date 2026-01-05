@@ -1,5 +1,9 @@
 # OpenCTI MISP Intel Stream Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
 This connector streams threat intelligence from OpenCTI to MISP, automatically creating, updating, and deleting MISP events based on OpenCTI containers (reports, groupings, and case management objects).
 
 ## Overview
@@ -45,7 +49,7 @@ OPENCTI_TOKEN=your-opencti-token
 
 # Connector Configuration
 CONNECTOR_ID=your-connector-uuid
-CONNECTOR_LIVE_STREAM_ID=live
+CONNECTOR_LIVE_STREAM_ID=ChangeMe
 CONNECTOR_LOG_LEVEL=info
 
 # MISP Configuration
@@ -95,26 +99,26 @@ python main.py
 
 ### Required Configuration
 
-| Parameter | Environment Variable | Description |
-|-----------|---------------------|-------------|
-| OpenCTI URL | `OPENCTI_URL` | URL of your OpenCTI instance |
-| OpenCTI Token | `OPENCTI_TOKEN` | API token for OpenCTI |
-| Connector ID | `CONNECTOR_ID` | Unique UUID for this connector |
-| MISP URL | `MISP_URL` | URL of your MISP instance |
-| MISP API Key | `MISP_API_KEY` | API key for MISP |
+| Parameter      | Environment Variable       | Description                           |
+|----------------|----------------------------|---------------------------------------|
+| OpenCTI URL    | `OPENCTI_URL`              | URL of your OpenCTI instance          |
+| OpenCTI Token  | `OPENCTI_TOKEN`            | API token for OpenCTI                 |
+| Connector ID   | `CONNECTOR_ID`             | Unique UUID for this connector        |
+| MISP URL       | `MISP_URL`                 | URL of your MISP instance             |
+| Live Stream ID | `CONNECTOR_LIVE_STREAM_ID` | ID of the OpenCTI stream to listen to |
+| MISP API Key   | `MISP_API_KEY`             | API key for MISP                      |
 
 ### Optional Configuration
 
-| Parameter | Environment Variable | Default | Description |
-|-----------|---------------------|---------|-------------|
-| Log Level | `CONNECTOR_LOG_LEVEL` | `info` | Logging level (debug, info, warning, error) |
-| Live Stream ID | `CONNECTOR_LIVE_STREAM_ID` | `live` | ID of the OpenCTI stream to listen to |
-| SSL Verify | `MISP_SSL_VERIFY` | `true` | Verify SSL certificates for MISP |
-| Owner Organization | `MISP_OWNER_ORG` | None | Organization that will own events in MISP |
-| Distribution Level | `MISP_DISTRIBUTION_LEVEL` | `1` | MISP distribution level (0-3) |
-| Threat Level | `MISP_THREAT_LEVEL` | `2` | MISP threat level (1-4) |
-| Container Types | `CONNECTOR_CONTAINER_TYPES` | All supported | Comma-separated list of container types to process |
-| Hard Delete | `MISP_HARD_DELETE` | `false` | Permanently delete events without blocklisting |
+| Parameter          | Environment Variable        | Default       | Description                                        |
+|--------------------|-----------------------------|---------------|----------------------------------------------------|
+| Log Level          | `CONNECTOR_LOG_LEVEL`       | `info`        | Logging level (debug, info, warning, error)        |
+| SSL Verify         | `MISP_SSL_VERIFY`           | `true`        | Verify SSL certificates for MISP                   |
+| Owner Organization | `MISP_OWNER_ORG`            | None          | Organization that will own events in MISP          |
+| Distribution Level | `MISP_DISTRIBUTION_LEVEL`   | `1`           | MISP distribution level (0-3)                      |
+| Threat Level       | `MISP_THREAT_LEVEL`         | `2`           | MISP threat level (1-4)                            |
+| Container Types    | `CONNECTOR_CONTAINER_TYPES` | All supported | Comma-separated list of container types to process |
+| Hard Delete        | `MISP_HARD_DELETE`          | `false`       | Permanently delete events without blocklisting     |
 
 ### Distribution Levels
 

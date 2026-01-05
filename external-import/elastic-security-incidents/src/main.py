@@ -1,3 +1,4 @@
+import sys
 import traceback
 
 from elastic_security_incidents_connector import ElasticSecurityIncidentsConnector
@@ -11,4 +12,4 @@ if __name__ == "__main__":
         connector.run()
     except Exception:
         traceback.print_exc()
-        exit(1)
+        sys.exit(1)

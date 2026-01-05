@@ -3,10 +3,9 @@ services:
   connector-cpe:
     image: opencti/connector-cpe:latest
     environment:
-      - OPENCTI_URL=http://localhost:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=Common Platform Enumeration
       - CONNECTOR_SCOPE=software
       - CONNECTOR_LOG_LEVEL=info

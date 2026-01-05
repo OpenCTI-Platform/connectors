@@ -8,6 +8,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The OpenCTI platform URL. |
 | OPENCTI_TOKEN | `string` | ✅ | string |  | The token of the user who represents the connector in the OpenCTI platform. |
+| CONNECTOR_LIVE_STREAM_ID | `string` | ✅ | string |  | The ID of the live stream to listen to. |
 | MISP_URL | `string` | ✅ | string |  | MISP instance URL (e.g., https://misp.example.com). |
 | MISP_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | MISP API key for authentication. |
 | CONNECTOR_NAME | `string` |  | string | `"MISP Intel"` | Name of the connector. |
@@ -15,7 +16,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_TYPE | `string` |  | string | `"STREAM"` | Should always be set to STREAM for this connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"info"` | Determines the verbosity of the logs. |
 | CONNECTOR_CONFIDENCE_LEVEL | `integer` |  | `0 <= x <= 100` | `80` | The default confidence level for created entities (0-100). |
-| CONNECTOR_LIVE_STREAM_ID | `string` |  | string | `"live"` | The ID of the live stream to listen to. |
 | CONNECTOR_LIVE_STREAM_LISTEN_DELETE | `boolean` |  | boolean | `true` | Listen to delete events in the stream. |
 | CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES | `boolean` |  | boolean | `false` | Do not auto-resolve dependencies. |
 | CONNECTOR_CONTAINER_TYPES | `array` |  | string | `["report", "grouping", "case-incident", "case-rfi", "case-rft"]` | List of container types to process. |

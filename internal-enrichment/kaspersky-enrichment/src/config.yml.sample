@@ -1,12 +1,12 @@
 opencti:
-  url: 'http://localhost:PORT'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
 #  id: 'ChangeMe'
 #  type: 'INTERNAL_ENRICHMENT'
 #  name: 'Kaspersky Enrichment'
-#  scope: 'StixFile,IPv4-Addr'  # Support for additional observable types (domains, and URLs) will be added in future releases.
+#  scope: 'StixFile,IPv4-Addr,Domain-Name,Hostname'  # Support for additional observable types (URLs) will be added in future releases.
 #  log_level: 'error'
 #  auto: true # Enable/disable auto-enrichment of observables
 
@@ -17,3 +17,4 @@ kaspersky:
 #  zone_octi_score_mapping: 'red:100,orange:80,yellow:60,gray:20,green:0'
 #  file_sections: 'LicenseInfo,Zone,FileGeneralInfo'
 #  ipv4_sections: 'LicenseInfo,Zone,IpGeneralInfo'
+#  domain_sections: 'LicenseInfo,Zone,DomainGeneralInfo'

@@ -1,5 +1,9 @@
 # OpenCTI Tanium Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
 # OpenCTI Stream Connector Template
 
 <!--

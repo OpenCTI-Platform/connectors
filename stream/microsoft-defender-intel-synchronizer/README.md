@@ -1,5 +1,9 @@
 # OpenCTI Microsoft Defender Intelligence Synchronizer Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
 This OpenCTI connector allows to synchronize OpenCTI TAXII collections with Microsoft Defender legacy intelligence (15 000 indicators maximum, taking the most recent ones).
 
 ## Installation

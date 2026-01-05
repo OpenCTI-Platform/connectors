@@ -1,5 +1,9 @@
 # OpenCTI Zscaler Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
+
 This connector integrates **OpenCTI** threat intelligence into the **Zscaler** environment.
 
 ## Overview
@@ -46,7 +50,6 @@ This connector integrates **OpenCTI** threat intelligence into the **Zscaler** e
 | `ZSCALER_PASSWORD`                      | `ZSCALER_PASSWORD`                              | Yes        | Zscaler password.                                                                              |
 | `ZSCALER_BLACKLIST_NAME`                | `ZSCALER_BLACKLIST_NAME`                        | Yes        | The name of the Zscaler blacklist to use.                        |
 
-
 ## Usage
 
 1. **Set Environment Variables**:
@@ -86,7 +89,7 @@ zscaler:
 version: '3'
 services:
   connector-zscaler:
-    image: opencti/connector-zscaler:6.9.4
+    image: opencti/connector-zscaler:6.9.5
     environment:
       OPENCTI_URL: "https://your-opencti-instance.com"
       OPENCTI_TOKEN: "YOUR_OPENCTI_TOKEN"
@@ -108,7 +111,6 @@ services:
 networks:
   opencti_network:
     external: true
-
 
 More information : 
 What happens if a domain is already in the blacklist?

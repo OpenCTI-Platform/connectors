@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/crowdstrike-endpoint-security_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "CrowdstrikeEndpointSecurity",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "crowdstrike-endpoint-security"
+      ],
+      "description": "The scope of the connector",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "STREAM",
+      "default": "STREAM",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_ID": {
+      "description": "The ID of the live stream to connect to.",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_LISTEN_DELETE": {
+      "default": true,
+      "description": "Whether to listen for delete events on the live stream.",
+      "type": "boolean"
+    },
+    "CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES": {
+      "default": true,
+      "description": "Whether to ignore dependencies when processing events from the live stream.",
+      "type": "boolean"
+    },
+    "CROWDSTRIKE_API_BASE_URL": {
+      "default": "https://api.crowdstrike.com",
+      "description": "Crowdstrike base url.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "CROWDSTRIKE_CLIENT_ID": {
+      "description": "Crowdstrike client ID used to connect to the API.",
+      "type": "string"
+    },
+    "CROWDSTRIKE_CLIENT_SECRET": {
+      "description": "Crowdstrike client secret used to connect to the API.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CROWDSTRIKE_PERMANENT_DELETE": {
+      "default": false,
+      "description": "Select whether or not to permanently delete data in Crowdstrike when data is deleted in OpenCTI. If set to `True`, `CONNECTOR_LIVE_STREAM_LISTEN_DELETE` must be set to `True`.",
+      "type": "boolean"
+    },
+    "CROWDSTRIKE_FALCON_FOR_MOBILE_ACTIVE": {
+      "default": false,
+      "description": "Crowdstrike client secret used to connect to the API.",
+      "type": "boolean"
+    },
+    "CROWDSTRIKE_CONSUMER_COUNT": {
+      "default": 10,
+      "description": "Number of consumer/worker used to push data",
+      "type": "integer"
+    },
+    "CROWDSTRIKE_IGNORE_TYPES": {
+      "default": [
+        "label",
+        "marking-definition",
+        "identity"
+      ],
+      "description": "Ignoring types from OpenCTI",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "METRICS_ENABLE": {
+      "default": false,
+      "description": "Whether or not Prometheus metrics should be enabled.",
+      "type": "boolean"
+    },
+    "METRICS_PORT": {
+      "default": 9113,
+      "description": "Port to use for metrics endpoint.",
+      "type": "integer"
+    },
+    "METRICS_ADDR": {
+      "default": "0.0.0.0",
+      "description": "Bind IP address to use for metrics endpoint.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_LIVE_STREAM_ID",
+    "CROWDSTRIKE_CLIENT_ID",
+    "CROWDSTRIKE_CLIENT_SECRET"
+  ],
+  "additionalProperties": true
+}

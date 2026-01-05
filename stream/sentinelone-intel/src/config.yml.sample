@@ -1,5 +1,5 @@
 opencti:
-  url: 'http://opencti:8080'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
@@ -7,7 +7,7 @@ connector:
   name: 'SentinelOne Intel Stream Connector'
   # scope: 'sentinelone'
   # log_level: 'error'
-  # live_stream_id: 'ChangeMe' # `live` or ID of the live stream created in the OpenCTI UI
+  live_stream_id: 'ChangeMe' # `live` or ID of the live stream created in the OpenCTI UI
   # live_stream_listen_delete: true
   # live_stream_no_dependencies: true
 

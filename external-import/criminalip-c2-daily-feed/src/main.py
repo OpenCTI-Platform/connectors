@@ -1,7 +1,7 @@
 import csv
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pycountry
 import requests
@@ -63,7 +63,7 @@ class CriminalIPC2DailyFeedConnector:
                     last_run = current_state["last_run"]
                     self.helper.log_info(
                         "Connector last run: "
-                        + datetime.utcfromtimestamp(last_run).strftime(
+                        + datetime.fromtimestamp(last_run, tz=timezone.utc).strftime(
                             "%Y-%m-%d %H:%M:%S"
                         )
                     )
@@ -76,7 +76,7 @@ class CriminalIPC2DailyFeedConnector:
                 ):
                     # Initiate the run
                     self.helper.log_info("Connector will run!")
-                    now = datetime.utcnow()
+                    now = datetime.now(timezone.utc)
                     file_date = now.strftime("%Y-%m-%d")
                     url = self.build_csv_url(file_date)
 
@@ -200,6 +200,6 @@ if __name__ == "__main__":
         connector = CriminalIPC2DailyFeedConnector()
         connector.run()
     except Exception as e:
-        print(f"Fatal error: {e}")
+        OpenCTIConnectorHelper.log_error(f"Fatal error: {e}")
         time.sleep(10)
-        exit(0)
+        exit(1)

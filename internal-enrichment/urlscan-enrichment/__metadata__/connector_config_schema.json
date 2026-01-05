@@ -54,7 +54,6 @@
       "type": "boolean"
     },
     "URLSCAN_ENRICHMENT_API_KEY": {
-      "default": null,
       "description": "URLScan API Key",
       "format": "password",
       "type": "string",
@@ -101,7 +100,8 @@
   },
   "required": [
     "OPENCTI_URL",
-    "OPENCTI_TOKEN"
+    "OPENCTI_TOKEN",
+    "URLSCAN_ENRICHMENT_API_KEY"
   ],
   "additionalProperties": true
 }

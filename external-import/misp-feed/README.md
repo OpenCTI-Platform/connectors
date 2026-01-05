@@ -1,10 +1,15 @@
-# OpenCTI External Ingestion Connector Template
+# OpenCTI MISP Feed Connector
 
-Import data from a MISP source (feed or MISP files stored in S3).
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
-Table of Contents
+The MISP Feed connector imports threat intelligence from MISP Feed formats (URL or S3 bucket) into OpenCTI.
 
-- [OpenCTI External Ingestion Connector Template](#opencti-external-ingestion-connector-template)
+## Table of Contents
+
+- [OpenCTI MISP Feed Connector](#opencti-misp-feed-connector)
+  - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -22,137 +27,185 @@ Table of Contents
 
 ## Introduction
 
+MISP Feeds are a standardized way to share threat intelligence in MISP format without requiring direct API access to a MISP instance. This connector can consume MISP feeds from HTTP/HTTPS URLs or AWS S3 buckets, converting MISP events to STIX 2.1 objects.
+
 ## Installation
 
 ### Requirements
 
-- OpenCTI Platform >= 6...
+- OpenCTI Platform >= 6.x
+- Access to a MISP Feed URL or S3 bucket
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
-in `config.yml` (for manual deployment).
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
 
 ### OpenCTI environment variables
 
-Below are the parameters you'll need to set for OpenCTI:
-
 | Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-| ------------- | ---------- | --------------------------- | --------- | ---------------------------------------------------- |
+|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
 | OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
 | OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
 
 ### Base connector environment variables
 
-Below are the parameters you'll need to set for running the connector properly:
-
-| Parameter       | config.yml | Docker environment variable | Default         | Mandatory | Description                                                                              |
-| --------------- | ---------- | --------------------------- | --------------- | --------- | ---------------------------------------------------------------------------------------- |
-| Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
-| Connector Name  | name       | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+| Parameter         | config.yml      | Docker environment variable   | Default    | Mandatory | Description                                                                 |
+|-------------------|-----------------|-------------------------------|------------|-----------|-----------------------------------------------------------------------------|
+| Connector ID      | id              | `CONNECTOR_ID`                |            | Yes       | A unique `UUIDv4` identifier for this connector instance.                   |
+| Connector Name    | name            | `CONNECTOR_NAME`              | Misp Feed  | No        | Name of the connector.                                                      |
+| Connector Scope   | scope           | `CONNECTOR_SCOPE`             | misp-feed  | No        | The scope or type of data the connector is importing.                       |
+| Log Level         | log_level       | `CONNECTOR_LOG_LEVEL`         | error      | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
+| Duration Period   | duration_period | `CONNECTOR_DURATION_PERIOD`   | PT5M       | No        | Time interval between connector runs in ISO 8601 format.                    |
 
 ### Connector extra parameters environment variables
 
-Below are the parameters you'll need to set for the connector:
-
-| Parameter                                  | config.yml                                                   | Docker environment variable                                  | Default        | Mandatory | Description                                                                         |
-| ------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | -------------- | --------- | ----------------------------------------------------------------------------------- |
-| Source type (url / s3)                     | misp_feed.source_type                                        | MISP_FEED_SOURCE_TYPE                                        | `"url"`        | No        | Source type for the MISP feed (`"url"` or `"s3"`).                                  |
-| MISP Feed URL                              | misp_feed.url                                                | MISP_FEED_URL                                                |                | No        | The URL of the MISP feed (required if `source_type` is `"url"`).                    |
-| MISP Feed SSL Verify                       | misp_feed.ssl_verify                                         | MISP_FEED_SSL_VERIFY                                         | `True`         | No        | Whether to verify SSL certificates for the feed URL.                                |
-| MISP Bucket Name                           | misp_feed.bucket_name                                        | MISP_BUCKET_NAME                                             |                | No        | Bucket Name where the MISP's files are stored (required if `source_type` is `"s3"`) |
-| MISP Bucket Prefix                         | misp_feed.bucket_prefix                                      | MISP_BUCKET_PREFIX                                           |                | No        | Used to filter imports (required if `source_type` is `"s3"`)                        |
-| AWS Endpoint URL                           | N/A                                                          | AWS_ENDPOINT_URL                                             |                | No        | URL to specify for compatibility with other S3 buckets (MinIO) (env var only)       |
-| AWS Access Key                             | N/A                                                          | AWS_ACCESS_KEY_ID                                            |                | No        | Access key used to access the bucket (env var only)                                 |
-| AWS Secret Access Key                      | N/A                                                          | AWS_SECRET_ACCESS_KEY                                        |                | No        | Secret key used to access the bucket (env var only)                                 |
-| MISP Feed Import From Date                 | misp_feed.import_from_date                                   | MISP_FEED_IMPORT_FROM_DATE                                   |                | No        | Start date for importing data from the MISP feed.                                   |
-| MISP Feed Create Reports                   | misp_feed.create_reports                                     | MISP_FEED_CREATE_REPORTS                                     | `True`         | No        | Whether to create reports from MISP feed data.                                      |
-| MISP Feed Report Type                      | misp_feed.report_type                                        | MISP_FEED_REPORT_TYPE                                        | `"misp-event"` | No        | The type of reports to create from the MISP feed.                                   |
-| MISP Feed Create Indicators                | misp_feed.create_indicators                                  | MISP_FEED_CREATE_INDICATORS                                  | `False`        | No        | Whether to create indicators from the MISP feed.                                    |
-| MISP Feed Create Observables               | misp_feed.create_observables                                 | MISP_FEED_CREATE_OBSERVABLES                                 | `False`        | No        | Whether to create observables from the MISP feed.                                   |
-| MISP Feed Create Tags as Labels            | misp_feed.create_tags_as_labels                              | MISP_CREATE_TAGS_AS_LABELS                                   | `True`         | No        | Whether to convert tags into labels.                                                |
-| MISP Feed Guess Threats From Tags          | misp_feed.guess_threats_from_tags                            | MISP_FEED_GUESS_THREATS_FROM_TAGS                            | `False`        | No        | Whether to infer threats from tags.                                                 |
-| MISP Feed Author From Tags                 | misp_feed.author_from_tags                                   | MISP_FEED_AUTHOR_FROM_TAGS                                   | `False`        | No        | Whether to infer authors from tags.                                                 |
-| MISP Feed Markings From Tags               | misp_feed.markings_from_tags                                 | MISP_FEED_MARKINGS_FROM_TAGS                                 | `False`        | No        | Whether to infer markings from tags.                                                |
-| MISP Feed Create Object Observables        | misp_feed.create_object_observables                          | MISP_FEED_CREATE_OBJECT_OBSERVABLES                          | `False`        | No        | Whether to create object observables.                                               |
-| MISP Feed Import To IDS No Score           | misp_feed.import_to_ids_no_score                             | MISP_FEED_IMPORT_TO_IDS_NO_SCORE                             |                | No        | Import data without a score to IDS.                                                 |
-| MISP Feed Import With Attachments          | misp_feed.import_with_attachments                            | MISP_FEED_IMPORT_WITH_ATTACHMENTS                            | `False`        | No        | Whether to import attachments from the feed.                                        |
-| MISP Feed Import Unsupported Observables   | misp_feed.import_unsupported_observables_as_text             | MISP_FEED_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT             | `False`        | No        | Import unsupported observables as plain text.                                       |
-| Import Unsupported Observables Transparent | misp_feed.import_unsupported_observables_as_text_transparent | MISP_FEED_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT | `True`         | No        | Whether to import unsupported observables transparently as text.                    |
-
-The S3 client used is boto3, [Configuration Guide](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html. It is now almost fully configurable via environment variables.
+| Parameter                              | config.yml                                        | Docker environment variable                                    | Default       | Mandatory | Description                                                                 |
+|----------------------------------------|---------------------------------------------------|----------------------------------------------------------------|---------------|-----------|-----------------------------------------------------------------------------|
+| Source Type                            | misp_feed.source_type                             | `MISP_FEED_SOURCE_TYPE`                                        | url           | No        | Feed source: `url` or `s3`.                                                 |
+| Feed URL                               | misp_feed.url                                     | `MISP_FEED_URL`                                                |               | Cond.     | URL of the MISP feed (required if source_type is `url`).                    |
+| SSL Verify                             | misp_feed.ssl_verify                              | `MISP_FEED_SSL_VERIFY`                                         | true          | No        | Verify SSL certificates.                                                    |
+| S3 Bucket Name                         | misp_feed.bucket_name                             | `MISP_FEED_BUCKET_NAME`                                        |               | Cond.     | S3 bucket name (required if source_type is `s3`).                           |
+| S3 Bucket Prefix                       | misp_feed.bucket_prefix                           | `MISP_FEED_BUCKET_PREFIX`                                      |               | Cond.     | S3 bucket prefix (required if source_type is `s3`).                         |
+| Import from Date                       | misp_feed.import_from_date                        | `MISP_FEED_IMPORT_FROM_DATE`                                   |               | No        | Start date for importing events (YYYY-MM-DD).                               |
+| Create Reports                         | misp_feed.create_reports                          | `MISP_FEED_CREATE_REPORTS`                                     | true          | No        | Create OpenCTI reports from MISP events.                                    |
+| Report Type                            | misp_feed.report_type                             | `MISP_FEED_REPORT_TYPE`                                        | misp-event    | No        | Report type for imported events.                                            |
+| Create Indicators                      | misp_feed.create_indicators                       | `MISP_FEED_CREATE_INDICATORS`                                  | false         | No        | Create indicators from attributes.                                          |
+| Create Observables                     | misp_feed.create_observables                      | `MISP_FEED_CREATE_OBSERVABLES`                                 | false         | No        | Create observables from attributes.                                         |
+| Create Object Observables              | misp_feed.create_object_observables               | `MISP_FEED_CREATE_OBJECT_OBSERVABLES`                          | false         | No        | Create observables from MISP objects.                                       |
+| Create Tags as Labels                  | misp_feed.create_tags_as_labels                   | `MISP_FEED_CREATE_TAGS_AS_LABELS`                              | true          | No        | Convert MISP tags to OpenCTI labels.                                        |
+| Guess Threats from Tags                | misp_feed.guess_threats_from_tags                 | `MISP_FEED_GUESS_THREATS_FROM_TAGS`                            | false         | No        | Infer threat actors from MISP tags.                                         |
+| Author from Tags                       | misp_feed.author_from_tags                        | `MISP_FEED_AUTHOR_FROM_TAGS`                                   | false         | No        | Set report author from tags.                                                |
+| Import to_ids No Score                 | misp_feed.import_to_ids_no_score                  | `MISP_FEED_IMPORT_TO_IDS_NO_SCORE`                             |               | No        | Score for attributes without to_ids flag.                                   |
+| Import Unsupported as Text             | misp_feed.import_unsupported_observables_as_text  | `MISP_FEED_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT`             | false         | No        | Import unsupported types as text observables.                               |
+| Unsupported Transparent                | misp_feed.import_unsupported_as_text_transparent  | `MISP_FEED_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT` | true          | No        | Make unsupported text observables transparent.                              |
+| Import with Attachments                | misp_feed.import_with_attachments                 | `MISP_FEED_IMPORT_WITH_ATTACHMENTS`                            | false         | No        | Include file attachments.                                                   |
 
 ## Deployment
 
 ### Docker Deployment
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
-sometimes the OpenCTI SDK fails to initialize.
+Build the Docker image:
 
-Build a Docker Image using the provided `Dockerfile`.
-
-Example:
-
-```shell
-# Replace the IMAGE NAME with the appropriate value
-docker build . -t [IMAGE NAME]:latest
+```bash
+docker build -t opencti/connector-misp-feed:latest .
 ```
 
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
-environment. Then, start the docker container with the provided docker-compose.yml
+Configure the connector in `docker-compose.yml`:
 
-```shell
+```yaml
+  connector-misp-feed:
+    image: opencti/connector-misp-feed:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=MISP Feed
+      - CONNECTOR_SCOPE=misp-feed
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=PT5M
+      - MISP_FEED_SOURCE_TYPE=url
+      - MISP_FEED_URL=https://example.com/misp-feed
+      - MISP_FEED_SSL_VERIFY=true
+      - MISP_FEED_IMPORT_FROM_DATE=2020-01-01
+      - MISP_FEED_CREATE_REPORTS=true
+      - MISP_FEED_REPORT_TYPE=misp-event
+      - MISP_FEED_CREATE_INDICATORS=true
+      - MISP_FEED_CREATE_OBSERVABLES=true
+      - MISP_FEED_CREATE_OBJECT_OBSERVABLES=true
+      - MISP_FEED_CREATE_TAGS_AS_LABELS=true
+    restart: always
+```
+
+Start the connector:
+
+```bash
 docker compose up -d
-# -d for detached
 ```
 
 ### Manual Deployment
 
-Create a file `config.yml` based on the provided `config.yml.sample`.
+1. Create `config.yml` based on `config.yml.sample`.
 
-Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
+2. Install dependencies:
 
-Install the required python dependencies (preferably in a virtual environment):
-
-```shell
+```bash
 pip3 install -r requirements.txt
 ```
 
-Then, start the connector from recorded-future/src:
+3. Start the connector:
 
-```shell
+```bash
 python3 main.py
 ```
 
 ## Usage
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
+The connector runs automatically at the interval defined by `CONNECTOR_DURATION_PERIOD`. To force an immediate run:
 
-However, if you would like to force an immediate download of a new batch of entities, navigate to:
+**Data Management → Ingestion → Connectors**
 
-`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform.
+Find the connector and click the refresh button to reset the state and trigger a new sync.
 
-Find the connector, and click on the refresh button to reset the connector's state and force a new
-download of data by re-running the connector.
+## Behavior
+
+The connector fetches MISP events from the feed and converts them to STIX 2.1 objects in OpenCTI.
+
+### Data Flow
+
+```mermaid
+graph LR
+    subgraph MISP Feed
+        direction TB
+        Manifest[manifest.json]
+        EventFile[Event JSON Files]
+    end
+
+    subgraph OpenCTI
+        direction LR
+        Report[Report]
+        Indicator[Indicator]
+        Observable[Observable]
+        Label[Label]
+    end
+
+    Manifest --> EventFile
+    EventFile --> Report
+    EventFile --> Indicator
+    EventFile --> Observable
+    EventFile --> Label
+```
+
+### Entity Mapping
+
+| MISP Feed Data       | OpenCTI Entity      | Description                                      |
+|----------------------|---------------------|--------------------------------------------------|
+| Event                | Report              | MISP event as report with object_refs            |
+| Attribute (IP)       | IPv4-Addr/IPv6-Addr | IP address observables                           |
+| Attribute (Domain)   | Domain-Name         | Domain observables                               |
+| Attribute (Hash)     | File                | File hash observables                            |
+| Attribute (URL)      | URL                 | URL observables                                  |
+| Object               | Observable          | Complex MISP objects                             |
+| Tag (TLP)            | Marking             | TLP markings                                     |
+| Tag (Other)          | Label               | Generic labels                                   |
+
+### Source Types
+
+| Type | Description                              |
+|------|------------------------------------------|
+| url  | HTTP/HTTPS URL pointing to MISP feed     |
+| s3   | AWS S3 bucket containing MISP feed files |
 
 ## Debugging
 
-The connector can be debugged by setting the appropiate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
-e., `self.helper.connector_logger.error("An error message")`.
+Enable verbose logging:
 
-<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
+```env
+CONNECTOR_LOG_LEVEL=debug
+```
 
 ## Additional information
 
-<!--
-Any additional information about this connector
-* What information is ingested/updated/changed
-* What should the user take into account when using this connector
-* ...
--->
+- **Feed Format**: MISP feeds follow a standard structure with `manifest.json` and event JSON files
+- **Public Feeds**: Many public MISP feeds are available (CIRCL, Botvrij, etc.)
+- **S3 Authentication**: AWS credentials should be configured via environment variables or IAM roles
+- **Reference**: [MISP Feeds Documentation](https://www.misp-project.org/feeds/)
