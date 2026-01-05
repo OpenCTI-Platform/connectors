@@ -1,5 +1,8 @@
 # OpenCTI Microsoft Sentinel Incidents Connector
 
+| Status            | Date | Comment |
+|-------------------|------|---------|
+| Filigran Verified | -    | -       |
 
 Table of Contents
 

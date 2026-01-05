@@ -1,17 +1,15 @@
-# OpenCTI External Ingestion Connector AbuseIPDB
+# OpenCTI AbuseIPDB IP Blacklist Connector
 
-<!--
-General description of the connector
-* What it does
-* How it works
-* Special requirements
-* Use case description
-* ...
--->
+The AbuseIPDB connector imports IP addresses from the AbuseIPDB blacklist API into OpenCTI as observables, with optional indicator creation.
 
-Table of Contents
+| Status            | Date | Comment |
+|-------------------|------|---------|
+| Filigran Verified | -    | -       |
 
-- [OpenCTI External Ingestion Connector AbuseIPDB](#opencti-external-ingestion-connector-abuseipdb)
+## Table of Contents
+
+- [OpenCTI AbuseIPDB IP Blacklist Connector](#opencti-abuseipdb-ip-blacklist-connector)
+  - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -29,124 +27,190 @@ Table of Contents
 
 ## Introduction
 
+AbuseIPDB is a project dedicated to helping combat the spread of hackers, spammers, and abusive activity on the internet. The AbuseIPDB API provides access to their comprehensive database of IP addresses reported for malicious activity.
+
+This connector fetches the IP blacklist from AbuseIPDB API and imports the malicious IP addresses into OpenCTI as IPv4/IPv6 observables, with optional indicator creation for detection purposes.
+
 ## Installation
 
 ### Requirements
 
-- OpenCTI Platform >= 6...
+- OpenCTI Platform >= 6.x
+- AbuseIPDB API key (subscription required for higher limits)
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
-in `config.yml` (for manual deployment).
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
 
 ### OpenCTI environment variables
 
-Below are the parameters you'll need to set for OpenCTI:
-
 | Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-| ------------- | ---------- | --------------------------- | --------- | ---------------------------------------------------- |
+|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
 | OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
 | OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
 
 ### Base connector environment variables
 
-Below are the parameters you'll need to set for running the connector properly:
-
-| Parameter       | config.yml        | Docker environment variable | Default           | Mandatory | Description                                                                                      |
-| --------------- | ----------------- | --------------------------- | ----------------- | --------- | ------------------------------------------------------------------------------------------------ |
-| Connector ID    | id                | `CONNECTOR_ID`              | /                 | Yes       | A unique `UUIDv4` identifier for this connector instance.                                        |
-| Connector Type  | type              | `CONNECTOR_TYPE`            | `EXTERNAL_IMPORT` | No        | Should always be set to `EXTERNAL_IMPORT` for this connector.                                    |
-| Connector Name  | name              | `CONNECTOR_NAME`            |                   | Yes       | Name of the connector.                                                                           |
-| Connector Scope | scope             | `CONNECTOR_SCOPE`           | `abuseipdb`       | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object.         |
-| Log Level       | log_level         | `CONNECTOR_LOG_LEVEL`       | `error`           | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.           |
-| Duration Period | `duration_period` | `CONNECTOR_DURATION_PERIOD` | `PT12H`           | No        | Determines the time interval between each launch of the connector (current use `interval_sec`).  |
-| Queue Threshold | `queue_threshold` | `CONNECTOR_QUEUE_THRESHOLD` | `500`             | No        | Used to determine the limit (RabbitMQ) in MB at which the connector must go into buffering mode. |
+| Parameter         | config.yml        | Docker environment variable   | Default         | Mandatory | Description                                                                      |
+|-------------------|-------------------|-------------------------------|-----------------|-----------|----------------------------------------------------------------------------------|
+| Connector ID      | id                | `CONNECTOR_ID`                |                 | Yes       | A unique `UUIDv4` identifier for this connector instance.                        |
+| Connector Name    | name              | `CONNECTOR_NAME`              |                 | Yes       | Name of the connector.                                                           |
+| Connector Scope   | scope             | `CONNECTOR_SCOPE`             | abuseipdb       | Yes       | The scope or type of data the connector is importing.                            |
+| Log Level         | log_level         | `CONNECTOR_LOG_LEVEL`         | error           | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.       |
+| Duration Period   | duration_period   | `CONNECTOR_DURATION_PERIOD`   | PT12H           | No        | Time interval between connector runs in ISO 8601 format.                         |
+| Queue Threshold   | queue_threshold   | `CONNECTOR_QUEUE_THRESHOLD`   | 500             | No        | RabbitMQ queue size limit (MB) before entering buffering mode.                   |
 
 ### Connector extra parameters environment variables
 
-Below are the parameters you'll need to set for the connector:
-
-| Parameter           | config.yml       | Docker environment variable  | Default                                      | Mandatory | Description                                            |
-| ------------------- | ---------------- | ---------------------------- | -------------------------------------------- | --------- | ------------------------------------------------------ |
-| API base URL        | base_url         | `ABUSEIPDB_API_URL`          | `https://api.abuseipdb.com/api/v2/blacklist` | No        |                                                        |
-| API key             | api_key          | `ABUSEIPDB_API_KEY`          |                                              | Yes        |                                                        |
-| API Score           | score            | `ABUSEIPDB_SCORE`            |                                              | No       | Confidence Score                                       |
-| Api Result Limit    | limit            | `ABUSEIPDB_LIMIT`            | 10000                                        | No        | 500000 fits your subscription limit.                  |
-| IPv4                | ipversion        | `ABUSEIPDB_IPVERSION`        | mixed                                        | No        | You can choose 4 or 6 (IPv4, IPv6).                     |
-| Except Country      | exceptcountry    | `ABUSEIPDB_EXCEPT_COUNTRY`   |                                              | No        | For example: RU, CN (You exclude Russia and China IPs) |
-| Only Country        | onlycountry      | `ABUSEIPDB_ONLY_COUNTRY`     |                                              | No        | RU, US: If you want only Russian and US IPs.          |
-| Create Indicator    | create_indicator | `ABUSEIPDB_CREATE_INDICATOR` | No                                           | No        |                                                        |
-| ABUSEIPDB_TLP_LEVEL | tlp_level        | `ABUSEIPDB_TLP_LEVEL`        | clear                                        | No        |                                                        |
+| Parameter          | config.yml         | Docker environment variable    | Default                                      | Mandatory | Description                                                    |
+|--------------------|--------------------|---------------------------------|----------------------------------------------|-----------|----------------------------------------------------------------|
+| API URL            | abuseipdb.api_url  | `ABUSEIPDB_URL`                 | https://api.abuseipdb.com/api/v2/blacklist   | No        | AbuseIPDB API endpoint URL.                                    |
+| API Key            | abuseipdb.api_key  | `ABUSEIPDB_API_KEY`             |                                              | Yes       | Your AbuseIPDB API key.                                        |
+| Confidence Score   | abuseipdb.score    | `ABUSEIPDB_SCORE`               |                                              | Yes       | Minimum confidence score threshold for IP addresses.           |
+| Result Limit       | abuseipdb.limit    | `ABUSEIPDB_LIMIT`               | 500000                                       | No        | Maximum number of IPs to fetch.                                |
+| IP Version         | abuseipdb.ipversion| `ABUSEIPDB_IPVERSION`           | mixed                                        | No        | IP version filter: `4`, `6`, or `mixed`.                       |
+| Except Countries   | abuseipdb.exceptcountry | `ABUSEIPDB_EXCEPT_COUNTRY` |                                              | No        | Comma-separated country codes to exclude (e.g., `RU,CN`).      |
+| Only Countries     | abuseipdb.onlycountry | `ABUSEIPDB_ONLY_COUNTRY`     |                                              | No        | Comma-separated country codes to include only.                 |
+| Create Indicator   | abuseipdb.create_indicator | `ABUSEIPDB_CREATE_INDICATOR` | false                                      | No        | Whether to create Indicators from observables.                 |
+| TLP Level          | abuseipdb.tlp_level | `ABUSEIPDB_TLP_LEVEL`          | clear                                        | No        | TLP marking for imported data (`clear`, `green`, `amber`, `amber+strict`, `red`). |
 
 ## Deployment
 
 ### Docker Deployment
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
-sometimes the OpenCTI SDK fails to initialize.
+Build the Docker image:
 
-Build a Docker Image using the provided `Dockerfile`.
-
-Example:
-
-```shell
-# Replace the IMAGE NAME with the appropriate value
-docker build . -t [IMAGE NAME]:latest
+```bash
+docker build -t opencti/connector-abuseipdb-ipblacklist:latest .
 ```
 
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
-environment. Then, start the docker container with the provided docker-compose.yml
+Configure the connector in `docker-compose.yml`:
 
-```shell
+```yaml
+  connector-abuseipdb-ipblacklist:
+    image: opencti/connector-abuseipdb-ipblacklist:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=AbuseIPDB IP Blacklist
+      - CONNECTOR_SCOPE=abuseipdb
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=PT12H
+      - ABUSEIPDB_API_KEY=ChangeMe
+      - ABUSEIPDB_SCORE=75
+      - ABUSEIPDB_TLP_LEVEL=clear
+      # Optional filters:
+      # - ABUSEIPDB_IPVERSION=4
+      # - ABUSEIPDB_LIMIT=10000
+      # - ABUSEIPDB_EXCEPT_COUNTRY=RU,CN
+      # - ABUSEIPDB_ONLY_COUNTRY=US
+      # - ABUSEIPDB_CREATE_INDICATOR=true
+    restart: always
+```
+
+Start the connector:
+
+```bash
 docker compose up -d
-# -d for detached
 ```
 
 ### Manual Deployment
 
-Create a file `config.yml` based on the provided `config.yml.sample`.
+1. Create `config.yml` based on `config.yml.sample`.
 
-Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
+2. Install dependencies:
 
-Install the required python dependencies (preferably in a virtual environment):
-
-```shell
+```bash
 pip3 install -r requirements.txt
 ```
 
-```shell
+3. Start the connector:
+
+```bash
 python3 main.py
 ```
 
 ## Usage
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
+The connector runs automatically at the interval defined by `CONNECTOR_DURATION_PERIOD`. To force an immediate run:
 
-However, if you would like to force an immediate download of a new batch of entities, navigate to:
+**Data Management → Ingestion → Connectors**
 
-`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform.
-
-Find the connector, and click on the refresh button to reset the connector's state and force a new
-download of data by re-running the connector.
+Find the connector and click the refresh button to reset the state and trigger a new data fetch.
 
 ## Behavior
 
-<!--
-Describe how the connector functions:
-* What data is ingested, updated, or modified
-* Important considerations for users when utilizing this connector
-* Additional relevant details
--->
+The connector queries the AbuseIPDB blacklist API and imports malicious IP addresses into OpenCTI.
+
+### Data Flow
+
+```mermaid
+graph LR
+    subgraph AbuseIPDB
+        direction TB
+        API[Blacklist API]
+    end
+
+    subgraph OpenCTI
+        direction LR
+        Identity[Identity - AbuseIPDB]
+        IPv4[IPv4-Addr Observable]
+        IPv6[IPv6-Addr Observable]
+    end
+
+    API --> Identity
+    API --> IPv4
+    API --> IPv6
+```
+
+### Entity Mapping
+
+| AbuseIPDB Data       | OpenCTI Entity      | Description                                      |
+|----------------------|---------------------|--------------------------------------------------|
+| IPv4 Address         | IPv4-Addr           | Observable for reported malicious IPv4           |
+| IPv6 Address         | IPv6-Addr           | Observable for reported malicious IPv6           |
+| Confidence Score     | x_opencti_score     | Score attribute on the observable                |
+| Country Code         | Description         | Included in observable description               |
+| Last Reported        | Description         | Included in observable description               |
+
+### Processing Details
+
+For each IP address returned by the API, the connector creates:
+
+1. **IPv4-Addr or IPv6-Addr Observable** with:
+   - `x_opencti_score`: Confidence score from AbuseIPDB
+   - `x_opencti_description`: Contains country code, confidence score, and last reported date
+   - `x_opencti_create_indicator`: Based on `create_indicator` config
+   - External reference to AbuseIPDB database
+
+2. **Identity**: AbuseIPDB organization identity
+
+3. **TLP Marking**: Based on configured `tlp_level`
+
+### Features
+
+- **Country Filtering**: Include or exclude IPs from specific countries using `exceptCountries` or `onlyCountries`
+- **Score Threshold**: Only import IPs above a certain confidence score with `confidenceMinimum`
+- **IP Version Selection**: Filter by IPv4, IPv6, or both (mixed)
+- **Indicator Creation**: Optionally create detection indicators with `create_indicator`
 
 ## Debugging
 
-The connector can be debugged by setting the appropriate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
-e., `self.helper.connector_logger.error("An error message")`.
+Enable verbose logging:
 
-<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
+```env
+CONNECTOR_LOG_LEVEL=debug
+```
+
+Common debugging information:
+- API response status
+- Number of IPs fetched
+- STIX bundle creation details
 
 ## Additional information
+
+- **Rate Limits**: AbuseIPDB enforces API rate limits based on subscription tier
+- **Data Freshness**: Recommended poll interval is 12+ hours (`PT12H`)
+- **Subscription Tiers**: Free tier has limited requests; paid tiers allow up to 500,000 IPs
+- **Country Codes**: Use ISO 3166-1 alpha-2 codes for country filtering (e.g., `RU`, `CN`, `US`)

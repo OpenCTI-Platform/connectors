@@ -1,5 +1,9 @@
 # OpenCTI SentinelOne Incidents
 
+| Status    | Date | Comment |
+|-----------|------|---------|
+| Community | -    | -       |
+
 This connector allows Incidents from a SentinelOne account to be created within an OpenCTI Instance
 
 <br>

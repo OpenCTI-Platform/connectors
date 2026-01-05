@@ -1,5 +1,13 @@
 # Malcore Import Connector
 
+The Malcore connector imports malware intelligence data from Malcore into OpenCTI, including file observables, indicators, and malware entities.
+
+| Status    | Date | Comment |
+|-----------|------|---------|
+| Community | -    | -       |
+
+## Introduction
+
 This connector imports data from [Malcore](https://malcore.io/)
 
 The connector creates the following OpenCTI entity types:

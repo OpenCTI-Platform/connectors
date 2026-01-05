@@ -1,55 +1,209 @@
 # OpenCTI Obstracts Connector
 
-## Overview
+| Status  | Date | Comment |
+|---------|------|---------|
+| Partner | -    | -       |
 
-Obstracts is a web application that turns blog posts from your favourite security blogs into structured threat intelligence.
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Installation](#installation)
+  - [Requirements](#requirements)
+- [Configuration](#configuration)
+  - [Configuration Variables](#configuration-variables)
+- [Deployment](#deployment)
+  - [Docker Deployment](#docker-deployment)
+  - [Manual Deployment](#manual-deployment)
+- [Behavior](#behavior)
+  - [Data Flow](#data-flow)
+  - [Entity Mapping](#entity-mapping)
+- [Debugging](#debugging)
+- [Additional Information](#additional-information)
+
+---
+
+## Introduction
+
+[Obstracts](https://www.obstracts.com/) is a web application that turns blog posts from your favorite security blogs into structured threat intelligence.
 
 ![](media/obstracts-subscriptions.png)
 ![](media/obstracts-extraction-graph.png)
 
-[You can read more and sign up for Obstracts for free here](https://www.obstracts.com/).
+The OpenCTI Obstracts Connector syncs the intelligence created from blogs you subscribe to with OpenCTI, enabling automated extraction and import of indicators, attack patterns, and other threat intelligence from security blog posts.
 
-The OpenCTI Obstracts Connector syncs the intelligence created from blogs you subscribe to with OpenCTI.
+> **Note**: This connector only works with Obstracts Web. It does not support self-hosted Obstracts installations at this time.
 
-_Note: The OpenCTI Obstracts Connector only works with Obstracts Web. It does not work with self-hosted Obstracts installations at this time._
+---
 
 ## Installation
 
-### Prerequisites
+### Requirements
 
-* An Obstracts team subscribed to a plan with API access enabled
-* OpenCTI >= 6.5.10
+- OpenCTI >= 6.5.10
+- Obstracts team subscribed to a plan with API access enabled
+- Obstracts API Key
 
-### Generating an Obstracts API Key
+### Generating an API Key
 
-1. Log in to your Obstracts account and navigate to "Account Settings"
-2. Locate the API section and select "Create Token"
-3. Select the team you want to use and generate the key
-4. Copy the key, it will be needed for the configoration
+1. Log in to your Obstracts account
+2. Navigate to "Account Settings"
+3. Locate the API section and select "Create Token"
+4. Select the team you want to use and generate the key
+5. Copy the key for configuration
 
-### Configoration
+---
 
-If you are unfamiliar with how to install OpenCTI Connectors, [you should read the official documentation here](https://docs.opencti.io/latest/deployment/connectors/).
+## Configuration
 
-There are a number of configuration options specific to Obstracts, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment). These options are as follows:
+### Configuration Variables
 
-| Docker Env variable        | config variable            | Required | Data Type | Recommended                                                | Description                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| -------------------------- | -------------------------- | -------- | --------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `OBSTRACTS_BASE_URL`         | `obstracts.base_url`         | TRUE     | url       | `https://api.obstracts.com/` | Should always be `https://api.obstracts.com/`                                                                                                                                                                                                                                                                                                                                                                                              |
-| `OBSTRACTS_API_KEY`          | `obstracts.api_key`          | TRUE     | string    | n/a                                                        | The API key used to authenticate to Obstracts Web                                                                                                                                                                                                                                                                                                                                                                                          |
-| `OBSTRACTS_FEED_IDS`         | `obstracts.feed_ids`         | FALSE    | uuid      | n/a                                                        | You can use the connector in 2 ways, 1) using a list of comma separated feed IDs (e.g. `'feed1id,feed2id,feed3id'`. You can get a feed ID in the Obstracts Web feed view, or 2) if value is left blank, all intelligence for feeds you are subscribed will be ingested (this includes feeds you subscribe to after the connector is configured).                                                                                         |
-| `OBSTRACTS_INTERVAL_HOURS`   | `obstracts.interval_hours`   | TRUE     | integer   | `12`                                                     | How often (in hours) this Connector should poll Obstracts Web for updates.                                                                                                                                                                                                                                                                                                                                                                 |
-| `OBSTRACTS_DAYS_TO_BACKFILL` | `obstracts.days_to_backfill` | TRUE     | integer   | `90`                                                     | When a new feed is added, this setting determines the number of days to backfill. For example, setting `30` will ingest any posts from the blog within the last 30 days. Max value is `365`. Will consider all feeds you are newly subscribed to (e.g. if you subscribe to a new feed after connector install, the old data will still be backfilled for that post from the date subscribed back to the backfill date specified here). |
+#### OpenCTI Parameters
+
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| OpenCTI URL | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
+| OpenCTI Token | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
+
+#### Base Connector Parameters
+
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| Connector ID | `CONNECTOR_ID` | Yes | A unique `UUIDv4` for this connector |
+| Connector Name | `CONNECTOR_NAME` | Yes | Name displayed in OpenCTI |
+| Log Level | `CONNECTOR_LOG_LEVEL` | No | Log level: `debug`, `info`, `warn`, or `error` |
+
+#### Connector Extra Parameters
+
+| Parameter | Docker envvar | config.yml | Required | Default | Description |
+|-----------|---------------|------------|----------|---------|-------------|
+| Base URL | `OBSTRACTS_BASE_URL` | `obstracts.base_url` | Yes | `https://api.obstracts.com/` | Obstracts API URL |
+| API Key | `OBSTRACTS_API_KEY` | `obstracts.api_key` | Yes | - | API key for authentication |
+| Feed IDs | `OBSTRACTS_FEED_IDS` | `obstracts.feed_ids` | No | - | Comma-separated feed IDs (blank = all subscribed feeds) |
+| Interval Hours | `OBSTRACTS_INTERVAL_HOURS` | `obstracts.interval_hours` | Yes | `12` | Polling interval in hours |
+| Days to Backfill | `OBSTRACTS_DAYS_TO_BACKFILL` | `obstracts.days_to_backfill` | Yes | `90` | Days of historical data to import (max `365`) |
+
+---
+
+## Deployment
+
+### Docker Deployment
+
+Use the following `docker-compose.yml`:
+
+```yaml
+services:
+  connector-obstracts:
+    image: opencti/connector-dogesec-obstracts:latest
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_OBSTRACTS_ID}
+      - CONNECTOR_NAME=Obstracts
+      - CONNECTOR_LOG_LEVEL=info
+      - OBSTRACTS_BASE_URL=https://api.obstracts.com/
+      - OBSTRACTS_API_KEY=${OBSTRACTS_API_KEY}
+      - OBSTRACTS_FEED_IDS=
+      - OBSTRACTS_INTERVAL_HOURS=12
+      - OBSTRACTS_DAYS_TO_BACKFILL=90
+    restart: always
+    depends_on:
+      - opencti
+```
+
+### Manual Deployment
+
+1. Clone the repository and navigate to the connector directory
+2. Install dependencies: `pip install -r requirements.txt`
+3. Configure `config.yml`
+4. Run: `python main.py`
+
+---
+
+## Behavior
+
+### Data Flow
+
+```mermaid
+graph LR
+    subgraph Obstracts
+        Blogs[Security Blogs]
+        API[Obstracts API]
+        NLP[NLP Extraction]
+    end
+    
+    Blogs --> NLP
+    NLP --> API
+    
+    subgraph Processing
+        API --> Connector[Obstracts Connector]
+        Connector --> STIX[STIX Objects]
+    end
+    
+    subgraph OpenCTI
+        STIX --> Report[Report]
+        STIX --> Indicator[Indicator]
+        STIX --> Observable[Observable]
+        STIX --> AttackPattern[Attack Pattern]
+    end
+```
+
+### Entity Mapping
+
+| Obstracts Data | OpenCTI Entity | Notes |
+|----------------|----------------|-------|
+| Blog Post | Report | Original blog post as report |
+| Extracted IOCs | Indicator/Observable | IPs, domains, hashes, URLs |
+| Extracted TTPs | Attack Pattern | MITRE ATT&CK techniques |
+| Extracted Actors | Threat Actor | Named threat actors |
+| Extracted Malware | Malware | Malware families |
+
+### Processing Details
+
+1. **Feed Selection**:
+   - Specify feed IDs for selective import
+   - Leave blank to import all subscribed feeds
+   - New feed subscriptions are automatically included
+
+2. **Backfill Logic**:
+   - On first run or new feed subscription, backfills historical data
+   - Maximum backfill period: 365 days
+   - Configurable via `OBSTRACTS_DAYS_TO_BACKFILL`
+
+3. **Incremental Updates**:
+   - Polls at configured interval (default: 12 hours)
+   - Only fetches new/updated intelligence since last run
+
+---
+
+## Debugging
+
+Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug`.
 
 ### Verification
 
-To verify the connector is working, you can navigate to `Data` -> `Ingestion` -> `Connectors` -> `Obstracts`.
+Navigate to `Data` → `Ingestion` → `Connectors` → `Obstracts` to verify the connector is working.
 
-## Support
+---
 
-You should contact OpenCTI if you are new to installing Connectors and need support.
+## Additional Information
 
-If you run into issues when installing this Connector, you can reach the dogesec team as follows:
+### About Obstracts
 
-* [dogesec Community Forum](https://community.dogesec.com/) (recommended)
-* [dogesec Support Portal](https://support.dogesec.com/) (requires a plan with email support)
+- **Website**: [obstracts.com](https://www.obstracts.com/)
+- **Sign up**: Free tier available
+- **Provider**: [dogesec](https://dogesec.com/)
+
+### Support
+
+- **OpenCTI Support**: For general connector installation help
+- **dogesec Community Forum**: [community.dogesec.com](https://community.dogesec.com/) (recommended)
+- **dogesec Support Portal**: [support.dogesec.com](https://support.dogesec.com/) (requires plan with email support)
+
+### Use Cases
+
+| Use Case | Description |
+|----------|-------------|
+| Blog Intelligence | Automate extraction of IOCs from security blogs |
+| Threat Research | Track threat actor/malware mentions |
+| TTP Tracking | Identify ATT&CK techniques discussed in blogs |
+| Early Warning | Get indicators before formal advisories |

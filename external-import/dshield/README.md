@@ -1,101 +1,264 @@
-# OpenCTI DShield connector
+# OpenCTI DShield Connector
 
-The DShield connector is a standalone Python process that collects data from the DShield.org Recommended Block List.
-Idea:damians-filigran
+| Status    | Date       | Comment                   |
+|-----------|------------|---------------------------|
+| Community | -          | -                         |
 
-## Summary
+## Introduction
 
-- [Introduction](#introduction)
-- [Requirements](#requirements)
-- [Configuration variables](#configuration-variables)
-- [Deployment](#deployment)
-  - [Docker Deployment](#docker-deployment)
-  - [Manual Deployment](#manual-deployment)
+The DShield connector imports threat intelligence from the [DShield.org](https://www.dshield.org/) Recommended Block List into OpenCTI. DShield is maintained by the Internet Storm Center (ISC) at SANS Institute and aggregates firewall logs from distributed sensors worldwide to identify the most aggressive attacking IP subnets.
+
+### Key Features
+
+- **Curated Block List**: Imports the top attacking Class C (/24) subnets observed over the past three days
+- **Community-Sourced Intelligence**: Aggregates reports from thousands of distributed intrusion detection systems
+- **Automatic STIX Conversion**: Converts subnet data into STIX 2.1 Indicators
+- **Configurable TLP Marking**: Apply appropriate TLP level to imported data
+
+### Useful Links
+
+- DShield Feeds: https://feeds.dshield.org/block.txt
+- DShield Information: https://www.dshield.org/howto.html
+- Internet Storm Center: https://isc.sans.edu/
+
 ---
 
-### Introduction
-
-The [DShield.org](https://feeds.dshield.org/block.txt) Recommended Block List is a curated summary of the top attacking class C (/24) subnets observed over the past three days. It is maintained by the Internet Storm Center (ISC) at SANS and aggregates reports from distributed intrusion detection systems across the internet. The list is intended to help network defenders identify and block IP ranges that are most actively scanning or attacking systems.
+## Installation
 
 ### Requirements
 
-- OpenCTI Platform version 6.7.7 or higher
+| Requirement          | Description                           |
+|----------------------|---------------------------------------|
+| OpenCTI Platform     | Version 6.7.7 or higher              |
+| Network Access       | Access to feeds.dshield.org          |
 
-### Configuration variables
+---
 
-Below are the parameters you'll need to set for OpenCTI:
+## Configuration variables
 
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+Below are the parameters you'll need to set for OpenCTI, the connector, and DShield-specific settings.
 
-Below are the parameters you'll need to set for running the connector properly:
+### OpenCTI API Connection
 
-| Parameter              | config.yml           | Docker environment variable     | Default                               | Mandatory | Description                                                                                  |
-|------------------------|----------------------|---------------------------------|---------------------------------------|-----------|----------------------------------------------------------------------------------------------|
-| Connector ID           | id                   | `CONNECTOR_ID`                  | /                                     | Yes       | A unique `UUIDv4` identifier for this connector instance.                                    |
-| Connector Name         | name                 | `CONNECTOR_NAME`                | Common Vulnerabilities and Exposures  | Yes       | Name of the connector.                                                                       |
-| Connector Scope        | scope                | `CONNECTOR_SCOPE`               | identity,vulnerability                | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object.     |
-| Run and Terminate      | run_and_terminate    | `CONNECTOR_RUN_AND_TERMINATE`   | False                                 | No        | Launch the connector once if set to True. Takes 2 available values: `True` or `False`        |
-| Log Level              | log_level            | `CONNECTOR_LOG_LEVEL`           | info                                  | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.       |
-| Duration Period        | duration_period      | `CONNECTOR_DURATION_PERIOD`     | P1D                                   | Yes       | Determines the time interval between each launch of the connector in ISO 8601, ex: `PT30M`.  |
+| Parameter      | config.yml | Docker Environment Variable | Mandatory | Description                          |
+|----------------|------------|----------------------------|-----------|--------------------------------------|
+| OpenCTI URL    | url        | `OPENCTI_URL`              | Yes       | URL of the OpenCTI platform         |
+| OpenCTI Token  | token      | `OPENCTI_TOKEN`            | Yes       | API token for the OpenCTI platform  |
 
+### Base Connector Configuration
 
-Below are the parameters you'll need to set for DShield connector:
+| Parameter              | config.yml         | Docker Environment Variable     | Default | Mandatory | Description                                              |
+|------------------------|--------------------|---------------------------------|---------|-----------|----------------------------------------------------------|
+| Connector ID           | id                 | `CONNECTOR_ID`                  |         | Yes       | Unique identifier for this connector (UUIDv4)           |
+| Connector Name         | name               | `CONNECTOR_NAME`                | dshield | Yes       | Name of the connector instance                           |
+| Connector Scope        | scope              | `CONNECTOR_SCOPE`               | dshield | Yes       | Connector scope                                          |
+| Log Level              | log_level          | `CONNECTOR_LOG_LEVEL`           | info    | No        | Log verbosity: `debug`, `info`, `warn`, `error`         |
+| Duration Period        | duration_period    | `CONNECTOR_DURATION_PERIOD`     | P1D     | Yes       | Interval between runs in ISO 8601 format (e.g., `PT30M`) |
+| Run and Terminate      | run_and_terminate  | `CONNECTOR_RUN_AND_TERMINATE`   | False   | No        | Run once and exit if set to `True`                       |
 
-| Parameter        | config.yml  | Docker environment variable | Default                             | Mandatory | Description                                                                                                                        |
-|------------------|-------------|-----------------------------|-------------------------------------|-----------|------------------------------------------------------------------------------------------------------------------------------------|
-| DShield Base URL | base_url    | `DSHIELD_API_BASE_URL`      | https://feeds.dshield.org/block.txt | Yes       | URL of DShield Blocking list .                                                                                                     |
-| TLP Level        | tlp_level   | `DSHIELD_TLP_LEVEL`         | 'clear'                             | No        | Traffic Light Protocol Marking definition level for ingested objects should be in 'white', 'green', 'amber', 'amber+strict', 'red' |
+### DShield Connector Configuration
 
-For more details about this project, see the link below:
+| Parameter        | config.yml | Docker Environment Variable | Default                              | Mandatory | Description                                                                         |
+|------------------|------------|----------------------------|--------------------------------------|-----------|------------------------------------------------------------------------------------|
+| DShield Base URL | base_url   | `DSHIELD_API_BASE_URL`     | https://feeds.dshield.org/block.txt | Yes       | URL of the DShield block list                                                      |
+| TLP Level        | tlp_level  | `DSHIELD_TLP_LEVEL`        | clear                                | No        | TLP marking: `clear`, `white`, `green`, `amber`, `amber+strict`, `red`            |
 
-- [DShield Sensor](https://www.dshield.org/howto.html)
+---
 
-### Deployment
+## Deployment
 
-#### Docker Deployment
+### Docker Deployment
 
-Build a Docker Image using the provided `Dockerfile`.
+Build a Docker image using the provided Dockerfile:
 
-Example:
-
-```shell
-docker build . -t connector-dshield:latest
+```bash
+docker build -t opencti/connector-dshield:latest .
 ```
 
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
-environment. Then, start the docker container with the provided docker-compose.yml
+Example `docker-compose.yml`:
 
-```shell
+```yaml
+version: '3'
+services:
+  connector-dshield:
+    image: opencti/connector-dshield:latest
+    environment:
+      - OPENCTI_URL=http://localhost:8080
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=DShield
+      - CONNECTOR_SCOPE=dshield
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=P1D
+      - DSHIELD_API_BASE_URL=https://feeds.dshield.org/block.txt
+      - DSHIELD_TLP_LEVEL=clear
+    restart: always
+```
+
+Start the connector:
+
+```bash
 docker compose up -d
-# -d for detached
 ```
 
-#### Manual Deployment
+### Manual Deployment
 
-Create a file `config.yml` based on the provided `config.yml.sample`.
+1. Clone the connector repository
+2. Navigate to the connector directory:
 
-Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
+```bash
+cd external-import/dshield
+```
 
-Install the required python dependencies (preferably in a virtual environment):
+3. Create a virtual environment and install dependencies:
 
-```shell
+```bash
+python3 -m venv venv
+source venv/bin/activate
 pip3 install -r requirements.txt
 ```
 
-Or if you have Make installed, in dshield/src:
+4. Create a `config.yml` from `config.yml.sample` and configure variables
+5. Run the connector from the `src` directory:
 
-```shell
-# Will install the requirements
-make init
-```
-
-Then, start the connector from dshield/src:
-
-```shell
+```bash
 python3 main.py
 ```
 
+---
+
+## Usage
+
+After installation, the connector runs automatically at the interval specified by `CONNECTOR_DURATION_PERIOD`. To force an immediate sync:
+
+1. Navigate to **Data management → Ingestion → Connectors** in OpenCTI
+2. Find the **DShield** connector
+3. Click the refresh button to reset state and trigger a new poll
+
+---
+
+## Behavior
+
+### Data Flow
+
+```mermaid
+flowchart LR
+    A[DShield Block List] -->|Fetch block.txt| B[DShield Connector]
+    B -->|Parse subnets| C[CIDR Parser]
+    C -->|Create STIX objects| D[STIX Converter]
+    D -->|Send bundle| E[OpenCTI Platform]
+```
+
+### Entity Mapping
+
+| DShield Data          | OpenCTI Entity Type | Notes                                            |
+|-----------------------|--------------------|--------------------------------------------------|
+| Subnet Entry          | Indicator          | STIX pattern: `[ipv4-addr:value = 'x.x.x.x/24']` |
+| DShield.org           | Identity           | Organization author for all indicators          |
+| TLP Marking           | Marking Definition | Applied to all imported indicators              |
+
+### Data Format
+
+The DShield block list is a tab-separated text file with the following schema:
+
+| Column  | Description                                    |
+|---------|------------------------------------------------|
+| IP      | Start IP address of the subnet                 |
+| Attacks | Number of attacking targets                    |
+| Netmask | CIDR prefix length (typically /24)             |
+
+Example raw data:
+
+```
+# DShield.org Recommended Block List
+# Site: https://feeds.dshield.org
+# updated: 2025-01-05 00:00:00
+#
+# Start	Attacks	Netmask
+1.2.3.0	100	24
+5.6.7.0	95	24
+```
+
+### Processing Details
+
+1. **Fetch Block List**:
+   - Downloads the latest block list from DShield feed URL
+   - Skips comment lines (starting with `#`) and empty lines
+
+2. **Parse Subnet Entries**:
+   - Extracts IP address and netmask from each line
+   - Constructs CIDR notation (e.g., `1.2.3.0/24`)
+
+3. **Create STIX Indicators**:
+   - Generates Indicator with IPv4 pattern for each subnet
+   - Sets `x_opencti_main_observable_type` to `IPv4-Addr`
+   - Applies configured TLP marking
+
+4. **Author Identity**:
+   - Creates "DShield.org" organization identity
+   - All indicators reference this author
+
+### Indicator Properties
+
+Each imported indicator contains:
+
+| Property           | Value                                              |
+|--------------------|----------------------------------------------------|
+| Name               | `DShield Block List: {subnet}`                    |
+| Pattern            | `[ipv4-addr:value = '{subnet}']`                  |
+| Pattern Type       | `stix`                                             |
+| Main Observable    | `IPv4-Addr`                                        |
+| Created By         | DShield.org                                        |
+| Object Marking     | Configured TLP level                              |
+
+### State Management
+
+The connector maintains state for operational tracking:
+
+| State Key  | Description                           |
+|------------|---------------------------------------|
+| `last_run` | Timestamp of last successful run      |
+
+> **Note**: The DShield block list is refreshed daily with the top attacking subnets from the past three days.
+
+---
+
+## Debugging
+
+### Common Issues
+
+| Issue                     | Solution                                            |
+|---------------------------|-----------------------------------------------------|
+| Connection refused        | Verify network access to feeds.dshield.org          |
+| Empty data imported       | Check if the feed URL is accessible                 |
+| Invalid TLP level         | Use valid values: `clear`, `green`, `amber`, `red` |
+
+### Logging
+
+To enable detailed logging, set `CONNECTOR_LOG_LEVEL=debug` in your configuration.
+
+---
+
+## Additional Information
+
+### About DShield
+
+The DShield Recommended Block List identifies the 20 most aggressive /24 subnets based on:
+
+- Number of unique attacking sources
+- Number of unique targets attacked
+- Attack persistence over time
+
+### Alternative Feed URL
+
+You can use the alternative URL if the primary is unavailable:
+
+```
+https://isc.sans.edu/block.txt
+```
+
+### Resources
+
+- [DShield Sensor Setup](https://www.dshield.org/howto.html)
+- [Internet Storm Center Diary](https://isc.sans.edu/diary/)
+- [SANS Technology Institute](https://www.sans.edu/)

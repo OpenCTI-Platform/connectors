@@ -1,5 +1,9 @@
 # Files restore connector
 
+| Status            | Date | Comment |
+|-------------------|------|---------|
+| Filigran Verified | -    | -       |
+
 This connector allows organizations to restore their OpenCTI data from a specific folder.
 
 ## Installation

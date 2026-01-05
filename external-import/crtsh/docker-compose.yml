@@ -9,7 +9,7 @@ services:
       - CONNECTOR_NAME=crt.sh
       - CONNECTOR_SCOPE=crtsh
       - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_DURATION_PERIOD=PT1H
+      - CONNECTOR_RUN_EVERY=1h # Format: 7d, 12h, 10m, 30s
       - CRTSH_DOMAIN=ChangeMe
       - CRTSH_LABELS=crtsh,osint
       - CRTSH_MARKING_REFS=TLP:WHITE

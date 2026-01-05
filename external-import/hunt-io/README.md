@@ -1,5 +1,9 @@
 # OpenCTI External Ingestion Connector Hunt IO
 
+| Status  | Date | Comment |
+|---------|------|---------|
+| Partner | -    | -       |
+
 <!--
 General description of the connector
 * What it does
