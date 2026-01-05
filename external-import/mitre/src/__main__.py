@@ -25,7 +25,9 @@ STATEMENT_MARKINGS = [
 def time_from_unixtime(timestamp):
     if not timestamp:
         return None
-    return datetime.fromtimestamp(timestamp, tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.fromtimestamp(timestamp, tz=timezone.utc).strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
 
 
 def get_unixtime_now():
