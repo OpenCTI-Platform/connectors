@@ -11,4 +11,4 @@ services:
       - MICROSOFT_DEFENDER_INTEL_TENANT_ID=ChangeMe
       - MICROSOFT_DEFENDER_INTEL_CLIENT_ID=ChangeMe
       - MICROSOFT_DEFENDER_INTEL_CLIENT_SECRET=ChangeMe
-    restart: unless-stopped
+    restart: always

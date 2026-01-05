@@ -1,4 +1,4 @@
-version: "3"
+version: '3'
 services:
   connector-urlhaus-recent-payloads:
     image: opencti/connector-urlhaus-recent-payloads:latest

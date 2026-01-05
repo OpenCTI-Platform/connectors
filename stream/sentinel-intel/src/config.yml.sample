@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'STREAM'
   name: 'Microsoft Sentinel'
   scope: 'sentinel' # MIME type or SCO
   log_level: 'info'

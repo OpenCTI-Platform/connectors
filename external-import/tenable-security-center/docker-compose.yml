@@ -1,9 +1,10 @@
+version: '3'
 services:
   connector-tenable-security-center:
     image: opencti/connector-tenable-security-center:latest
     env_file:
       - .env
-    restart: unless-stopped
+    restart: always
 
     # networks:
     #   - docker_default

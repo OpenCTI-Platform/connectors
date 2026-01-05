@@ -5,7 +5,6 @@ opencti:
 
 connector:
   id: "ChangeMe"
-  type: "INTERNAL_ENRICHMENT"
   name: "Shodan InternetDB"
   scope: "IPv4-Addr"
   auto: true

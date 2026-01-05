@@ -6,7 +6,6 @@ services:
       - OPENCTI_URL=ChangeMe
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=STREAM
       - CONNECTOR_NAME=ZscalerConnector
       - CONNECTOR_SCOPE=domain-name
       - CONNECTOR_LOG_LEVEL=info

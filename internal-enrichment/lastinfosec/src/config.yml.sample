@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'INTERNAL_ENRICHMENT'
   name: 'LastInfoSec Enrichment'
   scope: 'StixFile,Domain-Name,Hostname,Url'
   auto: true # Enable/disable auto-enrichment of observables

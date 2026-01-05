@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'MITRE ATLAS'
   scope: 'identity,attack-pattern,course-of-action,relationship,x-mitre-collection,x-mitre-matrix,x-mitre-tactic'
   confidence_level: 75 # From 0 (Unknown) to 100 (Fully trusted)

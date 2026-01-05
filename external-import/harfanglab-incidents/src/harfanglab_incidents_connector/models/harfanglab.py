@@ -72,11 +72,12 @@ class Process:
         self.username = data.get("username") or None
         self.current_directory = data.get("current_directory") or None
         self.name = data.get("process_name") or None
+        hashes_data = data.get("hashes") or {}
         self.hashes = {
-            # "SHA-512": data.get("hashes"][")ha512"],
-            "SHA-256": data.get("hashes")["sha256"],
-            "SHA-1": data.get("hashes")["sha1"],
-            "MD5": data.get("hashes")["md5"],
+            # "SHA-512": hashes_data.get("sha512"),
+            "SHA-256": hashes_data.get("sha256"),
+            "SHA-1": hashes_data.get("sha1"),
+            "MD5": hashes_data.get("md5"),
         }
 
 

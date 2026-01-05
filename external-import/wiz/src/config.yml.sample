@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'Wiz Cloud Threat Landscape'
   scope: 'wiz'
   log_level: 'info'

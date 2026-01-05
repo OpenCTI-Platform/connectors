@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'INTERNAL_ENRICHMENT'
   name: 'Hybrid Analysis (Sandbox Windows 10 64bit)'
   scope: 'StixFile,Artifact,Url,Domain-Name,Hostname'
   auto: false # Enable/disable auto-enrichment of observables

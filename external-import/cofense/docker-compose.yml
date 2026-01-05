@@ -1,4 +1,4 @@
-version: "3"
+version: '3'
 services:
   connector-cofense:
     image: opencti/connector-cofense:latest
@@ -6,7 +6,6 @@ services:
       - OPENCTI_URL=http://localhost:8080
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=CofenseIntel
       - CONNECTOR_SCOPE=cofenseintel
       - CONNECTOR_LOG_LEVEL=info

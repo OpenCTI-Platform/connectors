@@ -1,3 +1,4 @@
+version: '3'
 services:
   redis:
     image: redis:8.4.0
@@ -99,7 +100,7 @@ services:
       - rabbitmq
     networks:
       - dev-opencti
-    restart: unless-stopped
+    restart: always
 
   worker:
     image: opencti/worker:6.9.5
@@ -114,7 +115,7 @@ services:
       replicas: 1
     networks:
       - dev-opencti
-    restart: unless-stopped
+    restart: always
 
   webservice:
     build:
@@ -148,7 +149,7 @@ services:
       - webservice
     networks:
       - dev-opencti
-    restart: unless-stopped
+    restart: always
 
   # is it really needed ?
   connector-import-file-stix:
@@ -162,7 +163,7 @@ services:
       - CONNECTOR_SCOPE=application/json,application/xml
       - CONNECTOR_AUTO=false # Enable/disable auto-import of file
       - CONNECTOR_LOG_LEVEL=debug
-    restart: unless-stopped
+    restart: always
     networks:
       - dev-opencti
 

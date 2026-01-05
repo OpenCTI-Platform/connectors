@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'scout-search-connector'
-  type: 'INTERNAL_ENRICHMENT'
   name: 'Scout Search Connector'
   scope: 'Text'
   confidence_level: 100

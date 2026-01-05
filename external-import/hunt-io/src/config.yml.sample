@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'Hunt IO'
   scope: 'ChangeMe'
   log_level: 'info'

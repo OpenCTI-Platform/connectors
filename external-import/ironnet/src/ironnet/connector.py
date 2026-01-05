@@ -32,11 +32,10 @@ class IronNetConnector:
         """Constructor"""
 
         config_path = Path(__file__).parent.parent.joinpath("config.yml")
-        config = (
-            yaml.load(config_path.open(), Loader=yaml.SafeLoader)
-            if config_path.is_file()
-            else {}
-        )
+        config = {}
+        if config_path.is_file():
+            with open(config_path, encoding="utf-8") as f:
+                config = yaml.load(f, Loader=yaml.SafeLoader)
 
         self._helper = OpenCTIConnectorHelper(config)
 

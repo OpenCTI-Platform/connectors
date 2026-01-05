@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'INTERNAL_ENRICHMENT'
   name: 'DomainTools'
   scope: 'Domain-Name,Ipv4-Addr'
   auto: false # Enable/disable auto-enrichment of observables

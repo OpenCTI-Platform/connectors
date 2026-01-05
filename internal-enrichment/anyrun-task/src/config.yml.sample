@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'INTERNAL_ENRICHMENT'
   name: 'anyrun_task'
   scope: 'Artifact,Url'
   auto: false # Enable/disable auto-enrichment of observables

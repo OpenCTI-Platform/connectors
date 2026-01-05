@@ -1,4 +1,4 @@
-version: "3"
+version: '3'
 services:
   connector-crowdstrike-endpoint-security:
     image: opencti/connector-crowdstrike-endpoint-security:latest

@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'Microsoft Defender Incidents'
   scope: 'defender'
   log_level: 'info'

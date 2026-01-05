@@ -3,7 +3,6 @@ opencti:
   token: 'ChangeMe'
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'NTI'
   scope: nti
   log_level: 'error'

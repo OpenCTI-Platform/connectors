@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'ThreatMatch'
   scope: 'threatmatch'
   log_level: 'info'

@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'CONNECTOR_ID'
-  type: 'EXTERNAL_IMPORT'
   name: 'Red Flag Domains'
   scope: 'red-flag-domains'
   update_existing_data: False

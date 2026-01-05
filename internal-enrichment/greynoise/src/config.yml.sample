@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'INTERNAL_ENRICHMENT'
   name: 'GreyNoise'
   scope: 'IPv4-Addr'
   auto: true # Enable/disable auto-enrichment of observables

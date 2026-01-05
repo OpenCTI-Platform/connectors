@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'changeme'
-  type: 'EXTERNAL_IMPORT'
   name: 'Abuse.ch SSL Blacklist'
   scope: 'abuse-ssl'
   log_level: 'info'

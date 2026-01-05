@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'INTERNAL_IMPORT_FILE'
   name: 'ImportFileMISP'
   scope: 'application/json'
   log_level: 'info'

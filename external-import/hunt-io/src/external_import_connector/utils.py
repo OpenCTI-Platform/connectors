@@ -30,12 +30,7 @@ def is_url(value: str) -> bool:
     :param value: Value in string
     :return: A boolean
     """
-    is_valid_url = url(value)
-
-    if is_valid_url:
-        return True
-    else:
-        return False
+    return url(value) is True
 
 
 def is_md5(value: str) -> bool:

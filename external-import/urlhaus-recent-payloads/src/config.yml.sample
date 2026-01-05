@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'urlhaus_recent_payloads'
-  type: 'EXTERNAL_IMPORT'
   name: 'URLhaus Recent Payloads'
   scope: 'urlhaus_recent_payloads'
   confidence_level: 40 # From 0 (Unknown) to 100 (Fully trusted)

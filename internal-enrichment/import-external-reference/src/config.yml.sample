@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'INTERNAL_ENRICHMENT'
   name: 'ImportExternalReference'
   scope: 'External-Reference'
   auto: false # Enable/disable auto-import of file

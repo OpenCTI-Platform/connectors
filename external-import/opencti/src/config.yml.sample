@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'OpenCTI Datasets'
   scope: 'marking-definition,identity,location'
   update_existing_data: true

@@ -10,7 +10,6 @@ services:
       
       # Connector Configuration
       - CONNECTOR_ID=${CONNECTOR_ID}
-      - CONNECTOR_TYPE=STREAM
       - CONNECTOR_NAME=MISP Intel
       - CONNECTOR_SCOPE=misp
       - CONNECTOR_CONFIDENCE_LEVEL=80
@@ -36,4 +35,4 @@ services:
       - PROXY_HTTP=${PROXY_HTTP:-}
       - PROXY_HTTPS=${PROXY_HTTPS:-}
       - PROXY_NO_PROXY=${PROXY_NO_PROXY:-localhost,127.0.0.1}
-    restart: unless-stopped
+    restart: always

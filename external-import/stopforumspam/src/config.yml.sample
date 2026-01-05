@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: af24527e-857d-4b70-9803-e7fdfa8421ea
-  type: 'EXTERNAL_IMPORT'
   name: 'Stopforumspam'
   scope: 'stopforumspam'
   confidence_level: 60 # From 0 (Unknown) to 100 (Fully trusted)

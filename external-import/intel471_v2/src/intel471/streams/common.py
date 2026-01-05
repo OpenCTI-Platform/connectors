@@ -187,7 +187,7 @@ class Intel471Stream(ABC):
 
     @staticmethod
     def _get_ttl_hash(seconds=10_000):
-        """Return the same value withing `seconds` time period"""
+        """Return the same value within `seconds` time period"""
         return round(time.time() / seconds)
 
     @abstractmethod

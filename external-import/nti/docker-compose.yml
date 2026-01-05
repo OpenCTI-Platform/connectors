@@ -9,7 +9,6 @@ services:
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=NTI
       - CONNECTOR_SCOPE=nti
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_LOG_LEVEL=info # Required
       - CONNECTOR_DURATION_PERIOD=P1D # Required
       - NTI_BASE_URL=https://nti.nsfocusglobal.com/api/v2/ # Required

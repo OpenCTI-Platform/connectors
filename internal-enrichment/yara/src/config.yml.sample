@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'INTERNAL_ENRICHMENT'
   name: 'YARA'
   scope: 'Artifact' # MIME type or SCO
   auto: true # Enable/disable auto-enrichment of observables

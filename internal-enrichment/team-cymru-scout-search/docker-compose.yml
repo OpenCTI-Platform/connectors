@@ -1,3 +1,4 @@
+version: '3'
 services:
   connector-team-cymru-scout-search:
     image: opencti/connector-team-cymru-scout-search:rolling
@@ -5,7 +6,6 @@ services:
       - OPENCTI_URL=${OPENCTI_URL:-http://opencti:8080}
       - OPENCTI_TOKEN=${OPENCTI_TOKEN:-}
       - CONNECTOR_ID=${CONNECTOR_ID:-scout-search-connector}
-      - CONNECTOR_TYPE=${CONNECTOR_TYPE:-INTERNAL_ENRICHMENT}
       - CONNECTOR_NAME=${CONNECTOR_NAME:-Scout Search Connector}
       - CONNECTOR_SCOPE=${CONNECTOR_SCOPE:-Text}
       - CONNECTOR_CONFIDENCE_LEVEL=${CONNECTOR_CONFIDENCE_LEVEL:-100}

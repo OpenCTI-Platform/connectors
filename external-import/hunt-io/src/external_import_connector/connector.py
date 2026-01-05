@@ -1,5 +1,5 @@
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from pycti import OpenCTIConnectorHelper
@@ -46,7 +46,7 @@ class StateManager:
         if latest_timestamp:
             current_state[StateKeys.LAST_TIMESTAMP] = latest_timestamp
 
-        current_state[StateKeys.LAST_RUN] = datetime.now().strftime(
+        current_state[StateKeys.LAST_RUN] = datetime.now(timezone.utc).strftime(
             DateTimeFormats.STANDARD_FORMAT
         )
         current_state[StateKeys.ENTITIES_PROCESSED] = entities_processed
@@ -223,7 +223,7 @@ class ConnectorHuntIo:
 
         try:
             # Get the current state
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             current_timestamp = int(datetime.timestamp(now))
             current_state = self.helper.get_state()
 
@@ -261,9 +261,9 @@ class ConnectorHuntIo:
             )
             current_state = self.helper.get_state()
             current_state_datetime = now.strftime(DateTimeFormats.STANDARD_FORMAT)
-            last_run_datetime = datetime.utcfromtimestamp(current_timestamp).strftime(
-                DateTimeFormats.STANDARD_FORMAT
-            )
+            last_run_datetime = datetime.fromtimestamp(
+                current_timestamp, tz=timezone.utc
+            ).strftime(DateTimeFormats.STANDARD_FORMAT)
             if current_state:
                 current_state[StateKeys.LAST_RUN] = current_state_datetime
             else:

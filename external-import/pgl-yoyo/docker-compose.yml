@@ -4,7 +4,7 @@ services:
   pgl-yoyo-connector:
     image: opencti/connector-pgl-yoyo:latest
     container_name: pgl-yoyo-connector
-    restart: unless-stopped
+    restart: always
     environment:
       # OpenCTI connection — can also be provided in mounted config.yml
       OPENCTI_URL: "http://opencti:8080"

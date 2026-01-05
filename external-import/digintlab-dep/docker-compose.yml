@@ -1,3 +1,4 @@
+version: '3'
 services:
   connector-digintlab-dep:
     # image: opencti/connector-digintlab-dep:rolling
@@ -5,17 +6,17 @@ services:
       context: .
     environment:
       - OPENCTI_URL="http://opencti:8080"
-      - OPENCTI_TOKEN="CHANGEME"
-      - CONNECTOR_ID="CHANGEME"
+      - OPENCTI_TOKEN="ChangeMe"
+      - CONNECTOR_ID="ChangeMe"
       - CONNECTOR_NAME="DEP Connector"
-      - CONNECTOR_SCOPE="CHANGEME"
+      - CONNECTOR_SCOPE="ChangeMe"
       - CONNECTOR_LOG_LEVEL="info"
       - CONNECTOR_RUN_INTERVAL=3600
       # Connector's required execution parameters
-      - DEP_USERNAME="CHANGEME"
-      - DEP_PASSWORD="CHANGEME"
-      - DEP_API_KEY="CHANGEME"
-      - DEP_CLIENT_ID="CHANGEME"
+      - DEP_USERNAME="ChangeMe"
+      - DEP_PASSWORD="ChangeMe"
+      - DEP_API_KEY="ChangeMe"
+      - DEP_CLIENT_ID="ChangeMe"
       # Connector's optinal execution parameters
       - DEP_LOOKBACK_DAYS=7
       - DEP_CONFIDENCE=70
@@ -27,9 +28,9 @@ services:
       - DEP_ENABLE_HASH_INDICATOR="true"
 
       # Add proxy parameters below if needed
-      # - HTTP_PROXY=CHANGEME
-      # - HTTPS_PROXY=CHANGEME
-      # - NO_PROXY=CHANGEME
+      # - HTTP_PROXY=ChangeMe
+      # - HTTPS_PROXY=ChangeMe
+      # - NO_PROXY=ChangeMe
     restart: always
     # networks:
     #   - docker_default

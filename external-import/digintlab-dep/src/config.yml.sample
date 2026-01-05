@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: ChangeMe
-  type: EXTERNAL_IMPORT
   name: DEP Connector
   scope: incident,identity,indicator
   log_level: info

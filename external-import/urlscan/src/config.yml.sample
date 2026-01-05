@@ -6,7 +6,6 @@ opencti:
 
 connector:
   id: "ChangeMe"
-  type: "EXTERNAL_IMPORT"
   name: "Urlscan"
   scope: "urlscan"
   log_level: "info"

@@ -5,9 +5,9 @@ services:
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost
-      - OPENCTI_TOKEN=CHANGEME
+      - OPENCTI_TOKEN=ChangeMe
       # Connector's definition parameters REQUIRED
-      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_ID=ChangeMe
       - "CONNECTOR_NAME=Google SecOps SIEM"
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_LIVE_STREAM_ID=live # ID of the live stream created in the OpenCTI UI
@@ -16,23 +16,23 @@ services:
 
       # Connector's custom execution parameters
       - SECOPS_SIEM_PROJECT_REGION=us
-      - SECOPS_SIEM_PROJECT_ID=CHANGEME
-      - SECOPS_SIEM_PROJECT_INSTANCE=CHANGEME
-      - SECOPS_SIEM_PRIVATE_KEY_ID=CHANGEME
-      - SECOPS_SIEM_PRIVATE_KEY=CHANGEME
-      - SECOPS_SIEM_CLIENT_EMAIL=CHANGEME
-      - SECOPS_SIEM_CLIENT_ID=CHANGEME
-      - SECOPS_SIEM_AUTH_URI=CHANGEME
-      - SECOPS_SIEM_TOKEN_URI=CHANGEME
-      - SECOPS_SIEM_AUTH_PROVIDER_CERT=CHANGEME
-      - SECOPS_SIEM_ACLIENT_CERT_URL=CHANGEME
+      - SECOPS_SIEM_PROJECT_ID=ChangeMe
+      - SECOPS_SIEM_PROJECT_INSTANCE=ChangeMe
+      - SECOPS_SIEM_PRIVATE_KEY_ID=ChangeMe
+      - SECOPS_SIEM_PRIVATE_KEY=ChangeMe
+      - SECOPS_SIEM_CLIENT_EMAIL=ChangeMe
+      - SECOPS_SIEM_CLIENT_ID=ChangeMe
+      - SECOPS_SIEM_AUTH_URI=ChangeMe
+      - SECOPS_SIEM_TOKEN_URI=ChangeMe
+      - SECOPS_SIEM_AUTH_PROVIDER_CERT=ChangeMe
+      - SECOPS_SIEM_ACLIENT_CERT_URL=ChangeMe
       # Add proxy parameters below if needed
-      # - HTTP_PROXY=CHANGEME
-      # - HTTPS_PROXY=CHANGEME
-      # - NO_PROXY=CHANGEME
+      # - HTTP_PROXY=ChangeMe
+      # - HTTPS_PROXY=ChangeMe
+      # - NO_PROXY=ChangeMe
 
 
-    restart: unless-stopped
+    restart: always
     # networks:
     #   - docker_default
 

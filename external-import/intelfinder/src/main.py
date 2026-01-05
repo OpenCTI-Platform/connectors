@@ -1,5 +1,5 @@
 import sys
-import time
+import traceback
 from os import environ
 
 from intelfinder import Intelfinder
@@ -51,7 +51,7 @@ class IntelfinderConnector(ExternalImportConnector):
     def _collect_intelligence(self) -> []:
         """Collects intelligence from channels
 
-        Aadd your code depending on the use case as stated at https://docs.opencti.io/latest/development/connectors/.
+        Add your code depending on the use case as stated at https://docs.opencti.io/latest/development/connectors/.
         Some sample code is provided as a guide to add a specific observable and a reference to the main object.
         Consider adding additional methods to the class to make the code more readable.
 
@@ -108,7 +108,6 @@ if __name__ == "__main__":
         connector = IntelfinderConnector()
         connector.helper.log_info("Starting Intelfinder connector")
         connector.run()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        sys.exit(0)
+    except Exception:
+        traceback.print_exc()
+        sys.exit(1)

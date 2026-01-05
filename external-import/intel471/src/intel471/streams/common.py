@@ -1,7 +1,7 @@
-import datetime
 import os
 import time
 from abc import ABC, abstractmethod
+from datetime import datetime, timezone
 from queue import Queue
 from typing import Any, Iterator, Union
 
@@ -64,7 +64,7 @@ class Intel471Stream(ABC):
         if initial_history:
             self.initial_history = initial_history
         else:
-            self.initial_history = int((datetime.datetime.utcnow()).timestamp() * 1000)
+            self.initial_history = int(datetime.now(timezone.utc).timestamp() * 1000)
 
     @property
     def cursor_name(self) -> str:
@@ -167,7 +167,7 @@ class Intel471Stream(ABC):
 
     @staticmethod
     def _get_ttl_hash(seconds=10_000):
-        """Return the same value withing `seconds` time period"""
+        """Return the same value within `seconds` time period"""
         return round(time.time() / seconds)
 
     @abstractmethod

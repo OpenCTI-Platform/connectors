@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'virustotal_livehunt_notifications'
-  type: 'EXTERNAL_IMPORT'
   name: 'VirusTotal Livehunt Notifications'
   scope: 'StixFile,Indicator,Incident'
   create_indicator: False
