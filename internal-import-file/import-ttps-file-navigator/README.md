@@ -4,9 +4,9 @@
 |--------|------|---------|
 | Filigran Verified | -    | -       |
 
-Table of Contents
+## Table of Contents
 
-- [OpenCTI Import ATT&CK Navigator TTPs](#opencti-internal-import-yara-connector)
+- [OpenCTI Import ATT&CK Navigator TTPs](#opencti-import-attck-navigator-ttps)
     - [Introduction](#introduction)
     - [Installation](#installation)
         - [Requirements](#requirements)
@@ -126,22 +126,11 @@ However, if you would like to force an immediate download of a new batch of enti
 Find the connector, and click on the refresh button to reset the connector's state and force a new
 download of data by re-running the connector.
 
-## Behavior
-
-<!--
-Describe how the connector functions:
-* What data is ingested, updated, or modified
-* Important considerations for users when utilizing this connector
-* Additional relevant details
--->
-
 ## Debugging
 
 The connector can be debugged by setting the appropiate log level.
 Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
 e., `self.helper.connector_logger.error("An error message")`.
-
-<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
 
 ## Additional information
 

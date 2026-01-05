@@ -71,7 +71,8 @@ There are a number of configuration options, which are set either in `docker-com
 |---------------------|----------------------------------------|------------------------------------------------|---------|-----------|----------------------------------------------------------------|
 | Directory Path      | diode_import.get_from_directory_path   | `DIODE_IMPORT_GET_FROM_DIRECTORY_PATH`         |         | Yes       | Path to directory containing exported bundles.                 |
 | Directory Retention | diode_import.get_from_directory_retention | `DIODE_IMPORT_GET_FROM_DIRECTORY_RETENTION` | 7       | No        | Days to retain processed files before deletion.                |
-| Applicant Mappings  | diode_import.applicant_mappings        | `DIODE_IMPORT_APPLICANT_MAPPINGS`              |         | Yes       | JSON mapping of source applicant IDs to target IDs.            |
+| Delete After Import | diode_import.delete_after_import       | `DIODE_IMPORT_DELETE_AFTER_IMPORT`             | true    | No        | Delete files immediately after successful processing.          |
+| Applicant Mappings  | diode_import.applicant_mappings        | `DIODE_IMPORT_APPLICANT_MAPPINGS`              |         | Yes       | Mapping of source applicant IDs to target IDs (format: `id1:id2,id3:id4`). |
 
 ## Deployment
 
@@ -97,7 +98,8 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_RUN_AND_TERMINATE=false
       - DIODE_IMPORT_GET_FROM_DIRECTORY_PATH=/data/diode
       - DIODE_IMPORT_GET_FROM_DIRECTORY_RETENTION=7
-      - DIODE_IMPORT_APPLICANT_MAPPINGS={"source-user-id":"target-user-id"}
+      - DIODE_IMPORT_DELETE_AFTER_IMPORT=true
+      - DIODE_IMPORT_APPLICANT_MAPPINGS=source-user-id:target-user-id
     volumes:
       - /path/to/shared/directory:/data/diode
     restart: always
@@ -230,13 +232,10 @@ Common issues:
 
 ### Applicant Mappings Format
 
-The `DIODE_IMPORT_APPLICANT_MAPPINGS` parameter accepts JSON format:
+The `DIODE_IMPORT_APPLICANT_MAPPINGS` parameter accepts comma-separated `key:value` pairs:
 
-```json
-{
-  "source-user-uuid-1": "target-user-uuid-1",
-  "source-user-uuid-2": "target-user-uuid-2"
-}
+```
+source-user-uuid-1:target-user-uuid-1,source-user-uuid-2:target-user-uuid-2
 ```
 
 ### Related Configuration

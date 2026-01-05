@@ -4,121 +4,266 @@
 |--------|------|---------|
 | Community | -    | -       |
 
-This connector integrates **OpenCTI** threat intelligence into the **Zscaler** environment.
+The Zscaler connector streams OpenCTI domain indicators to Zscaler for URL filtering and blocking.
 
-## Overview
+## Table of Contents
 
-- **Scope**  
-  - The connector focuses on indicators of type `domain-name`.
-  - It listens to events from the OpenCTI stream (creation and deletion of STIX indicators).
-  - Whenever a domain indicator is created or deleted in OpenCTI, the connector updates the Zscaler configuration accordingly.
+- [OpenCTI Zscaler Connector](#opencti-zscaler-connector)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction](#introduction)
+  - [Installation](#installation)
+    - [Requirements](#requirements)
+  - [Configuration variables](#configuration-variables)
+    - [OpenCTI environment variables](#opencti-environment-variables)
+    - [Base connector environment variables](#base-connector-environment-variables)
+    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
+  - [Deployment](#deployment)
+    - [Docker Deployment](#docker-deployment)
+    - [Manual Deployment](#manual-deployment)
+  - [Usage](#usage)
+  - [Behavior](#behavior)
+  - [Debugging](#debugging)
+  - [Additional information](#additional-information)
 
-- **Key Features**  
-  1. **Authentication and Classification Retrieval**:  
-     The connector authenticates with the Zscaler API using a username, password, and API key. It can also query Zscaler to retrieve the classification of a domain (e.g., the labels/categories Zscaler applies to this domain).  
-  2. **Blacklist Management**:  
-     By default, the connector manages the `BLACK_LIST_DYNDNS` category in Zscaler:
-     - **Indicator Creation**: If the domain is not already in the blacklist, the connector adds it to `BLACK_LIST_DYNDNS` and activates the changes to make them effective.  
-     - **Indicator Deletion**: If the domain exists in `BLACK_LIST_DYNDNS`, the connector can remove it from this category and activate the changes.  
-  3. **Customizing the Category**:  
-     You can change the category name (e.g., `Black-list` or any other category name you use) in the code or configuration variables to manage the list that best suits your needs.  
-  4. **Specific Event Handling**:  
-     The connector only processes events of type `create` and `delete` (no updates).
+## Introduction
+
+This connector integrates OpenCTI threat intelligence into the Zscaler environment by managing domain indicators in Zscaler URL categories. It focuses on domain-name indicators and automatically adds or removes domains from a configurable blacklist category.
+
+Key features:
+- Real-time domain indicator management
+- Automatic Zscaler configuration activation
+- Domain validation before submission
+- Classification lookup before blacklisting
+- Rate limit handling with automatic retries
+- Duplicate domain detection
 
 ## Installation
 
 ### Requirements
 
-- **OpenCTI Platform >= 6.0.0**
+- OpenCTI Platform >= 6.0.0
+- Zscaler account with API access
+- Zscaler API key, username, and password
 
-### Configuration
+## Configuration variables
 
-| Parameter                               | Docker Env Variable                             | Mandatory  | Description                                                                                     |
-|-----------------------------------------|-------------------------------------------------|------------|-------------------------------------------------------------------------------------------------|
-| `OPENCTI_URL`                           | `OPENCTI_URL`                                   | Yes        | The URL of the OpenCTI platform.                                                               |
-| `OPENCTI_TOKEN`                         | `OPENCTI_TOKEN`                                 | Yes        | The API token for OpenCTI.                                                                     |
-| `CONNECTOR_ID`                          | `CONNECTOR_ID`                                  | Yes        | A unique UUIDv4 for this connector.                                                             |
-| `CONNECTOR_TYPE`                        | `CONNECTOR_TYPE`                                | Yes        | Must be set to `STREAM` for this connector.                                                    |
-| `CONNECTOR_NAME`                        | `CONNECTOR_NAME`                                | Yes        | Name of the connector, e.g., `ZscalerConnector`.                                               |
-| `CONNECTOR_SCOPE`                       | `CONNECTOR_SCOPE`                               | Yes        | Set to `domain-name` to focus on domain indicators.                                           |
-| `CONNECTOR_LOG_LEVEL`                   | `CONNECTOR_LOG_LEVEL`                           | No         | Logging level (`debug`, `info`, `warn`, or `error`).                                           |
-| `CONNECTOR_LIVE_STREAM_ID`              | `CONNECTOR_LIVE_STREAM_ID`                      | Yes        | The ID of the OpenCTI Live Stream.                                                            |
-| `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`           | Yes        | Whether to listen for deletions (`true` or `false`).                                           |
-| `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES` | `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES`         | Yes        | Disable dependency processing (`true` or `false`).                                             |
-| `ZSCALER_API_KEY`                       | `ZSCALER_API_KEY`                               | Yes        | Zscaler API key.                                                                               |
-| `ZSCALER_USERNAME`                      | `ZSCALER_USERNAME`                              | Yes        | Zscaler username.                                                                              |
-| `ZSCALER_PASSWORD`                      | `ZSCALER_PASSWORD`                              | Yes        | Zscaler password.                                                                              |
-| `ZSCALER_BLACKLIST_NAME`                | `ZSCALER_BLACKLIST_NAME`                        | Yes        | The name of the Zscaler blacklist to use.                        |
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
 
-## Usage
+### OpenCTI environment variables
 
-1. **Set Environment Variables**:
-   - Configure the OpenCTI URL and token, as well as your Zscaler credentials (`ZSCALER_USERNAME`, `ZSCALER_PASSWORD`, `ZSCALER_API_KEY`) and blacklist name (`ZSCALER_BLACKLIST_NAME`) as shown in the table above.
-2. **Configure the Category**:
-   - By default, the connector uses the `BLACK_LIST_DYNDNS` category.  
-   - To use another list:
-     - Set the `ZSCALER_BLACKLIST_NAME` environment variable in your `docker-compose.yml` or update the `blacklist_name` in your `config.yml`.
-     - For example:
-       - In `config.yml`:  
-         ```yaml
-         blacklist_name: "YOUR_CUSTOM_BLACKLIST"  # Specify your custom category here
-         ```
-       - In `docker-compose.yml`:  
-         ```yaml
-         ZSCALER_BLACKLIST_NAME: "YOUR_CUSTOM_BLACKLIST" # Specify your custom category here
-3. **Run the Connector**:  
-   Once the Docker image is built or retrieved, run `docker-compose up -d` or an equivalent command. The connector will then connect to OpenCTI and, for every creation or deletion of a `domain-name` indicator, add or remove it from the specified list in Zscaler and activate the changes.
+| Parameter     | config.yml   | Docker environment variable | Mandatory | Description                                          |
+|---------------|--------------|------------------------------|-----------|------------------------------------------------------|
+| OpenCTI URL   | url          | `OPENCTI_URL`                | Yes       | The URL of the OpenCTI platform.                     |
+| OpenCTI Token | token        | `OPENCTI_TOKEN`              | Yes       | The default admin token set in the OpenCTI platform. |
+| SSL Verify    | ssl_verify   | `OPENCTI_SSL_VERIFY`         | No        | Verify SSL certificates (default: false).            |
 
-## Example Configuration
+### Base connector environment variables
 
-### Example `config.yml`
+| Parameter                      | config.yml                 | Docker environment variable              | Default          | Mandatory | Description                                                                    |
+|--------------------------------|----------------------------|------------------------------------------|------------------|-----------|--------------------------------------------------------------------------------|
+| Connector ID                   | id                         | `CONNECTOR_ID`                           |                  | Yes       | A unique `UUIDv4` identifier for this connector instance.                      |
+| Connector Type                 | type                       | `CONNECTOR_TYPE`                         | STREAM           | Yes       | Should always be set to `STREAM` for this connector.                           |
+| Connector Name                 | name                       | `CONNECTOR_NAME`                         | ZscalerConnector | No        | Name of the connector.                                                         |
+| Connector Scope                | scope                      | `CONNECTOR_SCOPE`                        | Zscaler          | Yes       | The scope of the connector.                                                    |
+| Live Stream ID                 | live_stream_id             | `CONNECTOR_LIVE_STREAM_ID`               |                  | Yes       | The Live Stream ID of the stream created in the OpenCTI interface.             |
+| Live Stream Listen Delete      | live_stream_listen_delete  | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`    | true             | Yes       | Listen to delete events.                                                       |
+| Live Stream No Dependencies    | live_stream_no_dependencies| `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES`  | true             | No        | Set to `true` unless synchronizing between OpenCTI platforms.                  |
+| Log Level                      | log_level                  | `CONNECTOR_LOG_LEVEL`                    | info             | No        | Determines the verbosity of the logs.                                          |
+
+### Connector extra parameters environment variables
+
+| Parameter        | config.yml            | Docker environment variable | Default           | Mandatory | Description                                         |
+|------------------|----------------------|------------------------------|-------------------|-----------|-----------------------------------------------------|
+| Username         | zscaler.username     | `ZSCALER_USERNAME`           |                   | Yes       | Zscaler username for API authentication.            |
+| Password         | zscaler.password     | `ZSCALER_PASSWORD`           |                   | Yes       | Zscaler password for API authentication.            |
+| API Key          | zscaler.api_key      | `ZSCALER_API_KEY`            |                   | Yes       | Zscaler API key.                                    |
+| Blacklist Name   | zscaler.blacklist_name | `ZSCALER_BLACKLIST_NAME`   | BLACK_LIST_DYNDNS | Yes       | Name of the Zscaler URL category to manage.         |
+
+## Deployment
+
+### Docker Deployment
+
+Build the Docker image:
+
+```bash
+docker build -t opencti/connector-zscaler:latest .
+```
+
+Configure the connector in `docker-compose.yml`:
 
 ```yaml
-opencti:
-  url: "https://your-opencti-instance.com"
-  token: "YOUR_OPENCTI_TOKEN"
-
-zscaler:
-  username: "YOUR_ZSCALER_USERNAME"
-  password: "YOUR_ZSCALER_PASSWORD"
-  api_key: "YOUR_ZSCALER_API_KEY"
-  blacklist_name: "BLACK_LIST_DYNDNS"  # Customize this as needed
-
-### Example `Docker Compose`
-
-version: '3'
-services:
   connector-zscaler:
-    image: opencti/connector-zscaler:6.9.5
+    image: opencti/connector-zscaler:latest
     environment:
-      OPENCTI_URL: "https://your-opencti-instance.com"
-      OPENCTI_TOKEN: "YOUR_OPENCTI_TOKEN"
-      CONNECTOR_ID: "YOUR_CONNECTOR_UUID"
-      CONNECTOR_TYPE: "STREAM"
-      CONNECTOR_NAME: "ZscalerConnector"
-      CONNECTOR_SCOPE: "domain-name"
-      CONNECTOR_LOG_LEVEL: "info"
-      CONNECTOR_LIVE_STREAM_ID: "YOUR_LIVE_STREAM_ID"
-      CONNECTOR_LIVE_STREAM_LISTEN_DELETE: "true"
-      CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES: "true"
-      ZSCALER_USERNAME: "YOUR_ZSCALER_USERNAME"
-      ZSCALER_PASSWORD: "YOUR_ZSCALER_PASSWORD"
-      ZSCALER_API_KEY: "YOUR_ZSCALER_API_KEY"
-      ZSCALER_BLACKLIST_NAME: "YOUR_CUSTOM_BLACKLIST"  # Customize the blacklist name
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=STREAM
+      - CONNECTOR_NAME=ZscalerConnector
+      - CONNECTOR_SCOPE=Zscaler
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe
+      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
+      - ZSCALER_USERNAME=ChangeMe
+      - ZSCALER_PASSWORD=ChangeMe
+      - ZSCALER_API_KEY=ChangeMe
+      - ZSCALER_BLACKLIST_NAME=YOUR_CUSTOM_BLACKLIST
+    restart: always
     networks:
       - opencti_network
 
 networks:
   opencti_network:
     external: true
+```
 
-More information : 
-What happens if a domain is already in the blacklist?
+Start the connector:
 
-The connector checks the blacklist before adding a domain to avoid duplicates.
-Can I use multiple blacklists?
+```bash
+docker compose up -d
+```
 
-Not currently. The connector works with one blacklist at a time, as specified in ZSCALER_BLACKLIST_NAME.
-Does the connector handle rate limits?
+### Manual Deployment
 
-Yes, it includes logic to respect API rate limits and retries failed requests.
+1. Create `config.yml` based on `config.yml.sample`:
+
+```yaml
+opencti:
+  url: 'https://your-opencti-instance.com'
+  token: 'YOUR_OPENCTI_TOKEN'
+  ssl_verify: false
+
+connector:
+  name: 'ZscalerConnector'
+  id: 'ChangeMe'
+  live_stream_id: 'ChangeMe'
+  live_stream_listen_delete: true
+  scope: 'Zscaler'
+  log_level: 'info'
+
+zscaler:
+  username: 'YOUR_ZSCALER_USERNAME'
+  password: 'YOUR_ZSCALER_PASSWORD'
+  api_key: 'YOUR_ZSCALER_API_KEY'
+  blacklist_name: 'BLACK_LIST_DYNDNS'
+```
+
+2. Install dependencies:
+
+```bash
+pip3 install -r requirements.txt
+```
+
+3. Start the connector from the `src` directory:
+
+```bash
+python3 main.py
+```
+
+## Usage
+
+1. Create a Live Stream in OpenCTI (Data Management -> Data Sharing -> Live Streams)
+2. Configure the stream to include domain-name indicators
+3. Copy the Live Stream ID to the connector configuration
+4. Start the connector
+
+The connector will:
+- Authenticate with Zscaler API on startup
+- Listen for domain indicator create/delete events
+- Add domains to the specified blacklist category
+- Automatically activate changes in Zscaler
+
+## Behavior
+
+The connector listens to OpenCTI live stream events and manages domains in Zscaler URL categories.
+
+### Data Flow
+
+```mermaid
+graph LR
+    subgraph OpenCTI
+        direction TB
+        Stream[Live Stream]
+        Indicators[Domain Indicators]
+    end
+
+    subgraph Connector
+        direction LR
+        Listen[Event Listener]
+        Validate[Validate Domain]
+        Check[Check Classification]
+    end
+
+    subgraph Zscaler
+        direction TB
+        API[Zscaler API]
+        Category[URL Category]
+        Activate[Activate Changes]
+    end
+
+    Stream --> Indicators
+    Indicators --> Listen
+    Listen --> Validate
+    Validate --> Check
+    Check --> API
+    API --> Category
+    Category --> Activate
+```
+
+### Event Processing
+
+| Event Type | Action                                       |
+|------------|----------------------------------------------|
+| create     | Adds domain to Zscaler blacklist category    |
+| delete     | Removes domain from Zscaler blacklist        |
+
+### Domain Processing Flow
+
+1. **Pattern Extraction**: Extract domain from STIX pattern `[domain-name:value = 'example.com']`
+2. **Validation**: Verify domain format is valid
+3. **Classification Lookup**: Check current Zscaler classification
+4. **Duplicate Check**: Verify domain not already in blacklist
+5. **Add/Remove**: Add or remove domain from URL category
+6. **Activation**: Automatically activate Zscaler configuration changes
+
+### Rate Limiting
+
+The connector handles Zscaler API rate limits:
+- Maximum 400 requests per hour
+- Automatic retry with exponential backoff
+- Respects `Retry-After` headers
+
+## Debugging
+
+Enable verbose logging by setting:
+
+```env
+CONNECTOR_LOG_LEVEL=debug
+```
+
+### Common Issues
+
+| Issue                          | Solution                                              |
+|--------------------------------|-------------------------------------------------------|
+| Authentication failed          | Verify username, password, and API key                |
+| Domain already in blacklist    | Normal behavior - domain is skipped                   |
+| Invalid domain pattern         | Ensure indicator uses STIX pattern format             |
+| Rate limit exceeded (429)      | Connector will automatically retry                    |
+| Activation failed (503)        | Connector retries with exponential backoff            |
+
+### FAQ
+
+| Question                                | Answer                                              |
+|-----------------------------------------|-----------------------------------------------------|
+| What if a domain is already blocked?    | The connector checks and skips duplicates           |
+| Can I use multiple blacklists?          | No, one blacklist per connector instance            |
+| Does it handle rate limits?             | Yes, with automatic retries                         |
+
+## Additional information
+
+- **Supported Indicators**: Only `domain-name` type indicators
+- **Pattern Format**: Must use STIX pattern `[domain-name:value = 'example.com']`
+- **API Endpoint**: Uses `zsapi.zscalertwo.net` - adjust if using different Zscaler cloud
+- **Session Management**: Automatic re-authentication when session expires
+- **Activation**: Changes are automatically activated after each operation

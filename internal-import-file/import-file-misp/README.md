@@ -1,10 +1,10 @@
 # OpenCTI Import File MISP Connector
 
-The Import File MISP connector enables importing MISP JSON event files into OpenCTI, converting MISP events, attributes, and objects to STIX 2.1 entities.
-
-| Status            | Date | Comment |
-|-------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Filigran Verified | -    | -       |
+
+The Import File MISP connector enables importing MISP JSON event files into OpenCTI, converting MISP events, attributes, and objects to STIX 2.1 entities.
 
 ## Table of Contents
 
