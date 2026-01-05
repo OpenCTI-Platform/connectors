@@ -4,8 +4,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 
 ### Type: `object`
 
-> ⚠️ Additional properties are not allowed.
-
 | Property | Type | Required | Possible values | Default | Description |
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
