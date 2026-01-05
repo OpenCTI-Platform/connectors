@@ -23,7 +23,6 @@ class CPEConnector:
         """
 
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        print(ValueError(config_file_path))
         config = (
             yaml.load(open(config_file_path), Loader=yaml.SafeLoader)
             if os.path.isfile(config_file_path)
@@ -61,7 +60,7 @@ class CPEConnector:
         Returns the interval to use for the connector
 
         This SHOULD return always the interval in seconds.
-        If the connector is execting that the parameter is received as hoursUncomment as necessary.
+        If the connector is expecting that the parameter is received as hours uncomment as necessary.
 
         Returns:
             int: The interval to use for the connector
@@ -296,7 +295,7 @@ class CPEConnector:
 
         stix_objects = []
 
-        # Create a STIX2 Cyber Observable Object Sofwtare for each CPE
+        # Create a STIX2 Cyber Observable Object Software for each CPE
         for i in range(nb_results):
             cpe_infos = self._get_cpe_infos(
                 json_objects["products"][i]["cpe"]["cpeName"]
@@ -388,7 +387,7 @@ class CPEConnector:
                 work_id=work_id,
             )
 
-            time.sleep(6)  # Sleep for 6 seconds as recommanded by NIST NVD API
+            time.sleep(6)  # Sleep for 6 seconds as recommended by NIST NVD API
 
     def _import_date(self, work_id) -> None:
         """
@@ -436,7 +435,7 @@ class CPEConnector:
                 work_id=work_id,
             )
 
-            time.sleep(6)  # Sleep for 6 seconds as recommanded by NIST NVD API
+            time.sleep(6)  # Sleep for 6 seconds as recommended by NIST NVD API
 
     def run(self) -> None:
         """

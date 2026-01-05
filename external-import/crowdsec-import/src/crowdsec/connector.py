@@ -233,7 +233,7 @@ class CrowdSecImporter:
             update=True if database_observable else False,
         )
         self.helper.log_debug(f"STIX Observable created/updated: {stix_observable}")
-        # Start Bundle creation wby adding observable
+        # Start bundle creation by adding observable
         builder.add_to_bundle([stix_observable])
         observable_id = stix_observable["id"]
         # Initialize external reference for sightings

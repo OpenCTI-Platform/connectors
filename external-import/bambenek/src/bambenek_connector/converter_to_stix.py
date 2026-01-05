@@ -28,7 +28,7 @@ class ConverterToStix:
         self.helper = helper
         self.author = self.create_author()
         self.collection_to_stix_function = (
-            {  # Any new collections must have there converter function mapped here
+            {  # Any new collections must have their converter function mapped here
                 "c2_dga": self.convert_domain_ioc_to_stix,
                 "c2_dga_high_conf": self.convert_domain_ioc_to_stix,
                 "c2_domain": self.convert_domain_ioc_to_stix,
@@ -59,8 +59,8 @@ class ConverterToStix:
         name: str,
         observable_type: str,
         confidence_level: int = DEFAULT_CONFIDENCE_LEVEL,
-        labels: list[str] = None,
-        valid_from: datetime = None,
+        labels: list[str] | None = None,
+        valid_from: datetime | None = None,
     ) -> Indicator:
         """
         Convenience method to return an indicator using common patterns from the Bambenek feeds
@@ -136,7 +136,7 @@ class ConverterToStix:
             id=StixCoreRelationship.generate_id(
                 relation,
                 source_id,
-                source_id,
+                target_id,
             ),
             relationship_type=relation,
             source_ref=source_id,

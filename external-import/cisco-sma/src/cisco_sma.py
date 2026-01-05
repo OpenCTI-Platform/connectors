@@ -307,14 +307,16 @@ class Cisco_SMA:
             self.stix_domain.append(relationship)
 
     def create_stix_bundle(self, data, true_attributes):
-        identity_id = "identity--a798ea4a-e656-5a8b-989e-960419abb1fc"
+        from pycti import Identity as pyctiIdentity
+
+        identity_id = pyctiIdentity.generate_id("Cisco SMA", "organization")
         identity = stix2.Identity(
             id=identity_id,
             spec_version="2.1",
             name="Cisco SMA",
             identity_class="organization",
             type="identity",
-            object_marking_refs=stix2.TLP_WHITE,
+            object_marking_refs=[stix2.TLP_WHITE["id"]],
         )
 
         k = 0
@@ -402,9 +404,11 @@ class Cisco_SMA:
 
 if __name__ == "__main__":
     try:
-        cisco_sma_Connector = Cisco_SMA()
-        cisco_sma_Connector.run()
-    except Exception as e:
-        print(e)
+        connector = Cisco_SMA()
+        connector.run()
+    except Exception:
+        import traceback
+
+        traceback.print_exc()
         time.sleep(10)
-        sys.exit(0)
+        sys.exit(1)

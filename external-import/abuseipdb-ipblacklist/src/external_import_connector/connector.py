@@ -146,7 +146,7 @@ class ConnectorAbuseIPDB:
 
                 self.helper.connector_logger.info(
                     "Sending STIX objects to OpenCTI...",
-                    {"bundles_sent": {str(len(bundles_sent))}},
+                    {"bundles_sent": str(len(bundles_sent))},
                 )
 
             self.helper.connector_logger.debug(

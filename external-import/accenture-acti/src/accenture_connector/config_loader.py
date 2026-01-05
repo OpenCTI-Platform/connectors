@@ -112,7 +112,7 @@ class ConfigConnector:
                 self.mapping = json.load(f)
         else:
             self.mapping = {}
-        if type(self.relative_import_start_date) == str:
+        if isinstance(self.relative_import_start_date, str):
             self.relative_import_start_date = isodate.parse_duration(
                 self.relative_import_start_date
             )

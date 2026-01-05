@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import get_config_variable
 
 from .utils import SUPPORTED_COLLECTIONS
 
@@ -16,7 +16,6 @@ class ConfigConnector:
 
         # Load configuration file
         self.load = self._load_config()
-        self.helper = OpenCTIConnectorHelper(self.load)
         self._initialize_configurations()
 
     @staticmethod
@@ -27,7 +26,6 @@ class ConfigConnector:
         """
 
         config_file_path = Path(__file__).parents[1].joinpath("config.yml")
-        print(f"CONFIG FILE PATH = {config_file_path}")
         config = (
             yaml.load(open(config_file_path), Loader=yaml.FullLoader)
             if os.path.isfile(config_file_path)
@@ -74,10 +72,9 @@ class ConfigConnector:
             x.strip() for x in bambenek_collections_string.split(",")
         ]
 
-        # validate collection configured
-        for collection in bambenek_collections_list:
-            if collection not in SUPPORTED_COLLECTIONS:
-                self.helper.log_error(f"Unsupported collection: {collection}")
-                bambenek_collections_list.remove(collection)
-
-        self.bambenek_collections = bambenek_collections_list
+        # validate collection configured - filter out unsupported collections
+        self.bambenek_collections = [
+            collection
+            for collection in bambenek_collections_list
+            if collection in SUPPORTED_COLLECTIONS
+        ]

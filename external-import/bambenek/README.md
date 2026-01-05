@@ -111,7 +111,7 @@ docker compose up -d
 Create a file `config.yml` based on the provided `config.yml.sample`.
 
 Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
+your environment.
 
 Install the required python dependencies (preferably in a virtual environment):
 
@@ -119,7 +119,7 @@ Install the required python dependencies (preferably in a virtual environment):
 pip3 install -r requirements.txt
 ```
 
-Then, start the connector from recorded-future/src:
+Then, start the connector from bambenek/src:
 
 ```shell
 python3 main.py
@@ -144,4 +144,4 @@ The connector pulls files from Bambenek's server then parses them into stix2 obj
 ## Debugging
 
 The connector can be debugged by setting the appropriate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.e., `self.helper.connector_logger.error("An error message")`.
+Note that logging messages can be added using `self.helper.connector_logger.{LOG_LEVEL}("Sample message")`, i.e., `self.helper.connector_logger.error("An error message")`.

@@ -7,7 +7,7 @@ import ssl
 import sys
 import time
 import urllib
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Optional
 
 import requests
@@ -171,7 +171,7 @@ class CyberMonitor:
                         name=report_name,
                         published=report_date,
                         external_references=[external_reference],
-                        object_refs=[self.dummy_organization["standard_id"]],
+                        object_refs=[self.dummy_organization["id"]],
                         allow_custom=True,
                         custom_properties={"x_opencti_files": files},
                     )
@@ -199,7 +199,9 @@ class CyberMonitor:
                 last_run = current_state["last_run"]
                 self.helper.log_info(
                     "Connector last run: "
-                    + datetime.utcfromtimestamp(last_run).strftime("%Y-%m-%d %H:%M:%S")
+                    + datetime.fromtimestamp(last_run, tz=timezone.utc).strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
                 )
             else:
                 last_run = None
@@ -212,7 +214,7 @@ class CyberMonitor:
             ):
                 self.helper.log_info("Connector will run!")
 
-                now = datetime.utcfromtimestamp(timestamp)
+                now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
                 friendly_name = "Cyber Monitor run @ " + now.strftime(
                     "%Y-%m-%d %H:%M:%S"
                 )
@@ -276,9 +278,9 @@ class CyberMonitor:
 
 if __name__ == "__main__":
     try:
-        cyberMonitorConnector = CyberMonitor()
-        cyberMonitorConnector.run()
+        connector = CyberMonitor()
+        connector.run()
     except Exception as e:
-        print(e)
+        OpenCTIConnectorHelper.log_error(str(e))
         time.sleep(10)
-        sys.exit(0)
+        sys.exit(1)

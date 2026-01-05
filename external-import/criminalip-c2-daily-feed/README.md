@@ -20,7 +20,7 @@ The connector uses the [criminalip C2-Daily-Feed](https://github.com/criminalip/
 | `connector_log_level`                | `CONNECTOR_LOG_LEVEL`        | Yes          | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                              |
 | `CRIMINALIP_CSV_URL`                      | `CRIMINALIP_CSV_URL`              | Yes          | https://raw.githubusercontent.com/criminalip/C2-Daily-Feed/refs/heads/main                                                                                                               |
 | `CRIMINALIP_CONFIDENCE_SCORE`         | `CRIMINALIP_CONFIDENCE_SCORE`     | Yes          | CriminalIP Score Limitation                                                                                                                |
-| `CRIMINALIP_INTERVAL`                 | `ABUSEIPDB_LIMIT`            | Yes          | interval between 2 collect itself                                                                                                                |
+| `CRIMINALIP_INTERVAL`                 | `CRIMINALIP_INTERVAL`        | Yes          | Interval between 2 collections                                                                                                                   |
 
 ### Notes
 

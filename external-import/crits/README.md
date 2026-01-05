@@ -36,7 +36,7 @@ requests library to function.
 | `crits_event_type`               | `CRITS_EVENT_TYPE`               | Yes          | When importing CRITs Events as Analysis Reports, what Report Type to give them                                                         |
 | `crits_interval`                 | `CRITS_INTERVAL`                 | Yes          | The interval to delay between updates, in minutes                                                                                      |
 | `crits_import_campaign_as`       | `CRITS_IMPORT_CAMPAIGN_AS`       | No           | 'Campaign' or 'IntrusionSet': What STIX2.1 type to import Campaigns as. Default: IntrusionSet                                          |
-| `crits_timestamp_field`          | `CRITS_TIMESTAMP_FIELD`          | No           | Which fieldin the CRITs objects to use for the timestamp (default: modified)                                                           |
+| `crits_timestamp_field`          | `CRITS_TIMESTAMP_FIELD`          | No           | Which field in the CRITs objects to use for the timestamp (default: modified)                                                          |
 | `crits_chunk_size`               | `CRITS_CHUNK_SIZE`               | No           | Ingests non-event-related observables in chunks of this size, helps with memory consumption. Adjust experimentally (default: 100)      |
 | `crits_default_marking`          | `CRITS_DEFAULT_MARKING`          | No           | Marking definition to use, case insensitive, one of ["TLP:RED", "TLP:GREEN", "TLP:AMBER", "TLP:WHITE"] (default: TLP:GREEN)            |
 | `crits_default_score`            | `CRITS_DEFAULT_SCORE`            | No           | Default_score allows you to add a default score for an indicator and its observable (a number between 1 and 100, default: 50)          |
@@ -70,7 +70,7 @@ significant metadata, headers, and portions of multipart contents are capable of
 
 ### Debugging ###
 
-The connector logs useful statistics and debbuging data to the console at run-time
+The connector logs useful statistics and debugging data to the console at run-time
 
 ### Additional information
 
