@@ -182,7 +182,7 @@ class ConnectorIBMXTI:
 
         try:
             # Get the current state
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             current_timestamp = int(datetime.timestamp(now))
             current_state = cast(ConnectorIBMXTIState, self.__helper.get_state())
 

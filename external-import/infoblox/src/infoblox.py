@@ -1,9 +1,9 @@
-import datetime
 import json
 import os
 import sys
 import time
 import traceback
+from datetime import datetime, timezone
 
 import requests
 import stix2
@@ -190,12 +190,12 @@ class Infoblox:
                 pattern_type="stix",
                 description=description,
                 created_by_ref=identity_id,
-                created=datetime.datetime.strptime(
+                created=datetime.strptime(
                     threat["detected"], "%Y-%m-%dT%H:%M:%S.%fZ"
-                ),
-                modified=datetime.datetime.strptime(
+                ).replace(tzinfo=timezone.utc),
+                modified=datetime.strptime(
                     threat["imported"], "%Y-%m-%dT%H:%M:%S.%fZ"
-                ),
+                ).replace(tzinfo=timezone.utc),
                 labels=[threat["class"], threat["property"]],
                 confidence=threat["confidence"],
                 object_marking_refs=[self.infoblox_marking],
@@ -294,7 +294,7 @@ class Infoblox:
         try:
             self.helper.connector_logger.info("Synchronizing with Infoblox APIs...")
             timestamp = int(time.time())
-            now = datetime.datetime.fromtimestamp(timestamp, datetime.timezone.utc)
+            now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
             friendly_name = "Infoblox run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
@@ -309,7 +309,7 @@ class Infoblox:
                 "Get IOC since " + current_state["last_run"]
             )
             self.opencti_bundle(work_id)
-            self.helper.set_state({"last_run": now.astimezone().isoformat()})
+            self.helper.set_state({"last_run": now.isoformat()})
             message = "End of synchronization"
             self.helper.api.work.to_processed(work_id, message)
             self.helper.connector_logger.info(message)
