@@ -1,10 +1,10 @@
 import base64
-from datetime import datetime, timezone
 import json
 import os
 import re
 import sys
 import time
+from datetime import datetime, timezone
 
 import cabby
 import eti_api
@@ -270,7 +270,9 @@ class Eset:
                                 object["x_opencti_create_observables"] = (
                                     self.eset_create_observables
                                 )
-                        object["where_sighted_refs"] = []
+                            # Clear where_sighted_refs for indicators only
+                            # (this property is not valid for other STIX object types)
+                            object["where_sighted_refs"] = []
                         objects.append(object)
                     parsed_content["objects"] = objects
                     self.helper.send_stix2_bundle(
@@ -336,8 +338,8 @@ class Eset:
 
 if __name__ == "__main__":
     try:
-        esetConnector = Eset()
-        esetConnector.run()
+        eset_connector = Eset()
+        eset_connector.run()
     except Exception as e:
         print(e)
         time.sleep(10)

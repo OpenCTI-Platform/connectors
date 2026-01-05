@@ -68,7 +68,9 @@ class ConnectorDisinfox:
         state = self.helper.get_state()
         if state is None:
             self.helper.connector_logger.info("First run, setting last_fetch to epoch")
-            last_fetch = datetime.fromtimestamp(0).isoformat(timespec="microseconds")
+            last_fetch = datetime.fromtimestamp(0, tz=timezone.utc).isoformat(
+                timespec="microseconds"
+            )
         else:
             last_fetch = state.get("last_fetch")
             if not last_fetch:  # If its the first run, we set epoch as last_fetch
@@ -79,7 +81,7 @@ class ConnectorDisinfox:
                     timespec="microseconds"
                 )
         last_fetch = last_fetch + "Z"
-        now = datetime.now().isoformat(timespec="microseconds") + "Z"
+        now = datetime.now(tz=timezone.utc).isoformat(timespec="microseconds") + "Z"
         entities = self.client.get_entities(params={"newer_than": last_fetch})
 
         if entities:
@@ -105,7 +107,7 @@ class ConnectorDisinfox:
 
         try:
             # Get the current state
-            now = datetime.now()
+            now = datetime.now(tz=timezone.utc)
             current_timestamp = int(datetime.timestamp(now))
             current_state = self.helper.get_state()
 
@@ -148,7 +150,7 @@ class ConnectorDisinfox:
 
                 self.helper.connector_logger.info(
                     "Sending STIX objects to OpenCTI...",
-                    {"bundles_sent": {str(len(bundles_sent))}},
+                    {"bundles_sent": str(len(bundles_sent))},
                 )
             # ===========================
             # === Add your code above ===

@@ -95,7 +95,9 @@ class DisarmFramework:
                 last_run = current_state["last_run"]
                 self.helper.log_info(
                     "Connector last run: "
-                    + datetime.fromtimestamp(last_run, tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+                    + datetime.fromtimestamp(last_run, tz=timezone.utc).strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
                 )
             else:
                 last_run = None
@@ -175,8 +177,8 @@ class DisarmFramework:
 
 if __name__ == "__main__":
     try:
-        disarmFrameworkConnector = DisarmFramework()
-        disarmFrameworkConnector.run()
+        connector = DisarmFramework()
+        connector.run()
     except Exception as e:
         print(e)
         time.sleep(10)

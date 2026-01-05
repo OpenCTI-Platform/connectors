@@ -670,21 +670,21 @@ class MISPConverterToStix:
         return elements
 
     @staticmethod
-    def _detect_ip_version(value, type=False):
+    def _detect_ip_version(value, type_=False):
         """
         :param value:
-        :param type:
+        :param type_:
         :return:
         """
         if re.match(
             r"^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}(\/([1-9]|[1-2]\d|3[0-2]))?$",
             value,
         ):
-            if type:
+            if type_:
                 return "IPv4-Addr"
             return "ipv4-addr"
         else:
-            if type:
+            if type_:
                 return "IPv6-Addr"
             return "ipv6-addr"
 
@@ -1188,7 +1188,8 @@ class MISPConverterToStix:
                                     int(misp_sighting["date_sighting"]), timezone.utc
                                 ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                                 datetime.fromtimestamp(
-                                    int(misp_sighting["date_sighting"]) + 3600, timezone.utc
+                                    int(misp_sighting["date_sighting"]) + 3600,
+                                    timezone.utc,
                                 ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                             ),
                             sighting_of_ref=indicator["id"],
@@ -1925,7 +1926,8 @@ class MISPConverterToStix:
                                 datetime.strptime(
                                     str(event["Event"]["date"]), "%Y-%m-%d"
                                 ).timestamp()
-                            ), timezone.utc
+                            ),
+                            timezone.utc,
                         ),
                     ),
                     name=event["Event"]["info"],
@@ -1935,14 +1937,16 @@ class MISPConverterToStix:
                             datetime.strptime(
                                 str(event["Event"]["date"]), "%Y-%m-%d"
                             ).timestamp()
-                        ), timezone.utc
+                        ),
+                        timezone.utc,
                     ),
                     created=datetime.fromtimestamp(
                         int(
                             datetime.strptime(
                                 str(event["Event"]["date"]), "%Y-%m-%d"
                             ).timestamp()
-                        ), timezone.utc
+                        ),
+                        timezone.utc,
                     ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     modified=datetime.fromtimestamp(
                         int(event["Event"]["timestamp"]), timezone.utc
@@ -1968,7 +1972,8 @@ class MISPConverterToStix:
                                 datetime.strptime(
                                     str(event["Event"]["date"]), "%Y-%m-%d"
                                 ).timestamp()
-                            ), timezone.utc
+                            ),
+                            timezone.utc,
                         ),
                     ),
                     name=event["Event"]["info"],
@@ -1979,7 +1984,8 @@ class MISPConverterToStix:
                             datetime.strptime(
                                 str(event["Event"]["date"]), "%Y-%m-%d"
                             ).timestamp()
-                        ), timezone.utc
+                        ),
+                        timezone.utc,
                     ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     modified=datetime.fromtimestamp(
                         int(event["Event"]["timestamp"]), timezone.utc
@@ -1998,17 +2004,17 @@ class MISPConverterToStix:
             for note in event["Event"].get("EventReport", []):
                 note = stix2.Note(
                     id=Note.generate_id(
-                        datetime.fromtimestamp(int(note["timestamp"]), timezone.utc).strftime(
-                            "%Y-%m-%dT%H:%M:%SZ"
-                        ),
+                        datetime.fromtimestamp(
+                            int(note["timestamp"]), timezone.utc
+                        ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                         self._process_note(note["content"], bundle_objects),
                     ),
-                    created=datetime.fromtimestamp(int(note["timestamp"]), timezone.utc).strftime(
-                        "%Y-%m-%dT%H:%M:%SZ"
-                    ),
-                    modified=datetime.fromtimestamp(int(note["timestamp"]), timezone.utc).strftime(
-                        "%Y-%m-%dT%H:%M:%SZ"
-                    ),
+                    created=datetime.fromtimestamp(
+                        int(note["timestamp"]), timezone.utc
+                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    modified=datetime.fromtimestamp(
+                        int(note["timestamp"]), timezone.utc
+                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     created_by_ref=author["id"],
                     object_marking_refs=event_markings,
                     abstract=note["name"],

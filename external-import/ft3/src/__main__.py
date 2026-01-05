@@ -107,7 +107,7 @@ class FT3:
                 if year < 100:
                     year += 2000
                 return datetime(year, month, day).strftime("%Y-%m-%dT%H:%M:%S.000Z")
-        except:
+        except (ValueError, IndexError):
             pass
         return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
@@ -409,8 +409,8 @@ class FT3:
 
 if __name__ == "__main__":
     try:
-        ft3Connector = FT3()
-        ft3Connector.run()
+        ft3_connector = FT3()
+        ft3_connector.run()
     except Exception as e:
         print(e)
         time.sleep(10)

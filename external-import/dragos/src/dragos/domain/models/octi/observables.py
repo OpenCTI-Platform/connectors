@@ -5,6 +5,8 @@ from abc import abstractmethod
 from typing import Any, Optional, Self
 
 import stix2  # type: ignore[import-untyped] # stix2 does not provide stubs
+from pydantic import AwareDatetime, Field, PositiveInt, field_validator, model_validator
+
 from dragos.domain.models.octi.common import (
     Author,
     BaseEntity,
@@ -17,7 +19,6 @@ from dragos.domain.models.octi.enums import (
     ObservableType,
     PatternType,
 )
-from pydantic import AwareDatetime, Field, PositiveInt, field_validator, model_validator
 
 
 class Observable(BaseEntity):

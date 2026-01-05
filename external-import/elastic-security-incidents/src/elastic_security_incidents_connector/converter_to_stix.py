@@ -104,7 +104,9 @@ class ConverterToStix:
         incident_name = alert.get("kibana.alert.rule.name", "Elastic Security Alert")
 
         # Get timestamps
-        incident_created_at = alert.get("@timestamp", datetime.now(timezone.utc).isoformat())
+        incident_created_at = alert.get(
+            "@timestamp", datetime.now(timezone.utc).isoformat()
+        )
         first_seen = alert.get("kibana.alert.original_time", incident_created_at)
         last_seen = alert.get("kibana.alert.last_detected", incident_created_at)
 
@@ -634,8 +636,10 @@ class ConverterToStix:
                     custom_properties={"created_by_ref": self.author["id"]},
                 )
             elif field_name == "process.executable":
-                return stix2.Process(
-                    binary_ref=str(field_value),
+                # Return a File object for the executable path
+                # (binary_ref requires an object reference, not a string value)
+                return stix2.File(
+                    name=str(field_value),
                     object_marking_refs=[self.tlp_marking],
                     custom_properties={"created_by_ref": self.author["id"]},
                 )

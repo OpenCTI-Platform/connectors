@@ -10,6 +10,7 @@ import requests
 import stix2
 import yaml
 from pycti import (
+    Identity,
     Indicator,
     MarkingDefinition,
     OpenCTIConnectorHelper,
@@ -123,7 +124,7 @@ class Fortinet:
             default="TLP:AMBER+STRICT",
         )
 
-        self.identity_id = "identity--da04cc3f-ad56-5cf3-a1f0-860685179cdf"
+        self.identity_id = Identity.generate_id("Fortinet", "organization")
 
     def set_marking(self):
         if self.fortinet_marking == "TLP:WHITE" or self.fortinet_marking == "TLP:CLEAR":
@@ -256,7 +257,7 @@ class Fortinet:
 
                 stix_objects.append(relationship)
 
-            except:
+            except (ValueError, TypeError):
                 stix_objects.pop()
 
             return stix_objects
@@ -264,12 +265,10 @@ class Fortinet:
     def create_fortinet_org(self):
         identity = stix2.Identity(
             id=self.identity_id,
-            spec_version="2.1",
             name="Fortinet",
-            confidence=100,
             identity_class="organization",
-            type="identity",
-            object_marking_refs=stix2.TLP_WHITE,
+            description="Fortinet is a cybersecurity company providing threat intelligence feeds.",
+            object_marking_refs=[stix2.TLP_WHITE],
         )
 
         return identity
@@ -383,8 +382,8 @@ class Fortinet:
 
 if __name__ == "__main__":
     try:
-        fortinetConnector = Fortinet()
-        fortinetConnector.run()
+        fortinet_connector = Fortinet()
+        fortinet_connector.run()
     except Exception as e:
         print(e)
         time.sleep(10)
