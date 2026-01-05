@@ -10,8 +10,10 @@ VulnCheck aggregates data from a wide range of sources, providing actionable
 insights into vulnerabilities, exploits, ransomware activity, threat actors,
 and more.
 
-<!--toc:start-->
+## Table of Contents
+
 - [OpenCTI VulnCheck Connector](#opencti-vulncheck-connector)
+  - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -23,12 +25,8 @@ and more.
     - [Manual Deployment](#manual-deployment)
   - [Usage](#usage)
   - [Behavior](#behavior)
-    - [Data Sources](#data-sources)
-    - [Data Volume](#data-volume)
   - [Debugging](#debugging)
-  - [Useful Resources](#useful-resources)
-  - [Maintainers](#maintainers)
-<!--toc:end-->
+  - [Additional information](#additional-information)
 
 ## Introduction
 

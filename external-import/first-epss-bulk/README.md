@@ -1,16 +1,17 @@
-> **⚠️ WARNING:**  
-> This connector is **not the recommended way** to enrich vulnerabilities with EPSS information.  
-> It is strongly advised to use the `internal/enrichment-connector` for FIRST EPSS instead, as it provides a more robust and integrated solution.
+# OpenCTI FIRST EPSS Connector
 
-# OpenCTI FIRST EPSS external import connector
+> **Warning**: This connector is not the recommended way to enrich vulnerabilities with EPSS information. It is strongly advised to use the `internal/enrichment-connector` for FIRST EPSS instead, as it provides a more robust and integrated solution.
+
+The FIRST EPSS connector imports EPSS (Exploit Prediction Scoring System) scores for CVE vulnerabilities into OpenCTI.
 
 | Status            | Date | Comment |
 |-------------------|------|---------|
 | Filigran Verified | -    | -       |
 
-Table of Contents
+## Table of Contents
 
-- [OpenCTI FIRST EPSS external import connector](#opencti-first-epss-external-import-connector)
+- [OpenCTI FIRST EPSS Connector](#opencti-first-epss-connector)
+  - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -28,22 +29,22 @@ Table of Contents
 
 ## Introduction
 
-The OpenCTI First EPSS external import connector can be used to enrich CVE vulnerabilities with EPSS information provided by [FIRST EPSS CSV FILE](https://epss.cyentia.com).
+The FIRST EPSS connector enriches CVE vulnerabilities with EPSS (Exploit Prediction Scoring System) scores provided by [FIRST](https://www.first.org/epss/). EPSS is a data-driven effort for estimating the likelihood that a software vulnerability will be exploited in the wild.
+
+The EPSS score ranges from 0 to 1, where higher scores indicate a higher probability of exploitation within the next 30 days.
 
 ## Installation
 
 ### Requirements
 
 - OpenCTI Platform >= 6.5.2
+- Internet access to EPSS API (epss.cyentia.com)
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
-in `config.yml` (for manual deployment).
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
 
 ### OpenCTI environment variables
-
-Below are the parameters you'll need to set for OpenCTI:
 
 | Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
 |---------------|------------|-----------------------------|-----------|------------------------------------------------------|
@@ -52,102 +53,139 @@ Below are the parameters you'll need to set for OpenCTI:
 
 ### Base connector environment variables
 
-Below are the parameters you'll need to set for running the connector properly:
-
-| Parameter       | config.yml      | Docker environment variable   | Default                                | Mandatory | Description                                                                                      |
-|-----------------|-----------------|-------------------------------|----------------------------------------|-----------|--------------------------------------------------------------------------------------------------|
-| Connector ID    | id              | `CONNECTOR_ID`                | /                                      | Yes       | A unique `UUIDv4` identifier for this connector instance.                                        |
-| Connector Type  | type            | `CONNECTOR_TYPE`              | EXTERNAL_IMPORT                        | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                                    |
-| Connector Name  | name            | `CONNECTOR_NAME`              | `External Import First EPSS Connector` | Yes       | Name of the connector.                                                                           |
-| Connector Scope | scope           | `CONNECTOR_SCOPE`             | `vulnerability`                        | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object.         |
-| Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD`   | `PT24H`                                | No        | Determines the time interval between each launch of the connector in ISO 8601, ex: .             |
-| Queue Threshold | queue_threshold | `CONNECTOR_QUEUE_THRESHOLD`   | `500`                                  | No        | Used to determine the limit (RabbitMQ) in MB at which the connector must go into buffering mode. |
-| Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`         | info                                   | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.           |
+| Parameter       | config.yml      | Docker environment variable   | Default                                | Mandatory | Description                                                              |
+|-----------------|-----------------|-------------------------------|----------------------------------------|-----------|--------------------------------------------------------------------------|
+| Connector ID    | id              | `CONNECTOR_ID`                |                                        | Yes       | A unique `UUIDv4` identifier for this connector instance.                |
+| Connector Name  | name            | `CONNECTOR_NAME`              | External Import First EPSS Connector   | No        | Name of the connector.                                                   |
+| Connector Scope | scope           | `CONNECTOR_SCOPE`             | vulnerability                          | No        | The scope or type of data the connector is importing.                    |
+| Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD`   | PT24H                                  | No        | Time interval between runs in ISO 8601 format.                           |
+| Queue Threshold | queue_threshold | `CONNECTOR_QUEUE_THRESHOLD`   | 500                                    | No        | RabbitMQ queue limit in MB before buffering mode.                        |
+| Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`         | info                                   | No        | Determines the verbosity of logs: `debug`, `info`, `warn`, or `error`.   |
 
 ### Connector extra parameters environment variables
 
-Below are the parameters you'll need to set for the connector:
-
-| Parameter    | config.yml   | Docker environment variable | Default                  | Mandatory | Description |
-|--------------|--------------|-----------------------------|--------------------------|-----------|-------------|
-| API base URL | api_base_url | FIRST_EPSS_API_BASE_URL     | <https://epss.cyentia.com> | Yes       |             |
+| Parameter    | config.yml   | Docker environment variable | Default                    | Mandatory | Description                    |
+|--------------|--------------|------------------------------|----------------------------|-----------|--------------------------------|
+| API Base URL | api_base_url | `FIRST_EPSS_API_BASE_URL`    | https://epss.cyentia.com   | Yes       | FIRST EPSS API base URL.       |
 
 ## Deployment
 
 ### Docker Deployment
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
-sometimes the OpenCTI SDK fails to initialize.
+Build the Docker image:
 
-Build a Docker Image using the provided `Dockerfile`.
-
-Example:
-
-```shell
-# Replace the IMAGE NAME with the appropriate value
-docker build . -t [IMAGE NAME]:latest
+```bash
+docker build -t opencti/connector-first-epss-bulk:latest .
 ```
 
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
-environment. Then, start the docker container with the provided docker-compose.yml
+Configure the connector in `docker-compose.yml`:
 
-```shell
+```yaml
+  connector-first-epss-bulk:
+    image: opencti/connector-first-epss-bulk:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=FIRST EPSS
+      - CONNECTOR_SCOPE=vulnerability
+      - CONNECTOR_DURATION_PERIOD=PT24H
+      - CONNECTOR_LOG_LEVEL=info
+      - FIRST_EPSS_API_BASE_URL=https://epss.cyentia.com
+    restart: always
+```
+
+Start the connector:
+
+```bash
 docker compose up -d
-# -d for detached
 ```
 
 ### Manual Deployment
 
-Create a file `config.yml` based on the provided `config.yml.sample`.
+1. Create `config.yml` based on `config.yml.sample`.
 
-Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
+2. Install dependencies:
 
-Install the required python dependencies (preferably in a virtual environment):
-
-```shell
+```bash
 pip3 install -r requirements.txt
 ```
 
-Then, start the connector from recorded-future/src:
+3. Start the connector:
 
-```shell
+```bash
 python3 main.py
 ```
 
 ## Usage
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
+The connector runs automatically at the interval defined by `CONNECTOR_DURATION_PERIOD` (daily by default). To force an immediate run:
 
-However, if you would like to force an immediate download of a new batch of entities, navigate to:
+**Data Management → Ingestion → Connectors**
 
-`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform.
-
-Find the connector, and click on the refresh button to reset the connector's state and force a new
-download of data by re-running the connector.
+Find the connector and click the refresh button to reset the state and trigger a new data fetch.
 
 ## Behavior
 
-<!--
-Describe how the connector functions:
-* What data is ingested, updated, or modified
-* Important considerations for users when utilizing this connector
-* Additional relevant details
--->
+The connector fetches EPSS scores from FIRST and enriches CVE vulnerabilities in OpenCTI.
+
+### Data Flow
+
+```mermaid
+graph LR
+    subgraph FIRST EPSS
+        direction TB
+        API[EPSS API]
+        CSV[EPSS CSV Data]
+    end
+
+    subgraph OpenCTI
+        direction LR
+        Vulnerability[Vulnerability]
+        EPSSScore[EPSS Score]
+    end
+
+    API --> CSV
+    CSV --> Vulnerability
+    Vulnerability --> EPSSScore
+```
+
+### Entity Mapping
+
+| EPSS Data        | OpenCTI Property    | Description                                      |
+|------------------|---------------------|--------------------------------------------------|
+| CVE ID           | Vulnerability       | CVE identifier for matching                      |
+| EPSS Score       | x_opencti_epss_score| Exploitation probability (0-1)                   |
+| Percentile       | x_opencti_epss_percentile | Percentile ranking                         |
+
+### Processing Details
+
+1. **Download CSV**: Fetches the complete EPSS CSV file from FIRST
+2. **Parse Data**: Extracts CVE IDs, EPSS scores, and percentiles
+3. **Match CVEs**: Matches against existing vulnerabilities in OpenCTI
+4. **Update Scores**: Updates EPSS scores on matching vulnerabilities
+
+### EPSS Score Interpretation
+
+| Score Range  | Exploitation Probability | Priority      |
+|--------------|-------------------------|---------------|
+| 0.9 - 1.0    | Very High               | Critical      |
+| 0.7 - 0.9    | High                    | High          |
+| 0.4 - 0.7    | Medium                  | Medium        |
+| 0.1 - 0.4    | Low                     | Low           |
+| 0.0 - 0.1    | Very Low                | Informational |
 
 ## Debugging
 
-The connector can be debugged by setting the appropiate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.e., `self.helper.connector_logger.error("An error message")`.
+Enable verbose logging:
 
-<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
+```env
+CONNECTOR_LOG_LEVEL=debug
+```
 
 ## Additional information
 
-<!--
-Any additional information about this connector
-* What information is ingested/updated/changed
-* What should the user take into account when using this connector
-* ...
--->
+- **Update Frequency**: EPSS scores are updated daily; daily polling is recommended
+- **Public Data**: EPSS data is publicly available
+- **Enrichment Alternative**: Consider using the internal enrichment connector for on-demand EPSS lookups
+- **Reference**: [FIRST EPSS](https://www.first.org/epss/)

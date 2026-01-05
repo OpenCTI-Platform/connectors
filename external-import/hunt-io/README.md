@@ -1,21 +1,15 @@
-# OpenCTI External Ingestion Connector Hunt IO
+# OpenCTI Hunt.io Connector
+
+The Hunt.io connector imports threat intelligence from Hunt.io's threat intelligence platform into OpenCTI.
 
 | Status  | Date | Comment |
 |---------|------|---------|
 | Partner | -    | -       |
 
-<!--
-General description of the connector
-* What it does
-* How it works
-* Special requirements
-* Use case description
-* ...
--->
+## Table of Contents
 
-Table of Contents
-
-- [OpenCTI External Ingestion Connector Hunt IO](#opencti-external-ingestion-connector-hunt-io)
+- [OpenCTI Hunt.io Connector](#opencti-huntio-connector)
+  - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -33,20 +27,20 @@ Table of Contents
 
 ## Introduction
 
+[Hunt.io](https://hunt.io/) provides threat intelligence focused on attacker infrastructure, including C2 servers, malware hosting, and other malicious infrastructure. This connector fetches threat data from the Hunt.io API and imports it into OpenCTI.
+
 ## Installation
 
 ### Requirements
 
-- OpenCTI Platform >= 6...
+- OpenCTI Platform >= 6.x
+- Hunt.io API access (API key required)
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
-in `config.yml` (for manual deployment).
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
 
 ### OpenCTI environment variables
-
-Below are the parameters you'll need to set for OpenCTI:
 
 | Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
 |---------------|------------|-----------------------------|-----------|------------------------------------------------------|
@@ -55,103 +49,122 @@ Below are the parameters you'll need to set for OpenCTI:
 
 ### Base connector environment variables
 
-Below are the parameters you'll need to set for running the connector properly:
-
-| Parameter       | config.yml | Docker environment variable | Default         | Mandatory | Description                                                                              |
-|-----------------|------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
-| Connector Name  | name       | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+| Parameter       | config.yml | Docker environment variable | Default | Mandatory | Description                                                              |
+|-----------------|------------|-----------------------------|---------|-----------|--------------------------------------------------------------------------|
+| Connector ID    | id         | `CONNECTOR_ID`              |         | Yes       | A unique `UUIDv4` identifier for this connector instance.                |
+| Connector Name  | name       | `CONNECTOR_NAME`            | Hunt.io | No        | Name of the connector.                                                   |
+| Connector Scope | scope      | `CONNECTOR_SCOPE`           |         | Yes       | The scope or type of data the connector is importing.                    |
+| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | info    | No        | Determines the verbosity of logs: `debug`, `info`, `warn`, or `error`.   |
 
 ### Connector extra parameters environment variables
 
-Below are the parameters you'll need to set for the connector:
-
-| Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description |
-|--------------|--------------|-----------------------------|---------|-----------|-------------|
-| API base URL | api_base_url |                             |         | Yes       |             |
-| API key      | api_key      |                             |         | Yes       |             |
+| Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description                    |
+|--------------|--------------|------------------------------|---------|-----------|--------------------------------|
+| API Base URL | api_base_url | `HUNT_IO_API_BASE_URL`       |         | Yes       | Hunt.io API base URL.          |
+| API Key      | api_key      | `HUNT_IO_API_KEY`            |         | Yes       | Hunt.io API key.               |
 
 ## Deployment
 
 ### Docker Deployment
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
-sometimes the OpenCTI SDK fails to initialize.
+Build the Docker image:
 
-Build a Docker Image using the provided `Dockerfile`.
-
-Example:
-
-```shell
-# Replace the IMAGE NAME with the appropriate value
-docker build . -t [IMAGE NAME]:latest
+```bash
+docker build -t opencti/connector-hunt-io:latest .
 ```
 
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
-environment. Then, start the docker container with the provided docker-compose.yml
+Configure the connector in `docker-compose.yml`:
 
-```shell
+```yaml
+  connector-hunt-io:
+    image: opencti/connector-hunt-io:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Hunt.io
+      - CONNECTOR_SCOPE=hunt-io
+      - CONNECTOR_LOG_LEVEL=info
+      - HUNT_IO_API_BASE_URL=ChangeMe
+      - HUNT_IO_API_KEY=ChangeMe
+    restart: always
+```
+
+Start the connector:
+
+```bash
 docker compose up -d
-# -d for detached
 ```
 
 ### Manual Deployment
 
-Create a file `config.yml` based on the provided `config.yml.sample`.
+1. Create `config.yml` based on `config.yml.sample`.
 
-Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
+2. Install dependencies:
 
-Install the required python dependencies (preferably in a virtual environment):
-
-```shell
+```bash
 pip3 install -r requirements.txt
 ```
 
-Then, start the connector from recorded-future/src:
+3. Start the connector:
 
-```shell
+```bash
 python3 main.py
 ```
 
 ## Usage
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
+The connector runs automatically at the configured interval. To force an immediate run:
 
-However, if you would like to force an immediate download of a new batch of entities, navigate to:
+**Data Management → Ingestion → Connectors**
 
-`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform.
-
-Find the connector, and click on the refresh button to reset the connector's state and force a new
-download of data by re-running the connector.
+Find the connector and click the refresh button to reset the state and trigger a new data fetch.
 
 ## Behavior
 
-<!--
-Describe how the connector functions:
-* What data is ingested, updated, or modified
-* Important considerations for users when utilizing this connector
-* Additional relevant details
--->
+The connector fetches threat intelligence from Hunt.io API and imports it into OpenCTI.
 
+### Data Flow
+
+```mermaid
+graph LR
+    subgraph Hunt.io
+        direction TB
+        API[Hunt.io API]
+        Infrastructure[Threat Infrastructure]
+    end
+
+    subgraph OpenCTI
+        direction LR
+        Identity[Identity - Hunt.io]
+        Indicator[Indicator]
+        Observable[Observable]
+    end
+
+    API --> Infrastructure
+    Infrastructure --> Indicator
+    Infrastructure --> Observable
+    Indicator -- based-on --> Observable
+```
+
+### Entity Mapping
+
+| Hunt.io Data       | OpenCTI Entity      | Description                                      |
+|--------------------|---------------------|--------------------------------------------------|
+| IP Address         | IPv4-Addr           | Malicious IP observable                          |
+| Domain             | Domain-Name         | Malicious domain observable                      |
+| URL                | URL                 | Malicious URL observable                         |
+| -                  | Indicator           | STIX indicator with pattern                      |
 
 ## Debugging
 
-The connector can be debugged by setting the appropiate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
-e., `self.helper.connector_logger.error("An error message")`.
+Enable verbose logging:
 
-<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
+```env
+CONNECTOR_LOG_LEVEL=debug
+```
 
 ## Additional information
 
-<!--
-Any additional information about this connector
-* What information is ingested/updated/changed
-* What should the user take into account when using this connector
-* ...
--->
+- **API Access**: Hunt.io API requires authentication
+- **Reference**: [Hunt.io](https://hunt.io/)

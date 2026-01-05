@@ -1,4 +1,6 @@
-# Cyber Campaign Collection Connector
+# OpenCTI Cyber Campaign Collection Connector
+
+The Cyber Campaign Collection connector imports APT and cybercriminal campaign reports from the CyberMonitor GitHub repository into OpenCTI.
 
 | Status    | Date | Comment |
 |-----------|------|---------|
@@ -6,160 +8,163 @@
 
 ## Table of Contents
 
-- [Introduction](#introduction)
-- [Installation](#installation)
-  - [Requirements](#requirements)
-- [Configuration](#configuration)
-  - [Configuration Variables](#configuration-variables)
-- [Deployment](#deployment)
-  - [Docker Deployment](#docker-deployment)
-  - [Manual Deployment](#manual-deployment)
-- [Behavior](#behavior)
-  - [Data Flow](#data-flow)
-  - [Entity Mapping](#entity-mapping)
-- [Debugging](#debugging)
-- [Additional Information](#additional-information)
-
----
+- [OpenCTI Cyber Campaign Collection Connector](#opencti-cyber-campaign-collection-connector)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction](#introduction)
+  - [Installation](#installation)
+    - [Requirements](#requirements)
+  - [Configuration variables](#configuration-variables)
+    - [OpenCTI environment variables](#opencti-environment-variables)
+    - [Base connector environment variables](#base-connector-environment-variables)
+    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
+  - [Deployment](#deployment)
+    - [Docker Deployment](#docker-deployment)
+    - [Manual Deployment](#manual-deployment)
+  - [Usage](#usage)
+  - [Behavior](#behavior)
+  - [Debugging](#debugging)
+  - [Additional information](#additional-information)
 
 ## Introduction
 
-This connector imports APT and cybercriminal campaign reports from the [CyberMonitor APT_CyberCriminal_Campagin_Collections](https://github.com/CyberMonitor/APT_CyberCriminal_Campagin_Collections) GitHub repository into OpenCTI. This community-maintained repository aggregates publicly available threat intelligence reports documenting APT (Advanced Persistent Threat) and cybercriminal campaigns from various security vendors and researchers.
+The [CyberMonitor APT_CyberCriminal_Campagin_Collections](https://github.com/CyberMonitor/APT_CyberCriminal_Campagin_Collections) GitHub repository is a community-maintained collection that aggregates publicly available threat intelligence reports documenting APT (Advanced Persistent Threat) and cybercriminal campaigns from various security vendors and researchers.
 
-The connector parses the repository structure (organized by year and campaign date) and creates Report entities in OpenCTI with attached original documents (PDFs, images, etc.).
-
----
+This connector parses the repository structure (organized by year and campaign date) and creates Report entities in OpenCTI with attached original documents (PDFs, images, etc.).
 
 ## Installation
 
 ### Requirements
 
-- OpenCTI Platform version 6.0.0 or higher
+- OpenCTI Platform >= 6.0.0
 - (Optional) GitHub Personal Access Token for higher API rate limits
 
----
+## Configuration variables
 
-## Configuration
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
 
-### Configuration Variables
+### OpenCTI environment variables
 
-#### OpenCTI Parameters
+| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
+|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
+| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
+| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| OpenCTI URL | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
-| OpenCTI Token | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
+### Base connector environment variables
 
-#### Base Connector Parameters
+| Parameter            | config.yml           | Docker environment variable      | Default                   | Mandatory | Description                                                              |
+|----------------------|----------------------|----------------------------------|---------------------------|-----------|--------------------------------------------------------------------------|
+| Connector ID         | id                   | `CONNECTOR_ID`                   |                           | Yes       | A unique `UUIDv4` identifier for this connector instance.                |
+| Connector Name       | name                 | `CONNECTOR_NAME`                 | Cyber Campaign Collection | Yes       | Name of the connector.                                                   |
+| Connector Scope      | scope                | `CONNECTOR_SCOPE`                | cyber-monitor             | Yes       | The scope or type of data the connector is importing.                    |
+| Log Level            | log_level            | `CONNECTOR_LOG_LEVEL`            | info                      | No        | Determines the verbosity of logs: `debug`, `info`, `warn`, or `error`.   |
+| Update Existing Data | update_existing_data | `CONNECTOR_UPDATE_EXISTING_DATA` | false                     | No        | Whether to update existing data in OpenCTI.                              |
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| Connector ID | `CONNECTOR_ID` | Yes | A unique `UUIDv4` for this connector |
-| Connector Name | `CONNECTOR_NAME` | Yes | Name displayed in OpenCTI (e.g., `Cyber Campaign Collection`) |
-| Connector Scope | `CONNECTOR_SCOPE` | Yes | Supported scope (e.g., `cyber-monitor`) |
-| Log Level | `CONNECTOR_LOG_LEVEL` | Yes | Log level: `debug`, `info`, `warn`, or `error` |
-| Update Existing Data | `CONNECTOR_UPDATE_EXISTING_DATA` | No | Whether to update existing data |
+### Connector extra parameters environment variables
 
-#### Connector Extra Parameters
-
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| GitHub Token | `CYBER_MONITOR_GITHUB_TOKEN` | No | GitHub personal access token for higher API rate limits |
-| From Year | `CYBER_MONITOR_FROM_YEAR` | Yes | Starting year for historical import (e.g., `2020`) |
-| Interval | `CYBER_MONITOR_INTERVAL` | Yes | Polling interval in days (e.g., `7`) |
-
----
+| Parameter    | config.yml               | Docker environment variable    | Default | Mandatory | Description                                                    |
+|--------------|--------------------------|--------------------------------|---------|-----------|----------------------------------------------------------------|
+| GitHub Token | cyber_monitor.github_token | `CYBER_MONITOR_GITHUB_TOKEN` |         | No        | GitHub personal access token for higher API rate limits.       |
+| From Year    | cyber_monitor.from_year  | `CYBER_MONITOR_FROM_YEAR`      |         | Yes       | Starting year for historical import (e.g., `2020`).            |
+| Interval     | cyber_monitor.interval   | `CYBER_MONITOR_INTERVAL`       |         | Yes       | Polling interval in days (e.g., `7`).                          |
 
 ## Deployment
 
 ### Docker Deployment
 
-Use the following `docker-compose.yml`:
+Build the Docker image:
+
+```bash
+docker build -t opencti/connector-cyber-campaign-collection:latest .
+```
+
+Configure the connector in `docker-compose.yml`:
 
 ```yaml
-services:
   connector-cyber-campaign-collection:
     image: opencti/connector-cyber-campaign-collection:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
-      - CONNECTOR_ID=${CONNECTOR_CYBER_CAMPAIGN_ID}
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=Cyber Campaign Collection
       - CONNECTOR_SCOPE=cyber-monitor
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_UPDATE_EXISTING_DATA=false
-      - CYBER_MONITOR_GITHUB_TOKEN=${GITHUB_TOKEN}
+      - CYBER_MONITOR_GITHUB_TOKEN=ChangeMe
       - CYBER_MONITOR_FROM_YEAR=2020
       - CYBER_MONITOR_INTERVAL=7
     restart: always
-    depends_on:
-      - opencti
+```
+
+Start the connector:
+
+```bash
+docker compose up -d
 ```
 
 ### Manual Deployment
 
-1. Clone the repository and navigate to the connector directory
-2. Install dependencies: `pip install -r requirements.txt`
-3. Configure `config.yml`:
+1. Create `config.yml` based on `config.yml.sample`.
 
-```yaml
-opencti:
-  url: 'http://localhost:8080'
-  token: 'your-token'
+2. Install dependencies:
 
-connector:
-  id: 'your-uuid'
-  name: 'Cyber Campaign Collection'
-  scope: 'cyber-monitor'
-  log_level: 'info'
-  update_existing_data: false
-
-cyber_monitor:
-  github_token: 'your-github-token'  # Optional
-  from_year: 2020
-  interval: 7  # Days
+```bash
+pip3 install -r requirements.txt
 ```
 
-4. Run: `python cyber_campaign_collection.py`
+3. Start the connector:
 
----
+```bash
+python3 cyber_campaign_collection.py
+```
+
+## Usage
+
+The connector runs automatically at the interval defined by `CYBER_MONITOR_INTERVAL`. To force an immediate run:
+
+**Data Management → Ingestion → Connectors**
+
+Find the connector and click the refresh button to reset the state and trigger a new data fetch.
 
 ## Behavior
+
+The connector fetches campaign reports from the GitHub repository and creates Report entities with attached files.
 
 ### Data Flow
 
 ```mermaid
-graph TB
+graph LR
     subgraph GitHub Repository
+        direction TB
         Repo[APT_CyberCriminal_Campagin_Collections]
-        Years[Year Folders - 2019, 2020, ...]
-        Campaigns[Campaign Folders - YYYY.MM.DD_CampaignName]
-        Files[Report Files - PDF, Images, etc.]
+        Years[Year Folders]
+        Campaigns[Campaign Folders]
+        Files[Report Files]
     end
-    
-    subgraph Processing
-        Repo --> Years
-        Years --> Campaigns
-        Campaigns --> Files
+
+    subgraph OpenCTI
+        direction LR
+        Report[Report]
+        ExternalRef[External Reference]
+        Attachments[Attached Files]
     end
-    
-    subgraph OpenCTI Entities
-        Files --> Report[Report]
-        Files --> ExternalRef[External Reference]
-        Files --> Attachments[Attached Files]
-    end
-    
-    Report --> Organization[DUMMY Organization]
+
+    Repo --> Years
+    Years --> Campaigns
+    Campaigns --> Files
+    Files --> Report
+    Files --> ExternalRef
+    Files --> Attachments
 ```
 
 ### Entity Mapping
 
-| GitHub Data | OpenCTI Entity | Notes |
-|-------------|----------------|-------|
-| Campaign Folder | Report | Name extracted from folder name (after date prefix) |
-| Folder Date (YYYY.MM.DD) | Report.published | Date extracted and parsed from folder name |
-| Files (PDF, images, etc.) | Report.x_opencti_files | Files attached to the Report |
-| GitHub URL | External Reference | Link to the GitHub folder |
+| GitHub Data                  | OpenCTI Entity      | Description                                          |
+|------------------------------|---------------------|------------------------------------------------------|
+| Campaign Folder              | Report              | Name extracted from folder name (after date prefix)  |
+| Folder Date (YYYY.MM.DD)     | Report.published    | Date extracted and parsed from folder name           |
+| Files (PDF, images, etc.)    | Report.x_opencti_files | Files attached to the Report                       |
+| GitHub URL                   | External Reference  | Link to the GitHub folder                            |
 
 ### Processing Details
 
@@ -188,28 +193,27 @@ graph TB
    - **First Run**: Imports all campaigns from `from_year` to present
    - **Subsequent Runs**: Only imports current year campaigns
 
-6. **Author Identity**: A "DUMMY" organization is created as a placeholder object reference (required for valid STIX bundles)
-
 ### Import Frequency
 
-| Mode | Trigger | Data Scope |
-|------|---------|------------|
-| Historical Import | First run (no `last_run` state) | All years from `from_year` to current |
-| Incremental Import | Subsequent runs | Current year only |
-
----
+| Mode               | Trigger                        | Data Scope                        |
+|--------------------|--------------------------------|-----------------------------------|
+| Historical Import  | First run (no `last_run` state)| All years from `from_year` to current |
+| Incremental Import | Subsequent runs                | Current year only                 |
 
 ## Debugging
 
-Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug`. Common issues:
+Enable verbose logging:
 
+```env
+CONNECTOR_LOG_LEVEL=debug
+```
+
+Common issues:
 - **GitHub API rate limits**: Provide a `CYBER_MONITOR_GITHUB_TOKEN` to increase limits
 - **Large files**: Some PDFs may be large; ensure adequate memory
 - **Invalid date formats**: Some folder names may have non-standard dates; connector handles gracefully
 
----
-
-## Additional Information
+## Additional information
 
 ### Source Repository
 
@@ -219,14 +223,13 @@ Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug`. Common issues:
 
 ### Rate Limits
 
-| Authentication | Rate Limit |
-|----------------|------------|
-| Without token | 60 requests/hour |
-| With token | 5,000 requests/hour |
+| Authentication   | Rate Limit           |
+|------------------|----------------------|
+| Without token    | 60 requests/hour     |
+| With token       | 5,000 requests/hour  |
 
 ### Recommendations
 
 - Use a GitHub Personal Access Token for production deployments
 - Set `from_year` based on your data retention needs (older reports may be less relevant)
 - Consider running weekly (`interval: 7`) to catch new additions
-

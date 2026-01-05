@@ -4,7 +4,7 @@
 |-------------------|------|---------|
 | Filigran Verified | -    | -       |
 
-Table of Contents
+## Table of Contents
 
 - [OpenCTI Microsoft Defender Incidents Connector](#opencti-microsoft-defender-incidents-connector)
     - [Introduction](#introduction)
