@@ -41,7 +41,7 @@ class ConnectorClient:
             with gzip.open(io.BytesIO(response.content), "rt", encoding="utf-8") as f:
                 # Skip first line
                 next(f)
-                # Read csv by defaut taking in the headers cve,epss,percentile
+                # Read csv by default taking in the headers cve,epss,percentile
                 reader = csv.DictReader(f)
                 epss_data = {
                     row["cve"]: {
@@ -53,11 +53,11 @@ class ConnectorClient:
 
             return epss_data
         except requests.exceptions.RequestException as e:
-            self.helper.logger.error(f"Error during download: {e}")
+            self.helper.connector_logger.error(f"Error during download: {e}")
         except gzip.BadGzipFile as e:
-            self.helper.logger.error(f"Error during unzipping: {e}")
+            self.helper.connector_logger.error(f"Error during unzipping: {e}")
         except Exception as e:
-            self.helper.logger.error(f"Unknown error: {e}")
+            self.helper.connector_logger.error(f"Unknown error: {e}")
 
             self.helper.connector_logger.info(
                 "[API] HTTP Get Request to endpoint", {"url_path": api_url}

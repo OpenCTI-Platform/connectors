@@ -26,7 +26,7 @@ class ConverterToStix:
             id=Identity.generate_id(name="DShield.org", identity_class="organization"),
             name="DShield.org",
             identity_class="organization",
-            description="DESCRIPTION",
+            description="DShield is a community-based collaborative firewall log correlation system. It provides a platform for users of firewalls to share intrusion information and helps identify trends in malicious activity.",
             external_references=[
                 stix2.ExternalReference(
                     source_name="DShield",
@@ -65,6 +65,8 @@ class ConverterToStix:
         """
         indicator = stix2.Indicator(
             id=Indicator.generate_id(subnet),
+            name=f"DShield Block List: {subnet}",
+            description=f"This IP address/subnet ({subnet}) has been reported as a source of malicious activity by the DShield community.",
             pattern=f"[ipv4-addr:value = '{subnet}']",
             created_by_ref=self.author["id"],
             pattern_type="stix",

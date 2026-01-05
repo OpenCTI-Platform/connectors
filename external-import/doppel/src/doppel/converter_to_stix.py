@@ -1,4 +1,5 @@
 import json
+import re
 
 from doppel.utils import parse_iso_datetime
 from pycti import Identity as PyCTIIdentity
@@ -12,6 +13,13 @@ class ConverterToStix:
     """
     Provides methods for converting various types of input data into STIX 2.1 objects.
     """
+
+    # URL regex pattern
+    URL_PATTERN = re.compile(r"^https?://", re.IGNORECASE)
+    # IPv4 regex pattern
+    IPV4_PATTERN = re.compile(r"^(\d{1,3}\.){3}\d{1,3}$")
+    # Email regex pattern
+    EMAIL_PATTERN = re.compile(r"^[^@]+@[^@]+\.[^@]+$")
 
     def __init__(self, helper, config):
         self.helper = helper
@@ -56,6 +64,31 @@ class ConverterToStix:
         }
         return mapping[level]
 
+    def _detect_entity_type(self, entity: str) -> tuple[str, str]:
+        """
+        Detect the type of entity and return the appropriate STIX pattern and observable type.
+        :param entity: The entity value to analyze
+        :return: Tuple of (stix_pattern, opencti_observable_type)
+        """
+        entity_stripped = entity.strip()
+
+        # Check for URL
+        if self.URL_PATTERN.match(entity_stripped):
+            escaped_entity = entity_stripped.replace("'", "\\'")
+            return f"[url:value = '{escaped_entity}']", "Url"
+
+        # Check for IPv4
+        if self.IPV4_PATTERN.match(entity_stripped):
+            return f"[ipv4-addr:value = '{entity_stripped}']", "IPv4-Addr"
+
+        # Check for Email
+        if self.EMAIL_PATTERN.match(entity_stripped):
+            return f"[email-addr:value = '{entity_stripped}']", "Email-Addr"
+
+        # Default to domain-name (most common for brand protection)
+        escaped_entity = entity_stripped.replace("'", "\\'").lower()
+        return f"[domain-name:value = '{escaped_entity}']", "Domain-Name"
+
     def convert_alerts_to_stix(self, alerts: list):
         """
         Convert list of alerts to stix2 Indicator objects
@@ -72,7 +105,7 @@ class ConverterToStix:
                 )
 
                 entity = alert.get("entity", "unknown")
-                pattern = f"[entity:value ='{entity}']"
+                pattern, observable_type = self._detect_entity_type(entity)
                 indicator_id = PyCTIIndicator.generate_id(pattern=pattern)
 
                 created_at = (
@@ -139,6 +172,7 @@ class ConverterToStix:
                     ],
                     custom_properties={
                         "x_opencti_score": score,
+                        "x_opencti_main_observable_type": observable_type,
                         "x_opencti_brand": alert.get("brand", "unknown"),
                         "x_mitre_platforms": platform_value,
                         "x_opencti_source": alert.get("source", "unknown"),

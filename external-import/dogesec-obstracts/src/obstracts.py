@@ -99,7 +99,7 @@ class ObstractsConnector:
             )
             self.helper.send_stix2_bundle(json.dumps(bundle), work_id=self.work_id)
             self.set_feed_state(feed_id, last_updated=post_updated)
-        except:
+        except Exception:
             self.helper.log_error("could not process post " + post_name)
 
     def retrieve(self, path, list_key, params: dict = None):
@@ -125,7 +125,7 @@ class ObstractsConnector:
                 self.helper.connect_id, self.helper.connect_name
             )
             self._run_once()
-        except:
+        except Exception:
             self.helper.log_error("run failed")
             in_error = True
         finally:

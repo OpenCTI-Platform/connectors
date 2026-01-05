@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-disarm-framework
 
 # Start the connector
-python3 disarm-framework.py
+python3 disarm_framework.py

@@ -74,8 +74,8 @@ class _EmailIntelConfig(BaseModel):
 
     @model_validator(mode="before")
     def check_auth(cls, values: dict[str, Any]) -> dict[str, Any]:
-        """Check the autentivication method."""
-        # Condition fo unicity to select proprer adapter should be added here
+        """Check the authentication method."""
+        # Condition for unicity to select proper adapter should be added here
         # Only one of these conditions must be True
         password = values.get("password")
         google_token_json = values.get("google_token_json")

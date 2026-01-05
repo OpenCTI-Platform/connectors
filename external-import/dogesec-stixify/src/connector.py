@@ -4,6 +4,7 @@ STIXIFY Connector
 
 import json
 import os
+import sys
 import time
 from datetime import UTC, datetime, timedelta
 from urllib.parse import urljoin
@@ -35,7 +36,7 @@ class StixifyConnector:
         if not self.dossier_ids:
             self.helper.log_error("at least one dossier id required")
             self.helper.stop()
-            exit(0)
+            sys.exit(1)
 
         self.session = requests.Session()
         self.session.headers = {
@@ -56,7 +57,7 @@ class StixifyConnector:
     def list_dossiers(self):
         try:
             return self.retrieve2("v1/dossiers/")
-        except:
+        except Exception:
             self.helper.log_error("failed to fetch dossiers")
         return []
 
@@ -98,12 +99,12 @@ class StixifyConnector:
                 f"{report_name} sending bundle with {len(objects)} items"
             )
             self.helper.send_stix2_bundle(json.dumps(bundle), work_id=self.work_id)
-            ## add some miliseconds to the time so it gets skipped next run
+            # Add some milliseconds to the time so it gets skipped next run
             report_created = (
                 datetime.fromisoformat(report_created) + timedelta(milliseconds=990)
             ).isoformat()
             self.set_dossier_state(dossier_id, last_updated=report_created)
-        except:
+        except Exception:
             self.helper.log_error("could not process report " + report_name)
 
     def retrieve(self, path, list_key, params: dict = None):
@@ -151,7 +152,7 @@ class StixifyConnector:
                 self.helper.connect_id, self.helper.connect_name
             )
             self._run_once()
-        except:
+        except Exception:
             self.helper.log_error("run failed")
             in_error = True
         finally:
