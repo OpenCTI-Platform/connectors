@@ -3,7 +3,7 @@ import ssl
 import sys
 import time
 import urllib
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from pycti import OpenCTIConnectorHelper
@@ -25,7 +25,7 @@ STATEMENT_MARKINGS = [
 def time_from_unixtime(timestamp):
     if not timestamp:
         return None
-    return datetime.utcfromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.fromtimestamp(timestamp, tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def get_unixtime_now():
@@ -216,9 +216,10 @@ class Mitre:
 
 if __name__ == "__main__":
     try:
-        mitreConnector = Mitre()
-        mitreConnector.run()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        sys.exit(0)
+        mitre_connector = Mitre()
+        mitre_connector.run()
+    except Exception:
+        import traceback
+
+        traceback.print_exc()
+        sys.exit(1)
