@@ -1,142 +1,185 @@
-# Scout Search Connector Internal Enrichment Connector
+# OpenCTI Team Cymru Scout Search Internal Enrichment Connector
 
-| Type                | Status       | OpenCTI Version  | Deployment      |
-|---------------------|--------------|------------------|-----------------|
-| Internal Enrichment | ✅ Supported | ≥ 6.7.16         | Docker / Manual |
+## Table of Contents
 
-> **⚠️ EARLY ACCESS VERSION**
->
-> This connector is currently in early access. Features and functionality may change as development continues. Please report any issues or feedback to help improve the connector.
+- [Introduction](#introduction)
+- [Installation](#installation)
+  - [Requirements](#requirements)
+- [Configuration](#configuration)
+  - [OpenCTI Configuration](#opencti-configuration)
+  - [Base Connector Configuration](#base-connector-configuration)
+  - [Scout API Configuration](#scout-api-configuration)
+- [Deployment](#deployment)
+  - [Docker Deployment](#docker-deployment)
+  - [Manual Deployment](#manual-deployment)
+- [Usage](#usage)
+- [Behavior](#behavior)
+  - [Data Flow](#data-flow)
+  - [API Endpoints](#api-endpoints)
+  - [Generated STIX Objects](#generated-stix-objects)
+- [Debugging](#debugging)
+- [Additional Information](#additional-information)
 
-## 🧭 Introduction
+---
 
-**Scout Search Connector** is a powerful cyber threat intelligence tool that uniquely provides real-time visibility of external threats, at speeds others can't match. This internal enrichment connector allows **OpenCTI** users to query the **Team Cymru Scout API** to enrich observables of Playbook query via Text observable.
+## Introduction
+
+**Scout Search Connector** is a powerful cyber threat intelligence tool that uniquely provides real-time visibility of external threats at speeds others cannot match. This internal enrichment connector allows OpenCTI users to query the Team Cymru Scout API using Text observables for playbook-based queries.
 
 This connector queries the Scout API endpoints in real-time and transforms the response into standardized STIX 2.1 bundles compatible with the OpenCTI platform.
 
----
-
-## 🧬 Supported Observable Types
-
-| Observable Type |
-|-----------------|
-| Text            |
+**Note**: This connector is currently in early access. Features and functionality may change as development continues.
 
 ---
 
-## 🔗 API Endpoints Used
+## Installation
 
-| Method | Endpoint                            | Description              |
-|--------|-------------------------------------|--------------------------|
-| GET    | `/search?query={query}&days={days}` | Used for Text Enrichment |
+### Requirements
 
----
-
-## ✅ Requirements
-
-- OpenCTI Platform version: **≥ 6.7.16**
-- **Docker Engine** (for container-based deployment)
-- **Python ≥ 3.9** (for manual deployment)
+- OpenCTI Platform >= 6.7.16
+- Docker Engine (for container-based deployment)
+- Python >= 3.9 (for manual deployment)
+- Team Cymru Scout API token
 
 ---
 
-## ⚙️ Configuration Variables
+## Configuration
 
-This connector supports two configuration methods:
+### OpenCTI Configuration
 
-- **Environment variables** (recommended for Docker)
-- **config.yml** (for manual deployment)
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `opencti_url` | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
+| `opencti_token` | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
 
-### OpenCTI Environment Variables
+### Base Connector Configuration
 
-| Variable        | Description            | Required  |
-|-----------------|------------------------|-----------|
-| `OPENCTI_URL`   | OpenCTI platform URL   | ✅        |
-| `OPENCTI_TOKEN` | OpenCTI platform token | ✅        |
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `connector_id` | `CONNECTOR_ID` | Yes | A valid arbitrary `UUIDv4` unique for this connector |
+| `connector_name` | `CONNECTOR_NAME` | Yes | The name of the connector instance |
+| `connector_scope` | `CONNECTOR_SCOPE` | Yes | Must be `Text` |
+| `connector_confidence_level` | `CONNECTOR_CONFIDENCE_LEVEL` | Yes | Default confidence level (0-100) |
+| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
 
-### Connector Base Environment Variables
+### Scout API Configuration
 
-| Variable                     | Description                              | Required  | Example                    |
-|------------------------------|------------------------------------------|-----------|----------------------------|
-| `CONNECTOR_ID`               | Unique connector instance ID             | ✅        | pure-signal-scout-connector|
-| `CONNECTOR_TYPE`             | Always set to `INTERNAL_ENRICHMENT`      | ✅        | INTERNAL_ENRICHMENT        |
-| `CONNECTOR_NAME`             | Display name in OpenCTI UI               | ✅        | Scout Search Connector     |
-| `CONNECTOR_SCOPE`            | Supported observable types               | ✅        | Text                       |
-| `CONNECTOR_CONFIDENCE_LEVEL` | Confidence score (0–100)                 | ✅        | 100                        |
-| `CONNECTOR_LOG_LEVEL`        | Logging level (`debug`, `info`, `error`) | ✅        | error                      |
-
-### Scout API Environment Variables
-
-| Variable                            | Description                           | Required  | Example                                 |
-|-------------------------------------|---------------------------------------|-----------|------------------------------------------|
-| `PURE_SIGNAL_SCOUT_API_URL`         | Base URL of the Scout API             | ✅        | <https://taxii.cymru.com/api/scout>     |
-| `PURE_SIGNAL_SCOUT_API_TOKEN`       | Bearer token for the Scout API        | ✅        | (Set securely)                          |
-| `PURE_SIGNAL_SCOUT_MAX_TLP`         | Max TLP level to return in enrichment | ✅        | TLP:AMBER                               |
-| `PURE_SIGNAL_SCOUT_SEARCH_INTERVAL` | Search interval in days               | ✅        | 1                                       |
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `pure_signal_scout_api_url` | `PURE_SIGNAL_SCOUT_API_URL` | Yes | Base URL of the Scout API |
+| `pure_signal_scout_api_token` | `PURE_SIGNAL_SCOUT_API_TOKEN` | Yes | Bearer token for the Scout API |
+| `pure_signal_scout_max_tlp` | `PURE_SIGNAL_SCOUT_MAX_TLP` | Yes | Max TLP level for enrichment (default: TLP:AMBER) |
+| `pure_signal_scout_search_interval` | `PURE_SIGNAL_SCOUT_SEARCH_INTERVAL` | Yes | Search interval in days (default: 1) |
 
 ---
 
-## 🚀 Deployment
+## Deployment
 
-### 🐳 Docker Deployment
+### Docker Deployment
 
-**1. Configure Environment Variables:**
+Build a Docker Image using the provided `Dockerfile`.
 
-Copy the sample environment file and update with your values:
-
-```bash
-cp .env.sample .env
-```
-
-Edit `.env` and set your actual values:
-
-- `OPENCTI_URL` - Your OpenCTI instance URL
-- `OPENCTI_TOKEN` - Your OpenCTI API token
-- `PURE_SIGNAL_SCOUT_API_TOKEN` - Your Scout API token
-- Adjust other settings as needed
-
-**2. Update docker-compose.yml (if needed):**
-
-The default `docker-compose.yml` uses the external network `docker_default`. If your OpenCTI instance uses a different network name, update the network configuration:
+Example `docker-compose.yml`:
 
 ```yaml
-networks:
-  docker_default:
-    external: true
-    name: your-network-name  # Change this to match your OpenCTI network
+version: '3'
+services:
+  connector-team-cymru-scout-search:
+    image: opencti/connector-team-cymru-scout-search:rolling
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=scout-search-connector
+      - CONNECTOR_NAME=Scout Search Connector
+      - CONNECTOR_SCOPE=Text
+      - CONNECTOR_CONFIDENCE_LEVEL=100
+      - CONNECTOR_LOG_LEVEL=error
+      - PURE_SIGNAL_SCOUT_API_URL=https://taxii.cymru.com/api/scout
+      - PURE_SIGNAL_SCOUT_API_TOKEN=ChangeMe
+      - PURE_SIGNAL_SCOUT_MAX_TLP=TLP:AMBER
+      - PURE_SIGNAL_SCOUT_SEARCH_INTERVAL=1
+    restart: always
 ```
 
-**3. Build and Start:**
+### Manual Deployment
 
-```bash
-docker compose up -d
-```
-
-Or using make:
-
-```bash
-make docker-build
-make docker-up
-```
+1. Clone the repository
+2. Copy `.env.sample` to `.env` and configure
+3. Install dependencies: `pip install -r requirements.txt`
+4. Run the connector
 
 ---
 
-## ⚙️ Behavior
+## Usage
 
-### Routing Logic
+The connector performs searches by:
+1. Receiving Text observable enrichment requests (typically from playbooks)
+2. Querying the Scout API with the search query
+3. Returning STIX 2.1 bundles with search results
 
-| Observable Type | API Endpoint Used                   |
-|-----------------|-------------------------------------|
-| Text            | `/search?query={query}&days={days}` |
+This connector is designed for playbook integration where Text observables contain search queries.
 
-### Processing
+---
+
+## Behavior
+
+### Data Flow
+
+```mermaid
+flowchart LR
+    A[Text Observable] --> B[Scout Search Connector]
+    B --> C{Scout API}
+    C --> D[Search Results]
+    D --> E[STIX 2.1 Bundle]
+    E --> F[OpenCTI]
+```
+
+### API Endpoints
+
+| Observable Type | API Endpoint | Description |
+|-----------------|--------------|-------------|
+| Text | `/search?query={query}&days={days}` | Text-based search |
+
+### Processing Details
 
 - Responses are returned as STIX 2.1 bundles (no transformation required)
 - No bundle validation needed
 - **Rate Limiting**: Respects 1 request per second
+- Search interval configurable via `PURE_SIGNAL_SCOUT_SEARCH_INTERVAL`
 
-## 📜 Logging
+### Generated STIX Objects
 
-Default logging level: error
+The Scout API returns complete STIX 2.1 bundles that may include:
 
-For detailed logs, set `CONNECTOR_LOG_LEVEL=debug`
+| Object Type | Description |
+|-------------|-------------|
+| Identity | Organizations and entities |
+| Location | Geographic information |
+| Autonomous-System | ASN data |
+| Indicator | Threat indicators |
+| Observable | IP addresses, domains, etc. |
+| Relationship | Links between entities |
+
+---
+
+## Debugging
+
+Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug` to see:
+- API request/response details
+- Search query processing
+- STIX bundle contents
+
+---
+
+## Additional Information
+
+- [Team Cymru](https://www.team-cymru.com/)
+- [Pure Signal Scout](https://www.team-cymru.com/pure-signal)
+
+### Early Access
+
+This connector is currently in early access. Please report any issues or feedback to help improve the connector.
+
+### Use Case
+
+This connector is primarily designed for playbook-based searches where complex queries need to be executed against the Scout API. Create a Text observable with your search query and trigger enrichment.
