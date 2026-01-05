@@ -1,10 +1,10 @@
 # OpenCTI ESET ETI Report Connector
 
-The ESET ETI Report Enrichment connector automatically downloads PDF reports from the ESET Threat Intelligence (ETI) portal and attaches them to ESET report objects in OpenCTI.
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner Verified | -    | -       |
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
+The ESET ETI Report Enrichment connector automatically downloads PDF reports from the ESET Threat Intelligence (ETI) portal and attaches them to ESET report objects in OpenCTI.
 
 ## Table of Contents
 

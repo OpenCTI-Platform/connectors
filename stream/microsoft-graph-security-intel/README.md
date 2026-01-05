@@ -1,5 +1,9 @@
 # OpenCTI Microsoft Graph Security Intel
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
 > [!WARNING]  
 > **This connector is obsolete and should no longer be used.**  
 > This connector relies on Microsoft Graph's Threat Intelligence Indicator API, which uses the tiIndicator entity. Microsoft has officially deprecated this entity, and it will be removed in April 2026.
@@ -10,7 +14,6 @@
 > To feed Indicators into Microsoft Defender Threat Intelligence use the Microsoft Defender Intel connector:
 > 👉 https://github.com/OpenCTI-Platform/connectors/tree/master/stream/microsoft-defender-intel.
 > Please plan your migration as soon as possible to avoid service disruption after April 2026.
-
 
 This OpenCTI connector allows the ability to create or delete data from your OpenCTI platform to either the Microsoft
 Sentinel or Microsoft Defender for Endpoint platform utilizing
@@ -81,7 +84,6 @@ Below are the parameters you'll need to set for Sentinel Connector:
 | Action                                     | `action`         | `MICROSOFT_GRAPH_SECURITY_INTEL_ACTION`               | Depending on score            | No        | `alert`                       | The action to apply if the indicator is matched from within the targetProduct security tool. Possible values are: `unknown`, `allow`, `block`, `alert`.                                                                                                                                                                                                           |
 | TLP Level                                  | `tlp_level`      | `MICROSOFT_GRAPH_SECURITY_INTEL_TLP_LEVEL`            | /                             | No        | `amber`                       | This will overide all TLP values submitted to Sentinel to this. Possible TLP values are `unknown`, `white`, `green`, `amber`, `red`                                                                                                                                                                                                                               |
 | Passive Only                               | `passive_only`   | `MICROSOFT_GRAPH_SECURITY_INTEL_PASSIVE_ONLY`         | /                             | No        | `true`                        | Determines if the indicator should trigger an event that is visible to an end-user. When set to `True` security tools will not notify the end user that a ‘hit’ has occurred. This is most often treated as audit or silent mode by security products where they will simply log that a match occurred but will not perform the action. Default value is `False`. |
-
 
 ### Known Behavior
 

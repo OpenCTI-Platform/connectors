@@ -1,5 +1,9 @@
 # OpenCTI Hatching Triage Sandbox Internal Enrichment Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
 ## Table of Contents
 
 - [Introduction](#introduction)
@@ -223,4 +227,3 @@ Common issues:
 - [Hatching Triage Documentation](https://tria.ge/docs/)
 - [Get Triage API Token](https://tria.ge/account)
 - [Triage Public Cloud](https://tria.ge/)
-

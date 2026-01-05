@@ -1,10 +1,10 @@
 # OpenCTI CrowdSec External Import Connector
 
-The CrowdSec External Import Connector imports IP address threat intelligence from CrowdSec's Cyber Threat Intelligence (CTI) API into OpenCTI. It enriches IP observables with comprehensive threat data including reputation scores, attack patterns, MITRE techniques, vulnerabilities (CVEs), and behavioral analysis.
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner Verified | -    | -       |
 
-| Status  | Date | Comment |
-|---------|------|---------|
-| Partner | -    | -       |
+The CrowdSec External Import Connector imports IP address threat intelligence from CrowdSec's Cyber Threat Intelligence (CTI) API into OpenCTI. It enriches IP observables with comprehensive threat data including reputation scores, attack patterns, MITRE techniques, vulnerabilities (CVEs), and behavioral analysis.
 
 ## Table of Contents
 

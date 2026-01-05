@@ -1,7 +1,7 @@
 # OpenCTI Flashpoint Connector
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Filigran Verified | -    | -       |
 
 This connector integrates Flashpoint with the OpenCTI platform.
@@ -50,7 +50,6 @@ Priority: **YAML > .env > environment > defaults**.
 Find all the configuration variables available here: [Connector Configurations](./__metadata__)
 
 ⚠️ Please be aware that `CONNECTOR_DURATION_PERIOD` default value takes precedence over `FLASHPOINT_INTERVAL` default value if none of them are set.
-
 
 ## Deployment
 
@@ -176,7 +175,6 @@ graph LR
 
 %% Relationships
   FlashpointReport --> OpenCTIReport --> OpenCTIExternalReference
-
 
 %% Relationships to reports
   OpenCTIReport -- references --> OpenCTIAttackPattern

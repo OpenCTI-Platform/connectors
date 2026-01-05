@@ -1,5 +1,9 @@
 # OpenCTI Intezer Sandbox Internal Enrichment Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
+
 ## Table of Contents
 
 - [Introduction](#introduction)
@@ -197,4 +201,3 @@ Common issues:
 - [Intezer Analyze](https://analyze.intezer.com/)
 - [Get Intezer API Key](https://analyze.intezer.com/account-details)
 - [Intezer Documentation](https://docs.intezer.com/)
-

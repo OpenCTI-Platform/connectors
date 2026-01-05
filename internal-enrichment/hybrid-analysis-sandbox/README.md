@@ -1,5 +1,9 @@
 # OpenCTI Hybrid Analysis Sandbox Internal Enrichment Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
 ## Table of Contents
 
 - [Introduction](#introduction)
@@ -217,4 +221,3 @@ Common issues:
 - [Hybrid Analysis](https://www.hybrid-analysis.com/)
 - [Hybrid Analysis API Documentation](https://www.hybrid-analysis.com/docs/api/v2)
 - Free service powered by CrowdStrike Falcon Sandbox
-

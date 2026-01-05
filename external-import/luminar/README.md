@@ -1,10 +1,10 @@
 # OpenCTI Luminar CTI Connector
 
-The Luminar connector imports threat intelligence from Cognyte Luminar platform into OpenCTI, including IOCs, leaked credentials, and strategic cyber intelligence feeds.
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
-| Status    | Date       | Comment                   |
-|-----------|------------|---------------------------|
-| Community | -          | -                         |
+The Luminar connector imports threat intelligence from Cognyte Luminar platform into OpenCTI, including IOCs, leaked credentials, and strategic cyber intelligence feeds.
 
 ## Table of Contents
 

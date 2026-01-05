@@ -1,10 +1,10 @@
 # OpenCTI Tanium Incidents Connector
 
-The Tanium Incidents connector imports security alerts from Tanium Threat Response into OpenCTI as incidents and sightings.
-
-| Status            | Date | Comment |
-|-------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Filigran Verified | -    | -       |
+
+The Tanium Incidents connector imports security alerts from Tanium Threat Response into OpenCTI as incidents and sightings.
 
 ## Table of Contents
 

@@ -1,10 +1,10 @@
 # RansomwareLive Connector
 
-The RansomwareLive connector imports ransomware attack data and victim information from the ransomware.live API into OpenCTI.
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
-| Status            | Date       | Comment |
-|-------------------|------------|---------|
-| Filigran Verified | 2025-07-25 | -       |
+The RansomwareLive connector imports ransomware attack data and victim information from the ransomware.live API into OpenCTI.
 
 ## Table of Contents
 

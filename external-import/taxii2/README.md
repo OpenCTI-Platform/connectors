@@ -1,10 +1,10 @@
 # OpenCTI TAXII 2 Connector
 
-The TAXII 2 connector imports STIX 2.x threat intelligence from any TAXII 2.0 or 2.1 server into OpenCTI.
-
-| Status    | Date | Comment |
-|-----------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Community | -    | -       |
+
+The TAXII 2 connector imports STIX 2.x threat intelligence from any TAXII 2.0 or 2.1 server into OpenCTI.
 
 ## Table of Contents
 

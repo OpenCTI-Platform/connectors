@@ -1,5 +1,9 @@
 # OpenCTI VirusTotal Livehunt Stream connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
+
 This connector allows organizations to create and manage VirusTotal Livehunts from OpenCTI. 
 When enabling a Yara rule in OpenCTI automatically it does create a new Livehunt in VirusTotal.
 

@@ -1,7 +1,10 @@
 # OpenCTI ExportReportPdf Connector
 
-OpenCTI ExportReportPdf connector allows exporting PDF based reports for the following entities: Report (Analysis), Intrusion Set, and Threat Actor. The PDF may be useful for sharing threat intelligence with an external entity in a nice, well-groomed format.
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
+OpenCTI ExportReportPdf connector allows exporting PDF based reports for the following entities: Report (Analysis), Intrusion Set, and Threat Actor. The PDF may be useful for sharing threat intelligence with an external entity in a nice, well-groomed format.
 
 #### Technical information
 

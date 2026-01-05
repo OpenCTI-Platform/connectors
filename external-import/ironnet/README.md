@@ -1,10 +1,10 @@
 # OpenCTI IronNet Connector
 
-The IronNet connector imports threat intelligence from the IronRadar threat feed into OpenCTI.
-
-| Status  | Date | Comment |
-|---------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Partner | -    | -       |
+
+The IronNet connector imports threat intelligence from the IronRadar threat feed into OpenCTI.
 
 ## Table of Contents
 

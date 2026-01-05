@@ -1,5 +1,9 @@
 # OpenCTI ShadowTrackr Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
+
 ## Table of Contents
 
 - [Introduction](#introduction)
@@ -190,9 +194,3 @@ Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug` to see:
 - **Reduce Detection Noise**: Automatically lower scores for IP addresses associated with CDNs, Clouds, and VPNs.
 - **Time-Limited Indicators**: Set short validity periods for rapidly changing infrastructure (CDN, Cloud, VPN IPs change function frequently).
 - **Contextual Labeling**: Add labels to help analysts understand the nature of observed IP addresses.
-
-### Filigran Verification
-
-| Status            | Date       | Comment |
-|-------------------|------------|---------|
-| Filigran Verified | 2025-12-10 | -       |

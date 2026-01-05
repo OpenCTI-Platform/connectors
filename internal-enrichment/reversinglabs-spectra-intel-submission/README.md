@@ -1,5 +1,9 @@
 # OpenCTI ReversingLabs Spectra Intelligence Submission Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
+
 ## Table of Contents
 
 - [Introduction](#introduction)

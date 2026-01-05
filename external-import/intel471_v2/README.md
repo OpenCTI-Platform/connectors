@@ -1,7 +1,7 @@
 # OpenCTI Intel 471 Connector v2
 
-| Status           | Date | Comment |
-|------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Partner Verified | -    | -       |
 
 ## Description

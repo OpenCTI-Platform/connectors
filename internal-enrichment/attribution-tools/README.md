@@ -1,10 +1,10 @@
 # OpenCTI Attribution Tools Connector
 
-The Attribution Tools connector developed by WithSecure provides ML-based incident attribution capability for OpenCTI, automatically identifying the most probable intrusion sets responsible for an incident.
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
+The Attribution Tools connector developed by WithSecure provides ML-based incident attribution capability for OpenCTI, automatically identifying the most probable intrusion sets responsible for an incident.
 
 ## Table of Contents
 

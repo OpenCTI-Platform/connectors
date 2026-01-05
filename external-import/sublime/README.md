@@ -1,7 +1,7 @@
 # Sublime Security OpenCTI Connector
 
-| Status    | Date | Comment |
-|-----------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Community | -    | -       |
 
 An OpenCTI external import connector that retrieves malicious email message groups from Sublime Security's API and ingests them as OpenCTI Incidents and Cases.
@@ -110,7 +110,6 @@ docker compose logs -f connector-sublime
 | `SUBLIME_SET_PRIORITY` | `true` | Enable priority mapping from attack score |
 | `SUBLIME_SET_SEVERITY` | `false` | Enable severity mapping from attack score |
 | `SUBLIME_BATCH_SIZE` | `100` | Number of messages per processing batch |
-
 
 ## API Token Configuration
 

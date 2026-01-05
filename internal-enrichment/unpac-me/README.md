@@ -1,5 +1,9 @@
 # OpenCTI UnpacMe Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
+
 ## Table of Contents
 
 - [Introduction](#introduction)
@@ -199,4 +203,3 @@ Common issues:
 ### Less Noise Mode
 
 When `UNPAC_ME_LESS_NOISE=true`, the connector will only upload unpacked samples if they matched a malware family, reducing noise from generic unpacking results.
-

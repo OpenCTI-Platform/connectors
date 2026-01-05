@@ -1,10 +1,10 @@
 # OpenCTI MISP Feed Connector
 
-The MISP Feed connector imports threat intelligence from MISP Feed formats (URL or S3 bucket) into OpenCTI.
-
-| Status            | Date | Comment |
-|-------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Filigran Verified | -    | -       |
+
+The MISP Feed connector imports threat intelligence from MISP Feed formats (URL or S3 bucket) into OpenCTI.
 
 ## Table of Contents
 

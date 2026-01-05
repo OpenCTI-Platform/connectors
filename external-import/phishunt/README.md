@@ -1,10 +1,10 @@
 # Phishunt Connector
 
-The Phishunt connector imports URLs of active websites suspected of being phishing from the Phishunt feed into OpenCTI.
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
-| Status            | Date       | Comment |
-|-------------------|------------|---------|
-| Filigran Verified | 2025-06-13 | -       |
+The Phishunt connector imports URLs of active websites suspected of being phishing from the Phishunt feed into OpenCTI.
 
 ## Introduction
 

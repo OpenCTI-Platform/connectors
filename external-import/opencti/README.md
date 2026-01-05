@@ -1,10 +1,10 @@
 # OpenCTI Datasets Connector
 
-The OpenCTI Datasets connector imports reference data from the OpenCTI datasets repository to pre-populate your OpenCTI instance with foundational entities.
-
-| Status            | Date | Comment |
-|-------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Filigran Verified | -    | -       |
+
+The OpenCTI Datasets connector imports reference data from the OpenCTI datasets repository to pre-populate your OpenCTI instance with foundational entities.
 
 ## Table of Contents
 

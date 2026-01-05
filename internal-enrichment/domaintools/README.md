@@ -1,10 +1,10 @@
 # OpenCTI DomainTools Connector
 
-The DomainTools connector enriches Domain-Name and IPv4-Addr observables with WHOIS data, DNS records, risk scores, and related infrastructure from the DomainTools Iris Investigate API.
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
+The DomainTools connector enriches Domain-Name and IPv4-Addr observables with WHOIS data, DNS records, risk scores, and related infrastructure from the DomainTools Iris Investigate API.
 
 ## Table of Contents
 

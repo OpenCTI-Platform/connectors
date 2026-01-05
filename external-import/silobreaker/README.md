@@ -1,8 +1,8 @@
 # OpenCTI Silobreaker Connector
 
-| Status           | Date       | Comment |
-|------------------|------------|---------|
-| Partner Verified | 2025-03-06 | -       |
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner Verified | -    | -       |
 
 This connector connects to the Silobreaker and gather all data from a given date.
 

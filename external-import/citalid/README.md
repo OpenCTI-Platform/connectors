@@ -1,10 +1,10 @@
 # OpenCTI Citalid Connector
 
-The Citalid connector imports the latest CTI dataset from the Citalid platform into OpenCTI as STIX bundles.
-
-| Status  | Date | Comment |
-|---------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Partner | -    | -       |
+
+The Citalid connector imports the latest CTI dataset from the Citalid platform into OpenCTI as STIX bundles.
 
 ## Table of Contents
 

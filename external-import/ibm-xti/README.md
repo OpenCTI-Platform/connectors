@@ -1,10 +1,10 @@
 # OpenCTI IBM X-Force Threat Intelligence Connector
 
-The IBM X-Force connector imports threat intelligence from IBM X-Force Premium Threat Intelligence (XTI) via TAXII 2.1 into OpenCTI.
-
-| Status           | Date | Comment |
-|------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Partner Verified | -    | -       |
+
+The IBM X-Force connector imports threat intelligence from IBM X-Force Premium Threat Intelligence (XTI) via TAXII 2.1 into OpenCTI.
 
 ## Table of Contents
 

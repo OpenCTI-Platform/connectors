@@ -1,10 +1,10 @@
 # OpenCTI ESET Connector
 
-The ESET connector imports threat intelligence data from ESET Threat Intelligence into OpenCTI.
-
-| Status           | Date | Comment |
-|------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Partner Verified | -    | -       |
+
+The ESET connector imports threat intelligence data from ESET Threat Intelligence into OpenCTI.
 
 ## Table of Contents
 

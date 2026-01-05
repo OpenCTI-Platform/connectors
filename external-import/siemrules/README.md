@@ -1,7 +1,7 @@
 # OpenCTI SIEM Rules Connector
 
-| Status  | Date | Comment |
-|---------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Partner | -    | -       |
 
 ## Description

@@ -1,10 +1,10 @@
 # OpenCTI Cybersixgill Connector
 
-The Cybersixgill Darkfeed connector imports threat intelligence data from Cybersixgill's underground monitoring platform into OpenCTI.
-
-| Status    | Date | Comment |
-|-----------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Community | -    | -       |
+
+The Cybersixgill Darkfeed connector imports threat intelligence data from Cybersixgill's underground monitoring platform into OpenCTI.
 
 ## Table of Contents
 

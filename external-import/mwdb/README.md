@@ -1,8 +1,8 @@
 # OpenCTI MWDB Connector
 
-| Status    | Date       | Comment                         |
-|-----------|------------|---------------------------------|
-| Community | -          | -                               |
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
 ## Introduction
 

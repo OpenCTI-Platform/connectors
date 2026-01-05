@@ -1,10 +1,10 @@
 # OpenCTI Malpedia Connector
 
-The Malpedia connector imports malware family information, threat actor associations, and YARA rules from Malpedia into OpenCTI.
-
-| Status            | Date | Comment |
-|-------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Filigran Verified | -    | -       |
+
+The Malpedia connector imports malware family information, threat actor associations, and YARA rules from Malpedia into OpenCTI.
 
 ## Table of Contents
 

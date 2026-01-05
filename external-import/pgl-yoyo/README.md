@@ -1,7 +1,7 @@
 # PGL Yoyo Connector
 
-| Status    | Date | Comment |
-|-----------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Community | -    | -       |
 
 ## Table of Contents

@@ -1,10 +1,10 @@
 # OpenCTI SpyCloud Connector
 
-The SpyCloud connector imports breach records and compromised data from SpyCloud's threat intelligence platform into OpenCTI as incidents and observables.
-
-| Status            | Date | Comment |
-|-------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Filigran Verified | -    | -       |
+
+The SpyCloud connector imports breach records and compromised data from SpyCloud's threat intelligence platform into OpenCTI as incidents and observables.
 
 ## Table of Contents
 

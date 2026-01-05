@@ -1,10 +1,10 @@
 # OpenCTI Sekoia Connector
 
-The Sekoia connector imports threat intelligence from the Sekoia.io threat intelligence platform into OpenCTI.
-
-| Status            | Date | Comment |
-|-------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Filigran Verified | -    | -       |
+
+The Sekoia connector imports threat intelligence from the Sekoia.io threat intelligence platform into OpenCTI.
 
 ## Table of Contents
 

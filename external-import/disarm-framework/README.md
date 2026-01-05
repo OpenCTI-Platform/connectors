@@ -1,10 +1,10 @@
 # OpenCTI DISARM Framework Connector
 
-The DISARM Framework connector imports the DISARM (Disinformation Analysis and Risk Management) framework into OpenCTI, providing a structured approach for describing and countering disinformation campaigns.
-
-| Status            | Date | Comment |
-|-------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Filigran Verified | -    | -       |
+
+The DISARM Framework connector imports the DISARM (Disinformation Analysis and Risk Management) framework into OpenCTI, providing a structured approach for describing and countering disinformation campaigns.
 
 ## Table of Contents
 

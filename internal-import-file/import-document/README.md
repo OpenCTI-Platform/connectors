@@ -1,5 +1,9 @@
 # OpenCTI Document Import Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
 This connector allows organizations to feed information from document to OpenCTI.
 
 This connector extracts the information in the document files and then matches it against regular expressions for Entities from the OpenCTI knowledge base or new Observables.
@@ -128,7 +132,6 @@ regex_patterns =
 
 # if 'library', then define iocfinder function
 iocfinder_function = parse_urls
-
 
 # define Stix target where the result will be stored
 stix_target = Url.value

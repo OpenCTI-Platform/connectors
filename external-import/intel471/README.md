@@ -1,12 +1,12 @@
 # OpenCTI Intel 471 Connector (Legacy)
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner Verified | -    | -       |
+
 > ⚠️ **DEPRECATED**: This is the legacy version of the connector. Please use [OpenCTI Intel 471 Connector v2](../intel471_v2) for new deployments.
 
 The Intel 471 connector imports threat intelligence from Intel 471's Titan cybercrime intelligence platform into OpenCTI.
-
-| Status           | Date | Comment |
-|------------------|------|---------|
-| Partner Verified | -    | -       |
 
 ## Table of Contents
 

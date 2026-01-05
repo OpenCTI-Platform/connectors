@@ -1,5 +1,9 @@
 # OpenCTI Shodan Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
 ## Table of Contents
 
 - [Introduction](#introduction)

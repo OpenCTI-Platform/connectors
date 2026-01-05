@@ -1,7 +1,7 @@
 # ZeroFox Threat Intelligence Connector
 
-| Status           | Date | Comment |
-|------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Partner Verified | -    | -       |
 
 The OpenCTI ZeroFox connector can be used to import knowledge from the ZeroFox
@@ -26,7 +26,6 @@ integrated to the global `docker-compose.yml` file of OpenCTI.
 If you are using it independently, remember that the connector will try to connect to
 the RabbitMQ on the port configured in the OpenCTI platform.
 
-
 ### Requirements
 
 - OpenCTI Platform >= 6.9.5
@@ -46,4 +45,3 @@ the RabbitMQ on the port configured in the OpenCTI platform.
 | `username`                       | `ZEROFOX_USERNAME`               | Yes          | A ZeroFox platform username                                                                     |
 | `password`                       | `ZEROFOX_PASSWORD`               | Yes          | A personal access token for accesing the ZeroFox API                                            |
 | `zerofox_collectors`             | `ZEROFOX_COLLECTORS`             | No           | A comma-separated list of collector names to use by the connector. Uses all of them if ommited  |
-

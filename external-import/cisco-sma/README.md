@@ -1,10 +1,10 @@
 # OpenCTI Cisco SMA Connector
 
-The Cisco SMA connector imports threat intelligence data from the Cisco Secure Malware Analytics (formerly ThreatGrid) feeds into OpenCTI.
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
+The Cisco SMA connector imports threat intelligence data from the Cisco Secure Malware Analytics (formerly ThreatGrid) feeds into OpenCTI.
 
 ## Table of Contents
 
