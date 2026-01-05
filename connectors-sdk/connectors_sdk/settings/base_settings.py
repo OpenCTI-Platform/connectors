@@ -117,8 +117,7 @@ class _SettingsLoader(BaseSettings):
             return config_yml_legacy_file_path
         elif config_yml_file_path.is_file():
             return config_yml_file_path
-        else:
-            return None
+        return None
 
     @classmethod
     def _get_dot_env_file_path(cls) -> Path | None:
