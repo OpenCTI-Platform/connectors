@@ -9,7 +9,7 @@ services:
       - CONNECTOR_NAME=FT3
       - CONNECTOR_SCOPE=ft3
       - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_DURATION_PERIOD=P7D # ISO8601 format, every 7 days
+      - FT3_INTERVAL=7 # In days
       # - FT3_TACTICS_URL=https://raw.githubusercontent.com/stripe/ft3/refs/heads/master/FT3_Tactics.json # Optional
       # - FT3_TECHNIQUES_URL=https://raw.githubusercontent.com/stripe/ft3/refs/heads/master/FT3_Techniques.json # Optional
     restart: always

@@ -1,5 +1,9 @@
 # OpenCTI TeamT5 External Import Connector
 
+| Status            | Date       | Comment |
+|-------------------|------------|---------|
+| Filigran Verified | 2025-10-14 | -       |
+
 A connector enabling the automatic ingestion of Reports and Indicator Bundles from the Team T5 Platform to an OpenCTI Instance.
 
 

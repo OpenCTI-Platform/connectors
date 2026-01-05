@@ -1,5 +1,9 @@
 # OpenCTI External Ingestion Connector IBM X-Force Premier Threat Intelligence Services
 
+| Status           | Date | Comment |
+|------------------|------|---------|
+| Partner Verified | -    | -       |
+
 <!--
 General description of the connector
 * What it does
