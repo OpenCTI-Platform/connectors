@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'DISARM Framework'
   scope: 'marking-definition,identity,attack-pattern,course-of-action,intrusion-set,campaign,malware,tool,report,narrative,event,channel'
   run_and_terminate: false

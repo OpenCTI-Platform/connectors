@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'CrowdStrike'
   scope: 'crowdstrike'
   log_level: 'info'

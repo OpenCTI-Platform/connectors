@@ -1,3 +1,4 @@
+version: '3'
 services:
   connector-team-cymru-scout:
     image: opencti/connector-team-cymru-scout:rolling
@@ -5,7 +6,6 @@ services:
       - OPENCTI_URL=${OPENCTI_URL:-http://opencti:8080}
       - OPENCTI_TOKEN=${OPENCTI_TOKEN:-}
       - CONNECTOR_ID=${CONNECTOR_ID:-scout-enrichment-connector}
-      - CONNECTOR_TYPE=${CONNECTOR_TYPE:-INTERNAL_ENRICHMENT}
       - CONNECTOR_NAME=${CONNECTOR_NAME:-Scout Enrichment Connector}
       - CONNECTOR_SCOPE=${CONNECTOR_SCOPE:-IPv4-Addr,IPv6-Addr,Domain-Name}
       - CONNECTOR_AUTO=${CONNECTOR_AUTO:-false}

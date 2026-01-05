@@ -6,7 +6,6 @@ services:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=CATALYST
       - CONNECTOR_SCOPE=catalyst
       - CONNECTOR_LOG_LEVEL=info

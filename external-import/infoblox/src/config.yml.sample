@@ -5,7 +5,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'Infoblox'
   scope: 'Infoblox'
   log_level: 'info'

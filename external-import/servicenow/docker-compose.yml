@@ -4,11 +4,11 @@ services:
     image: opencti/connector-servicenow:latest
     environment:
       # OpenCTI parameters - REQUIRED
-      - OPENCTI_URL=CHANGEME
-      - OPENCTI_TOKEN=CHANGEME
+      - OPENCTI_URL=ChangeMe
+      - OPENCTI_TOKEN=ChangeMe
 
       # Connector's definition parameters - REQUIRED
-      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_ID=ChangeMe
 
       # Connector's definition parameters - OPTIONAL
       #- CONNECTOR_NAME=ServiceNow
@@ -21,11 +21,11 @@ services:
       #- CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7
       #- CONNECTOR_SEND_TO_DIRECTORY=False
       # (if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path for CONNECTOR_SEND_TO_DIRECTORY_PATH)
-      #- CONNECTOR_SEND_TO_DIRECTORY_PATH=CHANGEME
+      #- CONNECTOR_SEND_TO_DIRECTORY_PATH=ChangeMe
 
       # ServiceNow definition parameters - REQUIRED
-      - SERVICENOW_INSTANCE_NAME=CHANGEME
-      - SERVICENOW_API_KEY=CHANGEME
+      - SERVICENOW_INSTANCE_NAME=ChangeMe
+      - SERVICENOW_API_KEY=ChangeMe
 
       # ServiceNow definition parameters - OPTIONAL
       #- SERVICENOW_IMPORT_START_DATE=P30D
@@ -43,9 +43,9 @@ services:
       #- SERVICENOW_PROMOTE_OBSERVABLES_AS_INDICATORS=True
 
       # Add proxy parameters below if needed
-      # - HTTP_PROXY=CHANGEME
-      # - HTTPS_PROXY=CHANGEME
-      # - NO_PROXY=CHANGEME
+      # - HTTP_PROXY=ChangeMe
+      # - HTTPS_PROXY=ChangeMe
+      # - NO_PROXY=ChangeMe
     restart: always
     # networks:
     #   - docker_default

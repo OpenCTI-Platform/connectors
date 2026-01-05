@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'INTERNAL_ENRICHMENT'
   name: 'ONYPHE'
   scope: 'ipv4-addr,ipv6-addr,indicator,hostname,x509-certificate,text'
   auto: false # Enable/disable auto-enrichment of observables

@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'INTERNAL_ENRICHMENT'
   name: 'IVRE-ChangeMeInstanceName'
   auto: true
   scope: 'autonomous-system,domain-name,ipv4-addr,ipv6-addr,mac-addr,x509-certificate'
