@@ -6,7 +6,7 @@
 
 The SentinelOne Intel Stream Connector is a standalone Python process that monitors the creation of STIX Indicators in OpenCTI and automatically creates them in a SentinelOne Instance. 
 
-Table of Contents
+## Table of Contents
 
 - [OpenCTI SentinelOne Intel Stream Connector](#opencti-sentinelone-intel-stream-connector)
     - [Introduction](#introduction)

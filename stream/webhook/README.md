@@ -1,10 +1,10 @@
 # OpenCTI Webhook Connector
 
-The Webhook connector streams OpenCTI events to external systems via HTTP POST requests, enabling real-time integration with SOAR platforms, ticketing systems, and other tools.
-
-| Status           | Date | Comment |
-|------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Partner Verified | -    | -       |
+
+The Webhook connector streams OpenCTI events to external systems via HTTP POST requests, enabling real-time integration with SOAR platforms, ticketing systems, and other tools.
 
 ## Table of Contents
 

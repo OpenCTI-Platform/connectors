@@ -4,18 +4,9 @@
 |--------|------|---------|
 | Filigran Verified | -    | -       |
 
-<!--
-General description of the connector
-* What it does
-* How it works
-* Special requirements
-* Use case description
-* ...
--->
+## Table of Contents
 
-Table of Contents
-
-- [OpenCTI Internal Export Connector Template](#opencti-internal-export-connector-template)
+- [OpenCTI Export File YARA](#opencti-export-file-yara)
     - [Introduction](#introduction)
     - [Installation](#installation)
         - [Requirements](#requirements)
@@ -114,5 +105,3 @@ python3 main.py
 
 The connector can be debugged by setting the appropriate log level.
 Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.e., `self.helper.connector_logger.error("An error message")`.
-
-<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->

@@ -1,10 +1,10 @@
 # OpenCTI Import File STIX Connector
 
-The Import File STIX connector enables importing STIX 1.2 and STIX 2.1 JSON files into OpenCTI, supporting contextual imports into containers.
-
-| Status            | Date | Comment |
-|-------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Filigran Verified | -    | -       |
+
+The Import File STIX connector enables importing STIX 1.2 and STIX 2.1 JSON files into OpenCTI, supporting contextual imports into containers.
 
 ## Table of Contents
 

@@ -1,78 +1,263 @@
-# OpenCTI Microsoft Defender Intel
+# OpenCTI Microsoft Defender Intel Connector
 
 | Status | Date | Comment |
 |--------|------|---------|
 | Filigran Verified | -    | -       |
 
-This connector allows you to stream indicators from OpenCTI to Microsoft Defender Intelligence utilizing native
-Microsoft Defender APIs.
+The Microsoft Defender Intel connector streams OpenCTI indicators to Microsoft Defender for Endpoint for threat detection and protection.
+
+## Table of Contents
+
+- [OpenCTI Microsoft Defender Intel Connector](#opencti-microsoft-defender-intel-connector)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction](#introduction)
+  - [Installation](#installation)
+    - [Requirements](#requirements)
+  - [Configuration variables](#configuration-variables)
+    - [OpenCTI environment variables](#opencti-environment-variables)
+    - [Base connector environment variables](#base-connector-environment-variables)
+    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
+  - [Deployment](#deployment)
+    - [Docker Deployment](#docker-deployment)
+    - [Manual Deployment](#manual-deployment)
+  - [Usage](#usage)
+  - [Behavior](#behavior)
+  - [Debugging](#debugging)
+  - [Additional information](#additional-information)
+
+## Introduction
+
+This connector enables organizations to stream threat indicators from OpenCTI to Microsoft Defender for Endpoint using native Microsoft APIs. Indicators are synced in real-time and can trigger alerts, blocks, or audits based on configurable actions.
+
+Key features:
+- Real-time synchronization of indicators to Microsoft Defender
+- Support for multiple observable types (IP, domain, URL, file hash, email)
+- Automatic score-based action assignment
+- Configurable indicator expiration
+- Support for create, update, and delete operations
 
 ## Installation
-
-If you don't know how to get the `tenant_id`, `client_id`, and `client_secret` information, here's a screenshot to
-help !
-![Sentinel_variables](./doc/sentinel_info_variables.png)
-
-It's also important to define the necessary permissions in Sentinel for the connector to work.
-
-In the Entra portal, you need to set :
-Home > Application Registration > OpenCTI (your name) > API Permissions
-and prioritize the "Ti.ReadWrite.All" permissions.
-![Sentinel_permission](./doc/permission_mandatory.png)
-
-You will then be able to view the data (indicators) in :
-Home > Microsoft Sentinel > OpenCTI (Your Name) > Threat Indicators
-
-For more information, visit:
-
-- [Microsoft Security-Authorization](https://learn.microsoft.com/en-us/graph/security-authorization)
-- [Microsoft Connect-Threat-Intelligence-Tip](https://learn.microsoft.com/en-us/azure/sentinel/connect-threat-intelligence-tip)
-
-Another interesting link:
-
-- [Microsoft Sentinel-Threat-Intelligence](https://learn.microsoft.com/en-us/azure/architecture/example-scenario/data/sentinel-threat-intelligence#import-threat-indicators-with-the-platforms-data-connector)
 
 ### Requirements
 
 - OpenCTI Platform >= 6.4
+- Azure AD Application with appropriate permissions
+- Microsoft Defender for Endpoint license
 
-### Configuration variables
+### Azure AD Application Setup
 
-Below are the parameters you'll need to set for OpenCTI:
+1. Register an application in Azure AD (Entra portal)
+2. Note the `tenant_id`, `client_id`, and `client_secret`
+3. Configure API permissions: **Ti.ReadWrite.All**
 
-| Parameter `opencti` | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| URL                 | `url`      | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| Token               | `token`    | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+![Sentinel Variables](./doc/sentinel_info_variables.png)
+![Sentinel Permissions](./doc/permission_mandatory.png)
 
-Below are the parameters you'll need to set for running the connector properly:
+For more information:
+- [Microsoft Security Authorization](https://learn.microsoft.com/en-us/graph/security-authorization)
+- [Connect Threat Intelligence](https://learn.microsoft.com/en-us/azure/sentinel/connect-threat-intelligence-tip)
 
-| Parameter `connector`       | config.yml                    | Docker environment variable             | Default | Mandatory | Example                                | Description                                                                            |
-|-----------------------------|-------------------------------|-----------------------------------------|---------|-----------|----------------------------------------|----------------------------------------------------------------------------------------|
-| ID                          | `id`                          | `CONNECTOR_ID`                          | /       | Yes       | `fe418972-1b42-42c9-a665-91544c1a9939` | A unique `UUIDv4` identifier for this connector instance.                              |
-| Name                        | `name`                        | `CONNECTOR_NAME`                        | /       | Yes       | `Microsoft Defender Intel`             | Full name of the connector : `Microsoft Sentinel`.                                     |
-| Log Level                   | `log_level`                   | `CONNECTOR_LOG_LEVEL`                   | `error` | No        | `error`                                | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`. |
-| Live stream id              | `live_stream_id`              | `CONNECTOR_LIVE_STREAM_ID`              | /       | Yes       | `9f204482-47a4-4fa4-b88b-ff4f390f31dd` | The Live Stream ID of the stream created in the OpenCTI interface. A unique `UUIDv4`.  |
-| Live stream listen delete   | `live_stream_listen_delete`   | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | `true`  | No        | `true`                                 | The Live Stream listen delete must be `true`.                                          |
-| Live stream no dependencies | `live_stream_no_dependencies` | `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES` | `true`  | No        | `true`                                 | The Live Stream no dependencies must be `true`.                                        |
+## Configuration variables
 
-Below are the parameters you'll need to set for Sentinel Connector:
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
 
-| Parameter `microsoft_defender_intel` | config.yml         | Docker environment variable                 | Default                                    | Mandatory | Example                                    | Description                                                                                                                                                                                                                                                                                                                                                       |
-|--------------------------------------|--------------------|---------------------------------------------|--------------------------------------------|-----------|--------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Tenant ID                            | `tenant_id`        | `MICROSOFT_DEFENDER_INTEL_TENANT_ID`        | /                                          | Yes       | /                                          | Your Azure App Tenant ID, see the screenshot to help you find this information.                                                                                                                                                                                                                                                                                   |
-| Client ID                            | `client_id`        | `MICROSOFT_DEFENDER_INTEL_CLIENT_ID`        | /                                          | Yes       | /                                          | Your Azure App Client ID, see the screenshot to help you find this information.                                                                                                                                                                                                                                                                                   |
-| Client Secret                        | `client_secret`    | `MICROSOFT_DEFENDER_INTEL_CLIENT_SECRET`    | /                                          | Yes       | /                                          | Your Azure App Client secret, See the screenshot to help you find this information.                                                                                                                                                                                                                                                                               |
-| Login Url                            | `login_url`        | `MICROSOFT_DEFENDER_INTEL_LOGIN_URL`        | `https://login.microsoft.com`              | No        | `https://login.microsoft.com`              | Login URL for Microsoft which is `https://login.microsoft.com`                                                                                                                                                                                                                                                                                                    |
-| API Base URL                         | `base_url`         | `MICROSOFT_DEFENDER_INTEL_BASE_URL`         | `https://api.securitycenter.microsoft.com` | No        | `https://api.securitycenter.microsoft.com` | The resource the API will use which is `https://api.securitycenter.microsoft.com`                                                                                                                                                                                                                                                                                 |
-| Resource Url Path                    | `resource_path`    | `MICROSOFT_DEFENDER_INTEL_RESOURCE_PATH`    | `/api/indicators`                          | No        | `/api/indicators`                          | The request URL that will be used which is `/api/indicators`                                                                                                                                                                                                                                                                                                      |
-| Expire Time                          | `expire_time`      | `MICROSOFT_DEFENDER_INTEL_EXPIRE_TIME`      | `30`                                       | No        | `30`                                       | Number of days for your indicator to expire in Sentinel. Suggestion of `30` as a default                                                                                                                                                                                                                                                                          |
-| Action                               | `action`           | `MICROSOFT_DEFENDER_INTEL_ACTION`           | `Alert`                                    | No        | `Alert`                                    | The action to apply if the indicator is matched from within the targetProduct security tool. Possible values are: `Warn`, `Block`, `Audit`, `Alert`, `AlertAndBlock`, `BlockAndRemediate`, `Allowed`. `BlockAndRemediate` is not compatible with network indicators (see: https://learn.microsoft.com/en-us/defender-endpoint/indicator-manage)                   |
-| Passive Only                         | `passive_only`     | `MICROSOFT_DEFENDER_INTEL_PASSIVE_ONLY`     | `false`                                    | No        | `true`                                     | Determines if the indicator should trigger an event that is visible to an end-user. When set to `True` security tools will not notify the end user that a ‘hit’ has occurred. This is most often treated as audit or silent mode by security products where they will simply log that a match occurred but will not perform the action. Default value is `False`. |
+### OpenCTI environment variables
 
-### Known Behavior
+| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
+|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
+| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
+| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
 
-- When creating, updating or deleting and IOC, it can take few minutes before seeing it into Microsoft Sentinel TI
-- When creating an email address, it will display the `Types` as `Other`
+### Base connector environment variables
 
-![Display of Email Address on MSTI](./doc/ioc_msti.png)
+| Parameter                      | config.yml                | Docker environment variable             | Default | Mandatory | Description                                                                    |
+|--------------------------------|---------------------------|-----------------------------------------|---------|-----------|--------------------------------------------------------------------------------|
+| Connector ID                   | id                        | `CONNECTOR_ID`                          |         | Yes       | A unique `UUIDv4` identifier for this connector instance.                      |
+| Connector Name                 | name                      | `CONNECTOR_NAME`                        |         | Yes       | Name of the connector.                                                         |
+| Live Stream ID                 | live_stream_id            | `CONNECTOR_LIVE_STREAM_ID`              |         | Yes       | The Live Stream ID of the stream created in the OpenCTI interface.             |
+| Live Stream Listen Delete      | live_stream_listen_delete | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | true    | No        | Listen to delete events for the entity.                                        |
+| Live Stream No Dependencies    | live_stream_no_dependencies| `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES`| true    | No        | Set to `true` unless synchronizing between OpenCTI platforms.                  |
+| Log Level                      | log_level                 | `CONNECTOR_LOG_LEVEL`                   | error   | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.     |
+
+### Connector extra parameters environment variables
+
+| Parameter        | config.yml                              | Docker environment variable              | Default                                     | Mandatory | Description                                                |
+|------------------|-----------------------------------------|------------------------------------------|---------------------------------------------|-----------|------------------------------------------------------------|
+| Tenant ID        | microsoft_defender_intel.tenant_id      | `MICROSOFT_DEFENDER_INTEL_TENANT_ID`     |                                             | Yes       | Azure AD Tenant ID.                                        |
+| Client ID        | microsoft_defender_intel.client_id      | `MICROSOFT_DEFENDER_INTEL_CLIENT_ID`     |                                             | Yes       | Azure AD Application Client ID.                            |
+| Client Secret    | microsoft_defender_intel.client_secret  | `MICROSOFT_DEFENDER_INTEL_CLIENT_SECRET` |                                             | Yes       | Azure AD Application Client Secret.                        |
+| Login URL        | microsoft_defender_intel.login_url      | `MICROSOFT_DEFENDER_INTEL_LOGIN_URL`     | https://login.microsoft.com                 | No        | Microsoft login URL.                                       |
+| API Base URL     | microsoft_defender_intel.base_url       | `MICROSOFT_DEFENDER_INTEL_BASE_URL`      | https://api.securitycenter.microsoft.com    | No        | Microsoft Defender API base URL.                           |
+| Resource Path    | microsoft_defender_intel.resource_path  | `MICROSOFT_DEFENDER_INTEL_RESOURCE_PATH` | /api/indicators                             | No        | API endpoint path for indicators.                          |
+| Expire Time      | microsoft_defender_intel.expire_time    | `MICROSOFT_DEFENDER_INTEL_EXPIRE_TIME`   | 30                                          | No        | Days before indicators expire in Defender.                 |
+| Action           | microsoft_defender_intel.action         | `MICROSOFT_DEFENDER_INTEL_ACTION`        | Alert                                       | No        | Default action for matched indicators.                     |
+| Passive Only     | microsoft_defender_intel.passive_only   | `MICROSOFT_DEFENDER_INTEL_PASSIVE_ONLY`  | false                                       | No        | Silent/audit mode without user notification.               |
+
+## Deployment
+
+### Docker Deployment
+
+Build the Docker image:
+
+```bash
+docker build -t opencti/connector-microsoft-defender-intel:latest .
+```
+
+Configure the connector in `docker-compose.yml`:
+
+```yaml
+  connector-microsoft-defender-intel:
+    image: opencti/connector-microsoft-defender-intel:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Microsoft Defender Intel
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe
+      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
+      - CONNECTOR_LOG_LEVEL=error
+      - MICROSOFT_DEFENDER_INTEL_TENANT_ID=ChangeMe
+      - MICROSOFT_DEFENDER_INTEL_CLIENT_ID=ChangeMe
+      - MICROSOFT_DEFENDER_INTEL_CLIENT_SECRET=ChangeMe
+      - MICROSOFT_DEFENDER_INTEL_EXPIRE_TIME=30
+      - MICROSOFT_DEFENDER_INTEL_ACTION=Alert
+    restart: always
+```
+
+Start the connector:
+
+```bash
+docker compose up -d
+```
+
+### Manual Deployment
+
+1. Create `config.yml` based on `config.yml.sample`.
+
+2. Install dependencies:
+
+```bash
+pip3 install -r requirements.txt
+```
+
+3. Start the connector from the `src` directory:
+
+```bash
+python3 main.py
+```
+
+## Usage
+
+1. Set up an Azure AD Application with `Ti.ReadWrite.All` permissions
+2. Create a Live Stream in OpenCTI (Data Management -> Data Sharing -> Live Streams)
+3. Configure the stream to include indicators
+4. Copy the Live Stream ID to the connector configuration
+5. Start the connector
+
+View indicators in Microsoft Defender at: **Security Center > Threat Intelligence > Indicators**
+
+## Behavior
+
+The connector listens to OpenCTI live stream events and manages indicators in Microsoft Defender for Endpoint.
+
+### Data Flow
+
+```mermaid
+graph LR
+    subgraph OpenCTI
+        direction TB
+        Stream[Live Stream]
+        Indicators[Indicator Events]
+    end
+
+    subgraph Connector
+        direction LR
+        Listen[Event Listener]
+        Convert[Convert to Defender Format]
+    end
+
+    subgraph Microsoft
+        direction TB
+        API[Defender API]
+        TI[Threat Intelligence]
+    end
+
+    Stream --> Indicators
+    Indicators --> Listen
+    Listen --> Convert
+    Convert --> API
+    API --> TI
+```
+
+### Event Processing
+
+| Event Type | Action                                       |
+|------------|----------------------------------------------|
+| create     | Creates indicator in Microsoft Defender      |
+| update     | Updates indicator in Microsoft Defender      |
+| delete     | Removes indicator from Microsoft Defender    |
+
+### Entity Mapping
+
+| OpenCTI Observable Type | Microsoft Defender IOC Type |
+|-------------------------|-----------------------------|
+| IPv4-Addr               | IpAddress                   |
+| IPv6-Addr               | IpAddress                   |
+| Domain-Name             | DomainName                  |
+| Hostname                | DomainName                  |
+| URL                     | Url                         |
+| File (MD5)              | FileMd5                     |
+| File (SHA-1)            | FileSha1                    |
+| File (SHA-256)          | FileSha256                  |
+
+### Score-based Action Mapping
+
+| OpenCTI Score | Defender Action | Severity      |
+|---------------|-----------------|---------------|
+| >= 60         | Block           | High          |
+| 30-59         | Alert           | Medium        |
+| 1-29          | Warn            | Low           |
+| 0             | Audit           | Informational |
+
+### Available Actions
+
+| Action           | Description                                              |
+|------------------|----------------------------------------------------------|
+| Warn             | Generate warning without blocking                        |
+| Block            | Block the indicator                                      |
+| Audit            | Log only, no action                                      |
+| Alert            | Generate alert                                           |
+| AlertAndBlock    | Generate alert and block                                 |
+| BlockAndRemediate| Block and remediate (not for network indicators)         |
+| Allowed          | Explicitly allow                                         |
+
+## Debugging
+
+Enable verbose logging by setting:
+
+```env
+CONNECTOR_LOG_LEVEL=debug
+```
+
+Log output includes:
+- Event processing status
+- API request/response details
+- Indicator creation/update/deletion status
+
+### Common Issues
+
+| Issue                          | Solution                                              |
+|--------------------------------|-------------------------------------------------------|
+| Authentication errors          | Verify tenant_id, client_id, and client_secret        |
+| Permission denied              | Ensure Ti.ReadWrite.All permission is granted         |
+| Indicator not appearing        | Wait a few minutes; sync is not instant               |
+| Email displays as "Other"      | Known behavior for email address indicators           |
+
+## Additional information
+
+- **Sync Delay**: Indicators may take a few minutes to appear in Microsoft Defender
+- **Expiration**: Indicators expire after the configured `expire_time` (default: 30 days)
+- **Tags**: All indicators are tagged with "opencti" plus any OpenCTI labels
+- **Passive Mode**: Set `passive_only=true` for audit/silent mode
+- **BlockAndRemediate**: Not compatible with network indicators (IP, domain, URL)
