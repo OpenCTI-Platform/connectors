@@ -3,7 +3,6 @@ import json
 import os
 import sys
 import time
-from collections import defaultdict
 
 import yaml
 from pycti import OpenCTIConnector, OpenCTIConnectorHelper, get_config_variable
@@ -25,7 +24,7 @@ class DiodeImport:
             config,
             False,
         )
-        mappings_dict = defaultdict()  # uses set to avoid duplicates
+        mappings_dict = {}  # mapping of source applicant ID to target applicant ID
         for mapping in opencti_applicant_mappings.split(","):
             mapping_def = mapping.split(":")
             mappings_dict[mapping_def[0]] = mapping_def[1]
@@ -56,9 +55,9 @@ class DiodeImport:
 
     def process(self):
         current_state = self.helper.get_state()
-        # This is my path
+        # Build path pattern to find all JSON files
         path = os.path.join(self.get_from_directory_path, "*.json")
-        # Prints all types of txt files present in a Path
+        # Get all JSON files matching the pattern
         file_paths = glob.glob(path, recursive=True)
         file_paths.sort(key=os.path.getmtime)  # Use mtime consistently
         for file_path in file_paths:
@@ -163,9 +162,9 @@ class DiodeImport:
 
 if __name__ == "__main__":
     try:
-        diodeImport = DiodeImport()
-        diodeImport.run()
+        connector = DiodeImport()
+        connector.run()
     except Exception as e:
         print(e)
         time.sleep(10)
-        sys.exit(0)
+        sys.exit(1)

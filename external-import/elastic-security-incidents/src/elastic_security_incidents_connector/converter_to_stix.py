@@ -3,7 +3,7 @@ Converter for Elastic Security data to STIX 2.1 format
 """
 
 import ipaddress
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, List, Optional
 
 import stix2
@@ -104,7 +104,9 @@ class ConverterToStix:
         incident_name = alert.get("kibana.alert.rule.name", "Elastic Security Alert")
 
         # Get timestamps
-        incident_created_at = alert.get("@timestamp", datetime.utcnow().isoformat())
+        incident_created_at = alert.get(
+            "@timestamp", datetime.now(timezone.utc).isoformat()
+        )
         first_seen = alert.get("kibana.alert.original_time", incident_created_at)
         last_seen = alert.get("kibana.alert.last_detected", incident_created_at)
 
@@ -254,7 +256,7 @@ class ConverterToStix:
         alert_id = alert.get("kibana.alert.uuid", "")
 
         note_title = f"Investigation Guide - {rule_name}"
-        created_at = alert.get("@timestamp", datetime.utcnow().isoformat())
+        created_at = alert.get("@timestamp", datetime.now(timezone.utc).isoformat())
 
         # Generate predictive ID for the note
         note_id = Note.generate_id(created_at, investigation_guide)
@@ -263,7 +265,7 @@ class ConverterToStix:
         note = stix2.Note(
             id=note_id,
             created=created_at,
-            modified=alert.get("@timestamp", datetime.utcnow().isoformat()),
+            modified=alert.get("@timestamp", datetime.now(timezone.utc).isoformat()),
             abstract=note_title,
             content=investigation_guide,
             object_refs=[incident_id],
@@ -303,7 +305,7 @@ class ConverterToStix:
         created_at = (
             comment.get("createdAt")
             or comment.get("created_at")
-            or datetime.utcnow().isoformat()
+            or datetime.now(timezone.utc).isoformat()
         )
         # Fix timezone format for STIX
         if created_at and "+00:00" in created_at:
@@ -416,9 +418,7 @@ class ConverterToStix:
         case_id = case.get("id", "")
         case_name = case.get("title", "Elastic Security Case")
 
-        from datetime import timezone
-
-        default_created = datetime.utcnow().replace(tzinfo=timezone.utc).isoformat()
+        default_created = datetime.now(timezone.utc).isoformat()
         case_created_at = (
             case.get("createdAt") or case.get("created_at") or default_created
         )
@@ -636,8 +636,10 @@ class ConverterToStix:
                     custom_properties={"created_by_ref": self.author["id"]},
                 )
             elif field_name == "process.executable":
-                return stix2.Process(
-                    binary_ref=str(field_value),
+                # Return a File object for the executable path
+                # (binary_ref requires an object reference, not a string value)
+                return stix2.File(
+                    name=str(field_value),
                     object_marking_refs=[self.tlp_marking],
                     custom_properties={"created_by_ref": self.author["id"]},
                 )
