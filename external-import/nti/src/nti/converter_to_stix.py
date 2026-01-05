@@ -139,7 +139,7 @@ class ConverterToStix:
             value = get_obs_value(self.helper, entity)
             return stix2.URL(
                 value=value,
-                object_marking_refs=self.tlp_marking.id,
+                object_marking_refs=[self.tlp_marking.id],
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
                     "x_opencti_labels": self.get_url_content(entity.get("contents", []))
@@ -259,15 +259,19 @@ class ConverterToStix:
         location_type = ""
         if location.get("street_address"):
             name = location.get("street_address")
+            location_type = "Position"
         elif location.get("city"):
             name = location.get("city")
+            location_type = "City"
         elif location.get("region"):
             name = location.get("region")
+            location_type = "Administrative-Area"
         elif location.get("country"):
             name = location.get("country")
+            location_type = "Country"
         return name, location_type
 
-    def create_AutonomousSystem(self, autonomous: list) -> list:
+    def create_autonomous_system(self, autonomous: list) -> list:
         """
         Create AutonomousSystem for IP
         :param autonomous: AutonomousSystem from IP data
@@ -404,7 +408,7 @@ class ConverterToStix:
                 confidence=entity.get("confidence"),
                 revoked=bool(entity.get("revoked")),
                 labels=tags,
-                created_by_ref=self.author,
+                created_by_ref=self.author["id"],
                 indicator_types=[
                     THREAT_TYPE.get(i) for i in entity.get("threat_types")
                 ],
