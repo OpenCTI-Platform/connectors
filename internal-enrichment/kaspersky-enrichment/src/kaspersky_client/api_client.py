@@ -86,3 +86,12 @@ class KasperskyClient:
         self.params["sections"] = sections
         response = self._request_data(file_url, params=self.params)
         return response.json()
+
+    def get_domain_info(self, obs_domain: str, sections: str) -> dict:
+        """
+        Retrieve domain information
+        """
+        file_url = f"{self.base_url}api/domain/{obs_domain}"
+        self.params["sections"] = sections
+        response = self._request_data(file_url, params=self.params)
+        return response.json()
