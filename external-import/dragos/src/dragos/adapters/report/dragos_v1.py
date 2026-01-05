@@ -6,12 +6,12 @@ from io import BytesIO
 from logging import getLogger
 from typing import TYPE_CHECKING, Iterator, Optional
 
+from pydantic import PrivateAttr
+
 from client_api.errors import DragosAPIError
 from client_api.v1 import DragosClientAPIV1
 from client_api.v1.indicator import IndicatorResponse
 from client_api.v1.product import ProductResponse, TagResponse
-from pydantic import PrivateAttr
-
 from dragos.interfaces import Indicator, Report, Reports, Tag
 from dragos.interfaces.report import (
     IncompleteReportWarning,
