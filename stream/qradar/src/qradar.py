@@ -72,7 +72,6 @@ class QRadarConnector:
         """
         In case of stream_id configuration is missing, raise ValueError
         """
-        pass
         if (
             not self.helper.connect_live_stream_id
             or self.helper.connect_live_stream_id.lower() == "changeme"
