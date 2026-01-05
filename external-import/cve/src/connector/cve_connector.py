@@ -1,6 +1,6 @@
 import sys
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from pycti import OpenCTIConnectorHelper  # type: ignore
 from src import ConfigLoader
@@ -45,7 +45,7 @@ class CVEConnector:
         :param timestamp: Timestamp in integer
         :return: Work id in string
         """
-        now = datetime.utcfromtimestamp(timestamp)
+        now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
         friendly_name = f"{self.helper.connect_name} run @ " + now.strftime(
             "%Y-%m-%d %H:%M:%S"
         )
@@ -66,7 +66,7 @@ class CVEConnector:
         """
         msg = (
             f"[CONNECTOR] Connector successfully run, storing last_run as "
-            f"{datetime.utcfromtimestamp(current_time).strftime('%Y-%m-%d %H:%M:%S')}"
+            f"{datetime.fromtimestamp(current_time, tz=timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}"
         )
         self.helper.connector_logger.info(msg)
         self.helper.api.work.to_processed(work_id, msg)
@@ -188,7 +188,7 @@ class CVEConnector:
             "[CONNECTOR] Getting the last CVEs since the last run..."
         )
 
-        last_run_ts = datetime.utcfromtimestamp(last_run)
+        last_run_ts = datetime.fromtimestamp(last_run, tz=timezone.utc)
 
         # Update date range
         cve_params = self._update_cve_params(last_run_ts, now)
@@ -219,8 +219,8 @@ class CVEConnector:
             if current_state is not None and "last_run" in current_state:
                 last_run = current_state["last_run"]
 
-                msg = "[CONNECTOR] Connector last run: " + datetime.utcfromtimestamp(
-                    last_run
+                msg = "[CONNECTOR] Connector last run: " + datetime.fromtimestamp(
+                    last_run, tz=timezone.utc
                 ).strftime("%Y-%m-%d %H:%M:%S")
                 self.helper.connector_logger.info(msg)
             else:

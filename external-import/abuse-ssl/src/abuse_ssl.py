@@ -1,5 +1,6 @@
 import os
 import time
+import traceback
 from datetime import datetime, timezone
 
 import requests
@@ -14,7 +15,7 @@ from pycti import (
 )
 
 
-class AbuseSSLImportConnector:
+class AbuseSSLConnector:
     """Enumerates files from text, then processes them"""
 
     def __init__(self):
@@ -61,7 +62,9 @@ class AbuseSSLImportConnector:
                     self.helper.connect_id, friendly_name
                 )
                 if current_state is not None and "last_run" in current_state:
-                    last_seen = datetime.fromtimestamp(current_state["last_run"])
+                    last_seen = datetime.fromtimestamp(
+                        current_state["last_run"], tz=timezone.utc
+                    )
                     self.helper.log_info(f"Connector last ran at: {last_seen} (UTC)")
                 else:
                     self.helper.log_info("Connector has never run")
@@ -220,19 +223,20 @@ class AbuseSSLImportConnector:
         self.helper.log_info("Sending STIX Bundle")
         try:
             self.helper.send_stix2_bundle(bundle, work_id=work_id)
-        except:
+        except Exception as e:
+            self.helper.log_error(f"First attempt to send bundle failed: {str(e)}")
             time.sleep(60)
             try:
                 self.helper.send_stix2_bundle(bundle, work_id=work_id)
-            except Exception as e:
-                self.helper.log_error(str(e))
+            except Exception as retry_error:
+                self.helper.log_error(str(retry_error))
 
 
 if __name__ == "__main__":
     try:
-        AbuseSSLImportConnector = AbuseSSLImportConnector()
-        AbuseSSLImportConnector.run()
-    except Exception as e:
-        print(e)
+        connector = AbuseSSLConnector()
+        connector.run()
+    except Exception:
+        traceback.print_exc()
         time.sleep(10)
-        exit(0)
+        exit(1)

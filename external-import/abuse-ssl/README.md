@@ -1,6 +1,6 @@
 # OpenCTI Abuse-SSL Connector
 
-The connector uses the an Abuse-ssl csv file that lists botnet ips detected based on certain ssl signatures
+The connector uses the Abuse.ch SSL csv file that lists botnet IPs detected based on certain SSL signatures.
 
 An SSL certificate can be associated with one or more servers (IP address:port combination). SSLBL collects IP addresses that are running with an SSL certificate blacklisted on SSLBL. These are usually botnet Command&Control servers (C&C). SSLBL hence publishes a blacklist containing these IPs which can be used to detect botnet C2 traffic from infected machines towards the internet, leaving your network. The CSV format is useful if you want to process the blacklisted IP addresses further, e.g. loading them into your SIEM or CTI (or both, don't be shy).
 
@@ -21,7 +21,7 @@ An SSL certificate can be associated with one or more servers (IP address:port c
 | `connector_scope`            | `CONNECTOR_SCOPE`            | Yes       |                                                                                               |
 | `connector_log_level`        | `CONNECTOR_LOG_LEVEL`        | Yes       | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose). |
 | `abusessl_url`               | `ABUSESSL_URL`               | Yes       | the abuse-ssl csv URL                                                                         |
-| `abusessl_interval`          | `ABUSEIPDB_LIMIT`            | Yes       | interval in minutes between 2 collections ( don't go below 5 minutes)                         |
+| `abusessl_interval`          | `ABUSESSL_INTERVAL`          | Yes       | Interval in minutes between 2 collections (don't go below 5 minutes).                         |
 
 ### Debugging
 
