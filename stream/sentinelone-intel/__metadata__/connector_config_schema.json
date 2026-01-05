@@ -47,7 +47,6 @@
       "type": "string"
     },
     "CONNECTOR_LIVE_STREAM_ID": {
-      "default": "live",
       "description": "The ID of the live stream to connect to.",
       "type": "string"
     },
@@ -93,6 +92,7 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
+    "CONNECTOR_LIVE_STREAM_ID",
     "SENTINELONE_INTEL_API_URL",
     "SENTINELONE_INTEL_API_KEY"
   ],
