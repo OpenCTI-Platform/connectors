@@ -2,9 +2,9 @@
 
 The RST Threat Feed connector imports indicators (IP, Domain, URL, Hash) with relationships to malware, TTPs, tools, threat groups, sectors, CVE, and other objects from RST Cloud into OpenCTI.
 
-| Status    | Date | Comment |
-|-----------|------|---------|
-| Community | -    | -       |
+| Status           | Date | Comment |
+|------------------|------|---------|
+| Partner Verified | -    | -       |
 
 ## Introduction
 

@@ -2,9 +2,9 @@
 
 The Harfanglab Incidents connector imports security alerts and threats from Harfanglab EDR into OpenCTI as incidents, case incidents, indicators, and observables.
 
-| Status    | Date | Comment |
-|-----------|------|---------|
-| Community | -    | -       |
+| Status            | Date | Comment |
+|-------------------|------|---------|
+| Filigran Verified | -    | -       |
 
 ## Table of Contents
 

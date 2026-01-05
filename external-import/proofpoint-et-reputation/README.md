@@ -2,9 +2,9 @@
 
 The ProofPoint ET Reputation connector imports malicious IP addresses and domain names from ProofPoint's Emerging Threats Intelligence Rep List into OpenCTI as observables and indicators.
 
-| Status    | Date | Comment |
-|-----------|------|---------|
-| Community | -    | -       |
+| Status            | Date | Comment |
+|-------------------|------|---------|
+| Filigran Verified | -    | -       |
 
 ## Table of Contents
 

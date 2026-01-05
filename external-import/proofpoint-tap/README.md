@@ -2,9 +2,9 @@
 
 The Proofpoint TAP connector imports phishing campaign data, events, and threat intelligence from Proofpoint Targeted Attack Protection (TAP) into OpenCTI.
 
-| Status    | Date | Comment |
-|-----------|------|---------|
-| Community | -    | -       |
+| Status            | Date | Comment |
+|-------------------|------|---------|
+| Filigran Verified | -    | -       |
 
 See: https://www.proofpoint.com/us/products/threat-defense
 

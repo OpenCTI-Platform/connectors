@@ -2,9 +2,9 @@
 
 The VirusTotal Livehunt Notifications connector imports malware samples matching YARA rules from VirusTotal Livehunt into OpenCTI.
 
-| Status    | Date | Comment |
-|-----------|------|---------|
-| Community | -    | -       |
+| Status            | Date | Comment |
+|-------------------|------|---------|
+| Filigran Verified | -    | -       |
 
 ## Table of Contents
 
