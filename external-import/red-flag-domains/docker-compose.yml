@@ -1,7 +1,8 @@
+version: '3'
   connector-redflag-domains:
     image: opencti/connector-red-flag-domains:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=OPEN_CTI_TOKEN
       - CONNECTOR_ID=CONNECTOR_ID
       - "CONNECTOR_NAME=Red Flag Domains"

@@ -3,9 +3,8 @@ services:
   lia-file-feed:
     image: opencti/connector-lia-file-feed:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME="Loader Insight Agency File Feed"
       - CONNECTOR_SCOPE=indicator,file,malware,url

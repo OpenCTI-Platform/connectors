@@ -219,7 +219,7 @@ def create_indicator_pattern_x509_certificate_issuer(value: str) -> IndicatorPat
 
 
 def create_indicator_pattern_user_agent(value: str) -> IndicatorPattern:
-    """Create an indicator pattern for an user-agent."""
+    """Create an indicator pattern for a user-agent."""
     return _create_indicator_pattern_with_value(_OBJECT_TYPE_USER_AGENT, value)
 
 

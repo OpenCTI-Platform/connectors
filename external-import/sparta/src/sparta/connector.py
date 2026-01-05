@@ -8,6 +8,18 @@ from sparta.client_api import SpartaClient
 from sparta.converter_to_stix import ConverterToStix
 from stix2 import TLP_WHITE
 
+SPARTA_KILL_CHAIN_PHASES = [
+    {"name": "Reconnaissance", "order": 0},
+    {"name": "Resource Development", "order": 1},
+    {"name": "Initial Access", "order": 2},
+    {"name": "Execution", "order": 3},
+    {"name": "Persistence", "order": 4},
+    {"name": "Defense Evasion", "order": 5},
+    {"name": "Lateral Movement", "order": 6},
+    {"name": "Exfiltration", "order": 7},
+    {"name": "Impact", "order": 8},
+]
+
 
 class Sparta:
     """
@@ -72,7 +84,7 @@ class Sparta:
             self.config.connector.id, friendly_name
         )
 
-    def _send_intelligence(self, prepared_objects: list):
+    def _send_intelligence(self, prepared_objects: str):
         """This method prepares and sends unique STIX objects to OpenCTI.
         This method takes a list of objects prepared by the models, extracts their STIX representations, creates a
         serialized STIX bundle, and It then sends this bundle to OpenCTI.
@@ -110,6 +122,17 @@ class Sparta:
             self.helper.api.work.to_processed(self.work_id, message)
         self.work_id = None
 
+    def _create_kill_chain_phase_and_order(self):
+        """
+        :return:
+        """
+        for phase in SPARTA_KILL_CHAIN_PHASES:
+            self.helper.api.kill_chain_phase.create(
+                kill_chain_name="sparta",
+                phase_name=phase.get("name"),
+                x_opencti_order=phase.get("order"),
+            )
+
     def _collect_intelligence(self):
         """Collect intelligence from the source.
         Returns:
@@ -126,7 +149,7 @@ class Sparta:
             )
             raise
 
-    def _transform_intelligence(self, collected_intelligence: list) -> list:
+    def _transform_intelligence(self, collected_intelligence: dict) -> str:
         """Add author and TLP to each object in collected_intelligence
         Returns:
             List of STIX objects
@@ -139,9 +162,33 @@ class Sparta:
             stix_objects = collected_intelligence["objects"]
             author = self.converter_to_stix.create_author()
 
+            attack_pattern_subtechnique_ids = []
             for stix_object in stix_objects:
                 stix_object["created_by_ref"] = author["id"]
                 stix_object["object_marking_refs"] = [str(TLP_WHITE.id)]
+                if stix_object["type"] == "attack-pattern":
+                    if (
+                        "x_sparta_is_subtechnique" in stix_object
+                        and stix_object["x_sparta_is_subtechnique"].strip().lower()
+                        == "true"
+                    ):
+                        attack_pattern_subtechnique_ids.append(stix_object["id"])
+
+            # going to process some relationships between objects (subtechniques-of and mitigates)
+            for stix_object in stix_objects:
+                if stix_object["type"] == "relationship":
+                    # fix 'related-to' to 'subtechnique-of' relationship
+                    if (
+                        "attack-pattern--" in stix_object["source_ref"]
+                        and "attack-pattern--" in stix_object["target_ref"]
+                        and stix_object["source_ref"] in attack_pattern_subtechnique_ids
+                    ):
+                        stix_object["relationship_type"] = "subtechnique-of"
+                    if (
+                        "course-of-action--" in stix_object["source_ref"]
+                        and "attack-pattern--" in stix_object["target_ref"]
+                    ):
+                        stix_object["relationship_type"] = "mitigates"
 
             stix_objects.append(json.loads(author.serialize()))
             stix_objects.append(json.loads(TLP_WHITE.serialize()))
@@ -192,6 +239,15 @@ class Sparta:
                     ),
                 },
             )
+
+            try:
+                self._create_kill_chain_phase_and_order()
+            except Exception as ex:
+                self.helper.connector_logger.error(
+                    "Unable to create kill chain phases and orders. Verify the connector service account has the 'Manage kill chain phases' capability.",
+                    {"exception": ex},
+                )
+                pass
 
             collected_intelligence = self._collect_intelligence()
 

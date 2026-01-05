@@ -18,10 +18,7 @@ def round_time(dt, round_to=60):
 
 
 def check_helper(helper: OpenCTIConnectorHelper) -> None:
-    if (
-        not helper.connect_live_stream_id
-        or helper.connect_live_stream_id == "ChangeMe"
-    ):
+    if not helper.connect_live_stream_id or helper.connect_live_stream_id == "ChangeMe":
         helper.log_error("missing Live Stream ID")
         exit(1)
 

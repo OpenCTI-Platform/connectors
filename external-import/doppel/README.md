@@ -78,7 +78,7 @@ There are a number of configuration options, which are set either in `docker-com
 
 ### Docker Deployment
 
-1. Ensure `pycti` version in `requirements.txt` matches your OpenCTI version (e.g., `pycti==6.9.4`).
+1. Ensure `pycti` version in `requirements.txt` matches your OpenCTI version (e.g., `pycti==6.9.5`).
 
 2. Build Docker image:
 

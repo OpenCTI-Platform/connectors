@@ -12,7 +12,7 @@ Author: Pavel Reshetnikov, Integration developer, 2024
 
 import ipaddress
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from urllib.parse import urlparse
 
 import pycti  # type: ignore
@@ -150,7 +150,7 @@ class BaseEntity(_CommonUtils):
         self.description = ""
 
         self.valid_from = None
-        self.valid_until: datetime = datetime.now()
+        self.valid_until: datetime = datetime.now(timezone.utc)
 
         # defined in self._setup
         self.stix_indicator = None
@@ -767,9 +767,9 @@ class Vulnerability(_BaseSDO):
                 self.cvss_severity = "LOW"
             elif 4.0 <= self.cvss_score <= 6.9:
                 self.cvss_severity = "MEDIUM"
-            elif 7.0 < self.cvss_score <= 8.9:
+            elif 7.0 <= self.cvss_score <= 8.9:
                 self.cvss_severity = "HIGH"
-            elif 9.0 < self.cvss_score <= 10.0:
+            elif 9.0 <= self.cvss_score <= 10.0:
                 self.cvss_severity = "CRITICAL"
             else:
                 self.cvss_severity = None
