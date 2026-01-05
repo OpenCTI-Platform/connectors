@@ -254,7 +254,7 @@ class CrowdSecBuilder:
         markings: List[str],
     ) -> stix2.Note:
         if self.reputation == "unknown":
-            content = "This is was not found in CrowdSec CTI. \n\n"
+            content = "This IP was not found in CrowdSec CTI. \n\n"
         else:
             content = f"**Reputation**: {self.reputation} \n\n"
             content += f"**Confidence**: {self.confidence} \n\n"

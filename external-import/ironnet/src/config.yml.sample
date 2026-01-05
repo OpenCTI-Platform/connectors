@@ -1,12 +1,11 @@
 ---
 
 opencti:
-  url: ""
+  url: 'http://localhost'
   token: ""
 
 connector:
   id: "ChangeMe"
-  type: "EXTERNAL_IMPORT"
   name: "IronNet"
   scope: "IronNet"
   log_level: "info"

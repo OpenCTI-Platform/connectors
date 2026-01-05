@@ -1,7 +1,7 @@
 """Batch processing management for the Hunt.IO connector."""
 
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 
 import stix2
@@ -86,9 +86,9 @@ class QueueHealthMonitor:
 
         # Store emergency state for monitoring
         current_state = self.helper.get_state() or {}
-        current_state[StateKeys.LAST_EMERGENCY_STOP] = datetime.now().strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
+        current_state[StateKeys.LAST_EMERGENCY_STOP] = datetime.now(
+            timezone.utc
+        ).strftime("%Y-%m-%d %H:%M:%S")
         current_state[StateKeys.EMERGENCY_QUEUE_SIZE] = queue_messages
         current_state[StateKeys.EMERGENCY_QUEUE_MB] = queue_size_mb
         self.helper.set_state(current_state)

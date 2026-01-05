@@ -1,9 +1,8 @@
 opencti:
-  url: "http://opencti:8080"
+  url: 'http://localhost'
   token: 'ChangeMe'
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'NTI'
   scope: nti
   log_level: 'error'

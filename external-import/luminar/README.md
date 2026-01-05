@@ -85,7 +85,7 @@ Below are the parameters you'll need to set for the connector:
 | Luminar Account ID    | account_id                   | `LUMINAR_ACCOUNT_ID`                   | /       | Yes       | Luminar Account ID                                                                                      |
 | Luminar Client ID     | client_id                   | `LUMINAR_CLIENT_ID`               | /       | Yes       | Luminar Client ID                                                                           |
 | Luminar Client Secret        | client_secret                   | `LUMINAR_CLIENT_SECRET`                  | /       | Yes       | Luminar Client Secret                                                                               |
-| Inititla Fetch Date                  | initial_fetch_date                  | `LUMINAR_INITIAL_FETCH_DATE`           | YYYY-MM-DD   | Yes       | Fetch feeds from date (ex: 2025-01-01) |
+| Initial Fetch Date                  | initial_fetch_date                  | `LUMINAR_INITIAL_FETCH_DATE`           | YYYY-MM-DD   | Yes       | Fetch feeds from date (ex: 2025-01-01) |
 | Create Observable| create_observable | `LUMINAR_CREATE_OBSERVABLE` | True    | Yes       | Whether to create observables in OpenCTI Platform.                       |
 
 ## Deployment
