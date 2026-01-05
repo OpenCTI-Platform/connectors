@@ -1,10 +1,10 @@
 # OpenCTI Backup Files Connector
 
-The Backup Files connector streams OpenCTI data to local filesystem storage, creating JSON backup files organized by time-based directories.
-
-| Status            | Date | Comment |
-|-------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Filigran Verified | -    | -       |
+
+The Backup Files connector streams OpenCTI data to local filesystem storage, creating JSON backup files organized by time-based directories.
 
 ## Table of Contents
 
