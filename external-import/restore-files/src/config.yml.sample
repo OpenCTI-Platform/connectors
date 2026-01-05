@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: RestoreFiles'
   scope: 'restore'
   log_level: 'info'

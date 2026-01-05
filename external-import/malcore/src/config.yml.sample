@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe' # Valid UUIDv4
-  type: 'EXTERNAL_IMPORT'
   name: 'Malcore'
   scope: 'malcore' # MIME type or SCO
   log_level: 'info'

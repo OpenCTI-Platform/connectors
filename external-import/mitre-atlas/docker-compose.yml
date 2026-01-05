@@ -1,4 +1,4 @@
-version: "3"
+version: '3'
 services:
   connector-mitre-atlas:
     image: opencti/connector-mitre-atlas:latest

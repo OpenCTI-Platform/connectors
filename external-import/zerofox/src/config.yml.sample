@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'changme'
-  type: 'EXTERNAL_IMPORT'
   name: 'Zerofox'
   scope: 'zerofox'
   log_level: 'info'

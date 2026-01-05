@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'ESET Cyber Threat Intelligence'
   scope: 'eset'
   log_level: 'info'

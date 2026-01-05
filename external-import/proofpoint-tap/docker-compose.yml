@@ -1,9 +1,10 @@
+version: '3'
 services:
   connector-proofpoint-tap:
     image: opencti/connector-proofpoint-tap:latest
     env_file:
       - .env
-    restart: unless-stopped
+    restart: always
 
     # networks:
     #   - docker_default

@@ -4,7 +4,7 @@ services:
     image: opencti/connector-first-epss:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=CHANGEME
+      - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=18f1a9e6-a82b-4ef4-9699-ae406fe4a1a6 # Optional (default: '18f1a9e6-a82b-4ef4-9699-ae406fe4a1a6')
       - "CONNECTOR_NAME=Internal Enrichment Connector FIRST" # Optional (default: 'First EPSS') 
       - CONNECTOR_SCOPE=vulnerability # Optional (default: ['vulnerability'])

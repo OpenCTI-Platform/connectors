@@ -27,7 +27,6 @@ opencti:
 
 connector:
   id: 'CAPEv2_Sandbox'
-  type: 'INTERNAL_ENRICHMENT'
   name: 'CAPEv2 Sandbox'
   scope: 'StixFile,Artifact'
   auto: false # Enable/disable auto-enrichment of observables

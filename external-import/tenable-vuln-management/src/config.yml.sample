@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'Tenable Vuln Management'
   scope: 'vulnerability'
   log_level: 'info'

@@ -1,3 +1,4 @@
+version: '3'
 services:
   connector-stream-exporter:
     image: opencti/connector-stream-exporter:latest

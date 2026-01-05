@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'Common Platform Enumeration'
   scope: 'software'
   log_level: 'info'

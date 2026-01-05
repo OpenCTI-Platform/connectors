@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'sentinelone-threats'
-  type: 'EXTERNAL_IMPORT'
   name: 'SentinelOne Threats'
   scope: 'sentinelone-threats'
   create_indicator: False

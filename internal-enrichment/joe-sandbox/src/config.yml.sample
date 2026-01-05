@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'Joe_Sandbox'
-  type: 'INTERNAL_ENRICHMENT'
   name: 'Joe Sandbox'
   scope: 'Artifact,Url'
   auto: false # Enable/disable auto-enrichment of observables

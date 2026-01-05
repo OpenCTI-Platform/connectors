@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'INTERNAL_ENRICHMENT'
   name:  'SophosLabs Intelix Lookup'
   scope: Url,IPv4-Addr,Artifact
   confidence_level: 50

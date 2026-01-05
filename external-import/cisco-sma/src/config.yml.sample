@@ -5,7 +5,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'Cisco sma'
   scope: 'Cisco sma'
   log_level: 'info'
