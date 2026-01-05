@@ -1,5 +1,9 @@
 # Internal Enrichment Intelfinder Connector
 
+| Status    | Date | Comment |
+|-----------|------|---------|
+| Community | -    | -       |
+
 This connector is designed for integration with the OpenCTI platform and [Intelfinder](https://intelfinder.io/). The integration imports Intelfinder alerts and converts them into OpenCTI incidents. Applicable `elements` are transformed into their related Stix objects and linked to the parent incident. 
 
 ## Installation

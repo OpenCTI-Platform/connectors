@@ -1,5 +1,9 @@
 # OpenCTI MWDB Connector
 
+| Status    | Date | Comment |
+|-----------|------|---------|
+| Community | -    | -       |
+
 ## Description
 
 MWDB is an opensource malware collector and databases.  https://mwdb.readthedocs.io/en/latest/user-guide/1-Introduction-to-MWDB.html

@@ -1,5 +1,9 @@
 # OpenCTI Luminar CTI Connector
 
+| Status    | Date | Comment |
+|-----------|------|---------|
+| Community | -    | -       |
+
 Table of Contents
 
 - [OpenCTI Luminar CTI Connector](#opencti-luminar-cti-connector)

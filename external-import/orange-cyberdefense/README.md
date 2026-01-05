@@ -1,5 +1,9 @@
 # CERT Orange Cyberdefense CTI Connector
 
+| Status  | Date | Comment |
+|---------|------|---------|
+| Partner | -    | -       |
+
 ## Objective
 
 This connector allows to ingest into OpenCTI the Cyber Threat Intelligence provided by the ***CERT Orange Cybderdefense***.

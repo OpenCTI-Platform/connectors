@@ -1,5 +1,9 @@
 # OpenCTI CRITs Connector
 
+| Status    | Date | Comment |
+|-----------|------|---------|
+| Community | -    | -       |
+
 This connector is intended to provide a mechanism for synchronizing data from a CRITs CTI database instance
 ([https://crits.github.io](https://crits.github.io/)) into OpenCTI. The primary use case for this is to help
 ease the migration from CRITs (a largely unmaintained platform, as of 2022) to OpenCTI. Inspiration from the

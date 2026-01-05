@@ -1,5 +1,9 @@
 # Maltiverse - OpenCTI connector
 
+| Status    | Date | Comment |
+|-----------|------|---------|
+| Community | -    | -       |
+
 This connector enables you to bring the information from [Maltiverse](https://maltiverse.com) into OpenCTI
 
 ## Installation

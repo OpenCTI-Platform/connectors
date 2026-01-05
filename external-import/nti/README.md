@@ -1,5 +1,9 @@
 # OpenCTI NTI Connector
 
+| Status    | Date | Comment |
+|-----------|------|---------|
+| Community | -    | -       |
+
 The OpenCTI NTI Connector can be used to import knowledge from NSFOCUS Threat Intelligence feed. 
 
 Table of Contents

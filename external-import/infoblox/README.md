@@ -1,5 +1,9 @@
 # Infoblox Import Connector
 
+| Status            | Date | Comment |
+|-------------------|------|---------|
+| Filigran Verified | -    | -       |
+
 <!--
 General description of the connector
 * What it does

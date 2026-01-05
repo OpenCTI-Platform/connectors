@@ -1,5 +1,9 @@
 # OpenCTI Zvelo CTI Connector
 
+| Status            | Date | Comment |
+|-------------------|------|---------|
+| Filigran Verified | -    | -       |
+
 Table of Contents
 
 - [OpenCTI Zvelo CTI connector](#opencti-zvelo-connector)

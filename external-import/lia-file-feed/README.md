@@ -1,5 +1,9 @@
 # OpenCTI LIA File Feed
 
+| Status    | Date | Comment |
+|-----------|------|---------|
+| Community | -    | -       |
+
 The connector ingests indicators of compromise (IOCs) from the Loader Insight Agency (LIA) File Feed, establishing
 relationships between IOCs to provide context such as the loader family responsible for downloading a payload and the
 URL from which it was downloaded. If known, the payload is tagged with a detection, offering insights into which malware
