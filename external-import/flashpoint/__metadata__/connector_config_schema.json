@@ -125,5 +125,5 @@
     "OPENCTI_TOKEN",
     "FLASHPOINT_API_KEY"
   ],
-  "additionalProperties": false
+  "additionalProperties": true
 }
