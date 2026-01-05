@@ -5,7 +5,7 @@ opencti:
 
 connector:
   id: 'bddfd745-040a-4cc3-9ed9-f5bc751f272b'
-  live_stream_id: 'IDHERE' # ID of the live stream created in the OpenCTI UI
+  live_stream_id: 'ChangeMe' # ID of the live stream created in the OpenCTI UI
   live_stream_listen_delete: true
   live_stream_no_dependencies: true
   name: 'Logrhythm'
