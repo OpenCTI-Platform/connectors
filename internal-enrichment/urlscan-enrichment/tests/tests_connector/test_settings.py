@@ -39,7 +39,9 @@ from urlscan_enrichment_services import ConnectorSettings
                     "token": "test-token",
                 },
                 "connector": {},
-                "urlscan_enrichment": {},
+                "urlscan_enrichment": {
+                    "api_key": "test-api-key",
+                },
             },
             id="minimal_valid_settings_dict",
         ),
