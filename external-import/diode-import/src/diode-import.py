@@ -163,9 +163,9 @@ class DiodeImport:
 
 if __name__ == "__main__":
     try:
-        diodeImport = DiodeImport()
-        diodeImport.run()
+        connector = DiodeImport()
+        connector.run()
     except Exception as e:
         print(e)
         time.sleep(10)
-        sys.exit(0)
+        sys.exit(1)

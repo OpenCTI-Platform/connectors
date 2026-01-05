@@ -4,6 +4,7 @@ STIXIFY Connector
 
 import json
 import os
+import sys
 import time
 from datetime import UTC, datetime, timedelta
 from urllib.parse import urljoin
@@ -35,7 +36,7 @@ class StixifyConnector:
         if not self.dossier_ids:
             self.helper.log_error("at least one dossier id required")
             self.helper.stop()
-            exit(0)
+            sys.exit(1)
 
         self.session = requests.Session()
         self.session.headers = {

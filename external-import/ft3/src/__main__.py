@@ -22,7 +22,7 @@ FT3_TECHNIQUES_URL = (
 def time_from_unixtime(timestamp):
     if not timestamp:
         return None
-    return datetime.utcfromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.fromtimestamp(timestamp, timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def get_unixtime_now():
@@ -414,4 +414,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        sys.exit(0)
+        sys.exit(1)

@@ -6,7 +6,7 @@ import ssl
 import sys
 import time
 import urllib
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 import yaml
@@ -95,7 +95,7 @@ class DisarmFramework:
                 last_run = current_state["last_run"]
                 self.helper.log_info(
                     "Connector last run: "
-                    + datetime.utcfromtimestamp(last_run).strftime("%Y-%m-%d %H:%M:%S")
+                    + datetime.fromtimestamp(last_run, tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
                 )
             else:
                 last_run = None
@@ -107,7 +107,7 @@ class DisarmFramework:
             ):
                 self.helper.log_info("Connector will run!")
 
-                now = datetime.utcfromtimestamp(timestamp)
+                now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
                 friendly_name = "DISARM Framework run @ " + now.strftime(
                     "%Y-%m-%d %H:%M:%S"
                 )
@@ -180,4 +180,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        sys.exit(0)
+        sys.exit(1)
