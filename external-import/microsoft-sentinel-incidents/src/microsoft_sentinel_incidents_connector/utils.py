@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 import stix2
 from dateutil.parser import parse
@@ -23,7 +23,7 @@ def format_datetime(date_str: str | None) -> str:
     :return: The formatted date string in ISO 8601 format with 'Z' as the timezone indicator.
     """
     if date_str is not None and date_str.strip():
-        # some 'CreatedTimeUtc' date doesn't contains 'Z' (see malware evidence)
+        # some 'CreatedTimeUtc' date doesn't contain 'Z' (see malware evidence)
         if not date_str.endswith("Z") and not date_str.endswith("+00:00"):
             date_str += "Z"
         from_iso_format = datetime.fromisoformat(date_str)
@@ -32,7 +32,12 @@ def format_datetime(date_str: str | None) -> str:
         )
         return iso_date_str
     else:
-        now = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+        now = (
+            datetime.now(timezone.utc)
+            .replace(microsecond=0)
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
         return now
 
 

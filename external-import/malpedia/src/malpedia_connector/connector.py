@@ -1,7 +1,7 @@
 """OpenCTI Malpedia Knowledge importer module."""
 
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 import stix2
@@ -151,7 +151,7 @@ class MalpediaConnector:
                 "[CONNECTOR] Error while processing data:", {"error": str(e)}
             )
             self.helper.metric.state("stopped")
-            sys.exit(0)
+            sys.exit(1)
         self.helper.metric.state("idle")
 
     def _run_malpedia_process(self):
@@ -169,7 +169,7 @@ class MalpediaConnector:
         stix2_bundle = self.helper.stix2_create_bundle(final_stix_objects)
         self.helper.send_stix2_bundle(stix2_bundle, work_id=self.work_id)
         self.helper.metric.inc("record_send", len(final_stix_objects))
-        state_timestamp = int(datetime.utcnow().timestamp())
+        state_timestamp = int(datetime.now(timezone.utc).timestamp())
         self.helper.connector_logger.info(
             "[CONNECTOR] Malpedia importer bundle completed",
             {
