@@ -1,12 +1,14 @@
 # Proofpoint TAP Connector
 
-The Proofpoint TAP connector for OpenCTI allows for the ingestion of phishing campaign data from Proofpoint TAP
-into the OpenCTI platform. 
+The Proofpoint TAP connector imports phishing campaign data, events, and threat intelligence from Proofpoint Targeted Attack Protection (TAP) into OpenCTI.
 
-See : https://www.proofpoint.com/us/products/threat-defense
+| Status    | Date | Comment |
+|-----------|------|---------|
+| Community | -    | -       |
 
+See: https://www.proofpoint.com/us/products/threat-defense
 
-Table of Contents
+## Table of Contents
 
 - [Proofpoint TAP Connector](#proofpoint-tap-connector)
   - [Introduction](#introduction)

@@ -1,6 +1,12 @@
 # Spycloud OpenCTI External Import connector
 
-Table of Contents
+The Spycloud connector imports breach records and compromised data from Spycloud's threat intelligence platform into OpenCTI as incidents and observables.
+
+| Status    | Date | Comment |
+|-----------|------|---------|
+| Community | -    | -       |
+
+## Table of Contents
 
 - [pycloud OpenCTI External Import connector](#opencti-external-ingestion-connector-template)
   - [Introduction](#introduction)

@@ -1,17 +1,15 @@
-# OpenCTI External Ingestion Connector URLhaus
+# OpenCTI URLhaus Connector
 
-<!--
-General description of the connector
-* What it does
-* How it works
-* Special requirements
-* Use case description
-* ...
--->
+The URLhaus connector imports malicious URL data from abuse.ch URLhaus into OpenCTI as URL observables and indicators.
 
-Table of Contents
+| Status    | Date | Comment |
+|-----------|------|---------|
+| Community | -    | -       |
 
-- [OpenCTI External Ingestion Connector URLhaus](#opencti-external-ingestion-connector-urlhaus)
+## Table of Contents
+
+- [OpenCTI URLhaus Connector](#opencti-urlhaus-connector)
+  - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -29,20 +27,22 @@ Table of Contents
 
 ## Introduction
 
+URLhaus is a project from abuse.ch with the goal of sharing malicious URLs that are being used for malware distribution. The service collects and tracks URLs that host malware, including download locations, C&C servers, and exploit kit landing pages.
+
+This connector fetches the recent URL additions from URLhaus and imports them as URL observables and indicators into OpenCTI, with optional threat relationship creation.
+
 ## Installation
 
 ### Requirements
 
-- OpenCTI Platform >= 6...
+- OpenCTI Platform >= 6.x
+- Internet access to URLhaus CSV feed (publicly available)
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
-in `config.yml` (for manual deployment).
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
 
 ### OpenCTI environment variables
-
-Below are the parameters you'll need to set for OpenCTI:
 
 | Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
 |---------------|------------|-----------------------------|-----------|------------------------------------------------------|
@@ -51,107 +51,183 @@ Below are the parameters you'll need to set for OpenCTI:
 
 ### Base connector environment variables
 
-Below are the parameters you'll need to set for running the connector properly:
-
-| Parameter       | config.yml | Docker environment variable | Default          | Mandatory | Description                                                                              |
-|-----------------|------------|-----------------------------|------------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID    | id         | `CONNECTOR_ID`              | /                | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT  | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
-| Connector Name  | name       | `CONNECTOR_NAME`            | Abuse.ch URLhaus | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           | urlhaus          | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | error            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+| Parameter         | config.yml      | Docker environment variable   | Default         | Mandatory | Description                                                                 |
+|-------------------|-----------------|-------------------------------|-----------------|-----------|-----------------------------------------------------------------------------|
+| Connector ID      | id              | `CONNECTOR_ID`                |                 | Yes       | A unique `UUIDv4` identifier for this connector instance.                   |
+| Connector Name    | name            | `CONNECTOR_NAME`              | Abuse.ch URLhaus | No      | Name of the connector.                                                      |
+| Connector Scope   | scope           | `CONNECTOR_SCOPE`             | urlhaus         | No        | The scope or type of data the connector is importing.                       |
+| Log Level         | log_level       | `CONNECTOR_LOG_LEVEL`         | error           | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
 
 ### Connector extra parameters environment variables
 
-Below are the parameters you'll need to set for the connector:
-
-| Parameter       | config.yml              | Docker environment variable       | Default                                              | Mandatory | Description                                                                  |
-|-----------------|-------------------------|-----------------------------------|------------------------------------------------------|-----------|------------------------------------------------------------------------------|
-| API base URL    | csv_url                 | `URLHAUS_CSV_URL`                 | https://api.phishstats.info/api/phishing?_sort=-id   | Yes       |                                                                              |
-| Score           | default_x_opencti_score | `URLHAUS_DEFAULT_X_OPENCTI_SCORE` | 80                                                   |           |                                                                              |
-| Import Offline  | import_offline          | `URLHAUS_IMPORT_OFFLINE`          | true                                                 |           |                                                                              |
-| Related Threats | threats_from_labels     | `URLHAUS_THREATS_FROM_LABELS`     | true                                                 |           |                                                                              |
-| Interval        | interval                | `URLHAUS_INTERVAL`                | 3                                                    | Yes       | Interval for the scheduler process in days (e.g., 1 for 1 day).              |
-
+| Parameter            | config.yml                   | Docker environment variable       | Default                                      | Mandatory | Description                                                                 |
+|----------------------|------------------------------|-----------------------------------|----------------------------------------------|-----------|-----------------------------------------------------------------------------|
+| Interval             | urlhaus.interval             | `URLHAUS_INTERVAL`                | 3                                            | Yes       | Polling interval in hours.                                                  |
+| CSV URL              | urlhaus.csv_url              | `URLHAUS_CSV_URL`                 | https://urlhaus.abuse.ch/downloads/csv_recent/ | No     | URLhaus CSV feed URL.                                                       |
+| Default Score        | urlhaus.default_x_opencti_score | `URLHAUS_DEFAULT_X_OPENCTI_SCORE` | 80                                         | No        | Default x_opencti_score for imported indicators.                            |
+| Import Offline       | urlhaus.import_offline       | `URLHAUS_IMPORT_OFFLINE`          | true                                         | No        | Import URLs marked as "offline" in addition to "online".                    |
+| Threats from Labels  | urlhaus.threats_from_labels  | `URLHAUS_THREATS_FROM_LABELS`     | true                                         | No        | Create relationships to existing threats based on URL tags.                 |
 
 ## Deployment
 
 ### Docker Deployment
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
-sometimes the OpenCTI SDK fails to initialize.
+Build the Docker image:
 
-Build a Docker Image using the provided `Dockerfile`.
-
-Example:
-
-```shell
-# Replace the IMAGE NAME with the appropriate value
-docker build . -t [IMAGE NAME]:latest
+```bash
+docker build -t opencti/connector-urlhaus:latest .
 ```
 
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
-environment. Then, start the docker container with the provided docker-compose.yml
+Configure the connector in `docker-compose.yml`:
 
-```shell
+```yaml
+  connector-urlhaus:
+    image: opencti/connector-urlhaus:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Abuse.ch URLhaus
+      - CONNECTOR_SCOPE=urlhaus
+      - CONNECTOR_LOG_LEVEL=error
+      - URLHAUS_INTERVAL=3
+      - URLHAUS_CSV_URL=https://urlhaus.abuse.ch/downloads/csv_recent/
+      - URLHAUS_DEFAULT_X_OPENCTI_SCORE=80
+      - URLHAUS_IMPORT_OFFLINE=true
+      - URLHAUS_THREATS_FROM_LABELS=true
+    restart: always
+```
+
+Start the connector:
+
+```bash
 docker compose up -d
-# -d for detached
 ```
 
 ### Manual Deployment
 
-Create a file `config.yml` based on the provided `config.yml.sample`.
+1. Create `config.yml` based on `config.yml.sample`.
 
-Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
+2. Install dependencies:
 
-Install the required python dependencies (preferably in a virtual environment):
-
-```shell
+```bash
 pip3 install -r requirements.txt
 ```
 
-Then, start the connector from recorded-future/src:
+3. Start the connector from the `src` directory:
 
-```shell
+```bash
 python3 main.py
 ```
 
 ## Usage
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `interval`.
+The connector runs automatically at the interval defined by `URLHAUS_INTERVAL`. To force an immediate run:
 
-However, if you would like to force an immediate download of a new batch of entities, navigate to:
+**Data Management → Ingestion → Connectors**
 
-`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform.
-
-Find the connector, and click on the refresh button to reset the connector's state and force a new
-download of data by re-running the connector.
+Find the connector and click the refresh button to reset the state and trigger a new data fetch.
 
 ## Behavior
 
-<!--
-Describe how the connector functions:
-* What data is ingested, updated, or modified
-* Important considerations for users when utilizing this connector
-* Additional relevant details
--->
+The connector fetches the recent CSV feed from URLhaus and creates URL observables and indicators in OpenCTI.
 
+### Data Flow
+
+```mermaid
+graph LR
+    subgraph URLhaus
+        direction TB
+        CSV[CSV Feed]
+    end
+
+    subgraph OpenCTI
+        direction LR
+        Identity[Identity - Abuse.ch]
+        URL[URL Observable]
+        Indicator[Indicator]
+        Relationship[Relationship]
+        Threat[Threat Entity]
+    end
+
+    CSV --> Identity
+    CSV --> URL
+    CSV --> Indicator
+    Indicator -- based-on --> URL
+    Indicator -- indicates --> Threat
+    URL -- related-to --> Threat
+```
+
+### Entity Mapping
+
+| URLhaus CSV Field    | OpenCTI Entity/Property | Description                                      |
+|----------------------|-------------------------|--------------------------------------------------|
+| url                  | URL Observable          | Malicious URL value                              |
+| url                  | Indicator               | STIX pattern `[url:value = '...']`               |
+| dateadded            | Indicator.valid_from    | Date URL was added to URLhaus                    |
+| url_status           | Indicator.description   | online/offline status                            |
+| threat               | Indicator.description   | Threat type (malware, C&C, etc.)                 |
+| tags                 | Observable.labels       | Malware family tags                              |
+| urlhaus_link         | External Reference      | Link to URLhaus entry                            |
+| reporter             | Indicator.description   | Reporter username                                |
+
+### CSV Schema
+
+URLhaus CSV feed columns:
+1. `id` - URLhaus ID
+2. `dateadded` - Date/time added (UTC)
+3. `url` - The malicious URL
+4. `url_status` - online/offline
+5. `last_online` - Last seen online
+6. `threat` - Threat type
+7. `tags` - Comma-separated malware tags
+8. `urlhaus_link` - Reference URL
+9. `reporter` - Reporter name
+
+### Threat Relationships
+
+When `URLHAUS_THREATS_FROM_LABELS=true`:
+- Tags are used to search for existing threats in OpenCTI
+- If a matching Threat-Actor, Intrusion-Set, Malware, Campaign, Incident, or Tool exists:
+  - Indicator → `indicates` → Threat
+  - URL → `related-to` → Threat
+
+### Processing Details
+
+1. **URL Observable**: Created with:
+   - `x_opencti_score`: Configurable default score
+   - Labels from URLhaus tags
+   - External reference to URLhaus
+
+2. **Indicator**: Created with:
+   - Pattern: `[url:value = '<url>']`
+   - `x_opencti_main_observable_type`: "Url"
+   - Description includes threat type, reporter, status
+
+3. **Relationship**: `based-on` from Indicator to Observable
+
+4. **TLP Marking**: All data marked as TLP:WHITE
 
 ## Debugging
 
-The connector can be debugged by setting the appropiate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
-e., `self.helper.connector_logger.error("An error message")`.
+Enable verbose logging:
 
-<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
+```env
+CONNECTOR_LOG_LEVEL=debug
+```
+
+Log output includes:
+- CSV download status
+- URL processing progress
+- Threat relationship creation
 
 ## Additional information
 
-<!--
-Any additional information about this connector
-* What information is ingested/updated/changed
-* What should the user take into account when using this connector
-* ...
--->
+- **Public Feed**: URLhaus data is publicly available without authentication
+- **CSV Variants**: 
+  - `csv_recent/` - Recent 30 days (recommended)
+  - `csv/` - Full database (very large)
+- **Update Frequency**: URLhaus updates frequently; 3-hour polling is recommended
+- **Offline URLs**: Set `URLHAUS_IMPORT_OFFLINE=false` to skip inactive URLs
+- **High Score**: Default score of 80 reflects high confidence in URLhaus data
+- **Reference**: [URLhaus](https://urlhaus.abuse.ch/)

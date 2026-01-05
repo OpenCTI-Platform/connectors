@@ -1,6 +1,12 @@
 # OpenCTI External Import Connector - ProofPoint ET Reputation
 
-Table of Contents
+The ProofPoint ET Reputation connector imports malicious IP addresses and domain names from ProofPoint's Emerging Threats Intelligence Rep List into OpenCTI as observables and indicators.
+
+| Status    | Date | Comment |
+|-----------|------|---------|
+| Community | -    | -       |
+
+## Table of Contents
 
 - [OpenCTI External Import Connector - ProofPoint ET Reputation](#opencti-external-import-connector---proofpoint-et-reputation)
   - [Introduction](#introduction)

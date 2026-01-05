@@ -1,5 +1,13 @@
 # OpenCTI Kaspersky Connector
 
+The Kaspersky connector imports threat intelligence from Kaspersky Threat Intelligence Portal into OpenCTI, including reports, IoCs, and YARA rules.
+
+| Status    | Date | Comment |
+|-----------|------|---------|
+| Community | -    | -       |
+
+## Introduction
+
 The OpenCTI Kaspersky connector can be used to import knowledge from the Kaspersky
 Threat Intelligence Portal. The connector leverages the Kaspersky Threat Intelligence
 Portal API to retrieve the intelligence published on the Kaspersky
