@@ -11,7 +11,7 @@ services:
       - CONNECTOR_NAME=CHANGEME
       - CONNECTOR_SCOPE=CHANGEME
       - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_LIVE_STREAM_ID=changeme # ID of the live stream created in the OpenCTI UI
+      - CONNECTOR_LIVE_STREAM_ID=CHANGEME # ID of the live stream created in the OpenCTI UI
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
       # Connector's custom execution parameters
