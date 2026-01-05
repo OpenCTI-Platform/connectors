@@ -1,5 +1,9 @@
 # OpenCTI Flashpoint Connector
 
+| Status            | Date | Comment |
+|-------------------|------|---------|
+| Filigran Verified | -    | -       |
+
 This connector integrates Flashpoint with the OpenCTI platform.
 It pulls various threat intelligence data from Flashpoint and imports it into OpenCTI, providing enhanced visibility into security threats.
 

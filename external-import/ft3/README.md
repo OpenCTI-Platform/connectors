@@ -1,5 +1,9 @@
 # OpenCTI FT3 Framework Connector
 
+| Status    | Date | Comment |
+|-----------|------|---------|
+| Community | -    | -       |
+
 This connector imports the FT3 (Fraud Tactics, Techniques, and Procedures) framework from Stripe into OpenCTI.
 
 ## Overview

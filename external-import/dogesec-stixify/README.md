@@ -1,55 +1,212 @@
 # OpenCTI Stixify Connector
 
-## Overview
+| Status  | Date | Comment |
+|---------|------|---------|
+| Partner | -    | -       |
 
-Stixify is a web application that turns reports into structured threat intelligence.
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Installation](#installation)
+  - [Requirements](#requirements)
+- [Configuration](#configuration)
+  - [Configuration Variables](#configuration-variables)
+- [Deployment](#deployment)
+  - [Docker Deployment](#docker-deployment)
+  - [Manual Deployment](#manual-deployment)
+- [Behavior](#behavior)
+  - [Data Flow](#data-flow)
+  - [Entity Mapping](#entity-mapping)
+- [Debugging](#debugging)
+- [Additional Information](#additional-information)
+
+---
+
+## Introduction
+
+[Stixify](https://www.stixify.com/) is a web application that turns reports into structured threat intelligence.
 
 ![](media/stixify-graph.png)
 ![](media/stixify-reports.png)
 ![](media/stixify-dossiers.png)
 
-[You can read more and sign up for Stixify for free here](https://www.stixify.com/).
+The OpenCTI Stixify Connector syncs the intelligence reports held in Stixify Dossiers to OpenCTI, enabling automated extraction and import of structured STIX data from PDF reports, documents, and other file formats.
 
-The OpenCTI Stixify Connector syncs the intelligence reports held in Stixify Dossier to OpenCTI.
+> **Note**: This connector only works with Stixify Web. It does not support self-hosted Stixify installations at this time.
 
-_Note: The OpenCTI Stixify Connector only works with Stixify Web. It does not work with self-hosted Stixify installations at this time._
+---
 
 ## Installation
 
-### Prerequisites
+### Requirements
 
-* An Stixify team subscribed to a plan with API access enabled
-* OpenCTI >= 6.5.10
+- OpenCTI >= 6.5.10
+- Stixify team subscribed to a plan with API access enabled
+- Stixify API Key
 
-### Generating an Stixify API Key
+### Generating an API Key
 
-1. Log in to your Stixify account and navigate to "Account Settings"
-2. Locate the API section and select "Create Token"
-3. Select the team you want to use and generate the key
-4. Copy the key, it will be needed for the configoration
+1. Log in to your Stixify account
+2. Navigate to "Account Settings"
+3. Locate the API section and select "Create Token"
+4. Select the team you want to use and generate the key
+5. Copy the key for configuration
 
-### Configoration
+---
 
-If you are unfamiliar with how to install OpenCTI Connectors, [you should read the official documentation here](https://docs.opencti.io/latest/deployment/connectors/).
+## Configuration
 
-There are a number of configuration options specific to Stixify, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment). These options are as follows:
+### Configuration Variables
 
-| Docker Env variable    | config variable        | Required | Data Type | Recommended                                            | Description                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| ---------------------- | ---------------------- | -------- | --------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `STIXIFY_BASE_URL`       | `stixify.base_url`       | TRUE     | url       | `https://api.stixify.com/` | Should always be `https://api.stixify.com/`                                                                                                                                                                                                                                                                                                                                                                                                          |
-| `STIXIFY_API_KEY`        | `stixify.api_key`        | TRUE     | string    | n/a                                                    | The API key used to authenticate to Stixify Web                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `STIXIFY_DOSSIER_IDS`    | `stixify.dossier_ids`    | TRUE     | uuid      | n/a                                                    | A list of comma separated dossier IDs (e.g. `'dossier1id,dossier2id'`. You can get a Dossier ID in the Stixify web app. At least one Dossier ID must be passed. All historical intelligence from reports will be ingested, and new intelligence added to the Dossier will be ingested as per the interval setting. You can use any Dossier visible to the authenticated team (even if the team you're using to authenticate with does not own it). |
-| `STIXIFY_INTERVAL_HOURS` | `stixify.interval_hours` | TRUE     | integer   | `12`                                                 | How often (in hours) this Connector should poll Stixify Web for updates.                                                                                                                                                                                                                                                                                                                                                                             |                                                                      
+#### OpenCTI Parameters
+
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| OpenCTI URL | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
+| OpenCTI Token | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
+
+#### Base Connector Parameters
+
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| Connector ID | `CONNECTOR_ID` | Yes | A unique `UUIDv4` for this connector |
+| Connector Name | `CONNECTOR_NAME` | Yes | Name displayed in OpenCTI |
+| Log Level | `CONNECTOR_LOG_LEVEL` | No | Log level: `debug`, `info`, `warn`, or `error` |
+
+#### Connector Extra Parameters
+
+| Parameter | Docker envvar | config.yml | Required | Default | Description |
+|-----------|---------------|------------|----------|---------|-------------|
+| Base URL | `STIXIFY_BASE_URL` | `stixify.base_url` | Yes | `https://api.stixify.com/` | Stixify API URL |
+| API Key | `STIXIFY_API_KEY` | `stixify.api_key` | Yes | - | API key for authentication |
+| Dossier IDs | `STIXIFY_DOSSIER_IDS` | `stixify.dossier_ids` | Yes | - | Comma-separated dossier IDs to import |
+| Interval Hours | `STIXIFY_INTERVAL_HOURS` | `stixify.interval_hours` | Yes | `12` | Polling interval in hours |
+
+---
+
+## Deployment
+
+### Docker Deployment
+
+Use the following `docker-compose.yml`:
+
+```yaml
+services:
+  connector-stixify:
+    image: opencti/connector-dogesec-stixify:latest
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_STIXIFY_ID}
+      - CONNECTOR_NAME=Stixify
+      - CONNECTOR_LOG_LEVEL=info
+      - STIXIFY_BASE_URL=https://api.stixify.com/
+      - STIXIFY_API_KEY=${STIXIFY_API_KEY}
+      - STIXIFY_DOSSIER_IDS=dossier1-uuid,dossier2-uuid
+      - STIXIFY_INTERVAL_HOURS=12
+    restart: always
+    depends_on:
+      - opencti
+```
+
+### Manual Deployment
+
+1. Clone the repository and navigate to the connector directory
+2. Install dependencies: `pip install -r requirements.txt`
+3. Configure `config.yml`
+4. Run: `python main.py`
+
+---
+
+## Behavior
+
+### Data Flow
+
+```mermaid
+graph LR
+    subgraph Stixify
+        Reports[Reports/Documents]
+        API[Stixify API]
+        NLP[NLP Extraction]
+        Dossiers[Dossiers]
+    end
+    
+    Reports --> NLP
+    NLP --> Dossiers
+    Dossiers --> API
+    
+    subgraph Processing
+        API --> Connector[Stixify Connector]
+        Connector --> STIX[STIX Objects]
+    end
+    
+    subgraph OpenCTI
+        STIX --> Report[Report]
+        STIX --> Indicator[Indicator]
+        STIX --> Observable[Observable]
+        STIX --> AttackPattern[Attack Pattern]
+        STIX --> ThreatActor[Threat Actor]
+        STIX --> Malware[Malware]
+    end
+```
+
+### Entity Mapping
+
+| Stixify Data | OpenCTI Entity | Notes |
+|--------------|----------------|-------|
+| Source Report | Report | Original document with extracted intelligence |
+| Extracted IOCs | Indicator/Observable | IPs, domains, URLs, hashes |
+| Extracted TTPs | Attack Pattern | MITRE ATT&CK techniques |
+| Extracted Actors | Threat Actor | Named threat actors from text |
+| Extracted Malware | Malware | Malware families and samples |
+| Extracted Tools | Tool | Software tools mentioned |
+
+### Processing Details
+
+1. **Dossier Selection**:
+   - At least one Dossier ID must be provided
+   - Can import from multiple dossiers (comma-separated)
+   - Access to dossiers visible to authenticated team
+
+2. **Historical Import**:
+   - All historical intelligence from reports is ingested
+   - New intelligence added to dossiers is imported on schedule
+
+3. **Incremental Updates**:
+   - Polls at configured interval (default: 12 hours)
+   - Only fetches new/updated intelligence since last run
+
+---
+
+## Debugging
+
+Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug`.
 
 ### Verification
 
-To verify the connector is working, you can navigate to `Data` -> `Ingestion` -> `Connectors` -> `Stixify`.
+Navigate to `Data` → `Ingestion` → `Connectors` → `Stixify` to verify the connector is working.
 
-## Support
+---
 
-You should contact OpenCTI if you are new to installing Connectors and need support.
+## Additional Information
 
-If you run into issues when installing this Connector, you can reach the dogesec team as follows:
+### About Stixify
 
-* [dogesec Community Forum](https://community.dogesec.com/) (recommended)
-* [dogesec Support Portal](https://support.dogesec.com/) (requires a plan with email support)
+- **Website**: [stixify.com](https://www.stixify.com/)
+- **Sign up**: Free tier available
+- **Provider**: [dogesec](https://dogesec.com/)
+
+### Support
+
+- **OpenCTI Support**: For general connector installation help
+- **dogesec Community Forum**: [community.dogesec.com](https://community.dogesec.com/) (recommended)
+- **dogesec Support Portal**: [support.dogesec.com](https://support.dogesec.com/) (requires plan with email support)
+
+### Use Cases
+
+| Use Case | Description |
+|----------|-------------|
+| Report Processing | Extract intelligence from PDF threat reports |
+| Document Analysis | Analyze advisories, bulletins, research papers |
+| IOC Extraction | Automate indicator extraction from documents |
+| Intelligence Library | Build searchable intelligence from reports |

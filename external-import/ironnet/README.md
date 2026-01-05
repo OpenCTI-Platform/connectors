@@ -1,5 +1,9 @@
 # OpenCTI IronNet Connector
 
+| Status  | Date | Comment |
+|---------|------|---------|
+| Partner | -    | -       |
+
 The OpenCTI IronNet connector can be used to import knowledge from the IronNet IronRadar threat intel feed.
 
 **Note**: Requires subscription to the [IronRadar](https://www.ironnet.com/products/ironradar) threat intel feed.

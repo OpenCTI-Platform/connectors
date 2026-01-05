@@ -1,5 +1,9 @@
 # OpenCTI SIEM Rules Connector
 
+| Status  | Date | Comment |
+|---------|------|---------|
+| Partner | -    | -       |
+
 ## Description
 
 SIEM Rules is a global repository of detection rules written in Sigma format, with automatic conversions to most popular SIEM and XDR rule formats.

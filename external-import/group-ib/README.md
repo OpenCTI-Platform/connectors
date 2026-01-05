@@ -102,7 +102,7 @@ The ones that follow are connector's generic execution parameters expected to be
 | Parameter                      | Mandatory | Description                                                                                                                                                                   |
 |--------------------------------|-----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `CONNECTOR_LOG_LEVEL`          | Yes       | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                                                 |
-| `CONNECTOR__DURATION_PERIOD`   | Yes       | The time unit is represented by a single character at the end of the string: d for days, h for hours, m for minutes, and s for seconds. e.g., 30s is 30 seconds. 1d is 1 day. |
+| `CONNECTOR__DURATION_PERIOD`   | Yes       | The time interval in ISO 8601 duration format. Examples: `PT3M` (3 minutes), `PT5S` (5 seconds), `P1D` (1 day), `P1DT2H` (1 day and 2 hours). |
 
 
 ### OpenCTI environment variables

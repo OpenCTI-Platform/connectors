@@ -4,6 +4,10 @@
 
 # OpenCTI FIRST EPSS external import connector
 
+| Status            | Date | Comment |
+|-------------------|------|---------|
+| Filigran Verified | -    | -       |
+
 Table of Contents
 
 - [OpenCTI FIRST EPSS external import connector](#opencti-first-epss-external-import-connector)

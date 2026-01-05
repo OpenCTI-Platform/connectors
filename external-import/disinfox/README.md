@@ -1,143 +1,224 @@
-# OpenCTI External Ingestion Connector DISINFOX
+# OpenCTI DISINFOX Connector
 
-<!--
-General description of the connector
-* What it does
-* How it works
-* Special requirements
-* Use case description
-* ...
--->
+| Status    | Date | Comment |
+|-----------|------|---------|
+| Community | -    | -       |
 
-Table of Contents
+## Table of Contents
 
-- [OpenCTI External Ingestion Connector DISINFOX](#opencti-external-ingestion-connector-disinfox)
-  - [Introduction](#introduction)
-  - [Installation](#installation)
-    - [Requirements](#requirements)
-  - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
-  - [Deployment](#deployment)
-    - [Docker Deployment](#docker-deployment)
-    - [Manual Deployment](#manual-deployment)
-  - [Usage](#usage)
-  - [Behavior](#behavior)
-  - [Debugging](#debugging)
-  - [Additional information](#additional-information)
+- [Introduction](#introduction)
+- [Installation](#installation)
+  - [Requirements](#requirements)
+- [Configuration](#configuration)
+  - [Configuration Variables](#configuration-variables)
+- [Deployment](#deployment)
+  - [Docker Deployment](#docker-deployment)
+  - [Manual Deployment](#manual-deployment)
+- [Behavior](#behavior)
+  - [Data Flow](#data-flow)
+  - [Entity Mapping](#entity-mapping)
+- [Usage](#usage)
+- [Debugging](#debugging)
+- [Additional Information](#additional-information)
+
+---
 
 ## Introduction
+
+This connector imports disinformation incident data from [DISINFOX](https://github.com/CyberDataLab/disinfox) into OpenCTI. DISINFOX is a platform for tracking and analyzing disinformation campaigns, providing structured data about influence operations and their characteristics.
+
+The connector fetches STIX 2.1 bundles from the DISINFOX API, enabling automated ingestion of disinformation intelligence into your OpenCTI instance for analysis and correlation with other threat data.
+
+---
 
 ## Installation
 
 ### Requirements
 
-- OpenCTI Platform >= 6...
-- A reacheable [DISINFOX](https://github.com/CyberDataLab/disinfox) API.
-- A DISINFOX API Key. 
+- OpenCTI Platform >= 6.0.0
+- A reachable [DISINFOX](https://github.com/CyberDataLab/disinfox) API instance
+- A DISINFOX API Key (available from your DISINFOX Profile page)
 
-## Configuration variables
+---
 
-There are a number of configuration options, which are set either in `docker-compose.yml` or  `.env` (duplicating the `example.env`) in Docker.
+## Configuration
 
-### OpenCTI environment variables
+### Configuration Variables
 
-Below are the parameters you'll need to set for OpenCTI:
+#### OpenCTI Parameters
 
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| OpenCTI URL | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
+| OpenCTI Token | `OPENCTI_TOKEN` | Yes | The default admin token set in the OpenCTI platform |
 
-### Base connector environment variables
+#### Base Connector Parameters
 
-Below are the parameters you'll need to set for running the connector properly:
+| Parameter | Docker envvar | Mandatory | Default | Description |
+|-----------|---------------|-----------|---------|-------------|
+| Connector ID | `CONNECTOR_ID` | Yes | - | A unique `UUIDv4` identifier for this connector instance |
+| Connector Name | `CONNECTOR_NAME` | No | `DISINFOX` | Name of the connector |
+| Log Level | `CONNECTOR_LOG_LEVEL` | No | `info` | Log level: `debug`, `info`, `warn`, or `error` |
+| Duration Period | `CONNECTOR_DURATION_PERIOD` | No | `PT1H` | Polling interval in ISO 8601 format |
 
-| Parameter       | config.yml | Docker environment variable | Default         | Mandatory | Description                                                                              |
-|-----------------|------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
+#### Connector Extra Parameters
 
-### Connector extra parameters environment variables
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| DISINFOX URL | `DISINFOX_URL` | Yes | URL of a reachable DISINFOX installation |
+| DISINFOX API Key | `DISINFOX_API_KEY` | Yes | API key from DISINFOX Profile section |
 
-Below are the parameters you'll need to set for the connector:
-
-| Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description |
-|--------------|--------------|-----------------------------|---------|-----------|-------------|
-| DISINFOX API base URL |  |  DISINFOX_URL                           |         | Yes       |     URL of a reachable DISINFOX installation        |
-| DISINFOX API key      |       |  DISINFOX_API_KEY                           |         | Yes       |    The API key for DISINFOX, available in the user's Profile section         |
+---
 
 ## Deployment
 
 ### Docker Deployment
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
-sometimes the OpenCTI SDK fails to initialize.
-
-Build a Docker Image using the provided `Dockerfile`.
-
-Example:
+Build the Docker image:
 
 ```shell
-# Replace the IMAGE NAME with the appropriate value
-docker build . -t [IMAGE NAME]:latest
+docker build . -t opencti/connector-disinfox:latest
 ```
 
-Make sure to:
+Use the following `docker-compose.yml`:
 
-- **Duplicate the `example.env` file**
-- Rename it to `.env`.
-- Adapt it to your instalation environment.
-
-You can also directly edit the environment variables in `docker-compose.yml` with the appropriate configurations for your environment. Then, start the docker container with the provided `docker-compose.yml`.
-
-```shell
-docker compose up -d
-# -d for detached
+```yaml
+services:
+  connector-disinfox:
+    image: opencti/connector-disinfox:latest
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_DISINFOX_ID}
+      - CONNECTOR_NAME=DISINFOX
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT1H
+      - DISINFOX_URL=${DISINFOX_URL}
+      - DISINFOX_API_KEY=${DISINFOX_API_KEY}
+    restart: always
+    depends_on:
+      - opencti
 ```
+
+Configuration via `.env` file:
+
+1. Duplicate `example.env` to `.env`
+2. Edit with your environment values
+3. Run: `docker compose up -d`
 
 ### Manual Deployment
 
-...
+1. Clone the repository and navigate to the connector directory
+2. Install dependencies: `pip install -r requirements.txt`
+3. Configure environment variables or `config.yml`
+4. Run: `python main.py`
 
-## Usage
-
-After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` in `duration_period`.
-
-However, if you would like to force an immediate download of a new batch of entities, navigate to:
-
-`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform.
-
-Find the connector, and click on the refresh button to reset the connector's state and force a new
-download of data by re-running the connector.
+---
 
 ## Behavior
 
-<!--
-Describe how the connector functions:
-* What data is ingested, updated, or modified
-* Important considerations for users when utilizing this connector
-* Additional relevant details
--->
-This connector retrieves data from a DISINFOX instance.
-It fetches STIX2 Bundles from the DISINFOX Public API to get newly added disinformation incidents to DISINFOX.
+### Data Flow
 
-**It's essential** to get a DISINFOX API Key from the Profile page at DISINFOX.
+```mermaid
+graph LR
+    subgraph DISINFOX Platform
+        API[DISINFOX API]
+        Incidents[Disinformation Incidents]
+    end
+    
+    Incidents --> API
+    
+    subgraph Processing
+        API --> Connector[DISINFOX Connector]
+        Connector --> Bundle[STIX Bundle]
+    end
+    
+    subgraph OpenCTI
+        Bundle --> STIXObjects[STIX Objects]
+    end
+```
+
+### Entity Mapping
+
+| DISINFOX Data | OpenCTI Entity | Notes |
+|---------------|----------------|-------|
+| Disinformation Incident | Various STIX Types | Native STIX bundle import |
+| Incident Metadata | SDO Properties | Timestamps, descriptions, references |
+| Related Entities | STIX Objects | Actors, campaigns, indicators |
+
+### Processing Details
+
+1. **Incremental Fetching**:
+   - Tracks `last_fetch` timestamp in connector state
+   - Fetches only incidents newer than last fetch
+   - First run fetches all available data (from epoch)
+
+2. **STIX Bundle Import**:
+   - Retrieves native STIX 2.1 bundles from DISINFOX API
+   - Direct import without transformation
+   - Preserves all DISINFOX entity relationships
+
+3. **State Management**:
+   - Stores `last_fetch` timestamp
+   - Stores `last_run` for connector status
+   - Enables efficient incremental updates
+
+### API Authentication
+
+The connector authenticates using the `DISINFOX_API_KEY` parameter with requests to:
+```
+{DISINFOX_URL}/api/...?newer_than={last_fetch}
+```
+
+---
+
+## Usage
+
+After installation, the connector runs automatically at the interval specified by `CONNECTOR_DURATION_PERIOD`.
+
+To force an immediate sync:
+
+1. Navigate to `Data management` → `Ingestion` → `Connectors`
+2. Find the DISINFOX connector
+3. Click the refresh button to reset state and trigger a new download
+
+---
 
 ## Debugging
 
-The connector can be debugged by setting the appropiate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
-e., `self.helper.connector_logger.error("An error message")`.
+Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug`.
 
-<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
+Logging in code:
+```python
+self.helper.connector_logger.info("Message")
+self.helper.connector_logger.error("Error message")
+```
 
-## Additional information
+Common issues:
 
-<!--
-Any additional information about this connector
-* What information is ingested/updated/changed
-* What should the user take into account when using this connector
-* ...
--->
+- **API authentication failed**: Verify DISINFOX API key
+- **Connection refused**: Check DISINFOX URL accessibility
+- **Empty results**: Confirm data exists in DISINFOX for the time range
+
+---
+
+## Additional Information
+
+### About DISINFOX
+
+- **Repository**: [CyberDataLab/disinfox](https://github.com/CyberDataLab/disinfox)
+- **Purpose**: Track and analyze disinformation campaigns
+- **Data Format**: Native STIX 2.1 bundles
+
+### Use Cases
+
+| Use Case | Description |
+|----------|-------------|
+| Disinformation Tracking | Monitor emerging influence operations |
+| Campaign Analysis | Correlate disinformation with other threats |
+| Attribution | Link incidents to known actors |
+| Reporting | Generate intelligence reports |
+
+### API Key
+
+**Essential**: Obtain your DISINFOX API Key from the Profile page in your DISINFOX installation.

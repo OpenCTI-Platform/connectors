@@ -1,5 +1,9 @@
 # Tenable Security Center Connector
 
+| Status            | Date | Comment |
+|-------------------|------|---------|
+| Filigran Verified | -    | -       |
+
 The Tenable Security Center connector for OpenCTI allows for the ingestion of vulnerability data from Tenable Security Center 
 into the OpenCTI platform. 
 

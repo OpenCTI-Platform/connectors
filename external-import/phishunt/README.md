@@ -1,22 +1,6 @@
 # Phishunt Connector
 
-Table of Contents
-
-- [OpenCTI External Ingestion Connector Template](#opencti-external-ingestion-connector-template)
-    - [Introduction](#introduction)
-    - [Installation](#installation)
-        - [Requirements](#requirements)
-    - [Configuration variables](#configuration-variables)
-        - [OpenCTI environment variables](#opencti-environment-variables)
-        - [Base connector environment variables](#base-connector-environment-variables)
-        - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
-    - [Deployment](#deployment)
-        - [Docker Deployment](#docker-deployment)
-        - [Manual Deployment](#manual-deployment)
-    - [Usage](#usage)
-    - [Debugging](#debugging)
-
-## Status Filigran
+The Phishunt connector imports URLs of active websites suspected of being phishing from the Phishunt feed into OpenCTI.
 
 | Status            | Date       | Comment |
 |-------------------|------------|---------|

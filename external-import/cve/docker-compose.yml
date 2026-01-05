@@ -9,8 +9,8 @@ services:
       - CONNECTOR_NAME=Common Vulnerabilities and Exposures
       - CONNECTOR_SCOPE=cve
       - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_DURATION_PERIOD=PT2H # ISO8601 format, every 2 hours
       - CVE_API_KEY=ChangeMe # Required
+      - CVE_INTERVAL=6 # In hours, minimum 2 recommended by NIST
       # - CVE_BASE_URL=https://services.nvd.nist.gov/rest/json/cves # Optional
       # - CVE_MAX_DATE_RANGE=120 # Optional, in days, max 120
       # - CVE_MAINTAIN_DATA=true # Optional, retrieve only updated data

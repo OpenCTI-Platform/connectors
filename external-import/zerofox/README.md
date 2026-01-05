@@ -1,5 +1,9 @@
 # ZeroFox Threat Intelligence Connector
 
+| Status           | Date | Comment |
+|------------------|------|---------|
+| Partner Verified | -    | -       |
+
 The OpenCTI ZeroFox connector can be used to import knowledge from the ZeroFox
  platform. The connector leverages the Threat Intelligence data feeds to get data about ...
 
