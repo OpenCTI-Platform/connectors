@@ -1,4 +1,4 @@
-# OpenCTI GreyNoise Vulnerability Internal Enrichment Connector
+# OpenCTI GreyNoise Vulnerability Connector
 
 | Status | Date | Comment |
 |--------|------|---------|

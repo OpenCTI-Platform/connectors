@@ -8,7 +8,7 @@ The ESET ETI Report Enrichment connector automatically downloads PDF reports fro
 
 ## Table of Contents
 
-- [OpenCTI ESET ETI Report Enrichment Connector](#opencti-eset-eti-report-enrichment-connector)
+- [OpenCTI ESET ETI Report Connector](#opencti-eset-eti-report-connector)
   - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
   - [Installation](#installation)

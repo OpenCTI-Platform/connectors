@@ -1,4 +1,4 @@
-# OpenCTI Import External Reference Internal Enrichment Connector
+# OpenCTI Import External Reference Connector
 
 | Status | Date | Comment |
 |--------|------|---------|
