@@ -1,22 +1,23 @@
-import datetime
 import json
 import os
 import sys
 import time
+import traceback
+from datetime import datetime, timezone
 
 import requests
 import yaml
-from pycti import OpenCTIApiClient, OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class LastInfoSec:
     def __init__(self):
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
+        if os.path.isfile(config_file_path):
+            with open(config_file_path, encoding="utf-8") as f:
+                config = yaml.load(f, Loader=yaml.FullLoader)
+        else:
+            config = {}
         self.helper = OpenCTIConnectorHelper(config)
 
         self.lastinfosec_cti_url = "https://api.client.lastinfosec.com/v2/stix21/getbyminutes/{}?api_key={}&headers=false&platform=opencti"
@@ -69,8 +70,6 @@ class LastInfoSec:
         elif total_enabled > 1:
             raise Exception("You can enable only one feed per connector")
 
-        self.api = OpenCTIApiClient(self.opencti_url, self.opencti_id)
-
     def run(self):
         self.helper.log_info("Fetching lastinfosec datasets...")
         if not self.helper.get_run_and_terminate():
@@ -100,7 +99,7 @@ class LastInfoSec:
                 and self.lastinfosec_apikey is not None
             ):
                 url = self.lastinfosec_cve_url.format(self.lastinfosec_apikey)
-                run_interval = 3600  # 1h in second
+                run_interval = 3600  # 1h in seconds
                 time_to_sleep = self.fetch_data(url, run_interval)
             elif (
                 self.lastinfosec_tactic_enabled
@@ -108,7 +107,7 @@ class LastInfoSec:
                 and self.lastinfosec_apikey is not None
             ):
                 url = self.lastinfosec_tactic_url.format(self.lastinfosec_apikey)
-                run_interval = 86400  # 24h in second
+                run_interval = 86400  # 24h in seconds
                 time_to_sleep = self.fetch_data(url, run_interval)
             else:
                 self.helper.log_info("CTI Feed not configured")
@@ -128,7 +127,7 @@ class LastInfoSec:
         start = time.perf_counter()
         time_to_sleep = 0
         timestamp = int(time.time())
-        now = datetime.datetime.utcfromtimestamp(timestamp)
+        now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
 
         proxy_dic = {}
         if self.proxy_http is not None:
@@ -173,9 +172,9 @@ class LastInfoSec:
 
 if __name__ == "__main__":
     try:
-        lastInfoSecConnector = LastInfoSec()
-        lastInfoSecConnector.run()
-    except Exception as e:
-        print(e)
-        time.sleep(100)
-        sys.exit(0)
+        connector = LastInfoSec()
+        connector.run()
+    except Exception:
+        traceback.print_exc()
+        time.sleep(10)
+        sys.exit(1)

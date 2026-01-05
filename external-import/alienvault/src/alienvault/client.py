@@ -7,7 +7,7 @@ from typing import List
 
 from alienvault.models import Pulse
 from OTXv2 import OTXv2
-from pydantic.v1 import parse_obj_as
+from pydantic.v1 import HttpUrl, parse_obj_as
 
 __all__ = [
     "AlienVaultClient",
@@ -17,13 +17,13 @@ __all__ = [
 class AlienVaultClient:
     """AlienVault client."""
 
-    def __init__(self, base_url: str, api_key: str) -> None:
+    def __init__(self, base_url: HttpUrl, api_key: str) -> None:
         """
         Initializer.
         :param base_url: Base API url.
         :param api_key: API key.
         """
-        server = base_url if not base_url.endswith("/") else base_url[:-1]
+        server = str(base_url).strip("/")
 
         self.otx = OTXv2(api_key, server=server)
 

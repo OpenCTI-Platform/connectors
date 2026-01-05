@@ -1,10 +1,9 @@
 opencti:
-  url: 'http://localhost:8080'
+  url: 'http://localhost'
   token: 'ChangeMe' # OpenCTI API Key
 
 connector:
   id: 'ChangeMe' # Valid UUIDv4
-  type: 'EXTERNAL_IMPORT'
   name: 'Malcore'
   scope: 'malcore' # MIME type or SCO
   log_level: 'info'

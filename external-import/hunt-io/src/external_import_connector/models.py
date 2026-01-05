@@ -2,7 +2,7 @@
 
 import uuid
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional, TypedDict, Union
 
 import pycti
@@ -179,7 +179,7 @@ class C2ScanResult:
         """Validate and extract timestamp."""
         timestamp = data.get("timestamp", "")
         if not timestamp or not isinstance(timestamp, str):
-            return datetime.now().isoformat()
+            return datetime.now(timezone.utc).isoformat()
         return timestamp.strip()
 
     def _validate_and_get_confidence(self, data: C2) -> float:
@@ -328,7 +328,7 @@ class URL(BaseModel):
         self.author_id = author_id
         self.__post_init__()
 
-    def to_stix2_object(self) -> stix2.v21.observables.URL:
+    def to_stix2_object(self) -> stix2.Indicator:
         return stix2.Indicator(
             id=pycti.Indicator.generate_id(f"[url:value = '{self.scan_uri}']"),
             name=self.scan_uri,
@@ -383,7 +383,7 @@ class Infrastructure(BaseModel):
             created=self.created,
             name=self.name,
             created_by_ref=self.author,
-            infrastructure_types=self.infrastructure_types,
+            infrastructure_types=[self.infrastructure_types],
         )
 
 
