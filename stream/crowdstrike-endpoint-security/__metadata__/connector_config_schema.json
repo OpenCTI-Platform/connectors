@@ -60,6 +60,18 @@
       "description": "Whether to ignore dependencies when processing events from the live stream.",
       "type": "boolean"
     },
+    "CONNECTOR_IGNORE_TYPES": {
+      "default": [
+        "label",
+        "marking-definition",
+        "identity"
+      ],
+      "description": "Ignoring types from OpenCTI",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
     "CROWDSTRIKE_API_BASE_URL": {
       "default": "https://api.crowdstrike.com",
       "description": "Crowdstrike base url.",
@@ -87,23 +99,6 @@
       "default": false,
       "description": "Crowdstrike client secret used to connect to the API.",
       "type": "boolean"
-    },
-    "CROWDSTRIKE_CONSUMER_COUNT": {
-      "default": 10,
-      "description": "Number of consumer/worker used to push data",
-      "type": "integer"
-    },
-    "CROWDSTRIKE_IGNORE_TYPES": {
-      "default": [
-        "label",
-        "marking-definition",
-        "identity"
-      ],
-      "description": "Ignoring types from OpenCTI",
-      "items": {
-        "type": "string"
-      },
-      "type": "array"
     },
     "METRICS_ENABLE": {
       "default": false,

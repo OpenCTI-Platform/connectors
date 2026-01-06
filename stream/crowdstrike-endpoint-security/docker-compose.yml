@@ -12,7 +12,6 @@ services:
       # - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       # - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
       # - CONNECTOR_LOG_LEVEL=error
-      # - CONNECTOR_CONSUMER_COUNT=10
       # - CONNECTOR_IGNORE_TYPES=label,marking-definition,identity
       # - CROWDSTRIKE_API_BASE_URL=https://api.crowdstrike.com
       - CROWDSTRIKE_CLIENT_ID=ChangeMe
