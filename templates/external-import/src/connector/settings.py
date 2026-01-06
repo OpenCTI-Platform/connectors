@@ -5,6 +5,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    ListFromString,
 )
 from pydantic import Field, HttpUrl
 
@@ -15,9 +16,17 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     to the configuration for connectors of type `EXTERNAL_IMPORT`.
     """
 
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        default="00000000-0000-0000-0000-000000000000",
+    )
     name: str = Field(
         description="The name of the connector.",
         default="TemplateConnector",
+    )
+    scope: ListFromString = Field(
+        description="The scope of the connector.",
+        default=[],
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
