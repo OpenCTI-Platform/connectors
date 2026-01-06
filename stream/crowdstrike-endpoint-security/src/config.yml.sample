@@ -10,7 +10,6 @@ connector:
 #   live_stream_listen_delete: true
 #   live_stream_no_dependencies: true
 #   log_level: 'error'
-#   consumer_count: 10
 #   ignore_types: label,marking-definition,identity
 
 crowdstrike:
