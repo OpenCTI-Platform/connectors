@@ -3,7 +3,7 @@ import os
 import re
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 import boto3
@@ -912,18 +912,18 @@ class MispFeed:
                         description=attribute["comment"],
                         pattern_type=pattern_type,
                         pattern=pattern,
-                        valid_from=datetime.utcfromtimestamp(
-                            int(attribute["timestamp"])
+                        valid_from=datetime.fromtimestamp(
+                            int(attribute["timestamp"]), tz=timezone.utc
                         ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                         labels=attribute_tags,
                         created_by_ref=author["id"],
                         object_marking_refs=attribute_markings,
                         external_references=attribute_external_references,
-                        created=datetime.utcfromtimestamp(
-                            int(attribute["timestamp"])
+                        created=datetime.fromtimestamp(
+                            int(attribute["timestamp"]), tz=timezone.utc
                         ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                        modified=datetime.utcfromtimestamp(
-                            int(attribute["timestamp"])
+                        modified=datetime.fromtimestamp(
+                            int(attribute["timestamp"]), tz=timezone.utc
                         ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                         custom_properties={
                             "x_opencti_main_observable_type": observable_type,
@@ -1127,19 +1127,21 @@ class MispFeed:
                             id=StixSightingRelationship.generate_id(
                                 indicator["id"],
                                 sighted_by["id"],
-                                datetime.utcfromtimestamp(
-                                    int(misp_sighting["date_sighting"])
+                                datetime.fromtimestamp(
+                                    int(misp_sighting["date_sighting"]), tz=timezone.utc
                                 ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                                datetime.utcfromtimestamp(
-                                    int(misp_sighting["date_sighting"]) + 3600
+                                datetime.fromtimestamp(
+                                    int(misp_sighting["date_sighting"]) + 3600,
+                                    tz=timezone.utc,
                                 ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                             ),
                             sighting_of_ref=indicator["id"],
-                            first_seen=datetime.utcfromtimestamp(
-                                int(misp_sighting["date_sighting"])
+                            first_seen=datetime.fromtimestamp(
+                                int(misp_sighting["date_sighting"]), tz=timezone.utc
                             ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                            last_seen=datetime.utcfromtimestamp(
-                                int(misp_sighting["date_sighting"]) + 3600
+                            last_seen=datetime.fromtimestamp(
+                                int(misp_sighting["date_sighting"]) + 3600,
+                                tz=timezone.utc,
                             ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                             where_sighted_refs=(
                                 [sighted_by] if sighted_by is not None else None
@@ -1715,32 +1717,35 @@ class MispFeed:
             report = stix2.Report(
                 id=Report.generate_id(
                     event["Event"]["info"],
-                    datetime.utcfromtimestamp(
+                    datetime.fromtimestamp(
                         int(
                             datetime.strptime(
                                 str(event["Event"]["date"]), "%Y-%m-%d"
                             ).timestamp()
-                        )
+                        ),
+                        tz=timezone.utc,
                     ),
                 ),
                 name=event["Event"]["info"],
                 description=event["Event"]["info"],
-                published=datetime.utcfromtimestamp(
+                published=datetime.fromtimestamp(
                     int(
                         datetime.strptime(
                             str(event["Event"]["date"]), "%Y-%m-%d"
                         ).timestamp()
-                    )
+                    ),
+                    tz=timezone.utc,
                 ),
-                created=datetime.utcfromtimestamp(
+                created=datetime.fromtimestamp(
                     int(
                         datetime.strptime(
                             str(event["Event"]["date"]), "%Y-%m-%d"
                         ).timestamp()
-                    )
+                    ),
+                    tz=timezone.utc,
                 ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                modified=datetime.utcfromtimestamp(
-                    int(event["Event"]["timestamp"])
+                modified=datetime.fromtimestamp(
+                    int(event["Event"]["timestamp"]), tz=timezone.utc
                 ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                 report_types=[self.config.misp_feed.report_type],
                 created_by_ref=author["id"],
@@ -1755,17 +1760,17 @@ class MispFeed:
             for note in event["Event"].get("EventReport", []):
                 note = stix2.Note(
                     id=Note.generate_id(
-                        datetime.utcfromtimestamp(int(note["timestamp"])).strftime(
-                            "%Y-%m-%dT%H:%M:%SZ"
-                        ),
+                        datetime.fromtimestamp(
+                            int(note["timestamp"]), tz=timezone.utc
+                        ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                         self._process_note(note["content"], bundle_objects),
                     ),
-                    created=datetime.utcfromtimestamp(int(note["timestamp"])).strftime(
-                        "%Y-%m-%dT%H:%M:%SZ"
-                    ),
-                    modified=datetime.utcfromtimestamp(int(note["timestamp"])).strftime(
-                        "%Y-%m-%dT%H:%M:%SZ"
-                    ),
+                    created=datetime.fromtimestamp(
+                        int(note["timestamp"]), tz=timezone.utc
+                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    modified=datetime.fromtimestamp(
+                        int(note["timestamp"]), tz=timezone.utc
+                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     created_by_ref=author["id"],
                     object_marking_refs=event_markings,
                     abstract=note["name"],
@@ -1872,9 +1877,9 @@ class MispFeed:
                                 + " (date="
                                 + item["date"]
                                 + ", modified="
-                                + datetime.utcfromtimestamp(last_event_timestamp)
-                                .astimezone(pytz.UTC)
-                                .isoformat()
+                                + datetime.fromtimestamp(
+                                    last_event_timestamp, tz=pytz.UTC
+                                ).isoformat()
                                 + ")"
                             )
                             event = json.loads(
@@ -1893,20 +1898,18 @@ class MispFeed:
                                 "Event processed, storing state (last_run="
                                 + now.astimezone(pytz.utc).isoformat()
                                 + ", last_event="
-                                + datetime.utcfromtimestamp(last_event_timestamp)
-                                .astimezone(pytz.UTC)
-                                .isoformat()
+                                + datetime.fromtimestamp(
+                                    last_event_timestamp, tz=pytz.UTC
+                                ).isoformat()
                                 + ", last_event_timestamp="
                                 + str(last_event_timestamp)
                             )
                             self.helper.set_state(
                                 {
                                     "last_run": now.astimezone(pytz.utc).isoformat(),
-                                    "last_event": datetime.utcfromtimestamp(
-                                        last_event_timestamp
-                                    )
-                                    .astimezone(pytz.UTC)
-                                    .isoformat(),
+                                    "last_event": datetime.fromtimestamp(
+                                        last_event_timestamp, tz=pytz.UTC
+                                    ).isoformat(),
                                     "last_event_timestamp": last_event_timestamp,
                                 }
                             )
@@ -1919,9 +1922,9 @@ class MispFeed:
                     + " events have been processed), storing state (last_run="
                     + now.astimezone(pytz.utc).isoformat()
                     + ", last_event="
-                    + datetime.utcfromtimestamp(last_event_timestamp)
-                    .astimezone(pytz.UTC)
-                    .isoformat()
+                    + datetime.fromtimestamp(
+                        last_event_timestamp, tz=pytz.UTC
+                    ).isoformat()
                     + ", last_event_timestamp="
                     + str(last_event_timestamp)
                     + ")"

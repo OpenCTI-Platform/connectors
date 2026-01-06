@@ -5,7 +5,7 @@ import ssl
 import sys
 import time
 import urllib
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 import yaml
@@ -80,7 +80,9 @@ class MitreAtlas:
                 last_run = current_state["last_run"]
                 self.helper.log_info(
                     "Connector last run: "
-                    + datetime.utcfromtimestamp(last_run).strftime("%Y-%m-%d %H:%M:%S")
+                    + datetime.fromtimestamp(last_run, tz=timezone.utc).strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
                 )
             else:
                 last_run = None
@@ -92,7 +94,7 @@ class MitreAtlas:
             ):
                 self.helper.log_info("Connector will run!")
 
-                now = datetime.utcfromtimestamp(timestamp)
+                now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
                 friendly_name = "MITRE ATLAS run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
                 work_id = self.helper.api.work.initiate_work(
                     self.helper.connect_id, friendly_name
@@ -157,7 +159,8 @@ if __name__ == "__main__":
     try:
         connector = MitreAtlas()
         connector.run()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        sys.exit(0)
+    except Exception:
+        import traceback
+
+        traceback.print_exc()
+        sys.exit(1)

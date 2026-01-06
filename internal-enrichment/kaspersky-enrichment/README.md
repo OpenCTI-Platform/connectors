@@ -1,90 +1,188 @@
-# OpenCTI Internal Enrichment Connector Kaspersky
+# OpenCTI Kaspersky Connector
 
-## Status Filigran
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
-| Status            | Date          | Comment |
-|-------------------|---------------|---------|
-| Filigran Verified | 11/28/2025    | -       |
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Installation](#installation)
+  - [Requirements](#requirements)
+- [Configuration](#configuration)
+  - [OpenCTI Configuration](#opencti-configuration)
+  - [Base Connector Configuration](#base-connector-configuration)
+  - [Kaspersky Configuration](#kaspersky-configuration)
+- [Deployment](#deployment)
+  - [Docker Deployment](#docker-deployment)
+  - [Manual Deployment](#manual-deployment)
+- [Usage](#usage)
+- [Behavior](#behavior)
+  - [Data Flow](#data-flow)
+  - [API Endpoints](#api-endpoints)
+  - [Generated STIX Objects](#generated-stix-objects)
+- [Debugging](#debugging)
+- [Additional Information](#additional-information)
+
+---
 
 ## Introduction
 
-Kaspersky enrichment is used to investigate objects by using the Kaspersky Threat Intelligence Portal such as File, IPV4, Domain/Hostname and URL.
+Kaspersky Threat Intelligence Portal provides threat intelligence services for investigating files, IP addresses, domains, hostnames, and URLs. This connector enriches observables using the Kaspersky TIP API.
 
-> [!NOTE]
-> At this time, the connector only supports the enrichment of File-type observables. Enrichment for other observable types will be introduced in future releases.
+**Note**: At this time, the connector primarily supports the enrichment of File-type observables. Enrichment for other observable types will be introduced in future releases.
 
-## Requirements
+Key features:
+- File hash reputation lookup
+- Zone classification (red, orange, yellow, gray, green)
+- Threat intelligence enrichment
+- Score mapping based on threat zones
 
-- OpenCTI Platform >= 6.9.4
+---
 
-## Configuration variables environment
+## Installation
 
-Find all the configuration variables available (default/required) here: [Connector Configurations](./__metadata__)
+### Requirements
+
+- OpenCTI Platform >= 6.9.5
+- Kaspersky TIP API key
+- Network access to Kaspersky TIP API
+
+---
+
+## Configuration
+
+### OpenCTI Configuration
+
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `opencti_url` | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
+| `opencti_token` | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
+
+### Base Connector Configuration
+
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `connector_id` | `CONNECTOR_ID` | Yes | A valid arbitrary `UUIDv4` unique for this connector |
+| `connector_name` | `CONNECTOR_NAME` | No | The name of the connector instance |
+| `connector_scope` | `CONNECTOR_SCOPE` | No | Supported: `StixFile`, `IPv4-Addr`, `Domain-Name`, `Hostname` |
+| `connector_auto` | `CONNECTOR_AUTO` | No | Enable/disable auto-enrichment |
+| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | No | Log level (`debug`, `info`, `warn`, `error`) |
+
+### Kaspersky Configuration
+
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `kaspersky_api_key` | `KASPERSKY_API_KEY` | Yes | Kaspersky TIP API key |
+| `kaspersky_api_base_url` | `KASPERSKY_API_BASE_URL` | No | API base URL (default: https://tip.kaspersky.com) |
+| `kaspersky_max_tlp` | `KASPERSKY_MAX_TLP` | No | Maximum TLP for processing |
+| `kaspersky_zone_octi_score_mapping` | `KASPERSKY_ZONE_OCTI_SCORE_MAPPING` | No | Zone to score mapping |
+| `kaspersky_file_sections` | `KASPERSKY_FILE_SECTIONS` | No | File API sections to retrieve |
+| `kaspersky_ipv4_sections` | `KASPERSKY_IPV4_SECTIONS` | No | IPv4 API sections to retrieve |
+| `kaspersky_domain_sections` | `KASPERSKY_DOMAIN_SECTIONS` | No | Domain API sections to retrieve |
+
+---
 
 ## Deployment
 
 ### Docker Deployment
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==6.9.4`. If you don't, it will take the latest version, but
-sometimes the OpenCTI SDK fails to initialize.
-
 Build a Docker Image using the provided `Dockerfile`.
 
-Example:
+Example `docker-compose.yml`:
 
-```shell
-# Replace the IMAGE NAME with the appropriate value
-docker build . -t [IMAGE NAME]:latest
-```
-
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
-environment. Then, start the docker container with the provided docker-compose.yml
-
-```shell
-docker compose up -d
-# -d for detached
+```yaml
+version: '3'
+services:
+  connector-kaspersky-enrichment:
+    image: opencti/connector-kaspersky-enrichment:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - KASPERSKY_API_KEY=ChangeMe
+    restart: always
 ```
 
 ### Manual Deployment
 
-Create a file `config.yml` based on the provided `config.yml.sample`.
+1. Clone the repository
+2. Create `config.yml` based on `config.yml.sample`
+3. Install dependencies: `pip3 install -r requirements.txt`
+4. Run from src directory: `python3 main.py`
 
-Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
-
-Install the required python dependencies (preferably in a virtual environment):
-
-```shell
-pip3 install -r requirements.txt
-```
-
-Then, start the connector from kaspersky-enrichment/src:
-
-```shell
-python3 main.py
-```
+---
 
 ## Usage
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
+The connector enriches observables by:
+1. Querying the Kaspersky TIP API for threat intelligence
+2. Applying zone-based scoring
+3. Enriching the observable with threat data
 
-However, if you would like to force an immediate download of a new batch of entities, navigate to:
+Trigger enrichment:
+- Manually via the OpenCTI UI
+- Automatically if `CONNECTOR_AUTO=true`
+- Via playbooks
 
-`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform.
+---
 
-Find the connector, and click on the refresh button to reset the connector's state and force a new
-download of data by re-running the connector.
+## Behavior
 
-## API Endpoints in Use
+### Data Flow
 
-| API                                             | Use in the connector     |
-|-------------------------------------------------|--------------------------|
-| https://tip.kaspersky.com/api/hash/{hash_value} | Enrich 'File' observable |
+```mermaid
+flowchart LR
+    A[File/IP/Domain] --> B[Kaspersky Connector]
+    B --> C{Kaspersky TIP API}
+    C --> D[Zone Classification]
+    C --> E[Threat Intelligence]
+    D --> F[Score Mapping]
+    E --> G[Enrichment Data]
+    F --> H[OpenCTI]
+    G --> H
+```
 
+### API Endpoints
+
+| API Endpoint | Observable Type | Description |
+|--------------|-----------------|-------------|
+| `/api/hash/{hash_value}` | File | Enrich File observable |
+| `/api/ip/{ip_value}` | IPv4-Addr | Enrich IP address (future) |
+| `/api/domain/{domain_value}` | Domain-Name | Enrich domain (future) |
+
+### Zone Score Mapping
+
+| Zone | Default Score | Description |
+|------|---------------|-------------|
+| Red | 100 | High threat |
+| Orange | 80 | Medium-high threat |
+| Yellow | 60 | Medium threat |
+| Gray | 20 | Unknown/Low |
+| Green | 0 | Safe |
+
+### Generated STIX Objects
+
+| Object Type | Description |
+|-------------|-------------|
+| Observable enrichment | Zone, score, and threat data |
+| External Reference | Link to Kaspersky TIP |
+| Labels | Zone classification |
+
+---
 
 ## Debugging
 
-The connector can be debugged by setting the appropriate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
-e., `self.helper.connector_logger.error("An error message")`.
+Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug`.
+
+Use logging with:
+```python
+self.helper.connector_logger.{LOG_LEVEL}("Message")
+```
+
+---
+
+## Additional Information
+
+- [Kaspersky Threat Intelligence Portal](https://tip.kaspersky.com/)
+- [Kaspersky TIP API Documentation](https://tip.kaspersky.com/help/api/)

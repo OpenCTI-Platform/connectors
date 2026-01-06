@@ -1,121 +1,230 @@
-# OpenCTI Shodan Internal Enrichment Connector
+# OpenCTI Shodan Connector
 
-## What is Shodan?
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
-Shodan official link : https://www.shodan.io/
-Shodan help link : https://help.shodan.io/the-basics/what-is-shodan
+## Table of Contents
 
-Shodan is a search engine for Internet-connected devices. Web search engines, such as Google and Bing, are great for finding websites. But what if you're interested in measuring which countries are becoming more connected? Or if you want to know which version of Microsoft IIS is the most popular? Or you want to find the control servers for malware? Maybe a new vulnerability came out and you want to see how many hosts it could affect? Traditional web search engines don't let you answer those questions.
+- [Introduction](#introduction)
+- [Installation](#installation)
+  - [Requirements](#requirements)
+- [Configuration](#configuration)
+  - [OpenCTI Configuration](#opencti-configuration)
+  - [Base Connector Configuration](#base-connector-configuration)
+  - [Shodan Configuration](#shodan-configuration)
+- [Deployment](#deployment)
+  - [Docker Deployment](#docker-deployment)
+  - [Manual Deployment](#manual-deployment)
+- [Usage](#usage)
+- [Behavior](#behavior)
+  - [Data Flow](#data-flow)
+  - [Observable Enrichment](#observable-enrichment)
+  - [Indicator Enrichment](#indicator-enrichment)
+  - [Generated STIX Objects](#generated-stix-objects)
+- [Debugging](#debugging)
+- [Additional Information](#additional-information)
 
-Shodan gathers information about all devices directly connected to the Internet. If a device is directly hooked up to the Internet then Shodan queries it for various publicly-available information. The types of devices that are indexed can vary tremendously: ranging from small desktops up to nuclear power plants and everything in between.
+---
 
-So what does Shodan index then? The bulk of the data is taken from banners, which are metadata about a software that's running on a device. This can be information about the server software, what options the service supports, a welcome message or anything else that the client would like to know before interacting with the server.
+## Introduction
 
-## What is scope for shodan Connector ?
+[Shodan](https://www.shodan.io/) is a search engine for Internet-connected devices. Unlike traditional web search engines, Shodan indexes information about devices directly connected to the Internet, including servers, routers, webcams, and more.
 
-    Scope :
-        - Ipv4,
-        - Indicator (only pattern_type: shodan)
+This connector enriches IPv4 observables and Shodan pattern indicators with comprehensive device and network intelligence.
 
-## What does Shodan Connector do ?
-
-This connector allows ipv4 observables or indicators with a ‘shodan’ pattern_type to be enriched, any other scope is not supported.
-
-For an observable, it can be enriched with :
-
-- Shodan identity (organisation)
-- Organisation + relationship
-- DomainName + relationship
-- HostName + relationship
-- AutonomousSystem+ relationship
-- X509Certificate + relationship
-- Location (City & Country) + relationship
-- Vulnerability + relationship
-- Updating the observable enriched with a description, labels, external reference
-
-For an indicator with pattern_type "Shodan", it can be enriched with :
-
-- Note with "Facets", by retrieving the total number of search results for the query.
-  - Facets titles :
-    - Global
-    - Top 20 Organizations
-    - Top 20 Domains
-    - Top 20 Ports
-    - Top 20 Autonomous Systems
-    - Top 20 Countries
-
-By default, the import_search_results environment variable is set to true, which means that for each indicator enrichment, it will first search for all ipv4s associated with that entity, and for each IPv4 observable, it will perform an automatic enrichment of that observable that includes all of the entities listed above.
+---
 
 ## Installation
 
 ### Requirements
 
 - OpenCTI Platform >= 5.2.4
+- Shodan API key
+- Network access to Shodan API
 
-## Configuration variables
+---
 
-Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
+## Configuration
 
-_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
-For more information regarding these variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
+### OpenCTI Configuration
+
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `opencti_url` | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
+| `opencti_token` | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
+
+### Base Connector Configuration
+
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `connector_id` | `CONNECTOR_ID` | No | A valid arbitrary `UUIDv4` unique for this connector |
+| `connector_name` | `CONNECTOR_NAME` | No | The name of the connector instance |
+| `connector_scope` | `CONNECTOR_SCOPE` | No | Supported: `IPv4-Addr,Indicator` (pattern_type: shodan) |
+| `connector_auto` | `CONNECTOR_AUTO` | No | Enable/disable auto-enrichment |
+| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | No | Log level (`debug`, `info`, `warn`, `error`) |
+
+### Shodan Configuration
+
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `shodan_token` | `SHODAN_TOKEN` | Yes | Shodan API token |
+| `shodan_max_tlp` | `SHODAN_MAX_TLP` | No | Maximum TLP for enrichment |
+| `shodan_default_score` | `SHODAN_DEFAULT_SCORE` | No | Default score for created indicators |
+| `shodan_import_search_results` | `SHODAN_IMPORT_SEARCH_RESULTS` | No | Import search results for indicators (default: true) |
+| `shodan_create_note` | `SHODAN_CREATE_NOTE` | No | Create note with facets for indicators |
+| `shodan_use_isp_name` | `SHODAN_USE_ISP_NAME` | No | Use ISP name for ASN |
+
+---
 
 ## Deployment
 
 ### Docker Deployment
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
-sometimes the OpenCTI SDK fails to initialize.
-
 Build a Docker Image using the provided `Dockerfile`.
 
-Example:
+Example `docker-compose.yml`:
 
-```shell
-# Replace the IMAGE NAME with the appropriate value
-docker build . -t [IMAGE NAME]:latest
-```
-
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
-environment. Then, start the docker container with the provided docker-compose.yml
-
-```shell
-docker compose up -d
-# -d for detached
+```yaml
+version: '3'
+services:
+  connector-shodan:
+    image: opencti/connector-shodan:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - SHODAN_TOKEN=ChangeMe
+      - CONNECTOR_SCOPE=IPv4-Addr,Indicator
+      - CONNECTOR_AUTO=false
+      - CONNECTOR_LOG_LEVEL=error
+    restart: always
 ```
 
 ### Manual Deployment
 
-Create a file `config.yml` based on the provided `config.yml.sample`.
+1. Clone the repository
+2. Create `config.yml` based on `config.yml.sample`
+3. Install dependencies: `pip3 install -r requirements.txt`
+4. Run: `python3 main.py`
 
-Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
+---
 
-Install the required python dependencies (preferably in a virtual environment):
+## Usage
 
-```shell
-pip3 install -r requirements.txt
+The connector enriches:
+1. **IPv4 Observables**: With device and network information
+2. **Indicators with Shodan pattern_type**: With search facets and results
+
+Trigger enrichment:
+- Manually via the OpenCTI UI
+- Automatically if `CONNECTOR_AUTO=true` (see warnings below)
+- Via playbooks
+
+---
+
+## Behavior
+
+### Data Flow
+
+```mermaid
+flowchart LR
+    A[IPv4/Indicator] --> B[Shodan Connector]
+    B --> C{Shodan API}
+    C --> D[Device Info]
+    D --> E[Organization]
+    D --> F[Domain/Hostname]
+    D --> G[ASN/Location]
+    D --> H[Certificates]
+    D --> I[Vulnerabilities]
+    E --> J[OpenCTI]
+    F --> J
+    G --> J
+    H --> J
+    I --> J
 ```
 
-Then, start the connector from recorded-future/src:
+### Observable Enrichment
 
-```shell
-python3 main.py
-```
+For IPv4 observables, the connector creates:
 
-### Additional information
+| STIX Object | Description |
+|-------------|-------------|
+| Identity | Shodan organization |
+| Organization | Related organization + relationship |
+| Domain-Name | Associated domains + relationship |
+| Hostname | Associated hostnames + relationship |
+| Autonomous-System | ASN information + relationship |
+| X509-Certificate | SSL certificates + relationship |
+| Location | City and country + relationship |
+| Vulnerability | CVEs found + relationship |
 
-#### Warnings:
+Additionally, it updates the observable with:
+- Description with device details
+- Labels for services and technologies
+- External reference to Shodan
 
-- Currently, if you set the ‘auto’ environment variable to true, you risk getting a set of traceback errors of the following type: (ValueError : Unsupported pattern type : ‘patternType’) due to the indicator type events being triggered.
-  However, there is a small function directly accessible on OpenCTI which allows you to filter the indicator pattern type :
+### Indicator Enrichment
 
-  In the connector Shodan page: Data / Ingestion / Connectors / Shodan
+For indicators with `pattern_type: shodan`, the connector creates:
 
-  Use the added filters titled `Trigger filters` and add two filters: `Pattern type = shodan` OR `Entity type = IPv4 address`
+| Content | Description |
+|---------|-------------|
+| Note | Facets with aggregated statistics |
 
-  ![trigger-filters](./__docs__/media/trigger-filters.png)
+Facets include:
+- Global summary
+- Top 20 Organizations
+- Top 20 Domains
+- Top 20 Ports
+- Top 20 Autonomous Systems
+- Top 20 Countries
 
-Useful links:
+When `import_search_results=true`, the connector also enriches all IPv4 addresses matching the search pattern.
 
-- Shodan Python: https://shodan.readthedocs.io/en/latest/api.html
+### Generated STIX Objects
+
+| Object Type | Description |
+|-------------|-------------|
+| Identity | Shodan organization |
+| Organization | Related organizations |
+| Domain-Name | Associated domains |
+| Autonomous-System | ASN information |
+| X509-Certificate | SSL certificates |
+| Location | Geographic data |
+| Vulnerability | CVEs discovered |
+| Note | Search facets (for indicators) |
+| Labels | Service and technology tags |
+| External Reference | Shodan links |
+
+---
+
+## Debugging
+
+Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug` to see:
+- API request/response details
+- Entity creation progress
+- Error details
+
+---
+
+## Additional Information
+
+- [Shodan](https://www.shodan.io/)
+- [Shodan API Documentation](https://shodan.readthedocs.io/en/latest/api.html)
+- [Shodan Help](https://help.shodan.io/the-basics/what-is-shodan)
+
+### Warnings
+
+**Auto Enrichment**: If you set `CONNECTOR_AUTO=true`, you may encounter errors for indicators with unsupported pattern types. To avoid this, use Trigger Filters in OpenCTI:
+
+1. Navigate to: Data -> Ingestion -> Connectors -> Shodan
+2. Add Trigger Filters:
+   - `Pattern type = shodan` OR `Entity type = IPv4 address`
+
+This ensures the connector only processes supported entity types.
+
+### Use Cases
+
+- **Vulnerability Assessment**: Discover CVEs on exposed services
+- **Asset Discovery**: Find associated domains, certificates, and infrastructure
+- **Threat Hunting**: Search for attacker infrastructure patterns

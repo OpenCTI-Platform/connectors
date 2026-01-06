@@ -1,12 +1,15 @@
-# OpenCTI External Ingestion Connector Wiz
+# OpenCTI Wiz Connector
 
-| Status            | Date       | Comment |
-| ----------------- |------------| ------- |
-| Filigran Verified | 2025-04-09 |    -    |
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
-Table of Contents
+The Wiz connector imports cloud security threat intelligence from Wiz Research into OpenCTI.
 
-- [OpenCTI External Ingestion Connector Wiz](#opencti-external-ingestion-connector-wiz)
+## Table of Contents
+
+- [OpenCTI Wiz Connector](#opencti-wiz-connector)
+  - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -24,37 +27,32 @@ Table of Contents
 
 ## Introduction
 
-This connector imports data made publicly available by Wiz exposed at https://threats.wiz.io/.
-The list of imported entities (with their relationships) :
+This connector imports threat intelligence data publicly available from [Wiz Research](https://threats.wiz.io/). The data provides comprehensive insights into cloud security threats including:
 
-- **Incidents** : A historical collection of past cloud security incidents and campaigns, offering insights into targeting patterns, initial access methods, and effective impact.
+- **Incidents**: Historical collection of past cloud security incidents and campaigns, offering insights into targeting patterns, initial access methods, and effective impact.
 
-- **Actors** : Profiles of threat actors involved in cloud security incidents, shedding light on their potential motivations and victimology, to aid in risk assessment and threat modeling. NB: These can be modeled as either Threat Actor or Intrusion Set objects, depending on the configuration variable. See `threat_actor_as_intrusion_set` in [Configuration variables](#configuration-variables).
+- **Actors**: Profiles of threat actors involved in cloud security incidents, shedding light on their potential motivations and victimology for risk assessment and threat modeling.
 
-- **Techniques** : An overview of attack techniques used by threat actors in cloud security incidents, aligned with the MITRE ATT&CK matrix framework for additional context.
+- **Techniques**: Attack techniques used by threat actors in cloud security incidents, aligned with the MITRE ATT&CK matrix framework.
 
-- **Tools** : Details on software utilized by threat actors in their activities targeting cloud environments, ranging from penetration testing utilities to bespoke malware.
+- **Tools**: Software utilized by threat actors in their activities targeting cloud environments, from penetration testing utilities to bespoke malware.
 
-- **Targeted Technologies** : Analysis of frequently targeted software found in cloud environments, noting their prevalence and any related incidents and techniques.
+- **Targeted Technologies**: Frequently targeted software in cloud environments, noting their prevalence and related incidents and techniques.
 
-- **Defenses** : A corpus of cloud security measures that can serve to mitigate risks and prevent or detect attack techniques. Each mechanism is mapped to the MITRE D3FEND matrix.
-
-
+- **Defenses**: Cloud security measures that can mitigate risks and prevent or detect attack techniques, mapped to the MITRE D3FEND matrix.
 
 ## Installation
 
 ### Requirements
 
 - OpenCTI Platform >= 6.3.8
+- Internet access to https://threats.wiz.io/
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
-in `config.yml` (for manual deployment).
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
 
 ### OpenCTI environment variables
-
-Below are the parameters you'll need to set for OpenCTI:
 
 | Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
 |---------------|------------|-----------------------------|-----------|------------------------------------------------------|
@@ -63,97 +61,182 @@ Below are the parameters you'll need to set for OpenCTI:
 
 ### Base connector environment variables
 
-Below are the parameters you'll need to set for running the connector properly:
+| Parameter       | config.yml      | Docker environment variable   | Default | Mandatory | Description                                                              |
+|-----------------|-----------------|-------------------------------|---------|-----------|--------------------------------------------------------------------------|
+| Connector ID    | id              | `CONNECTOR_ID`                |         | Yes       | A unique `UUIDv4` identifier for this connector instance.                |
+| Connector Name  | name            | `CONNECTOR_NAME`              | Wiz     | No        | Name of the connector.                                                   |
+| Connector Scope | scope           | `CONNECTOR_SCOPE`             |         | Yes       | The scope or type of data the connector is importing.                    |
+| Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`         | info    | No        | Determines the verbosity of logs: `debug`, `info`, `warn`, or `error`.   |
+| Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD`   |         | Yes       | Interval between runs in ISO 8601 format.                                |
 
-| Parameter                     | config.yml                    | Docker environment variable         | Default         | Mandatory | Description                                                                                                   |
-|-------------------------------|-------------------------------|-------------------------------------|-----------------|-----------|---------------------------------------------------------------------------------------------------------------|
-| Connector ID                  | id                            | `CONNECTOR_ID`                      | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                                     |
-| Connector Type                | type                          | `CONNECTOR_TYPE`                    | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                                                 |
-| Connector Name                | name                          | `CONNECTOR_NAME`                    |                 | Yes       | Name of the connector.                                                                                        |
-| Connector Scope               | scope                         | `CONNECTOR_SCOPE`                   |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object.                      |
-| Log Level                     | log_level                     | `CONNECTOR_LOG_LEVEL`               | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.                        |
-| Duration Period               | duration_period               | `CONNECTOR_DURATION_PERIOD`         | /               | Yes       | Determines how often the connector should run.                                                                |
-| Threat Actor as Intrusion-Set | threat_actor_as_intrusion_set | `WIZ_THREAT_ACTOR_AS_INTRUSION_SET` | False           | No        | Convert Threat Actor objects to Intrusion Set objects. Defaults to `False`.                                   |
-| TLP Level                     | tlp_level                     | `WIZ_TLP_LEVEL`                     | "clear"         | No        | TLP level to set on imported entities (allowed values are ['white', 'green', 'amber', 'amber+strict', 'red']) |
+### Connector extra parameters environment variables
+
+| Parameter                     | config.yml                    | Docker environment variable         | Default | Mandatory | Description                                                    |
+|-------------------------------|-------------------------------|-------------------------------------|---------|-----------|----------------------------------------------------------------|
+| Threat Actor as Intrusion-Set | threat_actor_as_intrusion_set | `WIZ_THREAT_ACTOR_AS_INTRUSION_SET` | False   | No        | Convert Threat Actor objects to Intrusion Set objects.         |
+| TLP Level                     | tlp_level                     | `WIZ_TLP_LEVEL`                     | clear   | No        | TLP marking: `white`, `green`, `amber`, `amber+strict`, `red`. |
 
 ## Deployment
 
 ### Docker Deployment
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
-sometimes the OpenCTI SDK fails to initialize.
+Build the Docker image:
 
-Build a Docker Image using the provided `Dockerfile`.
-
-Example:
-
-```shell
-# Replace the IMAGE NAME with the appropriate value
-docker build . -t [IMAGE NAME]:latest
+```bash
+docker build -t opencti/connector-wiz:latest .
 ```
 
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
-environment. Then, start the docker container with the provided docker-compose.yml
+Configure the connector in `docker-compose.yml`:
 
-```shell
+```yaml
+  connector-wiz:
+    image: opencti/connector-wiz:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Wiz
+      - CONNECTOR_SCOPE=wiz
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=P1D
+      - WIZ_THREAT_ACTOR_AS_INTRUSION_SET=false
+      - WIZ_TLP_LEVEL=clear
+    restart: always
+```
+
+Start the connector:
+
+```bash
 docker compose up -d
-# -d for detached
 ```
 
 ### Manual Deployment
 
-Create a file `config.yml` based on the provided `config.yml.sample`.
+1. Create `config.yml` based on `config.yml.sample`.
 
-Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
+2. Install dependencies:
 
-Install the required python dependencies (preferably in a virtual environment):
-
-```shell
+```bash
 pip3 install -r requirements.txt
 ```
 
-Then, start the connector from recorded-future/src:
+3. Start the connector:
 
-```shell
+```bash
 python3 main.py
 ```
 
 ## Usage
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
+The connector runs automatically at the interval defined by `CONNECTOR_DURATION_PERIOD`. To force an immediate run:
 
-However, if you would like to force an immediate download of a new batch of entities, navigate to:
+**Data Management → Ingestion → Connectors**
 
-`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform.
-
-Find the connector, and click on the refresh button to reset the connector's state and force a new
-download of data by re-running the connector.
+Find the connector and click the refresh button to reset the state and trigger a new data fetch.
 
 ## Behavior
 
-<!--
-Describe how the connector functions:
-* What data is ingested, updated, or modified
-* Important considerations for users when utilizing this connector
-* Additional relevant details
--->
+The connector fetches cloud threat intelligence from Wiz Research and imports it into OpenCTI.
 
+### Data Flow
+
+```mermaid
+graph LR
+    subgraph Wiz Research
+        direction TB
+        API[STIX Feed]
+        Incidents[Incidents]
+        Actors[Threat Actors]
+        Techniques[Techniques]
+        Tools[Tools]
+        Technologies[Targeted Technologies]
+        Defenses[Defenses]
+    end
+
+    subgraph OpenCTI
+        direction LR
+        Incident[Incident]
+        ThreatActor[Threat Actor/Intrusion Set]
+        AttackPattern[Attack Pattern]
+        Tool[Tool]
+        Malware[Malware]
+        Software[Software]
+        CourseOfAction[Course of Action]
+    end
+
+    API --> Incidents
+    API --> Actors
+    API --> Techniques
+    API --> Tools
+    API --> Technologies
+    API --> Defenses
+    
+    Incidents --> Incident
+    Actors --> ThreatActor
+    Techniques --> AttackPattern
+    Tools --> Tool
+    Tools --> Malware
+    Technologies --> Software
+    Defenses --> CourseOfAction
+    
+    ThreatActor -- uses --> AttackPattern
+    ThreatActor -- uses --> Tool
+    AttackPattern -- mitigated-by --> CourseOfAction
+    Incident -- attributed-to --> ThreatActor
+```
+
+### Entity Mapping
+
+| Wiz Data               | OpenCTI Entity               | Description                                      |
+|------------------------|------------------------------|--------------------------------------------------|
+| Incident               | Incident                     | Cloud security incident or campaign              |
+| Actor                  | Threat Actor or Intrusion Set| Threat actor profile (configurable)              |
+| Technique              | Attack Pattern               | MITRE ATT&CK aligned technique                   |
+| Tool (Legitimate)      | Tool                         | Legitimate software used maliciously             |
+| Tool (Malware)         | Malware                      | Malicious software                               |
+| Targeted Technology    | Software                     | Frequently targeted cloud software               |
+| Defense                | Course of Action             | Mitigation mapped to MITRE D3FEND                |
+
+### Configuration Options
+
+#### Threat Actor as Intrusion Set
+
+Set `WIZ_THREAT_ACTOR_AS_INTRUSION_SET=true` to convert Threat Actor objects to Intrusion Set objects. This is useful when:
+
+- You prefer to model threat actors as Intrusion Sets for consistency
+- Your threat intelligence workflow uses Intrusion Sets for actor tracking
+
+#### TLP Marking
+
+All imported data is marked with the configured TLP level:
+
+| TLP Level    | Description                                      |
+|--------------|--------------------------------------------------|
+| clear/white  | Publicly available information (default)         |
+| green        | Limited disclosure to community                  |
+| amber        | Limited disclosure, need-to-know basis           |
+| amber+strict | Strict need-to-know within organization          |
+| red          | Personal for named recipients only               |
+
+### External References
+
+All imported entities include an external reference to the Wiz Research STIX feed:
+
+- **Source**: Connector name
+- **URL**: https://www.wiz.io/api/feed/cloud-threat-landscape/stix.json
+- **Description**: Comprehensive threat intelligence database of cloud security incidents
 
 ## Debugging
 
-The connector can be debugged by setting the appropiate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
-e., `self.helper.connector_logger.error("An error message")`.
+Enable verbose logging:
 
-<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
+```env
+CONNECTOR_LOG_LEVEL=debug
+```
 
 ## Additional information
 
-<!--
-Any additional information about this connector
-* What information is ingested/updated/changed
-* What should the user take into account when using this connector
-* ...
--->
+- **Public Feed**: No authentication required; data is publicly available
+- **STIX Format**: Wiz provides data in native STIX format
+- **MITRE Mappings**: Techniques map to ATT&CK, defenses map to D3FEND
+- **Reference**: [Wiz Cloud Threat Landscape](https://threats.wiz.io/)
