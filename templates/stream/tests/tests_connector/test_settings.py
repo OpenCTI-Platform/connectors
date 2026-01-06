@@ -19,7 +19,7 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "name": "Test Connector",
                     "scope": "test, connector",
                     "log_level": "error",
-                    "live_stream_id": "live",
+                    "live_stream_id": "test-live-stream-id",
                     "live_stream_listen_delete": True,
                     "live_stream_no_dependencies": True,
                 },
@@ -37,9 +37,7 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "token": "test-token",
                 },
                 "connector": {
-                    "id": "connector-id",
-                    "scope": "test, connector",
-                    "log_level": "error",
+                    "live_stream_id": "test-live-stream-id",
                 },
                 "template": {
                     "api_base_url": "http://test.com",
@@ -90,25 +88,22 @@ def test_settings_should_accept_valid_input(settings_dict):
         pytest.param(
             {
                 "opencti": {
-                    "url": "http://localhost:PORT",
-                    "token": "test-token",
+                    "url": "http://localhost:8080",
                 },
                 "connector": {
                     "id": "connector-id",
                     "name": "Test Connector",
                     "scope": "test, connector",
                     "log_level": "error",
-                    "live_stream_id": "live",
-                    "live_stream_listen_delete": True,
-                    "live_stream_no_dependencies": True,
+                    "live_stream_id": "test-live-stream-id",
                 },
                 "template": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
                 },
             },
-            "opencti.url",
-            id="invalid_opencti_url",
+            "opencti.token",
+            id="missing_opencti_token",
         ),
         pytest.param(
             {
@@ -117,12 +112,11 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "token": "test-token",
                 },
                 "connector": {
+                    "id": 123456,
                     "name": "Test Connector",
                     "scope": "test, connector",
                     "log_level": "error",
-                    "live_stream_id": "live",
-                    "live_stream_listen_delete": True,
-                    "live_stream_no_dependencies": True,
+                    "live_stream_id": "test-live-stream-id",
                 },
                 "template": {
                     "api_base_url": "http://test.com",
@@ -130,7 +124,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                 },
             },
             "connector.id",
-            id="missing_connector_id",
+            id="invalid_connector_id",
         ),
     ],
 )
