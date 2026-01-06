@@ -1,5 +1,6 @@
 import sys
 from datetime import datetime, timedelta, timezone
+from typing import TYPE_CHECKING
 
 from api_client.client import MISPClient, MISPClientError
 from api_client.models import EventRestSearchListItem
@@ -8,48 +9,51 @@ from connector.threats_guesser import ThreatsGuesser
 from connector.use_cases import ConverterError, EventConverter
 from pycti import OpenCTIConnectorHelper
 
+if TYPE_CHECKING:
+    from connector.settings import MispConfig
+
 
 class Misp:
-
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         self.config = config
+        self.config_misp: MispConfig = config.misp
         self.helper = helper
         self.client = MISPClient(
-            url=self.config.misp.url,
-            key=self.config.misp.key.get_secret_value(),
-            verify_ssl=self.config.misp.ssl_verify,
-            certificate=self.config.misp.client_cert,
+            url=self.config_misp.url,
+            key=self.config_misp.key.get_secret_value(),
+            verify_ssl=self.config_misp.ssl_verify,
+            certificate=self.config_misp.client_cert,
         )
         self.converter = EventConverter(
-            report_type=self.config.misp.report_type,
-            report_description_attribute_filters=self.config.misp.report_description_attribute_filters,
-            external_reference_base_url=self.config.misp.reference_url
-            or self.config.misp.url,
-            convert_event_to_report=self.config.misp.create_reports,
-            convert_attribute_to_associated_file=self.config.misp.import_with_attachments,
-            convert_attribute_to_indicator=self.config.misp.create_indicators,
-            convert_attribute_to_observable=self.config.misp.create_observables,
-            convert_object_to_observable=self.config.misp.create_object_observables,
-            convert_unsupported_object_to_text_observable=self.config.misp.import_unsupported_observables_as_text,
-            convert_unsupported_object_to_transparent_text_observable=self.config.misp.import_unsupported_observables_as_text_transparent,
-            convert_tag_to_author=self.config.misp.author_from_tags,
-            convert_tag_to_label=self.config.misp.create_tags_as_labels,
-            convert_tag_to_marking=self.config.misp.markings_from_tags,
-            propagate_report_labels=self.config.misp.propagate_labels,
-            original_tags_to_keep_as_labels=self.config.misp.keep_original_tags_as_label,
-            default_attribute_score=self.config.misp.import_to_ids_no_score,
-            guess_threats_from_tags=self.config.misp.guess_threats_from_tags,
+            report_type=self.config_misp.report_type,
+            report_description_attribute_filters=self.config_misp.report_description_attribute_filters,
+            external_reference_base_url=self.config_misp.reference_url
+            or self.config_misp.url,
+            convert_event_to_report=self.config_misp.create_reports,
+            convert_attribute_to_associated_file=self.config_misp.import_with_attachments,
+            convert_attribute_to_indicator=self.config_misp.create_indicators,
+            convert_attribute_to_observable=self.config_misp.create_observables,
+            convert_object_to_observable=self.config_misp.create_object_observables,
+            convert_unsupported_object_to_text_observable=self.config_misp.import_unsupported_observables_as_text,
+            convert_unsupported_object_to_transparent_text_observable=self.config_misp.import_unsupported_observables_as_text_transparent,
+            convert_tag_to_author=self.config_misp.author_from_tags,
+            convert_tag_to_label=self.config_misp.create_tags_as_labels,
+            convert_tag_to_marking=self.config_misp.markings_from_tags,
+            propagate_report_labels=self.config_misp.propagate_labels,
+            original_tags_to_keep_as_labels=self.config_misp.keep_original_tags_as_label,
+            default_attribute_score=self.config_misp.import_to_ids_no_score,
+            guess_threats_from_tags=self.config_misp.guess_threats_from_tags,
             threats_guesser=(
                 ThreatsGuesser(self.helper.api)
-                if self.config.misp.guess_threats_from_tags
+                if self.config_misp.guess_threats_from_tags
                 else None
             ),
         )
 
     def process_event(self, event: EventRestSearchListItem):
         if (
-            self.config.misp.import_owner_orgs
-            and event.Event.Org.name not in self.config.misp.import_owner_orgs
+            self.config_misp.import_owner_orgs
+            and event.Event.Org.name not in self.config_misp.import_owner_orgs
         ):
             self.helper.connector_logger.info(
                 "Event owner Organization not in `MISP_IMPORT_OWNER_ORGS`, skipping event",
@@ -57,8 +61,8 @@ class Misp:
             )
             return
         if (
-            self.config.misp.import_owner_orgs_not
-            and event.Event.Org.name in self.config.misp.import_owner_orgs_not
+            self.config_misp.import_owner_orgs_not
+            and event.Event.Org.name in self.config_misp.import_owner_orgs_not
         ):
             self.helper.connector_logger.info(
                 "Event owner Organization in `MISP_IMPORT_OWNER_ORGS_NOT`, skipping event",
@@ -66,9 +70,9 @@ class Misp:
             )
             return
         if (
-            self.config.misp.import_distribution_levels
+            self.config_misp.import_distribution_levels
             and event.Event.distribution
-            not in self.config.misp.import_distribution_levels
+            not in self.config_misp.import_distribution_levels
         ):
             self.helper.connector_logger.info(
                 "Event distribution level not in `MISP_IMPORT_DISTRIBUTION_LEVELS`, skipping event",
@@ -76,15 +80,15 @@ class Misp:
             )
             return
         if (
-            self.config.misp.import_threat_levels
-            and event.Event.threat_level_id not in self.config.misp.import_threat_levels
+            self.config_misp.import_threat_levels
+            and event.Event.threat_level_id not in self.config_misp.import_threat_levels
         ):
             self.helper.connector_logger.info(
                 "Event threat level not in `MISP_IMPORT_THREAT_LEVELS`, skipping event",
                 {"event_threat_level": event.Event.threat_level_id},
             )
             return
-        if self.config.misp.import_only_published and (not event.Event.published):
+        if self.config_misp.import_only_published and (not event.Event.published):
             self.helper.connector_logger.info(
                 "Event not published and `MISP_IMPORT_ONLY_PUBLISHED` enabled, skipping event",
                 {"event_published": event.Event.published},
@@ -144,8 +148,8 @@ class Misp:
                     },
                 )
             else:
-                if self.config.misp.import_from_date:
-                    last_event = self.config.misp.import_from_date
+                if self.config_misp.import_from_date:
+                    last_event = self.config_misp.import_from_date
                 else:
                     last_event = now
                 self.helper.connector_logger.info("Connector has never run")
@@ -153,27 +157,27 @@ class Misp:
             self.helper.connector_logger.info(
                 "Fetching MISP events with filters:",
                 {
-                    "date_field_filter": self.config.misp.date_filter_field,
+                    "date_field_filter": self.config_misp.date_filter_field,
                     "date_value_filter": next_event_date,
-                    "keyword": self.config.misp.import_keyword,
-                    "included_tags": self.config.misp.import_tags,
-                    "excluded_tags": self.config.misp.import_tags_not,
-                    "included_org_creators": self.config.misp.import_creator_orgs,
-                    "excluded_org_creators": self.config.misp.import_creator_orgs_not,
-                    "enforce_warning_list": self.config.misp.enforce_warning_list,
-                    "with_attachments": self.config.misp.import_with_attachments,
+                    "keyword": self.config_misp.import_keyword,
+                    "included_tags": self.config_misp.import_tags,
+                    "excluded_tags": self.config_misp.import_tags_not,
+                    "included_org_creators": self.config_misp.import_creator_orgs,
+                    "excluded_org_creators": self.config_misp.import_creator_orgs_not,
+                    "enforce_warning_list": self.config_misp.enforce_warning_list,
+                    "with_attachments": self.config_misp.import_with_attachments,
                 },
             )
             events = self.client.search_events(
-                date_field_filter=self.config.misp.date_filter_field,
+                date_field_filter=self.config_misp.date_filter_field,
                 date_value_filter=next_event_date,
-                keyword=self.config.misp.import_keyword,
-                included_tags=self.config.misp.import_tags,
-                excluded_tags=self.config.misp.import_tags_not,
-                included_org_creators=self.config.misp.import_creator_orgs,
-                excluded_org_creators=self.config.misp.import_creator_orgs_not,
-                enforce_warning_list=self.config.misp.enforce_warning_list,
-                with_attachments=self.config.misp.import_with_attachments,
+                keyword=self.config_misp.import_keyword,
+                included_tags=self.config_misp.import_tags,
+                excluded_tags=self.config_misp.import_tags_not,
+                included_org_creators=self.config_misp.import_creator_orgs,
+                excluded_org_creators=self.config_misp.import_creator_orgs_not,
+                enforce_warning_list=self.config_misp.enforce_warning_list,
+                with_attachments=self.config_misp.import_with_attachments,
             )
             processed_events_count = 0
             last_event_datetime = None
@@ -191,9 +195,9 @@ class Misp:
                     )
                     continue
                 event_datetime_value = getattr(
-                    event.Event, self.config.misp.datetime_attribute
+                    event.Event, self.config_misp.datetime_attribute
                 )
-                if self.config.misp.datetime_attribute in [
+                if self.config_misp.datetime_attribute in [
                     "timestamp",
                     "publish_timestamp",
                     "sighting_timestamp",
@@ -201,7 +205,7 @@ class Misp:
                     event_datetime = datetime.fromtimestamp(
                         int(event_datetime_value), tz=timezone.utc
                     )
-                elif self.config.misp.datetime_attribute == "date":
+                elif self.config_misp.datetime_attribute == "date":
                     event_datetime = datetime.fromisoformat(
                         event_datetime_value
                     ).replace(tzinfo=timezone.utc)
