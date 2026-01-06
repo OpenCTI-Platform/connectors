@@ -390,7 +390,13 @@ class S3Connector:
             # History Note
             if obj.get("x_history", None) and obj.get("x_acti_uuid", None):
                 note_content = "| Timestamp | Comment |\n|---------|---------|\n"
-                for history in obj.get("x_history"):
+                # Sort history entries by timestamp from most recent to oldest
+                sorted_history = sorted(
+                    obj.get("x_history"),
+                    key=lambda h: h.get("timestamp", ""),
+                    reverse=True,
+                )
+                for history in sorted_history:
                     note_content += f"| {history.get('timestamp', '')} | {history.get('comment', '')} |\n"
 
                 note_key = obj.get("x_acti_uuid") + " - History"
