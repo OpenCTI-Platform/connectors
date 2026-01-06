@@ -9,6 +9,6 @@ services:
       - CONNECTOR_NAME=MITRE ATT&CK
       - CONNECTOR_SCOPE=mitre
       - CONNECTOR_LOG_LEVEL=error
-      - MITRE_INTERVAL=7 # In days
+      # - MITRE_INTERVAL=7 # In days
       # - MITRE_REMOVE_STATEMENT_MARKING=true # Optional
     restart: always
