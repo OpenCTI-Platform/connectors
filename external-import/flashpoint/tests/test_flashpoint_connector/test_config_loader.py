@@ -35,6 +35,7 @@ def fake_config_dict() -> dict[str, dict[str, Any]]:
             ),  # Reduce precision for later comparison in tests
             "import_reports": True,
             "indicators_in_reports": True,
+            "create_reports": False,
             "guess_relationships_from_reports": False,
             "import_alerts": True,
             "alert_create_related_entities": True,
