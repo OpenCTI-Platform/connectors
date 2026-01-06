@@ -93,7 +93,7 @@ class MISPConverterToStix:
         self.misp_feed_create_observables = True
         self.misp_feed_import_with_attachments = True
         self.misp_feed_create_object_observables = False
-        self.misp_feed_create_reports = True
+        self.misp_feed_create_reports = config.flashpoint.create_reports
         self.misp_indicators_in_reports = config.flashpoint.indicators_in_reports
         self.misp_feed_report_type = "misp-event"
 
