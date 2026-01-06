@@ -48,39 +48,10 @@ Key features:
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-| Parameter                  | config.yml                | Docker environment variable             | Default                        | Mandatory | Description                                                                    |
-|----------------------------|---------------------------|-----------------------------------------|--------------------------------|-----------|--------------------------------------------------------------------------------|
-| Connector ID               | id                        | `CONNECTOR_ID`                          |                                | Yes       | A unique `UUIDv4` identifier for this connector instance.                      |
-| Connector Name             | name                      | `CONNECTOR_NAME`                        | CrowdstrikeEndpointSecurity    | No        | Name of the connector.                                                         |
-| Connector Scope            | scope                     | `CONNECTOR_SCOPE`                       | crowdstrike-endpoint-security  | No        | The scope of the connector.                                                    |
-| Live Stream ID             | live_stream_id            | `CONNECTOR_LIVE_STREAM_ID`              |                                | Yes       | The Live Stream ID of the stream created in the OpenCTI interface.             |
-| Log Level                  | log_level                 | `CONNECTOR_LOG_LEVEL`                   | error                          | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.     |
-| Consumer Count             | consumer_count            | `CONNECTOR_CONSUMER_COUNT`              | 10                             | No        | Number of consumer/worker threads that will push data to CrowdStrike.          |
-| Ignore Types               | ignore_types              | `CONNECTOR_IGNORE_TYPES`                | label,marking-definition,identity | No    | Comma-separated list of entity types to ignore from the stream.                |
-
-### Connector extra parameters environment variables
-
-| Parameter                  | config.yml                      | Docker environment variable              | Default                      | Mandatory | Description                                                |
-|----------------------------|---------------------------------|------------------------------------------|------------------------------|-----------|-----------------------------------------------------------|
-| CrowdStrike API Base URL   | crowdstrike.api_base_url        | `CROWDSTRIKE_API_BASE_URL`               | https://api.crowdstrike.com  | No        | The CrowdStrike API base URL.                              |
-| CrowdStrike Client ID      | crowdstrike.client_id           | `CROWDSTRIKE_CLIENT_ID`                  |                              | Yes       | The CrowdStrike API Client ID.                             |
-| CrowdStrike Client Secret  | crowdstrike.client_secret       | `CROWDSTRIKE_CLIENT_SECRET`              |                              | Yes       | The CrowdStrike API Client Secret.                         |
-| Permanent Delete           | crowdstrike.permanent_delete    | `CROWDSTRIKE_PERMANENT_DELETE`           | false                        | No        | Permanently delete IOCs in CrowdStrike when deleted in OpenCTI. |
-| Falcon for Mobile Active   | crowdstrike.falcon_for_mobile_active | `CROWDSTRIKE_FALCON_FOR_MOBILE_ACTIVE` | false                     | No        | Enable Android and iOS platform support.                   |
-| Metrics Enable             | metrics.enable                  | `METRICS_ENABLE`                         | false                        | No        | Whether to enable Prometheus metrics.                      |
-| Metrics Address            | metrics.addr                    | `METRICS_ADDR`                           | 0.0.0.0                      | No        | Bind IP address for metrics endpoint.                      |
-| Metrics Port               | metrics.port                    | `METRICS_PORT`                           | 9113                         | No        | Port for metrics endpoint.                                 |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding these variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 

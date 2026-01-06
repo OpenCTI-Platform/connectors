@@ -60,18 +60,6 @@
       "description": "Whether to ignore dependencies when processing events from the live stream.",
       "type": "boolean"
     },
-    "CONNECTOR_IGNORE_TYPES": {
-      "default": [
-        "label",
-        "marking-definition",
-        "identity"
-      ],
-      "description": "Ignoring types from OpenCTI",
-      "items": {
-        "type": "string"
-      },
-      "type": "array"
-    },
     "CROWDSTRIKE_API_BASE_URL": {
       "default": "https://api.crowdstrike.com",
       "description": "Crowdstrike base url.",
