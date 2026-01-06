@@ -53,7 +53,7 @@ class CrowdstrikeEndpointSecurityConfig(BaseConfigModel):
         default=False,
     )
     falcon_for_mobile_active: bool = Field(
-        description="Crowdstrike client secret used to connect to the API.",
+        description="Enable Android and iOS platform support.",
         default=False,
     )
 
