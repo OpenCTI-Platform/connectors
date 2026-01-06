@@ -9,7 +9,7 @@ services:
       - CONNECTOR_NAME=Intelfinder
       - CONNECTOR_SCOPE=intelfinder
       - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_RUN_EVERY=1h # Format: 7d, 12h, 10m, 30s
+      - CONNECTOR_RUN_EVERY=5m
       - CONNECTOR_UPDATE_EXISTING_DATA=false
       - INTELFINDER_TOKEN=ChangeMe
       - INTELFINDER_LABELS=intelfinder

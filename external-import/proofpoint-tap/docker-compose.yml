@@ -10,7 +10,14 @@ services:
       - CONNECTOR_SCOPE=proofpoint-tap
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_DURATION_PERIOD=PT1H
-      - PROOFPOINT_TAP_API_URL=https://tap-api-v2.proofpoint.com
-      - PROOFPOINT_TAP_SERVICE_PRINCIPAL=ChangeMe
-      - PROOFPOINT_TAP_SECRET=ChangeMe
+      - TAP_API_BASE_URL=https://tap-api-v2.proofpoint.com/
+      - TAP_API_PRINCIPAL=ChangeMe
+      - TAP_API_SECRET=ChangeMe
+#      - TAP_API_TIMEOUT=PT30S
+#      - TAP_API_RETRIES=3
+#      - TAP_API_BACKOFF=PT5S
+      - TAP_MARKING_DEFINITION=white
+      - TAP_EXPORT_CAMPAIGNS=True
+      - TAP_EXPORT_EVENTS=True
+      - TAP_EVENTS_TYPE=issues
     restart: always
