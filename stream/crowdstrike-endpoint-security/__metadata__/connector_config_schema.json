@@ -97,7 +97,7 @@
     },
     "CROWDSTRIKE_FALCON_FOR_MOBILE_ACTIVE": {
       "default": false,
-      "description": "Crowdstrike client secret used to connect to the API.",
+      "description": "Enable Android and iOS platform support.",
       "type": "boolean"
     },
     "METRICS_ENABLE": {
