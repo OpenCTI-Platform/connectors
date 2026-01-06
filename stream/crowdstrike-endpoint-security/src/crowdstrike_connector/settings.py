@@ -27,6 +27,10 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
     live_stream_id: str = Field(
         description="The ID of the live stream to connect to.",
     )
+    ignore_types: ListFromString = Field(
+        description="Ignoring types from OpenCTI",
+        default=["label", "marking-definition", "identity"],
+    )
 
 
 class CrowdstrikeEndpointSecurityConfig(BaseConfigModel):
@@ -56,10 +60,7 @@ class CrowdstrikeEndpointSecurityConfig(BaseConfigModel):
         description="Number of consumer/worker used to push data",
         default=10,
     )
-    ignore_types: ListFromString = Field(
-        description="Ignoring types from OpenCTI",
-        default=["label", "marking-definition", "identity"],
-    )
+
 
 
 class MetricsConfig(BaseConfigModel):
