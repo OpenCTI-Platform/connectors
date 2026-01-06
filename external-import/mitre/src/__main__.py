@@ -1,4 +1,3 @@
-import datetime
 import json
 import ssl
 import sys
@@ -127,6 +126,8 @@ class Mitre:
                     )
                 )
                 self.remove_statement_marking(stix_bundle)
+            # Enrich kill chain phases with x_opencti_order and versioned phases
+            self.enrich_kill_chain_phases(stix_bundle, url)
             return stix_bundle
         except (
             urllib.error.URLError,
@@ -150,32 +151,117 @@ class Mitre:
                 else:
                     obj["object_marking_refs"] = new_markings
 
-    def create_kill_chain_phase_and_order(self, matrix):
+    @staticmethod
+    def get_collection_major_version(stix_bundle: dict) -> Optional[str]:
         """
-        :param matrix:
-        :return:
+        Extract the major version from the x-mitre-collection object in the bundle.
+
+        Parameters
+        ----------
+        stix_bundle : dict
+            The STIX bundle to search.
+
+        Returns
+        -------
+        Optional[str]
+            The major version (e.g., "18" from "18.1") or None if not found.
         """
-        if matrix == "enterprise-attack":
-            for phase in ENTERPRISE_ATTACK_KILL_CHAIN_PHASES:
-                self.helper.api.kill_chain_phase.create(
-                    kill_chain_name="mitre-attack",
-                    phase_name=phase.get("name"),
-                    x_opencti_order=phase.get("order"),
+        for obj in stix_bundle["objects"]:
+            if obj.get("type") == "x-mitre-collection":
+                version_str = obj.get("x_mitre_version", "")
+                if version_str:
+                    return version_str.split(".")[0]
+        return None
+
+    @staticmethod
+    def _build_kill_chain_order_mapping() -> dict:
+        """
+        Build a mapping from (kill_chain_name, phase_name) to x_opencti_order.
+
+        Returns
+        -------
+        dict
+            A dictionary mapping (kill_chain_name, phase_name) tuples to order values.
+        """
+        mapping = {}
+        for phase in ENTERPRISE_ATTACK_KILL_CHAIN_PHASES:
+            mapping[("mitre-attack", phase["name"])] = phase["order"]
+        for phase in MOBILE_ATTACK_KILL_CHAIN_PHASES:
+            mapping[("mitre-mobile-attack", phase["name"])] = phase["order"]
+        for phase in ICS_ATTACK_KILL_CHAIN_PHASES:
+            mapping[("mitre-ics-attack", phase["name"])] = phase["order"]
+        return mapping
+
+    def enrich_kill_chain_phases(self, stix_bundle: dict, url: str):
+        """
+        Enrich kill chain phases in attack patterns with x_opencti_order and versioned phases.
+        For ATT&CK matrices (not CAPEC), this adds:
+        - x_opencti_order to existing kill chain phases
+        - Versioned kill chain phases (e.g., "mitre-attack-v18") with x_opencti_order
+
+        Parameters
+        ----------
+        stix_bundle : dict
+            The STIX bundle to process.
+        url : str
+            The URL from which the bundle was retrieved (used to check if CAPEC).
+        """
+        # Build the order mapping
+        order_mapping = self._build_kill_chain_order_mapping()
+
+        # Check if this is CAPEC
+        is_capec = "capec" in url.lower()
+
+        # Get the collection major version for ATT&CK matrices
+        collection_version = None
+        if not is_capec:
+            collection_version = self.get_collection_major_version(stix_bundle)
+            if collection_version:
+                self.helper.log_info(
+                    f"Found MITRE ATT&CK collection major version: {collection_version}"
                 )
-        if matrix == "mobile-attack":
-            for phase in MOBILE_ATTACK_KILL_CHAIN_PHASES:
-                self.helper.api.kill_chain_phase.create(
-                    kill_chain_name="mitre-mobile-attack",
-                    phase_name=phase.get("name"),
-                    x_opencti_order=phase.get("order"),
+            else:
+                self.helper.log_warning(
+                    "Could not find x-mitre-collection version in bundle, skipping versioned kill chain phases"
                 )
-        if matrix == "ics-attack":
-            for phase in ICS_ATTACK_KILL_CHAIN_PHASES:
-                self.helper.api.kill_chain_phase.create(
-                    kill_chain_name="mitre-ics-attack",
-                    phase_name=phase.get("name"),
-                    x_opencti_order=phase.get("order"),
-                )
+
+        # Process all attack patterns
+        for obj in stix_bundle["objects"]:
+            if obj.get("type") == "attack-pattern" and "kill_chain_phases" in obj:
+                enriched_phases = []
+                for phase in obj["kill_chain_phases"]:
+                    kill_chain_name = phase.get("kill_chain_name", "")
+                    phase_name = phase.get("phase_name", "")
+
+                    # Look up the order for this phase
+                    order = order_mapping.get((kill_chain_name, phase_name))
+
+                    # Build enriched phase with x_opencti_order
+                    enriched_phase = {
+                        "kill_chain_name": kill_chain_name,
+                        "phase_name": phase_name,
+                    }
+                    if order is not None:
+                        enriched_phase["x_opencti_order"] = order
+
+                    enriched_phases.append(enriched_phase)
+
+                    # Add versioned kill chain phase for ATT&CK matrices
+                    if collection_version and kill_chain_name in [
+                        "mitre-attack",
+                        "mitre-mobile-attack",
+                        "mitre-ics-attack",
+                    ]:
+                        versioned_phase = {
+                            "kill_chain_name": f"{kill_chain_name}-v{collection_version}",
+                            "phase_name": phase_name,
+                        }
+                        if order is not None:
+                            versioned_phase["x_opencti_order"] = order
+                        enriched_phases.append(versioned_phase)
+
+                # Replace with enriched phases
+                obj["kill_chain_phases"] = enriched_phases
 
     def process_data(self):
         unixtime_now = get_unixtime_now()
@@ -200,15 +286,6 @@ class Mitre:
 
         self.helper.log_info("Fetching MITRE datasets...")
         for url in self.mitre_urls:
-            try:
-                self.create_kill_chain_phase_and_order(
-                    url.split("/")[-1].split(".json")[0]
-                )
-            except Exception as ex:
-                self.helper.log_error(
-                    f"Unable to create kill chain phases and orders. Verify the connector service account has the 'Manage kill chain phases' capability. Exception: {ex}"
-                )
-                pass
             self.helper.log_debug(f"Fetching {url}...")
             data = self.retrieve_data(url)
 
@@ -219,6 +296,7 @@ class Mitre:
                 json.dumps(data),
                 entities_types=self.helper.connect_scope,
                 work_id=work_id,
+                update=True,
             )
             self.helper.metric.inc("record_send", len(data["objects"]))
 
