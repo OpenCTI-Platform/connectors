@@ -9,9 +9,16 @@ services:
       - CONNECTOR_NAME=Tenable Security Center
       - CONNECTOR_SCOPE=vulnerability
       - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_DURATION_PERIOD=PT1H
-      - TSC_URL=ChangeMe
-      - TSC_ACCESS_KEY=ChangeMe
-      - TSC_SECRET_KEY=ChangeMe
-      - TSC_VERIFY_SSL=true
+      - CONNECTOR_DURATION_PERIOD=PT12H
+      - TSC_API_BASE_URL=ChangeMe
+      - TSC_API_ACCESS_KEY=ChangeMe
+      - TSC_API_SECRET_KEY=ChangeMe
+      - TSC_EXPORT_SINCE=2024-11-18T12:00:00Z
+      - TSC_SEVERITY_MIN_LEVEL=high
+      - TSC_PROCESS_SYSTEMS_WITHOUT_VULNERABILITIES=false
+      - TSC_MARKING_DEFINITION=TLP:CLEAR
+      # - TSC_API_TIMEOUT=30
+      # - TSC_API_BACKOFF=5
+      # - TSC_API_RETRIES=3
+      # - TSC_NUMBER_THREADS=4
     restart: always

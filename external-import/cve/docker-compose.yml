@@ -10,7 +10,7 @@ services:
       - CONNECTOR_SCOPE=cve
       - CONNECTOR_LOG_LEVEL=error
       - CVE_API_KEY=ChangeMe # Required
-      - CVE_INTERVAL=6 # In hours, minimum 2 recommended by NIST
+      # - CVE_INTERVAL=2 # Optional, in hours advice min 2
       # - CVE_BASE_URL=https://services.nvd.nist.gov/rest/json/cves # Optional
       # - CVE_MAX_DATE_RANGE=120 # Optional, in days, max 120
       # - CVE_MAINTAIN_DATA=true # Optional, retrieve only updated data

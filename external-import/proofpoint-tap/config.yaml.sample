@@ -22,9 +22,9 @@ tap:
   api_base_url: 'ChangeMe'
   api_principal_key: 'ChangeMe'
   api_secret_key: 'ChangeMe'
-  api_timeout: 'PT30S'
-  api_backoff: 'PT5S'
-  api_retries: 5
+  # api_timeout: 'PT30S'
+  # api_backoff: 'PT5S'
+  # api_retries: 5
   marking_definition: 'white'
   export_campaigns: true
   export_events: true
