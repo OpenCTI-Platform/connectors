@@ -2,6 +2,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseStreamConnectorConfig,
+    ListFromString,
 )
 from pydantic import Field, HttpUrl
 
@@ -12,13 +13,17 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
     to the configuration for connectors of type `STREAM`.
     """
 
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        default="00000000-0000-0000-0000-000000000000",
+    )
     name: str = Field(
         description="The name of the connector.",
         default="TemplateConnector",
     )
-    live_stream_id: str = Field(
-        description="The ID of the live stream to connect to.",
-        default="live",  # listen the global stream (not filtered)
+    scope: ListFromString = Field(
+        description="The scope of the connector.",
+        default=[],
     )
 
 
