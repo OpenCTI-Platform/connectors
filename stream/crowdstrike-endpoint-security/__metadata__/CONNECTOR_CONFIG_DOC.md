@@ -17,7 +17,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_TYPE | `const` |  | `STREAM` | `"STREAM"` |  |
 | CONNECTOR_LIVE_STREAM_LISTEN_DELETE | `boolean` |  | boolean | `true` | Whether to listen for delete events on the live stream. |
 | CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES | `boolean` |  | boolean | `true` | Whether to ignore dependencies when processing events from the live stream. |
-| CONNECTOR_IGNORE_TYPES | `array` |  | string | `["label", "marking-definition", "identity"]` | Ignoring types from OpenCTI |
 | CROWDSTRIKE_API_BASE_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"https://api.crowdstrike.com"` | Crowdstrike base url. |
 | CROWDSTRIKE_PERMANENT_DELETE | `boolean` |  | boolean | `false` | Select whether or not to permanently delete data in Crowdstrike when data is deleted in OpenCTI. If set to `True`, `CONNECTOR_LIVE_STREAM_LISTEN_DELETE` must be set to `True`. |
 | CROWDSTRIKE_FALCON_FOR_MOBILE_ACTIVE | `boolean` |  | boolean | `false` | Crowdstrike client secret used to connect to the API. |
