@@ -2,6 +2,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalExportFileConnectorConfig,
+    ListFromString,
 )
 from pydantic import Field
 
@@ -12,9 +13,17 @@ class InternalExportFileConnectorConfig(BaseInternalExportFileConnectorConfig):
     to the configuration for connectors of type `INTERNAL_EXPORT_FILE`.
     """
 
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        default="00000000-0000-0000-0000-000000000000",
+    )
     name: str = Field(
         description="The name of the connector.",
         default="TemplateConnector",
+    )
+    scope: ListFromString = Field(
+        description="The scope of the connector.",
+        default=[],
     )
 
 
