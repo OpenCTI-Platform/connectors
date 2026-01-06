@@ -16,6 +16,10 @@ from typing import Any, Literal, Self
 import __main__
 from connectors_sdk.settings.annotated_types import ListFromString
 from connectors_sdk.settings.exceptions import ConfigValidationError
+from connectors_sdk.utils.deprecations import (
+    migrate_deprecated_namespace,
+    migrate_deprecated_variable,
+)
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -254,6 +258,53 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
     def to_helper_config(self) -> dict[str, Any]:
         """Convert model into a valid dict for `pycti.OpenCTIConnectorHelper`."""
         return self.model_dump(mode="json", context={"mode": "pycti"})
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_deprecation(cls, data: dict) -> dict:
+        """Migrate deprecated variables and namespaces in the configuration data.
+        Args:
+            data (dict): The configuration data to validate and potentially migrate.
+        Returns:
+            dict: The updated configuration data with deprecated variables and namespaces migrated.
+        """
+        for field_name, field in cls.model_fields.items():
+            json_schema_extra = field.json_schema_extra or {}
+            deprecated = field.deprecated
+            new_namespace = json_schema_extra.get("new_namespace", None)
+            new_variable_name = json_schema_extra.get("new_variable_name", None)
+            set_to_empty_dict = json_schema_extra.get("set_to_empty_dict", False)
+            if field.annotation is dict and new_variable_name:
+                raise ValueError(
+                    f"Cannot rename variable for field {field_name} with dict type. Use only `new_namespace`."
+                )
+            if deprecated and new_namespace and field.annotation is dict:
+                migrate_deprecated_namespace(
+                    data, old_namespace=field_name, new_namespace=new_namespace
+                )
+            if set_to_empty_dict:
+                data[field_name] = {}
+            if issubclass(field.annotation, BaseConfigModel):
+                # Search for deprecated variables to migrate in sub-models:
+                for sub_field_name, sub_field in field.annotation.model_fields.items():
+                    sub_json_schema_extra = sub_field.json_schema_extra or {}
+                    sub_deprecated = sub_field.deprecated
+                    sub_new_namespace = sub_json_schema_extra.get("new_namespace", None)
+                    sub_new_variable_name = sub_json_schema_extra.get(
+                        "new_variable_name", None
+                    )
+                    sub_change_value = sub_json_schema_extra.get("change_value", None)
+                    if sub_deprecated and sub_new_variable_name:
+                        migrate_deprecated_variable(
+                            data,
+                            old_name=sub_field_name,
+                            new_name=sub_new_variable_name,
+                            current_namespace=field_name,
+                            new_namespace=sub_new_namespace,
+                            change_value=sub_change_value,
+                        )
+
+        return data
 
 
 class BaseExternalImportConnectorConfig(_BaseConnectorConfig):
