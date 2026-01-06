@@ -109,7 +109,8 @@ def _get_updated_init_content(
                     )
                 ]
             ):
-                node.body.append(
+                node.body.insert(
+                    len(node.body),  # at the end of the module
                     ast.Assign(
                         [ast.Name("__all__")],
                         ast.List(
@@ -118,7 +119,7 @@ def _get_updated_init_content(
                                 ast.Constant(connector_class_name),
                             ]
                         ),
-                    )
+                    ),
                 )
 
             self.generic_visit(node)

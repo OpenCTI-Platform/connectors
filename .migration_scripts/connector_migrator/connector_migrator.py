@@ -251,6 +251,12 @@ class ConnectorMigrator:
                         self.entrypoint_path.read_text("utf-8"),
                         encoding="utf-8",
                     )
+                elif (
+                    connector_class_path.parent.as_posix()
+                    == self.entrypoint_path.parent.as_posix()
+                ):
+                    connector_tmp_path = src_subdirectory_path / "connector.py.tmp"
+                    connector_class_path.replace(connector_tmp_path)
                 else:
                     connector_tmp_path = (
                         connector_class_path.parent / "connector.py.tmp"
@@ -604,7 +610,7 @@ class ConnectorMigrator:
         tests_path = self.connector_path / "tests"
         returncode = subprocess.call(
             (
-                f"autoflake --remove-all-unused-imports --recursive --in-place {src_path} {tests_path} "
+                f"autoflake --recursive --in-place {src_path} {tests_path} "
                 f"&& black {src_path} {tests_path} "
                 f"&& isort --profile black {src_path} {tests_path} "
                 f"&& flake8 --ignore=E,W {src_path} {tests_path}"
