@@ -20,7 +20,10 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "default": [
+        "misp-feed"
+      ],
+      "description": "The scope of the connector.",
       "items": {
         "type": "string"
       },
@@ -167,8 +170,7 @@
   },
   "required": [
     "OPENCTI_URL",
-    "OPENCTI_TOKEN",
-    "CONNECTOR_SCOPE"
+    "OPENCTI_TOKEN"
   ],
   "additionalProperties": true
 }
