@@ -17,7 +17,10 @@ class Misp:
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         self.config = config
         self.config_misp: MispConfig = config.misp
+
         self.helper = helper
+        self.logger = helper.connector_logger
+
         self.client = MISPClient(
             url=self.config_misp.url,
             key=self.config_misp.key.get_secret_value(),
@@ -55,7 +58,7 @@ class Misp:
             self.config_misp.import_owner_orgs
             and event.Event.Org.name not in self.config_misp.import_owner_orgs
         ):
-            self.helper.connector_logger.info(
+            self.logger.info(
                 "Event owner Organization not in `MISP_IMPORT_OWNER_ORGS`, skipping event",
                 {"event_owner_organization": event.Event.Org.name},
             )
@@ -64,7 +67,7 @@ class Misp:
             self.config_misp.import_owner_orgs_not
             and event.Event.Org.name in self.config_misp.import_owner_orgs_not
         ):
-            self.helper.connector_logger.info(
+            self.logger.info(
                 "Event owner Organization in `MISP_IMPORT_OWNER_ORGS_NOT`, skipping event",
                 {"event_owner_organization": event.Event.Org.name},
             )
@@ -74,7 +77,7 @@ class Misp:
             and event.Event.distribution
             not in self.config_misp.import_distribution_levels
         ):
-            self.helper.connector_logger.info(
+            self.logger.info(
                 "Event distribution level not in `MISP_IMPORT_DISTRIBUTION_LEVELS`, skipping event",
                 {"event_distribution_level": event.Event.distribution},
             )
@@ -83,18 +86,18 @@ class Misp:
             self.config_misp.import_threat_levels
             and event.Event.threat_level_id not in self.config_misp.import_threat_levels
         ):
-            self.helper.connector_logger.info(
+            self.logger.info(
                 "Event threat level not in `MISP_IMPORT_THREAT_LEVELS`, skipping event",
                 {"event_threat_level": event.Event.threat_level_id},
             )
             return
         if self.config_misp.import_only_published and (not event.Event.published):
-            self.helper.connector_logger.info(
+            self.logger.info(
                 "Event not published and `MISP_IMPORT_ONLY_PUBLISHED` enabled, skipping event",
                 {"event_published": event.Event.published},
             )
             return
-        self.helper.connector_logger.info(
+        self.logger.info(
             "Processing event",
             {"event_id": event.Event.id, "event_uuid": event.Event.uuid},
         )
@@ -111,7 +114,7 @@ class Misp:
             sent_bundles = self.helper.send_stix2_bundle(
                 bundle, work_id=work_id, cleanup_inconsistent_bundle=True
             )
-            self.helper.connector_logger.info(
+            self.logger.info(
                 "Sent STIX2 bundles:", {"sent_bundles_count": len(sent_bundles)}
             )
             self.helper.metric.inc("record_send", len(bundle_objects))
@@ -130,7 +133,7 @@ class Misp:
             if "last_run" in current_state and "last_event" in current_state:
                 last_run = datetime.fromisoformat(current_state["last_run"])
                 last_event = datetime.fromisoformat(current_state["last_event"])
-                self.helper.connector_logger.info(
+                self.logger.info(
                     "Current state of the connector:",
                     {
                         "last_run": current_state["last_run"],
@@ -140,7 +143,7 @@ class Misp:
             elif "last_run" in current_state:
                 last_run = datetime.fromisoformat(current_state["last_run"])
                 last_event = last_run
-                self.helper.connector_logger.info(
+                self.logger.info(
                     "Current state of the connector:",
                     {
                         "last_run": current_state["last_run"],
@@ -152,9 +155,9 @@ class Misp:
                     last_event = self.config_misp.import_from_date
                 else:
                     last_event = now
-                self.helper.connector_logger.info("Connector has never run")
+                self.logger.info("Connector has never run")
             next_event_date = last_event + timedelta(seconds=1)
-            self.helper.connector_logger.info(
+            self.logger.info(
                 "Fetching MISP events with filters:",
                 {
                     "date_field_filter": self.config_misp.date_filter_field,
@@ -182,14 +185,14 @@ class Misp:
             processed_events_count = 0
             last_event_datetime = None
             for event in events:
-                self.helper.connector_logger.info(
+                self.logger.info(
                     "MISP event found",
                     {"event_id": event.Event.id, "event_uuid": event.Event.uuid},
                 )
                 try:
                     self.process_event(event)
                 except ConverterError as err:
-                    self.helper.connector_logger.error(
+                    self.logger.error(
                         f"Error while converting MISP event, skipping it. {err}",
                         {"event_id": event.Event.id, "event_uuid": event.Event.uuid},
                     )
@@ -216,7 +219,7 @@ class Misp:
                 if last_event_datetime is None or event_datetime > last_event_datetime:
                     last_event_datetime = event_datetime
                 processed_events_count += 1
-            self.helper.connector_logger.info(
+            self.logger.info(
                 "Connector ran successfully",
                 {"processed_events_count": processed_events_count},
             )
@@ -224,20 +227,18 @@ class Misp:
             if last_event_datetime:
                 current_state["last_event"] = last_event_datetime.isoformat()
             self.helper.set_state(current_state)
-            self.helper.connector_logger.info(
-                "Updating connector state as:", current_state
-            )
+            self.logger.info("Updating connector state as:", current_state)
         except MISPClientError as err:
-            self.helper.connector_logger.error(err)
+            self.logger.error(err)
             self.helper.metric.inc("client_error_count")
         except (KeyboardInterrupt, SystemExit):
-            self.helper.connector_logger.info(
+            self.logger.info(
                 "Connector stopped by user or system",
                 {"connector_name": self.helper.connect_name},
             )
             sys.exit(0)
         except Exception as err:
-            self.helper.connector_logger.error(
+            self.logger.error(
                 "Unexpected error. See connector's log for more details.",
                 {"error": err},
             )
