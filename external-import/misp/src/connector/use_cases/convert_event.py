@@ -1,5 +1,6 @@
 from copy import deepcopy
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 import pycti
 import stix2
@@ -15,6 +16,11 @@ from .convert_galaxy import GalaxyConverter
 from .convert_object import ObjectConverter
 from .convert_tag import TagConverter
 from .utils import find_type_by_uuid
+
+if TYPE_CHECKING:
+    from utils.protocols import LoggerProtocol
+
+LOG_PREFIX = "[EventConverter]"
 
 
 def event_threat_level_to_opencti_score(threat_level: str) -> int:
@@ -58,6 +64,7 @@ class EventConverter:
 
     def __init__(
         self,
+        logger: "LoggerProtocol",
         external_reference_base_url: HttpUrl,
         report_type: str = "misp-event",
         report_description_attribute_filters: dict = {},
@@ -77,6 +84,7 @@ class EventConverter:
         guess_threats_from_tags: bool = False,
         threats_guesser: ThreatsGuesser | None = None,
     ):
+        self.logger = logger
         self.config = ConverterConfig(
             report_type=report_type,
             report_description_attribute_filters=report_description_attribute_filters,
@@ -435,10 +443,10 @@ class EventConverter:
                                     ),
                                     relationship_type="related-to",
                                     created_by_ref=event_author["id"],
-                                    description="Original Relationship: "
-                                    + object_reference["relationship_type"]
-                                    + "  \nComment: "
-                                    + object_reference["comment"],
+                                    description=(
+                                        f"Original Relationship: {object_reference['relationship_type']}\n"
+                                        f"Comment: {object_reference['comment']}"
+                                    ),
                                     source_ref=src_result["entity"]["id"],
                                     target_ref=target_result["entity"]["id"],
                                     object_marking_refs=event_markings,

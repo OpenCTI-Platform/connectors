@@ -1,16 +1,15 @@
-import sys
-from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
-from api_client.client import MISPClient, MISPClientError
-from api_client.models import EventRestSearchListItem
 from connector.settings import ConnectorSettings
-from connector.threats_guesser import ThreatsGuesser
-from connector.use_cases import ConverterError, EventConverter
+from exceptions.connector_errors import MispWorkProcessingError
 from pycti import OpenCTIConnectorHelper
+from utils.orchestrators import Orchestrator
+from utils.work_manager import WorkManager
 
 if TYPE_CHECKING:
     from connector.settings import MispConfig
+
+LOG_PREFIX = "[Connector]"
 
 
 class Misp:
@@ -21,229 +20,99 @@ class Misp:
         self.helper = helper
         self.logger = helper.connector_logger
 
-        self.client = MISPClient(
-            url=self.config_misp.url,
-            key=self.config_misp.key.get_secret_value(),
-            verify_ssl=self.config_misp.ssl_verify,
-            certificate=self.config_misp.client_cert,
-        )
-        self.converter = EventConverter(
-            report_type=self.config_misp.report_type,
-            report_description_attribute_filters=self.config_misp.report_description_attribute_filters,
-            external_reference_base_url=self.config_misp.reference_url
-            or self.config_misp.url,
-            convert_event_to_report=self.config_misp.create_reports,
-            convert_attribute_to_associated_file=self.config_misp.import_with_attachments,
-            convert_attribute_to_indicator=self.config_misp.create_indicators,
-            convert_attribute_to_observable=self.config_misp.create_observables,
-            convert_object_to_observable=self.config_misp.create_object_observables,
-            convert_unsupported_object_to_text_observable=self.config_misp.import_unsupported_observables_as_text,
-            convert_unsupported_object_to_transparent_text_observable=self.config_misp.import_unsupported_observables_as_text_transparent,
-            convert_tag_to_author=self.config_misp.author_from_tags,
-            convert_tag_to_label=self.config_misp.create_tags_as_labels,
-            convert_tag_to_marking=self.config_misp.markings_from_tags,
-            propagate_report_labels=self.config_misp.propagate_labels,
-            original_tags_to_keep_as_labels=self.config_misp.keep_original_tags_as_label,
-            default_attribute_score=self.config_misp.import_to_ids_no_score,
-            guess_threats_from_tags=self.config_misp.guess_threats_from_tags,
-            threats_guesser=(
-                ThreatsGuesser(self.helper.api)
-                if self.config_misp.guess_threats_from_tags
-                else None
-            ),
-        )
+        self.work_manager = WorkManager(self.config, self.helper, self.logger)
 
-    def process_event(self, event: EventRestSearchListItem):
-        if (
-            self.config_misp.import_owner_orgs
-            and event.Event.Org.name not in self.config_misp.import_owner_orgs
-        ):
+    def batch_process_event(self) -> str | None:
+        """Setup and run the orchestrator to process MISP events."""
+
+        try:
+            orchestrator = Orchestrator(
+                work_manager=self.work_manager,
+                logger=self.logger,
+                config=self.config_misp,
+            )
+
+            initial_state = self.helper.get_state()
             self.logger.info(
-                "Event owner Organization not in `MISP_IMPORT_OWNER_ORGS`, skipping event",
-                {"event_owner_organization": event.Event.Org.name},
+                "Retrieved state",
+                {"prefix": LOG_PREFIX, "initial_state": initial_state},
             )
-            return
-        if (
-            self.config_misp.import_owner_orgs_not
-            and event.Event.Org.name in self.config_misp.import_owner_orgs_not
-        ):
-            self.logger.info(
-                "Event owner Organization in `MISP_IMPORT_OWNER_ORGS_NOT`, skipping event",
-                {"event_owner_organization": event.Event.Org.name},
+
+            self.logger.info("Starting MISP full ingestion...", {"prefix": LOG_PREFIX})
+            orchestrator.run_event(initial_state)
+            return None
+
+        except Exception as e:
+            error_msg = f"MISP events processing failed: {e}"
+            self.logger.error(
+                "MISP events processing failed",
+                {"prefix": LOG_PREFIX, "error": str(e)},
             )
-            return
-        if (
-            self.config_misp.import_distribution_levels
-            and event.Event.distribution
-            not in self.config_misp.import_distribution_levels
-        ):
-            self.logger.info(
-                "Event distribution level not in `MISP_IMPORT_DISTRIBUTION_LEVELS`, skipping event",
-                {"event_distribution_level": event.Event.distribution},
-            )
-            return
-        if (
-            self.config_misp.import_threat_levels
-            and event.Event.threat_level_id not in self.config_misp.import_threat_levels
-        ):
-            self.logger.info(
-                "Event threat level not in `MISP_IMPORT_THREAT_LEVELS`, skipping event",
-                {"event_threat_level": event.Event.threat_level_id},
-            )
-            return
-        if self.config_misp.import_only_published and (not event.Event.published):
-            self.logger.info(
-                "Event not published and `MISP_IMPORT_ONLY_PUBLISHED` enabled, skipping event",
-                {"event_published": event.Event.published},
-            )
-            return
-        self.logger.info(
-            "Processing event",
-            {"event_id": event.Event.id, "event_uuid": event.Event.uuid},
-        )
-        bundle_objects = self.converter.process(
-            event=event, include_relationships=len(event.Event.Attribute) < 10000
-        )
-        if bundle_objects:
-            now = datetime.now(tz=timezone.utc)
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id,
-                friendly_name="MISP run @ " + now.isoformat(timespec="seconds"),
-            )
-            bundle = self.helper.stix2_create_bundle(bundle_objects)
-            sent_bundles = self.helper.send_stix2_bundle(
-                bundle, work_id=work_id, cleanup_inconsistent_bundle=True
-            )
-            self.logger.info(
-                "Sent STIX2 bundles:", {"sent_bundles_count": len(sent_bundles)}
-            )
-            self.helper.metric.inc("record_send", len(bundle_objects))
-            self.helper.api.work.to_processed(
-                work_id,
-                f"MISP event successfully imported (event id = {event.Event.id})",
-            )
+            return error_msg
 
     def process(self):
         """Connector main process to collect intelligence."""
+        error_flag = False
+        error_message = None
+
         try:
-            now = datetime.now(tz=timezone.utc)
-            self.helper.metric.inc("run_count")
-            self.helper.metric.state("running")
-            current_state = self.helper.get_state() or {}
-            if "last_run" in current_state and "last_event" in current_state:
-                last_run = datetime.fromisoformat(current_state["last_run"])
-                last_event = datetime.fromisoformat(current_state["last_event"])
-                self.logger.info(
-                    "Current state of the connector:",
-                    {
-                        "last_run": current_state["last_run"],
-                        "last_event": current_state["last_event"],
-                    },
-                )
-            elif "last_run" in current_state:
-                last_run = datetime.fromisoformat(current_state["last_run"])
-                last_event = last_run
-                self.logger.info(
-                    "Current state of the connector:",
-                    {
-                        "last_run": current_state["last_run"],
-                        "last_event": current_state["last_run"],
-                    },
-                )
-            else:
-                if self.config_misp.import_from_date:
-                    last_event = self.config_misp.import_from_date
-                else:
-                    last_event = now
-                self.logger.info("Connector has never run")
-            next_event_date = last_event + timedelta(seconds=1)
+            try:
+                error_result = self.batch_process_event()
+                if error_result:
+                    error_message = error_result
+                    error_flag = True
+            except KeyboardInterrupt:
+                raise KeyboardInterrupt("MISP imports processing interrupted") from None
+
+        except (KeyboardInterrupt, SystemExit):
+            error_message = "Connector stopped due to user interrupt"
             self.logger.info(
-                "Fetching MISP events with filters:",
-                {
-                    "date_field_filter": self.config_misp.date_filter_field,
-                    "date_value_filter": next_event_date,
-                    "keyword": self.config_misp.import_keyword,
-                    "included_tags": self.config_misp.import_tags,
-                    "excluded_tags": self.config_misp.import_tags_not,
-                    "included_org_creators": self.config_misp.import_creator_orgs,
-                    "excluded_org_creators": self.config_misp.import_creator_orgs_not,
-                    "enforce_warning_list": self.config_misp.enforce_warning_list,
-                    "with_attachments": self.config_misp.import_with_attachments,
+                "Connector stopped due to user interrupt",
+                {"prefix": LOG_PREFIX, "connector_name": self.helper.connect_name},
+            )
+            error_flag = True
+            raise
+
+        except MispWorkProcessingError as work_err:
+            error_message = f"Work processing error: {work_err}"
+            work_id = getattr(
+                work_err, "work_id", self.work_manager.get_current_work_id()
+            )
+            self.logger.warning(
+                "Work processing error",
+                meta={
+                    "prefix": LOG_PREFIX,
+                    "error": str(work_err),
+                    "work_id": work_id,
                 },
             )
-            events = self.client.search_events(
-                date_field_filter=self.config_misp.date_filter_field,
-                date_value_filter=next_event_date,
-                keyword=self.config_misp.import_keyword,
-                included_tags=self.config_misp.import_tags,
-                excluded_tags=self.config_misp.import_tags_not,
-                included_org_creators=self.config_misp.import_creator_orgs,
-                excluded_org_creators=self.config_misp.import_creator_orgs_not,
-                enforce_warning_list=self.config_misp.enforce_warning_list,
-                with_attachments=self.config_misp.import_with_attachments,
-            )
-            processed_events_count = 0
-            last_event_datetime = None
-            for event in events:
-                self.logger.info(
-                    "MISP event found",
-                    {"event_id": event.Event.id, "event_uuid": event.Event.uuid},
-                )
-                try:
-                    self.process_event(event)
-                except ConverterError as err:
-                    self.logger.error(
-                        f"Error while converting MISP event, skipping it. {err}",
-                        {"event_id": event.Event.id, "event_uuid": event.Event.uuid},
-                    )
-                    continue
-                event_datetime_value = getattr(
-                    event.Event, self.config_misp.datetime_attribute
-                )
-                if self.config_misp.datetime_attribute in [
-                    "timestamp",
-                    "publish_timestamp",
-                    "sighting_timestamp",
-                ]:
-                    event_datetime = datetime.fromtimestamp(
-                        int(event_datetime_value), tz=timezone.utc
-                    )
-                elif self.config_misp.datetime_attribute == "date":
-                    event_datetime = datetime.fromisoformat(
-                        event_datetime_value
-                    ).replace(tzinfo=timezone.utc)
-                else:
-                    raise ValueError(
-                        "`MISP_DATETIME_ATTRIBUTE` must be either: 'date', 'timestamp', 'publish_timestamp' or 'sighting_timestamp'"
-                    )
-                if last_event_datetime is None or event_datetime > last_event_datetime:
-                    last_event_datetime = event_datetime
-                processed_events_count += 1
-            self.logger.info(
-                "Connector ran successfully",
-                {"processed_events_count": processed_events_count},
-            )
-            current_state["last_run"] = now.isoformat()
-            if last_event_datetime:
-                current_state["last_event"] = last_event_datetime.isoformat()
-            self.helper.set_state(current_state)
-            self.logger.info("Updating connector state as:", current_state)
-        except MISPClientError as err:
-            self.logger.error(err)
-            self.helper.metric.inc("client_error_count")
-        except (KeyboardInterrupt, SystemExit):
-            self.logger.info(
-                "Connector stopped by user or system",
-                {"connector_name": self.helper.connect_name},
-            )
-            sys.exit(0)
+            error_flag = True
+
         except Exception as err:
+            error_message = f"Unexpected error: {err}"
             self.logger.error(
-                "Unexpected error. See connector's log for more details.",
-                {"error": err},
+                "Unexpected error",
+                {"prefix": LOG_PREFIX, "error": str(err)},
             )
+            error_flag = True
+
         finally:
-            self.helper.metric.state("idle")
+            self.logger.info(
+                "Connector stopped",
+                {"prefix": LOG_PREFIX, "connector_name": self.helper.connect_name},
+            )
+            try:
+                self.work_manager.process_all_remaining_works(
+                    error_flag=error_flag, error_message=error_message
+                )
+                self.logger.info(
+                    "All remaining works marked to process", {"prefix": LOG_PREFIX}
+                )
+            except Exception as cleanup_err:
+                self.logger.error(
+                    "Error during cleanup",
+                    meta={"prefix": LOG_PREFIX, "error": str(cleanup_err)},
+                )
 
     def run(self) -> None:
         """
