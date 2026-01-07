@@ -10,7 +10,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |
 | KASPERSKY_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | API key used to authenticate requests to the Kaspersky service. |
 | CONNECTOR_NAME | `string` |  | string | `"Kaspersky Enrichment"` | Name of the connector. |
-| CONNECTOR_SCOPE | `array` |  | string | `["StixFile", "IPv4-Addr"]` | The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only). |
+| CONNECTOR_SCOPE | `array` |  | string | `["StixFile", "IPv4-Addr", "Domain-Name", "Hostname"]` | The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only). |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` | `"INTERNAL_ENRICHMENT"` |  |
 | CONNECTOR_AUTO | `boolean` |  | boolean | `true` | If True, the connector will automatically import data from the API. |
@@ -18,4 +18,5 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | KASPERSKY_MAX_TLP | `string` |  | `TLP:CLEAR` `TLP:WHITE` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` | `"TLP:AMBER"` | Max TLP marking of the entity to enrich (inclusive). |
 | KASPERSKY_ZONE_OCTI_SCORE_MAPPING | `string` |  | string | `"red:100,orange:80,yellow:60,gray:20,green:0"` | Zone to score mapping. Only the numerical value need to be changed if necessary. See https://tip.kaspersky.com/Help/Doc_data/en-US/AboutZones.htm for further explanations |
 | KASPERSKY_FILE_SECTIONS | `string` |  | string | `"LicenseInfo,Zone,FileGeneralInfo"` | Sections wanted to investigate for the requested hash. LicenseInfo, Zone and FileGeneralInfo are always set, can't be disabled. Only DetectionsInfo, FileDownloadedFromUrls, Industries and FileNames are currently supported |
-| KASPERSKY_IPV4_SECTIONS | `string` |  | string | `"LicenseInfo,Zone,IpGeneralInfo"` | Sections wanted to investigate for the requested IPV4. LicenseInfo, Zone and IpGeneralInfo are always set, can't be disabled. Only DetectionsInfo, FileDownloadedFromUrls, Industries and FileNames are currently supported |
+| KASPERSKY_IPV4_SECTIONS | `string` |  | string | `"LicenseInfo,Zone,IpGeneralInfo"` | Sections wanted to investigate for the requested IPV4. LicenseInfo, Zone and IpGeneralInfo are always set, can't be disabled. Only FilesDownloadedFromIp, HostedUrls, IpWhoIs, IpDnsResolutions and Industries are currently supported |
+| KASPERSKY_DOMAIN_SECTIONS | `string` |  | string | `"LicenseInfo,Zone,DomainGeneralInfo"` | Sections wanted to investigate for the requested domain/hostname. LicenseInfo, Zone and DomainGeneralInfo are always set, can't be disabled. Only DomainDnsResolutions, FilesDownloaded, FilesAccessed and Industries are currently supported |
