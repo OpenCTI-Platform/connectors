@@ -25,11 +25,55 @@ class UrlEnricher(BaseUseCases):
         Collect intelligence from the source for an URL type
         """
         octi_objects = []
+        observable_to_ref = self.converter_to_stix.create_reference(
+            obs_id=observable["id"]
+        )
         self.helper.connector_logger.info("[CONNECTOR] Starting enrichment...")
 
         # Retrieve domain
         obs_domain = observable["value"]
 
         # Get entity data from api client
-        self.client.get_url_info(obs_domain, self.sections)
+        entity_data = self.client.get_url_info(obs_domain, self.sections)
+
+        # Check Quota
+        self.check_quota(entity_data["LicenseInfo"])
+
+        # Create and add author, TLP clear and TLP amber to octi_objects
+        octi_objects += self.generate_author_and_tlp_markings()
+
+        # Manage UrlGeneralInfo data
+
+        self.helper.connector_logger.info(
+            "[CONNECTOR] Process enrichment from UrlGeneralInfo data..."
+        )
+
+        # Score
+        if entity_data.get("Zone"):
+            observable = self.update_observable_score(entity_data["Zone"], observable)
+
+        entity_general_info = entity_data["UrlGeneralInfo"]
+
+        if entity_general_info.get("Categories"):
+            # Labels
+            observable["labels"] = observable.get("x_opencti_labels", [])
+            for label in entity_general_info["Categories"]:
+                pretty_label = label.replace("CATEGORY_", "").replace("_", "")
+                if pretty_label not in observable["labels"]:
+                    observable["labels"].append(pretty_label)
+
+            # Host
+            if entity_general_info.get("Host"):
+                domain_object = self.converter_to_stix.create_domain(
+                    name=entity_general_info["Host"]
+                )
+                if domain_object:
+                    octi_objects.append(domain_object.to_stix2_object())
+                    domain_relation = self.converter_to_stix.create_relationship(
+                        relationship_type="related-to",
+                        source_obj=observable_to_ref,
+                        target_obj=domain_object,
+                    )
+                    octi_objects.append(domain_relation.to_stix2_object())
+
         return octi_objects

@@ -65,7 +65,7 @@ class ConverterToStix:
         """
         return Country(name=country_name, author=self.author, markings=[self.tlp_clear])
 
-    def create_domain(self, name: str, score: int) -> DomainName:
+    def create_domain(self, name: str, score: int = None) -> DomainName:
         """
         Create a Domain object
         """
