@@ -69,7 +69,7 @@ find_requirements_txt() {
 find_pyproject_toml() {
   # Method to find the highest pyproject.toml in connector's tree
 
-  # find: find all requirements.txt recursively
+  # find: find all pyproject.toml recursively
   # awk: count path length
   # sort: sort by path length
   # head: take the first file
