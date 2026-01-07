@@ -22,7 +22,9 @@
     "CONNECTOR_SCOPE": {
       "default": [
         "StixFile",
-        "IPv4-Addr"
+        "IPv4-Addr",
+        "Domain-Name",
+        "Hostname"
       ],
       "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
       "items": {
@@ -91,7 +93,12 @@
     },
     "KASPERSKY_IPV4_SECTIONS": {
       "default": "LicenseInfo,Zone,IpGeneralInfo",
-      "description": "Sections wanted to investigate for the requested IPV4. LicenseInfo, Zone and IpGeneralInfo are always set, can't be disabled. Only DetectionsInfo, FileDownloadedFromUrls, Industries and FileNames are currently supported",
+      "description": "Sections wanted to investigate for the requested IPV4. LicenseInfo, Zone and IpGeneralInfo are always set, can't be disabled. Only FilesDownloadedFromIp, HostedUrls, IpWhoIs, IpDnsResolutions and Industries are currently supported",
+      "type": "string"
+    },
+    "KASPERSKY_DOMAIN_SECTIONS": {
+      "default": "LicenseInfo,Zone,DomainGeneralInfo",
+      "description": "Sections wanted to investigate for the requested domain/hostname. LicenseInfo, Zone and DomainGeneralInfo are always set, can't be disabled. Only DomainDnsResolutions, FilesDownloaded, FilesAccessed and Industries are currently supported",
       "type": "string"
     }
   },
