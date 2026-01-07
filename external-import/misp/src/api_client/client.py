@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Generator, Optional
+from typing import Generator
 from warnings import warn
 
 from api_client.models import EventRestSearchListItem
@@ -20,7 +20,7 @@ class MISPClient:
         url: HttpUrl,
         key: str,
         verify_ssl: bool = False,
-        certificate: Optional[str] = None,
+        certificate: str | None = None,
         retry: int = 3,
         backoff: timedelta = timedelta(seconds=1),
     ):
