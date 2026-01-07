@@ -1,6 +1,6 @@
 {
-  "title": "VMRay",
-  "slug": "VMRay",
+  "title": "VMRay Platform",
+  "slug": "VMRay Platform",
   "description": "VMRay provides advanced threat analysis and detection by integrating its unique agentless hypervisor-based sandbox with a real-time analysis. \n\nThis connector enables the ingestion and correlation of VMRay analysis data including IOCs, VTIs, and MITRE ATT&CK techniques for faster detection and response.",
   "short_description": "VMRay provides advanced threat analysis and detection by integrating its unique agentless hypervisor-based sandbox with a real-time analysis.",
   "logo": "external-import/vmray-platform/__metadata__/logo.png",
