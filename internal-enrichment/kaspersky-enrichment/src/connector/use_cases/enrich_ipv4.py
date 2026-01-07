@@ -191,21 +191,9 @@ class Ipv4Enricher(BaseUseCases):
 
         # Manage Industries data
 
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from Industries data..."
-        )
-
         if entity_data.get("Industries"):
-            for industry in entity_data["Industries"]:
-                industry_object = self.converter_to_stix.create_sector(industry)
-
-                if industry_object:
-                    octi_objects.append(industry_object.to_stix2_object())
-                    industry_relation = self.converter_to_stix.create_relationship(
-                        relationship_type="related-to",
-                        source_obj=observable_to_ref,
-                        target_obj=industry_object,
-                    )
-                    octi_objects.append(industry_relation.to_stix2_object())
+            octi_objects += self.manage_industries(
+                observable_to_ref, entity_data["Industries"]
+            )
 
         return octi_objects

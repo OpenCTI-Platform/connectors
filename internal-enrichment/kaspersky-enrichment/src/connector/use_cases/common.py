@@ -1,5 +1,6 @@
 from connector.converter_to_stix import ConverterToStix
 from connector.utils import is_quota_exceeded
+from connectors_sdk.models import Reference
 from pycti import STIX_EXT_OCTI_SCO, OpenCTIConnectorHelper, OpenCTIStix2
 
 
@@ -50,3 +51,25 @@ class BaseUseCases:
         return OpenCTIStix2.put_attribute_in_extension(
             observable, STIX_EXT_OCTI_SCO, "score", score
         )
+
+    def manage_industries(self, observable_to_ref: Reference, industries: list) -> list:
+        """
+        Create sector and relation for each item in industries
+        """
+        self.helper.connector_logger.info(
+            "[CONNECTOR] Process enrichment from Industries data..."
+        )
+
+        industry_objects = []
+        for industry in industries:
+            industry_object = self.converter_to_stix.create_sector(industry)
+
+            if industry_object:
+                industry_objects.append(industry_object.to_stix2_object())
+                industry_relation = self.converter_to_stix.create_relationship(
+                    relationship_type="related-to",
+                    source_obj=observable_to_ref,
+                    target_obj=industry_object,
+                )
+                industry_objects.append(industry_relation.to_stix2_object())
+        return industry_objects
