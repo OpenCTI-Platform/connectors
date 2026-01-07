@@ -4,6 +4,7 @@ opencti:
 
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'
   name: 'Infoblox'
   scope: 'Infoblox'

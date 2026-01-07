@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'STREAM'
   id: 'ChangeMe'
   name: 'Microsoft Defender Intel'
   live_stream_id: 'ChangeMe'

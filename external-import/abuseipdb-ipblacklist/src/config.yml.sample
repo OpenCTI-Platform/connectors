@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe' # Valid UUIDv4
   name: 'AbuseIPDB IP Blacklist'
   scope: 'abuseipdb' # MIME type or SCO

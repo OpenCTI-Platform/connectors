@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'INTERNAL_ENRICHMENT'
   id: 'ChangeMe'
   name: 'Hybrid Analysis (Sandbox Windows 10 64bit)'
   scope: 'StixFile,Artifact,Url,Domain-Name,Hostname'

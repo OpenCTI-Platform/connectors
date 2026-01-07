@@ -3,6 +3,7 @@ opencti:
   token: 'changeme'
 
 connector:
+  # type: 'INTERNAL_ENRICHMENT'
   # id: '9955194d-d000-4507-bc9d-19f851c20de9'
   # name: 'Silent Push - Enrichment'
   # scope: 'Indicator,IPv4-Addr,IPv6-Addr,Domain-Name,Hostname,URL'

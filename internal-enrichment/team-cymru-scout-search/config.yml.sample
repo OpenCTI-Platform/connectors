@@ -3,6 +3,7 @@ opencti:
   token: 'Changeme'
 
 connector:
+  type: 'INTERNAL_ENRICHMENT'
   id: 'scout-search-connector'
   name: 'Scout Search Connector'
   scope: 'Text'

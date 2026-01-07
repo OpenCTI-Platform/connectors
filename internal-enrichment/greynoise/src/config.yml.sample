@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'INTERNAL_ENRICHMENT'
   id: 'ChangeMe'
   name: 'GreyNoise'
   scope: 'IPv4-Addr'

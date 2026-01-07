@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'
   name: 'S3 Bucket'
   log_level: 'error'

@@ -2,6 +2,10 @@ opencti:
   url: 'http://localhost'
   token: 'ChangeMe'
 
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+
 cve:
 #  base_url: 'https://services.nvd.nist.gov/rest/json/cves' # Optional
   api_key: 'ChangeMe' # Required

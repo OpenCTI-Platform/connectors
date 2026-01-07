@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 #connector:
+#  type: 'INTERNAL_ENRICHMENT'
 #  id: "ChangeMe"
 #  name: "Censys Enrichment"
 #  scope: "IPv4-Addr,IPv6-Addr,X509-Certificate,Domain-Name"

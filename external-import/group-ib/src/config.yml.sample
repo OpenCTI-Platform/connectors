@@ -5,6 +5,7 @@ opencti:
   token: ""
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   # Generate one with uuidgen (https://www.uuidgenerator.net/version4)
   id: ""
   name: "Group-IB Connector"

@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   id: 'e84df642-f33b-4c73-877f-dd4b0093fd09' # Optional (default: 'e84df642-f33b-4c73-877f-dd4b0093fd09')
   name: 'Silobreaker Cyber Threat Intelligence' # Optional (default: 'Silobreaker')
   scope: 'silobreaker' # Optional (default: ['silobreaker'])

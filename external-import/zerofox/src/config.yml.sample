@@ -3,6 +3,7 @@ opencti:
   token: 'changeme'
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   id: 'changme'
   name: 'Zerofox'
   scope: 'zerofox'

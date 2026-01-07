@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'INTERNAL_ENRICHMENT'
   id: 'Joe_Sandbox'
   name: 'Joe Sandbox'
   scope: 'Artifact,Url'

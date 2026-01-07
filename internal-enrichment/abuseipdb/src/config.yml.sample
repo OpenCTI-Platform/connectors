@@ -2,5 +2,9 @@ opencti:
   url: 'http://localhost'
   token: 'ChangeMe'
 
+connector:
+  type: 'INTERNAL_ENRICHMENT'
+  id: 'ChangeMe'
+
 abuseipdb:
   api_key: 'ChangeMe'
