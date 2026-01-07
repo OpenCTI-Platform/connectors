@@ -2,6 +2,10 @@ opencti:
   url: 'http://localhost'
   token: 'ChangeMe'
 
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+
 dragos:
   api_base_url: 'https://portal.dragos.com'
   api_token: 'ChangeMe'

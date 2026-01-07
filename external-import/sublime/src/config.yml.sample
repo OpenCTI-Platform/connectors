@@ -9,6 +9,7 @@ opencti:
 
 # Connector Configuration
 connector:
+  type: 'EXTERNAL_IMPORT'
   # Must match CONNECTOR_ID in docker-compose.yml if you use both
   id: "a2c156d3-3bbe-4170-b370-bf6faebb56e2"
   name: "Sublime Security Incidents"

@@ -3,6 +3,7 @@ opencti:
   token: "ChangeMe"
 
 connector:
+  type: 'INTERNAL_ENRICHMENT'
   #id: "496df155-c2f0-43b3-ab46-4352e68989d8" # Optional (default: '496df155-c2f0-43b3-ab46-4352e68989d8')
   #name: "UrlScan" # Optional (default: 'Urlscan Enrichment')
   #scope: "url,ipv4-addr,ipv6-addr" # Optional (default: 'url,ipv4-addr,ipv6-addr')

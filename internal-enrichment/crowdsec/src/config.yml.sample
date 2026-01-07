@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe' # Add OpenCTI API token here
 
 connector:
+  type: 'INTERNAL_ENRICHMENT'
   id: 'ChangeMe' # Add connector ID (any valid UUID v4)
   name: 'CrowdSec' # Connector name that will be displayed in OpenCTI
   scope: 'IPv4-Addr,IPv6-Addr' # MIME type or SCO

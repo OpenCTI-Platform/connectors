@@ -3,6 +3,7 @@ opencti:
   token: 'Changeme'
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'
   name: 'Loader Insight Agency File Feed'
   scope: 'stix2'

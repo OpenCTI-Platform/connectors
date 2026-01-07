@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   id: 'virustotal_livehunt_notifications'
   name: 'VirusTotal Livehunt Notifications'
   scope: 'StixFile,Indicator,Incident'

@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'INTERNAL_ENRICHMENT'
   id: 'ChangeMe'
   name: 'Recorded Future Enrichment'
   scope: 'ipv4-addr,ipv6-addr,domain-name,url,stixfile,vulnerability'

@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'  # OpenCTI API token
 
 connector:
+  type: 'STREAM'
   id: 'ChangeMe'  # Connector UUID
   name: 'MISP Intel'
   scope: 'misp'

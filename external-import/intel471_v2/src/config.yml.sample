@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   id: 'd5067b93-7f6a-47e2-b76d-bb4ed69e270d' # Optional (default: 'd5067b93-7f6a-47e2-b76d-bb4ed69e270d')
   name: 'Intel471 v2' # Optional (default: 'Intel471 v2')
   scope: 'malware,vulnerability,indicator' # Optional (default: 'malware, vulnerability, indicator')

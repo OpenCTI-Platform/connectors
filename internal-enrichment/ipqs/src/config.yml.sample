@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'INTERNAL_ENRICHMENT'
   id: 'ChangeMe'
   name: 'IPQS Fraud and Risk Scoring'
   scope: 'IPv4-Addr,Email-Addr,Phone-Number,Domain-Name,Url'

@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   id: '8bbae241-6289-4faf-b7d6-7503bed50bbc'  # Optional (default: 8bbae241-6289-4faf-b7d6-7503bed50bbc)
   name: 'AlienVault'  # Optional (default: AlienVault)
   scope: 'alienvault'  # Optional (default: alienvault)

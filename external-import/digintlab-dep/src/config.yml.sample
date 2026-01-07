@@ -3,6 +3,7 @@ opencti:
   token: "CHANGE_ME"
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   id: ChangeMe
   name: DEP Connector
   scope: incident,identity,indicator

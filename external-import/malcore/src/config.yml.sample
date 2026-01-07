@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe' # OpenCTI API Key
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe' # Valid UUIDv4
   name: 'Malcore'
   scope: 'malcore' # MIME type or SCO

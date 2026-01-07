@@ -3,8 +3,8 @@ opencti:
   token: 'ChangeMe'
 
 #connector:
-#  id: 'ChangeMe'
 #  type: 'INTERNAL_ENRICHMENT'
+#  id: 'ChangeMe'
 #  name: 'VirusTotal'
 #  scope: 'StixFile,Artifact,IPv4-Addr,Domain-Name,Url'
 #  auto: false # Enable/disable auto-enrichment of observables

@@ -5,6 +5,7 @@ opencti:
   token: "ChangeMe"
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   id: "ChangeMe"
   name: "Urlscan"
   scope: "urlscan"

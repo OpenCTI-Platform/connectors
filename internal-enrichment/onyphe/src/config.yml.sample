@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'INTERNAL_ENRICHMENT'
   id: 'ChangeMe'
   name: 'ONYPHE'
   scope: 'ipv4-addr,ipv6-addr,indicator,hostname,x509-certificate,text'

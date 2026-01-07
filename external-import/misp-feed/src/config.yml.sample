@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'
   name: 'MISP Feed' # Optional (default: 'Misp Feed')
   scope: 'misp-feed'

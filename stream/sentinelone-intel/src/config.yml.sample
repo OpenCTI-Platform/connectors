@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'STREAM'
   id: 'ChangeMe'
   name: 'SentinelOne Intel Stream Connector'
   # scope: 'sentinelone'

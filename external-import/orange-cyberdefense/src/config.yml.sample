@@ -4,6 +4,7 @@ opencti:
 
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   id: 'connector-orange-cyberdefense'
   name: 'Orange Cyberdefense Cyber Threat Intelligence'
   scope: 'identity,attack-pattern,intrusion-set,malware,tool,report,location,vulnerability,indicator,campaign,relationship'

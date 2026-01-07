@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   id: 'fae73097-aa2c-4460-96ee-1aa975ce1945' # Optional (default: 'fae73097-aa2c-4460-96ee-1aa975ce1945')
   name: 'MISP' # Optional (default: 'MISP')
   scope: 'misp' # Optional (default: 'misp')

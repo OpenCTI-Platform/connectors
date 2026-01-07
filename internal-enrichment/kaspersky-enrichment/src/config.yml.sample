@@ -3,8 +3,8 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-#  id: 'ChangeMe'
 #  type: 'INTERNAL_ENRICHMENT'
+#  id: 'ChangeMe'
 #  name: 'Kaspersky Enrichment'
 #  scope: 'StixFile,IPv4-Addr,Domain-Name,Hostname'  # Support for additional observable types (URLs) will be added in future releases.
 #  log_level: 'error'

@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   id: 'sentinelone-threats'
   name: 'SentinelOne Threats'
   scope: 'sentinelone-threats'

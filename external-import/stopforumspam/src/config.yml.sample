@@ -3,6 +3,7 @@ opencti:
   token: 67f792b7-5ac5-4f5b-87ef-ca395ffee3a3
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   id: af24527e-857d-4b70-9803-e7fdfa8421ea
   name: 'Stopforumspam'
   scope: 'stopforumspam'

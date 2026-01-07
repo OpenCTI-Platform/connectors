@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'INTERNAL_IMPORT_FILE'
   id: 'ChangeMe'
   name: 'ImportFileMISP'
   scope: 'application/json'

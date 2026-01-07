@@ -3,6 +3,7 @@ opencti: # OpenCTI Parameters
   token: 'ChangeMe' # REQUIRED
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   # Connector definition parameters - REQUIRED
   id: 'ChangeMe'
 

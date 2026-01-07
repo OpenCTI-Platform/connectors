@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'INTERNAL_EXPORT_FILE'
   id: 'ExportReportPdf'
   name: 'ExportReportPdf'
   scope: 'application/pdf'
