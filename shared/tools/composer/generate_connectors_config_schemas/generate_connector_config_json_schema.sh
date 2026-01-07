@@ -98,15 +98,14 @@ activate_venv() {
     echo '> Installing requirements in: ' "$1"
 
     # Install requirements.txt from connector's directory
-    original_dir=$(pwd)
-    cd "$1"
+    pushd "$1"
 
     requirements_file=$(find_requirements_txt .)
     # -qq: Hides both informational and warning messages, showing only errors.
     python -m pip install -qq -r "$requirements_file"
 
     # Return to original working directory
-    cd "$original_dir"
+    popd
 
     # Check if venv is well created
     venv_exists=$(find "$1" -name ".temp_venv")
