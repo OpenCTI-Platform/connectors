@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'INTERNAL_ENRICHMENT'
   id: 'ChangeMe'
   name: 'ESET ETI Report Enrichment Connector'
   scope: 'report'

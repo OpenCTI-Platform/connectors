@@ -105,11 +105,17 @@ class DiodeImport:
                     auto_update=False,  # default
                     enrichment_resolution="none",  # default
                 )
-                self.helper.api.connector.register(connector_registration)
-                self.connectors_cache[connector_id] = connector_id
+                connector_configuration = self.helper.api.connector.register(
+                    connector_registration
+                )
+                # Put configuration in the cache
+                self.connectors_cache[connector_id] = connector_configuration
             # endregion
+
             # region Setup the helper
             self.helper.connect_id = connector_id
+            ### Connector config is IMPORTANT as it is containing the new RabbitMQ configuration including routing key
+            self.helper.connector_config = self.connectors_cache[connector_id]["config"]
             self.helper.connect_validate_before_import = connector.get(
                 "validate_before_import", False
             )

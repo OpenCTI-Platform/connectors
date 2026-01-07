@@ -3,6 +3,7 @@ opencti:
   token: 'changeMe'
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   id: 'changeMe'      # Valid UUIDv4
   name: 'Doppel Threat Intelligence'
   scope: 'doppel'

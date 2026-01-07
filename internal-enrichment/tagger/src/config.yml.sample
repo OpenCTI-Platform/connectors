@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 #connector:
+  #type: 'INTERNAL_ENRICHMENT'
   #id: 'tagger--b5970f8a-ce4b-4497-a381-20b7256f5777'
   #name:  'Tagger'
   #scope: 'report,malware,tool'

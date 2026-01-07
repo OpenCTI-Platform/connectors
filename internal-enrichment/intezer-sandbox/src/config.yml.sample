@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'INTERNAL_ENRICHMENT'
   id: 'Intezer_Sandbox'
   name: 'IntezerSandbox'
   scope: 'Artifact'

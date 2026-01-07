@@ -1,4 +1,6 @@
 connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
   name: "PGL Yoyo Ad Server Blocklist"
   scope: "observable"
   confidence_level: 50

@@ -4,8 +4,9 @@ opencti:
   ssl_verify: false
 
 connector:
-  name: 'ZscalerConnector'
+  type: 'STREAM'
   id: 'ChangeMe'
+  name: 'ZscalerConnector'
   live_stream_id: 'ChangeMe' # ID of the live stream created in the OpenCTI UI
   live_stream_listen_delete: true
   

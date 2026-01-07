@@ -4,6 +4,7 @@ opencti:
   json_logging: false
 
 connector:
+  type: 'INTERNAL_ENRICHMENT'
   id: "ChangeMe"
   name: "Shodan InternetDB"
   scope: "IPv4-Addr"

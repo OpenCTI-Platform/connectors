@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'INTERNAL_ENRICHMENT'
   id: 'ChangeMe'
   name: 'LastInfoSec Enrichment'
   scope: 'StixFile,Domain-Name,Hostname,Url'

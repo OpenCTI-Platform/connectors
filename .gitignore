@@ -1,5 +1,6 @@
 .vscode
 .idea
+.diode
 __pycache__
 *.log
 *.iml

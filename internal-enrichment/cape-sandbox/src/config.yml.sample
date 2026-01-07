@@ -26,6 +26,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'INTERNAL_ENRICHMENT'
   id: 'CAPEv2_Sandbox'
   name: 'CAPEv2 Sandbox'
   scope: 'StixFile,Artifact'

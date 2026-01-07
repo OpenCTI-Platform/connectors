@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'
   name: 'Diode Import'
   run_and_terminate: false

@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'
   name: 'Tanium Threat Response Incidents'
   scope: 'tanium' # Reserved

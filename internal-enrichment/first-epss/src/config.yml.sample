@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'INTERNAL_ENRICHMENT'
   id: '18f1a9e6-a82b-4ef4-9699-ae406fe4a1a6' # Optional (default: '18f1a9e6-a82b-4ef4-9699-ae406fe4a1a6')
   name: 'Internal Enrichment Connector FIRST' # Optional (default: 'First EPSS') 
   scope: 'vulnerability' # Optional (default: ['vulnerability'])

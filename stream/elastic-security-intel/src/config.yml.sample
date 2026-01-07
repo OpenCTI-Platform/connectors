@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'STREAM'
   id: 'ChangeMe' # Valid UUIDv4
   live_stream_id: 'ChangeMe' # ID of the live stream created in OpenCTI
   name: 'Elastic Security Intel'

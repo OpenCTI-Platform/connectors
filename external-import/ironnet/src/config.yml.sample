@@ -5,6 +5,7 @@ opencti:
   token: ""
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   id: "ChangeMe"
   name: "IronNet"
   scope: "IronNet"

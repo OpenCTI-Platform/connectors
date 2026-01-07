@@ -28,12 +28,6 @@ class OpenCTI:
         else:
             config = {}
         self.helper = OpenCTIConnectorHelper(config)
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-            default=True,
-        )
         self.config_interval = get_config_variable(
             "CONFIG_INTERVAL", ["config", "interval"], config, isNumber=True, default=7
         )
@@ -162,7 +156,7 @@ class OpenCTI:
             self.helper.send_stix2_bundle(
                 json.dumps(data),
                 entities_types=self.helper.connect_scope,
-                update=self.update_existing_data,
+                update=True,
                 work_id=work_id,
             )
         except Exception as e:

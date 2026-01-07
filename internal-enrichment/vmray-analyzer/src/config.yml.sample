@@ -3,6 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  type: 'INTERNAL_ENRICHMENT'
   id: 'VMRay_Analyzer'
   name: 'VMRay Analyzer'
   scope: 'Artifact'
