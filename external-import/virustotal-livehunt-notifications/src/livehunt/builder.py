@@ -27,7 +27,7 @@ class LivehuntBuilder:
         helper: OpenCTIConnectorHelper,
         author: stix2.Identity,
         author_name: str,
-        tag: str,
+        tag: str | None,
         create_alert: bool,
         max_age_days: int,
         create_file: bool,

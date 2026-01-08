@@ -1,17 +1,14 @@
-# -*- coding: utf-8 -*-
 """Virustotal Livehunt Notifications module."""
-import os
+
 import sys
 import time
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import Any, Mapping, Optional
 
 import vt
-import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
-
-from .builder import LivehuntBuilder
+from livehunt.builder import LivehuntBuilder
+from livehunt.settings import ConnectorSettings
+from pycti import OpenCTIConnectorHelper
 
 
 class VirustotalLivehuntNotifications:
@@ -27,15 +24,9 @@ class VirustotalLivehuntNotifications:
     # Number of days to load if no state
     _LAST_DAYS_TO_LOAD = 3
 
-    def __init__(self):
-        # Instantiate the connector helper from config
-        config_file_path = Path(__file__).parents[1].joinpath("config.yml")
-        config = (
-            yaml.load(open(config_file_path, encoding="utf-8"), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config)
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+        self.config = config
+        self.helper = helper
 
         author = self.helper.api.identity.create(
             name=self._DEFAULT_AUTHOR,
@@ -43,164 +34,33 @@ class VirustotalLivehuntNotifications:
             description="Download/upload files from Virustotal Livehunt Notifications.",
         )
 
-        # Instantiate vt client from config settings
-        api_key = get_config_variable(
-            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_API_KEY",
-            ["virustotal_livehunt_notifications", "api_key"],
-            config,
-        )
-        client = vt.Client(api_key)
+        client = vt.Client(apikey=self.config.virustotal_livehunt_notifications.api_key)
 
-        self.interval_sec = get_config_variable(
-            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_INTERVAL_SEC",
-            ["virustotal_livehunt_notifications", "interval_sec"],
-            config,
-            isNumber=True,
-        )
-
-        tag = get_config_variable(
-            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_FILTER_WITH_TAG",
-            ["virustotal_livehunt_notifications", "filter_with_tag"],
-            config,
-            default="",
-        )
-
-        create_alert = get_config_variable(
-            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_ALERT",
-            ["virustotal_livehunt_notifications", "create_alert"],
-            config,
-        )
-
-        max_age_days = get_config_variable(
-            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MAX_OLD_DAYS",
-            ["virustotal_livehunt_notifications", "max_old_days"],
-            config,
-            isNumber=True,
-        )
-
-        create_file = get_config_variable(
-            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_FILE",
-            ["virustotal_livehunt_notifications", "create_file"],
-            config,
-        )
-
-        create_yara_rule = get_config_variable(
-            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_YARA_RULE",
-            ["virustotal_livehunt_notifications", "create_yara_rule"],
-            config,
-        )
-
-        delete_notification = get_config_variable(
-            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_DELETE_NOTIFICATION",
-            ["virustotal_livehunt_notifications", "delete_notification"],
-            config,
-            default=False,
-        )
-
-        extensions = get_config_variable(
-            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_EXTENSIONS",
-            ["virustotal_livehunt_notifications", "extensions"],
-            config,
-            default=[],
-        )
-        exts = []
-        if extensions:
-            exts = extensions.split(",")
-
-        min_file_size = get_config_variable(
-            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MIN_FILE_SIZE",
-            ["virustotal_livehunt_notifications", "min_file_size"],
-            config,
-            True,
-        )
-
-        max_file_size = get_config_variable(
-            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MAX_FILE_SIZE",
-            ["virustotal_livehunt_notifications", "max_file_size"],
-            config,
-            True,
-        )
-
-        min_positives = get_config_variable(
-            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MIN_POSITIVES",
-            ["virustotal_livehunt_notifications", "min_positives"],
-            config,
-            True,
-            default=1,
-        )
-
-        upload_artifact = get_config_variable(
-            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_UPLOAD_ARTIFACT",
-            ["virustotal_livehunt_notifications", "upload_artifact"],
-            config,
-        )
-
-        alert_prefix = get_config_variable(
-            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_ALERT_PREFIX",
-            ["virustotal_livehunt_notifications", "alert_prefix"],
-            config,
-            default="VT ",
-        )
-
-        av_list = get_config_variable(
-            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_AV_LIST",
-            ["virustotal_livehunt_notifications", "av_list"],
-            config,
-            default=[],
-        )
-        if isinstance(av_list, str):
-            av_list = av_list.split(",")
-
-        yara_label_prefix = get_config_variable(
-            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_YARA_LABEL_PREFIX",
-            ["virustotal_livehunt_notifications", "yara_label_prefix"],
-            config,
-            default="vt:yara:",
-        )
-
-        livehunt_label_prefix = get_config_variable(
-            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_LIVEHUNT_LABEL_PREFIX",
-            ["virustotal_livehunt_notifications", "livehunt_label_prefix"],
-            config,
-            default="vt:lh:",
-        )
-
-        livehunt_tag_prefix = get_config_variable(
-            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_LIVEHUNT_TAG_PREFIX",
-            ["virustotal_livehunt_notifications", "livehunt_tag_prefix"],
-            config,
-            default="",
-        )
-
-        enable_label_enrichment = get_config_variable(
-            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_ENABLE_LABEL_ENRICHMENT",
-            ["virustotal_livehunt_notifications", "enable_label_enrichment"],
-            config,
-            default=True,
-        )
+        # TODO: to remove - for dev purpose only
+        self.interval_sec = self.config.connector.duration_period.total_seconds()
 
         self.builder = LivehuntBuilder(
             client,
             self.helper,
             author,
             self._DEFAULT_AUTHOR,
-            tag,
-            create_alert,
-            max_age_days,
-            create_file,
-            upload_artifact,
-            create_yara_rule,
-            delete_notification,
-            exts,
-            min_file_size,
-            max_file_size,
-            min_positives,
-            alert_prefix,
-            av_list,
-            yara_label_prefix,
-            livehunt_label_prefix,
-            livehunt_tag_prefix,
-            enable_label_enrichment,
+            self.config.virustotal_livehunt_notifications.filter_with_tag,
+            self.config.virustotal_livehunt_notifications.create_alert,
+            self.config.virustotal_livehunt_notifications.max_age_days,
+            self.config.virustotal_livehunt_notifications.create_file,
+            self.config.virustotal_livehunt_notifications.upload_artifact,
+            self.config.virustotal_livehunt_notifications.create_yara_rule,
+            self.config.virustotal_livehunt_notifications.delete_notification,
+            self.config.virustotal_livehunt_notifications.extensions,
+            self.config.virustotal_livehunt_notifications.min_file_size,
+            self.config.virustotal_livehunt_notifications.max_file_size,
+            self.config.virustotal_livehunt_notifications.min_positives,
+            self.config.virustotal_livehunt_notifications.alert_prefix,
+            self.config.virustotal_livehunt_notifications.av_list,
+            self.config.virustotal_livehunt_notifications.yara_label_prefix,
+            self.config.virustotal_livehunt_notifications.livehunt_label_prefix,
+            self.config.virustotal_livehunt_notifications.livehunt_tag_prefix,
+            self.config.virustotal_livehunt_notifications.enable_label_enrichment,
         )
 
     @staticmethod
