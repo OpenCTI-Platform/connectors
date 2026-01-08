@@ -59,7 +59,7 @@ class Ipv4Enricher(BaseUseCases):
         if entity_general_info.get("Categories"):
             observable["labels"] = observable.get("x_opencti_labels", [])
             for label in entity_general_info["Categories"]:
-                pretty_label = label.replace("CATEGORY_", "").replace("_", "")
+                pretty_label = label.replace("CATEGORY_", "").replace("_", " ")
                 if pretty_label not in observable["labels"]:
                     observable["labels"].append(pretty_label)
 

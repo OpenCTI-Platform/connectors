@@ -1,5 +1,5 @@
 from connector.converter_to_stix import ConverterToStix
-from connector.utils import is_quota_exceeded
+from connector.utils import get_first_and_last_seen_datetime, is_quota_exceeded
 from connectors_sdk.models import Reference
 from pycti import STIX_EXT_OCTI_SCO, OpenCTIConnectorHelper, OpenCTIStix2
 
@@ -73,3 +73,32 @@ class BaseUseCases:
                 )
                 industry_objects.append(industry_relation.to_stix2_object())
         return industry_objects
+
+    def manage_files(self, files: list, observable_to_ref: Reference) -> list:
+        """
+        Create file and relation for each item
+        """
+        file_objects = []
+        for file in files:
+            obs_file = self.converter_to_stix.create_file(
+                hashes={"MD5": file["Md5"]},
+                score=self.zone_octi_score_mapping[file["Zone"].lower()],
+            )
+
+            if obs_file:
+                file_objects.append(obs_file.to_stix2_object())
+                file_first_seen_datetime, file_last_seen_datetime = (
+                    get_first_and_last_seen_datetime(
+                        file["FirstSeen"],
+                        file["LastSeen"],
+                    )
+                )
+                file_relation = self.converter_to_stix.create_relationship(
+                    source_obj=observable_to_ref,
+                    relationship_type="related-to",
+                    target_obj=obs_file,
+                    start_time=file_first_seen_datetime,
+                    stop_time=file_last_seen_datetime,
+                )
+                file_objects.append(file_relation.to_stix2_object())
+        return file_objects

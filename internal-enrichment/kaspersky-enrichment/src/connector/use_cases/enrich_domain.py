@@ -85,39 +85,18 @@ class DomainEnricher(BaseUseCases):
 
         # Manage FilesDownloaded
 
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from FilesDownloaded data..."
-        )
-
         if entity_data.get("FilesDownloaded"):
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Process enrichment from FilesDownloaded data..."
+            )
             files_downloaded = entity_data["FilesDownloaded"]
+
+            # Create File object and relation
+            octi_objects += self.manage_files(files_downloaded, observable_to_ref)
+
+            # Create Url object and relation
             for file_downloaded_entity in files_downloaded:
-                # Create File object and relation
-                obs_file = self.converter_to_stix.create_file(
-                    hashes={"MD5": file_downloaded_entity["Md5"]},
-                    score=self.zone_octi_score_mapping[
-                        file_downloaded_entity["Zone"].lower()
-                    ],
-                )
 
-                if obs_file:
-                    octi_objects.append(obs_file.to_stix2_object())
-                    file_first_seen_datetime, file_last_seen_datetime = (
-                        get_first_and_last_seen_datetime(
-                            file_downloaded_entity["FirstSeen"],
-                            file_downloaded_entity["LastSeen"],
-                        )
-                    )
-                    file_relation = self.converter_to_stix.create_relationship(
-                        source_obj=observable_to_ref,
-                        relationship_type="related-to",
-                        target_obj=obs_file,
-                        start_time=file_first_seen_datetime,
-                        stop_time=file_last_seen_datetime,
-                    )
-                    octi_objects.append(file_relation.to_stix2_object())
-
-                # Create Url object and relation
                 obs_url = self.converter_to_stix.create_url(
                     obs_url_score=self.zone_octi_score_mapping[
                         file_downloaded_entity["Zone"].lower()

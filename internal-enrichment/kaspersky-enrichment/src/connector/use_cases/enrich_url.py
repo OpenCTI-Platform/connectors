@@ -1,6 +1,5 @@
 from connector.converter_to_stix import ConverterToStix
 from connector.use_cases.common import BaseUseCases
-from connector.utils import get_first_and_last_seen_datetime
 from kaspersky_client import KasperskyClient
 from pycti import OpenCTIConnectorHelper
 
@@ -31,11 +30,15 @@ class UrlEnricher(BaseUseCases):
         )
         self.helper.connector_logger.info("[CONNECTOR] Starting enrichment...")
 
-        # Retrieve domain
-        obs_domain = observable["value"]
+        # Retrieve url
+        obs_url = (
+            observable["value"]
+            if observable["value"].startswith("http")
+            else "http://" + observable["value"]
+        )
 
         # Get entity data from api client
-        entity_data = self.client.get_url_info(obs_domain, self.sections)
+        entity_data = self.client.get_url_info(obs_url, self.sections)
 
         # Check Quota
         self.check_quota(entity_data["LicenseInfo"])
@@ -59,7 +62,7 @@ class UrlEnricher(BaseUseCases):
             # Labels
             observable["labels"] = observable.get("x_opencti_labels", [])
             for label in entity_general_info["Categories"]:
-                pretty_label = label.replace("CATEGORY_", "").replace("_", "")
+                pretty_label = label.replace("CATEGORY_", "").replace("_", " ")
                 if pretty_label not in observable["labels"]:
                     observable["labels"].append(pretty_label)
 
@@ -79,67 +82,23 @@ class UrlEnricher(BaseUseCases):
 
         # Manage FilesDownloaded data
 
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from FilesDownloaded data..."
-        )
-
         if entity_data.get("FilesDownloaded"):
-            files_downloaded = entity_data["FilesDownloaded"]
-            for file_downloaded_entity in files_downloaded:
-                obs_file = self.converter_to_stix.create_file(
-                    hashes={"MD5": file_downloaded_entity["Md5"]},
-                    score=self.zone_octi_score_mapping[
-                        file_downloaded_entity["Zone"].lower()
-                    ],
-                )
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Process enrichment from FilesDownloaded data..."
+            )
+            octi_objects += self.manage_files(
+                entity_data["FilesDownloaded"], observable_to_ref
+            )
 
-                if obs_file:
-                    octi_objects.append(obs_file.to_stix2_object())
-                    file_first_seen_datetime, file_last_seen_datetime = (
-                        get_first_and_last_seen_datetime(
-                            file_downloaded_entity["FirstSeen"],
-                            file_downloaded_entity["LastSeen"],
-                        )
-                    )
-                    file_relation = self.converter_to_stix.create_relationship(
-                        source_obj=observable_to_ref,
-                        relationship_type="related-to",
-                        target_obj=obs_file,
-                        start_time=file_first_seen_datetime,
-                        stop_time=file_last_seen_datetime,
-                    )
-                    octi_objects.append(file_relation.to_stix2_object())
-
-        # Manage FilesAccessed
-
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from FilesAccessed data..."
-        )
+        # Manage FilesAccessed data
 
         if entity_data.get("FilesAccessed"):
-            files_accessed = entity_data["FilesAccessed"]
-            for file_accessed in files_accessed:
-                obs_file_accessed = self.converter_to_stix.create_file(
-                    hashes={"MD5": file_accessed["Md5"]},
-                    score=self.zone_octi_score_mapping[file_accessed["Zone"].lower()],
-                )
-
-                if obs_file_accessed:
-                    octi_objects.append(obs_file_accessed.to_stix2_object())
-                    file_first_seen_datetime, file_last_seen_datetime = (
-                        get_first_and_last_seen_datetime(
-                            file_accessed["FirstSeen"],
-                            file_accessed["LastSeen"],
-                        )
-                    )
-                    file_accessed_relation = self.converter_to_stix.create_relationship(
-                        source_obj=observable_to_ref,
-                        relationship_type="related-to",
-                        target_obj=obs_file_accessed,
-                        start_time=file_first_seen_datetime,
-                        stop_time=file_last_seen_datetime,
-                    )
-                    octi_objects.append(file_accessed_relation.to_stix2_object())
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Process enrichment from FilesAccessed data..."
+            )
+            octi_objects += self.manage_files(
+                entity_data["FilesAccessed"], observable_to_ref
+            )
 
         # Manage Industries data
 
