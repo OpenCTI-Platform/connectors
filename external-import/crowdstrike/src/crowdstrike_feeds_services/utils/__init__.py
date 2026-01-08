@@ -501,7 +501,7 @@ def create_intrusion_set_from_actor_entity(
     Expects a full actor resource as returned by the Intel API.
     """
     # Name / slug
-    name = actor.get("name") or actor.get("slug")
+    name = actor.get("name")
     if not name:
         raise ValueError("Actor entity is missing both 'name' and 'slug'")
 
