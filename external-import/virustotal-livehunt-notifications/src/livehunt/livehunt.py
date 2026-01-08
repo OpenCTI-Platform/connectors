@@ -330,13 +330,3 @@ class VirustotalLivehuntNotifications:
                 sys.exit(0)
 
             self._sleep(delay_sec=run_interval)
-
-
-if __name__ == "__main__":
-    try:
-        vt_livehunt_notifications = VirustotalLivehuntNotifications()
-        vt_livehunt_notifications.run()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        sys.exit(0)
