@@ -180,6 +180,7 @@ class EventConverter:
         """
         Process an event and convert it to a list of STIX objects.
         :param event: EventRestSearchListItem object
+        :param include_relationships: Whether to include relationships between objects
         :return: List of STIX objects
         """
         event_author = None
