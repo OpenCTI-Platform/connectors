@@ -170,6 +170,14 @@ Find the connector and click the refresh button to reset the state and trigger a
 
 The connector fetches MISP events and converts them to STIX 2.1 objects in OpenCTI.
 
+**NOTE**: For MISP events containing more than 10,000 attributes and objects combined, all entities are still converted to STIX 2.1 objects, but relationships between objects are not created to optimize performance and reduce processing time.
+
+### Batch Processing
+
+The connector uses a batch processing system to efficiently handle large volumes of STIX objects. Objects are collected and processed in batches of up to 9,999 items before being sent to OpenCTI. 
+
+For detailed information about the batch processing system, see the [Batch Processors documentation](src/utils/batch_processors/README.md). 
+
 ### Data Flow
 
 ```mermaid
