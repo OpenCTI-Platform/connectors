@@ -108,25 +108,14 @@ class ReportBundleBuilder:
 
         for actor in report_actors:
             try:
-                # crowdstrike_feeds_connector/report/builder.py inside _create_intrusion_sets loop
-                if isinstance(actor, dict):
-                    logger.debug(
-                        "Report actor entity before IntrusionSet creation",
-                        extra={
-                            "actor_name": actor.get("name"),
-                            "actor_slug": actor.get("slug"),
-                            "actor": actor,
-                        },
+                intrusion_sets.append(
+                    create_intrusion_set_from_actor_entity(
+                        actor,
+                        created_by=self.author,
+                        confidence=self.confidence_level,
+                        object_markings=self.object_markings,
                     )
-                    intrusion_sets.append(
-                        create_intrusion_set_from_actor_entity(
-                            actor,
-                            created_by=self.author,
-                            confidence=self.confidence_level,
-                            object_markings=self.object_markings,
-                        )
-                    )
-                    continue
+                )
 
             except Exception:
                 logger.exception(
