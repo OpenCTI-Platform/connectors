@@ -48,15 +48,18 @@ activate_venv() {
       . "$1/$VENV_NAME/Scripts/activate"  # Windows
     fi
 
-    # Install dependencies
+    # Install dependencies from connector's directory
+    pushd "$1"
     echo '> Installing requirements in: ' "$1"
 
-    # Install requirements.txt from connector's directory
-    pushd "$1"
-
     requirements_file=$(find_requirements_txt .)
-    # -qq: Hides both informational and warning messages, showing only errors.
-    python -m pip install -qq -r "$requirements_file"
+    if [ -n "$requirements_file" ]; then
+      # -qq: Hides both informational and warning messages, showing only errors.
+      python -m pip install -qq -r "$requirements_file"
+    else
+      # If no requirements.txt, try to install the connector as a package (assuming pyproject.toml exists)
+      python -m pip install .
+    fi
 
     # Return to original working directory
     popd
@@ -65,9 +68,9 @@ activate_venv() {
     venv_exists=$(find "$1" -name ".temp_venv")
 
     if [ -d "$venv_exists" ]; then
-      echo "✅ Requirements installed for: " "$1"
+      echo "✅ Dependencies installed for: " "$1"
     else
-      echo "❌ Requirements not installed for: " "$1"
+      echo "❌ Dependencies not installed for: " "$1"
     fi
 }
 
@@ -106,35 +109,34 @@ do
 
       # Check if requirements file contains pydantic-settings or connectors-sdk dependency
       # If not found in requirements.txt and pyproject.toml exists, try to find connectors-sdk in pyproject.toml
-      has_required_dependency=false
-      if grep -qE 'pydantic-settings|connectors-sdk' "$requirements_file"; then
-          has_required_dependency=true
+      if [[ -n "$requirements_file" ]] && grep -qE 'pydantic-settings|connectors-sdk' "$requirements_file"; then
+          echo "Found requirements.txt: $requirements_file"
       elif [[ -n "$pyproject_toml" ]] && grep -q 'connectors-sdk' "$pyproject_toml"; then
-          has_required_dependency=true
+          echo "Found pyproject.toml: $pyproject_toml"
+      else
+          continue
       fi
 
-      if $has_required_dependency; then
-        (
-          echo -e "\033[32mFound pydantic-settings and/or connectors-sdk in dependencies. Proceeding with schema generation...\033[0m"
+      (
+        echo -e "\033[32mFound pydantic-settings and/or connectors-sdk in dependencies. Proceeding with schema generation...\033[0m"
 
-          activate_venv "$connector_directory_path"
+        activate_venv "$connector_directory_path"
 
-          # Generate connector JSON schema in __metadata__
-          generator_path=$(find . -name "generate_connector_config_json_schema.py.sample")
-          cp "$generator_path" "$connector_directory_path/generate_connector_config_json_schema_tmp.py"
-          python "$connector_directory_path/generate_connector_config_json_schema_tmp.py"
-          rm "$connector_directory_path/generate_connector_config_json_schema_tmp.py"
+        # Generate connector JSON schema in __metadata__
+        generator_path=$(find . -name "generate_connector_config_json_schema.py.sample")
+        cp "$generator_path" "$connector_directory_path/generate_connector_config_json_schema_tmp.py"
+        python "$connector_directory_path/generate_connector_config_json_schema_tmp.py"
+        rm "$connector_directory_path/generate_connector_config_json_schema_tmp.py"
 
-          # Generate configurations table in __metadata/CONNECTOR_CONFIG_DOC.md
-          python -m pip install -q --disable-pip-version-check jsonschema_markdown
-          generator_config_doc_path=$(find . -name "generate_connector_config_doc.py.sample")
-          cp "$generator_config_doc_path" "$connector_directory_path/generate_connector_config_doc_tmp.py"
-          python "$connector_directory_path/generate_connector_config_doc_tmp.py"
-          rm "$connector_directory_path/generate_connector_config_doc_tmp.py"
+        # Generate configurations table in __metadata/CONNECTOR_CONFIG_DOC.md
+        python -m pip install -q --disable-pip-version-check jsonschema_markdown
+        generator_config_doc_path=$(find . -name "generate_connector_config_doc.py.sample")
+        cp "$generator_config_doc_path" "$connector_directory_path/generate_connector_config_doc_tmp.py"
+        python "$connector_directory_path/generate_connector_config_doc_tmp.py"
+        rm "$connector_directory_path/generate_connector_config_doc_tmp.py"
 
-          deactivate_venv "$connector_directory_path/$VENV_NAME"
-        )
-      fi
+        deactivate_venv "$connector_directory_path/$VENV_NAME"
+      )
     fi
   fi
 done
