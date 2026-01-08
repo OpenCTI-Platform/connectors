@@ -30,7 +30,7 @@ misp:
   keep_original_tags_as_label: "" # Optional (default: '')
   enforce_warning_list: false # Optional (default: false)
   report_type: 'misp-event' # Optional (default: 'misp-event')
-  import_from_date: '2010-01-01' # Optional (default: null)
+  import_from_date: '2025-06-01' # Optional (default: null)
   import_tags: '' # Optional (default: '')
   import_tags_not: '' # Optional (default: '')
   import_creator_orgs: '' # Optional (default: '')
