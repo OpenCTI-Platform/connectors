@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://opencti:8080'
+  token: 'CHANGE_ME'
+
+connector:
+  id: 'ransomfeed-connector'
+  type: 'EXTERNAL_IMPORT'
+  name: 'RansomFeed'
+  scope: 'ransomfeed'
+  confidence_level: 70
+  log_level: 'info'
+  duration_period: 'PT1H' # Run every hour (ISO 8601 format)
+
+ransomfeed:
+  api_url: 'https://api.ransomfeed.it' # Base URL of your RansomFeed API
+  tlp_level: 'white' # TLP level: white, clear, green, amber, red
+  create_indicators: true # Create indicators from file hashes
