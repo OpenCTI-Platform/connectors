@@ -243,29 +243,56 @@ class IndicatorImporter(BaseImporter):
 
                 if to_resolve:
                     try:
-                        response = self.actors_api_cs.get_actors_by_slugs(to_resolve)
-                        resources = (
-                            response.get("resources", [])
-                            if isinstance(response, dict)
-                            else []
-                        )
-
-                        # Build lookup from slug/name -> canonical name.
                         lookup: Dict[str, str] = {}
-                        for actor in resources:
-                            name = actor.get("name") or actor.get("slug")
-                            if not name:
+                        resolved_count = 0
+
+                        for raw_actor in to_resolve:
+                            safe = str(raw_actor).replace("'", "\\'")
+                            # Use name-only filter (validated to work best for ALLCAPS tokens like WICKEDPANDA)
+                            fql_filter = f"(name:'{safe}')"
+
+                            response = self.actors_api_cs.get_combined_actor_entities(
+                                fql_filter=fql_filter,
+                                limit=100,
+                                offset=0,
+                                sort="created_date|desc",
+                                fields="__full__",
+                            )
+                            resources = (
+                                response.get("resources", [])
+                                if isinstance(response, dict)
+                                else []
+                            )
+                            if not resources:
                                 continue
+
+                            actor = (
+                                resources[0] if isinstance(resources[0], dict) else None
+                            )
+                            if not actor:
+                                continue
+
+                            canon = actor.get("name") or actor.get("slug")
+                            if not canon:
+                                continue
+
+                            # Map the raw token to the canonical name.
+                            lookup[str(raw_actor)] = canon
+                            # Also index by returned `name` and `slug` for robustness.
+                            name = actor.get("name")
                             slug = actor.get("slug")
-                            if slug:
-                                lookup[slug] = name
-                            lookup[name] = name
+                            if isinstance(name, str) and name:
+                                lookup[name] = canon
+                            if isinstance(slug, str) and slug:
+                                lookup[slug] = canon
+
+                            resolved_count += 1
 
                         for token in to_resolve:
                             canon = lookup.get(token)
                             if not canon:
-                                canon = lookup.get(token.lower()) or lookup.get(
-                                    token.upper()
+                                canon = lookup.get(str(token).lower()) or lookup.get(
+                                    str(token).upper()
                                 )
                             canon = canon or token
                             self._resolved_actor_name_cache[token] = canon
@@ -277,7 +304,7 @@ class IndicatorImporter(BaseImporter):
                                 "indicator_id": indicator.get("id"),
                                 "input_actors": actor_tokens,
                                 "normalized_actors": normalized,
-                                "resolved_count": len(resources),
+                                "resolved_count": resolved_count,
                             },
                         )
                     except Exception as err:

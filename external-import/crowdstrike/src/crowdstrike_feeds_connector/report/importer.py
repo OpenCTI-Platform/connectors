@@ -4,7 +4,6 @@
 from datetime import datetime
 from typing import Any, Generator, List, Mapping, Optional
 
-from crowdstrike_feeds_services.client.actors import ActorsAPI
 from crowdstrike_feeds_services.client.indicators import IndicatorsAPI
 from crowdstrike_feeds_services.client.reports import ReportsAPI
 from crowdstrike_feeds_services.utils import (
@@ -57,7 +56,6 @@ class ReportImporter(BaseImporter):
         self.guess_malware = guess_malware
         self.report_guess_relations = report_guess_relations
         self.indicators_api_cs = IndicatorsAPI(helper)
-        self.actors_api_cs = ActorsAPI(helper)
         self.indicator_config = indicator_config
         self.no_file_trigger_import = no_file_trigger_import
 
@@ -303,7 +301,6 @@ class ReportImporter(BaseImporter):
         confidence_level = self._confidence_level()
         related_indicators_with_related_entities = []
 
-        # Resolve CrowdStrike actor identifiers to proper actor entities before building the bundle.
         # Important: Reports often already include actor stubs as dicts with `id`, `name`, and `slug`.
         # In that case we should NOT perform additional API lookups (Romain's point).
         raw_actors = report.get("actors") or []
@@ -312,50 +309,6 @@ class ReportImporter(BaseImporter):
             "Report actors field (raw)",
             {"report_id": report.get("id"), "actors": raw_actors},
         )
-
-        # If the report already contains actor dict stubs with IDs, trust them and skip resolution.
-        # (We only resolve when we receive string tokens / identifiers.)
-        should_resolve = False
-        if raw_actors:
-            for a in raw_actors:
-                if not isinstance(a, dict):
-                    should_resolve = True
-                    break
-                if a.get("id") is None:
-                    # Dict without ID: treat as ambiguous, allow resolution.
-                    should_resolve = True
-                    break
-
-        if should_resolve:
-            try:
-                response = self.actors_api_cs.get_actors_by_slugs(raw_actors)
-                resources = response.get("resources", [])
-
-                self.helper.connector_logger.debug(
-                    "Resolved report actors via CrowdStrike Actors API",
-                    {
-                        "report_id": report.get("id"),
-                        "report_slug": report.get("slug"),
-                        "input_actors": raw_actors,
-                        "resolved_count": len(resources),
-                    },
-                )
-
-                if resources:
-                    # Replace the report actors list with the resolved actor entities.
-                    report["actors"] = resources
-            except Exception as err:
-                # Do not fail the whole report if actor resolution fails.
-                # Keep existing 'actors' field and log a warning.
-                self.helper.connector_logger.warning(
-                    "[WARNING] Failed to resolve report actors; using report-provided values as-is.",
-                    {
-                        "report_id": report.get("id"),
-                        "report_slug": report.get("slug"),
-                        "input_actors": raw_actors,
-                        "error": str(err),
-                    },
-                )
 
         report_slug = report["slug"]
         if report_slug is not None:
