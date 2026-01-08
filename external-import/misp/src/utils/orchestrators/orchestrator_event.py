@@ -236,12 +236,48 @@ class OrchestratorEvent(BaseOrchestrator):
 
                 self._log_entities_summary(bundle_objects, 0, 1)
 
-                self._check_batch_size_and_flush(self.batch_processor, bundle_objects)
-                self._add_entities_to_batch(
-                    self.batch_processor,
-                    bundle_objects,
-                    self.converter,
-                )
+                if len(bundle_objects) > self.batch_processor.config.batch_size:
+                    self.logger.warning(
+                        "Bundle objects count is greater than the batch size, splitting the bundle",
+                        {
+                            "prefix": LOG_PREFIX,
+                            "bundle_objects_count": len(bundle_objects),
+                            "batch_size": self.batch_processor.config.batch_size,
+                        },
+                    )
+                    for i in range(
+                        0, len(bundle_objects), self.batch_processor.config.batch_size
+                    ):
+                        bundle_objects_chunk = bundle_objects[
+                            i : i + self.batch_processor.config.batch_size
+                        ]
+                        self._check_batch_size_and_flush(
+                            self.batch_processor, bundle_objects_chunk
+                        )
+                        self._add_entities_to_batch(
+                            self.batch_processor,
+                            bundle_objects_chunk,
+                            self.converter,
+                        )
+
+                    # Flush the remaining items
+                    work_id = self.batch_processor.flush()
+                    if work_id:
+                        self.logger.info(
+                            "Batch processor: Flushed remaining items",
+                            {"prefix": LOG_PREFIX},
+                        )
+
+                else:
+                    self._check_batch_size_and_flush(
+                        self.batch_processor, bundle_objects
+                    )
+
+                    self._add_entities_to_batch(
+                        self.batch_processor,
+                        bundle_objects,
+                        self.converter,
+                    )
 
         finally:
             self._flush_batch_processor()
