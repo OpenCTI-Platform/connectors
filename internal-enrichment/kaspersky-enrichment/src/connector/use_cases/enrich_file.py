@@ -102,8 +102,8 @@ class FileEnricher(BaseUseCases):
             content += "|----------------|----------------|------------------|\n"
 
             for obs_detection_info in entity_data["DetectionsInfo"]:
-                detection_name = f"[{obs_detection_info["DetectionName"]}]({obs_detection_info["DescriptionUrl"]})"
-                content += f"| {obs_detection_info["LastDetectDate"]} | {detection_name} | {obs_detection_info["DetectionMethod"]} |\n"
+                detection_name = f"[{obs_detection_info['DetectionName']}]({obs_detection_info['DescriptionUrl']})"
+                content += f"| {obs_detection_info['LastDetectDate']} | {detection_name} | {obs_detection_info['DetectionMethod']} |\n"
 
             obs_note = self.converter_to_stix.create_note(observable_to_ref, content)
             octi_objects.append(obs_note.to_stix2_object())
