@@ -532,7 +532,7 @@ class FeedRow:
             self.last_seen = None
 
         self.confidence_level = int(row[9])
-        self.is_compromised = row[10] == "True"
+        self.is_compromised = str(row[10]).lower() == "true"
         self.reference = row[11]
 
         if self.reference == "None":
