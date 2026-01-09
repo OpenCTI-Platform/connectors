@@ -532,18 +532,19 @@ class FeedRow:
             self.last_seen = None
 
         self.confidence_level = int(row[9])
-        self.reference = row[10]
+        self.is_compromised = row[10] == "True"
+        self.reference = row[11]
 
         if self.reference == "None":
             self.reference = ""
 
-        self.tags = list(filter(None, row[11].split(",")))
+        self.tags = list(filter(None, row[12].split(",")))
 
         if self.threat_type:
             self.tags.insert(0, self.threat_type)
 
-        self.anonymous = bool(int(row[12]))
-        self.reporter = row[13]
+        self.anonymous = bool(int(row[13]))
+        self.reporter = row[14]
 
 
 if __name__ == "__main__":
