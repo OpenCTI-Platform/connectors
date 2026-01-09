@@ -456,7 +456,7 @@ class EventConverter:
                             )
 
         # Prepare the bundle
-        bundle_objects = [event_author]
+        bundle_objects = []
         # Keep track of objects in bundle to remove duplicates
         bundled_refs = [event_author["id"]]
 
@@ -468,7 +468,6 @@ class EventConverter:
         # Add event markings
         for event_marking in event_markings:
             if event_marking["id"] not in bundled_refs:
-                bundle_objects.append(event_marking)
                 bundled_refs.append(event_marking["id"])
 
         for stix_object in stix_objects:
@@ -512,4 +511,4 @@ class EventConverter:
                 )
                 bundle_objects.extend(note_stix_objects)
 
-        return bundle_objects
+        return (event_author, event_markings, bundle_objects)

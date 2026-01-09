@@ -226,7 +226,7 @@ class OrchestratorEvent(BaseOrchestrator):
                     },
                 )
 
-                bundle_objects = self.converter.process(
+                author, markings, bundle_objects = self.converter.process(
                     event=event,
                     include_relationships=(
                         len(event.Event.Attribute or []) + len(event.Event.Object or [])
@@ -256,9 +256,7 @@ class OrchestratorEvent(BaseOrchestrator):
                             self.batch_processor, bundle_objects_chunk
                         )
                         self._add_entities_to_batch(
-                            self.batch_processor,
-                            bundle_objects_chunk,
-                            self.converter,
+                            self.batch_processor, bundle_objects_chunk, author, markings
                         )
 
                     # Flush the remaining items
