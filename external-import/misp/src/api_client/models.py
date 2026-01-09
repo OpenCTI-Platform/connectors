@@ -5,7 +5,20 @@ from typing import Any, Dict, List, Optional, Union
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class AnalysisLevelId(StrEnum):
+class IntCoercingStrEnum(StrEnum):
+    @classmethod
+    def _missing_(cls, value):
+        """Try to coerce int to str before failing.
+
+        :param value: Value passed to enum constructor.
+        :return: Enum member if coercion succeeds.
+        """
+        if isinstance(value, int):
+            return cls(str(value))
+        return super()._missing_(value)
+
+
+class AnalysisLevelId(IntCoercingStrEnum):
     level_0 = "0"
     level_1 = "1"
     level_2 = "2"
@@ -221,7 +234,7 @@ class AttributeCategory(StrEnum):
     Other = "Other"
 
 
-class DistributionLevelId(StrEnum):
+class DistributionLevelId(IntCoercingStrEnum):
     level_0 = "0"
     level_1 = "1"
     level_2 = "2"
@@ -246,7 +259,7 @@ class Formula(StrEnum):
     Polynomial = "Polynomial"
 
 
-class ThreatLevelId(StrEnum):
+class ThreatLevelId(IntCoercingStrEnum):
     level_1 = "1"
     level_2 = "2"
     level_3 = "3"
@@ -259,6 +272,7 @@ class MISPBaseModel(BaseModel):
         frozen=True,
         arbitrary_types_allowed=True,
         use_enum_values=True,
+        coerce_numbers_to_str=True,
     )
 
 
@@ -313,9 +327,7 @@ class ExtendedAttributeItem(MISPBaseModel):
     to_ids: Optional[bool] = Field(default=True)
     uuid: Optional[str] = Field(default=None)
     timestamp: Optional[str] = Field(default="0")
-    distribution: Optional[DistributionLevelId] = Field(
-        default=None, coerce_numbers_to_str=True
-    )
+    distribution: Optional[DistributionLevelId] = Field(default=None)
     sharing_group_id: Optional[str] = Field(default=None)
     comment: Optional[str] = Field(default=None)
     deleted: Optional[bool] = Field(default=False)
@@ -380,9 +392,7 @@ class ObjectItem(MISPBaseModel):
     event_id: Optional[str] = Field(default=None)
     uuid: Optional[str] = Field(default=None)
     timestamp: Optional[str] = Field(default="0")
-    distribution: Optional[DistributionLevelId] = Field(
-        default=None, coerce_numbers_to_str=True
-    )
+    distribution: Optional[DistributionLevelId] = Field(default=None)
     sharing_group_id: Optional[str] = Field(default=None)
     comment: Optional[str] = Field(default=None)
     deleted: Optional[bool] = Field(default=None)
@@ -413,9 +423,7 @@ class EventFeed(MISPBaseModel):
     url: Optional[str] = Field(default=None)
     rules: Optional[str] = Field(default=None)
     enabled: Optional[bool] = Field(default=None)
-    distribution: Optional[DistributionLevelId] = Field(
-        default=None, coerce_numbers_to_str=True
-    )
+    distribution: Optional[DistributionLevelId] = Field(default=None)
     sharing_group_id: Optional[str] = Field(default=None)
     tag_id: Optional[str] = Field(default=None)
     default: Optional[bool] = Field(default=None)
@@ -448,9 +456,7 @@ class EventReportItem(MISPBaseModel):
     event_id: Optional[str] = Field(default=None)
     name: Optional[str] = Field(default=None)
     content: Optional[str] = Field(default=None)
-    distribution: Optional[DistributionLevelId] = Field(
-        default=None, coerce_numbers_to_str=True
-    )
+    distribution: Optional[DistributionLevelId] = Field(default=None)
     sharing_group_id: Optional[str] = Field(default=None)
     timestamp: Optional[str] = Field(default="0")
     deleted: Optional[bool] = Field(default=False)
@@ -459,26 +465,20 @@ class EventReportItem(MISPBaseModel):
 class ExtendedEvent(MISPBaseModel):
     id: Optional[str] = Field(default=None)
     org_id: Optional[str] = Field(default=None)
-    distribution: Optional[DistributionLevelId] = Field(
-        default=None, coerce_numbers_to_str=True
-    )
+    distribution: Optional[DistributionLevelId] = Field(default=None)
     info: Optional[str] = Field(default=None)
     orgc_id: Optional[str] = Field(default=None)
     orgc_uuid: Optional[str] = Field(default=None)  # from SlimEvent
     uuid: Optional[str] = Field(default=None)
     date: Optional[str] = Field(default=None, example="1991-01-15")
     published: Optional[bool] = Field(default=False)
-    analysis: Optional[AnalysisLevelId] = Field(
-        default=None, coerce_numbers_to_str=True
-    )
+    analysis: Optional[AnalysisLevelId] = Field(default=None)
     attribute_count: Optional[str] = Field(default=None)
     timestamp: Optional[str] = Field(default="0")
     sharing_group_id: Optional[str] = Field(default=None)
     proposal_email_lock: Optional[bool] = Field(default=None)
     locked: Optional[bool] = Field(default=None)
-    threat_level_id: Optional[ThreatLevelId] = Field(
-        default=None, coerce_numbers_to_str=True
-    )
+    threat_level_id: Optional[ThreatLevelId] = Field(default=None)
     publish_timestamp: Optional[str] = Field(default="0")
     sighting_timestamp: Optional[str] = Field(default="0")
     disable_correlation: Optional[bool] = Field(default=False)
