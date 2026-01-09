@@ -164,7 +164,7 @@ class ThreatFox:
             last_processed_entry_running_max = last_processed_entry
 
             for i, row in enumerate(csv_reader):
-                if len(row) > 14:
+                if len(row) > 15:
                     self.helper.log_info(
                         f"The csv line is badly formatted and will be ignored.(line: {i}, data: {row})"
                     )
