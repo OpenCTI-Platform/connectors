@@ -4,9 +4,11 @@
 import logging
 from typing import List, Mapping, Optional, Tuple, Union
 
+from crowdstrike_feeds_connector.related_actors.builder import (
+    RelatedActorBundleBuilder,
+)
 from crowdstrike_feeds_services.utils import (
     create_external_reference,
-    create_intrusion_set_from_actor_entity,
     create_malware,
     create_object_refs,
     create_organization,
@@ -31,6 +33,7 @@ from stix2 import (
 from stix2 import Report as STIXReport  # type: ignore
 from stix2.v21 import _DomainObject, _RelationshipObject  # type: ignore
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -52,6 +55,7 @@ class ReportBundleBuilder:
         related_indicators: Optional = None,
         report_guess_relations: bool = False,
         malwares_from_field: Optional[List[dict]] = None,
+        scopes: Set[str] = set(),
     ) -> None:
         """Initialize report bundle builder."""
         self.report = report
@@ -65,6 +69,8 @@ class ReportBundleBuilder:
         self.related_indicators = related_indicators
         self.report_guess_relations = report_guess_relations
         self.malwares_from_field = malwares_from_field if malwares_from_field else []
+        self.related_actor_builder = RelatedActorBundleBuilder()
+        self.scopes = scopes
 
         # Use report dates for start time and stop time.
         start_time = timestamp_to_datetime(self.report["created_date"])
@@ -217,8 +223,13 @@ class ReportBundleBuilder:
         bundle_objects.extend(self.object_markings)
 
         # Create intrusion sets and add to bundle.
-        intrusion_sets = self._create_intrusion_sets()
-        bundle_objects.extend(intrusion_sets)
+        if "actor" in self.scopes:
+            intrusion_sets = (
+                self.related_actor_builder.create_intrusion_sets_from_actor_entity(
+                    self.report.get("actors", [])
+                )
+            )
+            bundle_objects.extend(intrusion_sets)
 
         # Create malwares and add to bundle.
         malwares = self._create_malwares()

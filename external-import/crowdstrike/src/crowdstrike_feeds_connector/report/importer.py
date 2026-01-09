@@ -19,6 +19,7 @@ from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 
 from ..importer import BaseImporter
 from ..indicator.importer import IndicatorBundleBuilder, IndicatorBundleBuilderConfig
+from crowdstrike_feeds_connector.related_actors.importer import RelatedActorImporter
 from .builder import ReportBundleBuilder
 
 
@@ -43,6 +44,7 @@ class ReportImporter(BaseImporter):
         report_guess_relations: bool,
         indicator_config: dict,
         no_file_trigger_import: bool,
+        scopes: set[str],
     ) -> None:
         """Initialize CrowdStrike report importer."""
         super().__init__(helper, author, tlp_marking)
@@ -58,6 +60,8 @@ class ReportImporter(BaseImporter):
         self.indicators_api_cs = IndicatorsAPI(helper)
         self.indicator_config = indicator_config
         self.no_file_trigger_import = no_file_trigger_import
+        self.related_actors = RelatedActorImporter(helper)
+        self.scopes = scopes
 
     def run(self, state: dict[str, Any]) -> dict[str, Any]:
         self._info(
@@ -244,6 +248,7 @@ class ReportImporter(BaseImporter):
                         indicator_unwanted_labels=self.indicator_config[
                             "indicator_unwanted_labels"
                         ],
+                        scopes=self.indicator_config["scopes"],
                     )
                     try:
                         bundle_builder = IndicatorBundleBuilder(
@@ -304,6 +309,9 @@ class ReportImporter(BaseImporter):
         # Important: Reports often already include actor stubs as dicts with `id`, `name`, and `slug`.
         # In that case we should NOT perform additional API lookups (Romain's point).
         raw_actors = report.get("actors") or []
+        RelatedActorImporter._resolved_actor_name_cache.update(
+            {actor.get("id"): actor.get("name") for actor in raw_actors}
+        )
 
         self.helper.connector_logger.debug(
             "Report actors field (raw)",
@@ -330,6 +338,7 @@ class ReportImporter(BaseImporter):
             related_indicators_with_related_entities,
             self.report_guess_relations,
             malwares_from_field=malwares_from_field,
+            scopes=self.scopes,
         )
         return bundle_builder.build()
 

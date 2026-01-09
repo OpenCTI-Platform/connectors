@@ -14,6 +14,7 @@ from crowdstrike_feeds_services.utils import (
 from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
     OpenCTIConnectorHelper,
 )
+from crowdstrike_feeds_connector.related_actors.importer import RelatedActorImporter
 from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 
 from ..importer import BaseImporter
@@ -134,6 +135,15 @@ class ActorImporter(BaseImporter):
                 or modified_date > latest_modified_datetime
             ):
                 latest_modified_datetime = modified_date
+
+            RelatedActorImporter._resolved_actor_name_cache.update(
+                {actor.get("id"): actor.get("name") for actor in raw_actors}
+            )
+
+            self.helper.connector_logger.debug(
+                "Report actors field (raw)",
+                {"report_id": report.get("id"), "actors": raw_actors},
+            )
 
         self._info(
             "Processing actors completed (imported: {0}, latest: {1})",

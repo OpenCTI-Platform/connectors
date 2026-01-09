@@ -17,6 +17,7 @@ from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 
 from ..importer import BaseImporter
 from .builder import IndicatorBundleBuilder, IndicatorBundleBuilderConfig
+from crowdstrike_feeds_connector.related_actors.importer import RelatedActorImporter
 
 
 class IndicatorImporterConfig(NamedTuple):
@@ -40,6 +41,7 @@ class IndicatorImporterConfig(NamedTuple):
     indicator_high_score_labels: Set[str]
     indicator_unwanted_labels: Set[str]
     no_file_trigger_import: bool
+    scopes: set[str]
 
 
 class IndicatorImporter(BaseImporter):
@@ -59,8 +61,8 @@ class IndicatorImporter(BaseImporter):
 
         self.indicators_api_cs = IndicatorsAPI(config.helper)
         self.actors_api_cs = ActorsAPI(config.helper)
+        self.related_actor_importer = RelatedActorImporter(config.helper)
         # Simple per-run cache to avoid repeated actor resolution calls.
-        self._resolved_actor_name_cache: Dict[str, str] = {}
         self.create_observables = config.create_observables
         self.create_indicators = config.create_indicators
         self.default_latest_timestamp = config.default_latest_timestamp
@@ -77,6 +79,7 @@ class IndicatorImporter(BaseImporter):
         self.indicator_unwanted_labels = config.indicator_unwanted_labels
         self.next_page: Optional[str] = None
         self.no_file_trigger_import = config.no_file_trigger_import
+        self.scopes = config.scopes
 
         if not (self.create_observables or self.create_indicators):
             msg = "'create_observables' and 'create_indicators' false at the same time"
@@ -223,105 +226,16 @@ class IndicatorImporter(BaseImporter):
 
     def _create_indicator_bundle(self, indicator: dict) -> Optional[Bundle]:
         try:
-            # Normalize CrowdStrike actor tokens to stable human-readable names before building the bundle.
-            # Indicators frequently contain actor values as strings (internal tokens / slugs). We only
-            # normalize the names for stable Intrusion Set creation; the Actor feed/enrichment owns the full profile.
-            actor_tokens = indicator.get("actors") or []
-            if actor_tokens:
-                # Use cache first.
-                normalized: List[str] = []
-                to_resolve: List[str] = []
-
-                for token in actor_tokens:
-                    if not token:
-                        continue
-                    cached = self._resolved_actor_name_cache.get(token)
-                    if cached:
-                        normalized.append(cached)
-                    else:
-                        to_resolve.append(token)
-
-                if to_resolve:
-                    try:
-                        lookup: Dict[str, str] = {}
-                        resolved_count = 0
-
-                        for raw_actor in to_resolve:
-                            safe = str(raw_actor).replace("'", "\\'")
-                            # Use name-only filter (validated to work best for ALLCAPS tokens like WICKEDPANDA)
-                            fql_filter = f"(name:'{safe}')"
-
-                            response = self.actors_api_cs.get_combined_actor_entities(
-                                fql_filter=fql_filter,
-                                limit=100,
-                                offset=0,
-                                sort="created_date|desc",
-                                fields="__full__",
-                            )
-                            resources = (
-                                response.get("resources", [])
-                                if isinstance(response, dict)
-                                else []
-                            )
-                            if not resources:
-                                continue
-
-                            actor = (
-                                resources[0] if isinstance(resources[0], dict) else None
-                            )
-                            if not actor:
-                                continue
-
-                            canon = actor.get("name") or actor.get("slug")
-                            if not canon:
-                                continue
-
-                            # Map the raw token to the canonical name.
-                            lookup[str(raw_actor)] = canon
-                            # Also index by returned `name` and `slug` for robustness.
-                            name = actor.get("name")
-                            slug = actor.get("slug")
-                            if isinstance(name, str) and name:
-                                lookup[name] = canon
-                            if isinstance(slug, str) and slug:
-                                lookup[slug] = canon
-
-                            resolved_count += 1
-
-                        for token in to_resolve:
-                            canon = lookup.get(token)
-                            if not canon:
-                                canon = lookup.get(str(token).lower()) or lookup.get(
-                                    str(token).upper()
-                                )
-                            canon = canon or token
-                            self._resolved_actor_name_cache[token] = canon
-                            normalized.append(canon)
-
-                        self.helper.connector_logger.debug(
-                            "Normalized indicator actors via CrowdStrike Actors API.",
-                            {
-                                "indicator_id": indicator.get("id"),
-                                "input_actors": actor_tokens,
-                                "normalized_actors": normalized,
-                                "resolved_count": resolved_count,
-                            },
-                        )
-                    except Exception as err:
-                        # Do not fail the whole indicator if actor normalization fails.
-                        # Keep existing 'actors' field (tokens) and log a warning.
-                        self.helper.connector_logger.warning(
-                            "[WARNING] Failed to normalize indicator actors; using raw values as-is.",
-                            {
-                                "indicator_id": indicator.get("id"),
-                                "actor_tokens": actor_tokens,
-                                "error": str(err),
-                            },
-                        )
-                        normalized = actor_tokens
+            if "actor" in self.scopes:
+                # Process related actors
+                related_actors = indicator.get("actors", [])
 
                 # Replace with normalized list (preserves ordering; falls back to raw token when unresolved).
-                indicator["actors"] = normalized
+                indicator["actors"] = (
+                    self.related_actor_importer._process_related_actors(
+                        indicator.get("id"), related_actors
+                    )
+                )
 
             bundle_builder_config = IndicatorBundleBuilderConfig(
                 indicator=indicator,
@@ -339,6 +253,7 @@ class IndicatorImporter(BaseImporter):
                 indicator_high_score=self.indicator_high_score,
                 indicator_high_score_labels=self.indicator_high_score_labels,
                 indicator_unwanted_labels=self.indicator_unwanted_labels,
+                scopes=self.scopes,
             )
 
             bundle_builder = IndicatorBundleBuilder(self.helper, bundle_builder_config)

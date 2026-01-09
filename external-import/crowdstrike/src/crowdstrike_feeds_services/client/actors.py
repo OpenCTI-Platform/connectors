@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Union, Optional
 
 from .base_api import BaseCrowdstrikeClient
 
@@ -14,7 +14,7 @@ class ActorsAPI(BaseCrowdstrikeClient):
         sort: str,
         fql_filter: str,
         fields: Union[str, List[str]],
-    ):
+    ) -> Optional[dict]:
         """
         Get info about actors that match provided FQL filters.
         :param limit: Maximum number of records to return (Max: 5000) in integer

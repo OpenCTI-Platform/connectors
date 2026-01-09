@@ -48,6 +48,7 @@ from stix2 import (
     Vulnerability,
 )
 from stix2.v21 import _DomainObject, _Observable  # type: ignore
+from crowdstrike_feeds_connector.related_actors.builder import RelatedActorBuilder
 
 
 class Observation(NamedTuple):
@@ -76,6 +77,7 @@ class IndicatorBundleBuilderConfig(NamedTuple):
     indicator_high_score: int
     indicator_high_score_labels: Set[str]
     indicator_unwanted_labels: Set[str]
+    scopes: set[str]
 
 
 class IndicatorBundleBuilder:
@@ -149,6 +151,8 @@ class IndicatorBundleBuilder:
         self.indicator_high_score = config.indicator_high_score
         self.indicator_high_score_labels = config.indicator_high_score_labels
         self.indicator_unwanted_labels = config.indicator_unwanted_labels
+        self.related_actor_builder = RelatedActorBuilder(helper, config)
+        self.scopes = config.scopes
 
         self.observation_factory = self._get_observation_factory(self.indicator["type"])
 
@@ -158,18 +162,6 @@ class IndicatorBundleBuilder:
         if factory is None:
             raise TypeError(f"Unsupported indicator type: {indicator_type}")
         return factory
-
-    def _create_intrusion_sets(self) -> List[IntrusionSet]:
-        indicator_actors = self.indicator["actors"]
-        if not indicator_actors:
-            return []
-
-        return create_intrusion_sets_from_names(
-            indicator_actors,
-            created_by=self.author,
-            confidence=self.confidence_level,
-            object_markings=self.object_markings,
-        )
 
     def _create_kill_chain_phases(self) -> List[KillChainPhase]:
         kill_chain_phases = []
@@ -461,8 +453,13 @@ class IndicatorBundleBuilder:
         bundle_objects.extend(self.object_markings)
 
         # Create intrusion sets and add to bundle.
-        intrusion_sets = self._create_intrusion_sets()
-        bundle_objects.extend(intrusion_sets)
+        if "actor" in self.scopes:
+            intrusion_sets = (
+                self.related_actor_builder.create_intrusion_sets_from_actor_entity(
+                    self.indicator.get("actors", [])
+                )
+            )
+            bundle_objects.extend(intrusion_sets)
 
         # Create kill chain phases.
         kill_chain_phases = self._create_kill_chain_phases()

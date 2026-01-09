@@ -216,6 +216,7 @@ class CrowdStrike:
                 report_guess_relations,
                 indicator_config,
                 no_file_trigger_import,
+                scopes=scopes,
             )
 
             importers.append(report_importer)
@@ -240,6 +241,7 @@ class CrowdStrike:
                 indicator_high_score_labels=set(indicator_high_score_labels),
                 indicator_unwanted_labels=set(indicator_unwanted_labels),
                 no_file_trigger_import=no_file_trigger_import,
+                scopes=scopes,
             )
 
             indicator_importer = IndicatorImporter(indicator_importer_config)
@@ -253,6 +255,7 @@ class CrowdStrike:
                 report_status,
                 report_type,
                 no_file_trigger_import,
+                scopes=scopes,
             )
 
             importers.append(yara_master_importer)
