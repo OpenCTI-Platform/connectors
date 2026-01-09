@@ -59,7 +59,7 @@
       "writeOnly": true
     },
     "INTEL471_INTERVAL_INDICATORS": {
-      "default": 0,
+      "default": 60,
       "description": "How often malware indicators should be fetched in minutes. If not set, the stream will not be enabled.",
       "type": "integer"
     },
@@ -69,7 +69,7 @@
       "type": "integer"
     },
     "INTEL471_INTERVAL_YARA": {
-      "default": 0,
+      "default": 60,
       "description": "How often YARA rules should be fetched in minutes. If not set, the stream will not be enabled.",
       "type": "integer"
     },
@@ -79,7 +79,7 @@
       "type": "integer"
     },
     "INTEL471_INTERVAL_CVES": {
-      "default": 0,
+      "default": 120,
       "description": "How often CVE reports should be fetched in minutes. If not set, the stream will not be enabled.",
       "type": "integer"
     },
@@ -89,7 +89,7 @@
       "type": "integer"
     },
     "INTEL471_INTERVAL_REPORTS": {
-      "default": 0,
+      "default": 120,
       "description": "How often reports should be fetched in minutes. If not set, the stream will not be enabled.",
       "type": "integer"
     },
