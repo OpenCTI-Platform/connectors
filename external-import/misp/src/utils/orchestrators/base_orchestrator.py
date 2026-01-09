@@ -127,7 +127,8 @@ class BaseOrchestrator:
         self,
         batch_processor: "GenericBatchProcessor",
         all_entities: "list[stix2.v21._STIXBase21]",
-        converter: Any,
+        author,
+        markings,
     ) -> None:
         """Add entities to the batch processor.
 
@@ -137,6 +138,6 @@ class BaseOrchestrator:
             converter: The converter instance to use for organization and tlp_marking
 
         """
-        batch_processor.add_item(converter.organization)
-        # batch_processor.add_item(converter.tlp_marking)
+        batch_processor.add_item(author)
+        batch_processor.add_items(markings)
         batch_processor.add_items(all_entities)
