@@ -1,5 +1,5 @@
 pycti==6.9.6
-urllib3==2.6.2
+urllib3==2.6.3
 pydantic-settings==2.9.1
 jsonschema==4.25.1
 python-dateutil==2.9.0.post0
