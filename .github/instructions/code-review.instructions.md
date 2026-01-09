@@ -1,3 +1,7 @@
+---
+applyTo: "*"
+---
+
 When reviewing code, focus on:
 
 ## Security Critical Issues
