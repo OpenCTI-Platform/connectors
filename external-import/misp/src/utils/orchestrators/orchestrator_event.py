@@ -202,6 +202,7 @@ class OrchestratorEvent(BaseOrchestrator):
         )
 
         try:
+            last_event_datetime = None
             for event in self.client_api.search_events(
                 date_field_filter=self.config.date_filter_field,
                 date_value_filter=next_event_date,
@@ -278,6 +279,29 @@ class OrchestratorEvent(BaseOrchestrator):
                         bundle_objects,
                         self.converter,
                     )
+
+                event_datetime_value = getattr(
+                    event.Event, self.config.datetime_attribute
+                )
+                if self.config.datetime_attribute in [
+                    "timestamp",
+                    "publish_timestamp",
+                    "sighting_timestamp",
+                ]:
+                    event_datetime = datetime.fromtimestamp(
+                        int(event_datetime_value), tz=timezone.utc
+                    )
+                elif self.config.datetime_attribute == "date":
+                    event_datetime = datetime.fromisoformat(
+                        event_datetime_value
+                    ).replace(tzinfo=timezone.utc)
+                else:
+                    raise ValueError(
+                        "`MISP_DATETIME_ATTRIBUTE` must be either: 'date', 'timestamp', 'publish_timestamp' or 'sighting_timestamp'"
+                    )
+                if last_event_datetime is None or event_datetime > last_event_datetime:
+                    last_event_datetime = event_datetime
+                    self.batch_processor.set_latest_date(event_datetime.isoformat())
 
         finally:
             self._flush_batch_processor()
