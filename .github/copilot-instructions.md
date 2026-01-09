@@ -133,32 +133,24 @@ external-import/myconnector/
 
 ## Creating New Connectors
 
-**Use the provided script to scaffold a new connector:**
-
 ```bash
 cd templates
 sh create_connector_dir.sh -t <TYPE> -n <NAME>
 ```
 
-**Available types:** `external-import`, `internal-enrichment`, `stream`, `internal-import-file`, `internal-export-file`
+**Types:** `external-import`, `internal-enrichment`, `stream`, `internal-import-file`, `internal-export-file`
 
-**After creating, update these files:**
-1. Replace all `Template`/`template` references with your connector name
-2. Update `__metadata__/connector_manifest.json` with accurate information
-3. Configure environment variables in `.env.sample`
-4. Implement connector logic in `src/connector/connector.py`
+**After creating:** Replace `Template`/`template` references, update `__metadata__/connector_manifest.json`, configure `.env.sample`, implement logic in `src/connector/connector.py`.
 
 ## Key Configuration Files
 
-### Root Level
+### Key Files
 
-- **`.flake8`** - Flake8 configuration (ignores: E203, E266, E501, W503, F403, F401)
+- **`.flake8`** - Ignores: E203, E266, E501, W503, F403, F401
 - **`.pre-commit-config.yaml`** - Pre-commit hooks (black, flake8, isort, GPG signing)
-- **`.pylintrc`** - Pylint configuration
-- **`ci-requirements.txt`** - CI dependencies: `isort==7.0.0 black==25.12.0 pytest==8.4.2`
-- **`Makefile`** - Manifest and schema generation commands
-- **`run_test.sh`** - Test execution script (checks for changes, runs pytest)
-- **`manifest.json`** - Global manifest (auto-generated from all connector manifests)
+- **`ci-requirements.txt`** - CI deps: isort==7.0.0, black==25.12.0, pytest==8.4.2
+- **`Makefile`** - Manifest/schema generation commands
+- **`run_test.sh`** - Test execution (checks changes, runs pytest)
 
 ### CircleCI Pipeline
 
@@ -174,29 +166,21 @@ sh create_connector_dir.sh -t <TYPE> -n <NAME>
 
 ## Connectors SDK
 
-**Location:** `connectors-sdk/`
+**Location:** `connectors-sdk/` - Provides STIX2.1 models with deterministic IDs, pre-built classes for IOCs/Authors/Markings/Relationships, exception handling, Pydantic config validation.
 
-**Purpose:** Provides models, exceptions, and utilities for building connectors.
-
-**Installation:**
+**Install:**
 ```bash
 pip install "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk"
 ```
 
-**Key Features:**
-- STIX2.1 compliant models with deterministic IDs
-- Pre-built classes for IOCs, Authors, Markings, Relationships
-- Exception handling utilities
-- Pydantic-based configuration validation
-
-**Example Usage:**
+**Example:**
 ```python
 from connectors_sdk.models import IPV4Address, OrganizationAuthor, TLPMarking
 from connectors_sdk.models.octi import related_to
 
 author = OrganizationAuthor(name="Example Author")
 ip = IPV4Address(value="127.0.0.1", author=author, markings=[TLPMarking(level="amber+strict")])
-stix_object = ip.to_stix2_object()  # Deterministic ID generated
+stix_object = ip.to_stix2_object()  # Deterministic ID
 ```
 
 ## Dockerfile Pattern
@@ -223,43 +207,22 @@ ENTRYPOINT ["/entrypoint.sh"]
 
 ## Common Issues & Workarounds
 
-### Issue: Test Script Fails with "fatal: Not a valid object name origin/master"
-**Workaround:** The script expects `origin/master` remote ref. In CI/local environments with shallow clones, you may need to fetch master branch first.
-
-### Issue: Tests Not Running
-**Cause:** Test script only runs tests for connectors with changes (detected via git diff).
-**Workaround:** Set `CIRCLE_BRANCH=master` to force all tests to run, or make a change in the connector directory.
-
-### Issue: Pylint Plugin Fails
-**Common Cause:** Creating STIX2 objects without deterministic IDs.
-**Fix:** Use pycti's `generate_id()` methods or connectors-sdk models.
-
-### Issue: Import/Dependency Errors During Tests
-**Cause:** Tests install latest pycti from GitHub, which may have breaking changes.
-**Workaround:** Pin specific pycti version in test-requirements.txt if needed.
+- **Test script fails "fatal: Not a valid object name origin/master"** - Script expects origin/master ref; fetch master branch first in shallow clones
+- **Tests not running** - Only runs for changed code; set `CIRCLE_BRANCH=master` to force all tests
+- **Pylint plugin fails** - Use pycti's `generate_id()` or connectors-sdk models for deterministic STIX IDs
+- **Import/dependency errors in tests** - Tests install latest pycti from GitHub; pin version if needed
 
 ## Manifest & Schema Generation
 
-**Commands (defined in Makefile):**
-
 ```bash
-# Generate single connector manifest
-make connector_manifest
-
-# Generate all connector manifests
-make connectors_manifests
-
-# Generate single connector config schema
-make connector_config_schema
-
-# Generate all connector config schemas
-make connectors_config_schemas
-
-# Generate global manifest.json
-make global_manifest
+make connector_manifest          # Single connector
+make connectors_manifests        # All connectors
+make connector_config_schema     # Single schema
+make connectors_config_schemas   # All schemas
+make global_manifest             # Global manifest.json
 ```
 
-**Process:** These scripts scan `__metadata__/connector_manifest.json` files and consolidate them.
+Scripts scan `__metadata__/connector_manifest.json` files and consolidate them.
 
 ## Python Version Requirements
 
@@ -278,18 +241,27 @@ make global_manifest
 6. **Docker networking** - When running locally, connectors expect `docker_default` network
 7. **Environment variables** - Use `.env.sample` as template, never commit actual secrets
 
-## Validation Checklist
+## Code Review & PR Submission
 
-Before submitting a PR with connector changes:
+**Before submitting a PR:**
 
-- [ ] Code formatted with `black .` and `isort --profile black .`
-- [ ] Passes flake8: `flake8 --ignore=E,W .`
-- [ ] Passes custom pylint: `cd shared/pylint_plugins/check_stix_plugin && PYTHONPATH=. python -m pylint <path>`
-- [ ] Tests pass: `bash run_test.sh <path-to-test-requirements.txt>`
-- [ ] Docker image builds: `docker build -t test .`
-- [ ] `__metadata__/connector_manifest.json` updated with accurate information
-- [ ] README.md updated with connector-specific instructions
-- [ ] No secrets in code or config files
+1. **Run all validation checks** (formatting, linting, custom pylint, tests)
+2. **Sign commits with GPG** (required by pre-commit hook)
+3. **Update metadata** (`__metadata__/connector_manifest.json`) if adding/modifying connectors
+4. **Update documentation** (connector README.md, add examples)
+5. **Test functionality** with different use cases
+6. **No secrets** in code or config files
+
+**PR Checklist:**
+- [ ] Code formatted: `black .` and `isort --profile black .`
+- [ ] Linting passes: `flake8 --ignore=E,W .`
+- [ ] Custom pylint passes (for STIX objects)
+- [ ] Tests pass: `bash run_test.sh <path>`
+- [ ] Docker builds: `docker build -t test .`
+- [ ] Commits signed with GPG
+- [ ] Metadata and docs updated
+
+**The CircleCI pipeline runs:** formatting checks → linting → custom pylint → tests (parallel) → manifest build → Docker builds (only for changed connectors).
 
 ## Trust These Instructions
 
