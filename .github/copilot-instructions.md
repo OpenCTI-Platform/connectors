@@ -58,22 +58,18 @@ PYTHONPATH=. python -m pylint ../../../external-import/myconnector \
 
 **Test Structure:** Each connector with tests has a `tests/test-requirements.txt` file. Tests run in isolated virtual environments.
 
-**To run tests for a specific connector:**
-
 ```bash
-# Run test script with specific test-requirements.txt
 bash run_test.sh ./external-import/myconnector/tests/test-requirements.txt
 ```
 
-**Important Notes:**
-- The test script (`run_test.sh`) checks for changes from `master` branch
-- Tests only run if connector or connectors-sdk has changes (on non-master branches)
-- Test script installs latest pycti from GitHub master branch
-- If connector depends on connectors-sdk, it installs local version
-- Test output goes to `test_outputs/` directory
-- Tests use pytest with JUnit XML output
+**Notes:**
+- Test script checks for changes from `master` branch
+- Tests only run if connector or connectors-sdk changed (non-master branches)
+- Installs latest pycti from GitHub master branch
+- If connector depends on connectors-sdk, installs local version
+- Output goes to `test_outputs/` directory
 
-**Test Dependencies Common Pattern:**
+**Test Dependencies Pattern:**
 ```
 pytest
 pycti
@@ -155,14 +151,14 @@ sh create_connector_dir.sh -t <TYPE> -n <NAME>
 ### CircleCI Pipeline
 
 **Workflow Steps:**
-1. **ensure_formatting** - Runs isort and black checks (Python 3.12)
-2. **base_linter** - Runs flake8 with `--ignore=E,W`
-3. **linter** - Runs custom pylint plugin for STIX ID validation
-4. **test** - Runs pytest for changed connectors (parallelism: 4, Python 3.11)
+1. **ensure_formatting** - isort and black checks (Python 3.12)
+2. **base_linter** - flake8 with `--ignore=E,W`
+3. **linter** - Custom pylint plugin for STIX ID validation
+4. **test** - pytest for changed connectors (parallelism: 4, Python 3.11)
 5. **build_manifest** - Generates manifest.json and config schemas
 6. **build** - Builds Docker images for changed connectors
 
-**Important:** Tests and builds only run for connectors with changes (unless on master or connectors-sdk changed).
+Tests and builds only run for connectors with changes (unless on master or connectors-sdk changed).
 
 ## Connectors SDK
 
@@ -236,19 +232,62 @@ Scripts scan `__metadata__/connector_manifest.json` files and consolidate them.
 1. **ALWAYS format code** with black and isort before committing
 2. **ALWAYS run custom pylint plugin** when changing connector code that creates STIX objects
 3. **NEVER auto-generate STIX IDs** - use deterministic generation via pycti or connectors-sdk
-4. **Test isolation** - Each connector's tests run in a separate virtual environment
-5. **Commit signing** - All commits should be GPG signed (enforced by pre-commit hook)
-6. **Docker networking** - When running locally, connectors expect `docker_default` network
-7. **Environment variables** - Use `.env.sample` as template, never commit actual secrets
+4. **Test isolation** - Each connector's tests run in separate virtual environments
+5. **Commit signing** - GPG signed commits required (pre-commit hook enforced)
+6. **Docker networking** - Locally, connectors expect `docker_default` network
+7. **Environment variables** - Use `.env.sample` as template, never commit secrets
 
 ## Code Review & PR Submission
+
+**When reviewing code, focus on:**
+
+### Security Critical Issues
+- Check for hardcoded secrets, API keys, or credentials
+- Look for SQL injection and XSS vulnerabilities
+- Verify proper input validation and sanitization
+- Review authentication and authorization logic
+
+### Performance Red Flags
+- Identify N+1 database query problems
+- Spot inefficient loops and algorithmic issues
+- Check for memory leaks and resource cleanup
+- Review caching opportunities for expensive operations
+
+### Code Quality Essentials
+- Functions should be focused and appropriately sized
+- Use clear, descriptive naming conventions
+- Ensure proper error handling throughout
+
+### Review Style
+- Be specific and actionable in feedback
+- Explain the "why" behind recommendations
+- Acknowledge good patterns when you see them
+- Ask clarifying questions when code intent is unclear
+
+Always prioritize security vulnerabilities and performance issues that could impact users.
+
+Always suggest changes to improve readability. For example:
+
+```python
+# Instead of:
+if user.email and '@' in user.email and len(user.email) > 5:
+    submit_button.enabled = True
+else:
+    submit_button.enabled = False
+
+# Consider:
+def is_valid_email(email):
+    return email and '@' in email and len(email) > 5
+
+submit_button.enabled = is_valid_email(user.email)
+```
 
 **Before submitting a PR:**
 
 1. **Run all validation checks** (formatting, linting, custom pylint, tests)
 2. **Sign commits with GPG** (required by pre-commit hook)
 3. **Update metadata** (`__metadata__/connector_manifest.json`) if adding/modifying connectors
-4. **Update documentation** (connector README.md, add examples)
+4. **Update documentation** (README.md, add examples)
 5. **Test functionality** with different use cases
 6. **No secrets** in code or config files
 
@@ -261,7 +300,7 @@ Scripts scan `__metadata__/connector_manifest.json` files and consolidate them.
 - [ ] Commits signed with GPG
 - [ ] Metadata and docs updated
 
-**The CircleCI pipeline runs:** formatting checks → linting → custom pylint → tests (parallel) → manifest build → Docker builds (only for changed connectors).
+**CircleCI pipeline:** formatting checks → linting → custom pylint → tests (parallel) → manifest build → Docker builds (only for changed connectors).
 
 ## Trust These Instructions
 
