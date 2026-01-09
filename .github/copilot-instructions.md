@@ -237,50 +237,7 @@ Scripts scan `__metadata__/connector_manifest.json` files and consolidate them.
 6. **Docker networking** - Locally, connectors expect `docker_default` network
 7. **Environment variables** - Use `.env.sample` as template, never commit secrets
 
-## Code Review & PR Submission
-
-**When reviewing code, focus on:**
-
-### Security Critical Issues
-- Check for hardcoded secrets, API keys, or credentials
-- Look for SQL injection and XSS vulnerabilities
-- Verify proper input validation and sanitization
-- Review authentication and authorization logic
-
-### Performance Red Flags
-- Identify N+1 database query problems
-- Spot inefficient loops and algorithmic issues
-- Check for memory leaks and resource cleanup
-- Review caching opportunities for expensive operations
-
-### Code Quality Essentials
-- Functions should be focused and appropriately sized
-- Use clear, descriptive naming conventions
-- Ensure proper error handling throughout
-
-### Review Style
-- Be specific and actionable in feedback
-- Explain the "why" behind recommendations
-- Acknowledge good patterns when you see them
-- Ask clarifying questions when code intent is unclear
-
-Always prioritize security vulnerabilities and performance issues that could impact users.
-
-Always suggest changes to improve readability. For example:
-
-```python
-# Instead of:
-if user.email and '@' in user.email and len(user.email) > 5:
-    submit_button.enabled = True
-else:
-    submit_button.enabled = False
-
-# Consider:
-def is_valid_email(email):
-    return email and '@' in email and len(email) > 5
-
-submit_button.enabled = is_valid_email(user.email)
-```
+## PR Submission
 
 **Before submitting a PR:**
 
