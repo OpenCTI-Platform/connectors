@@ -201,18 +201,23 @@ class OrchestratorEvent(BaseOrchestrator):
             },
         )
 
+        date_attr_used = self.config.datetime_attribute == "date"
         try:
             last_event_datetime = None
-            for event in self.client_api.search_events(
-                date_field_filter=self.config.date_filter_field,
-                date_value_filter=next_event_date,
-                keyword=self.config.import_keyword,
-                included_tags=self.config.import_tags,
-                excluded_tags=self.config.import_tags_not,
-                included_org_creators=self.config.import_creator_orgs,
-                excluded_org_creators=self.config.import_creator_orgs_not,
-                enforce_warning_list=self.config.enforce_warning_list,
-                with_attachments=self.config.import_with_attachments,
+            date_changed = False
+            bundle_split = False
+            for event_index, event in enumerate(
+                self.client_api.search_events(
+                    date_field_filter=self.config.date_filter_field,
+                    date_value_filter=next_event_date,
+                    keyword=self.config.import_keyword,
+                    included_tags=self.config.import_tags,
+                    excluded_tags=self.config.import_tags_not,
+                    included_org_creators=self.config.import_creator_orgs,
+                    excluded_org_creators=self.config.import_creator_orgs_not,
+                    enforce_warning_list=self.config.enforce_warning_list,
+                    with_attachments=self.config.import_with_attachments,
+                )
             ):
                 if not self._validate_event(event):
                     continue
@@ -235,9 +240,52 @@ class OrchestratorEvent(BaseOrchestrator):
                     < 10000,
                 )
 
+                event_datetime_value = getattr(
+                    event.Event, self.config.datetime_attribute
+                )
+                if self.config.datetime_attribute in [
+                    "timestamp",
+                    "publish_timestamp",
+                    "sighting_timestamp",
+                ]:
+                    event_datetime = datetime.fromtimestamp(
+                        int(event_datetime_value), tz=timezone.utc
+                    )
+                elif date_attr_used:
+                    event_datetime = datetime.fromisoformat(
+                        event_datetime_value
+                    ).replace(tzinfo=timezone.utc)
+                else:
+                    raise ValueError(
+                        "`MISP_DATETIME_ATTRIBUTE` must be either: 'date', 'timestamp', 'publish_timestamp' or 'sighting_timestamp'"
+                    )
+
+                if last_event_datetime is None or event_datetime > last_event_datetime:
+                    if last_event_datetime is not None:
+                        date_changed = True
+                    last_event_datetime = event_datetime
+                    self.batch_processor.set_latest_date(event_datetime.isoformat())
+
+                    if date_attr_used and bundle_split and date_changed:
+                        # If the bundle was split and the date changed
+                        self.batch_processor.update_final_state()
+                        return
+
                 self._log_entities_summary(bundle_objects, 0, 1)
 
                 if len(bundle_objects) > self.batch_processor.config.batch_size:
+                    if event_index != 0 and (not date_attr_used or date_changed):
+                        self.logger.warning(
+                            "Bundle objects count is greater than the batch size, splitting the bundle, This event will be splitted in the next process",
+                            {
+                                "prefix": LOG_PREFIX,
+                                "bundle_objects_count": len(bundle_objects),
+                                "batch_size": self.batch_processor.config.batch_size,
+                            },
+                        )
+                        return
+
+                    bundle_split = True
                     self.logger.warning(
                         "Bundle objects count is greater than the batch size, splitting the bundle",
                         {
@@ -259,49 +307,24 @@ class OrchestratorEvent(BaseOrchestrator):
                             self.batch_processor, bundle_objects_chunk, author, markings
                         )
 
-                    # Flush the remaining items
-                    work_id = self.batch_processor.flush()
-                    if work_id:
-                        self.logger.info(
-                            "Batch processor: Flushed remaining items",
-                            {"prefix": LOG_PREFIX},
-                        )
+                    # Flush the remaining items and Update the final state
+                    self._flush_batch_processor()
+
+                    if not date_attr_used:
+                        return
 
                 else:
-                    self._check_batch_size_and_flush(
-                        self.batch_processor, bundle_objects
-                    )
-
                     self._add_entities_to_batch(
-                        self.batch_processor,
-                        bundle_objects,
-                        self.converter,
+                        self.batch_processor, bundle_objects, author, markings
                     )
-
-                event_datetime_value = getattr(
-                    event.Event, self.config.datetime_attribute
-                )
-                if self.config.datetime_attribute in [
-                    "timestamp",
-                    "publish_timestamp",
-                    "sighting_timestamp",
-                ]:
-                    event_datetime = datetime.fromtimestamp(
-                        int(event_datetime_value), tz=timezone.utc
-                    )
-                elif self.config.datetime_attribute == "date":
-                    event_datetime = datetime.fromisoformat(
-                        event_datetime_value
-                    ).replace(tzinfo=timezone.utc)
-                else:
-                    raise ValueError(
-                        "`MISP_DATETIME_ATTRIBUTE` must be either: 'date', 'timestamp', 'publish_timestamp' or 'sighting_timestamp'"
-                    )
-                if last_event_datetime is None or event_datetime > last_event_datetime:
-                    last_event_datetime = event_datetime
-                    self.batch_processor.set_latest_date(event_datetime.isoformat())
+                    # Flush the remaining items and Update the final state
+                    self._flush_batch_processor()
 
         finally:
+            if last_event_datetime is not None and date_attr_used:
+                self.batch_processor.set_latest_date(
+                    (last_event_datetime + timedelta(days=1)).isoformat()
+                )
             self._flush_batch_processor()
 
     def _flush_batch_processor(self) -> None:
