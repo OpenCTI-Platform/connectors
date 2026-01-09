@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime, timezone
 from typing import Any
 
 from exceptions.connector_errors import MispWorkProcessingError
@@ -74,49 +73,6 @@ def log_batch_completion(stix_objects: list[Any], work_id: str) -> None:
     )
 
 
-def extract_stix_date(stix_object: Any) -> Any | None:
-    """Extract the latest date from a STIX object for state updates.
-
-    Args:
-        stix_object: STIX object to extract date from
-
-    Returns:
-        ISO format date string with timezone information or None
-
-    """
-    date_value = getattr(
-        stix_object,
-        "modified",
-        stix_object.get("modified") if hasattr(stix_object, "get") else None,
-    )
-    if date_value:
-        now_utc = datetime.now(timezone.utc)
-        if hasattr(date_value, "replace"):
-            date_with_tz = (
-                date_value.replace(tzinfo=timezone.utc)
-                if date_value.tzinfo is None
-                else date_value
-            )
-            if date_with_tz > now_utc:
-                return now_utc.isoformat()
-            return date_value.isoformat()
-        if isinstance(date_value, str):
-            try:
-                parsed_date = datetime.fromisoformat(date_value.replace("Z", "+00:00"))
-                date_with_tz = (
-                    parsed_date.replace(tzinfo=timezone.utc)
-                    if parsed_date.tzinfo is None
-                    else parsed_date
-                )
-                if date_with_tz > now_utc:
-                    return now_utc.isoformat()
-            except (ValueError, AttributeError):
-                pass
-            return date_value
-
-    return None
-
-
 EVENT_BATCH_PROCESSOR_CONFIG = GenericBatchProcessorConfig(
     batch_size=9999,
     work_name_template="MISP - Batch #{batch_num}",
@@ -126,7 +82,6 @@ EVENT_BATCH_PROCESSOR_CONFIG = GenericBatchProcessorConfig(
     exception_class=MispWorkProcessingError,
     display_name_singular="STIX object",
     auto_process=False,
-    date_extraction_function=extract_stix_date,
     postprocessing_function=log_batch_completion,
     validation_function=validate_stix_object,
     empty_batch_behavior="update_state",
