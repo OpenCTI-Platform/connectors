@@ -56,14 +56,10 @@ class Misp:
         error_message = None
 
         try:
-            try:
-                error_result = self.batch_process_event()
-                if error_result:
-                    error_message = error_result
-                    error_flag = True
-            except KeyboardInterrupt:
-                raise KeyboardInterrupt("MISP imports processing interrupted") from None
-
+            error_result = self.batch_process_event()
+            if error_result:
+                error_message = error_result
+                error_flag = True
         except (KeyboardInterrupt, SystemExit):
             error_message = "Connector stopped due to user interrupt"
             self.logger.info(
