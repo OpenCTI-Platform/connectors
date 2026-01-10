@@ -339,7 +339,7 @@ class RSTThreatFeed:
             elif threat["type"] == ThreatTypes.TOOL:
                 threat_object = stix2.v21.Tool(**shared_parameters)
             elif threat["type"] == ThreatTypes.TTP:
-                if "aliases" in threat and self._create_custom_ttps:
+                if "mitre_id" not in threat and self._create_custom_ttps:
                     threat_object = stix2.v21.AttackPattern(**shared_parameters)
                 elif "mitre_id" in threat and self._create_mitre_ttps:
                     # mitre_id based lookup. We only map to mitre_id based ttps.

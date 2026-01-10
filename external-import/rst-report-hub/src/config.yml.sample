@@ -4,6 +4,7 @@ opencti:
 
 connector:
   id: 'ChangeMe' # Valid UUIDv4
+  type: 'EXTERNAL_IMPORT'
   name: 'RST Report Hub'
   scope: 'application/json,application/pdf' # MIME type or SCO
   run_and_terminate: true
