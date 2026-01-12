@@ -9,6 +9,10 @@ This is an `EXTERNAL_IMPORT` connector that:
 - Sends bundles via `helper.send_stix2_bundle`
 - Persists progress using OpenCTI connector state so reruns only ingest newly appended rows
 
+## Development context
+
+This development is also an experiment to code with the help of Spec-kit from Github. Find more info here: https://github.com/github/spec-kit
+
 ## Requirements
 
 - A running OpenCTI stack (OpenCTI platform + worker + RabbitMQ)

@@ -1,5 +1,16 @@
 from __future__ import annotations
 
+"""CSV dataset reader.
+
+This module reads Pravda dataset files (plain `.csv` or gzipped `.csv.gz`) and
+yields validated rows as `DatasetRow` objects.
+
+Key goals:
+- Validate required columns and required field presence.
+- Enforce optional size/row-count guards from `Config`.
+- Provide a stable per-file cursor via `start_cursor`.
+"""
+
 import csv
 import gzip
 from dataclasses import dataclass
@@ -8,7 +19,6 @@ from typing import IO, Iterator
 
 from pravda_dataset.config import Config
 from pravda_dataset.reporting import RunReport, SkipReason
-
 
 REQUIRED_COLUMNS = {
     "URL",
@@ -20,6 +30,8 @@ REQUIRED_COLUMNS = {
 
 @dataclass(frozen=True)
 class DatasetRow:
+    """A normalized row extracted from a dataset file."""
+
     source_file: str
     row_number: int
 
@@ -35,16 +47,20 @@ class DatasetRow:
 
 
 class RowSkip(Exception):
+    """Raised for file-level validation issues (e.g., missing headers/columns)."""
+
     pass
 
 
 def _open_dataset_file(path: Path) -> IO[str]:
+    """Open a dataset file as text, supporting gzip-compressed CSV files."""
     if [s.lower() for s in path.suffixes[-2:]] == [".csv", ".gz"]:
         return gzip.open(path, mode="rt", encoding="utf-8", newline="")
     return path.open(mode="rt", encoding="utf-8", newline="")
 
 
 def _validate_header(fieldnames: list[str] | None) -> None:
+    """Ensure the CSV header contains the required columns."""
     if not fieldnames:
         raise RowSkip("missing header")
     missing = REQUIRED_COLUMNS.difference(fieldnames)
@@ -60,6 +76,11 @@ def iter_rows(
     start_cursor: int = 0,
     report: RunReport | None = None,
 ) -> Iterator[DatasetRow]:
+    """Iterate over validated rows from a dataset file.
+
+    `start_cursor` skips the first N data rows (0-based index, not counting the
+    header) which enables resume/retry within a file.
+    """
     # Basic file-level guard
     if config.max_file_bytes is not None:
         try:
@@ -71,7 +92,11 @@ def iter_rows(
                 report.skip(SkipReason.FILE_TOO_LARGE)
             return
 
-    rel = str(file_path.resolve().relative_to(dataset_root.resolve())).replace("\\", "/")
+    # Relative path is used for reporting/state and normalized to POSIX separators
+    # for consistent behavior on Windows/Linux.
+    rel = str(file_path.resolve().relative_to(dataset_root.resolve())).replace(
+        "\\", "/"
+    )
 
     with _open_dataset_file(file_path) as fp:
         reader = csv.DictReader(fp)
