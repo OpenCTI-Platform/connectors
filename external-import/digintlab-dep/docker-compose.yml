@@ -1,0 +1,27 @@
+version: '3'
+services:
+  connector-digintlab-dep:
+    image: opencti/connector-digintlab-dep:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=DEP Connector
+      - CONNECTOR_SCOPE=ChangeMe
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_RUN_INTERVAL=3600 # In seconds
+      # Connector's required execution parameters
+      - DEP_USERNAME=ChangeMe
+      - DEP_PASSWORD=ChangeMe
+      - DEP_API_KEY=ChangeMe
+      - DEP_CLIENT_ID=ChangeMe
+      # Connector's optional execution parameters
+      - DEP_LOOKBACK_DAYS=7
+      - DEP_CONFIDENCE=70
+      - DEP_LOGIN_ENDPOINT=https://cognito-idp.eu-west-1.amazonaws.com/
+      - DEP_API_ENDPOINT=https://api.eu-ep1.doubleextortion.com/v1/dbtr/privlist
+      - DEP_DSET=ext
+      - DEP_EXTENDED_RESULTS=true
+      - DEP_ENABLE_SITE_INDICATOR=true
+      - DEP_ENABLE_HASH_INDICATOR=true
+    restart: always

@@ -1,0 +1,16 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'INTERNAL_ENRICHMENT'
+  id: 'ChangeMe'
+  name: 'Template Connector' # optional (default: 'Template Connector')
+  scope: 'ChangeMe'
+  log_level: 'error' # optional (default: 'error')
+  auto: false # optional, enable/disable auto-enrichment of OpenCTI entities (default: false)
+
+template:
+  api_base_url: 'ChangeMe'
+  api_key: 'ChangeMe'
+  max_tlp_level: 'amber+strict'  # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber+strict')

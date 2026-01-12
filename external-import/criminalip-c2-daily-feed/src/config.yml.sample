@@ -1,0 +1,15 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe' # Valid UUIDv4
+  name: 'Criminal IP C2 Daily Feed'
+  scope: 'ipv4-addr'
+  log_level: 'debug'
+
+criminalipc2dailyfeed:
+  csv_url: 'https://raw.githubusercontent.com/criminalip/C2-Daily-Feed/refs/heads/main'
+  score: 100
+  interval: 1

@@ -91,14 +91,6 @@ class ConnectorAbuseIPDB:
 
             stix_objects.append(obs)
 
-            if self.config.create_indicator:
-                indicator = self.converter_to_stix.create_indicator(obs)
-                stix_objects.append(indicator)
-                rel = self.converter_to_stix.create_relationship(
-                    indicator.id, "based-on", obs.id
-                )
-                stix_objects.append(rel)
-
         if len(stix_objects):
             stix_objects.append(self.converter_to_stix.author)
             stix_objects.append(self.converter_to_stix.tlp_marking)
@@ -154,7 +146,7 @@ class ConnectorAbuseIPDB:
 
                 self.helper.connector_logger.info(
                     "Sending STIX objects to OpenCTI...",
-                    {"bundles_sent": {str(len(bundles_sent))}},
+                    {"bundles_sent": str(len(bundles_sent))},
                 )
 
             self.helper.connector_logger.debug(

@@ -1,7 +1,7 @@
 """Threat actor-specific converter for fetching and processing threat actor data."""
 
 import logging
-from typing import Any, List
+from typing import Any
 
 from connector.src.custom.configs import (
     GTIConfig,
@@ -18,18 +18,26 @@ class ConvertToSTIXThreatActor(BaseConvertToSTIX):
         """Initialize Threat Actor Converter."""
         super().__init__(config, logger, tlp_level)
 
-    def convert_threat_actor_to_stix(self, threat_actor_data: Any) -> List[Any]:
+    def convert_threat_actor_to_stix(self, threat_actor_data: Any) -> list[Any]:
         """Convert threat actor to location, identity, and threat actor STIX objects.
 
         Args:
             threat_actor_data: GTIThreatActorData object from fetcher
 
         Returns:
-            List of STIX entities (location, identity, threat_actor)
+            list of STIX entities (location, identity, threat_actor)
 
         """
         try:
-            converter = self.converter_factory.create_converter_by_name("threat_actor")
+            additional_deps = {}
+            if hasattr(self.config, "enable_threat_actor_aliases"):
+                additional_deps["enable_threat_actor_aliases"] = (
+                    self.config.enable_threat_actor_aliases
+                )
+
+            converter = self.converter_factory.create_converter_by_name(
+                "threat_actor", additional_dependencies=additional_deps
+            )
             stix_entities = converter.convert_single(threat_actor_data)
 
             if not isinstance(stix_entities, list):

@@ -26,15 +26,19 @@ KNOWLEDGE_BASES = [
     "attack-ics",
     "attack-enterprise",
     "disarm",
+    "atlas",
 ]
 
 
-def parse_knowledgebases(value: str):
+def parse_knowledgebases(helper: OpenCTIConnectorHelper, value: str):
     if not value:
         return []
     values = value.split(",")
     for v in values:
-        assert v in KNOWLEDGE_BASES, f"unknown knowledge base: {v}"
+        if v not in KNOWLEDGE_BASES:
+            message = f"Unsupported knowledge base: {v}"
+            helper.log_error(message)
+            raise ValueError(message)
     return values
 
 
@@ -62,7 +66,9 @@ class CTIButlerConnector:
         self.helper = OpenCTIConnectorHelper(config)
         self.base_url = self._get_param("base_url") + "/"
         self.api_key = self._get_param("api_key")
-        self.knowledgebases = parse_knowledgebases(self._get_param("knowledgebases"))
+        self.knowledgebases = parse_knowledgebases(
+            self.helper, self._get_param("knowledgebases")
+        )
         self.interval_days = self._get_param("interval_days", is_number=True)
 
         self.session = requests.Session()
@@ -98,7 +104,7 @@ class CTIButlerConnector:
         self.helper.log_info(f"running for {knowledge_base}")
         _, ingested_versions = self.get_knowledge_base_versions(knowledge_base)
         resp = self.session.get(
-            urljoin(self.base_url, f"v1/{knowledge_base}/versions/")
+            urljoin(self.base_url, f"v1/{knowledge_base}/versions/installed/")
         )
         resp.raise_for_status()
         versions = resp.json()["versions"]
@@ -135,11 +141,12 @@ class CTIButlerConnector:
                 self.update_state(base, version)
             except VersionAlreadyIngested as e:
                 self.helper.log_info(e)
-            except:
+            except Exception:
                 self.helper.log_error("cannot process for knowledge base")
 
     @staticmethod
     def get_object_name(base, obj):
+        name = None
         if refs := obj.get("external_references"):
             name = refs[0].get("external_id")
         name = name or obj["id"]
@@ -161,7 +168,7 @@ class CTIButlerConnector:
                 work_id=cve_work_id,
                 message=f"[{readable_name}] bundle retrieved",
             )
-        except:
+        except Exception:
             self.helper.log_error(
                 f"process {readable_name} failed", dict(work_id=cve_work_id)
             )
@@ -181,7 +188,7 @@ class CTIButlerConnector:
     def run_once(self):
         try:
             self._run_once()
-        except:
+        except Exception:
             self.helper.log_error("run failed")
 
     def _get_state(self) -> dict:

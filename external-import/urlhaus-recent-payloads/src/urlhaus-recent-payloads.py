@@ -252,6 +252,13 @@ class URLHausRecentPayloads:
                 self.helper.log_info("Connector stop")
                 sys.exit(0)
 
+            except requests.exceptions.HTTPError as err:
+                if "403" in str(err):
+                    msg = "403 Forbidden: Invalid API key. Please verify that your API credentials are correct"
+                    self.helper.connector_logger.error(msg)
+                else:
+                    raise err
+
             except Exception as e:
                 self.helper.log_error(str(e))
 
@@ -272,7 +279,7 @@ class URLHausRecentPayloads:
 
         url = self.api_url + "payloads/recent/"
         resp = requests.get(url, headers={"Auth-Key": self.api_key})
-
+        resp.raise_for_status()
         # Handle the response data
 
         recent_payloads_list = resp.json()

@@ -1,8 +1,8 @@
 version: '3'
 services:
   connector-c2tracker:
-    image: opencti/connector-montysecurity-c2-tracker:rolling
+    image: opencti/connector-montysecurity-c2-tracker:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_C2TRACKER_TOKEN=${OPENCTI_C2TRACKER_TOKEN}
     restart: always

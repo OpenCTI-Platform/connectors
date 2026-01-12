@@ -84,6 +84,10 @@ class ConfigDoppel:
             "DOPPEL_API_KEY", ["doppel", "api_key"], self.load
         )
 
+        self.user_api_key = get_config_variable(
+            "DOPPEL_USER_API_KEY", ["doppel", "user_api_key"], self.load
+        )
+
         self.alerts_endpoint = get_config_variable(
             "DOPPEL_ALERTS_ENDPOINT",
             ["doppel", "alerts_endpoint"],
@@ -126,4 +130,14 @@ class ConfigDoppel:
             ["doppel", "tlp_level"],
             self.load,
             default="clear",
+        )
+
+        self.page_size = self._validate_positive_int(
+            get_config_variable(
+                "DOPPEL_PAGE_SIZE",
+                ["doppel", "page_size"],
+                self.load,
+                default=100,
+            ),
+            "DOPPEL_PAGE_SIZE",
         )

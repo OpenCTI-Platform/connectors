@@ -3,7 +3,7 @@
   "slug": "feedly",
   "description": "The OpenCTI Feedly Connector is designed to integrate curated intelligence from Feedly directly into the OpenCTI platform. By leveraging the Feedly API, this connector retrieves the latest articles from designated Feedly boards and folders, importing them along with relevant entities, indicators, detection rules, and inter-entity relationships. This ensures that organizations have access to the most recent and relevant open-source intelligence available, enriching their threat intelligence efforts with up-to-date insights from a wide array of sources.\n\nTo utilize this integration, users need the Feedly for Threat Intelligence package, which facilitates access to specialized features and data retrieval capabilities tailored for cybersecurity purposes. Once configured, the connector automates the ingestion of structured intelligence from Feedly into OpenCTI, enhancing analysts' ability to track emerging threats and correlate this information with existing internal data. This integration strengthens an organization's intelligence framework, improving its ability to detect, analyze, and respond to threats rapidly.",
   "short_description": "Feedly Connector imports curated intelligence from Feedly into OpenCTI, enhancing threat tracking.",
-  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "logo": "external-import/feedly/__metadata__/logo.png",
   "use_cases": [
     "Commercial Threat Intel"
   ],
@@ -14,7 +14,7 @@
   "support_version": ">= 6.5.1",
   "subscription_link": "https://feedly.com/threat-intelligence",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/feedly",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-feedly",
   "container_type": "EXTERNAL_IMPORT"

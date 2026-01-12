@@ -1,0 +1,260 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/google-ti-feeds_config.schema.json",
+  "type": "object",
+  "properties": {
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "description": "Type of connector - must be EXTERNAL_IMPORT for import connectors",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Google Threat Intel Feeds",
+      "description": "Display name for the connector",
+      "minLength": 1,
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": "report,location,identity,attack_pattern,domain,file,ipv4,ipv6,malware,sector,intrusion_set,url,vulnerability,campaign",
+      "description": "Comma-separated list of OpenCTI entity types that this connector can import",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "Logging level for the connector",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT2H",
+      "description": "ISO 8601 duration between connector runs (e.g., PT2H for 2 hours)",
+      "format": "duration",
+      "type": "string"
+    },
+    "CONNECTOR_QUEUE_THRESHOLD": {
+      "default": 500,
+      "description": "Maximum number of messages in the connector queue before throttling",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "CONNECTOR_TLP_LEVEL": {
+      "default": "AMBER+STRICT",
+      "description": "Traffic Light Protocol (TLP) marking for imported data",
+      "enum": [
+        "WHITE",
+        "GREEN",
+        "AMBER",
+        "RED",
+        "WHITE+STRICT",
+        "GREEN+STRICT",
+        "AMBER+STRICT",
+        "RED+STRICT"
+      ],
+      "type": "string"
+    },
+    "OPENCTI_URL": {
+      "description": "The URL of the OpenCTI platform instance",
+      "examples": [
+        "http://localhost:8080",
+        "https://opencti.example.com"
+      ],
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "Authentication token for accessing the OpenCTI API",
+      "minLength": 1,
+      "type": "string"
+    },
+    "GTI_API_KEY": {
+      "description": "API key for authenticating with the Google Threat Intelligence service",
+      "format": "password",
+      "minLength": 1,
+      "type": "string",
+      "writeOnly": true
+    },
+    "GTI_API_URL": {
+      "default": "https://www.virustotal.com/api/v3",
+      "description": "Base URL for the Google Threat Intelligence API",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "GTI_CAMPAIGN_IMPORT_START_DATE": {
+      "default": "P1D",
+      "description": "ISO 8601 duration string specifying how far back to import campaigns (e.g., P1D for 1 day, P7D for 7 days)",
+      "format": "duration",
+      "type": "string"
+    },
+    "GTI_IMPORT_CAMPAIGNS": {
+      "default": false,
+      "description": "Whether to enable importing campaign data from GTI",
+      "type": "boolean"
+    },
+    "GTI_CAMPAIGN_ORIGINS": {
+      "default": [
+        "google threat intelligence"
+      ],
+      "description": "Comma-separated list of campaign origins to import, or 'All' for all origins. Allowed values: All, partner, crowdsourced, google threat intelligence",
+      "examples": [
+        "All",
+        "partner,google threat intelligence",
+        "crowdsourced"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "GTI_VULNERABILITY_IMPORT_START_DATE": {
+      "default": "P1D",
+      "description": "ISO 8601 duration string specifying how far back to import vulnerabilities (e.g., P1D for 1 day, P7D for 7 days)",
+      "format": "duration",
+      "type": "string"
+    },
+    "GTI_IMPORT_VULNERABILITIES": {
+      "default": false,
+      "description": "Whether to enable importing vulnerability data from GTI",
+      "type": "boolean"
+    },
+    "GTI_VULNERABILITY_GET_RELATED_SOFTWARES": {
+      "default": false,
+      "description": "Whether to enable importing related software data from vulnerability data",
+      "type": "boolean"
+    },
+    "GTI_VULNERABILITY_ORIGINS": {
+      "default": [
+        "google threat intelligence"
+      ],
+      "description": "Comma-separated list of vulnerability origins to import, or 'All' for all origins. Allowed values: All, partner, crowdsourced, google threat intelligence",
+      "examples": [
+        "All",
+        "partner,google threat intelligence",
+        "crowdsourced"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "GTI_MALWARE_FAMILY_IMPORT_START_DATE": {
+      "default": "P1D",
+      "description": "ISO 8601 duration string specifying how far back to import malware families (e.g., P1D for 1 day, P7D for 7 days)",
+      "format": "duration",
+      "type": "string"
+    },
+    "GTI_IMPORT_MALWARE_FAMILIES": {
+      "default": false,
+      "description": "Whether to enable importing malware family data from GTI",
+      "type": "boolean"
+    },
+    "GTI_MALWARE_FAMILY_ORIGINS": {
+      "default": [
+        "google threat intelligence"
+      ],
+      "description": "Comma-separated list of malware family origins to import, or 'All' for all origins. Allowed values: All, partner, crowdsourced, google threat intelligence",
+      "examples": [
+        "All",
+        "partner,google threat intelligence",
+        "crowdsourced"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "GTI_ENABLE_MALWARE_ALIASES": {
+      "default": false,
+      "description": "Whether to enable importing malware family aliases from GTI",
+      "type": "boolean"
+    },
+    "GTI_THREAT_ACTOR_IMPORT_START_DATE": {
+      "default": "P1D",
+      "description": "ISO 8601 duration string specifying how far back to import threat actors (e.g., P1D for 1 day, P7D for 7 days)",
+      "format": "duration",
+      "type": "string"
+    },
+    "GTI_IMPORT_THREAT_ACTORS": {
+      "default": false,
+      "description": "Whether to enable importing threat actor data from GTI",
+      "type": "boolean"
+    },
+    "GTI_THREAT_ACTOR_ORIGINS": {
+      "default": [
+        "google threat intelligence"
+      ],
+      "description": "Comma-separated list of threat actor origins to import, or 'All' for all origins. Allowed values: All, partner, crowdsourced, google threat intelligence",
+      "examples": [
+        "All",
+        "partner,google threat intelligence",
+        "crowdsourced"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "GTI_ENABLE_THREAT_ACTOR_ALIASES": {
+      "default": false,
+      "description": "Whether to enable importing threat actor aliases from GTI",
+      "type": "boolean"
+    },
+    "GTI_REPORT_IMPORT_START_DATE": {
+      "default": "P1D",
+      "description": "ISO 8601 duration string specifying how far back to import reports (e.g., P1D for 1 day, P7D for 7 days)",
+      "format": "duration",
+      "type": "string"
+    },
+    "GTI_IMPORT_REPORTS": {
+      "default": true,
+      "description": "Whether to enable importing report data from GTI",
+      "type": "boolean"
+    },
+    "GTI_REPORT_TYPES": {
+      "default": [
+        "All"
+      ],
+      "description": "Comma-separated list of report types to import, or 'All' for all types. Allowed values: All, Actor Profile, Country Profile, Cyber Physical Security Roundup, Event Coverage/Implication, Industry Reporting, Malware Profile, Net Assessment, Network Activity Reports, News Analysis, OSINT Article, Patch Report, Strategic Perspective, TTP Deep Dive, Threat Activity Alert, Threat Activity Report, Trends and Forecasting, Weekly Vulnerability Exploitation Report",
+      "examples": [
+        "All",
+        "Actor Profile,Malware Profile",
+        "Threat Activity Alert"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "GTI_REPORT_ORIGINS": {
+      "default": [
+        "google threat intelligence"
+      ],
+      "description": "Comma-separated list of report origins to import, or 'All' for all origins. Allowed values: All, partner, crowdsourced, google threat intelligence",
+      "examples": [
+        "All",
+        "partner,google threat intelligence",
+        "crowdsourced"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "GTI_API_KEY"
+  ],
+  "additionalProperties": true
+}

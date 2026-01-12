@@ -1,7 +1,7 @@
 from datetime import timedelta
 from typing import Annotated, Literal
 
-from connectors_sdk.core.pydantic import ListFromString
+from connectors_sdk import ListFromString
 from models.configs import ConfigBaseSettings
 from pydantic import Field, HttpUrl, PlainSerializer, PositiveInt, field_validator
 
@@ -61,5 +61,5 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     )
 
     @field_validator("type")
-    def force_value_for_type_to_be_internal_enrichment(cls, value):
+    def force_value_for_type_to_be_external_import(cls, value):
         return "EXTERNAL_IMPORT"

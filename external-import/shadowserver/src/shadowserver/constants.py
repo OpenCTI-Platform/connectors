@@ -3,6 +3,7 @@ import stix2
 from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
 
 BASE_URL = "https://transform.shadowserver.org/api2/"
+DOWNLOAD_URL = "https://dl.shadowserver.org/"
 TIMEOUT = 500
 
 REQUEST_DATE_FORMAT = "%Y-%m-%d"

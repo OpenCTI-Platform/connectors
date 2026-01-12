@@ -53,8 +53,8 @@ class DoppelConnector:
         try:
             last_run = self._get_last_run(start_datetime)
 
-            # Perfom collect of intelligence
-            alerts = self.client.get_alerts(last_run)
+            # Perform collection of intelligence
+            alerts = self.client.get_alerts(last_run, page_size=self.config.page_size)
             if alerts:
                 work_id = self.helper.api.work.initiate_work(
                     self.helper.connect_id, "Connector feed"

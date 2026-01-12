@@ -1,10 +1,10 @@
 opencti:
-  url: 'ChangeMe'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
-  id: 'Intezer_Sandbox'
   type: 'INTERNAL_ENRICHMENT'
+  id: 'Intezer_Sandbox'
   name: 'IntezerSandbox'
   scope: 'Artifact'
   auto: false # Enable/disable auto-enrichment of observables

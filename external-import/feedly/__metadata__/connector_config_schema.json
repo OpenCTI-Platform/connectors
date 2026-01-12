@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/feedly_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The OpenCTI platform URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Feedly",
+      "description": "Name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "feedly"
+      ],
+      "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_TYPE": {
+      "default": "EXTERNAL_IMPORT",
+      "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "Determines the verbosity of the logs.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "FEEDLY_INTERVAL": {
+      "default": 60,
+      "description": "Polling interval in minutes for fetching and refreshing Feedly data. Determines how often the system checks for updates from Feedly streams.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "FEEDLY_STREAM_IDS": {
+      "default": [],
+      "description": "Comma separated list of Feedly stream IDs to monitor. Each stream ID represents a specific feed or collection to import from Feedly.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "FEEDLY_DAYS_TO_BACK_FILL": {
+      "default": 7,
+      "description": "Number of days to back fill for new streams. When a new stream is added, the connector will fetch articles from this many days in the past.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "FEEDLY_API_KEY": {
+      "description": "Feedly API key for authentication. Generate your API key at https://feedly.com/i/team/api",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "FEEDLY_API_KEY"
+  ],
+  "additionalProperties": true
+}

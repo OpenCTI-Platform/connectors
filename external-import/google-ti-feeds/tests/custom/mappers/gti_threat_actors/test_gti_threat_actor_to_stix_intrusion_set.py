@@ -1,7 +1,7 @@
 """Module to test the GTI threat actor to STIX intrusion set mapper."""
 
 from datetime import datetime, timezone
-from typing import Any, List, Optional
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -132,17 +132,17 @@ def minimal_threat_actor_data() -> GTIThreatActorData:
     )
 
 
-# @pytest.fixture
-# def threat_actor_with_aliases() -> GTIThreatActorData:
-#     """Fixture for threat actor data with aliases."""
-#     return GTIThreatActorDataFactory.build(
-#         attributes=ThreatActorModelFactory.build(
-#             alt_names_details=[
-#                 AltNameDetailFactory.build(value="APT Example"),
-#                 AltNameDetailFactory.build(value="Example Group"),
-#             ]
-#         )
-#     )
+@pytest.fixture
+def threat_actor_with_aliases() -> GTIThreatActorData:
+    """Fixture for threat actor data with aliases."""
+    return GTIThreatActorDataFactory.build(
+        attributes=ThreatActorModelFactory.build(
+            alt_names_details=[
+                AltNameDetailFactory.build(value="APT Example"),
+                AltNameDetailFactory.build(value="Example Group"),
+            ]
+        )
+    )
 
 
 @pytest.fixture
@@ -285,28 +285,28 @@ def test_gti_threat_actor_to_stix_minimal_data(
     )
 
 
-# # Scenario: Create STIX intrusion set with aliases
-# @pytest.mark.order(1)
-# def test_gti_threat_actor_to_stix_with_aliases(
-#     threat_actor_with_aliases: GTIThreatActorData,
-#     mock_organization: Identity,
-#     mock_tlp_marking: MarkingDefinition,
-# ) -> None:
-#     """Test converting GTI threat actor with aliases to STIX."""
-#     # Given a GTI threat actor with aliases
-#     mapper = _given_gti_threat_actor_mapper(
-#         threat_actor_with_aliases, mock_organization, mock_tlp_marking
-#     )
-#     # When converting to STIX
-#     stix_intrusion_set = _when_convert_to_stix(mapper)
-#     # Then STIX intrusion set should include aliases
-#     _then_stix_intrusion_set_created_successfully(
-#         stix_intrusion_set,
-#         threat_actor_with_aliases,
-#         mock_organization,
-#         mock_tlp_marking,
-#     )
-#     _then_stix_intrusion_set_has_aliases(stix_intrusion_set, threat_actor_with_aliases)
+# Scenario: Create STIX intrusion set with aliases
+@pytest.mark.order(1)
+def test_gti_threat_actor_to_stix_with_aliases(
+    threat_actor_with_aliases: GTIThreatActorData,
+    mock_organization: Identity,
+    mock_tlp_marking: MarkingDefinition,
+) -> None:
+    """Test converting GTI threat actor with aliases to STIX."""
+    # Given a GTI threat actor with aliases
+    mapper = _given_gti_threat_actor_mapper(
+        threat_actor_with_aliases, mock_organization, mock_tlp_marking
+    )
+    # When converting to STIX
+    stix_intrusion_set = _when_convert_to_stix(mapper)
+    # Then STIX intrusion set should include aliases
+    _then_stix_intrusion_set_created_successfully(
+        stix_intrusion_set,
+        threat_actor_with_aliases,
+        mock_organization,
+        mock_tlp_marking,
+    )
+    _then_stix_intrusion_set_has_aliases(stix_intrusion_set, threat_actor_with_aliases)
 
 
 # Scenario: Create STIX intrusion set with seen dates
@@ -469,7 +469,9 @@ def test_gti_threat_actor_none_object(
 ) -> None:
     """Test handling None threat actor object."""
     # Given a None threat actor object
-    mapper = GTIThreatActorToSTIXIntrusionSet(None, mock_organization, mock_tlp_marking)
+    mapper = GTIThreatActorToSTIXIntrusionSet(
+        None, mock_organization, mock_tlp_marking, enable_threat_actor_aliases=True
+    )
     # When converting to STIX
     # Then should raise ValueError
     _when_convert_to_stix_raises_error(
@@ -613,7 +615,9 @@ def _given_gti_threat_actor_mapper(
     tlp_marking: MarkingDefinition,
 ) -> GTIThreatActorToSTIXIntrusionSet:
     """Set up the GTI threat actor mapper."""
-    return GTIThreatActorToSTIXIntrusionSet(threat_actor, organization, tlp_marking)
+    return GTIThreatActorToSTIXIntrusionSet(
+        threat_actor, organization, tlp_marking, enable_threat_actor_aliases=True
+    )
 
 
 # When convert to STIX
@@ -660,23 +664,23 @@ def _then_stix_intrusion_set_created_successfully(
     assert stix_intrusion_set.modified == expected_modified  # noqa: S101
 
 
-# # Then STIX intrusion set has aliases
-# def _then_stix_intrusion_set_has_aliases(
-#     stix_intrusion_set: Any, gti_threat_actor: GTIThreatActorData
-# ) -> None:
-#     """Check if STIX intrusion set has aliases."""
-#     expected_aliases = [
-#         alt_name.value
-#         for alt_name in gti_threat_actor.attributes.alt_names_details
-#         if alt_name.value
-#     ]
+# Then STIX intrusion set has aliases
+def _then_stix_intrusion_set_has_aliases(
+    stix_intrusion_set: Any, gti_threat_actor: GTIThreatActorData
+) -> None:
+    """Check if STIX intrusion set has aliases."""
+    expected_aliases = [
+        alt_name.value
+        for alt_name in gti_threat_actor.attributes.alt_names_details
+        if alt_name.value
+    ]
 
-#     if expected_aliases:
-#         assert stix_intrusion_set.aliases is not None  # noqa: S101
-#         for expected_alias in expected_aliases:
-#             assert expected_alias in stix_intrusion_set.aliases  # noqa: S101
-#     else:
-#         assert stix_intrusion_set.aliases is None  # noqa: S101
+    if expected_aliases:
+        assert stix_intrusion_set.aliases is not None  # noqa: S101
+        for expected_alias in expected_aliases:
+            assert expected_alias in stix_intrusion_set.aliases  # noqa: S101
+    else:
+        assert stix_intrusion_set.aliases is None  # noqa: S101
 
 
 # Then STIX intrusion set has seen dates
@@ -742,33 +746,33 @@ def _then_stix_intrusion_set_handles_empty_collections(stix_intrusion_set: Any) 
     assert stix_intrusion_set.secondary_motivations is None  # noqa: S101
 
 
-# # Scenario: Test extract aliases method
-# @pytest.mark.order(1)
-# def test_extract_aliases() -> None:
-#     """Test extracting aliases from threat actor attributes."""
-#     # Given threat actor attributes with aliases
-#     attributes = ThreatActorModelFactory.build(
-#         alt_names_details=[
-#             AltNameDetailFactory.build(value="APT Example"),
-#             AltNameDetailFactory.build(value="Example Group"),
-#         ]
-#     )
-#     # When extracting aliases
-#     aliases = _when_extract_aliases(attributes)
-#     # Then aliases should be extracted correctly
-#     _then_aliases_extracted_correctly(aliases, ["APT Example", "Example Group"])
+# Scenario: Test extract aliases method
+@pytest.mark.order(1)
+def test_extract_aliases() -> None:
+    """Test extracting aliases from threat actor attributes."""
+    # Given threat actor attributes with aliases
+    attributes = ThreatActorModelFactory.build(
+        alt_names_details=[
+            AltNameDetailFactory.build(value="APT Example"),
+            AltNameDetailFactory.build(value="Example Group"),
+        ]
+    )
+    # When extracting aliases
+    aliases = _when_extract_aliases(attributes)
+    # Then aliases should be extracted correctly
+    _then_aliases_extracted_correctly(aliases, ["APT Example", "Example Group"])
 
 
-# # Scenario: Test extract aliases with empty collection
-# @pytest.mark.order(1)
-# def test_extract_aliases_empty() -> None:
-#     """Test extracting aliases with empty collection."""
-#     # Given threat actor attributes without aliases
-#     attributes = ThreatActorModelFactory.build(alt_names_details=None)
-#     # When extracting aliases
-#     aliases = _when_extract_aliases(attributes)
-#     # Then aliases should be None
-#     _then_aliases_are_none(aliases)
+# Scenario: Test extract aliases with empty collection
+@pytest.mark.order(1)
+def test_extract_aliases_empty() -> None:
+    """Test extracting aliases with empty collection."""
+    # Given threat actor attributes without aliases
+    attributes = ThreatActorModelFactory.build(alt_names_details=None)
+    # When extracting aliases
+    aliases = _when_extract_aliases(attributes)
+    # Then aliases should be None
+    _then_aliases_are_none(aliases)
 
 
 # Scenario: Test extract seen dates method
@@ -807,7 +811,9 @@ def test_extract_motivations() -> None:
         definition_type="statement",
         definition={"statement": "test"},
     )
-    mapper = GTIThreatActorToSTIXIntrusionSet(threat_actor, mock_org, mock_tlp)
+    mapper = GTIThreatActorToSTIXIntrusionSet(
+        threat_actor, mock_org, mock_tlp, enable_threat_actor_aliases=True
+    )
 
     # When extracting motivations
     primary, secondary = _when_extract_motivations(mapper, threat_actor.attributes)
@@ -822,16 +828,16 @@ def test_extract_motivations() -> None:
 # =====================
 
 
-# # When extract aliases
-# def _when_extract_aliases(attributes: ThreatActorModel) -> Optional[List[str]]:
-#     """Extract aliases from threat actor attributes."""
-#     return GTIThreatActorToSTIXIntrusionSet._extract_aliases(attributes)
+# When extract aliases
+def _when_extract_aliases(attributes: ThreatActorModel) -> list[str] | None:
+    """Extract aliases from threat actor attributes."""
+    return GTIThreatActorToSTIXIntrusionSet._extract_aliases(attributes)
 
 
 # When extract seen dates
 def _when_extract_seen_dates(
     attributes: ThreatActorModel,
-) -> tuple[Optional[datetime], Optional[datetime]]:
+) -> tuple[datetime | None, datetime | None]:
     """Extract seen dates from threat actor attributes."""
     return GTIThreatActorToSTIXIntrusionSet._extract_seen_dates(attributes)
 
@@ -839,31 +845,31 @@ def _when_extract_seen_dates(
 # When extract motivations
 def _when_extract_motivations(
     mapper: GTIThreatActorToSTIXIntrusionSet, attributes: ThreatActorModel
-) -> tuple[Optional[str], Optional[List[str]]]:
+) -> tuple[str | None, list[str] | None]:
     """Extract motivations from threat actor attributes."""
     return mapper._extract_motivations(attributes)
 
 
-# # Then aliases extracted correctly
-# def _then_aliases_extracted_correctly(
-#     aliases: Optional[List[str]], expected: List[str]
-# ) -> None:
-#     """Check if aliases were extracted correctly."""
-#     assert aliases is not None  # noqa: S101
-#     assert len(aliases) == len(expected)  # noqa: S101
-#     for expected_alias in expected:
-#         assert expected_alias in aliases  # noqa: S101
+# Then aliases extracted correctly
+def _then_aliases_extracted_correctly(
+    aliases: list[str] | None, expected: list[str]
+) -> None:
+    """Check if aliases were extracted correctly."""
+    assert aliases is not None  # noqa: S101
+    assert len(aliases) == len(expected)  # noqa: S101
+    for expected_alias in expected:
+        assert expected_alias in aliases  # noqa: S101
 
 
-# # Then aliases are None
-# def _then_aliases_are_none(aliases: Optional[List[str]]) -> None:
-#     """Check if aliases are None."""
-#     assert aliases is None  # noqa: S101
+# Then aliases are None
+def _then_aliases_are_none(aliases: list[str] | None) -> None:
+    """Check if aliases are None."""
+    assert aliases is None  # noqa: S101
 
 
 # Then seen dates extracted correctly
 def _then_seen_dates_extracted_correctly(
-    first_seen: Optional[datetime], last_seen: Optional[datetime]
+    first_seen: datetime | None, last_seen: datetime | None
 ) -> None:
     """Check if seen dates were extracted correctly."""
     assert first_seen is not None  # noqa: S101
@@ -876,10 +882,10 @@ def _then_seen_dates_extracted_correctly(
 
 # Then motivations extracted correctly
 def _then_motivations_extracted_correctly(
-    primary: Optional[str],
-    secondary: Optional[List[str]],
+    primary: str | None,
+    secondary: list[str] | None,
     expected_primary: str,
-    expected_secondary: List[str],
+    expected_secondary: list[str],
 ) -> None:
     """Check if motivations were extracted correctly."""
     assert primary.value == expected_primary  # noqa: S101
@@ -906,7 +912,9 @@ def test_threat_actor_missing_hasattr() -> None:
         definition_type="statement",
         definition={"statement": "test"},
     )
-    mapper = GTIThreatActorToSTIXIntrusionSet(threat_actor, mock_org, mock_tlp)
+    mapper = GTIThreatActorToSTIXIntrusionSet(
+        threat_actor, mock_org, mock_tlp, enable_threat_actor_aliases=True
+    )
 
     # When converting to STIX
     # Then should raise ValueError

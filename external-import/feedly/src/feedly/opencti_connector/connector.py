@@ -1,12 +1,11 @@
 import json
 from datetime import datetime
 from typing import Optional
-from uuid import NAMESPACE_DNS, uuid5
 
 from feedly.api_client.enterprise.indicators_of_compromise import StixIoCDownloader
 from feedly.api_client.session import FeedlySession
 from markdown import markdown
-from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils
+from pycti import Identity, OpenCTIConnectorHelper, OpenCTIStix2Utils
 
 FEEDLY_AI_UUID = "identity--477866fd-8784-46f9-ab40-5592ed4eddd7"
 
@@ -27,7 +26,10 @@ class FeedlyConnector:
 
     def fetch_bundle(self, stream_id: str, newer_than: datetime) -> dict:
         bundle = StixIoCDownloader(
-            self.feedly_session, newer_than, stream_id
+            session=self.feedly_session,
+            newer_than=newer_than,
+            older_than=None,
+            stream_id=stream_id,
         ).download_all()
         _make_reports_content_instead_of_descriptions(bundle)
         _add_main_observable_type_to_indicators(bundle)
@@ -106,12 +108,12 @@ def _make_source_identity_object(source_name: str) -> dict:
         "type": "identity",
         "name": source_name,
         "identity_class": "organization",
-        "id": _make_source_id(source_name),
+        "id": Identity.generate_id(name=source_name, identity_class="organization"),
     }
 
 
 def _make_source_id(source_name: str) -> str:
-    return f"identity--{uuid5(NAMESPACE_DNS, 'feedly:source:'+source_name)}"
+    return Identity.generate_id(name=source_name, identity_class="organization")
 
 
 def _get_last_article_published_date(bundle: dict) -> Optional[str]:

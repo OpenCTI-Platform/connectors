@@ -1,0 +1,55 @@
+import json
+import logging
+
+from pycti import OpenCTIConnectorHelper
+from sentinelone_connector.settings import ConnectorSettings
+from sentinelone_services import SentinelOneClient
+
+
+class SentinelOneIntelConnector:
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+        """
+        Initialize the SentinelOne Intel Connector
+        with necessary configurations
+        """
+        self.config = config
+        self.helper = helper
+        self.client = SentinelOneClient(config, helper)
+
+    def process_message(self, msg) -> None:
+        """
+        Main process if connector successfully works.
+        Processes incoming steam messages and filters for the creation
+        of Stix Indicators and creates them in SentinelOne
+
+        :param msg: Message event from stream containing event data
+        :return: None
+        """
+        try:
+            data = json.loads(msg.data)["data"]
+        except Exception as e:
+            raise ValueError(f"Cannot process the message: {e}")
+
+        # Handle the Creation of an Indicator with a stix pattern
+        if data["type"] == "indicator" and data["pattern_type"] == "stix":
+            if msg.event == "create":
+                if self.helper.connector_logger.local_logger.isEnabledFor(logging.INFO):
+                    # `get_attribute_in_extension` can take a while to execute,
+                    # so we check if the logger is enabled for INFO level first
+                    indicator_id = self.helper.get_attribute_in_extension("id", data)
+                    self.helper.connector_logger.info(
+                        "[CREATE] Processing indicator",
+                        {"Indicator ID": indicator_id},
+                    )
+
+                if self.client.create_indicator(data):
+                    self.helper.connector_logger.info(
+                        "[CREATE] Successfully created Indicator in SentinelOne"
+                    )
+
+    def run(self) -> None:
+        """
+        Start the execution of the connector
+        Anchored on the process_message method
+        """
+        self.helper.listen_stream(message_callback=self.process_message)

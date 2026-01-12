@@ -1,10 +1,10 @@
 opencti:
-  url: 'http://opencti:8080'
-  token: 'CHANGEME'
+  url: 'http://localhost'
+  token: 'ChangeMe'
 
 connector:
-  id: 'CHANGEME'
   type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
   name: 'CTIButler'
   scope: 'ctibutler'
   confidence_level: 70
@@ -13,6 +13,6 @@ connector:
 
 ctibutler:
   base_url: 'https://api.ctibutler.com/'
-  api_key: CHANGEME
+  api_key: ChangeMe
   knowledgebases: "" # comma separated list of knowledge bases, e.g capec,cwe
   interval_days: 1 # interval in days #how often to check if new versions have been added

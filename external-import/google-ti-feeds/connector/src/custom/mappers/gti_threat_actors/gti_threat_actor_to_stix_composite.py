@@ -1,16 +1,18 @@
 """Composite mapper that handles threat actor to country locations, identity, intrusion set, and relationships conversion in one step."""
 
 from datetime import datetime, timezone
-from typing import Any, List
+from typing import Any
 
 from connector.src.custom.mappers.gti_threat_actors.gti_threat_actor_to_stix_identity import (
     GTIThreatActorToSTIXIdentity,
+    IdentityWithTiming,
 )
 from connector.src.custom.mappers.gti_threat_actors.gti_threat_actor_to_stix_intrusion_set import (
     GTIThreatActorToSTIXIntrusionSet,
 )
 from connector.src.custom.mappers.gti_threat_actors.gti_threat_actor_to_stix_location import (
     GTIThreatActorToSTIXLocation,
+    LocationWithTiming,
 )
 from connector.src.custom.models.gti.gti_threat_actor_model import GTIThreatActorData
 from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
@@ -29,6 +31,7 @@ class GTIThreatActorToSTIXComposite(BaseMapper):
         threat_actor: GTIThreatActorData,
         organization: OrganizationAuthor,
         tlp_marking: TLPMarking,
+        enable_threat_actor_aliases: bool = False,
     ) -> None:
         """Initialize the composite mapper.
 
@@ -36,17 +39,19 @@ class GTIThreatActorToSTIXComposite(BaseMapper):
             threat_actor: The GTI threat actor data to convert
             organization: The organization identity object
             tlp_marking: The TLP marking definition
+            enable_threat_actor_aliases: Whether to enable importing threat actor aliases
 
         """
         self.threat_actor = threat_actor
         self.organization = organization
         self.tlp_marking = tlp_marking
+        self.enable_threat_actor_aliases = enable_threat_actor_aliases
 
-    def to_stix(self) -> List[Any]:
+    def to_stix(self) -> list[Any]:
         """Convert the GTI threat actor to a list of STIX objects (country locations, sectors, intrusion set, relationships).
 
         Returns:
-            List of STIX objects in order: [country_locations..., sectors..., intrusion_set, relationships...]
+            list of STIX objects in order: [country_locations..., sectors..., intrusion_set, relationships...]
 
         """
         all_entities = []
@@ -56,7 +61,8 @@ class GTIThreatActorToSTIXComposite(BaseMapper):
             organization=self.organization,
             tlp_marking=self.tlp_marking,
         )
-        country_locations = location_mapper.to_stix()
+        locations_with_timing = location_mapper.to_stix_with_timing()
+        country_locations = [item.location for item in locations_with_timing]
         all_entities.extend(country_locations)
 
         identity_mapper = GTIThreatActorToSTIXIdentity(
@@ -64,39 +70,44 @@ class GTIThreatActorToSTIXComposite(BaseMapper):
             organization=self.organization,
             tlp_marking=self.tlp_marking,
         )
-        sectors = identity_mapper.to_stix()
+        sectors_with_timing = identity_mapper.to_stix_with_timing()
+        sectors = [item.identity for item in sectors_with_timing]
         all_entities.extend(sectors)
 
         intrusion_set_mapper = GTIThreatActorToSTIXIntrusionSet(
             threat_actor=self.threat_actor,
             organization=self.organization,
             tlp_marking=self.tlp_marking,
+            enable_threat_actor_aliases=self.enable_threat_actor_aliases,
         )
         intrusion_set = intrusion_set_mapper.to_stix()
         all_entities.append(intrusion_set)
 
         relationships = self._create_relationships(
-            intrusion_set, country_locations, sectors
+            intrusion_set, locations_with_timing, sectors_with_timing
         )
         all_entities.extend(relationships)
 
         return all_entities
 
     def _create_relationships(
-        self, intrusion_set: Any, country_locations: List[Any], sectors: List[Any]
-    ) -> List[Any]:
+        self,
+        intrusion_set: Any,
+        locations_with_timing: list[LocationWithTiming],
+        sectors_with_timing: list[IdentityWithTiming],
+    ) -> list[Any]:
         """Create relationships between the intrusion set and other entities.
 
         Args:
             intrusion_set: The intrusion set object
-            country_locations: List of country location objects
-            sectors: List of sector identity objects
+            locations_with_timing: list of LocationWithTiming objects containing location and timing data
+            sectors_with_timing: list of IdentityWithTiming objects containing sector identity and timing data
 
         Returns:
-            List of relationship objects
+            list of relationship objects
 
         """
-        relationships: List[Any] = []
+        relationships: list[Any] = []
 
         if (
             not hasattr(self.threat_actor, "attributes")
@@ -110,10 +121,11 @@ class GTIThreatActorToSTIXComposite(BaseMapper):
             attributes.last_modification_date, tz=timezone.utc
         )
 
-        targeted_country_locations = self._get_targeted_country_locations(
-            country_locations
+        targeted_locations_with_timing = self._get_targeted_locations_with_timing(
+            locations_with_timing
         )
-        for location in targeted_country_locations:
+        for location_with_timing in targeted_locations_with_timing:
+            location = location_with_timing.location
             relationship = OctiRelationshipModel.create(
                 relationship_type="targets",
                 source_ref=intrusion_set.id,
@@ -122,12 +134,17 @@ class GTIThreatActorToSTIXComposite(BaseMapper):
                 marking_ids=[self.tlp_marking.id],
                 created=created,
                 modified=modified,
+                start_time=location_with_timing.first_seen,
+                stop_time=location_with_timing.last_seen,
                 description=f"Threat actor '{attributes.name}' targets location '{location.name}'",
             )
             relationships.append(relationship)
 
-        source_country_locations = self._get_source_country_locations(country_locations)
-        for location in source_country_locations:
+        source_locations_with_timing = self._get_source_locations_with_timing(
+            locations_with_timing
+        )
+        for location_with_timing in source_locations_with_timing:
+            location = location_with_timing.location
             relationship = OctiRelationshipModel.create(
                 relationship_type="originates-from",
                 source_ref=intrusion_set.id,
@@ -136,11 +153,14 @@ class GTIThreatActorToSTIXComposite(BaseMapper):
                 marking_ids=[self.tlp_marking.id],
                 created=created,
                 modified=modified,
+                start_time=location_with_timing.first_seen,
+                stop_time=location_with_timing.last_seen,
                 description=f"Threat actor '{attributes.name}' originates from location '{location.name}'",
             )
             relationships.append(relationship)
 
-        for sector in sectors:
+        for sector_with_timing in sectors_with_timing:
+            sector = sector_with_timing.identity
             relationship = OctiRelationshipModel.create(
                 relationship_type="targets",
                 source_ref=intrusion_set.id,
@@ -149,70 +169,46 @@ class GTIThreatActorToSTIXComposite(BaseMapper):
                 marking_ids=[self.tlp_marking.id],
                 created=created,
                 modified=modified,
+                start_time=sector_with_timing.first_seen,
+                stop_time=sector_with_timing.last_seen,
                 description=f"Threat actor '{attributes.name}' targets sector '{sector.name}'",
             )
             relationships.append(relationship)
 
         return relationships
 
-    def _get_targeted_country_locations(
-        self, country_locations: List[Any]
-    ) -> List[Any]:
-        """Get locations that correspond to targeted countries.
+    def _get_targeted_locations_with_timing(
+        self, locations_with_timing: list[LocationWithTiming]
+    ) -> list[LocationWithTiming]:
+        """Get LocationWithTiming objects that correspond to targeted countries.
 
         Args:
-            country_locations: List of all country location objects
+            locations_with_timing: list of all LocationWithTiming objects
 
         Returns:
-            List of location objects that correspond to targeted countries
+            list of LocationWithTiming objects that correspond to targeted countries
 
         """
-        targeted_locations: List[Any] = []
+        return [
+            location_with_timing
+            for location_with_timing in locations_with_timing
+            if location_with_timing.is_targeted
+        ]
 
-        if (
-            not self.threat_actor.attributes
-            or not self.threat_actor.attributes.targeted_regions_hierarchy
-        ):
-            return targeted_locations
-
-        targeted_country_names = set()
-        for region in self.threat_actor.attributes.targeted_regions_hierarchy:
-            if region.country:
-                targeted_country_names.add(region.country.lower())
-
-        for location in country_locations:
-            if hasattr(location, "name") and location.name:
-                if location.name.lower() in targeted_country_names:
-                    targeted_locations.append(location)
-
-        return targeted_locations
-
-    def _get_source_country_locations(self, country_locations: List[Any]) -> List[Any]:
-        """Get locations that correspond to source countries.
+    def _get_source_locations_with_timing(
+        self, locations_with_timing: list[LocationWithTiming]
+    ) -> list[LocationWithTiming]:
+        """Get LocationWithTiming objects that correspond to source countries.
 
         Args:
-            country_locations: List of all country location objects
+            locations_with_timing: list of all LocationWithTiming objects
 
         Returns:
-            List of location objects that correspond to source countries
+            list of LocationWithTiming objects that correspond to source countries
 
         """
-        source_locations: List[Any] = []
-
-        if (
-            not self.threat_actor.attributes
-            or not self.threat_actor.attributes.source_regions_hierarchy
-        ):
-            return source_locations
-
-        source_country_names = set()
-        for region in self.threat_actor.attributes.source_regions_hierarchy:
-            if region.country:
-                source_country_names.add(region.country.lower())
-
-        for location in country_locations:
-            if hasattr(location, "name") and location.name:
-                if location.name.lower() in source_country_names:
-                    source_locations.append(location)
-
-        return source_locations
+        return [
+            location_with_timing
+            for location_with_timing in locations_with_timing
+            if location_with_timing.is_source
+        ]

@@ -1,0 +1,22 @@
+{
+  "title": "Tanium Intel",
+  "slug": "tanium-intel",
+  "description": "Information coming soon",
+  "short_description": "Information coming soon",
+  "logo": "stream/tanium-intel/__metadata__/logo.png",
+  "use_cases": [
+    "EDR",
+    "SIEM & Analytics"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.4.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/tanium-intel",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-tanium-intel",
+  "container_type": "STREAM"
+}

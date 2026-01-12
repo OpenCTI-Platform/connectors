@@ -1,104 +1,174 @@
-# OpenCTI URLScan Enrichment Connector
+# OpenCTI URLScan Connector
+
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Installation](#installation)
+  - [Requirements](#requirements)
+- [Configuration](#configuration)
+  - [OpenCTI Configuration](#opencti-configuration)
+  - [Base Connector Configuration](#base-connector-configuration)
+  - [URLScan Configuration](#urlscan-configuration)
+- [Deployment](#deployment)
+  - [Docker Deployment](#docker-deployment)
+  - [Manual Deployment](#manual-deployment)
+- [Usage](#usage)
+- [Behavior](#behavior)
+  - [Data Flow](#data-flow)
+  - [Processing Details](#processing-details)
+  - [Generated STIX Objects](#generated-stix-objects)
+- [Debugging](#debugging)
+- [Additional Information](#additional-information)
+
+---
 
 ## Introduction
 
-URLScan (https://urlscan.io/) is an online service that allows you to scan URLs to analyze and detect potential security threats. It provides a platform where users can submit links to be scanned to obtain information about the page's content, loaded external resources, potential threats, and other relevant security details.
+[URLScan](https://urlscan.io/) is an online service that scans URLs to analyze and detect potential security threats. It provides detailed information about page content, loaded external resources, potential threats, and other relevant security details.
 
-## Requirements
+This connector enriches URLs and IP addresses by submitting them to URLScan for analysis and importing the results.
 
+---
+
+## Installation
+
+### Requirements
+
+- OpenCTI Platform >= 6.0.0
+- URLScan API key (optional for public scans)
 - pycti
 
-## Configuration variables
+---
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+## Configuration
 
-## OpenCTI environment variables
+### OpenCTI Configuration
 
-Below are the parameters you'll need to set for OpenCTI:
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `opencti_url` | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
+| `opencti_token` | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
 
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+### Base Connector Configuration
 
-### Base connector environment variables
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `connector_id` | `CONNECTOR_ID` | No | A valid arbitrary `UUIDv4` unique for this connector |
+| `connector_name` | `CONNECTOR_NAME` | No | The name of the connector instance |
+| `connector_scope` | `CONNECTOR_SCOPE` | No | Supported: `url`, `ipv4-addr`, `ipv6-addr` |
+| `connector_auto` | `CONNECTOR_AUTO` | No | Enable/disable auto-enrichment |
+| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | No | Log level (`debug`, `info`, `warn`, `error`) |
 
-Below are the parameters you'll need to set for running the connector properly:
+### URLScan Configuration
 
-| Parameter         | config.yml        | Docker environment variable     | Default   | Mandatory | Description                                                                                      |
-|-------------------|-------------------|---------------------------------|-----------|-----------|--------------------------------------------------------------------------------------------------|
-| Connector ID      | id                | `CONNECTOR_ID`                  | /         | Yes       | A unique `UUIDv4` identifier for this connector instance.                                        |
-| Connector Name    | name              | `CONNECTOR_NAME`                | `URLScan` | Yes       | Name of the connector.                                                                           |
-| Connector Scope   | scope             | `CONNECTOR_SCOPE`               | /         | Yes       | Scope of the connector. Availables: `url or hostname or domain-name`, `ipv4-addr`, `ipv6-addr`   |
-| Run and Terminate | run_and_terminate | `CONNECTOR_RUN_AND_TERMINATE`   | `False`   | No        | Launch the connector once if set to True. Takes 2 available values: `True` or `False`            |
-| Log Level         | log_level         | `CONNECTOR_LOG_LEVEL`           | /         | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.           |
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `urlscan_api_key` | `URLSCAN_ENRICHMENT_API_KEY` | No | URLScan API key (for private scans) |
+| `urlscan_import_screenshot` | `URLSCAN_ENRICHMENT_IMPORT_SCREENSHOT` | No | Import screenshot (default: true) |
+| `urlscan_visibility` | `URLSCAN_ENRICHMENT_VISIBILITY` | No | Scan visibility (default: public) |
+| `urlscan_search_filtered_by_date` | `URLSCAN_ENRICHMENT_SEARCH_FILTERED_BY_DATE` | No | Search date filter (default: >now-1d) |
+| `urlscan_max_tlp` | `URLSCAN_ENRICHMENT_MAX_TLP` | No | Maximum TLP for processing |
+| `urlscan_create_indicator` | `URLSCAN_ENRICHMENT_CREATE_INDICATOR` | No | Create indicator (default: true) |
 
-### URLScan Enrichment connector environment variables
-
-Below are the parameters you'll need to set for URLScan Enrichment connector:
-
-| Parameter                            | config.yml              | Docker environment variable                       | Default   | Mandatory  | Description                                                                                                             |
-|--------------------------------------|-------------------------|---------------------------------------------------|-----------|------------|-------------------------------------------------------------------------------------------------------------------------|
-| URLScan Enr. Api Key                 | api_key                 | `URLSCAN_ENRICHMENT_API_KEY`                      | /         | Yes        | URLScan API Key                                                                                                         |
-| URLScan Enr. Api Base Url            | api_base_url            | `URLSCAN_ENRICHMENT_API_BASE_URL`                 | /         | Yes        | URLScan Base Url                                                                                                        |
-| URLScan Enr. Import Screenshot       | import_screenshot       | `URLSCAN_ENRICHMENT_IMPORT_SCREENSHOT`            | `true`    | Yes        | Allows or not the import of the screenshot of the scan submitted in URLScan to OpenCTI.                                 |
-| URLScan Enr. Visibility              | visibility              | `URLSCAN_ENRICHMENT_VISIBILITY`                   | `public`  | Yes        | URLScan offers several levels of visibility for submitted scans: `public`, `unlisted`, `private`                        |
-| URLScan Enr. Search filtered by date | search_filtered_by_date | `URLSCAN_ENRICHMENT_SEARCH_FILTERED_BY_DATE`      | `>now-1y` | Yes        | Allows you to filter by date available: `>now-1h`, `>now-1d`, `>now-1y`, `[2022 TO 2023]`, `[2022/01/01 TO 2023/12/01]` |
-| URLScan Enr. Max TLP                 | max_tlp                 | `URLSCAN_ENRICHMENT_MAX_TLP`                      | /         | Yes        | Do not send any data to URLScan if the TLP of the observable is greater than MAX_TLP                                    |
-| URLScan Enr. Create Indicator        | create_indicator        | `URLSCAN_ENRICHMENT_CREATE_INDICATOR`             | `true`    | No         | Decide whether or not to create an indicator based on this observable
-
+---
 
 ## Deployment
 
 ### Docker Deployment
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever version of OpenCTI you're running. Example, `pycti==6.1.3`. If you don't, it will take the latest version, but sometimes the OpenCTI SDK fails to initialize.
-
 Build a Docker Image using the provided `Dockerfile`.
 
-Example:
+Example `docker-compose.yml`:
 
-```shell
-# Replace the IMAGE NAME with the appropriate value
-docker build . -t [IMAGE NAME]:latest
-```
-
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
-environment. Then, start the docker container with the provided docker-compose.yml
-
-```shell
-docker compose up -d
-# -d for detached
+```yaml
+services:
+  connector-urlscan-enrichment:
+    image: opencti/connector-urlscan-enrichment:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+    restart: always
 ```
 
 ### Manual Deployment
 
-Create a file `config.yml` based on the provided `config.yml.sample`.
+1. Clone the repository
+2. Create `config.yml` based on `config.yml.sample`
+3. Install dependencies: `pip3 install -r requirements.txt`
+4. Run: `python3 main.py`
 
-Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
-
-Install the required python dependencies (preferably in a virtual environment):
-
-```shell
-pip3 install -r requirements.txt
-```
-
-Then, start the connector from crowdstrike-endpoint-security/src:
-
-```shell
-python3 main.py
-```
+---
 
 ## Usage
 
-After installation, the connector should require minimal interaction to use, and some configurations should be specified in your `docker-compose.yml` or `config.yml`.
+The connector enriches URLs and IP addresses by:
+1. Submitting URLs to URLScan for analysis
+2. Waiting for analysis completion
+3. Importing results including screenshots and indicators
 
-## Warnings
+Trigger enrichment:
+- Manually via the OpenCTI UI
+- Automatically if `CONNECTOR_AUTO=true`
+- Via playbooks
 
-- If you have the variable auto set to true, then it is important to choose the correct scope by selecting only one type of scope-submission (url or hostname or domain-name) to avoid looping ingestions.
-    - This is an example of looping ingestion: you have set a scope submission of URL and Domain name. When you will search for URL, it will retrieve lots of entities, including some domain names. These domain names will then be searched too. However, they can bring you some URLs too, creating this infinite loop.
+---
 
-- If you enrich IPv4 and IPv6 observables, only a link to URLScan search in external reference (OpenCTI) will be generated, but you can play with the search period with the environment variable search_filtered_by_date to refine the search.
+## Behavior
 
-- While the analysis is still in progress, the Result API endpoint will respond with an HTTP status code of 404. The connector's polling logic is to wait 10 seconds and retry 12 times, for a maximum wait time of 2 minutes, until the analysis is complete or the maximum wait time is reached.
+### Data Flow
+
+```mermaid
+flowchart LR
+    A[URL/IP] --> B[URLScan Connector]
+    B --> C{Submit to URLScan}
+    C --> D[Wait for Analysis]
+    D --> E[Fetch Results]
+    E --> F[Screenshot]
+    E --> G[Indicator]
+    E --> H[External Reference]
+    F --> I[OpenCTI]
+    G --> I
+    H --> I
+```
+
+### Processing Details
+
+1. **URL Submission**: URLs are submitted for scanning
+2. **Analysis Wait**: Polls for completion (10 sec intervals, max 2 min)
+3. **IP Enrichment**: Creates external reference link to URLScan search
+4. **Screenshot Import**: Optionally imports page screenshots
+5. **Indicator Creation**: Creates indicators based on analysis
+
+### Generated STIX Objects
+
+| Object Type | Description |
+|-------------|-------------|
+| External Reference | Link to URLScan analysis |
+| Screenshot | Page screenshot (if enabled) |
+| Indicator | Threat indicator (if enabled) |
+
+---
+
+## Debugging
+
+Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug` to see:
+- Submission status
+- Polling progress
+- Result processing
+
+---
+
+## Additional Information
+
+- [URLScan](https://urlscan.io/)
+- [URLScan API Documentation](https://urlscan.io/docs/api/)
+
+### Warnings
+
+- **Auto Mode**: Choose only one scope type (url OR hostname OR domain-name) to avoid looping ingestions
+- **IP Enrichment**: For IPv4/IPv6, only external reference links are generated
+- **Polling**: Analysis may take up to 2 minutes to complete

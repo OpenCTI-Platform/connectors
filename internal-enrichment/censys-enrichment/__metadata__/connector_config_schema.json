@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/censys-enrichment_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Censys Enrichment",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "IPv4-Addr",
+        "IPv6-Addr",
+        "X509-Certificate",
+        "Domain-Name"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Whether the connector should run automatically when an entity is created or updated.",
+      "type": "boolean"
+    },
+    "CENSYS_ENRICHMENT_MAX_TLP": {
+      "default": "TLP:AMBER",
+      "description": "The maximum TLP level allowed for enrichment.",
+      "enum": [
+        "TLP:WHITE",
+        "TLP:CLEAR",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
+    },
+    "CENSYS_ENRICHMENT_ORGANISATION_ID": {
+      "description": "Censys organisation ID.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CENSYS_ENRICHMENT_TOKEN": {
+      "description": "Censys API token.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CENSYS_ENRICHMENT_ORGANISATION_ID",
+    "CENSYS_ENRICHMENT_TOKEN"
+  ],
+  "additionalProperties": true
+}

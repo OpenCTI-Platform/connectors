@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-feedly:
-    image: opencti/connector-feedly:rolling
+    image: opencti/connector-feedly:latest
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe

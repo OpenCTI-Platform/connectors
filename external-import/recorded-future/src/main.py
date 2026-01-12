@@ -9,11 +9,10 @@
 ################################################################################
 """
 
-import os
 import traceback
 
-import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from models.configs.config_loader import ConfigLoader
+from pycti import OpenCTIConnectorHelper
 from rflib import (
     APP_VERSION,
     AnalystNote,
@@ -28,124 +27,67 @@ from rflib import (
 
 class BaseRFConnector:
     def __init__(self):
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config)
+        # Load configuration using the new config loader
+        self.config = ConfigLoader()
 
-        # Extra config
-        self.rf_token = get_config_variable(
-            "RECORDED_FUTURE_TOKEN", ["rf", "token"], config, required=True
+        # Initialize OpenCTI helper with the configuration
+        self.helper = OpenCTIConnectorHelper(self.config.model_dump_pycti())
+
+        # Extract configuration values from the loaded config
+        self.rf_token = self.config.recorded_future.token.get_secret_value()
+        self.rf_initial_lookback = self.config.recorded_future.initial_lookback
+        self.tlp = self.config.recorded_future.tlp.lower()
+        self.rf_pull_signatures = self.config.recorded_future.pull_signatures
+        self.rf_pull_risk_list = self.config.recorded_future.pull_risk_list
+        self.rf_riskrules_as_label = self.config.recorded_future.riskrules_as_label
+        self.rf_insikt_only = self.config.recorded_future.insikt_only
+
+        # Handle topics - convert list to comma-separated string if needed
+        self.rf_topics = (
+            self.config.recorded_future.topic
+            if self.config.recorded_future.topic
+            else [None]
         )
 
-        self.rf_initial_lookback = get_config_variable(
-            "RECORDED_FUTURE_INITIAL_LOOKBACK",
-            ["rf", "initial_lookback"],
-            config,
-            isNumber=True,
+        self.rf_person_to_TA = self.config.recorded_future.person_to_ta
+        self.rf_TA_to_intrusion_set = self.config.recorded_future.ta_to_intrusion_set
+        self.risk_as_score = self.config.recorded_future.risk_as_score
+        self.risk_threshold = self.config.recorded_future.risk_threshold
+        self.risk_list_threshold = self.config.recorded_future.risk_list_threshold
+        self.analyst_notes_guess_relationships = (
+            self.config.recorded_future.analyst_notes_guess_relationships
         )
 
-        self.tlp = get_config_variable(
-            "RECORDED_FUTURE_TLP", ["rf", "TLP"], config, required=True, default="red"
-        ).lower()
-
-        self.rf_pull_signatures = get_config_variable(
-            "RECORDED_FUTURE_PULL_SIGNATURES", ["rf", "pull_signatures"], config
-        )
-        self.rf_pull_risk_list = get_config_variable(
-            "RECORDED_FUTURE_PULL_RISK_LIST", ["rf", "pull_risk_list"], config
-        )
-        self.rf_riskrules_as_label = get_config_variable(
-            "RECORDED_FUTURE_RISKRULES_AS_LABEL",
-            ["rf", "riskrules_as_label"],
-            config,
-            default=False,
-        )
-        self.rf_insikt_only = get_config_variable(
-            "RECORDED_FUTURE_INSIKT_ONLY", ["rf", "insikt_only"], config
-        )
-        topics_value = get_config_variable(
-            "RECORDED_FUTURE_TOPIC", ["rf", "topic"], config
-        )
-        self.rf_topics = topics_value.split(",") if topics_value else [None]
-        self.rf_person_to_TA = get_config_variable(
-            "RECORDED_FUTURE_PERSON_TO_TA", ["rf", "person_to_TA"], config
-        )
-        self.rf_TA_to_intrusion_set = get_config_variable(
-            "RECORDED_FUTURE_TA_TO_INTRUSION_SET",
-            ["rf", "TA_to_intrusion_set"],
-            config,
-        )
-        self.risk_as_score = get_config_variable(
-            "RECORDED_FUTURE_RISK_AS_SCORE", ["rf", "risk_as_score"], config
-        )
-        self.risk_threshold = get_config_variable(
-            "RECORDED_FUTURE_RISK_THRESHOLD",
-            ["rf", "risk_threshold"],
-            config,
-            True,
-        )
-        self.risk_list_threshold = get_config_variable(
-            "RECORDED_FUTURE_RISK_LIST_THRESHOLD",
-            ["rf", "risk_list_threshold"],
-            config,
-            True,
-        )
         self.rfapi = RFClient(
             self.rf_token,
             self.helper,
             header=f"OpenCTI/{APP_VERSION}",
         )
+
         # In a crisis, smash glass and uncomment this line of code
         # self.helper.config['uri'] = self.helper.config['uri'].replace('rabbitmq', '172.19.0.6')
 
-        self.rf_pull_threat_maps = get_config_variable(
-            "RECORDED_FUTURE_PULL_THREAT_MAPS", ["rf", "pull_threat_maps"], config
-        )
+        self.rf_pull_threat_maps = self.config.recorded_future.pull_threat_maps
 
-        risklist_related_entities_list = get_config_variable(
-            "RECORDED_FUTURE_RISKLIST_RELATED_ENTITIES",
-            ["rf", "risklist_related_entities"],
-            config,
-        )
-
-        if risklist_related_entities_list is None:
-            raise ValueError(
-                "Missing or incorrect value in configuration parameter 'Risk List Related Entities'"
-            )
+        # Handle risk list related entities
+        if self.config.recorded_future.risklist_related_entities is None:
+            if self.rf_pull_risk_list:
+                raise ValueError(
+                    "Missing or incorrect value in configuration parameter 'Risk List Related Entities'"
+                )
+            self.risklist_related_entities = []
         else:
-            self.risklist_related_entities = risklist_related_entities_list.split(",")
+            self.risklist_related_entities = (
+                self.config.recorded_future.risklist_related_entities
+            )
 
-        self.rf_pull_analyst_notes = get_config_variable(
-            "RECORDED_FUTURE_PULL_ANALYST_NOTES", ["rf", "pull_analyst_notes"], config
+        self.rf_pull_analyst_notes = self.config.recorded_future.pull_analyst_notes
+        self.last_published_notes_interval = (
+            self.config.recorded_future.last_published_notes
         )
-
-        self.last_published_notes_interval = get_config_variable(
-            "RECORDED_FUTURE_LAST_PUBLISHED_NOTES",
-            ["rf", "last_published_notes"],
-            config,
-        )
-
-        self.duration_period = get_config_variable(
-            "CONNECTOR_DURATION_PERIOD", ["connector", "duration_period"], config
-        )
-
-        self.rf_interval = get_config_variable(
-            "RECORDED_FUTURE_INTERVAL",
-            ["rf", "interval"],
-            config,
-            default=24,  # in Hours
-        )
-
-        self.priority_alerts_only = get_config_variable(
-            "ALERT_PRIORITY_ALERTS_ONLY",
-            ["alert", "priority_alerts_only"],
-            config,
-            default=False,
-        )
+        self.duration_period = self.config.connector.duration_period
+        self.rf_interval = self.config.recorded_future.interval
+        self.priority_alerts_only = self.config.alert.priority_alerts_only
 
         self.rf_alerts_api = RecordedFutureApiClient(
             x_rf_token=self.rf_token,
@@ -154,51 +96,19 @@ class BaseRFConnector:
             priority_alerts_only=self.priority_alerts_only,
         )
 
-        self.rf_alert_enable = get_config_variable(
-            "ALERT_ENABLE", ["alert", "enable"], config
+        self.rf_alert_enable = self.config.alert.enable
+        self.opencti_default_severity = self.config.alert.default_opencti_severity
+        self.rf_playbook_alert_enable = self.config.playbook_alert.enable
+        self.severity_threshold_domain_abuse = (
+            self.config.playbook_alert.severity_threshold_domain_abuse
         )
-
-        self.opencti_default_severity = get_config_variable(
-            "ALERT_DEFAULT_OPENCTI_SEVERITY",
-            ["alert", "default_opencti_severity"],
-            config,
-            default="low",
+        self.severity_threshold_identity_novel_exposures = (
+            self.config.playbook_alert.severity_threshold_identity_novel_exposures
         )
-
-        self.rf_playbook_alert_enable = get_config_variable(
-            "PLAYBOOK_ALERT_ENABLE", ["playbook_alert", "enable"], config
+        self.severity_threshold_code_repo_leakage = (
+            self.config.playbook_alert.severity_threshold_code_repo_leakage
         )
-
-        self.severity_threshold_domain_abuse = get_config_variable(
-            "PLAYBOOK_ALERT_SEVERITY_THRESHOLD_DOMAIN_ABUSE",
-            ["playbook_alert", "severity_threshold_domain_abuse"],
-            config,
-            required=False,
-            default="Informational",
-        )
-        self.severity_threshold_identity_novel_exposures = get_config_variable(
-            "PLAYBOOK_ALERT_SEVERITY_THRESHOLD_IDENTITY_NOVEL_EXPOSURES",
-            ["playbook_alert", "severity_threshold_identity_novel_exposures"],
-            config,
-            required=False,
-            default="Informational",
-        )
-
-        self.severity_threshold_code_repo_leakage = get_config_variable(
-            "PLAYBOOK_ALERT_SEVERITY_THRESHOLD_CODE_REPO_LEAKAGE",
-            ["playbook_alert", "severity_threshold_code_repo_leakage"],
-            config,
-            required=False,
-            default="Informational",
-        )
-
-        self.debug_var = get_config_variable(
-            "PLAYBOOK_ALERT_DEBUG",
-            ["playbook_alert", "debug"],
-            config,
-            required=False,
-            default=False,
-        )
+        self.debug_var = self.config.playbook_alert.debug
 
 
 class RFConnector:
@@ -285,6 +195,7 @@ class RFConnector:
                 self.RF.rf_TA_to_intrusion_set,
                 self.RF.risk_as_score,
                 self.RF.risk_threshold,
+                self.RF.analyst_notes_guess_relationships,
             )
             self.analyst_notes.start()
         else:

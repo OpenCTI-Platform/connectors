@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any
 
-from connectors_sdk.core.pydantic import ListFromString
+from connectors_sdk import ListFromString
 from pydantic import Field
 from pydantic_settings import (
     BaseSettings,
@@ -26,7 +26,7 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
         description="A unique UUIDv4 identifier for this connector instance.",
     )
     name: str = Field(
-        default="Mitre Att&ck",
+        default="MITRE ATT&CK",
         description="Name of the connector.",
     )
     scope: ListFromString = Field(

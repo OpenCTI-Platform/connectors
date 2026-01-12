@@ -1,21 +1,22 @@
-version: "3"
+version: '3'
 services:
   connector-shadowserver:
-    image: opencti/connector-shadowserver:rolling
+    image: opencti/connector-shadowserver:latest
     environment:
       # OpenCTI configuration
-      OPENCTI_URL: ${OPENCTI_URL}
-      OPENCTI_TOKEN: ${OPENCTI_TOKEN}
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
       # Common connector configuration
-      CONNECTOR_ID: ${CONNECTOR_ID}
-      CONNECTOR_LOG_LEVEL: ${CONNECTOR_LOG_LEVEL}
-      CONNECTOR_DURATION_PERIOD: ${CONNECTOR_DURATION_PERIOD}
-      CONNECTOR_NAME: ${CONNECTOR_NAME}
-      CONNECTOR_SCOPE: ${CONNECTOR_SCOPE}
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Shadowserver
+      - CONNECTOR_SCOPE=shadowserver
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=PT1H
       # Connector configuration
-      SHADOWSERVER_API_KEY: ${SHADOWSERVER_API_KEY}
-      SHADOWSERVER_API_SECRET: ${SHADOWSERVER_API_SECRET}
-      SHADOWSERVER_MARKING: ${SHADOWSERVER_MARKING}
-      SHADOWSERVER_CREATE_INCIDENT: ${SHADOWSERVER_CREATE_INCIDENT}
-      SHADOWSERVER_INCIDENT_SEVERITY: ${SHADOWSERVER_INCIDENT_SEVERITY}
-      SHADOWSERVER_INCIDENT_PRIORITY: ${SHADOWSERVER_INCIDENT_PRIORITY}
+      - SHADOWSERVER_API_KEY=ChangeMe
+      - SHADOWSERVER_API_SECRET=ChangeMe
+      - SHADOWSERVER_MARKING=TLP:AMBER
+      - SHADOWSERVER_CREATE_INCIDENT=false
+      - SHADOWSERVER_INCIDENT_SEVERITY=medium
+      - SHADOWSERVER_INCIDENT_PRIORITY=P2
+    restart: always

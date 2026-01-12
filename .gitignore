@@ -1,5 +1,6 @@
 .vscode
 .idea
+.diode
 __pycache__
 *.log
 *.iml
@@ -17,3 +18,5 @@ black
 *.crt
 .env
 .pytest_cache
+external-import/loaderinsightagency
+.cursor

@@ -1,7 +1,7 @@
 """Converts a GTI threat actor to a STIX intrusion set object."""
 
 from datetime import datetime, timezone
-from typing import Any, List, Optional
+from typing import Any
 
 from connector.src.custom.models.gti.gti_threat_actor_model import (
     GTIThreatActorData,
@@ -63,6 +63,7 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
         threat_actor: GTIThreatActorData,
         organization: OrganizationAuthor,
         tlp_marking: TLPMarking,
+        enable_threat_actor_aliases: bool = False,
     ) -> None:
         """Initialize the GTIThreatActorToSTIXIntrusionSet object.
 
@@ -70,11 +71,13 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
             threat_actor (GTIThreatActorData): The GTI threat actor data to convert.
             organization (OrganizationAuthor): The organization identity object.
             tlp_marking (TLPMarking): The TLP marking definition.
+            enable_threat_actor_aliases (bool): Whether to enable importing threat actor aliases.
 
         """
         self.threat_actor = threat_actor
         self.organization = organization
         self.tlp_marking = tlp_marking
+        self.enable_threat_actor_aliases = enable_threat_actor_aliases
 
     def to_stix(self) -> IntrusionSet:
         """Convert the GTI threat actor to a STIX intrusion set object.
@@ -96,7 +99,11 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
             attributes.last_modification_date, tz=timezone.utc
         )
 
-        # aliases = self._extract_aliases(attributes)
+        aliases = (
+            self._extract_aliases(attributes)
+            if self.enable_threat_actor_aliases
+            else None
+        )
 
         first_seen, last_seen = self._extract_seen_dates(attributes)
 
@@ -116,7 +123,7 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
             organization_id=self.organization.id,
             marking_ids=[self.tlp_marking.id],
             description=description,
-            #  aliases=aliases,
+            aliases=aliases,
             first_seen=first_seen,
             last_seen=last_seen,
             primary_motivation=primary_motivation,
@@ -132,14 +139,14 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
         return intrusion_set_model
 
     @staticmethod
-    def _extract_aliases(attributes: ThreatActorModel) -> Optional[List[str]]:
+    def _extract_aliases(attributes: ThreatActorModel) -> list[str] | None:
         """Extract aliases from threat actor attributes.
 
         Args:
             attributes: The threat actor attributes
 
         Returns:
-            Optional[List[str]]: Extracted aliases or None if no aliases exist
+            list[str] | None: Extracted aliases or None if no aliases exist
 
         """
         if (
@@ -158,7 +165,7 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
     @staticmethod
     def _extract_seen_dates(
         attributes: ThreatActorModel,
-    ) -> tuple[Optional[datetime], Optional[datetime]]:
+    ) -> tuple[datetime | None, datetime | None]:
         """Extract first_seen and last_seen dates from threat actor attributes.
 
         Args:
@@ -204,7 +211,7 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
 
     def _extract_motivations(
         self, attributes: ThreatActorModel
-    ) -> tuple[Optional[str], Optional[List[str]]]:
+    ) -> tuple[str | None, list[str] | None]:
         """Extract primary and secondary motivations from threat actor attributes.
 
         Args:
@@ -237,27 +244,27 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
         return primary_motivation, secondary_motivations
 
     @staticmethod
-    def _map_gti_motivation_to_stix_motivation(motivation: str) -> Optional[str]:
+    def _map_gti_motivation_to_stix_motivation(motivation: str) -> str | None:
         """Map GTI motivation to STIX attack motivation.
 
         Args:
             motivation: The GTI motivation
 
         Returns:
-            Optional[str]: Mapped STIX attack motivation or None if no mapping exists
+            str | None: Mapped STIX attack motivation or None if no mapping exists
 
         """
         return AttackMotivationOV(motivation)
 
     @staticmethod
-    def _extract_labels(attributes: ThreatActorModel) -> Optional[List[str]]:
+    def _extract_labels(attributes: ThreatActorModel) -> list[str] | None:
         """Extract labels from threat actor tag details.
 
         Args:
             attributes: The threat actor attributes
 
         Returns:
-            Optional[List[str]]: Extracted labels from tag details or None if no tags exist
+            list[str] | None: Extracted labels from tag details or None if no tags exist
 
         """
         if not hasattr(attributes, "tags_details") or not attributes.tags_details:
@@ -270,7 +277,7 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
 
         return labels if labels else None
 
-    def _build_external_references(self) -> List[ExternalReferenceModel]:
+    def _build_external_references(self) -> list[ExternalReferenceModel]:
         """Build external references from Threat Actor attributes.
 
         Returns:

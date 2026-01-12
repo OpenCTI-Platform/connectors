@@ -19,3 +19,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | HYGIENE_LABEL_PARENT_NAME | `string` |  | string | `"hygiene_parent"` | Label name to be used when enriching sub-domains. |
 | HYGIENE_LABEL_PARENT_COLOR | `string` |  | string | `"#fc0341"` | Color to use for the label when enriching subdomains. |
 | HYGIENE_ENRICH_SUBDOMAINS | `boolean` |  | boolean | `false` | Enable enrichment of sub-domains, This option will add 'hygiene_parent' label and ext refs of the parent domain to the subdomain, if sub-domain is not found but parent is. |
+| HYGIENE_MAX_WORKERS | `integer` |  | `1 <= x <= 500` | `100` | Maximum number of worker threads for parallel processing. Set to 1 for sequential processing (old behavior). |

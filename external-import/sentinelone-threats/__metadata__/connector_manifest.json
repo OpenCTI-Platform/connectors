@@ -1,0 +1,21 @@
+{
+  "title": "SentinelOne Threats",
+  "slug": "sentinelone-threats",
+  "description": "The OpenCTI SentinelOne Threats connector can be used to import Artifacts from BinaryVault. For more information about BinaryVault and the steps to set it up, see: https://success.alienvault.com/s/article/UUID-9bf40076-0ba9-2f93-93bd-b4878bd6c220\nNote: API tokens expire every 6 months for SentinelOne. In order for this connector to continue functioning, you must re-generate a token before this expiration date,and replace it in the configuration.",
+  "short_description": "The OpenCTI SentinelOne Threats connector can be used to import Artifacts from BinaryVault. For more information about BinaryVault and the steps to set it up, see: https://success.alienvault.com/s/article/UUID-9bf40076-0ba9-2f93-93bd-b4878bd6c220\nNote: API tokens expire every 6 months for SentinelOne. In order for this connector to continue functioning, you must re-generate a token before this expiration date,and replace it in the configuration.",
+  "logo": "external-import/sentinelone-threats/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=5.5.4",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/sentinelone-threats",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-sentinelone-threats",
+  "container_type": "EXTERNAL_IMPORT"
+}

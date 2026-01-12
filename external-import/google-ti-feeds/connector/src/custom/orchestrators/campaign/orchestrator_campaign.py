@@ -2,7 +2,7 @@
 
 import logging
 import re
-from typing import Any, Dict, Optional
+from typing import Any
 
 from connector.src.custom.configs import (
     CAMPAIGN_BATCH_PROCESSOR_CONFIG,
@@ -71,7 +71,7 @@ class OrchestratorCampaign(BaseOrchestrator):
             logger=self.logger,
         )
 
-    async def run(self, initial_state: Optional[Dict[str, Any]]) -> None:
+    async def run(self, initial_state: dict[str, Any] | None) -> None:
         """Run the campaign orchestrator.
 
         Args:
@@ -93,6 +93,7 @@ class OrchestratorCampaign(BaseOrchestrator):
             async for gti_campaigns in self.client_api.fetch_campaigns(initial_state):
                 total_campaigns = len(gti_campaigns)
                 for campaign_idx, campaign in enumerate(gti_campaigns):
+                    self._update_index_inplace()
                     campaign_entities = self.converter.convert_campaign_to_stix(
                         campaign
                     )
@@ -157,7 +158,7 @@ class OrchestratorCampaign(BaseOrchestrator):
 
                     all_entities = campaign_entities + (subentity_stix or [])
 
-                    entity_types: Dict[str, int] = {}
+                    entity_types: dict[str, int] = {}
                     for entity in all_entities:
                         entity_type = getattr(entity, "type", None)
                         if entity_type:
@@ -179,7 +180,6 @@ class OrchestratorCampaign(BaseOrchestrator):
                     )
 
                     self._check_batch_size_and_flush(self.batch_processor, all_entities)
-                    self._update_index_inplace()
                     self._add_entities_to_batch(
                         self.batch_processor, all_entities, self.converter
                     )

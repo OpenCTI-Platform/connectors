@@ -1,0 +1,258 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/recorded-future_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The OpenCTI platform URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Recorded Future",
+      "description": "Name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "ipv4-addr",
+        "ipv6-addr",
+        "vulnerability",
+        "domain",
+        "url",
+        "file-sha256",
+        "file-md5",
+        "file-sha1"
+      ],
+      "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT24H",
+      "description": "ISO8601 Duration format starting with 'P' for Period (e.g., 'PT24H' for 24 hours).",
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "default": "EXTERNAL_IMPORT",
+      "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "Determines the verbosity of the logs.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "RECORDED_FUTURE_TOKEN": {
+      "description": "Recorded Future API token for authentication.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "RECORDED_FUTURE_INITIAL_LOOKBACK": {
+      "default": 240,
+      "description": "Initial lookback period in hours when first running the connector.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "RECORDED_FUTURE_TLP": {
+      "default": "amber+strict",
+      "description": "Default Traffic Light Protocol (TLP) marking for imported data.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string"
+    },
+    "RECORDED_FUTURE_INTERVAL": {
+      "default": 1,
+      "description": "Polling interval in hours for fetching Recorded Future data.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "RECORDED_FUTURE_PULL_ANALYST_NOTES": {
+      "default": true,
+      "description": "Whether to import Recorded Future analyst notes.",
+      "type": "boolean"
+    },
+    "RECORDED_FUTURE_LAST_PUBLISHED_NOTES": {
+      "default": 24,
+      "description": "Time window in hours for fetching recently published analyst notes.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "RECORDED_FUTURE_TOPIC": {
+      "default": [
+        "VTrvnW",
+        "g1KBGI",
+        "ZjnoP0",
+        "aDKkpk",
+        "TXSFt5",
+        "UrMRnT",
+        "TXSFt3"
+      ],
+      "description": "Comma-separated list of topic IDs to filter analyst notes. Examples: VTrvnW (Yara Rule), g1KBGI (Sigma Rule), ZjnoP0 (Snort Rule), aDKkpk (TTP Instance), TXSFt5 (Validated Intelligence Event), UrMRnT (Informational), TXSFt3 (Threat Lead).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "RECORDED_FUTURE_INSIKT_ONLY": {
+      "default": true,
+      "description": "Whether to import only Insikt notes (Recorded Future's analyst reports).",
+      "type": "boolean"
+    },
+    "RECORDED_FUTURE_PULL_SIGNATURES": {
+      "default": false,
+      "description": "Whether to import detection signatures (Yara/Snort/Sigma rules) from analyst notes.",
+      "type": "boolean"
+    },
+    "RECORDED_FUTURE_PERSON_TO_TA": {
+      "default": false,
+      "description": "Whether to convert Person entities to Threat Actor entities.",
+      "type": "boolean"
+    },
+    "RECORDED_FUTURE_TA_TO_INTRUSION_SET": {
+      "default": false,
+      "description": "Whether to convert Threat Actor entities to Intrusion Set entities.",
+      "type": "boolean"
+    },
+    "RECORDED_FUTURE_RISK_AS_SCORE": {
+      "default": true,
+      "description": "Whether to import risk scores as confidence scores in OpenCTI.",
+      "type": "boolean"
+    },
+    "RECORDED_FUTURE_RISK_THRESHOLD": {
+      "default": 60,
+      "description": "Minimum risk score threshold (0-100) for importing entities.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "RECORDED_FUTURE_ANALYST_NOTES_GUESS_RELATIONSHIPS": {
+      "default": false,
+      "description": "Enable or disable the automatic guessing of relationships between entities when processing analyst notes.",
+      "type": "boolean"
+    },
+    "RECORDED_FUTURE_PULL_RISK_LIST": {
+      "default": false,
+      "description": "Whether to import Recorded Future risk lists.",
+      "type": "boolean"
+    },
+    "RECORDED_FUTURE_RISKRULES_AS_LABEL": {
+      "default": false,
+      "description": "Whether to import risk rules as labels in OpenCTI.",
+      "type": "boolean"
+    },
+    "RECORDED_FUTURE_RISK_LIST_THRESHOLD": {
+      "default": 70,
+      "description": "Minimum risk score threshold (0-100) for importing risk list entities.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "RECORDED_FUTURE_RISKLIST_RELATED_ENTITIES": {
+      "default": [
+        "Malware",
+        "Hash",
+        "URL",
+        "Threat Actor",
+        "MitreAttackIdentifier"
+      ],
+      "description": "Comma-separated list of entity types to import from risk lists. Available choices: Malware, Hash, URL, Threat Actor, MitreAttackIdentifier.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "RECORDED_FUTURE_PULL_THREAT_MAPS": {
+      "default": false,
+      "description": "Whether to import Threat Actors and Malware from Recorded Future threat maps.",
+      "type": "boolean"
+    },
+    "ALERT_ENABLE": {
+      "default": false,
+      "description": "Whether to enable fetching Recorded Future alerts.",
+      "type": "boolean"
+    },
+    "ALERT_DEFAULT_OPENCTI_SEVERITY": {
+      "default": "low",
+      "description": "Default severity level for alerts imported into OpenCTI.",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "type": "string"
+    },
+    "ALERT_PRIORITY_ALERTS_ONLY": {
+      "default": false,
+      "description": "Whether to import only high-priority alerts.",
+      "type": "boolean"
+    },
+    "PLAYBOOK_ALERT_ENABLE": {
+      "default": false,
+      "description": "Whether to enable fetching Recorded Future playbook alerts.",
+      "type": "boolean"
+    },
+    "PLAYBOOK_ALERT_SEVERITY_THRESHOLD_DOMAIN_ABUSE": {
+      "default": "Informational",
+      "description": "Minimum severity threshold for domain abuse playbook alerts.",
+      "enum": [
+        "Informational",
+        "Moderate",
+        "High"
+      ],
+      "type": "string"
+    },
+    "PLAYBOOK_ALERT_SEVERITY_THRESHOLD_IDENTITY_NOVEL_EXPOSURES": {
+      "default": "Informational",
+      "description": "Minimum severity threshold for identity novel exposures playbook alerts.",
+      "enum": [
+        "Informational",
+        "Moderate",
+        "High"
+      ],
+      "type": "string"
+    },
+    "PLAYBOOK_ALERT_SEVERITY_THRESHOLD_CODE_REPO_LEAKAGE": {
+      "default": "Informational",
+      "description": "Minimum severity threshold for code repository leakage playbook alerts.",
+      "enum": [
+        "Informational",
+        "Moderate",
+        "High"
+      ],
+      "type": "string"
+    },
+    "PLAYBOOK_ALERT_DEBUG": {
+      "default": false,
+      "description": "Whether to enable debug logging for playbook alerts.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "RECORDED_FUTURE_TOKEN"
+  ],
+  "additionalProperties": true
+}

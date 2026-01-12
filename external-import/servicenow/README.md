@@ -1,7 +1,12 @@
-# OpenCTI External Ingestion Connector ServiceNow
-Table of Contents
+# OpenCTI ServiceNow Connector
 
-- [OpenCTI External Ingestion Connector ServiceNow](#opencti-external-ingestion-connector-servicenow)
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
+## Table of Contents
+
+- [OpenCTI ServiceNow Connector](#opencti-servicenow-connector)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -18,11 +23,6 @@ Table of Contents
   - [Additional information](#additional-information)
 
 ## Status Filigran
-
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
-
 ## Introduction
 
 **Introducing ServiceNow**
@@ -424,5 +424,3 @@ e., `self.helper.connector_logger.error("An error message")`.
 ---
 
 ## Additional information
-
-

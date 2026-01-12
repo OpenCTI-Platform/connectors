@@ -1,0 +1,30 @@
+version: '3'
+services:
+  connector-misp-intel:
+    image: opencti/connector-misp-intel:latest
+    environment:
+      # OpenCTI Configuration
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Connector Configuration
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=MISP Intel
+      - CONNECTOR_SCOPE=misp
+      - CONNECTOR_CONFIDENCE_LEVEL=80
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe
+      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=false
+      - CONNECTOR_CONTAINER_TYPES=report,grouping,case-incident,case-rfi,case-rft
+      # MISP Configuration
+      - MISP_URL=ChangeMe
+      - MISP_API_KEY=ChangeMe
+      - MISP_SSL_VERIFY=true
+      - MISP_OWNER_ORG=
+      - MISP_DISTRIBUTION_LEVEL=1
+      - MISP_THREAT_LEVEL=2
+      - MISP_PUBLISH_ON_CREATE=false
+      - MISP_PUBLISH_ON_UPDATE=false
+      - MISP_TAG_OPENCTI=true
+      - MISP_TAG_PREFIX=opencti:
+    restart: always

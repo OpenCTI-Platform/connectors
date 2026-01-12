@@ -1,11 +1,11 @@
 version: '3'
 services:
   connector-rst-ioc-lookup:
-    image: opencti/connector-rst-ioc-lookup:rolling
+    image: opencti/connector-rst-ioc-lookup:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
-      - CONNECTOR_ID=3582c335-cea7-45ec-b2a2-f46130762712
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=RST IoC Lookup
       - CONNECTOR_SCOPE=IPv4-Addr,Domain-Name,Url,StixFile,indicator
       - CONNECTOR_AUTO=false
@@ -21,5 +21,6 @@ services:
       - RST_IOC_LOOKUP_UPDATE_DESCRIPTION_ACTION=overwrite
       - RST_IOC_LOOKUP_DETECTION_FLAG_THRESHOLD=45
       - RST_IOC_LOOKUP_TIMEOUT=10
+    restart: always
     depends_on:
       - opencti

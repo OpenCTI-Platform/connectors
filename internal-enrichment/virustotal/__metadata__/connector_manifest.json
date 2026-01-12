@@ -1,0 +1,22 @@
+{
+  "title": "VirusTotal",
+  "slug": "virustotal",
+  "description": "VirusTotal is a comprehensive service that aggregates data from numerous antivirus products and online scanners to analyze suspicious files and URLs for potential threats. By providing collective analysis results, VirusTotal helps security teams identify malicious content quickly and effectively, supporting more comprehensive cybersecurity efforts.\n\nIntegrating VirusTotal with OpenCTI enhances threat intelligence by providing access to the collective insights of numerous security vendors. This integration allows for the automatic import of analysis results for files and URLs, enriching the threat intelligence platform with detailed threat data. Security teams can leverage VirusTotal data to confirm, investigate, and respond to potential threats more efficiently, fortifying their overall security posture.",
+  "short_description": "VirusTotal aggregates data from antivirus products and scanners to analyze files and URLs, aiding in the quick identification of malicious content. Its integration with OpenCTI imports analysis results, enriching threat intelligence for efficient threat confirmation and response.",
+  "logo": "internal-enrichment/virustotal/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis",
+    "Malware Analysis"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 50,
+  "support_version": ">=5.6.1",
+  "subscription_link": "https://www.virustotal.com",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/virustotal",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-virustotal",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

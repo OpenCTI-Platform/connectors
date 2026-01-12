@@ -22,15 +22,15 @@ API_BASE = "https://api.recordedfuture.com"
 API_BASE_V2 = urllib.parse.urljoin(API_BASE, "/v2")
 
 VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS = [
-    "analystNotes",
     "aiInsights",
+    "cpe",
     "risk",
 ]
 
 VulnerabilityEnrichmentOptionalFields = list[
     Literal[
-        "analystNotes",
         "aiInsights",
+        "cpe",
         "risk",
     ]
 ]
@@ -125,7 +125,6 @@ class RFClient:
     ) -> VulnerabilityEnrichment:
         enrichment_fields = [
             "commonNames",
-            "cpe",
             "cvss",
             "cvssv3",
             "cvssv4",
@@ -159,6 +158,9 @@ class RFClient:
             data = response_json.get("data")
             if not data:
                 raise RFClientError("RecordedFuture API response does not include data")
+
+            if not data.get("nvdDescription"):
+                data.pop("nvdDescription")
 
             return VulnerabilityEnrichment(**data)
         except ValidationError as err:

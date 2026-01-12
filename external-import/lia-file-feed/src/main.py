@@ -1,5 +1,6 @@
 import datetime as dt
 import os
+import sys
 import time
 import traceback
 from datetime import datetime
@@ -20,12 +21,11 @@ from pycti import (
 class LIAFileFeed:
     def __init__(self):
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
+        if os.path.isfile(config_file_path):
+            with open(config_file_path, encoding="utf-8") as f:
+                config = yaml.load(f, Loader=yaml.FullLoader)
+        else:
+            config = {}
 
         self.helper = OpenCTIConnectorHelper(config)
 
@@ -90,12 +90,12 @@ class LIAFileFeed:
             sha256 = item.get("sha256")
             filetype = item.get("filetype")
             first_seen = item.get("first_seen")
-            source_family = item.get("source_family").capitalize()
+            source_family = (item.get("source_family") or "").capitalize()
             source_botnet = item.get("source_botnet")
             size = item.get("size")
             source_url = item.get("source_url")
-            detected_as = item.get("detected_as").capitalize()
-            external_link = item["external_link"]
+            detected_as = (item.get("detected_as") or "").capitalize()
+            external_link = item.get("external_link")
 
             valid_from = parse(first_seen).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -133,6 +133,10 @@ class LIAFileFeed:
                 name=f"{detected_as} malware downloaded by {source_family}",
                 size=size,
                 mime_type=filetype,
+                custom_properties={
+                    "x_opencti_created_by_ref": self.identity["standard_id"],
+                    "x_opencti_score": 80,
+                },
             )
 
             pattern = f"[file:hashes.'SHA-256'='{sha256}']"
@@ -145,7 +149,10 @@ class LIAFileFeed:
                 description=f"This indicator represents a file hash observed from downloaded by {source_family}. The payload is detected as {detected_as}",
                 labels=["malicious", "file", source_family, source_botnet, detected_as],
                 created_by_ref=self.identity["standard_id"],
-                custom_properties={"x_opencti_main_observable_type": "File"},
+                custom_properties={
+                    "x_opencti_main_observable_type": "StixFile",
+                    "x_opencti_score": 80,
+                },
                 external_references=[
                     {
                         "source_name": "Loader Insight Agency",
@@ -166,10 +173,19 @@ class LIAFileFeed:
                 labels=["malicious", "url", source_family, source_botnet, detected_as],
                 created_by_ref=self.identity["standard_id"],
                 external_references=[lia_external_reference],
-                custom_properties={"x_opencti_main_observable_type": "URL"},
+                custom_properties={
+                    "x_opencti_main_observable_type": "Url",
+                    "x_opencti_score": 80,
+                },
             )
 
-            url_object = stix2.URL(value=source_url)
+            url_object = stix2.URL(
+                value=source_url,
+                custom_properties={
+                    "x_opencti_created_by_ref": self.identity["standard_id"],
+                    "x_opencti_score": 80,
+                },
+            )
 
             stix_objects.extend(
                 [file_observable, file_indicator, url_indicator, url_object]
@@ -250,7 +266,7 @@ class LIAFileFeed:
 
             self.helper.connector_logger.debug("Fetching external data...")
             data = self.get_feed_data()
-            if "results" in data.keys():
+            if data and "results" in data:
                 self.process_data(data)
             else:
                 self.helper.connector_logger.info(
@@ -282,6 +298,6 @@ if __name__ == "__main__":
     try:
         connector = LIAFileFeed()
         connector.run()
-    except:
+    except Exception:
         traceback.print_exc()
-        exit(1)
+        sys.exit(1)

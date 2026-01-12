@@ -223,7 +223,7 @@ class CofenseThreatHQ:
                 )
                 return
 
-            self.work_id = self._initiate_work()
+            self._initiate_work()
 
             reports_sorted = sorted(
                 reports, key=lambda x: x.get("occurredOn"), reverse=True
@@ -705,7 +705,8 @@ class CofenseThreatHQ:
                 )
 
             self.helper.set_state(current_state)
-            self._complete_work()
+            if self.work_id:
+                self._complete_work()
 
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(

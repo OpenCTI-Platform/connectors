@@ -1,0 +1,1 @@
+"""Recorded Future OpenCTI Connector"""

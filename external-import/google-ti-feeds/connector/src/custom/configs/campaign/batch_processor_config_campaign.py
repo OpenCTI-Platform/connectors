@@ -4,7 +4,7 @@ This module defines configuration for batch processing GTI campaign STIX objects
 using the generic batch processor system.
 """
 
-from typing import Any, Optional
+from typing import Any
 
 from connector.src.custom.configs.batch_processor_config import (
     extract_stix_date_for_type,
@@ -17,7 +17,7 @@ from connector.src.utils.batch_processors.generic_batch_processor_config import 
 )
 
 
-def campaign_extract_stix_date(stix_object: Any) -> Optional[Any]:
+def campaign_extract_stix_date(stix_object: Any) -> Any | None:
     """Extract the latest date from a STIX object for state updates.
 
     Only extracts dates from campaign objects to track the latest processed campaign.
@@ -34,7 +34,7 @@ def campaign_extract_stix_date(stix_object: Any) -> Optional[Any]:
 
 
 CAMPAIGN_BATCH_PROCESSOR_CONFIG = GenericBatchProcessorConfig(
-    batch_size=5000,
+    batch_size=9999,
     work_name_template="Google Threat Intel - Batch #{batch_num} (~ 0/0 campaigns)",
     state_key="campaign_next_cursor_start_date",
     entity_type="stix_objects",
