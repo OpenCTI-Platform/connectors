@@ -1,0 +1,19 @@
+services:
+  connector-pravda-dataset:
+    build: .
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=Pravda Dataset
+      - CONNECTOR_SCOPE=media-content,channel,url
+      - CONNECTOR_LOG_LEVEL=info
+      - PRAVDA_DATASET_PATH=/data_set
+      - PRAVDA_INTERVAL_MINUTES=60
+      - PRAVDA_BATCH_SIZE=1000
+    volumes:
+      # Default: use the sample dataset shipped with this connector folder.
+      # For production, replace ./data_test with your real dataset folder.
+      - ./data_test:/data_set:ro
+    restart: always
