@@ -19,7 +19,6 @@ def make_markdown_table(array):
             markdown += f"| {' | '.join(entry)} |{nl}"
 
     markdown += nl
-    markdown += "> "
 
     return markdown
 
