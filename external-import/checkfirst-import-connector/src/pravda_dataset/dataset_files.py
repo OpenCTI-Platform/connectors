@@ -1,9 +1,20 @@
 from __future__ import annotations
 
+"""Dataset file discovery utilities.
+
+The Pravda connector ingests CSV files from a dataset directory. This module is
+responsible for finding candidate files under a configured dataset root.
+
+Notes:
+- Only `.csv` and `.csv.gz` files are considered.
+- Results are returned as resolved absolute paths and sorted for determinism.
+"""
+
 from pathlib import Path
 
 
 def _is_under_root(root: Path, candidate: Path) -> bool:
+    """Return True if `candidate` is located under `root` (after resolving)."""
     root_resolved = root.resolve()
     candidate_resolved = candidate.resolve()
     try:
@@ -14,6 +25,10 @@ def _is_under_root(root: Path, candidate: Path) -> bool:
 
 
 def discover_dataset_files(dataset_root: Path) -> list[Path]:
+    """Discover dataset files under `dataset_root`.
+
+    Returns an empty list if the root does not exist or is not a directory.
+    """
     root_resolved = dataset_root.resolve()
     if not root_resolved.exists() or not root_resolved.is_dir():
         return []
@@ -29,6 +44,8 @@ def discover_dataset_files(dataset_root: Path) -> list[Path]:
             continue
 
         resolved = path.resolve()
+        # Guard against odd filesystem behaviors (symlinks, traversal) by ensuring
+        # the resolved path remains under the configured dataset root.
         if not _is_under_root(root_resolved, resolved):
             continue
 
