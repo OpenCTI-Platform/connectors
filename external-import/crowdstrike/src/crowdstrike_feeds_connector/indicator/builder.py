@@ -6,8 +6,8 @@ from typing import Dict, List, NamedTuple, Optional, Set
 from pycti import OpenCTIConnectorHelper
 from stix2 import Bundle, Identity
 from stix2 import Indicator as STIXIndicator  # type: ignore
-from stix2 import (IntrusionSet, KillChainPhase, Malware, MarkingDefinition,
-                   Relationship, Vulnerability)
+from stix2 import (KillChainPhase, Malware, MarkingDefinition, Relationship,
+                   Vulnerability)
 from stix2.v21 import _DomainObject, _Observable  # type: ignore
 
 from crowdstrike_feeds_connector.related_actors.builder import \
@@ -21,11 +21,11 @@ from crowdstrike_feeds_services.utils import (
     OBSERVATION_FACTORY_IP_ADDRESS_BLOCK, OBSERVATION_FACTORY_MUTEX,
     OBSERVATION_FACTORY_URL, OBSERVATION_FACTORY_USER_AGENT,
     ObservableProperties, ObservationFactory, create_based_on_relationships,
-    create_indicates_relationships, create_indicator,
-    create_intrusion_sets_from_names, create_kill_chain_phase, create_malware,
-    create_object_refs, create_sector, create_targets_relationships,
-    create_uses_relationships, create_vulnerability,
-    create_vulnerability_external_references, timestamp_to_datetime)
+    create_indicates_relationships, create_indicator, create_kill_chain_phase,
+    create_malware, create_object_refs, create_sector,
+    create_targets_relationships, create_uses_relationships,
+    create_vulnerability, create_vulnerability_external_references,
+    timestamp_to_datetime)
 
 
 class Observation(NamedTuple):

@@ -48,7 +48,7 @@ class YaraRuleBundleBuilder:
         self.report_status = report_status
         self.report_type = report_type
         self.reports = reports
-        self.related_actor_importer = RelatedActorImporter(helper)
+        self.related_actor_importer = RelatedActorImporter()
         self.scopes = scopes
 
         self.first_seen = self._date_to_datetime(self.rule.last_modified)

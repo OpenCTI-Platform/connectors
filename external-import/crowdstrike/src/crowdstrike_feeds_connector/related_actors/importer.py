@@ -1,18 +1,15 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike indicator importer module."""
 
-from typing import Any, Dict, List, NamedTuple, Optional, Set
+from typing import Dict
 
-from pycti.connector.opencti_connector_helper import \
-    OpenCTIConnectorHelper  # type: ignore  # noqa: E501
-from stix2 import Identity  # type: ignore
-from stix2 import (AttackPattern, Bundle, ExternalReference, IntrusionSet,
-                   Location, MarkingDefinition, Relationship)
-from stix2.v21 import _DomainObject
+from stix2 import Identity, MarkingDefinition  # type: ignore
 
 from crowdstrike_feeds_services.client.actors import ActorsAPI
 
 from ..importer import BaseImporter
+
+from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper  # type: ignore  # noqa: E501 # isort: skip
 
 
 class RelatedActorImporter(BaseImporter):
@@ -69,7 +66,7 @@ class RelatedActorImporter(BaseImporter):
 
                 except Exception as err:
                     self.helper.connector_logger.warning(
-                        f"Failed to normalize related actors; using raw values. orig_entity_id={orig_entity_id}",
+                        f"Failed to normalize related actors; using raw values. orig_entity_id={orig_entity_id} {err}",
                     )
                     for token in uncached_tokens:
                         self._resolved_actor_name_cache[token] = token
