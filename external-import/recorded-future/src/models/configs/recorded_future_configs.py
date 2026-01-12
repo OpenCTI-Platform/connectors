@@ -1,9 +1,8 @@
 from typing import Literal, Optional
 
 from connectors_sdk import ListFromString
-from pydantic import Field, PositiveInt, SecretStr, field_validator
-
 from models.configs.base_settings import ConfigBaseSettings
+from pydantic import Field, PositiveInt, SecretStr, field_validator
 
 
 class _ConfigLoaderRecordedFuture(ConfigBaseSettings):
