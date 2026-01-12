@@ -84,6 +84,7 @@ class ConverterToStix:
             custom_properties={
                 "x_opencti_score": self.config.default_x_opencti_score,
                 "x_opencti_main_observable_type": "Url",
+                "labels": [x for x in row[6].split(",") if x],
             },
         )
         return stix_indicator
