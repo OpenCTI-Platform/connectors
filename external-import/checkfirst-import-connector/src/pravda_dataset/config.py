@@ -1,11 +1,28 @@
 from __future__ import annotations
 
+"""Connector configuration.
+
+This connector is configured primarily through environment variables.
+`load_config()` converts an `os.environ`-like mapping into a typed `Config`.
+
+Required variables:
+- `OPENCTI_URL`, `OPENCTI_TOKEN`
+- `CONNECTOR_ID`, `CONNECTOR_TYPE`, `CONNECTOR_NAME`, `CONNECTOR_SCOPE`, `CONNECTOR_LOG_LEVEL`
+- `PRAVDA_DATASET_PATH`
+
+Optional variables:
+- `PRAVDA_INTERVAL_MINUTES`, `PRAVDA_BATCH_SIZE`, `PRAVDA_RUN_MODE`
+- resource guards: `PRAVDA_MAX_FILE_BYTES`, `PRAVDA_MAX_ROW_BYTES`, `PRAVDA_MAX_ROWS_PER_FILE`
+"""
+
 from dataclasses import dataclass
 from typing import Mapping
 
 
 @dataclass(frozen=True)
 class Config:
+    """Runtime configuration for the connector."""
+
     opencti_url: str
     opencti_token: str
     connector_id: str
@@ -28,10 +45,13 @@ class Config:
 
 
 class ConfigError(ValueError):
+    """Raised when config is missing or malformed."""
+
     pass
 
 
 def _require_str(environ: Mapping[str, str], key: str) -> str:
+    """Read a required string env var and reject empty/whitespace."""
     value = (environ.get(key) or "").strip()
     if not value:
         raise ConfigError(f"Missing required environment variable: {key}")
@@ -39,6 +59,10 @@ def _require_str(environ: Mapping[str, str], key: str) -> str:
 
 
 def _optional_int(environ: Mapping[str, str], key: str) -> int | None:
+    """Read an optional positive integer env var.
+
+    Returns None if unset/empty.
+    """
     raw = environ.get(key)
     if raw is None or str(raw).strip() == "":
         return None
@@ -52,6 +76,7 @@ def _optional_int(environ: Mapping[str, str], key: str) -> int | None:
 
 
 def load_config(environ: Mapping[str, str]) -> Config:
+    """Load connector configuration from an environment mapping."""
     interval_minutes = _optional_int(environ, "PRAVDA_INTERVAL_MINUTES") or 60
     batch_size = _optional_int(environ, "PRAVDA_BATCH_SIZE") or 1000
 
