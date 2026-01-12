@@ -45,6 +45,5 @@ SUPPORTED_PLAYBOOK_ALERT_CATEGORIES = [
     "domain_abuse",
     "identity_novel_exposures",
     "code_repo_leakage",
-    "cyber_vulnerability"
+    "cyber_vulnerability",
 ]
-
