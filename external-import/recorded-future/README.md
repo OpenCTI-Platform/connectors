@@ -380,9 +380,10 @@ Playbook Alerts are more advanced and tailored to specific use cases. They provi
 The key advantage of Playbook Alerts is that they consolidate all necessary information in one place, enabling quicker and more efficient triage of incidents compared to Classic Alerts.
 
 The connector will import all Playbook Alerts from the following alerting rules list:
-- Domain Abuse
-- Identity Exposure
-- Data Leakage on Code Repository
+- Domain Abuse (domain_abuse)
+- Identity Exposure (identity_novel_exposures)
+- Data Leakage on Code Repository (code_repo_leakage)
+- Cyber Vulnerability (cyber_vulnerability)
 
 #### Prerequisites
 
@@ -391,14 +392,19 @@ Same as for Alerts, you need to have a Recorded Future account with the appropri
 #### Initial population
 
 Pulling Playbook Alerts is Optional.
-Pulling Alerts from Recorded Future will create an Incident.
+Pulling Alerts from Recorded Future will create Incident entities with related context.
 
-You can choose the severity of the alerting rules to pull
+
+You can choose alert categories to pull
+```sh
+  categories: 'domain_abuse,identity_novel_exposures,code_repo_leakage,cyber_vulnerability'
+```
 
 ```sh
   severity_threshold_domain_abuse: 'High'
   severity_threshold_identity_novel_exposures: 'High'
   severity_threshold_code_repo_leakage: 'High'
+  severity_threshold_cyber_vulnerability: 'High'
 ```
 
 Example of result for an Incident:
