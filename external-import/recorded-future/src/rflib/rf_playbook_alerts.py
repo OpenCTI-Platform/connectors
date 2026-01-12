@@ -107,7 +107,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                 self.api_recorded_future.get_playbook_id(
                     category=playbook_type,
                     trigger_from=(
-                        datetime.datetime.today() - datetime.timedelta(days=30)
+                        datetime.datetime.today() - datetime.timedelta(days=1)
                     ).strftime("%Y-%m-%dT%H:%M:%S"),
                     trigger_to=timestamp.strftime("%Y-%m-%dT%H:%M:%S"),
                     priority_threshold=self.playbook_alert_priority_threshold[
