@@ -8,16 +8,15 @@ from typing import Any, Dict, List, Mapping, Optional
 
 import stix2
 import yaml
+from pycti import OpenCTIConnectorHelper  # type: ignore
+
 from crowdstrike_feeds_services.client.base_api import BaseCrowdstrikeClient
 from crowdstrike_feeds_services.utils import (
-    convert_comma_separated_str_to_list,
-    create_organization,
-    get_tlp_string_marking_definition,
-    timestamp_to_datetime,
-)
+    convert_comma_separated_str_to_list, create_organization,
+    get_tlp_string_marking_definition, timestamp_to_datetime)
 from crowdstrike_feeds_services.utils.config_variables import ConfigCrowdstrike
-from crowdstrike_feeds_services.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
-from pycti import OpenCTIConnectorHelper  # type: ignore
+from crowdstrike_feeds_services.utils.constants import \
+    DEFAULT_TLP_MARKING_DEFINITION
 
 from .actor.importer import ActorImporter
 from .importer import BaseImporter

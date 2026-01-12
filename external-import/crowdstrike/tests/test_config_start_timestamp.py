@@ -1,6 +1,7 @@
 import time
 
 import pytest
+
 from models.configs.crowdstrike_configs import _ConfigLoaderCrowdstrike
 
 

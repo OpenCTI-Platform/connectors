@@ -4,29 +4,18 @@
 import logging
 from typing import List, Optional, Tuple
 
-from crowdstrike_feeds_services.utils import (
-    create_external_reference,
-    create_intrusion_set,
-    create_originates_from_relationships,
-    create_regions_and_countries_from_entities,
-    create_sectors_from_entities,
-    create_targets_relationships,
-    create_uses_relationships,
-    normalize_start_time_and_stop_time,
-    remove_html_tags,
-    timestamp_to_datetime,
-)
 from stix2 import Identity  # type: ignore
-from stix2 import (
-    AttackPattern,
-    Bundle,
-    ExternalReference,
-    IntrusionSet,
-    Location,
-    MarkingDefinition,
-    Relationship,
-)
+from stix2 import (AttackPattern, Bundle, ExternalReference, IntrusionSet,
+                   Location, MarkingDefinition, Relationship)
 from stix2.v21 import _DomainObject  # type: ignore
+
+from crowdstrike_feeds_services.utils import (
+    create_external_reference, create_intrusion_set,
+    create_originates_from_relationships,
+    create_regions_and_countries_from_entities, create_sectors_from_entities,
+    create_targets_relationships, create_uses_relationships,
+    normalize_start_time_and_stop_time, remove_html_tags,
+    timestamp_to_datetime)
 
 logger = logging.getLogger(__name__)
 

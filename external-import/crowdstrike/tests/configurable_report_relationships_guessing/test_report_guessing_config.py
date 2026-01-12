@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import pytest
 from conftest import mock_env_vars
+
 from models.configs.config_loader import ConfigLoader
 from models.configs.crowdstrike_configs import _ConfigLoaderCrowdstrike
 

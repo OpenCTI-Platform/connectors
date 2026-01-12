@@ -8,9 +8,10 @@ from uuid import uuid4
 
 import pytest
 from conftest import mock_env_vars
+from stix2 import TLP_AMBER, Bundle, Identity, MarkingDefinition
+
 from crowdstrike_feeds_connector.report.builder import ReportBundleBuilder
 from models.configs.config_loader import ConfigLoader
-from stix2 import TLP_AMBER, Bundle, Identity, MarkingDefinition
 
 # =====================
 # Fixtures

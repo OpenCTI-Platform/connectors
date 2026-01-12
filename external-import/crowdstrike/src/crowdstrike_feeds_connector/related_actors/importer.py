@@ -3,21 +3,14 @@
 
 from typing import Any, Dict, List, NamedTuple, Optional, Set
 
-from crowdstrike_feeds_services.client.actors import ActorsAPI
-from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
-    OpenCTIConnectorHelper,
-)
+from pycti.connector.opencti_connector_helper import \
+    OpenCTIConnectorHelper  # type: ignore  # noqa: E501
 from stix2 import Identity  # type: ignore
-from stix2 import (
-    AttackPattern,
-    Bundle,
-    ExternalReference,
-    IntrusionSet,
-    Location,
-    MarkingDefinition,
-    Relationship,
-)
+from stix2 import (AttackPattern, Bundle, ExternalReference, IntrusionSet,
+                   Location, MarkingDefinition, Relationship)
 from stix2.v21 import _DomainObject
+
+from crowdstrike_feeds_services.client.actors import ActorsAPI
 
 from ..importer import BaseImporter
 

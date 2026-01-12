@@ -4,18 +4,16 @@
 from datetime import datetime
 from typing import Any, Dict, Generator, List, Optional
 
-from crowdstrike_feeds_services.client.actors import ActorsAPI
-from crowdstrike_feeds_services.utils import (
-    create_attack_pattern,
-    datetime_to_timestamp,
-    paginate,
-    timestamp_to_datetime,
-)
-from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
-    OpenCTIConnectorHelper,
-)
-from crowdstrike_feeds_connector.related_actors.importer import RelatedActorImporter
+from pycti.connector.opencti_connector_helper import \
+    OpenCTIConnectorHelper  # type: ignore  # noqa: E501
 from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
+
+from crowdstrike_feeds_connector.related_actors.importer import \
+    RelatedActorImporter
+from crowdstrike_feeds_services.client.actors import ActorsAPI
+from crowdstrike_feeds_services.utils import (create_attack_pattern,
+                                              datetime_to_timestamp, paginate,
+                                              timestamp_to_datetime)
 
 from ..importer import BaseImporter
 from .builder import ActorBundleBuilder

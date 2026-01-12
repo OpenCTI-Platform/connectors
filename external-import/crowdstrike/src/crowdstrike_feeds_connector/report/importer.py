@@ -4,22 +4,21 @@
 from datetime import datetime
 from typing import Any, Generator, List, Mapping, Optional
 
-from crowdstrike_feeds_services.client.indicators import IndicatorsAPI
-from crowdstrike_feeds_services.client.reports import ReportsAPI
-from crowdstrike_feeds_services.utils import (
-    create_file_from_download,
-    datetime_to_timestamp,
-    paginate,
-    timestamp_to_datetime,
-)
-from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
-    OpenCTIConnectorHelper,
-)
+from pycti.connector.opencti_connector_helper import \
+    OpenCTIConnectorHelper  # type: ignore  # noqa: E501
 from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 
+from crowdstrike_feeds_connector.related_actors.importer import \
+    RelatedActorImporter
+from crowdstrike_feeds_services.client.indicators import IndicatorsAPI
+from crowdstrike_feeds_services.client.reports import ReportsAPI
+from crowdstrike_feeds_services.utils import (create_file_from_download,
+                                              datetime_to_timestamp, paginate,
+                                              timestamp_to_datetime)
+
 from ..importer import BaseImporter
-from ..indicator.importer import IndicatorBundleBuilder, IndicatorBundleBuilderConfig
-from crowdstrike_feeds_connector.related_actors.importer import RelatedActorImporter
+from ..indicator.importer import (IndicatorBundleBuilder,
+                                  IndicatorBundleBuilderConfig)
 from .builder import ReportBundleBuilder
 
 
