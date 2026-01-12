@@ -67,7 +67,9 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                 if category in SUPPORTED_PLAYBOOK_ALERT_CATEGORIES:
                     self.playbook_categories.append(category)
                 else:
-                    self.helper.connector_logger.error(f"Invalid or unsupported playbook alert category: {category}")
+                    self.helper.connector_logger.error(
+                        f"Invalid or unsupported playbook alert category: {category}"
+                    )
 
     @staticmethod
     def _create_author():
@@ -195,40 +197,92 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
         """
 
         bundle_objects = []
-        vulnerability_name = playbook_alert.get("data").get("panel_status", {}).get("entity_name", "")
+        vulnerability_name = (
+            playbook_alert.get("data").get("panel_status", {}).get("entity_name", "")
+        )
         playbook_alert_summary = make_markdown_table(
             [
                 ["Attribute", "Value"],
-                ["Alert category", playbook_alert.get("data").get("panel_status", {}).get("case_rule_label", "")],
-                ["Alert created", playbook_alert.get("data").get("panel_status", {}).get("created", "")],
-                ["Alert updated", playbook_alert.get("data").get("panel_status", {}).get("updated", "")],
+                [
+                    "Alert category",
+                    playbook_alert.get("data")
+                    .get("panel_status", {})
+                    .get("case_rule_label", ""),
+                ],
+                [
+                    "Alert created",
+                    playbook_alert.get("data")
+                    .get("panel_status", {})
+                    .get("created", ""),
+                ],
+                [
+                    "Alert updated",
+                    playbook_alert.get("data")
+                    .get("panel_status", {})
+                    .get("updated", ""),
+                ],
                 [
                     "Alert priority",
                     self.severity_links[
-                        playbook_alert.get("data").get("panel_status", {}).get("priority", "Moderate")
+                        playbook_alert.get("data")
+                        .get("panel_status", {})
+                        .get("priority", "Moderate")
                     ],
                 ],
-                ["Alert ID", playbook_alert.get("data").get("playbook_alert_id" ,"")],
-                ["Alert Rule", playbook_alert.get("data").get("panel_status", {}).get("alert_rule", {}).get("name", "")],
+                ["Alert ID", playbook_alert.get("data").get("playbook_alert_id", "")],
+                [
+                    "Alert Rule",
+                    playbook_alert.get("data")
+                    .get("panel_status", {})
+                    .get("alert_rule", {})
+                    .get("name", ""),
+                ],
             ]
         )
 
         targets = []
-        for target in playbook_alert.get("data").get("panel_evidence_summary", {}).get("summary", {}).get("targets", []):
+        for target in (
+            playbook_alert.get("data")
+            .get("panel_evidence_summary", {})
+            .get("summary", {})
+            .get("targets", [])
+        ):
             targets.append(target.get("name"))
         playbook_alert_evidence = make_markdown_table(
             [
                 ["Attribute", "Value"],
                 ["Vulnerability", vulnerability_name],
-                ["Vulnerability Lifecycle Stage", playbook_alert.get("data").get("panel_status", {}).get("lifecycle_stage", "")],
-                ["Vulnerability Risk Score", str(playbook_alert.get("data").get("panel_status", {}).get("risk_score", ""))],
-                ["Vulnerability Criticality", playbook_alert.get("data").get("panel_status", {}).get("entity_criticality", "")],
-                ["Vulnerability Targets", ', '.join(targets)]
+                [
+                    "Vulnerability Lifecycle Stage",
+                    playbook_alert.get("data")
+                    .get("panel_status", {})
+                    .get("lifecycle_stage", ""),
+                ],
+                [
+                    "Vulnerability Risk Score",
+                    str(
+                        playbook_alert.get("data")
+                        .get("panel_status", {})
+                        .get("risk_score", "")
+                    ),
+                ],
+                [
+                    "Vulnerability Criticality",
+                    playbook_alert.get("data")
+                    .get("panel_status", {})
+                    .get("entity_criticality", ""),
+                ],
+                ["Vulnerability Targets", ", ".join(targets)],
             ]
         )
 
         markdown_array = [["Name", "Description"]]
-        for risk_rule in playbook_alert.get("data").get("panel_evidence_summary", {}).get("summary", {}).get("risk_rules", []):
+        for risk_rule in (
+            playbook_alert.get("data")
+            .get("panel_evidence_summary", {})
+            .get("summary", {})
+            .get("risk_rules", [])
+        ):
             markdown_array.append([risk_rule.get("rule"), risk_rule.get("description")])
         playbook_risk_rule = make_markdown_table(markdown_array)
 
@@ -254,7 +308,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
         stix_external_ref = stix2.ExternalReference(
             source_name="Recorded Future",
             url="https://app.recordedfuture.com/portal/alerts/"
-                +playbook_alert["data"]["playbook_alert_id"]
+            + playbook_alert["data"]["playbook_alert_id"],
         )
 
         stix_incident = stix2.Incident(
@@ -283,7 +337,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
             id=pycti.Vulnerability.generate_id(name=vulnerability_name),
             name=playbook_alert["data"]["panel_status"]["entity_name"],
             created_by_ref=self.author["id"],
-            object_marking_refs=[stix2.TLP_WHITE]
+            object_marking_refs=[stix2.TLP_WHITE],
         )
         bundle_objects.append(stix_vulnerability)
 

@@ -350,7 +350,10 @@ class RecordedFutureApiClient:
                 )
 
             # If playbook_alert.category is not one of: domain_abuse, identity_novel_exposures, code_repo_leakage, log the error
-            if playbook_alert_summary.category not in SUPPORTED_PLAYBOOK_ALERT_CATEGORIES:
+            if (
+                playbook_alert_summary.category
+                not in SUPPORTED_PLAYBOOK_ALERT_CATEGORIES
+            ):
                 self.helper.connector_logger.error(
                     f"You must provide an playbook alert whose category is among: {SUPPORTED_PLAYBOOK_ALERT_CATEGORIES}"
                 )
@@ -385,7 +388,9 @@ class RecordedFutureApiClient:
                         "Content-Type": "application/json",
                         "accept": "application/json",
                     },
-                    json={"panels": ["status", "action", "summary", "dns", "whois", "log"]},
+                    json={
+                        "panels": ["status", "action", "summary", "dns", "whois", "log"]
+                    },
                 )
 
             # If there is an error during the request, the method raise the error
