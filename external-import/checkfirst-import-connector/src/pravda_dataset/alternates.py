@@ -1,13 +1,21 @@
 from __future__ import annotations
 
+"""Helpers for parsing the dataset "Alternates" column.
+
+The Pravda dataset rows may include an "Alternates" field containing additional
+URLs (often separated by ';' and sometimes embedded in surrounding text).
+We keep parsing permissive: extract http(s) URLs, trim common trailing
+punctuation, and preserve order while de-duplicating.
+"""
+
 import re
 from typing import Iterable
-
 
 _URL_RE = re.compile(r"https?://\S+", re.IGNORECASE)
 
 
 def parse_alternates(raw: str | None) -> list[str]:
+    """Extract a list of unique alternate URLs from a raw column value."""
     if raw is None:
         return []
 
@@ -42,6 +50,7 @@ def parse_alternates(raw: str | None) -> list[str]:
 
 
 def iter_unique(values: Iterable[str]) -> list[str]:
+    """Return unique values while preserving original order."""
     seen: set[str] = set()
     out: list[str] = []
     for v in values:

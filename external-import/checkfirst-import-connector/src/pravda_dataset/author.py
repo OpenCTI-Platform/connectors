@@ -1,11 +1,18 @@
 from __future__ import annotations
 
+"""STIX author/identity helpers.
+
+The connector uses a single Identity (organization) as the created-by reference
+for all objects it generates.
+"""
+
 from typing import Any
 
 from pravda_dataset.stix_ids import identity_id
 
 
 def checkfirst_identity(*, source_file: str, row_number: int) -> dict[str, Any]:
+    """Create the fixed author Identity used by the connector."""
     # Identity is an SDO, so it uses created_by_ref when referenced by other objects.
     return {
         "type": "identity",
