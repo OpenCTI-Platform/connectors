@@ -1,0 +1,23 @@
+{
+  "title": "Portspoof Pro",
+  "slug": "portspoof",
+  "description": "Imports threat intelligence from Portspoof Pro's active deception platform: attacker IPs, tool fingerprints, scan techniques, behavioral patterns, and MITRE ATT&CK mappings.",
+  "short_description": "High-fidelity threat intelligence from Portspoof Pro's active deception platform.",
+  "logo": "external-import/portspoof/__metadata__/logo.png",
+  "use_cases": [
+    "Early Warning Intelligence",
+    "Threat Actor Profiling",
+    "Deception-Based Detection"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 85,
+  "support_version": ">=5.8.0",
+  "subscription_link": "https://portspoof.io",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/portspoof",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-portspoof",
+  "container_type": "EXTERNAL_IMPORT"
+}
