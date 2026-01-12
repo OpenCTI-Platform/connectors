@@ -1,5 +1,4 @@
 import datetime
-import json
 import threading
 
 import pycti
@@ -7,7 +6,7 @@ import pytz
 import stix2
 from pycti import StixCoreRelationship
 
-from .constants import TLP_MAP, SUPPORTED_PLAYBOOK_ALERT_CATEGORIES
+from .constants import SUPPORTED_PLAYBOOK_ALERT_CATEGORIES, TLP_MAP
 from .utils import make_markdown_table
 
 

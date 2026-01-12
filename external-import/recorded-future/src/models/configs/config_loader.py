@@ -2,6 +2,15 @@ from pathlib import Path
 from typing import Any
 
 from connectors_sdk import ListFromString
+from pydantic import AliasChoices, Field
+from pydantic_settings import (
+    BaseSettings,
+    DotEnvSettingsSource,
+    EnvSettingsSource,
+    PydanticBaseSettingsSource,
+    YamlConfigSettingsSource,
+)
+
 from models.configs.base_settings import ConfigBaseSettings
 from models.configs.connector_configs import (
     _ConfigLoaderConnector,
@@ -11,14 +20,6 @@ from models.configs.recorded_future_configs import (
     _ConfigLoaderAlert,
     _ConfigLoaderPlaybookAlert,
     _ConfigLoaderRecordedFuture,
-)
-from pydantic import AliasChoices, Field
-from pydantic_settings import (
-    BaseSettings,
-    DotEnvSettingsSource,
-    EnvSettingsSource,
-    PydanticBaseSettingsSource,
-    YamlConfigSettingsSource,
 )
 
 

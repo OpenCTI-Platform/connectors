@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 import requests
 from pycti import OpenCTIConnectorHelper
+
 from .constants import SUPPORTED_PLAYBOOK_ALERT_CATEGORIES
 
 

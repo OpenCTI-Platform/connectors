@@ -11,8 +11,9 @@
 
 import traceback
 
-from models.configs.config_loader import ConfigLoader
 from pycti import OpenCTIConnectorHelper
+
+from models.configs.config_loader import ConfigLoader
 from rflib import (
     APP_VERSION,
     AnalystNote,
