@@ -344,7 +344,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
             id=pycti.StixCoreRelationship.generate_id(
                 relationship_type="targets",
                 source_ref=stix_incident.id,
-                target_ref=stix_vulnerability.id
+                target_ref=stix_vulnerability.id,
             ),
             source_ref=stix_incident.id,
             target_ref=stix_vulnerability.id,
