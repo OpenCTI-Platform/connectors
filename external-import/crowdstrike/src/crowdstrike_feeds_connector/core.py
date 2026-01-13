@@ -8,6 +8,8 @@ from typing import Any, Dict, List, Mapping, Optional
 
 import stix2
 import yaml
+from pycti import OpenCTIConnectorHelper  # type: ignore
+
 from crowdstrike_feeds_services.client.base_api import BaseCrowdstrikeClient
 from crowdstrike_feeds_services.utils import (
     convert_comma_separated_str_to_list,
@@ -17,7 +19,6 @@ from crowdstrike_feeds_services.utils import (
 )
 from crowdstrike_feeds_services.utils.config_variables import ConfigCrowdstrike
 from crowdstrike_feeds_services.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
-from pycti import OpenCTIConnectorHelper  # type: ignore
 
 from .actor.importer import ActorImporter
 from .importer import BaseImporter
@@ -216,6 +217,7 @@ class CrowdStrike:
                 report_guess_relations,
                 indicator_config,
                 no_file_trigger_import,
+                scopes=scopes,
             )
 
             importers.append(report_importer)
@@ -240,6 +242,7 @@ class CrowdStrike:
                 indicator_high_score_labels=set(indicator_high_score_labels),
                 indicator_unwanted_labels=set(indicator_unwanted_labels),
                 no_file_trigger_import=no_file_trigger_import,
+                scopes=scopes,
             )
 
             indicator_importer = IndicatorImporter(indicator_importer_config)
@@ -253,6 +256,7 @@ class CrowdStrike:
                 report_status,
                 report_type,
                 no_file_trigger_import,
+                scopes=scopes,  # type: ignore
             )
 
             importers.append(yara_master_importer)
@@ -342,7 +346,7 @@ class CrowdStrike:
             new_state = current_state.copy()
 
             for importer in self.importers:
-                work_id = self._initiate_work(timestamp, importer.name)
+                work_id = self._initiate_work(timestamp, importer.name)  # type: ignore
                 importer_state = importer.start(work_id, new_state)
                 new_state.update(importer_state)
 
@@ -386,7 +390,7 @@ class CrowdStrike:
             f"{self.helper.connect_name}/{importer_name} run @ {datetime_str}"
         )
         work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id, friendly_name
+            self.helper.connect_id, friendly_name  # type: ignore
         )
 
         self._info(f"New '{importer_name} work '{work_id}' initiated", work_id)

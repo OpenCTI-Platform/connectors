@@ -3,16 +3,19 @@
 
 from typing import Any, Dict, List, NamedTuple, Optional, Set
 
+from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
+    OpenCTIConnectorHelper,
+)
+from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
+
+from crowdstrike_feeds_connector.related_actors.importer import RelatedActorImporter
+from crowdstrike_feeds_services.client.actors import ActorsAPI
 from crowdstrike_feeds_services.client.indicators import IndicatorsAPI
 from crowdstrike_feeds_services.utils import (
     datetime_to_timestamp,
     timestamp_to_datetime,
 )
 from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport, ReportFetcher
-from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
-    OpenCTIConnectorHelper,
-)
-from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 
 from ..importer import BaseImporter
 from .builder import IndicatorBundleBuilder, IndicatorBundleBuilderConfig
@@ -39,6 +42,7 @@ class IndicatorImporterConfig(NamedTuple):
     indicator_high_score_labels: Set[str]
     indicator_unwanted_labels: Set[str]
     no_file_trigger_import: bool
+    scopes: set[str]
 
 
 class IndicatorImporter(BaseImporter):
@@ -57,6 +61,9 @@ class IndicatorImporter(BaseImporter):
         )
 
         self.indicators_api_cs = IndicatorsAPI(config.helper)
+        self.actors_api_cs = ActorsAPI(config.helper)
+        self.related_actor_importer = RelatedActorImporter(config.helper)
+        # Simple per-run cache to avoid repeated actor resolution calls.
         self.create_observables = config.create_observables
         self.create_indicators = config.create_indicators
         self.default_latest_timestamp = config.default_latest_timestamp
@@ -73,6 +80,7 @@ class IndicatorImporter(BaseImporter):
         self.indicator_unwanted_labels = config.indicator_unwanted_labels
         self.next_page: Optional[str] = None
         self.no_file_trigger_import = config.no_file_trigger_import
+        self.scopes = config.scopes
 
         if not (self.create_observables or self.create_indicators):
             msg = "'create_observables' and 'create_indicators' false at the same time"
@@ -219,6 +227,17 @@ class IndicatorImporter(BaseImporter):
 
     def _create_indicator_bundle(self, indicator: dict) -> Optional[Bundle]:
         try:
+            if "actor" in self.scopes:
+                # Process related actors
+                related_actors = indicator.get("actors", [])
+
+                # Replace with normalized list (preserves ordering; falls back to raw token when unresolved).
+                indicator["actors"] = (
+                    self.related_actor_importer._process_related_actors(
+                        indicator.get("id"), related_actors
+                    )
+                )
+
             bundle_builder_config = IndicatorBundleBuilderConfig(
                 indicator=indicator,
                 author=self.author,
@@ -235,6 +254,7 @@ class IndicatorImporter(BaseImporter):
                 indicator_high_score=self.indicator_high_score,
                 indicator_high_score_labels=self.indicator_high_score_labels,
                 indicator_unwanted_labels=self.indicator_unwanted_labels,
+                scopes=self.scopes,
             )
 
             bundle_builder = IndicatorBundleBuilder(self.helper, bundle_builder_config)

@@ -25,7 +25,7 @@ class ReportsAPI(BaseCrowdstrikeClient):
         )
 
         self.handle_api_error(response)
-        self.helper.connector_logger.info("Getting combined actor entities...")
+        self.helper.connector_logger.info("Getting combined report entities...")
 
         return response["body"]
 
@@ -38,6 +38,11 @@ class ReportsAPI(BaseCrowdstrikeClient):
         """
 
         response = self.cs_intel.get_report_entities(ids=ids, fields=fields)
+
+        self.helper.connector_logger.debug(
+            "Raw CrowdStrike report entities payload",
+            {"ids": ids, "fields": fields, "response_body": response.get("body")},
+        )
 
         self.handle_api_error(response)
         self.helper.connector_logger.info("Getting report entities...")

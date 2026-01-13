@@ -1,3 +1,5 @@
+from typing import List, Optional, Union
+
 from .base_api import BaseCrowdstrikeClient
 
 
@@ -6,8 +8,13 @@ class ActorsAPI(BaseCrowdstrikeClient):
         super().__init__(helper)
 
     def get_combined_actor_entities(
-        self, limit: int, offset: int, sort: str, fql_filter: str, fields: list
-    ):
+        self,
+        limit: int,
+        offset: int,
+        sort: str,
+        fql_filter: str,
+        fields: Union[str, List[str]],
+    ) -> Optional[dict]:
         """
         Get info about actors that match provided FQL filters.
         :param limit: Maximum number of records to return (Max: 5000) in integer
@@ -24,6 +31,16 @@ class ActorsAPI(BaseCrowdstrikeClient):
         )
 
         self.handle_api_error(response)
+        self.helper.connector_logger.debug(
+            "ActorsAPI.get_combined_actor_entities",
+            {
+                "limit": limit,
+                "offset": offset,
+                "sort": sort,
+                "fql_filter": fql_filter,
+                "fields": fields,
+            },
+        )
         self.helper.connector_logger.info("Getting combined actor entities...")
 
         return response["body"]

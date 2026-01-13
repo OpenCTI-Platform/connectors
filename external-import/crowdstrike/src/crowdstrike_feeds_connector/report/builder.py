@@ -2,22 +2,8 @@
 """OpenCTI CrowdStrike report builder module."""
 
 import logging
-from typing import List, Mapping, Optional, Tuple, Union
+from typing import List, Mapping, Optional, Set, Tuple, Union
 
-from crowdstrike_feeds_services.utils import (
-    create_external_reference,
-    create_intrusion_set_from_name,
-    create_malware,
-    create_object_refs,
-    create_organization,
-    create_regions_and_countries_from_entities,
-    create_sectors_from_entities,
-    create_stix2_report_from_report,
-    create_targets_relationships,
-    create_uses_relationships,
-    normalize_start_time_and_stop_time,
-    timestamp_to_datetime,
-)
 from stix2 import (
     Bundle,
     ExternalReference,
@@ -30,6 +16,21 @@ from stix2 import (
 )
 from stix2 import Report as STIXReport  # type: ignore
 from stix2.v21 import _DomainObject, _RelationshipObject  # type: ignore
+
+from crowdstrike_feeds_connector.related_actors.builder import RelatedActorBundleBuilder
+from crowdstrike_feeds_services.utils import (
+    create_external_reference,
+    create_malware,
+    create_object_refs,
+    create_organization,
+    create_regions_and_countries_from_entities,
+    create_sectors_from_entities,
+    create_stix2_report_from_report,
+    create_targets_relationships,
+    create_uses_relationships,
+    normalize_start_time_and_stop_time,
+    timestamp_to_datetime,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,7 @@ class ReportBundleBuilder:
         related_indicators: Optional = None,
         report_guess_relations: bool = False,
         malwares_from_field: Optional[List[dict]] = None,
+        scopes: Set[str] = set(),
     ) -> None:
         """Initialize report bundle builder."""
         self.report = report
@@ -65,6 +67,8 @@ class ReportBundleBuilder:
         self.related_indicators = related_indicators
         self.report_guess_relations = report_guess_relations
         self.malwares_from_field = malwares_from_field if malwares_from_field else []
+        self.related_actor_builder = RelatedActorBundleBuilder()
+        self.scopes = scopes
 
         # Use report dates for start time and stop time.
         start_time = timestamp_to_datetime(self.report["created_date"])
@@ -100,39 +104,29 @@ class ReportBundleBuilder:
         )
 
     def _create_intrusion_sets(self) -> List[IntrusionSet]:
-        report_actors = self.report["actors"]
-        if report_actors is None:
+        report_actors = self.report.get("actors") or []
+        if not report_actors:
             return []
 
-        intrusion_sets = []
+        intrusion_sets: List[IntrusionSet] = []
 
         for actor in report_actors:
-            intrusion_set = self._create_intrusion_set_from_actor(actor)
-            intrusion_sets.append(intrusion_set)
+            try:
+                intrusion_sets.append(
+                    self.related_actor_builder(
+                        actor,
+                        created_by=self.author,
+                        confidence=self.confidence_level,
+                        object_markings=self.object_markings,
+                    )
+                )
+
+            except Exception:
+                logger.exception(
+                    "Failed to create IntrusionSet from report actor '%s'", actor
+                )
 
         return intrusion_sets
-
-    def _create_intrusion_set_from_actor(self, actor: dict) -> Optional[IntrusionSet]:
-        actor_name = actor["name"]
-        if actor_name is None or not actor_name:
-            return None
-
-        external_references = []
-
-        actor_url = actor["url"]
-        if actor_url is not None and actor_url:
-            external_reference = self._create_external_reference(
-                str(actor["id"]), actor_url
-            )
-            external_references.append(external_reference)
-
-        return create_intrusion_set_from_name(
-            actor_name,
-            self.author,
-            self.confidence_level,
-            external_references,
-            self.object_markings,
-        )
 
     def _create_external_reference(
         self, external_id: str, url: str
@@ -227,8 +221,13 @@ class ReportBundleBuilder:
         bundle_objects.extend(self.object_markings)
 
         # Create intrusion sets and add to bundle.
-        intrusion_sets = self._create_intrusion_sets()
-        bundle_objects.extend(intrusion_sets)
+        if "actor" in self.scopes:
+            intrusion_sets = (
+                self.related_actor_builder.create_intrusion_sets_from_actor_entity(
+                    self.report.get("actors", [])
+                )
+            )
+            bundle_objects.extend(intrusion_sets)
 
         # Create malwares and add to bundle.
         malwares = self._create_malwares()
@@ -288,7 +287,7 @@ class ReportBundleBuilder:
             bundle_objects.extend(malwares_target_countries)
 
         # Indicators linked to the report and add to bundle
-        indicators_linked = self.related_indicators
+        indicators_linked = self.related_indicators or []
         bundle_objects.extend(indicators_linked)
 
         # Create object references for the report.

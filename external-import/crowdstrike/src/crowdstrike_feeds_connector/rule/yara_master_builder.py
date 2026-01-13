@@ -4,17 +4,6 @@
 from datetime import date, datetime, timezone
 from typing import List, Mapping
 
-from crowdstrike_feeds_services.utils import (
-    create_indicates_relationships,
-    create_indicator,
-    create_intrusion_sets_from_names,
-    create_malware,
-    create_object_refs,
-    create_stix2_report_from_report,
-    create_uses_relationships,
-)
-from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport
-from crowdstrike_feeds_services.utils.yara_parser import YaraRule
 from stix2 import (
     Bundle,
     Identity,
@@ -26,6 +15,19 @@ from stix2 import (
 )
 from stix2 import Report as STIXReport  # type: ignore
 from stix2.v21 import _DomainObject  # type: ignore
+
+from crowdstrike_feeds_connector.related_actors.importer import RelatedActorImporter
+from crowdstrike_feeds_services.utils import (
+    create_indicates_relationships,
+    create_indicator,
+    create_intrusion_sets_from_names,
+    create_malware,
+    create_object_refs,
+    create_stix2_report_from_report,
+    create_uses_relationships,
+)
+from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport
+from crowdstrike_feeds_services.utils.yara_parser import YaraRule
 
 
 class YaraRuleBundleBuilder:
@@ -43,6 +45,7 @@ class YaraRuleBundleBuilder:
         report_status: int,
         report_type: str,
         reports: List[FetchedReport],
+        scopes: List[str],
     ) -> None:
         """Initialize YARA master builder."""
         self.rule = rule
@@ -53,6 +56,8 @@ class YaraRuleBundleBuilder:
         self.report_status = report_status
         self.report_type = report_type
         self.reports = reports
+        self.related_actor_importer = RelatedActorImporter()
+        self.scopes = scopes
 
         self.first_seen = self._date_to_datetime(self.rule.last_modified)
 
@@ -71,8 +76,9 @@ class YaraRuleBundleBuilder:
         bundle_objects.extend(self.object_markings)
 
         # Create intrusion sets and add to bundle.
-        intrusion_sets = self._create_intrusion_sets()
-        bundle_objects.extend(intrusion_sets)
+        if "actor" in self.scopes:
+            intrusion_sets = self._create_intrusion_sets()
+            bundle_objects.extend(intrusion_sets)
 
         # Create malwares and add to bundle.
         malwares = self._create_malwares()
@@ -112,7 +118,12 @@ class YaraRuleBundleBuilder:
         return Bundle(objects=bundle_objects, allow_custom=True)
 
     def _create_intrusion_sets(self) -> List[IntrusionSet]:
+        rule_id = self.rule.name
         rule_actors = self.rule.actors
+
+        rule_actors = self.related_actor_importer._process_related_actors(
+            rule_id, rule_actors
+        )
 
         return create_intrusion_sets_from_names(
             rule_actors,

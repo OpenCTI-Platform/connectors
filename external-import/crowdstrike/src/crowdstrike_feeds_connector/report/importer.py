@@ -4,6 +4,12 @@
 from datetime import datetime
 from typing import Any, Generator, List, Mapping, Optional
 
+from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
+    OpenCTIConnectorHelper,
+)
+from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
+
+from crowdstrike_feeds_connector.related_actors.importer import RelatedActorImporter
 from crowdstrike_feeds_services.client.indicators import IndicatorsAPI
 from crowdstrike_feeds_services.client.reports import ReportsAPI
 from crowdstrike_feeds_services.utils import (
@@ -12,10 +18,6 @@ from crowdstrike_feeds_services.utils import (
     paginate,
     timestamp_to_datetime,
 )
-from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
-    OpenCTIConnectorHelper,
-)
-from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 
 from ..importer import BaseImporter
 from ..indicator.importer import IndicatorBundleBuilder, IndicatorBundleBuilderConfig
@@ -43,6 +45,7 @@ class ReportImporter(BaseImporter):
         report_guess_relations: bool,
         indicator_config: dict,
         no_file_trigger_import: bool,
+        scopes: set[str],
     ) -> None:
         """Initialize CrowdStrike report importer."""
         super().__init__(helper, author, tlp_marking)
@@ -58,6 +61,8 @@ class ReportImporter(BaseImporter):
         self.indicators_api_cs = IndicatorsAPI(helper)
         self.indicator_config = indicator_config
         self.no_file_trigger_import = no_file_trigger_import
+        self.related_actors = RelatedActorImporter(helper)
+        self.scopes = scopes
 
     def run(self, state: dict[str, Any]) -> dict[str, Any]:
         self._info(
@@ -244,6 +249,7 @@ class ReportImporter(BaseImporter):
                         indicator_unwanted_labels=self.indicator_config[
                             "indicator_unwanted_labels"
                         ],
+                        scopes=self.indicator_config["scopes"],
                     )
                     try:
                         bundle_builder = IndicatorBundleBuilder(
@@ -301,13 +307,24 @@ class ReportImporter(BaseImporter):
         confidence_level = self._confidence_level()
         related_indicators_with_related_entities = []
 
+        # Important: Reports often already include actor stubs as dicts with `id`, `name`, and `slug`.
+        # In that case we should NOT perform additional API lookups (Romain's point).
+        raw_actors = report.get("actors") or []
+        RelatedActorImporter._resolved_actor_name_cache.update(
+            {actor.get("id"): actor.get("name") for actor in raw_actors}
+        )
+
+        self.helper.connector_logger.debug(
+            "Report actors field (raw)",
+            {"report_id": report.get("id"), "actors": raw_actors},
+        )
+
         report_slug = report["slug"]
         if report_slug is not None:
             report_name = report_slug.upper()
             related_indicators_with_related_entities = self._get_related_iocs(
                 report_name
             )
-
         malwares_from_field = report.get("malware", [])
 
         bundle_builder = ReportBundleBuilder(
@@ -322,6 +339,7 @@ class ReportImporter(BaseImporter):
             related_indicators_with_related_entities,
             self.report_guess_relations,
             malwares_from_field=malwares_from_field,
+            scopes=self.scopes,
         )
         return bundle_builder.build()
 

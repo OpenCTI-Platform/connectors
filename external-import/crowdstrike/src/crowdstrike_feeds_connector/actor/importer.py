@@ -4,6 +4,11 @@
 from datetime import datetime
 from typing import Any, Dict, Generator, List, Optional
 
+from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
+
+from crowdstrike_feeds_connector.related_actors.importer import (
+    RelatedActorImporter,
+)
 from crowdstrike_feeds_services.client.actors import ActorsAPI
 from crowdstrike_feeds_services.utils import (
     create_attack_pattern,
@@ -11,13 +16,11 @@ from crowdstrike_feeds_services.utils import (
     paginate,
     timestamp_to_datetime,
 )
-from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
-    OpenCTIConnectorHelper,
-)
-from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 
 from ..importer import BaseImporter
 from .builder import ActorBundleBuilder
+
+from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper  # type: ignore  # noqa: E501 # isort: skip
 
 
 class ActorImporter(BaseImporter):
@@ -106,7 +109,11 @@ class ActorImporter(BaseImporter):
         )
 
         actors = self.actors_api_cs.get_combined_actor_entities(
-            limit=limit, offset=offset, sort=sort, fql_filter=fql_filter, fields=fields
+            limit=limit,
+            offset=offset,
+            sort=sort,  # type:ignore
+            fql_filter=fql_filter,  # type:ignore
+            fields=fields,  # type:ignore
         )
 
         return actors
@@ -135,13 +142,22 @@ class ActorImporter(BaseImporter):
             ):
                 latest_modified_datetime = modified_date
 
+            RelatedActorImporter._resolved_actor_name_cache.update(
+                {actor.get("id"): actor.get("name") for actor in actors}
+            )
+
+            self.helper.connector_logger.debug(
+                "Report actors field (raw)",
+                {"actors": actors},
+            )
+
         self._info(
             "Processing actors completed (imported: {0}, latest: {1})",
             actor_count,
             latest_modified_datetime,
         )
 
-        return timestamp_to_datetime(latest_modified_datetime)
+        return timestamp_to_datetime(latest_modified_datetime)  # type:ignore
 
     def _process_actor(self, actor) -> None:
         self._info("Processing actor {0} ({1})...", actor["name"], actor["id"])
@@ -181,7 +197,9 @@ class ActorImporter(BaseImporter):
             )
 
             ttps_response = self.actors_api_cs.query_mitre_attacks(actor_id)
-            ttp_ids = ttps_response.get("resources", [])
+            ttp_ids = ttps_response.get(
+                "resources", []
+            )  # pyright: ignore[reportOptionalMemberAccess, reportAttributeAccessIssue]
 
             if not ttp_ids:
                 self._info("No TTPs found for actor: {0}", actor_name)

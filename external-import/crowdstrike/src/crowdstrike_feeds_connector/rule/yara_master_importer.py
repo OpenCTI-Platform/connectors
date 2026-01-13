@@ -7,6 +7,14 @@ from datetime import datetime
 from io import BytesIO
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple
 
+from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
+    OpenCTIConnectorHelper,
+)
+from requests import RequestException
+from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
+from stix2.exceptions import STIXError  # type: ignore
+
+from crowdstrike_feeds_services.client.actors import ActorsAPI
 from crowdstrike_feeds_services.client.rules import RulesAPI
 from crowdstrike_feeds_services.utils import (
     datetime_to_timestamp,
@@ -14,12 +22,6 @@ from crowdstrike_feeds_services.utils import (
 )
 from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport, ReportFetcher
 from crowdstrike_feeds_services.utils.yara_parser import YaraParser, YaraRule
-from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
-    OpenCTIConnectorHelper,
-)
-from requests import RequestException
-from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
-from stix2.exceptions import STIXError  # type: ignore
 
 from ..importer import BaseImporter
 from .yara_master_builder import YaraRuleBundleBuilder
@@ -52,14 +54,18 @@ class YaraMasterImporter(BaseImporter):
         report_status: int,
         report_type: str,
         no_file_trigger_import: bool,
+        scopes: List[str],
     ) -> None:
         """Initialize CrowdStrike YARA master importer."""
         super().__init__(helper, author, tlp_marking)
 
         self.rules_api_cs = RulesAPI(helper)
+        self.actors_api_cs = ActorsAPI(helper)
+
         self.report_status = report_status
         self.report_type = report_type
         self.no_file_trigger_import = no_file_trigger_import
+        self.scopes = scopes
 
         self.report_fetcher = ReportFetcher(helper, self.no_file_trigger_import)
 
@@ -394,6 +400,7 @@ class YaraMasterImporter(BaseImporter):
             report_status,
             report_type,
             reports,
+            scopes=self.scopes,
         )
 
         try:
