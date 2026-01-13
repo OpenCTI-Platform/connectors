@@ -7,18 +7,20 @@ from datetime import datetime
 from io import BytesIO
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple
 
-from pycti.connector.opencti_connector_helper import \
-    OpenCTIConnectorHelper  # type: ignore  # noqa: E501
+from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
+    OpenCTIConnectorHelper,
+)
 from requests import RequestException
 from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 from stix2.exceptions import STIXError  # type: ignore
 
 from crowdstrike_feeds_services.client.actors import ActorsAPI
 from crowdstrike_feeds_services.client.rules import RulesAPI
-from crowdstrike_feeds_services.utils import (datetime_to_timestamp,
-                                              timestamp_to_datetime)
-from crowdstrike_feeds_services.utils.report_fetcher import (FetchedReport,
-                                                             ReportFetcher)
+from crowdstrike_feeds_services.utils import (
+    datetime_to_timestamp,
+    timestamp_to_datetime,
+)
+from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport, ReportFetcher
 from crowdstrike_feeds_services.utils.yara_parser import YaraParser, YaraRule
 
 from ..importer import BaseImporter

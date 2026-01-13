@@ -3,15 +3,27 @@
 import ipaddress
 from typing import Any, List, Mapping, NamedTuple, Optional
 
-from pycti import (CustomObservableCryptocurrencyWallet,
-                   CustomObservableHostname, CustomObservableUserAgent)
+from pycti import (
+    CustomObservableCryptocurrencyWallet,
+    CustomObservableHostname,
+    CustomObservableUserAgent,
+)
 from stix2 import DomainName  # type: ignore
-from stix2 import (URL, EmailAddress, EmailMessage, File, Identity,
-                   IPv4Address, IPv6Address, MarkingDefinition, Mutex, Process,
-                   X509Certificate)
+from stix2 import (
+    URL,
+    EmailAddress,
+    EmailMessage,
+    File,
+    Identity,
+    IPv4Address,
+    IPv6Address,
+    MarkingDefinition,
+    Mutex,
+    Process,
+    X509Certificate,
+)
 
-from .constants import (X_OPENCTI_CREATED_BY_REF, X_OPENCTI_LABELS,
-                        X_OPENCTI_SCORE)
+from .constants import X_OPENCTI_CREATED_BY_REF, X_OPENCTI_LABELS, X_OPENCTI_SCORE
 
 
 def _get_default_custom_properties(

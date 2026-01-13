@@ -6,17 +6,22 @@ from typing import Any, Dict, Generator, List, Optional
 
 from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 
+from crowdstrike_feeds_connector.related_actors.importer import (
+    RelatedActorImporter,
+)
 from crowdstrike_feeds_services.client.actors import ActorsAPI
-from crowdstrike_feeds_services.utils import (create_attack_pattern,
-                                              datetime_to_timestamp, paginate,
-                                              timestamp_to_datetime)
+from crowdstrike_feeds_services.utils import (
+    create_attack_pattern,
+    datetime_to_timestamp,
+    paginate,
+    timestamp_to_datetime,
+)
 
 from ..importer import BaseImporter
 from .builder import ActorBundleBuilder
 
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper  # type: ignore  # noqa: E501 # isort: skip
 
-from crowdstrike_feeds_connector.related_actors.importer import RelatedActorImporter  # isort: skip
 
 class ActorImporter(BaseImporter):
     """CrowdStrike actor importer."""
@@ -192,7 +197,9 @@ class ActorImporter(BaseImporter):
             )
 
             ttps_response = self.actors_api_cs.query_mitre_attacks(actor_id)
-            ttp_ids = ttps_response.get("resources", [])  # pyright: ignore[reportOptionalMemberAccess, reportAttributeAccessIssue]
+            ttp_ids = ttps_response.get(
+                "resources", []
+            )  # pyright: ignore[reportOptionalMemberAccess, reportAttributeAccessIssue]
 
             if not ttp_ids:
                 self._info("No TTPs found for actor: {0}", actor_name)

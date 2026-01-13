@@ -5,8 +5,11 @@ import logging
 from typing import Any, List, Mapping, Optional
 
 from crowdstrike_feeds_services.utils import (
-    create_external_reference, create_intrusion_set,
-    normalize_start_time_and_stop_time, timestamp_to_datetime)
+    create_external_reference,
+    create_intrusion_set,
+    normalize_start_time_and_stop_time,
+    timestamp_to_datetime,
+)
 
 from stix2 import ExternalReference, Identity, IntrusionSet, MarkingDefinition  # type: ignore # isort: skip
 
