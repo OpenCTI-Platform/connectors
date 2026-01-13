@@ -15,5 +15,5 @@ services:
     volumes:
       # Default: use the sample dataset shipped with this connector folder.
       # For production, replace ./data_test with your real dataset folder.
-      - external-import/checkfirst-import-connector/data_test:/data_set:ro
+      - ./data_test:/data_set:ro
     restart: always
