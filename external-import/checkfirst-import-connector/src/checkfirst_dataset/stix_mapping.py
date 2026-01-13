@@ -8,15 +8,15 @@ The mapping implemented here is intentionally simple:
 - `url` SCOs represent source URLs and alternate URLs.
 - `relationship` objects link channel/content and content/alternates.
 
-All objects carry deterministic IDs (see `pravda_dataset.stix_ids`) and include
+All objects carry deterministic IDs (see `checkfirst_dataset.stix_ids`) and include
 basic provenance extensions for traceability back to the source CSV.
 """
 
 from typing import Any
 
-from pravda_dataset.alternates import parse_alternates
-from pravda_dataset.dates import parse_publication_date
-from pravda_dataset.stix_ids import (
+from checkfirst_dataset.alternates import parse_alternates
+from checkfirst_dataset.dates import parse_publication_date
+from checkfirst_dataset.stix_ids import (
     channel_id,
     media_content_id,
     relationship_id,
@@ -27,8 +27,8 @@ from pravda_dataset.stix_ids import (
 def _prov(source_file: str, row_number: int) -> dict[str, Any]:
     """Return provenance fields to attach to generated objects."""
     return {
-        "x_pravda_source_file": source_file,
-        "x_pravda_row_number": row_number,
+        "x_checkfirst_source_file": source_file,
+        "x_checkfirst_row_number": row_number,
     }
 
 

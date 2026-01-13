@@ -2,7 +2,7 @@ from __future__ import annotations
 
 """Dataset file discovery utilities.
 
-The Pravda connector ingests CSV files from a dataset directory. This module is
+The Checkfirst connector ingests CSV files from a dataset directory. This module is
 responsible for finding candidate files under a configured dataset root.
 
 Notes:
