@@ -1,0 +1,29 @@
+opencti:
+  url: http://opencti:8080
+  token: CHANGEME
+
+connector:
+  id: CHANGEME
+  name: Checkfirst Import Connector
+  scope: media-content,channel,url
+  log_level: info
+  duration_period: PT1H
+
+checkfirst:
+  dataset_path: /data_set
+  batch_size: 1000
+  run_mode: loop
+  force_reprocess: false
+  tlp_level: clear
+  # Optional guards
+  # max_file_bytes: 104857600
+  # max_row_bytes: 1048576
+  # max_rows_per_file: 100000
+
+mq:
+  host: rabbitmq
+  port: 5672
+  user: opencti
+  pass: ChangeMe
+  vhost: /
+  use_ssl: false
