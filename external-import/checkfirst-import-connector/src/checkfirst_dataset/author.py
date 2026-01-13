@@ -8,7 +8,7 @@ for all objects it generates.
 
 from typing import Any
 
-from pravda_dataset.stix_ids import identity_id
+from checkfirst_dataset.stix_ids import identity_id
 
 
 def checkfirst_identity(*, source_file: str, row_number: int) -> dict[str, Any]:
@@ -20,6 +20,6 @@ def checkfirst_identity(*, source_file: str, row_number: int) -> dict[str, Any]:
         "id": identity_id("CheckFirst"),
         "name": "CheckFirst",
         "identity_class": "organization",
-        "x_pravda_source_file": source_file,
-        "x_pravda_row_number": row_number,
+        "x_checkfirst_source_file": source_file,
+        "x_checkfirst_row_number": row_number,
     }

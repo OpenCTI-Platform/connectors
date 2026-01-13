@@ -6,7 +6,7 @@ from __future__ import annotations
 in-memory bundle object; callers may serialize to JSON as needed.
 
 Notes:
-- Object IDs should be deterministic (see `pravda_dataset.stix_ids`). Bundles
+- Object IDs should be deterministic (see `checkfirst_dataset.stix_ids`). Bundles
     themselves are transport containers, so their IDs can be random.
 """
 

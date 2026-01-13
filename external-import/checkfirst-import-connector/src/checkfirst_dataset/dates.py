@@ -2,7 +2,7 @@ from __future__ import annotations
 
 """Date parsing helpers.
 
-The Pravda CSV includes a `Publication Date` string. We parse it using
+The dataset includes a `Publication Date` string. We parse it using
 `dateutil` and normalize the output to timezone-aware UTC datetimes.
 """
 
