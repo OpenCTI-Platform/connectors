@@ -254,7 +254,7 @@ class CrowdStrike:
                 report_status,
                 report_type,
                 no_file_trigger_import,
-                scopes=scopes,
+                scopes=scopes,  # type: ignore
             )
 
             importers.append(yara_master_importer)
@@ -344,7 +344,7 @@ class CrowdStrike:
             new_state = current_state.copy()
 
             for importer in self.importers:
-                work_id = self._initiate_work(timestamp, importer.name)
+                work_id = self._initiate_work(timestamp, importer.name)  # type: ignore
                 importer_state = importer.start(work_id, new_state)
                 new_state.update(importer_state)
 
@@ -388,7 +388,7 @@ class CrowdStrike:
             f"{self.helper.connect_name}/{importer_name} run @ {datetime_str}"
         )
         work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id, friendly_name
+            self.helper.connect_id, friendly_name  # type: ignore
         )
 
         self._info(f"New '{importer_name} work '{work_id}' initiated", work_id)

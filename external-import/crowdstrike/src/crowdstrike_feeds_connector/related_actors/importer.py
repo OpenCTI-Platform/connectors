@@ -57,7 +57,7 @@ class RelatedActorImporter(BaseImporter):
                             sort="created_date|desc",
                             fields="__full__",
                         )
-                        actors_data = response.get("resources", [])
+                        actors_data = response.get("resources", [])  # type: ignore
 
                         for actor in actors_data:
                             slug = actor.get("slug")
