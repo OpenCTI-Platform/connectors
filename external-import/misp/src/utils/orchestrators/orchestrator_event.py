@@ -1,5 +1,6 @@
 """Report-specific orchestrator for fetching and processing report data."""
 
+import copy
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 
@@ -80,9 +81,11 @@ class OrchestratorEvent(BaseOrchestrator):
             Configured GenericBatchProcessor instance
 
         """
+        processor_config = copy.deepcopy(EVENT_BATCH_PROCESSOR_CONFIG)
+        processor_config.batch_size = self.work_manager._config.batch.size
         return GenericBatchProcessor(
             work_manager=self.work_manager,
-            config=EVENT_BATCH_PROCESSOR_CONFIG,
+            config=processor_config,
             logger=self.logger,
         )
 

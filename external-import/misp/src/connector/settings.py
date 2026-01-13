@@ -256,6 +256,17 @@ class MispConfig(BaseConfigModel):
         return value
 
 
+class BatchConfig(BaseConfigModel):
+    """
+    Define config specific to batch processing.
+    """
+
+    size: int = Field(
+        description="The size of the batch.",
+        default=9999,
+    )
+
+
 class ConnectorSettings(BaseConnectorSettings):
     """
     Override `BaseConnectorSettings` to include `ExternalImportConnectorConfig` and `MispConfig`.
@@ -265,6 +276,7 @@ class ConnectorSettings(BaseConnectorSettings):
         default_factory=ExternalImportConnectorConfig
     )
     misp: MispConfig = Field(default_factory=MispConfig)
+    batch: BatchConfig = Field(default_factory=BatchConfig)
 
     @model_validator(mode="before")
     @classmethod
