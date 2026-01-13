@@ -6,8 +6,8 @@ from azure.core.exceptions import HttpResponseError
 from azure.core.pipeline.policies import BearerTokenCredentialPolicy, RetryPolicy
 from azure.core.pipeline.transport._base import HttpRequest, HttpResponse
 from azure.identity import ClientSecretCredential
-from microsoft_sentinel_intel.config import ConnectorSettings
 from microsoft_sentinel_intel.errors import ConnectorClientError
+from microsoft_sentinel_intel.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
 
@@ -28,7 +28,7 @@ class ConnectorClient:
                 ClientSecretCredential(
                     tenant_id=config.microsoft_sentinel_intel.tenant_id,
                     client_id=config.microsoft_sentinel_intel.client_id,
-                    client_secret=config.microsoft_sentinel_intel.client_secret,
+                    client_secret=config.microsoft_sentinel_intel.client_secret.get_secret_value(),
                 ),
                 "https://management.azure.com/.default",
             ),
