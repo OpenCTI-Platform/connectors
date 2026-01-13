@@ -1,0 +1,19 @@
+{
+  "title": "Checkfirst Import Connector",
+  "slug": "checkfirst-import-connector",
+  "description": "Imports data from a local dataset and pushes STIX bundles to OpenCTI.",
+  "short_description": "Import local dataset into OpenCTI.",
+  "logo": null,
+  "use_cases": [],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">= 6.3.0",
+  "subscription_link": "",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/checkfirst-import-connector",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-checkfirst-import-connector",
+  "container_type": "EXTERNAL_IMPORT"
+}

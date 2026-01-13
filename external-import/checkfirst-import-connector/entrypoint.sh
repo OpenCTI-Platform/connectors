@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
 set -eu
 
-# Default: run connector main
-exec python /app/main.py
+cd /opt/opencti-connector-checkfirst-import-connector
+exec python3 main.py

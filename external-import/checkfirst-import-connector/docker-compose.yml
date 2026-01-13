@@ -1,17 +1,18 @@
 services:
-  connector-pravda-dataset:
+  connector-checkfirst-import-connector:
     build: .
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=Checkfirst Import Connector
       - CONNECTOR_SCOPE=media-content,channel,url
       - CONNECTOR_LOG_LEVEL=info
-      - PRAVDA_DATASET_PATH=/data_set
-      - PRAVDA_INTERVAL_MINUTES=60
-      - PRAVDA_BATCH_SIZE=1000
+      - CONNECTOR_DURATION_PERIOD=PT1H
+      - CHECKFIRST_DATASET_PATH=/data_set
+      - CHECKFIRST_BATCH_SIZE=1000
+      - CHECKFIRST_RUN_MODE=loop
+      - CHECKFIRST_TLP_LEVEL=clear
     volumes:
       # Default: use the sample dataset shipped with this connector folder.
       # For production, replace ./data_test with your real dataset folder.

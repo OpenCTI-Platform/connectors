@@ -2,7 +2,7 @@ from __future__ import annotations
 
 """Helpers for parsing the dataset "Alternates" column.
 
-The Pravda dataset rows may include an "Alternates" field containing additional
+Dataset rows may include an "Alternates" field containing additional
 URLs (often separated by ';' and sometimes embedded in surrounding text).
 We keep parsing permissive: extract http(s) URLs, trim common trailing
 punctuation, and preserve order while de-duplicating.

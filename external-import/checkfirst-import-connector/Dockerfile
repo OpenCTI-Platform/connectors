@@ -1,16 +1,24 @@
-FROM python:3.11-slim
+FROM python:3.12-alpine
 
-WORKDIR /app
+WORKDIR /opt/opencti-connector-checkfirst-import-connector
 
-# System deps (kept minimal)
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
+# System deps
+# - ca-certificates: HTTPS/TLS trust store for OpenCTI/API calls
+# - libmagic: required by python-magic (pulled by pycti on Linux)
+# - libffi: common runtime dep for wheels using libffi
+RUN apk add --no-cache \
+    ca-certificates \
+    libffi \
+    libmagic
 
-COPY requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY src/ ./
+COPY src /opt/opencti-connector-checkfirst-import-connector
+# Build deps (removed after pip install to keep the final image smaller)
+RUN apk add --no-cache --virtual .build-deps \
+        build-base \
+        git \
+        libffi-dev \
+    && pip install --no-cache-dir -r requirements.txt \
+    && apk del .build-deps
 
 ENV PYTHONUNBUFFERED=1
 

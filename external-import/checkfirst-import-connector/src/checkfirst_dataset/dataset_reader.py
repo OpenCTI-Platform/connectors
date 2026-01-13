@@ -2,12 +2,12 @@ from __future__ import annotations
 
 """CSV dataset reader.
 
-This module reads Pravda dataset files (plain `.csv` or gzipped `.csv.gz`) and
-yields validated rows as `DatasetRow` objects.
+This module reads Checkfirst dataset files (plain `.csv` or gzipped `.csv.gz`)
+and yields validated rows as `DatasetRow` objects.
 
 Key goals:
 - Validate required columns and required field presence.
-- Enforce optional size/row-count guards from `Config`.
+- Enforce optional size/row-count guards from the connector settings.
 - Provide a stable per-file cursor via `start_cursor`.
 """
 
@@ -17,8 +17,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import IO, Iterator
 
-from pravda_dataset.config import Config
-from pravda_dataset.reporting import RunReport, SkipReason
+from checkfirst_dataset.reporting import RunReport, SkipReason
+from checkfirst_dataset.types import CheckfirstConfigLike
 
 REQUIRED_COLUMNS = {
     "URL",
@@ -70,7 +70,7 @@ def _validate_header(fieldnames: list[str] | None) -> None:
 
 def iter_rows(
     *,
-    config: Config,
+    config: CheckfirstConfigLike,
     dataset_root: Path,
     file_path: Path,
     start_cursor: int = 0,
