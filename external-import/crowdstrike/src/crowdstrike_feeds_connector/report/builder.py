@@ -66,8 +66,8 @@ class ReportBundleBuilder:
         self.related_indicators = related_indicators
         self.report_guess_relations = report_guess_relations
         self.malwares_from_field = malwares_from_field if malwares_from_field else []
-        self.related_actor_builder = RelatedActorBundleBuilder()
-        self.scopes = scopes
+        self.related_actor_builder_cls = RelatedActorBundleBuilder
+        self.scopes = scopes or {"actor", "malware", "target"}
 
         # Use report dates for start time and stop time.
         start_time = timestamp_to_datetime(self.report["created_date"])
@@ -111,14 +111,21 @@ class ReportBundleBuilder:
 
         for actor in report_actors:
             try:
-                intrusion_sets.append(
-                    self.related_actor_builder(
-                        actor,
-                        created_by=self.author,
-                        confidence=self.confidence_level,
-                        object_markings=self.object_markings,
-                    )
+                actor_builder = self.related_actor_builder_cls(
+                    actor=actor,
+                    author=self.author,
+                    source_name=self.source_name,
+                    object_markings=self.object_markings,
+                    confidence_level=self.confidence_level,
                 )
+                intrusion_set = actor_builder._create_intrusion_set_from_actor_entity(
+                    actor,
+                    created_by=self.author,
+                    confidence=self.confidence_level,
+                    object_markings=self.object_markings,
+                )
+
+                intrusion_sets.append(intrusion_set)
 
             except Exception:
                 logger.exception(
@@ -220,12 +227,9 @@ class ReportBundleBuilder:
         bundle_objects.extend(self.object_markings)
 
         # Create intrusion sets and add to bundle.
+        intrusion_sets: List[IntrusionSet] = []
         if "actor" in self.scopes:
-            intrusion_sets = (
-                self.related_actor_builder.create_intrusion_sets_from_actor_entity(
-                    self.report.get("actors", [])
-                )
-            )
+            intrusion_sets = self._create_intrusion_sets()
             bundle_objects.extend(intrusion_sets)
 
         # Create malwares and add to bundle.

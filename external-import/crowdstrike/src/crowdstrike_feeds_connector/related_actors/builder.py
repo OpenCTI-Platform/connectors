@@ -19,8 +19,6 @@ logger = logging.getLogger(__name__)
 class RelatedActorBundleBuilder:
     """CrowdStrike related actor bundle builder."""
 
-    """Actor bundle builder."""
-
     def __init__(
         self,
         actor: dict,
@@ -38,12 +36,24 @@ class RelatedActorBundleBuilder:
         self.confidence_level = confidence_level
         self.attack_patterns = attack_patterns or []
 
-        first_seen = timestamp_to_datetime(self.actor["first_activity_date"])
-        last_seen = timestamp_to_datetime(self.actor["last_activity_date"])
+        # Report payloads often include an actor stub (id/name/slug) without activity dates.
+        # The full actor resource from the Intel API includes `first_activity_date` and
+        # `last_activity_date`. Be tolerant of missing values.
+        first_seen = None
+        last_seen = None
 
-        first_seen, last_seen = normalize_start_time_and_stop_time(
-            first_seen, last_seen
-        )
+        first_activity_ts = self.actor.get("first_activity_date")
+        if isinstance(first_activity_ts, int) and first_activity_ts > 0:
+            first_seen = timestamp_to_datetime(first_activity_ts)
+
+        last_activity_ts = self.actor.get("last_activity_date")
+        if isinstance(last_activity_ts, int) and last_activity_ts > 0:
+            last_seen = timestamp_to_datetime(last_activity_ts)
+
+        if first_seen is not None or last_seen is not None:
+            first_seen, last_seen = normalize_start_time_and_stop_time(
+                first_seen, last_seen
+            )
 
         self.first_seen = first_seen
         self.last_seen = last_seen

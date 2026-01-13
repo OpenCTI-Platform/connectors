@@ -3,7 +3,7 @@
 
 from typing import Dict, List, NamedTuple, Optional, Set
 
-from crowdstrike_feeds_connector.related_actors.builder import RelatedActorBuilder
+from crowdstrike_feeds_connector.related_actors.builder import RelatedActorBundleBuilder
 from crowdstrike_feeds_services.utils import (
     OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,
     OBSERVATION_FACTORY_DOMAIN_NAME,
@@ -149,7 +149,7 @@ class IndicatorBundleBuilder:
         self.indicator_high_score = config.indicator_high_score
         self.indicator_high_score_labels = config.indicator_high_score_labels
         self.indicator_unwanted_labels = config.indicator_unwanted_labels
-        self.related_actor_builder = RelatedActorBuilder(helper, config)
+        self.related_actor_builder = RelatedActorBundleBuilder(helper, config)
         self.scopes = config.scopes
 
         self.observation_factory = self._get_observation_factory(self.indicator["type"])
