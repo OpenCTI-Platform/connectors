@@ -1,21 +1,22 @@
+import logging
+
 from connector.converter_to_stix import ConverterToStix
 from connector.use_cases.common import BaseUseCases
 from connector.utils import resolve_file_hash
 from kaspersky_client import KasperskyClient
-from pycti import OpenCTIConnectorHelper
 
 
 class FileEnricher(BaseUseCases):
     def __init__(
         self,
-        helper: OpenCTIConnectorHelper,
+        connector_logger: logging.Logger,
         client: KasperskyClient,
         sections: str,
         zone_octi_score_mapping: dict,
         converter_to_stix: ConverterToStix,
     ):
-        BaseUseCases.__init__(self, helper, converter_to_stix)
-        self.helper = helper
+        BaseUseCases.__init__(self, connector_logger, converter_to_stix)
+        self.connector_logger = connector_logger
         self.client = client
         self.sections = sections
         self.zone_octi_score_mapping = zone_octi_score_mapping
@@ -29,24 +30,28 @@ class FileEnricher(BaseUseCases):
         observable_to_ref = self.converter_to_stix.create_reference(
             obs_id=observable["id"]
         )
-        self.helper.connector_logger.info("[CONNECTOR] Starting enrichment...")
+        self.connector_logger.info(
+            "[ENRICH FILE] Starting enrichment...",
+            {"observable_id": observable["id"]},
+        )
 
         # Retrieve file hash
         obs_hash = resolve_file_hash(observable)
 
         # Get entity data from api client
-        entity_data = self.client.get_file_info(obs_hash, self.sections)
+        entity_data = self.client.get_data("hash", obs_hash, self.sections)
 
         # Check Quota
         self.check_quota(entity_data["LicenseInfo"])
 
         # Create and add author, TLP clear and TLP amber to octi_objects
-        octi_objects += self.generate_author_and_tlp_markings()
+        octi_objects.append(self.generate_author_and_tlp_markings())
 
         # Manage FileGeneralInfo data
 
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from FileGeneralInfo data..."
+        self.connector_logger.info(
+            "[ENRICH FILE] Process enrichment from FileGeneralInfo data...",
+            {"observable_id": observable["id"]},
         )
 
         # Score
@@ -80,8 +85,9 @@ class FileEnricher(BaseUseCases):
         # Manage FileNames data
 
         if entity_data.get("FileNames"):
-            self.helper.connector_logger.info(
-                "[CONNECTOR] Process enrichment from FileNames data..."
+            self.connector_logger.info(
+                "[ENRICH FILE] Process enrichment from FileNames data...",
+                {"observable_id": observable["id"]},
             )
 
             observable["additional_names"] = observable.get(
@@ -94,8 +100,9 @@ class FileEnricher(BaseUseCases):
         # Manage DetectionsInfo data
 
         if entity_data.get("DetectionsInfo"):
-            self.helper.connector_logger.info(
-                "[CONNECTOR] Process enrichment from DetectionsInfo data..."
+            self.connector_logger.info(
+                "[ENRICH FILE] Process enrichment from DetectionsInfo data...",
+                {"observable_id": observable["id"]},
             )
 
             content = "| Detection Date | Detection Name | Detection Method |\n"
@@ -111,8 +118,9 @@ class FileEnricher(BaseUseCases):
         # Manage FileDownloadedFromUrls data
 
         if entity_data.get("FileDownloadedFromUrls"):
-            self.helper.connector_logger.info(
-                "[CONNECTOR] Process enrichment from FileDownloadedFromUrls data..."
+            self.connector_logger.info(
+                "[ENRICH FILE] Process enrichment from FileDownloadedFromUrls data...",
+                {"observable_id": observable["id"]},
             )
 
             for url_info in entity_data["FileDownloadedFromUrls"]:
@@ -133,8 +141,8 @@ class FileEnricher(BaseUseCases):
         # Manage Industries data
 
         if entity_data.get("Industries"):
-            octi_objects += self.manage_industries(
-                observable_to_ref, entity_data["Industries"]
+            octi_objects.append(
+                self.manage_industries(observable_to_ref, entity_data["Industries"])
             )
 
         return octi_objects

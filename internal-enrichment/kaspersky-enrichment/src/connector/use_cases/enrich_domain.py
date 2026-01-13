@@ -1,21 +1,22 @@
+import logging
+
 from connector.converter_to_stix import ConverterToStix
 from connector.use_cases.common import BaseUseCases
 from connector.utils import get_first_and_last_seen_datetime
 from kaspersky_client import KasperskyClient
-from pycti import OpenCTIConnectorHelper
 
 
 class DomainEnricher(BaseUseCases):
     def __init__(
         self,
-        helper: OpenCTIConnectorHelper,
+        connector_logger: logging.Logger,
         client: KasperskyClient,
         sections: str,
         zone_octi_score_mapping: dict,
         converter_to_stix: ConverterToStix,
     ):
-        BaseUseCases.__init__(self, helper, converter_to_stix)
-        self.helper = helper
+        BaseUseCases.__init__(self, connector_logger, converter_to_stix)
+        self.connector_logger = connector_logger
         self.client = client
         self.sections = sections
         self.zone_octi_score_mapping = zone_octi_score_mapping
@@ -29,24 +30,28 @@ class DomainEnricher(BaseUseCases):
         observable_to_ref = self.converter_to_stix.create_reference(
             obs_id=observable["id"]
         )
-        self.helper.connector_logger.info("[CONNECTOR] Starting enrichment...")
+        self.connector_logger.info(
+            "[ENRICH DOMAIN] Starting enrichment...",
+            {"observable_id": observable["id"]},
+        )
 
         # Retrieve domain
         obs_domain = observable["value"]
 
         # Get entity data from api client
-        entity_data = self.client.get_domain_info(obs_domain, self.sections)
+        entity_data = self.client.get_data("domain", obs_domain, self.sections)
 
         # Check Quota
         self.check_quota(entity_data["LicenseInfo"])
 
         # Create and add author, TLP clear and TLP amber to octi_objects
-        octi_objects += self.generate_author_and_tlp_markings()
+        octi_objects.append(self.generate_author_and_tlp_markings())
 
         # Manage DomainGeneralInfo data
 
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from DomainGeneralInfo data..."
+        self.connector_logger.info(
+            "[ENRICH DOMAIN] Process enrichment from DomainGeneralInfo data...",
+            {"observable_id": observable["id"]},
         )
 
         # Score
@@ -65,11 +70,12 @@ class DomainEnricher(BaseUseCases):
 
         # Manage DomainDnsResolutions
 
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from DomainDnsResolutions data..."
-        )
-
         if entity_data.get("DomainDnsResolutions"):
+            self.connector_logger.info(
+                "[ENRICH DOMAIN] Process enrichment from DomainDnsResolutions data...",
+                {"observable_id": observable["id"]},
+            )
+
             ipv4_entities = entity_data["DomainDnsResolutions"]
             for ipv4_entity in ipv4_entities:
                 obs_ipv4 = self.converter_to_stix.create_ipv4(ipv4_entity["Ip"])
@@ -86,13 +92,14 @@ class DomainEnricher(BaseUseCases):
         # Manage FilesDownloaded
 
         if entity_data.get("FilesDownloaded"):
-            self.helper.connector_logger.info(
-                "[CONNECTOR] Process enrichment from FilesDownloaded data..."
+            self.connector_logger.info(
+                "[ENRICH DOMAIN] Process enrichment from FilesDownloaded data...",
+                {"observable_id": observable["id"]},
             )
             files_downloaded = entity_data["FilesDownloaded"]
 
             # Create File object and relation
-            octi_objects += self.manage_files(files_downloaded, observable_to_ref)
+            octi_objects.append(self.manage_files(files_downloaded, observable_to_ref))
 
             # Create Url object and relation
             for file_downloaded_entity in files_downloaded:
@@ -123,11 +130,12 @@ class DomainEnricher(BaseUseCases):
 
         # Manage FilesAccessed
 
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from FilesAccessed data..."
-        )
-
         if entity_data.get("FilesAccessed"):
+            self.connector_logger.info(
+                "[ENRICH DOMAIN] Process enrichment from FilesAccessed data...",
+                {"observable_id": observable["id"]},
+            )
+
             files_accessed = entity_data["FilesAccessed"]
             for file_accessed in files_accessed:
                 obs_file_accessed = self.converter_to_stix.create_file(
@@ -160,8 +168,8 @@ class DomainEnricher(BaseUseCases):
         # Manage Industries data
 
         if entity_data.get("Industries"):
-            octi_objects += self.manage_industries(
-                observable_to_ref, entity_data["Industries"]
+            octi_objects.append(
+                self.manage_industries(observable_to_ref, entity_data["Industries"])
             )
 
         return octi_objects

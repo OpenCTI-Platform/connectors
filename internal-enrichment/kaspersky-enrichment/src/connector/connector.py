@@ -72,28 +72,28 @@ class KasperskyConnector:
         converter_to_stix = ConverterToStix(self.helper)
 
         self.file_enricher = FileEnricher(
-            helper=self.helper,
+            connector_logger=self.helper.connector_logger,
             client=client,
             sections=file_sections,
             zone_octi_score_mapping=zone_octi_score_mapping,
             converter_to_stix=converter_to_stix,
         )
         self.ipv4_enricher = Ipv4Enricher(
-            helper=self.helper,
+            connector_logger=self.helper.connector_logger,
             client=client,
             sections=ipv4_sections,
             zone_octi_score_mapping=zone_octi_score_mapping,
             converter_to_stix=converter_to_stix,
         )
         self.domain_enricher = DomainEnricher(
-            helper=self.helper,
+            connector_logger=self.helper.connector_logger,
             client=client,
             sections=domain_sections,
             zone_octi_score_mapping=zone_octi_score_mapping,
             converter_to_stix=converter_to_stix,
         )
         self.url_enricher = UrlEnricher(
-            helper=self.helper,
+            connector_logger=self.helper.connector_logger,
             client=client,
             sections=url_sections,
             zone_octi_score_mapping=zone_octi_score_mapping,

@@ -1,16 +1,18 @@
+import logging
+
 from connector.converter_to_stix import ConverterToStix
 from connector.utils import get_first_and_last_seen_datetime, is_quota_exceeded
 from connectors_sdk.models import Reference
-from pycti import STIX_EXT_OCTI_SCO, OpenCTIConnectorHelper, OpenCTIStix2
+from pycti import STIX_EXT_OCTI_SCO, OpenCTIStix2
 
 
 class BaseUseCases:
     def __init__(
         self,
-        helper: OpenCTIConnectorHelper,
+        connector_logger: logging.Logger,
         converter_to_stix: ConverterToStix,
     ):
-        self.helper = helper
+        self.connector_logger = connector_logger
         self.converter_to_stix = converter_to_stix
 
     def check_quota(self, license_info: dict) -> None:
@@ -18,7 +20,7 @@ class BaseUseCases:
         Send a log warning if quota is exceeded
         """
         if is_quota_exceeded(license_info):
-            self.helper.connector_logger.warning(
+            self.connector_logger.warning(
                 "[CONNECTOR] The daily quota has been exceeded",
                 {
                     "day_requests": license_info["DayRequests"],
@@ -43,7 +45,7 @@ class BaseUseCases:
 
         return common_objects
 
-    def update_observable_score(self, zone: str, observable: dict):
+    def update_observable_score(self, zone: str, observable: dict) -> dict:
         """
         Update score in observable
         """
@@ -56,7 +58,7 @@ class BaseUseCases:
         """
         Create sector and relation for each item in industries
         """
-        self.helper.connector_logger.info(
+        self.connector_logger.info(
             "[CONNECTOR] Process enrichment from Industries data..."
         )
 

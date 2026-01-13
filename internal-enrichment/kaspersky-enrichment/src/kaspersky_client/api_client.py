@@ -30,7 +30,7 @@ class KasperskyClient:
         self.session.headers.update(self.headers)
         self.params = params
 
-    def _request_data(self, api_url: str, params: dict) -> requests.Response:
+    def _request_data(self, api_url: HttpUrl, params: dict) -> requests.Response:
         """
         Internal method to handle API requests
         :return: Response in JSON format
@@ -69,38 +69,11 @@ class KasperskyClient:
             self.helper.connector_logger.error("Unknown error", {"error": err})
             raise
 
-    def get_file_info(self, obs_hash: str, sections: str) -> dict:
+    def get_data(self, type: str, obs: str, sections: str) -> dict:
         """
-        Retrieve file information
+        Retrieve data for current observable
         """
-        file_url = f"{self.base_url}api/hash/{obs_hash}"
+        url = HttpUrl(f"{self.base_url}api/{type}/{obs}")
         self.params["sections"] = sections
-        response = self._request_data(file_url, params=self.params)
-        return response.json()
-
-    def get_ipv4_info(self, obs_ipv4: str, sections: str) -> dict:
-        """
-        Retrieve ipv4 information
-        """
-        file_url = f"{self.base_url}api/ip/{obs_ipv4}"
-        self.params["sections"] = sections
-        response = self._request_data(file_url, params=self.params)
-        return response.json()
-
-    def get_domain_info(self, obs_domain: str, sections: str) -> dict:
-        """
-        Retrieve domain information
-        """
-        file_url = f"{self.base_url}api/domain/{obs_domain}"
-        self.params["sections"] = sections
-        response = self._request_data(file_url, params=self.params)
-        return response.json()
-
-    def get_url_info(self, obs_domain: str, sections: str) -> dict:
-        """
-        Retrieve url information
-        """
-        file_url = f"{self.base_url}api/url/{obs_domain}"
-        self.params["sections"] = sections
-        response = self._request_data(file_url, params=self.params)
+        response = self._request_data(url, params=self.params)
         return response.json()
