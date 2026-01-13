@@ -52,9 +52,9 @@ class ObstractsConnector:
     def list_feeds(self):
         try:
             feeds = self.retrieve(
-                "v1/feeds/", list_key="results", params=dict(show_only_my_feeds=True)
+                "v1/feeds/", list_key="feeds", params=dict(show_only_my_feeds="true")
             )
-            return [feed["obstract_feed_metadata"] for feed in feeds]
+            return [feed for feed in feeds]
         except Exception:
             self.helper.log_error("failed to fetch feeds")
         return []
@@ -90,7 +90,9 @@ class ObstractsConnector:
         post_updated = post["datetime_updated"]
         try:
             objects = self.retrieve(
-                f"v1/feeds/{feed_id}/posts/{post_id}/objects/", list_key="objects"
+                f"v1/feeds/{feed_id}/posts/{post_id}/objects/",
+                list_key="objects",
+                params=dict(ignore_embedded_sro="true"),
             )
             bundle = dict(
                 type="bundle",
@@ -106,9 +108,10 @@ class ObstractsConnector:
         params = params or {}
         params.update(page=1, page_size=200)
         objects: list[dict] = []
-        total_results_count = -1
-        while total_results_count < len(objects):
+        total_results_count = 9_000
+        while len(objects) < total_results_count:
             resp = self.session.get(urljoin(self.base_url, path), params=params)
+            resp.raise_for_status()
             params.update(page=params["page"] + 1)
             data = resp.json()
             total_results_count = data["total_results_count"]
