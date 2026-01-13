@@ -3,6 +3,7 @@ import logging
 from connector.converter_to_stix import ConverterToStix
 from connector.use_cases.common import BaseUseCases
 from kaspersky_client import KasperskyClient
+from validators import domain, ip_address
 
 
 class UrlEnricher(BaseUseCases):
@@ -48,7 +49,7 @@ class UrlEnricher(BaseUseCases):
         self.check_quota(entity_data["LicenseInfo"])
 
         # Create and add author, TLP clear and TLP amber to octi_objects
-        octi_objects.append(self.generate_author_and_tlp_markings())
+        octi_objects.extend(self.generate_author_and_tlp_markings())
 
         # Manage UrlGeneralInfo data
 
@@ -73,15 +74,26 @@ class UrlEnricher(BaseUseCases):
 
             # Host
             if entity_general_info.get("Host"):
-                domain_object = self.converter_to_stix.create_domain(
-                    name=entity_general_info["Host"]
-                )
-                if domain_object:
-                    octi_objects.append(domain_object.to_stix2_object())
+                host_object = None
+                if domain(entity_general_info["Host"]):
+                    host_object = self.converter_to_stix.create_domain(
+                        name=entity_general_info["Host"]
+                    )
+                elif ip_address.ipv4(entity_general_info["Host"]):
+                    host_object = self.converter_to_stix.create_ipv4(
+                        ip=entity_general_info["Host"]
+                    )
+                elif ip_address.ipv6(entity_general_info["Host"]):
+                    host_object = self.converter_to_stix.create_ipv6(
+                        ip=entity_general_info["Host"]
+                    )
+
+                if host_object:
+                    octi_objects.append(host_object.to_stix2_object())
                     domain_relation = self.converter_to_stix.create_relationship(
                         relationship_type="related-to",
                         source_obj=observable_to_ref,
-                        target_obj=domain_object,
+                        target_obj=host_object,
                     )
                     octi_objects.append(domain_relation.to_stix2_object())
 
@@ -92,7 +104,7 @@ class UrlEnricher(BaseUseCases):
                 "[ENRICH URL] Process enrichment from FilesDownloaded data...",
                 {"observable_id": observable["id"]},
             )
-            octi_objects.append(
+            octi_objects.extend(
                 self.manage_files(entity_data["FilesDownloaded"], observable_to_ref)
             )
 
@@ -103,14 +115,14 @@ class UrlEnricher(BaseUseCases):
                 "[ENRICH URL] Process enrichment from FilesAccessed data...",
                 {"observable_id": observable["id"]},
             )
-            octi_objects.append(
+            octi_objects.extend(
                 self.manage_files(entity_data["FilesAccessed"], observable_to_ref)
             )
 
         # Manage Industries data
 
         if entity_data.get("Industries"):
-            octi_objects.append(
+            octi_objects.extend(
                 self.manage_industries(observable_to_ref, entity_data["Industries"])
             )
 

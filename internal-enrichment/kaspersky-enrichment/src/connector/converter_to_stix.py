@@ -9,6 +9,7 @@ from connectors_sdk.models import (
     DomainName,
     File,
     IPV4Address,
+    IPV6Address,
     Note,
     OrganizationAuthor,
     Reference,
@@ -87,6 +88,12 @@ class ConverterToStix:
         Create an IPv4 object
         """
         return IPV4Address(value=ip, author=self.author, markings=[self.tlp_amber])
+
+    def create_ipv6(self, ip: str) -> IPV4Address:
+        """
+        Create an IPv6 object
+        """
+        return IPV6Address(value=ip, author=self.author, markings=[self.tlp_amber])
 
     def create_note(self, observable: Reference, content: str) -> Note:
         """

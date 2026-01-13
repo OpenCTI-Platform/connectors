@@ -45,7 +45,7 @@ class DomainEnricher(BaseUseCases):
         self.check_quota(entity_data["LicenseInfo"])
 
         # Create and add author, TLP clear and TLP amber to octi_objects
-        octi_objects.append(self.generate_author_and_tlp_markings())
+        octi_objects.extend(self.generate_author_and_tlp_markings())
 
         # Manage DomainGeneralInfo data
 
@@ -99,7 +99,7 @@ class DomainEnricher(BaseUseCases):
             files_downloaded = entity_data["FilesDownloaded"]
 
             # Create File object and relation
-            octi_objects.append(self.manage_files(files_downloaded, observable_to_ref))
+            octi_objects.extend(self.manage_files(files_downloaded, observable_to_ref))
 
             # Create Url object and relation
             for file_downloaded_entity in files_downloaded:
@@ -168,7 +168,7 @@ class DomainEnricher(BaseUseCases):
         # Manage Industries data
 
         if entity_data.get("Industries"):
-            octi_objects.append(
+            octi_objects.extend(
                 self.manage_industries(observable_to_ref, entity_data["Industries"])
             )
 
