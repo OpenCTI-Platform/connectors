@@ -9,7 +9,7 @@ services:
       - CONNECTOR_NAME=Checkfirst Import Connector
       - CONNECTOR_SCOPE=media-content,channel,url
       - CONNECTOR_LOG_LEVEL=info
-      - PRAVDA_DATASET_PATH=external-import/checkfirst-import-connector/data_test
+      - PRAVDA_DATASET_PATH=/data_set
       - PRAVDA_INTERVAL_MINUTES=60
       - PRAVDA_BATCH_SIZE=1000
     volumes:
