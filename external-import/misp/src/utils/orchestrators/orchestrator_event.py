@@ -182,6 +182,8 @@ class OrchestratorEvent(BaseOrchestrator):
             )
         else:
             last_event_date = self.config.import_from_date or now
+            self.batch_processor.set_latest_date(last_event_date.isoformat())
+            self.batch_processor.update_final_state()
             self.logger.info("Connector has never run")
 
         next_event_date = last_event_date + timedelta(seconds=1)
@@ -210,6 +212,7 @@ class OrchestratorEvent(BaseOrchestrator):
                 self.client_api.search_events(
                     date_field_filter=self.config.date_filter_field,
                     date_value_filter=next_event_date,
+                    datetime_attribute=self.config.datetime_attribute,
                     keyword=self.config.import_keyword,
                     included_tags=self.config.import_tags,
                     excluded_tags=self.config.import_tags_not,
@@ -243,11 +246,11 @@ class OrchestratorEvent(BaseOrchestrator):
                 event_datetime_value = getattr(
                     event.Event, self.config.datetime_attribute
                 )
-                if self.config.datetime_attribute in [
+                if self.config.datetime_attribute in {
                     "timestamp",
                     "publish_timestamp",
                     "sighting_timestamp",
-                ]:
+                }:
                     event_datetime = datetime.fromtimestamp(
                         int(event_datetime_value), tz=timezone.utc
                     )
@@ -257,36 +260,43 @@ class OrchestratorEvent(BaseOrchestrator):
                     ).replace(tzinfo=timezone.utc)
                 else:
                     raise ValueError(
-                        "`MISP_DATETIME_ATTRIBUTE` must be either: 'date', 'timestamp', 'publish_timestamp' or 'sighting_timestamp'"
+                        "`MISP_DATETIME_ATTRIBUTE` must be either: 'date', "
+                        "'timestamp', 'publish_timestamp' or 'sighting_timestamp'"
                     )
 
                 if last_event_datetime is None or event_datetime > last_event_datetime:
-                    if last_event_datetime is not None:
-                        date_changed = True
                     last_event_datetime = event_datetime
-                    self.batch_processor.set_latest_date(event_datetime.isoformat())
-
-                    if date_attr_used and bundle_split and date_changed:
-                        # If the bundle was split and the date changed
-                        self.batch_processor.update_final_state()
-                        return
+                    date_changed = True
+                    if date_attr_used and bundle_split:
+                        # If a previous event bundle was split and the date changed,
+                        # then update the final state and stop process (to avoid flooding the queue)
+                        self.batch_processor.set_latest_date(
+                            # Subtract 2 seconds to ensure this event will be
+                            # processed in the next scheduler process
+                            (event_datetime - timedelta(seconds=2)).isoformat()
+                        )
+                        break
+                else:
+                    date_changed = False
 
                 self._log_entities_summary(bundle_objects, 0, 1)
 
                 if len(bundle_objects) > self.batch_processor.config.batch_size:
-                    if event_index != 0 and (not date_attr_used or date_changed):
-                        self.logger.warning(
-                            "Bundle objects count is greater than the batch size, splitting the bundle, This event will be splitted in the next process",
+                    if (
+                        not date_attr_used or date_changed
+                    ) and self.work_manager._helper.check_connector_buffering():
+                        self.logger.info(
+                            "Connector is buffering, this event will be splitted in the next scheduler process",
                             {
                                 "prefix": LOG_PREFIX,
-                                "bundle_objects_count": len(bundle_objects),
-                                "batch_size": self.batch_processor.config.batch_size,
+                                "event_id": event.Event.id,
+                                "event_uuid": event.Event.uuid,
                             },
                         )
-                        return
+                        break
 
                     bundle_split = True
-                    self.logger.warning(
+                    self.logger.info(
                         "Bundle objects count is greater than the batch size, splitting the bundle",
                         {
                             "prefix": LOG_PREFIX,
@@ -294,12 +304,20 @@ class OrchestratorEvent(BaseOrchestrator):
                             "batch_size": self.batch_processor.config.batch_size,
                         },
                     )
+
                     for i in range(
                         0, len(bundle_objects), self.batch_processor.config.batch_size
                     ):
                         bundle_objects_chunk = bundle_objects[
                             i : i + self.batch_processor.config.batch_size
                         ]
+                        self.batch_processor.config.work_name_template = (
+                            f"MISP run @ {now.isoformat(timespec='seconds')}"
+                            f" - Event # {event_index + 1}"
+                            f" - Batch # {i // self.batch_processor.config.batch_size}"
+                            f" / {len(bundle_objects) // self.batch_processor.config.batch_size}"
+                        )
+
                         self._check_batch_size_and_flush(
                             self.batch_processor, bundle_objects_chunk
                         )
@@ -308,23 +326,34 @@ class OrchestratorEvent(BaseOrchestrator):
                         )
 
                     # Flush the remaining items and Update the final state
+                    self.batch_processor.set_latest_date(event_datetime.isoformat())
                     self._flush_batch_processor()
 
                     if not date_attr_used:
-                        return
+                        # If the `date` attribute is not used, update the final state and stop process (to avoid flooding the queue)
+                        self.batch_processor.update_final_state()
+                        break
 
                 else:
+                    self.batch_processor.config.work_name_template = f"MISP run @ {now.isoformat(timespec='seconds')} - Event # {event_index + 1}"
+                    # Normal case: One event => One work in queue
                     self._add_entities_to_batch(
                         self.batch_processor, bundle_objects, author, markings
                     )
+
                     # Flush the remaining items and Update the final state
+                    self.batch_processor.set_latest_date(event_datetime.isoformat())
                     self._flush_batch_processor()
+            else:
+                # All events were processed
+                if last_event_datetime is not None and date_attr_used:
+                    # If the `date` attribute is used, set the latest date to the next day,
+                    # otherwise the same event will be processed again
+                    self.batch_processor.set_latest_date(
+                        (last_event_datetime + timedelta(days=1)).isoformat()
+                    )
 
         finally:
-            if last_event_datetime is not None and date_attr_used:
-                self.batch_processor.set_latest_date(
-                    (last_event_datetime + timedelta(days=1)).isoformat()
-                )
             self._flush_batch_processor()
 
     def _flush_batch_processor(self) -> None:
