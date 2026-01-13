@@ -4,11 +4,6 @@
 from datetime import datetime
 from typing import Any, Generator, List, Mapping, Optional
 
-from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
-    OpenCTIConnectorHelper,
-)
-from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
-
 from crowdstrike_feeds_connector.related_actors.importer import RelatedActorImporter
 from crowdstrike_feeds_services.client.indicators import IndicatorsAPI
 from crowdstrike_feeds_services.client.reports import ReportsAPI
@@ -18,6 +13,10 @@ from crowdstrike_feeds_services.utils import (
     paginate,
     timestamp_to_datetime,
 )
+from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
+    OpenCTIConnectorHelper,
+)
+from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 
 from ..importer import BaseImporter
 from ..indicator.importer import IndicatorBundleBuilder, IndicatorBundleBuilderConfig

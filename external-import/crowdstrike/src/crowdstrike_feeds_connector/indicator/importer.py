@@ -3,11 +3,6 @@
 
 from typing import Any, Dict, List, NamedTuple, Optional, Set
 
-from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
-    OpenCTIConnectorHelper,
-)
-from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
-
 from crowdstrike_feeds_connector.related_actors.importer import RelatedActorImporter
 from crowdstrike_feeds_services.client.actors import ActorsAPI
 from crowdstrike_feeds_services.client.indicators import IndicatorsAPI
@@ -16,6 +11,10 @@ from crowdstrike_feeds_services.utils import (
     timestamp_to_datetime,
 )
 from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport, ReportFetcher
+from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
+    OpenCTIConnectorHelper,
+)
+from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 
 from ..importer import BaseImporter
 from .builder import IndicatorBundleBuilder, IndicatorBundleBuilderConfig

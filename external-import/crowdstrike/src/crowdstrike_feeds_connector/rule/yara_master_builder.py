@@ -4,18 +4,6 @@
 from datetime import date, datetime, timezone
 from typing import List, Mapping
 
-from stix2 import (
-    Bundle,
-    Identity,
-    Indicator,
-    IntrusionSet,
-    Malware,
-    MarkingDefinition,
-    Relationship,
-)
-from stix2 import Report as STIXReport  # type: ignore
-from stix2.v21 import _DomainObject  # type: ignore
-
 from crowdstrike_feeds_connector.related_actors.importer import RelatedActorImporter
 from crowdstrike_feeds_services.utils import (
     create_indicates_relationships,
@@ -28,6 +16,17 @@ from crowdstrike_feeds_services.utils import (
 )
 from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport
 from crowdstrike_feeds_services.utils.yara_parser import YaraRule
+from stix2 import (
+    Bundle,
+    Identity,
+    Indicator,
+    IntrusionSet,
+    Malware,
+    MarkingDefinition,
+    Relationship,
+)
+from stix2 import Report as STIXReport  # type: ignore
+from stix2.v21 import _DomainObject  # type: ignore
 
 
 class YaraRuleBundleBuilder:

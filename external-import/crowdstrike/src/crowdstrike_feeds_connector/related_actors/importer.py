@@ -3,9 +3,8 @@
 
 from typing import Dict
 
-from stix2 import Identity, MarkingDefinition  # type: ignore
-
 from crowdstrike_feeds_services.client.actors import ActorsAPI
+from stix2 import Identity, MarkingDefinition  # type: ignore
 
 from ..importer import BaseImporter
 

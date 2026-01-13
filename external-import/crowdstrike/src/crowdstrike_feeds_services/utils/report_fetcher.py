@@ -4,9 +4,8 @@
 import logging
 from typing import Any, Dict, List, Mapping, Optional, Union
 
-from pydantic.v1 import BaseModel
-
 from crowdstrike_feeds_services.client.reports import ReportsAPI
+from pydantic.v1 import BaseModel
 
 from . import create_file_from_download
 

@@ -4,8 +4,6 @@
 from datetime import datetime
 from typing import Any, Dict, Generator, List, Optional
 
-from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
-
 from crowdstrike_feeds_connector.related_actors.importer import (
     RelatedActorImporter,
 )
@@ -16,6 +14,7 @@ from crowdstrike_feeds_services.utils import (
     paginate,
     timestamp_to_datetime,
 )
+from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
 
 from ..importer import BaseImporter
 from .builder import ActorBundleBuilder

@@ -3,21 +3,6 @@
 
 from typing import Dict, List, NamedTuple, Optional, Set
 
-from pycti import OpenCTIConnectorHelper
-from stix2 import (
-    Bundle,
-    Identity,
-)
-from stix2 import Indicator as STIXIndicator  # type: ignore
-from stix2 import (
-    KillChainPhase,
-    Malware,
-    MarkingDefinition,
-    Relationship,
-    Vulnerability,
-)
-from stix2.v21 import _DomainObject, _Observable  # type: ignore
-
 from crowdstrike_feeds_connector.related_actors.builder import RelatedActorBuilder
 from crowdstrike_feeds_services.utils import (
     OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,
@@ -48,6 +33,20 @@ from crowdstrike_feeds_services.utils import (
     create_vulnerability_external_references,
     timestamp_to_datetime,
 )
+from pycti import OpenCTIConnectorHelper
+from stix2 import (
+    Bundle,
+    Identity,
+)
+from stix2 import Indicator as STIXIndicator  # type: ignore
+from stix2 import (
+    KillChainPhase,
+    Malware,
+    MarkingDefinition,
+    Relationship,
+    Vulnerability,
+)
+from stix2.v21 import _DomainObject, _Observable  # type: ignore
 
 
 class Observation(NamedTuple):
