@@ -65,6 +65,7 @@ class MISPClient:
         self,
         date_field_filter: str,
         date_value_filter: datetime,
+        datetime_attribute: str,
         keyword: str,
         included_tags: list,
         excluded_tags: list,
@@ -92,9 +93,6 @@ class MISPClient:
                     not_parameters=excluded_org_creators,
                 )
 
-                # MISP API doesn't provide a way to sort the results.
-                # Events are always returned sorted by Event.id ASC,
-                # which is **NOT** equivalent to sorted by Event.date (creation date) ASC
                 results = self._client.search(
                     controller="events",
                     return_format="json",
@@ -106,6 +104,9 @@ class MISPClient:
                     with_attachments=with_attachments,
                     limit=limit,
                     page=current_page,
+                    # Undocumented parameter to sort the results by the given attribute
+                    # https://www.circl.lu/doc/misp/automation/#:~:text=Example-,Search,-Events%20management
+                    order=f"Event.{datetime_attribute} ASC",
                     **{date_field_filter: date_value_filter},
                 )
                 if isinstance(results, dict) and results.get("errors"):
