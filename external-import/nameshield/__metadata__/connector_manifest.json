@@ -1,0 +1,21 @@
+{
+  "title": "NameShield",
+  "slug": "NameShield",
+  "description": "NameShield is registrar providing domain privacy and security services. This connector allows you to import your domain list from NameShield service into OpenCTI.",
+  "short_description": "NameShield connector to import your domain list from NameShield service.",
+  "logo": "external-import/NameShield/__metadata__/logo.png",
+  "use_cases": [
+    "Legitimate use case"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.9.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/NameShield",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-nameshield",
+  "container_type": "EXTERNAL_IMPORT"
+}
