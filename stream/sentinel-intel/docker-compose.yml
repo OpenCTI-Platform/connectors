@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-sentinel-intel:
-    image: opencti/connector-sentinel-intel:rolling
+    image: opencti/connector-sentinel-intel:latest
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -23,4 +23,4 @@ services:
       - SENTINEL_INTEL_ACTION=alert # Optional: Setting this will override all alerts to be this action (unknown, allow, block, alert)
       - SENTINEL_INTEL_TLP_LEVEL=amber # Optional: This will override all TLP submitted to Sentinel. (unknown, white, green, amber, red)
       - SENTINEL_INTEL_PASSIVE_ONLY=false # Optional: Defaults to false.
-    restart: unless-stopped
+    restart: always

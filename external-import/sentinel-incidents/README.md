@@ -1,5 +1,9 @@
 # OpenCTI Sentinel Incidents Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
 This connector is deprecated. A mistake has been made as this connector actually pulls incident from Defender and not Sentinel.
 
 Please use:

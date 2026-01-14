@@ -4,8 +4,8 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseStreamConnectorConfig,
+    ListFromString,
 )
-from connectors_sdk.core.pydantic import ListFromString
 from pydantic import (
     AliasChoices,
     Field,
@@ -24,11 +24,11 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
 
     name: str = Field(
         description="The name of the connector.",
-        default="SentinelOne Intel Stream Connector",
+        default="SentinelOne Intel",
     )
     scope: ListFromString = Field(
         description="The scope of the connector, e.g. 'sentinelone'.",
-        default="sentinelone",
+        default=["sentinelone"],
     )
     log_level: Literal["debug", "info", "warn", "warning", "error"] = Field(
         description="The minimum level of logs to display.",
@@ -36,7 +36,6 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
     )
     live_stream_id: str = Field(
         description="The ID of the live stream to connect to.",
-        default="live",  # listen the global stream (not filtered)
     )
 
 

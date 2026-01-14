@@ -1,0 +1,26 @@
+opencti:
+  url: 'http://localhost'
+  token: "CHANGE_ME"
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: ChangeMe
+  name: DEP Connector
+  scope: incident,identity,indicator
+  log_level: info
+  interval: 3600 # In seconds
+
+# Connector specific configuration
+dep:
+  username: your_dep_username
+  password: your_dep_password
+  api_key: your_dep_api_key
+  client_id: ""
+  confidence: 70
+  login_endpoint: https://cognito-idp.eu-west-1.amazonaws.com/
+  api_endpoint: https://api.eu-ep1.doubleextortion.com/v1/dbtr/privlist
+  dset: ext
+  lookback_days: 7
+  extended_results: true
+  enable_site_indicator: true
+  enable_hash_indicator: true

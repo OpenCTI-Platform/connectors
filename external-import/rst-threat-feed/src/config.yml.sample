@@ -1,10 +1,10 @@
 opencti:
-  url: "http://opencti:8080"
+  url: 'http://localhost'
   token: "ChangeMe"
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   id: "9288e3aa-3f94-4505-b31b-69585c47081b" # Valid UUIDv4
-  type: "EXTERNAL_IMPORT"
   name: "RST Threat Feed"
   scope: "application/json" # MIME type or SCO
   log_level: "info"

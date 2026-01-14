@@ -17,6 +17,12 @@ def round_time(dt, round_to=60):
     return dt + datetime.timedelta(0, rounding - seconds, -dt.microsecond)
 
 
+def check_helper(helper: OpenCTIConnectorHelper) -> None:
+    if not helper.connect_live_stream_id or helper.connect_live_stream_id == "ChangeMe":
+        helper.log_error("missing Live Stream ID")
+        exit(1)
+
+
 class BackupFilesConnector:
     def __init__(self, conf_data):
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
@@ -26,6 +32,7 @@ class BackupFilesConnector:
             else conf_data
         )
         self.helper = OpenCTIConnectorHelper(config)
+        check_helper(self.helper)
         # Extra config
         self.direct_url = get_config_variable("OPENCTI_URL", ["opencti", "url"], config)
         self.backup_protocol = get_config_variable(

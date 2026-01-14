@@ -1,5 +1,9 @@
 # OpenCTI Red Flag Domains Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
+
 ## Installation
 
 This connector facilitates the import of domain names from the Red Flag Domains platform into OpenCTI. Red Flag Domains provides lists of very recently registered, probably malicious domain names in French TLDs. More details can be found [here](https://red.flag.domains/).

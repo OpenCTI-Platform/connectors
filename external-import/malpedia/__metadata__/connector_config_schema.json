@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/malpedia_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Malpedia",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "malpedia"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "P1D",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "MALPEDIA_AUTH_KEY": {
+      "default": null,
+      "description": "API authentication key",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "MALPEDIA_IMPORT_INTRUSION_SETS": {
+      "default": true,
+      "description": "Choose if you want to import Intrusion-Sets from Malpedia",
+      "type": "boolean"
+    },
+    "MALPEDIA_IMPORT_YARA": {
+      "default": true,
+      "description": "Choose if you want to import Yara rules from Malpedia",
+      "type": "boolean"
+    },
+    "MALPEDIA_CREATE_INDICATORS": {
+      "default": true,
+      "description": "Choose if you want to create Indicators Sample (File) from Malpedia",
+      "type": "boolean"
+    },
+    "MALPEDIA_CREATE_OBSERVABLES": {
+      "default": true,
+      "description": "Choose if you want to create Observables Sample (File) from Malpedia",
+      "type": "boolean"
+    },
+    "MALPEDIA_DEFAULT_MARKING": {
+      "default": null,
+      "description": "The default TLP marking to apply to entities created by the connector. If not defined, the default when an API key is provided is `TLP:AMBER`, otherwise `TLP:WHITE`.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:RED"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}

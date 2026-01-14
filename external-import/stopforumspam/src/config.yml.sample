@@ -1,10 +1,10 @@
 opencti:
-  url: 'http://localhost:8080'
+  url: 'http://localhost'
   token: 67f792b7-5ac5-4f5b-87ef-ca395ffee3a3
 
 connector:
-  id: af24527e-857d-4b70-9803-e7fdfa8421ea
   type: 'EXTERNAL_IMPORT'
+  id: af24527e-857d-4b70-9803-e7fdfa8421ea
   name: 'Stopforumspam'
   scope: 'stopforumspam'
   confidence_level: 60 # From 0 (Unknown) to 100 (Fully trusted)

@@ -1,21 +1,19 @@
----
-
 version: '3'
 services:
   connector-censys-enrichment:
-    image: opencti/connector-censys-enrichment:rolling
+    image: opencti/connector-censys-enrichment:latest
     environment:
       # OpenCTI configuration
-      OPENCTI_URL: http://localhost:8080
-      OPENCTI_TOKEN: ChangeMe
-
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
       # Common connector configuration
-#      CONNECTOR_ID: censys-enrichment
-#      CONNECTOR_NAME: Censys Enrichment
-#      CONNECTOR_SCOPE: IPv4-Addr,IPv6-Addr,X509-Certificate,Domain-Name
-#      CONNECTOR_LOG_LEVEL: error
-
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Censys Enrichment
+      - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr,X509-Certificate,Domain-Name
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_AUTO=false
       # Censys configuration
-      CENSYS_ENRICHMENT_ORGANISATION_ID: ChangeMe
-      CENSYS_ENRICHMENT_TOKEN: ChangeMe
-#      CENSYS_ENRICHMENT_MAX_TLP: TLP:AMBER
+      - CENSYS_ENRICHMENT_ORGANISATION_ID=ChangeMe
+      - CENSYS_ENRICHMENT_TOKEN=ChangeMe
+      # - CENSYS_ENRICHMENT_MAX_TLP=TLP:AMBER # Optional
+    restart: always

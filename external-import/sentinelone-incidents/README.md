@@ -1,5 +1,9 @@
 # OpenCTI SentinelOne Incidents
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
+
 This connector allows Incidents from a SentinelOne account to be created within an OpenCTI Instance
 
 <br>
@@ -43,13 +47,10 @@ After appending the container to your compose file, you will need to create a ne
 
 ![Account ID In S1](doc/account_id.png)
 
-
 - Click on the settings icon at the bottom of the left panel on the console. 
 - From the `Settings` menu, select `ACCOUNTS` and click on the account you seek to use in the below list.
 - You will now be in the `Sentinels` menu. From here, select `ACCOUNT INFO` (you may need to scroll to the right on smaller monitors to see it).
 - Underneath your account name you will see your account ID in the field `ACCOUNT ID`
-
-
 
 <br>
 
@@ -69,7 +70,6 @@ Your SentinelOne URL is simply the first component of the URL you use to access 
 
 When configuring the connector, ensure that you include the ending '/'. For example, for the above image, you would input `https://usea1-purple.sentinelone.net/`
 
-
 <br>
 
 ### Creating the Connector User
@@ -77,19 +77,18 @@ It is best practice to create a new user under the `Connectors` group and to use
 
 ![Generating A User In OpenCTI](doc/user_creation.png)
 
-
 - Locate the gear (Settings) icon on the left menu and click `Security`.
 - On the menu on the right click on the `Users` option. 
 - Click the blue `+` icon at the bottom of the list
 - Enter `[C] S1 Incident Connector`. **Note:** you can name this whatever you'd like, but you should include `[C]` at the start regardless.
 - Enter the required information and ensure that under the `Groups` field `Connectors` is this selected option. 
 
-
 <br>
 
 ## Configuration
 
 ### OpenCTI Parameters
+
 ##### OpenCTI Instance URL
 - The URL of your OpenCTI instance within its internal network.
 - Example: `http://opencti:8080`
@@ -135,8 +134,6 @@ It is best practice to create a new user under the `Connectors` group and to use
 - Example: `PT5M`
 - Environment Variable: `CONNECTOR_DURATION_PERIOD`
 - Config.yml: `duration_period`
-
-
 
 <br>
 

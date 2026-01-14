@@ -2,7 +2,7 @@ import json
 import os
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 import taxii2client.v21 as taxiicli
 import yaml
@@ -47,7 +47,7 @@ class MaltiverseConnector:
                     last_run = current_state["last_run"]
                     self.helper.log_info(
                         "Connector last run: "
-                        + datetime.utcfromtimestamp(last_run).strftime(
+                        + datetime.fromtimestamp(last_run, tz=timezone.utc).strftime(
                             "%Y-%m-%d %H:%M:%S"
                         )
                     )
@@ -57,7 +57,7 @@ class MaltiverseConnector:
                 # If the last_run is more than interval-1 day
                 if last_run is None or ((timestamp - last_run) > (self.get_interval())):
                     timestamp = int(time.time())
-                    now = datetime.utcfromtimestamp(timestamp)
+                    now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
                     friendly_name = "Connector run @ " + now.strftime(
                         "%Y-%m-%d %H:%M:%S"
                     )
@@ -77,7 +77,9 @@ class MaltiverseConnector:
 
                     for col in collections:
                         try:
-                            self.helper.send_stix2_bundle(json.dumps(col.get_objects()))
+                            self.helper.send_stix2_bundle(
+                                json.dumps(col.get_objects()), work_id=work_id
+                            )
                         except Exception as e:
                             self.helper.log_error("error sending collection: " + str(e))
 
@@ -104,14 +106,15 @@ class MaltiverseConnector:
                     )
                     time.sleep(360)
             except Exception as e:
-                print(e)
+                self.helper.log_error(str(e))
 
 
 if __name__ == "__main__":
     try:
         connector = MaltiverseConnector()
         connector.run()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        sys.exit(0)
+    except Exception:
+        import traceback
+
+        traceback.print_exc()
+        sys.exit(1)

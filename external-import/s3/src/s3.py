@@ -1,19 +1,18 @@
+import base64
 import datetime
 import json
 import os
-import sys
 import time
-import traceback
 
 import boto3
 import pytz
 import stix2
 import yaml
-from dateutil import parser
 from pycti import (
     CourseOfAction,
     Identity,
     Infrastructure,
+    Malware,
     Note,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
@@ -44,7 +43,7 @@ mapped_keys = [
     "x_and_prior_versions",
     "x_credit",
 ]
-ignored_keys = ["x_acti_guid", "x_version", "x_vendor"]
+ignored_keys = ["x_acti_guid", "x_version", "x_vendor", "x_opencti_files"]
 
 
 class S3Connector:
@@ -96,17 +95,20 @@ class S3Connector:
                     m=s3_marking
                 )
             )
+        self.s3_interval = get_config_variable(
+            "S3_INTERVAL", ["s3", "interval"], config, isNumber=True, default=30
+        )
+        self.s3_attach_original_file = get_config_variable(
+            "S3_ATTACH_ORIGINAL_FILE",
+            ["s3", "attach_original_file"],
+            config,
+            default=False,
+        )
         self.s3_delete_after_import = get_config_variable(
             "S3_DELETE_AFTER_IMPORT",
             ["s3", "delete_after_import"],
             config,
             default=True,
-        )
-        self.s3_interval = get_config_variable(
-            "S3_INTERVAL", ["s3", "interval"], config, isNumber=True, default=120
-        )
-        self.s3_cutoff = get_config_variable(
-            "S3_CUTOFF", ["s3", "cutoff"], config, isNumber=True, default=360
         )
 
         bucket_prefixes = get_config_variable(
@@ -133,20 +135,8 @@ class S3Connector:
             region_name=self.s3_region,
         )
 
-    def set_state_value(self, s3_prefix: str, value: str):
-        """Using this method to set the value of a specific key in the state collection.
-        See Also:
-            get_state_value
-        """
-        try:
-            state = self.helper.get_state()
-            state[s3_prefix] = value
-            self.helper.set_state(state)
-        except (KeyError, TypeError) as err:
-            raise Exception(f"State key {s3_prefix} not found") from err
-
     def get_interval(self):
-        return int(self.s3_interval) * 60
+        return int(self.s3_interval)
 
     @staticmethod
     def rewrite_stix_ids(objects):
@@ -161,7 +151,7 @@ class S3Connector:
                 new_id = Vulnerability.generate_id(obj["name"])
                 id_mapping[old_id] = new_id
 
-            if obj_type == "infrastructure":
+            elif obj_type == "infrastructure":
                 old_id = obj["id"]
                 new_id = Infrastructure.generate_id(obj["name"])
                 id_mapping[old_id] = new_id
@@ -176,21 +166,17 @@ class S3Connector:
                 new_id = CourseOfAction.generate_id(obj["name"], obj.get("x_mitre_id"))
                 id_mapping[old_id] = new_id
 
+            elif obj_type == "malware":
+                old_id = obj["id"]
+                new_id = Malware.generate_id(obj["name"])
+                id_mapping[old_id] = new_id
+
         # Second pass: Update all objects with new IDs and references
         for obj in objects:
             obj_type = obj.get("type")
 
             if obj_type == "relationship":
-                # Update relationship ID
-                obj["id"] = StixCoreRelationship.generate_id(
-                    obj["relationship_type"],
-                    obj["source_ref"],
-                    obj["target_ref"],
-                    obj.get("start_time"),
-                    obj.get("stop_time"),
-                )
-
-                # Update references using the mapping
+                # FIRST: Update references using the mapping
                 source_ref = obj.get("source_ref")
                 target_ref = obj.get("target_ref")
 
@@ -199,8 +185,17 @@ class S3Connector:
                 if target_ref in id_mapping:
                     obj["target_ref"] = id_mapping[target_ref]
 
+                # THEN: Generate relationship ID with the NEW/updated refs
+                obj["id"] = StixCoreRelationship.generate_id(
+                    obj["relationship_type"],
+                    obj["source_ref"],
+                    obj["target_ref"],
+                    obj.get("start_time"),
+                    obj.get("stop_time"),
+                )
+
             # rewrite note object_refs stix_id
-            if obj_type == "note":
+            elif obj_type == "note":
                 for i, ref in enumerate(obj["object_refs"]):
                     if ref in id_mapping:
                         obj["object_refs"][i] = id_mapping[ref]
@@ -210,6 +205,7 @@ class S3Connector:
                 "identity",
                 "course-of-action",
                 "vulnerability",
+                "malware",
             ):
                 # Update the object's ID from the mapping
                 old_id = obj["id"]
@@ -218,17 +214,58 @@ class S3Connector:
 
         return objects
 
-    def fix_bundle(self, bundle):
+    def fix_bundle(self, bundle, file_name=None, original_content=None):
+        """
+        Process and fix a STIX bundle.
+
+        Args:
+            bundle: The STIX bundle content (bytes or string)
+            file_name: Original S3 file name (used for x_opencti_files attachment)
+            original_content: Original file content as bytes (used for x_opencti_files attachment)
+
+        Returns:
+            str: JSON string of the STIX bundle, or None if nothing to process
+        """
         included_entities = []
-        new_bundle = []
         new_bundle_objects = []
+
+        # Parse bundle - skip invalid JSON files (Accenture sometimes sends bad data)
         try:
             data = json.loads(bundle)
-        except:
-            return new_bundle
+        except json.JSONDecodeError as e:
+            self.helper.log_warning(
+                f"Invalid JSON in file '{file_name}', skipping: {e}"
+            )
+            return None
+
+        if "objects" not in data or not data["objects"]:
+            self.helper.log_warning("Bundle has no objects to process")
+            return None
+
+        # Prepare file attachment if enabled
+        file_attachment = None
+        if self.s3_attach_original_file and file_name and original_content:
+            # Extract just the filename from the S3 key (remove prefix path)
+            base_filename = file_name.split("/")[-1] if "/" in file_name else file_name
+            file_attachment = {
+                "name": base_filename,
+                "data": base64.b64encode(original_content).decode("utf-8"),
+                "mime_type": "application/json",
+                "no_trigger_import": True,
+            }
+
         for obj in data["objects"]:
             included_entities.append(obj["id"])
         for obj in data["objects"]:
+            # Attach original file to vulnerabilities if enabled
+            if obj.get("type") == "vulnerability" and file_attachment:
+                if "x_opencti_files" not in obj:
+                    obj["x_opencti_files"] = []
+                obj["x_opencti_files"].append(file_attachment)
+                self.helper.connector_logger.debug(
+                    f"Attached original file '{file_attachment['name']}' to vulnerability '{obj.get('name')}'"
+                )
+
             for key in obj:
                 if (
                     key.startswith("x_")
@@ -326,7 +363,8 @@ class S3Connector:
                         else None
                     ),
                 )
-                new_bundle_objects.append(note)
+                # Serialize to dict so object_refs can be rewritten later
+                new_bundle_objects.append(json.loads(note.serialize()))
 
             # Analysis Note
             if obj.get("x_analysis", None) and obj.get("x_acti_uuid", None):
@@ -346,12 +384,19 @@ class S3Connector:
                         else None
                     ),
                 )
-                new_bundle_objects.append(note)
+                # Serialize to dict so object_refs can be rewritten later
+                new_bundle_objects.append(json.loads(note.serialize()))
 
             # History Note
             if obj.get("x_history", None) and obj.get("x_acti_uuid", None):
                 note_content = "| Timestamp | Comment |\n|---------|---------|\n"
-                for history in obj.get("x_history"):
+                # Sort history entries by timestamp from most recent to oldest
+                sorted_history = sorted(
+                    obj.get("x_history"),
+                    key=lambda h: h.get("timestamp", ""),
+                    reverse=True,
+                )
+                for history in sorted_history:
                     note_content += f"| {history.get('timestamp', '')} | {history.get('comment', '')} |\n"
 
                 note_key = obj.get("x_acti_uuid") + " - History"
@@ -369,7 +414,8 @@ class S3Connector:
                         else None
                     ),
                 )
-                new_bundle_objects.append(note)
+                # Serialize to dict so object_refs can be rewritten later
+                new_bundle_objects.append(json.loads(note.serialize()))
 
             # Labels
             if "x_wormable" in obj and obj["x_wormable"]:
@@ -408,6 +454,16 @@ class S3Connector:
                     obj["external_references"].append(external_ref)
                 else:
                     obj["external_references"] = [external_ref]
+
+            # Log external references count for debugging
+            if "external_references" in obj and obj.get("type") == "vulnerability":
+                ext_ref_count = len(obj["external_references"])
+                ext_ref_sources = [
+                    r.get("source_name", "unknown") for r in obj["external_references"]
+                ]
+                self.helper.connector_logger.debug(
+                    f"Vulnerability '{obj.get('name')}' has {ext_ref_count} external_references: {ext_ref_sources}"
+                )
 
             # x_credit mapping
             if "x_credit" in obj and obj["x_credit"]:
@@ -468,7 +524,7 @@ class S3Connector:
                 self.helper.log_warning(
                     "Removing relationship from "
                     + obj["source_ref"]
-                    + " because object if not in bundle"
+                    + " because object is not in bundle"
                 )
                 continue
             if (
@@ -478,109 +534,129 @@ class S3Connector:
                 self.helper.log_warning(
                     "Removing relationship to "
                     + obj["target_ref"]
-                    + " because object if not in bundle"
+                    + " because object is not in bundle"
                 )
                 continue
             new_bundle_objects.append(obj)
 
+        # Only create bundle if we have objects to process
         if len(new_bundle_objects) > 0:
             rewritten_bundle_objects = self.rewrite_stix_ids(new_bundle_objects)
-            new_bundle = self.helper.stix2_create_bundle(rewritten_bundle_objects)
-        return new_bundle
+            return self.helper.stix2_create_bundle(rewritten_bundle_objects)
+
+        return None
 
     def process(self):
+        """
+        Process all STIX files from the S3 bucket.
 
-        state = self.helper.get_state()
-        if state is None:
-            state = {}
-
+        FAIL-FAST STRATEGY:
+        - Each file is processed and deleted immediately after successful ingestion
+        - If ANY error occurs during processing, the connector crashes completely
+        - This ensures no file is ever deleted without successful processing
+        - Platform team will be alerted when the connector crashes
+        """
         for prefix in self.s3_bucket_prefixes:
-
-            prefix_state = state.get(prefix, "")
-            if prefix_state:
-                prefix_state_date = parser.parse(prefix_state)
-            else:
-                prefix_state_date = None
             self.helper.connector_logger.info(
-                f"Going to process files in S3 Prefix: '{prefix}', Prefix state: '{prefix_state}'"
+                f"Listing files in S3 bucket '{self.s3_bucket_name}' with prefix '{prefix}'"
             )
 
-            now = datetime.datetime.now(pytz.UTC)
-            # We always re-send 2 days of data before deleting to handle multi instances consuming, we are good with this approach
-            # OpenCTI will de-duplicate / upsert if necessary
-            cutoff = now - datetime.timedelta(minutes=self.s3_cutoff)
+            # List all objects in the bucket with the given prefix
             objects = self.s3_client.list_objects(
                 Bucket=self.s3_bucket_name, Prefix=prefix
             )
+
+            contents = objects.get("Contents", [])
             self.helper.log_info(
-                f"{len(objects.get('Contents', []))} files listed in S3 Prefix: '{prefix}'"
+                f"{len(contents)} file(s) found in S3 prefix '{prefix}'"
             )
-            if (
-                objects.get("Contents", None) is not None
-                and len(objects.get("Contents")) > 0
-            ):
-                friendly_name = (
-                    f"S3/{prefix} run @ " + now.astimezone(pytz.UTC).isoformat()
+
+            if not contents:
+                continue
+
+            # Work ID created lazily - only when we have valid content to send
+            work_id = None
+            processed_files = 0
+
+            for obj in contents:
+                file_key = obj.get("Key")
+                self.helper.log_info(f"Processing file: '{file_key}'")
+
+                # Step 1: Fetch file content from S3
+                # If this fails, connector crashes - file is NOT deleted
+                data = self.s3_client.get_object(
+                    Bucket=self.s3_bucket_name, Key=file_key
                 )
-                work_id = self.helper.api.work.initiate_work(
-                    self.helper.connect_id, friendly_name
+                content = data["Body"].read()
+
+                # Step 2: Parse and fix the STIX bundle
+                # Pass file_key and content for optional file attachment to vulnerabilities
+                fixed_bundle = self.fix_bundle(
+                    content, file_name=file_key, original_content=content
                 )
-                updated_files = 0
-                for o in objects.get("Contents"):
-                    try:
-                        last_modified = o.get("LastModified")
-                        if (
-                            prefix_state_date is None
-                            or last_modified > prefix_state_date
-                        ):
-                            data = self.s3_client.get_object(
-                                Bucket=self.s3_bucket_name, Key=o.get("Key")
-                            )
-                            content = data["Body"].read()
-                            fixed_bundle = self.fix_bundle(content)
-                            if fixed_bundle:
-                                self.helper.log_info(
-                                    f"Sending STIX bundle from file: '{o.get("Key")}'"
-                                )
-                                self.helper.send_stix2_bundle(
-                                    bundle=fixed_bundle, work_id=work_id
-                                )
-                                state[prefix] = last_modified.strftime(
-                                    "%Y-%m-%d %H:%M:%S%z"
-                                )
-                                self.helper.set_state(state)
-                                updated_files += 1
-                            else:
-                                self.helper.log_info("No content to ingest")
-                    except Exception as ex:
-                        print(ex)
-                        continue
-                    if self.s3_delete_after_import and last_modified < cutoff:
-                        self.helper.log_info(
-                            "Deleting file "
-                            + o.get("Key")
-                            + "(2 days ago="
-                            + str(cutoff)
-                            + ", modified="
-                            + str(last_modified)
-                            + ")"
+
+                # Only process valid bundles (fix_bundle returns None or JSON string)
+                if fixed_bundle is not None:
+                    # Create work job only on first valid bundle (lazy initialization)
+                    if work_id is None:
+                        now = datetime.datetime.now(pytz.UTC)
+                        friendly_name = (
+                            f"S3/{prefix} run @ " + now.astimezone(pytz.UTC).isoformat()
                         )
-                        try:
-                            self.s3_client.delete_object(
-                                Bucket=self.s3_bucket_name, Key=o.get("Key")
-                            )
-                        except:
-                            continue
+                        work_id = self.helper.api.work.initiate_work(
+                            self.helper.connect_id, friendly_name
+                        )
+
+                    # Step 3: Send bundle to OpenCTI
+                    # If this fails, connector crashes - file is NOT deleted
+                    self.helper.log_info(f"Sending STIX bundle from file: '{file_key}'")
+                    self.helper.send_stix2_bundle(bundle=fixed_bundle, work_id=work_id)
+                    processed_files += 1
+
+                    # Step 4: Optionally delete file from S3 after successful processing
+                    if self.s3_delete_after_import:
+                        self.helper.log_info(f"Deleting processed file: '{file_key}'")
+                        self.s3_client.delete_object(
+                            Bucket=self.s3_bucket_name, Key=file_key
+                        )
+                        self.helper.log_info(
+                            f"Successfully processed and deleted file: '{file_key}'"
+                        )
+                    else:
+                        self.helper.log_info(
+                            f"Successfully processed file: '{file_key}' (kept in bucket for debug)"
+                        )
+                else:
+                    # Empty/invalid bundle - optionally delete the file
+                    if self.s3_delete_after_import:
+                        self.helper.log_warning(
+                            f"File '{file_key}' has no valid STIX content, deleting"
+                        )
+                        self.s3_client.delete_object(
+                            Bucket=self.s3_bucket_name, Key=file_key
+                        )
+                    else:
+                        self.helper.log_warning(
+                            f"File '{file_key}' has no valid STIX content (kept in bucket for debug)"
+                        )
+
+            # Only finalize work if we actually processed something
+            if work_id is not None:
                 message = (
-                    f"Connector successfully processed S3 Prefix: '{prefix}' files, "
-                    f"'{updated_files}' file(s) have been ingested"
+                    f"Connector successfully processed S3 prefix '{prefix}': "
+                    f"{processed_files} file(s) ingested"
                 )
                 self.helper.log_info(message)
                 self.helper.api.work.to_processed(work_id, message)
             else:
-                self.helper.log_info("Returned 0 files")
+                self.helper.log_info(
+                    f"No valid STIX content found in S3 prefix '{prefix}'"
+                )
 
     def run(self):
+        self.helper.log_info(
+            f"Starting S3 connector with {self.get_interval()} seconds interval"
+        )
         if self.helper.get_run_and_terminate():
             self.process()
             self.helper.force_ping()
@@ -591,10 +667,8 @@ class S3Connector:
 
 
 if __name__ == "__main__":
-    try:
-        s3Connector = S3Connector()
-        s3Connector.run()
-    except Exception:
-        traceback.print_exc()
-        time.sleep(10)
-        sys.exit(0)
+    # FAIL-FAST: Any unhandled exception will crash the connector
+    # This ensures files are never deleted without successful processing
+    # The platform team will be alerted when the connector exits with error
+    s3Connector = S3Connector()
+    s3Connector.run()

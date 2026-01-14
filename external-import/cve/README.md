@@ -1,201 +1,211 @@
-# OpenCTI CVE connector
+# OpenCTI CVE Connector
 
-The CVE connector is a standalone Python process that collect data from the NVD (National Vulnerability Database).
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
-## Summary
+The CVE connector imports Common Vulnerabilities and Exposures (CVE) data from the NIST National Vulnerability Database (NVD) into OpenCTI.
 
-- [Introduction](#introduction)
-- [CVE and CVSS base score V3.1](#cve-and-cvss-base-score-v31)
-- [Requirements](#requirements)
-- [Configuration variables](#configuration-variables)
-- [Deployment](#deployment)
-  - [Docker Deployment](#docker-deployment)
-  - [Manual Deployment](#manual-deployment)
-- [Behavior](#behavior)
-  - [Initial population](#initial-population)
-  - [Pull CVEs history](#pull-cves-history)
-  - [Maintaining data](#maintaining-data)
-  - [Errors](#errors)
-- [Usage](#usage)
-- [Sources](#sources)
+## Table of Contents
 
----
+- [OpenCTI CVE Connector](#opencti-cve-connector)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction](#introduction)
+  - [Installation](#installation)
+    - [Requirements](#requirements)
+  - [Configuration variables](#configuration-variables)
+    - [OpenCTI environment variables](#opencti-environment-variables)
+    - [Base connector environment variables](#base-connector-environment-variables)
+    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
+  - [Deployment](#deployment)
+    - [Docker Deployment](#docker-deployment)
+    - [Manual Deployment](#manual-deployment)
+  - [Usage](#usage)
+  - [Behavior](#behavior)
+  - [Debugging](#debugging)
+  - [Additional information](#additional-information)
 
-### Introduction
+## Introduction
 
-The [NVD](https://nvd.nist.gov/general/brief-history) is the US government's source for standards-based vulnerability
-management data and is a product of the [NIST](https://www.nist.gov/) Computer Security Division, Information Technology
-Laboratory.
+The National Vulnerability Database (NVD) is the U.S. government repository of standards-based vulnerability management data. This connector retrieves CVE (Common Vulnerabilities and Exposures) data from the NVD API and imports it into OpenCTI as Vulnerability entities.
 
-This data enables the automation of vulnerability management, security measurement, and compliance. NVD includes
-databases of vulnerability lists, software vulnerabilities, product names, and severity scores.
+The connector supports both incremental updates (maintaining data since last run) and historical import (pulling all CVEs from a specified year).
 
-The **CVE (Common Vulnerabilities and Exposures)** is a dictionary of publicly known information security
-vulnerabilities and
-other information security exposures.
-
-The CVE repository is maintained by [MITRE Corporation](https://www.mitre.org/) and is freely available.
-
-This connector collects CVE data from the NVD, converts to STIX2 and imports them into OpenCTI at a regular intervals.
-
-### CVE and CVSS base score V3.1
-
-CVEs are assigned a criticality score (CVSS) making it possible to prioritize vulnerabilities and thus prioritize IS
-security projects.
-
-As of July 13th, 2022, the NVD will no longer generate new information for CVSS v2.
-
-Existing CVSS V2 information will remain in the database, but the NVD will no longer actively populate CVSS V2 for new
-CVEs.
-
-CVSS V3.1 was released in June 2019, thus most CVE published before 2019 do not include the `cvssMetricV31` object. The
-exception are CVE published before 2019 that were later reanalyzed or modified.
-
-These CVE may have been updated to include CVSS V3.1 information. If the CVE was updated in this way, the API response
-would include this optional information.
-
-This connector will import all CVE with CVSS V3.1 base score.
+## Installation
 
 ### Requirements
 
-- OpenCTI Platform version 5.12.0 or higher
-- An API Key for accessing
+- OpenCTI Platform >= 6.x
+- NVD API key (required - request at [NVD API Key Request](https://nvd.nist.gov/developers/request-an-api-key))
 
-#### Request an API Key
+## Configuration variables
 
-To import data from the NVD and use the connector, you need to request an API Key:
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
 
-- [Request an API Key](https://nvd.nist.gov/developers/request-an-api-key)
+### OpenCTI environment variables
 
-### Configuration variables
+| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
+|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
+| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
+| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
 
-Find all the configuration variables available here: [Connector Configurations](./__metadata__)
+### Base connector environment variables
 
-For more details about the CVE API, see the documentation at the link below:
+| Parameter         | config.yml      | Docker environment variable   | Default                                  | Mandatory | Description                                                                 |
+|-------------------|-----------------|-------------------------------|------------------------------------------|-----------|-----------------------------------------------------------------------------|
+| Connector ID      | id              | `CONNECTOR_ID`                |                                          | Yes       | A unique `UUIDv4` identifier for this connector instance.                   |
+| Connector Name    | name            | `CONNECTOR_NAME`              | Common Vulnerabilities and Exposures     | No        | Name of the connector.                                                      |
+| Connector Scope   | scope           | `CONNECTOR_SCOPE`             | cve                                      | No        | The scope or type of data the connector is importing.                       |
+| Log Level         | log_level       | `CONNECTOR_LOG_LEVEL`         | error                                    | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
 
-- [CVE API](https://nvd.nist.gov/developers/vulnerabilities)
+### Connector extra parameters environment variables
 
-### Deployment
+| Parameter          | config.yml           | Docker environment variable | Default                                      | Mandatory | Description                                                                 |
+|--------------------|----------------------|-----------------------------|----------------------------------------------|-----------|-----------------------------------------------------------------------------|
+| API Key            | cve.api_key          | `CVE_API_KEY`               |                                              | Yes       | Your NVD API key.                                                           |
+| Base URL           | cve.base_url         | `CVE_BASE_URL`              | https://services.nvd.nist.gov/rest/json/cves | No        | NVD API endpoint URL.                                                       |
+| Interval           | cve.interval         | `CVE_INTERVAL`              | 6                                            | No        | Interval in hours between checks. Minimum 2 hours recommended by NIST.      |
+| Max Date Range     | cve.max_date_range   | `CVE_MAX_DATE_RANGE`        | 120                                          | No        | Maximum days per API query. Maximum 120 days.                               |
+| Maintain Data      | cve.maintain_data    | `CVE_MAINTAIN_DATA`         | true                                         | No        | Import CVEs from last run to current time (incremental updates).            |
+| Pull History       | cve.pull_history     | `CVE_PULL_HISTORY`          | false                                        | No        | Import all CVEs from `history_start_year`. Requires `history_start_year`.   |
+| History Start Year | cve.history_start_year | `CVE_HISTORY_START_YEAR`  | 2019                                         | No        | Required if `pull_history=true`. Minimum 2019 (CVSS v3.1 release).          |
 
-#### Docker Deployment
+## Deployment
 
-Build a Docker Image using the provided `Dockerfile`.
+### Docker Deployment
 
-Example:
+Build the Docker image:
 
-```shell
-docker build . -t opencti-cve-import:latest
+```bash
+docker build -t opencti/connector-cve:latest .
 ```
 
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
-environment. Then, start the docker container with the provided docker-compose.yml
+Configure the connector in `docker-compose.yml`:
 
-```shell
+```yaml
+  connector-cve:
+    image: opencti/connector-cve:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Common Vulnerabilities and Exposures
+      - CONNECTOR_SCOPE=cve
+      - CONNECTOR_LOG_LEVEL=error
+      - CVE_API_KEY=ChangeMe
+      - CVE_INTERVAL=6 # In hours, minimum 2 recommended by NIST
+      # - CVE_BASE_URL=https://services.nvd.nist.gov/rest/json/cves
+      # - CVE_MAX_DATE_RANGE=120
+      # - CVE_MAINTAIN_DATA=true
+      # - CVE_PULL_HISTORY=false
+      # - CVE_HISTORY_START_YEAR=2019
+    restart: always
+```
+
+Start the connector:
+
+```bash
 docker compose up -d
-# -d for detached
 ```
 
-#### Manual Deployment
+### Manual Deployment
 
-Create a file `config.yml` based on the provided `config.yml.sample`.
+1. Create `config.yml` based on `config.yml.sample`.
 
-Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
+2. Install dependencies:
 
-Install the required python dependencies (preferably in a virtual environment):
-
-```shell
+```bash
 pip3 install -r requirements.txt
 ```
 
-Or if you have Make installed, in cve/src:
+3. Start the connector from the `src` directory:
 
-```shell
-# Will install the requirements
-make init
+```bash
+python3 -m __main__
 ```
 
-Then, start the connector from cve/src:
+## Usage
 
-```shell
-python3 main.py
+The connector runs automatically at the interval defined by `CVE_INTERVAL`. To force an immediate run:
+
+**Data Management → Ingestion → Connectors**
+
+Find the connector and click the refresh button to reset the state and trigger a new sync.
+
+## Behavior
+
+The connector fetches CVE data from the NVD API and converts it to STIX Vulnerability objects.
+
+### Data Flow
+
+```mermaid
+graph LR
+    subgraph NVD API
+        direction TB
+        CVE[CVE Data]
+    end
+
+    subgraph OpenCTI
+        direction LR
+        Vulnerability[Vulnerability]
+        ExternalRef[External Reference]
+    end
+
+    CVE --> Vulnerability
+    CVE --> ExternalRef
 ```
 
-### Behavior
+### Entity Mapping
 
-#### Initial population
+| NVD CVE Data         | OpenCTI Entity/Property | Description                                      |
+|----------------------|-------------------------|--------------------------------------------------|
+| CVE ID               | Vulnerability.name      | CVE identifier (e.g., CVE-2021-44228)            |
+| Description          | Vulnerability.description | CVE description                                |
+| Published Date       | Vulnerability.created   | Date CVE was published                           |
+| Last Modified        | Vulnerability.modified  | Last modification date                           |
+| CVSS v3.1 Score      | Vulnerability.x_opencti_cvss_base_score | CVSS base score              |
+| CVSS v3.1 Severity   | Vulnerability.x_opencti_cvss_base_severity | CRITICAL/HIGH/MEDIUM/LOW |
+| CVSS v3.1 Vector     | Vulnerability.x_opencti_cvss_attack_vector | Attack vector            |
+| CWE IDs              | Labels                  | Weakness classifications                         |
+| References           | External References     | Links to advisories and patches                  |
 
-For the first run of the connector, the connector will import the most recent CVEs based on the CVSS V3.1 base score.
+### Operating Modes
 
-Configuring the `max_date_range` allows to fetch all CVEs from the last `max_date_range` days to now.
+1. **Incremental Updates** (`maintain_data=true`):
+   - Default mode
+   - Imports CVEs modified since the last run
+   - Keeps vulnerability data up-to-date
 
-The maximum allowable range when using any date range parameters is **120 consecutive days**. So, the `max_date_range`
-cannot exceed 120 days.
+2. **Historical Import** (`pull_history=true`):
+   - Imports all CVEs from specified year to present
+   - Useful for initial population
+   - Requires `history_start_year` (minimum 2019)
 
-If the response from CVE API is 200, data is fetched successfully, and you will see the following logs:
+### Processing Details
 
-Example of logs:
+- **CVSS v3.1**: Connector uses CVSS v3.1 scores (available from 2019+)
+- **Rate Limiting**: NVD API has rate limits; connector handles pagination
+- **Date Range**: Maximum 120-day range per API query
+- **API Key Required**: Unauthenticated requests are heavily rate-limited
 
-_max_date_range: 1_
+## Debugging
 
-![success logs](./_docs_/media/success-log.png)
+Enable verbose logging:
 
-#### Pull CVEs history
+```env
+CONNECTOR_LOG_LEVEL=debug
+```
 
-For the first run of the connector, you may want to pull CVEs from the last years.
-Configuring `pull_history` to `True` requires to add a start year.
+Log output includes:
+- API request/response details
+- CVE processing progress
+- STIX conversion details
 
-Example of logs:
+## Additional information
 
-_pull_history: True_
-
-_history_start_year: 2022_
-
-![history logs](./_docs_/media/history-logs.png)
-
-Since the maximum allowed range when using any date range parameter is **120 consecutive days**, and the default value
-and **maximum allowed limit to fetch is 2000** vulnerabilities (for network considerations), fetching CVEs of 1 year
-will take these parameters into account.
-
-These values have been optimized to provide the greatest number of results with the fewest number of requests.
-
-#### Maintaining data
-
-By default, `maintain_data` will be set to `True` to keep data updated.
-
-If the connector runs and the last run is higher than the `interval` set, the connector will import the last CVEs added
-or modified.
-
-#### Errors
-
-You may encounter some errors from the server:
-
-![logs error 503](./_docs_/media/log-error.png)
-
-![logs error 503](./_docs_/media/log-error-2.png)
-
-The connector will retry to fetch data from CVE API after few minutes.
-
-It retries for a total of 4 times the request before fail.
-
-![logs retry](./_docs_/media/retry-logs.png)
-
-
-### Usage
-
-After Installation, the connector should require minimal interaction to use, and should update automatically at the
-hourly interval specified in your `docker-compose.yml` or `config.yml`.
-
-However, if you would like to force an immediate poll of the CVE instance, navigate to _Data_ -> _Connectors_ in the
-OpenCTI platform.
-Find the "Common Vulnerabilities and Exposures" connector, and click on the refresh button to reset the connector's
-state and force a new poll of the CVEs.
-
-![reset connector](./_docs_/media/reset-connector.png)
-
-### Sources
-
-- [NVD](https://nvd.nist.gov/info)
-- [CVSS V2 deprecated](https://nvd.nist.gov/vuln-metrics/cvss/v2-calculator)
-- [CVSS V3.1 Official Support](https://nvd.nist.gov/general/news/cvss-v3-1-official-support)
-- [Computer Security Division](https://www.nist.gov/itl/csd)
+- **API Key**: Required for reasonable rate limits. Request at [NVD](https://nvd.nist.gov/developers/request-an-api-key)
+- **Rate Limits**: With API key: 50 requests/30 seconds. Without: 5 requests/30 seconds
+- **CVSS v3.1**: Minimum start year is 2019 (CVSS v3.1 release date)
+- **Large Dataset**: NVD contains 200,000+ CVEs; historical import takes significant time
+- **Polling Interval**: NIST recommends minimum 2-hour intervals
+- **Reference**: [NVD API Documentation](https://nvd.nist.gov/developers/vulnerabilities)

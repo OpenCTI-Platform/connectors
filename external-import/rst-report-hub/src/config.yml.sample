@@ -1,8 +1,9 @@
 opencti:
-  url: 'http://opencti:8080'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   id: 'aa817c8b-abae-460a-9ebc-97b1551e70ee' # Valid UUIDv4
   name: 'RST Report Hub'
   scope: 'application/json' # MIME type or SCO
