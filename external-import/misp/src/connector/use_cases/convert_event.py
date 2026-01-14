@@ -305,7 +305,7 @@ class EventConverter:
             event_intrusion_sets: list[stix2.IntrusionSet] = []
             event_malwares: list[stix2.Malware] = []
             event_tools: list[stix2.Tool] = []
-            event_countries: list[stix2.Location] = []
+            event_locations: list[stix2.Location] = []
             event_sectors: list[stix2.Identity] = []
             event_attack_patterns: list[stix2.AttackPattern] = []
 
@@ -318,8 +318,8 @@ class EventConverter:
                     case stix2.Tool():
                         event_tools.append(event_stix_object)
                     case stix2.Location():
-                        if event_stix_object["country"]:
-                            event_countries.append(event_stix_object)
+                        if "country" in event_stix_object or "region" in event_stix_object:
+                            event_locations.append(event_stix_object)
                     case stix2.Identity():
                         if event_stix_object["identity_class"] == "class":
                             event_sectors.append(event_stix_object)
@@ -360,7 +360,7 @@ class EventConverter:
                     event_intrusion_sets
                     + event_malwares
                     + event_tools
-                    + event_countries
+                    + event_locations
                     + event_sectors
                 ):
                     stix_objects.append(
@@ -398,7 +398,7 @@ class EventConverter:
                             allow_custom=True,
                         )
                     )
-                for event_entity in event_countries + event_sectors:
+                for event_entity in event_locations + event_sectors:
                     stix_objects.append(
                         stix2.Relationship(
                             id=pycti.StixCoreRelationship.generate_id(
