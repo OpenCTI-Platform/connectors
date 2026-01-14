@@ -71,41 +71,38 @@ class MontysecurityC2TrackerConnector:
         Collect intelligence from the source and convert into STIX object
         :return: List of STIX objects
         """
-        stix_objects = []
 
         # ===========================
         # === Add your code below ===
         # ===========================
 
         # Get entities from external sources
-        malwareList = self.client.get_entities()
+        malware_list = self.client.get_malwares()
         entities = []
         self.helper.connector_logger.info("Get Malware IPs")
 
         malwareIPsBaseUrl = "https://raw.githubusercontent.com/montysecurity/C2-Tracker/main/data/"
-        i = 0
-        for malware in malwareList:
-            malwareList[i] = str(malware).strip('"')
-            i += 1
-        for malware in malwareList:
-            malwareName = str(malware).split(" IPs.txt")[0]
-            self.helper.connector_logger.info("Looking at: ", malwareName)
+        malware_list = [str(malware).strip('"') for malware in malware_list]
+        self.helper.connector_logger.debug(malware_list)
+        for malware in malware_list:
+            malware_name = str(malware).split(" IPs.txt")[0]
+            self.helper.connector_logger.info("Looking at: ", malware_name)
             url = str(malwareIPsBaseUrl + str(malware).replace(" ", "%20"))
             self.helper.connector_logger.debug("URL: ", url)
-            malwareStix = None
-            malwareStix = Malware(
-                name=malwareName,
+            malware_stix = None
+            malware_stix = Malware(
+                name=malware_name,
                 is_family=True,
-                # description="This is an example malware from Monty Security C2 Tracker.",
-                # aliases=["MontysecurityTests", "MontysecurityTestss"],
                 author=self.converter_to_stix.author,
                 markings=[self.converter_to_stix.tlp_marking],
             ).to_stix2_object()
-            entities.append(malwareStix)
-            print(malwareStix.get("name"))
+            entities.append(malware_stix)
+            self.helper.connector_logger.debug(malware_stix.get("name"))
 
-            request = requests.get(url)
-            ips = str(request.text).split("\n")
+            ips = self.client.get_ips(malware)
+
+            #request = requests.get(url)
+            #ips = str(request.text).split("\n")
             ips.pop()
             for ip in ips:
                 indicatorIPV4 = Indicator(
@@ -121,7 +118,7 @@ class MontysecurityC2TrackerConnector:
 
                 relationship = self.converter_to_stix.create_relationship(
                     source_id = indicatorIPV4.id,
-                    target_id = malwareStix.id,
+                    target_id = malware_stix.id,
                     relationship_type=RelationshipType.INDICATES,
                 )
                 entities.append(relationship)

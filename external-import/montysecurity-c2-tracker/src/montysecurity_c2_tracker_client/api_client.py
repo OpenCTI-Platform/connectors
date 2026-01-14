@@ -45,46 +45,33 @@ class MontysecurityC2TrackerClient:
             )
             return None
 
-    def get_entities(self, params=None) -> dict:
+    def get_malwares(self, params=None) -> dict:
         try:
-            # ===========================
-            # === Add your code below ===
-            # ===========================
             self.helper.connector_logger.info("Get Malware Entities")
 
-            malwareListUrl = "https://github.com/montysecurity/C2-Tracker/tree/main/data"
-            response = self._request_data(malwareListUrl, params=params)
+            #TODO: move to conf
+            malware_list_url = "https://github.com/montysecurity/C2-Tracker/tree/main/data"
+            response = self._request_data(malware_list_url, params=params)
             self.helper.connector_logger.info("Status code from github.com: ", response.status_code)
-            malwareList = list(set(re.findall("\"[\w|\s|\d|\.]+IPs\.txt\"", response.text)))
+            malware_list = list(set(re.findall("\"[\w|\s|\d|\.]+IPs\.txt\"", response.text)))
 
-            return malwareList
+            return malware_list
 
-            # self.helper.connector_logger.info("Get Malware IPs")
-            #
-            # malwareIPsBaseUrl = "https://raw.githubusercontent.com/montysecurity/C2-Tracker/main/data/"
-            # malwareIPs = set()
-            # i = 0
-            # for malware in malwareList:
-            #     malwareList[i] = str(malware).strip('"')
-            #     i += 1
-            # for malware in malwareList:
-            #     print(f"[+] Looking at {malware}")
-            #     url = str(malwareIPsBaseUrl + str(malware).replace(" ", "%20"))
-            #     request = requests.get(url)
-            #     ips = str(request.text).split("\n")
-            #     ips.pop()
-            #     for ip in ips:
-            #         malwareIPs.add(ip)
-            # self.helper.connector_logger.info(malwareIPs)
+        except Exception as err:
+            self.helper.connector_logger.error(err)
 
+    def get_ips(self, malware_name: str, params=None) -> list:
+        try:
+            self.helper.connector_logger.info("Get Malware IPs")
 
+            #TODO: move to conf
+            malwareIPsBaseUrl = "https://raw.githubusercontent.com/montysecurity/C2-Tracker/main/data/"
 
-            # return response.json()
-            # ===========================
-            # === Add your code above ===
-            # ===========================
+            url = str(malwareIPsBaseUrl + str(malware_name).replace(" ", "%20"))
+            response = self._request_data(url, params=params)
+            ips = str(response.text).split("\n")
 
-            # raise NotImplementedError
-
+            return ips
+            #TODO: ask if better exception filtering is needed
         except Exception as err:
             self.helper.connector_logger.error(err)
