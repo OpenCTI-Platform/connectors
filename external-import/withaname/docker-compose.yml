@@ -1,0 +1,25 @@
+version: '1'
+services:
+  connector-withaname:
+    image: opencti/connector-withaname:rolling
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=CHANGME
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=WITHANAME
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      - WITHANAME_URL=https://witha.name/data/last.json
+      - WITHANAME_SAVE_DOMAIN=true
+      - WITHANAME_SAVE_IP=true
+      - WITHANAME_SAVE_URL=false
+      - WITHANAME_LINK_TOOL=DDoSia
+      - WITHANAME_LINK_TA=Noname057
+      - WITHANAME_LINK_AP="T1498 Network Denial of Service"
+      - WITHANAME_LINK_COUNTRY=true
+      - WITHANAME_LINKS_DURATION=24
+      - WITHANAME_CREATE_DAILY_CAMPAIGNS=true
+      - WITHANAME_INTERVAL=2 # In hours
+      - WITHANAME_MARKING=TLP:GREEN
+    restart: always

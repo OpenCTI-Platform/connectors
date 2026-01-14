@@ -1,0 +1,21 @@
+{
+  "title": "Witha.name",
+  "slug": "witha-name",
+  "description": "Witha.name is a research's initiative providing DDoSia configuration for security services. This connector will create OpenCTI indicators from DDoSia configuration.",
+  "short_description": "Import DDoSia configuration from Witha.name service into OpenCTI.",
+  "logo": "external-import/Wita.name/__metadata__/logo.png",
+  "use_cases": [
+    "DDoS Protection", "Russian Threat Actor"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.9.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/Wita.name",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-wita-name",
+  "container_type": "EXTERNAL_IMPORT"
+}

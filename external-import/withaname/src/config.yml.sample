@@ -1,0 +1,24 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Witha.name'
+  scope: 'Witha.name'
+  log_level: 'info'
+
+
+withaname:
+  url: 'https://witha.name/data/last.json'
+  save_domain: 'true'
+  save_ip: 'true'
+  save_url: 'false'
+  link_tool: 'DDoSia'
+  link_ta: 'Noname057'
+  link_country: 'true'
+  links_duration: 24
+  interval: 2 # In hours
+  marking_definition: 'TLP:GREEN'
