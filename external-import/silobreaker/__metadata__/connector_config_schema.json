@@ -87,8 +87,8 @@
       "type": "array"
     },
     "SILOBREAKER_IMPORT_START_DATE": {
-      "default": "2024-09-01T00:00:00Z",
-      "description": "The start date for importing Silobreaker data.",
+      "default": "2025-12-01T00:00:00Z",
+      "description": "The start date for importing Silobreaker data. (Default: 01/12/2025).",
       "format": "date-time",
       "type": "string"
     }
