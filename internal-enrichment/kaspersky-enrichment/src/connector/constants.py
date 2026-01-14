@@ -36,7 +36,17 @@ SECTIONS = {
             "Industries",
         ],
     },
-    "url_sections": {},
+    "url_sections": {
+        "mandatories_sections": ["LicenseInfo", "Zone", "UrlGeneralInfo"],
+        "supported_sections": [
+            "LicenseInfo",
+            "Zone",
+            "UrlGeneralInfo",
+            "FilesDownloaded",
+            "FilesAccessed",
+            "Industries",
+        ],
+    },
 }
 
 DATETIME_FORMAT = "%Y-%m-%dT%H:%MZ"
