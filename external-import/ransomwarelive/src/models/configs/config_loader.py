@@ -3,7 +3,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
-from connectors_sdk import ListFromString
+from connectors_sdk.core.pydantic import ListFromString
 from models.configs.base_settings import ConfigBaseSettings
 from models.configs.connector_configs import (
     _ConfigLoaderConnector,

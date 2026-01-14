@@ -1,125 +1,80 @@
 # RansomwareLive Connector
 
-| Status | Date | Comment |
-|--------|------|---------|
-| Community | -    | -       |
+<!--
+General description of the connector
+* What it does
+* How it works
+* Special requirements
+* Use case description
+* ...
+-->
 
-The RansomwareLive connector imports ransomware attack data and victim information from the ransomware.live API into OpenCTI.
-
-## Table of Contents
-
-- [RansomwareLive Connector](#ransomwarelive-connector)
-  - [Table of Contents](#table-of-contents)
-  - [Introduction](#introduction)
-  - [Installation](#installation)
-  - [Configuration variables](#configuration-variables)
-  - [Deployment](#deployment)
-  - [Usage](#usage)
-  - [Behavior](#behavior)
-  - [Debugging](#debugging)
-  - [Additional information](#additional-information)
-
-## Introduction
-
-RansomwareLive is a platform that tracks ransomware attacks and victim organizations. This connector imports ransomware group activity, victim information, and associated threat intelligence into OpenCTI.
+| Status            | Date       | Comment |
+| ----------------- |------------| ------- |
+| Filigran Verified | 2025-07-25 |    -    |
 
 ## Installation
 
 ### Requirements
 
-- OpenCTI Platform >= 6.x
+- OpenCTI Platform >= 6.7.7
 
-## Configuration variables
+### Configuration
 
-Find all the configuration variables available (default/required) here: [Connector Configurations](./__metadata__)
+Configuration parameters are provided using environment variables as described below.
+Some of them are placed directly in the `docker-compose.yml` since they are not expected to be modified by final users once that they have been defined by the developer of the connector.
 
-## Deployment
+Note that the values that follow can be grabbed within Python code using `self.helper.{PARAMETER}` i.e., `self.helper.connector_name`.
 
-### Docker Deployment
+Expected environment variables to be set in the  `docker-compose.yml` that describe the connector itself.
+Most of the time, these values are NOT expected to be changed.
 
-Build the Docker image:
+| Parameter       | .env variable | Docker environment variable  | Mandatory | Description                              |
+|-----------------|---------------|------------------------------|-----------|------------------------------------------|
+| Connector Name  | `name`        | `CONNECTOR_NAME`             | Yes       | A connector name to be shown in OpenCTI. |                                                                                                                   |
+| Connector Scope | `scope`       | `CONNECTOR_SCOPE`            | Yes       | Supported scope. E. g., `text/html`.     |
 
-```bash
-docker build -t opencti/connector-ransomwarelive:latest .
-```
+However, there are other values which are expected to be configured by end users.
+The following values are expected to be defined in the `.env` file.
+This file is included in the `.gitignore` to avoid leaking sensitive date. 
+Note that the `.env.sample` file can be used as a reference.
 
-Start the connector:
+The ones that follow are connector's generic execution parameters expected to be added for export connectors.
 
-```bash
-docker compose up -d
-```
+| Parameter                  | .env variable     | Docker environment variable  | Default | Mandatory | Description                                                                                                                                                                   |
+|----------------------------|-------------------|------------------------------|---------|-----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| OpenCTI URL                | `url`             | `OPENCTI_URL`                |         | Yes       | The URL of the OpenCTI platform. Note that final `/` should be avoided. Example value: `http://opencti:8080`                                                                  |
+| OpenCTI Token              | `token`           | `OPENCTI_TOKEN`              |         | Yes       | The API token for authenticating with OpenCTI.                                                                                                                                |
+| Connector ID               | `id`              | `CONNECTOR_ID`               |         | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector.                                                                                                            |
+| Connector Log Level        | `log_level`       | `CONNECTOR_LOG_LEVEL`        | error   | No        | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                                                 |
+| Duration period            | `duration_period` | `CONNECTOR_DURATION_PERIOD`  | PT10M   | No        | Determines the time interval between each launch of the connector in ISO 8601, ex: PT30M.                                                                                     |
+| ~~Interval~~ ⚠️Deprecated  | ~~/~~             | ~~`CONNECTOR_RUN_EVERY`~~    | ~~10m~~ | ~~❌~~     | The time unit is represented by a single character at the end of the string: d for days, h for hours, m for minutes, and s for seconds. e.g., 30s is 30 seconds. 1d is 1 day. |
 
-### Manual Deployment
 
-1. Create `config.yml` based on `config.yml.sample`.
+Finally, the ones that follow are connector's specific execution parameters expected to be used by this connector.
 
-2. Install dependencies:
+| Parameter                 | .env variable         | Docker environment variable     | Default | Mandatory | Description                                               |
+|---------------------------|-----------------------|---------------------------------|---------|-----------|-----------------------------------------------------------|
+| Pull History              | `pull_history`        | `CONNECTOR_PULL_HISTORY`        | False   | No        | Whether to pull historic data (Default: false)            |
+| History Start Year        | `history_start_year`  | `CONNECTOR_HISTORY_START_YEAR`  | 2023    | No        | The year to start from (Default: 2020)                    |
+| Create Threat Actor       | `create_threat_actor` | `CONNECTOR_CREATE_THREAT_ACTOR` | False   | No        | Whether to create a Threat Actor object (Default: false)  |
+| Create Intrusion Set      | `create_intrusion_set`| `CONNECTOR_CREATE_INTRUSION_SET`| False   | No        | Whether to create an Intrusion Set object (Default: false)|
+| Create Campaign           | `create_campaign`     | `CONNECTOR_CREATE_CAMPAIGN`     | False   | No        | Whether to create a Campaign object (Default: false)      |
+| Create Report             | `create_report`       | `CONNECTOR_CREATE_REPORT`       | False   | No        | Whether to create a Report object (Default: false)        |
 
-```bash
-pip3 install -r requirements.txt
-```
+### Debugging
 
-3. Start the connector from the `src` directory:
+The connector can be debugged by setting the appropriate log level.
+Note that logging messages can be added using `self.helper.connector_logger.{LOG_LEVEL}("Sample message")`, i.e., `self.helper.connector_logger.error("An error message")`.
 
-```bash
-python3 main.py
-```
+<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
 
-## Usage
+### Additional information
 
-The connector runs automatically at the configured interval. To force an immediate run:
 
-**Data Management → Ingestion → Connectors**
-
-Find the connector and click the refresh button to reset the state and trigger a new sync.
-
-## Behavior
-
-The connector fetches ransomware attack data and victim information from the ransomware.live API.
-
-### Data Flow
-
-```mermaid
-graph LR
-    subgraph RansomwareLive
-        direction TB
-        Groups[Ransomware Groups]
-        Victims[Victim Organizations]
-    end
-
-    subgraph OpenCTI
-        direction LR
-        ThreatActor[Threat Actor]
-        Organization[Identity - Organization]
-        Incident[Incident]
-    end
-
-    Groups --> ThreatActor
-    Victims --> Organization
-    Victims --> Incident
-    ThreatActor -- targets --> Organization
-```
-
-### Entity Mapping
-
-| RansomwareLive Data  | OpenCTI Entity      | Description                                      |
-|----------------------|---------------------|--------------------------------------------------|
-| Ransomware Group     | Threat-Actor        | Ransomware threat actor                          |
-| Victim Name          | Identity            | Victim organization                              |
-| Attack Date          | Incident            | Ransomware incident                              |
-| Victim Sector        | Sector              | Target industry sector                           |
-| Victim Country       | Location            | Target geography                                 |
-
-## Debugging
-
-Enable verbose logging:
-
-```env
-CONNECTOR_LOG_LEVEL=debug
-```
-
-## Additional information
-
-- **Data Source**: [ransomware.live](https://ransomware.live)
-- **Ransomware Tracking**: Provides visibility into ransomware campaigns
-- **Victim Intelligence**: Track targeted organizations and industries
+<!--
+Any additional information about this connector
+* What information is ingested/updated/changed
+* What should the user take into account when using this connector
+* ...
+-->

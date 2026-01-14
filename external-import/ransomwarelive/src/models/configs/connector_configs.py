@@ -1,7 +1,7 @@
 from datetime import timedelta
 from typing import Annotated, Literal
 
-from connectors_sdk import ListFromString
+from connectors_sdk.core.pydantic import ListFromString
 from models.configs import ConfigBaseSettings
 from pydantic import Field, HttpUrl, PlainSerializer, PositiveInt, field_validator
 
@@ -55,9 +55,22 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
         default=2023,
         description="The year to start from",
     )
+   
     create_threat_actor: bool = Field(
         default=False,
         description="Whether to create a Threat Actor object",
+    )
+    create_intrusion_set: bool = Field(
+        default=True,
+        description="Whether to create an Intrusion Set object",
+    )
+    create_campaign: bool = Field(
+        default=False,
+        description="Whether to create a Campaign object",
+    )
+    create_report: bool = Field(
+        default=True,
+        description="Whether to create a Report object",
     )
 
     @field_validator("type")
