@@ -181,9 +181,7 @@ class STIXConverter:
                 return None
 
             # Determine type
-            ioc_type = (
-                ioc_data.get("type") or ioc_data.get("ioc_type") or feed_type
-            )
+            ioc_type = ioc_data.get("type") or ioc_data.get("ioc_type") or feed_type
             detected_type = self.detect_ioc_type(str(value), ioc_type)
 
             # Create STIX pattern
