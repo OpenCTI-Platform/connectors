@@ -2,7 +2,8 @@
 """OpenCTI CrowdStrike related actors builder module."""
 
 import logging
-from typing import Any, List, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
 from crowdstrike_feeds_services.utils import (
     create_external_reference,
@@ -11,7 +12,13 @@ from crowdstrike_feeds_services.utils import (
     timestamp_to_datetime,
 )
 
-from stix2 import ExternalReference, Identity, IntrusionSet, MarkingDefinition  # type: ignore # isort: skip
+from stix2 import (
+    AttackPattern,
+    ExternalReference,
+    Identity,
+    IntrusionSet,
+    MarkingDefinition,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -21,12 +28,12 @@ class RelatedActorBundleBuilder:
 
     def __init__(
         self,
-        actor: dict,
+        actor: Mapping[str, Any],
         author: Identity,
         source_name: str,
-        object_markings: List[MarkingDefinition],
+        object_markings: list[MarkingDefinition],
         confidence_level: int,
-        attack_patterns: Optional[List] = None,
+        attack_patterns: list[AttackPattern] | None = None,
     ) -> None:
         """Initialize actor bundle builder."""
         self.actor = actor
@@ -36,41 +43,86 @@ class RelatedActorBundleBuilder:
         self.confidence_level = confidence_level
         self.attack_patterns = attack_patterns or []
 
-        # Report payloads often include an actor stub (id/name/slug) without activity dates.
-        # The full actor resource from the Intel API includes `first_activity_date` and
-        # `last_activity_date`. Be tolerant of missing values.
-        first_seen = None
-        last_seen = None
+    def build(self) -> IntrusionSet:
+        """Build and return an IntrusionSet for the provided actor entity."""
+        intrusion_set = self._create_intrusion_set_from_actor_entity(
+            self.actor,
+            created_by=self.author,
+            confidence=self.confidence_level,
+            object_markings=self.object_markings,
+        )
 
-        first_activity_ts = self.actor.get("first_activity_date")
-        if isinstance(first_activity_ts, int) and first_activity_ts > 0:
-            first_seen = timestamp_to_datetime(first_activity_ts)
-
-        last_activity_ts = self.actor.get("last_activity_date")
-        if isinstance(last_activity_ts, int) and last_activity_ts > 0:
-            last_seen = timestamp_to_datetime(last_activity_ts)
-
-        if first_seen is not None or last_seen is not None:
-            first_seen, last_seen = normalize_start_time_and_stop_time(
-                first_seen, last_seen
+        if self.attack_patterns:
+            logger.debug(
+                "RelatedActorBundleBuilder received attack_patterns but does not yet create relationships",
+                {"count": len(self.attack_patterns)},
             )
 
-        self.first_seen = first_seen
-        self.last_seen = last_seen
+        return intrusion_set
+
+    def _normalize_aliases(self, name: str, actor: Mapping[str, Any]) -> list[str]:
+        """Normalize CrowdStrike actor aliases into a clean, deduplicated list."""
+        raw_aliases = actor.get("aliases") or actor.get("known_as") or []
+
+        aliases: list[str] = []
+
+        if isinstance(raw_aliases, str):
+            aliases.extend(self._split_alias_string(raw_aliases))
+        elif isinstance(raw_aliases, list):
+            for alias_entry in raw_aliases:
+                alias_clean = self._alias_from_entry(alias_entry)
+                if alias_clean:
+                    aliases.append(alias_clean)
+
+        # Also add a compact alias without spaces (e.g. "SALTY SPIDER" -> "SALTYSPIDER")
+        compact = name.replace(" ", "")
+        if compact and compact != name and compact not in aliases:
+            aliases.append(compact)
+
+        return self._dedupe_aliases(name, aliases)
+
+    def _split_alias_string(self, raw: str) -> list[str]:
+        """Split a comma-separated alias string and trim whitespace."""
+        out: list[str] = []
+        for alias in raw.split(","):
+            alias_clean = alias.strip()
+            if alias_clean:
+                out.append(alias_clean)
+        return out
+
+    def _alias_from_entry(self, entry: Any) -> str:
+        """Extract a single alias string from a list entry."""
+        if isinstance(entry, str):
+            return entry.strip()
+        if isinstance(entry, Mapping):
+            return str(
+                entry.get("value") or entry.get("name") or entry.get("slug") or ""
+            ).strip()
+        return ""
+
+    def _dedupe_aliases(self, name: str, aliases: list[str]) -> list[str]:
+        """Deduplicate aliases while preserving order and excluding the primary name."""
+        seen: set[str] = set()
+        out: list[str] = []
+        for alias in aliases:
+            if alias and alias != name and alias not in seen:
+                seen.add(alias)
+                out.append(alias)
+        return out
 
     def _create_intrusion_set_from_actor_entity(
         self,
         actor: Mapping[str, Any],
-        created_by: Optional[Identity] = None,
-        confidence: Optional[int] = None,
-        object_markings: Optional[List[MarkingDefinition]] = None,
+        created_by: Identity | None = None,
+        confidence: int | None = None,
+        object_markings: list[MarkingDefinition] | None = None,
     ) -> IntrusionSet:
         """
         Create a STIX IntrusionSet from a CrowdStrike actor entity.
 
         Expects a full actor resource as returned by the Intel API.
         """
-        # Name / slug
+        # Name
         name = actor.get("name")
         if not name:
             raise ValueError("Actor entity is missing both 'name'")
@@ -90,50 +142,20 @@ class RelatedActorBundleBuilder:
         if isinstance(last_activity_ts, int) and last_activity_ts > 0:
             last_seen = timestamp_to_datetime(last_activity_ts)
 
+        # If only one of the two exists, set both (STIX first_seen/last_seen are expected as a pair)
+        if first_seen is not None or last_seen is not None:
+            if first_seen is None:
+                first_seen = last_seen
+            if last_seen is None:
+                last_seen = first_seen
+
+            assert first_seen is not None and last_seen is not None
+            first_seen, last_seen = normalize_start_time_and_stop_time(
+                first_seen, last_seen
+            )
+
         # Aliases
-        # CrowdStrike uses "known_as" as a comma-separated string of aliases, e.g.:
-        # "Sality, KuKu, SalLoad, Kookoo, SaliCode, Kukacka"
-        # It may also provide a list in "aliases". Normalize everything into a clean list.
-        raw_aliases = actor.get("aliases") or actor.get("known_as") or []
-        aliases: List[str] = []
-
-        if isinstance(raw_aliases, str):
-            # Split comma-separated string and trim whitespace
-            for alias in raw_aliases.split(","):
-                alias_clean = alias.strip()
-                if alias_clean:
-                    aliases.append(alias_clean)
-        elif isinstance(raw_aliases, list):
-            for alias_entry in raw_aliases:
-                if isinstance(alias_entry, str):
-                    alias_clean = alias_entry.strip()
-                elif isinstance(alias_entry, Mapping):
-                    alias_clean = str(
-                        alias_entry.get("value")
-                        or alias_entry.get("name")
-                        or alias_entry.get("slug")
-                        or ""
-                    ).strip()
-                else:
-                    alias_clean = ""
-
-                if alias_clean:
-                    aliases.append(alias_clean)
-
-        # Also add a compact alias without spaces (e.g. "SALTY SPIDER" -> "SALTYSPIDER")
-        if isinstance(name, str):
-            compact = name.replace(" ", "")
-            if compact and compact != name and compact not in aliases:
-                aliases.append(compact)
-
-        # Deduplicate while preserving order
-        seen_aliases = set()
-        deduped_aliases: List[str] = []
-        for alias in aliases:
-            if alias not in seen_aliases and alias != name:
-                seen_aliases.add(alias)
-                deduped_aliases.append(alias)
-        aliases = deduped_aliases
+        aliases = self._normalize_aliases(str(name), actor)
 
         # Motivations
         # CrowdStrike 'motivations' is a list of objects, e.g.:
@@ -142,7 +164,7 @@ class RelatedActorBundleBuilder:
         # of secondary_motivations, so we derive those from the list.
         motivations_raw = actor.get("motivations") or []
         primary_motivation = None
-        secondary_motivations: Optional[List[str]] = None
+        secondary_motivations: list[str] | None = None
 
         if isinstance(motivations_raw, list) and motivations_raw:
             # Use the first motivation as primary
@@ -153,7 +175,7 @@ class RelatedActorBundleBuilder:
 
             # Any additional motivations become secondary
             if len(motivations_raw) > 1:
-                secondary_values: List[str] = []
+                secondary_values: list[str] = []
                 for mot in motivations_raw[1:]:
                     val = (mot.get("value") or mot.get("slug") or "").strip()
                     if val:
@@ -174,10 +196,10 @@ class RelatedActorBundleBuilder:
 
         # Goals (map CrowdStrike 'objectives' to STIX goals)
         goals_raw = actor.get("objectives") or []
-        goals: Optional[List[str]] = None
+        goals: list[str] | None = None
 
         if isinstance(goals_raw, list) and goals_raw:
-            goal_values: List[str] = []
+            goal_values: list[str] = []
             for obj in goals_raw:
                 val = (obj.get("value") or obj.get("slug") or "").strip()
                 if val:
@@ -186,13 +208,13 @@ class RelatedActorBundleBuilder:
                 goals = goal_values
 
         # External reference back to CrowdStrike
-        external_references: List[ExternalReference] = []
+        external_references: list[ExternalReference] = []
         cs_id = str(actor.get("id") or "")
         url = actor.get("url")
         if cs_id and url:
             external_references.append(
                 create_external_reference(
-                    "CrowdStrike Intel",
+                    self.source_name,
                     cs_id,
                     url,
                 )

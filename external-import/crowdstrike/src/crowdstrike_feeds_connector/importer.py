@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
 import stix2
-from pycti import OpenCTIConnectorHelper  # type: ignore
+from pycti import OpenCTIConnectorHelper
 
 
 class BaseImporter(ABC):
@@ -72,7 +72,7 @@ class BaseImporter(ABC):
         return self.author["name"]
 
     def _confidence_level(self) -> int:
-        return self.helper.connect_confidence_level
+        return self.helper.connect_confidence_level or 10
 
     def _set_state(self, state: Dict[str, Any]) -> None:
         self.helper.set_state(state)

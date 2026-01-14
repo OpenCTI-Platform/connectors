@@ -3,7 +3,7 @@
 import ipaddress
 from typing import List, NamedTuple
 
-from stix2 import ObjectPath  # type: ignore
+from stix2 import ObjectPath
 from stix2 import EqualityComparisonExpression, ObservationExpression, StringConstant
 
 _OBJECT_TYPE_IPV4_ADDR = "ipv4-addr"

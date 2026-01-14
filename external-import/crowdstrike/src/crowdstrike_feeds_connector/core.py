@@ -4,7 +4,8 @@
 import os
 import sys
 import time
-from typing import Any, Dict, List, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any, cast
 
 import stix2
 import yaml
@@ -17,7 +18,7 @@ from crowdstrike_feeds_services.utils import (
 )
 from crowdstrike_feeds_services.utils.config_variables import ConfigCrowdstrike
 from crowdstrike_feeds_services.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
-from pycti import OpenCTIConnectorHelper  # type: ignore
+from pycti import OpenCTIConnectorHelper
 
 from .actor.importer import ActorImporter
 from .importer import BaseImporter
@@ -62,9 +63,11 @@ class CrowdStrike:
         self.config = ConfigCrowdstrike()
 
         scopes_str = self.config.scopes
-        scopes = set()
+        scopes: set[str] = set()
         if scopes_str is not None:
             scopes = set(convert_comma_separated_str_to_list(scopes_str))
+
+        scopes_list: list[str] = list(scopes)
 
         tlp = self.config.tlp
         tlp_marking = self._convert_tlp_to_marking_definition(tlp)
@@ -175,7 +178,7 @@ class CrowdStrike:
         self.connect_cs = BaseCrowdstrikeClient(self.helper)
 
         # Create importers.
-        importers: List[BaseImporter] = []
+        importers: list[BaseImporter] = []
 
         if self._CONFIG_SCOPE_ACTOR in scopes:
 
@@ -255,7 +258,7 @@ class CrowdStrike:
                 report_status,
                 report_type,
                 no_file_trigger_import,
-                scopes=scopes,  # type: ignore
+                scopes=scopes_list,
             )
 
             importers.append(yara_master_importer)
@@ -278,7 +281,7 @@ class CrowdStrike:
         self.importers = importers
 
     @staticmethod
-    def _read_configuration() -> Dict[str, str]:
+    def _read_configuration() -> dict[str, str]:
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/../config.yml"
         if not os.path.isfile(config_file_path):
             return {}
@@ -289,16 +292,16 @@ class CrowdStrike:
         return create_organization("CrowdStrike")
 
     @staticmethod
-    def _get_yaml_path(config_name: str) -> List[str]:
+    def _get_yaml_path(config_name: str) -> list[str]:
         return config_name.split(".")
 
     @staticmethod
-    def _get_environment_variable_name(yaml_path: List[str]) -> str:
+    def _get_environment_variable_name(yaml_path: list[str]) -> str:
         return "_".join(yaml_path).upper()
 
     @classmethod
     def _convert_tlp_to_marking_definition(
-        cls, tlp_value: Optional[str]
+        cls, tlp_value: str | None
     ) -> stix2.MarkingDefinition:
         if tlp_value is None:
             return DEFAULT_TLP_MARKING_DEFINITION
@@ -308,7 +311,7 @@ class CrowdStrike:
     def _convert_report_status_str_to_report_status_int(cls, report_status: str) -> int:
         return cls._CONFIG_REPORT_STATUS_MAPPING[report_status.lower()]
 
-    def _load_state(self) -> Dict[str, Any]:
+    def _load_state(self) -> dict[str, Any]:
         current_state = self.helper.get_state()
         if not current_state:
             return {}
@@ -316,7 +319,7 @@ class CrowdStrike:
 
     @staticmethod
     def _get_state_value(
-        state: Optional[Mapping[str, Any]], key: str, default: Optional[Any] = None
+        state: Mapping[str, Any] | None, key: str, default: Any | None = None
     ) -> Any:
         if state is not None:
             return state.get(key, default)
@@ -345,15 +348,17 @@ class CrowdStrike:
             new_state = current_state.copy()
 
             for importer in self.importers:
-                work_id = self._initiate_work(timestamp, importer.name)  # type: ignore
+                importer_name = importer.name or importer.__class__.__name__
+                work_id = self._initiate_work(timestamp, importer_name)
                 importer_state = importer.start(work_id, new_state)
                 new_state.update(importer_state)
 
                 self._info("Storing updated new state: {0}", new_state)
                 self.helper.set_state(new_state)
 
+                connect_name = self.helper.connect_name or "CrowdStrike"
                 message = (
-                    f"{self.helper.connect_name} {importer.name} successfully run, storing last_run as "
+                    f"{connect_name} {importer.name} successfully run, storing last_run as "
                     + str(timestamp)
                 )
                 self.helper.api.work.to_processed(work_id, message)
@@ -388,9 +393,14 @@ class CrowdStrike:
         friendly_name = (
             f"{self.helper.connect_name}/{importer_name} run @ {datetime_str}"
         )
+        connect_id = self.helper.connect_id
+        if not connect_id:
+            raise ValueError("OpenCTI helper connect_id is not set")
+
         work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id, friendly_name  # type: ignore
+            cast(str, connect_id), friendly_name
         )
+        work_id = cast(str, work_id)
 
         self._info(f"New '{importer_name} work '{work_id}' initiated", work_id)
         return work_id

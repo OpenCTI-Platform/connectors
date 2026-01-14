@@ -2,7 +2,8 @@
 """OpenCTI CrowdStrike actor builder module."""
 
 import logging
-from typing import List, Optional, Tuple
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 from crowdstrike_feeds_services.utils import (
     create_external_reference,
@@ -16,7 +17,7 @@ from crowdstrike_feeds_services.utils import (
     remove_html_tags,
     timestamp_to_datetime,
 )
-from stix2 import Identity  # type: ignore
+from stix2 import Identity
 from stix2 import (
     AttackPattern,
     Bundle,
@@ -26,7 +27,7 @@ from stix2 import (
     MarkingDefinition,
     Relationship,
 )
-from stix2.v21 import _DomainObject  # type: ignore
+from stix2.v21 import _DomainObject
 
 logger = logging.getLogger(__name__)
 
@@ -48,12 +49,12 @@ class ActorBundleBuilder:
 
     def __init__(
         self,
-        actor: dict,
+        actor: Mapping[str, Any],
         author: Identity,
         source_name: str,
-        object_markings: List[MarkingDefinition],
+        object_markings: list[MarkingDefinition],
         confidence_level: int,
-        attack_patterns: Optional[List] = None,
+        attack_patterns: list[AttackPattern] | None = None,
     ) -> None:
         """Initialize actor bundle builder."""
         self.actor = actor
@@ -63,17 +64,26 @@ class ActorBundleBuilder:
         self.confidence_level = confidence_level
         self.attack_patterns = attack_patterns or []
 
-        first_seen = timestamp_to_datetime(self.actor["first_activity_date"])
-        last_seen = timestamp_to_datetime(self.actor["last_activity_date"])
+        first_seen = None
+        last_seen = None
 
-        first_seen, last_seen = normalize_start_time_and_stop_time(
-            first_seen, last_seen
-        )
+        first_ts = self.actor.get("first_activity_date")
+        last_ts = self.actor.get("last_activity_date")
+
+        if isinstance(first_ts, int) and first_ts > 0:
+            first_seen = timestamp_to_datetime(first_ts)
+        if isinstance(last_ts, int) and last_ts > 0:
+            last_seen = timestamp_to_datetime(last_ts)
+
+        if first_seen is not None and last_seen is not None:
+            first_seen, last_seen = normalize_start_time_and_stop_time(
+                first_seen, last_seen
+            )
 
         self.first_seen = first_seen
         self.last_seen = last_seen
 
-    def _create_external_references(self) -> List[ExternalReference]:
+    def _create_external_references(self) -> list[ExternalReference]:
         external_references = []
         actor_url = self.actor["url"]
         if actor_url:
@@ -103,7 +113,7 @@ class ActorBundleBuilder:
             object_markings=self.object_markings,
         )
 
-    def _get_description(self) -> Optional[str]:
+    def _get_description(self) -> str | None:
         actor = self.actor
 
         actor_description = actor["description"]
@@ -121,7 +131,7 @@ class ActorBundleBuilder:
 
         return final_description
 
-    def _get_aliases(self) -> List[str]:
+    def _get_aliases(self) -> list[str]:
         actor = self.actor
 
         name = actor["name"]
@@ -144,7 +154,7 @@ class ActorBundleBuilder:
 
         return aliases
 
-    def _get_motivations(self) -> Tuple[Optional[str], Optional[List[str]]]:
+    def _get_motivations(self) -> tuple[str | None, list[str] | None]:
         actor = self.actor
 
         actor_motivations = actor["motivations"]
@@ -172,12 +182,12 @@ class ActorBundleBuilder:
         else:
             return motivations[0], motivations[1:]
 
-    def _create_intrusion_sets(self) -> List[IntrusionSet]:
+    def _create_intrusion_sets(self) -> list[IntrusionSet]:
         return [self._create_intrusion_set()]
 
     def _create_origin_regions_and_countries(
         self,
-    ) -> Tuple[List[Location], List[Location]]:
+    ) -> tuple[list[Location], list[Location]]:
         actor_origins = self.actor["origins"]
         if actor_origins is None:
             return [], []
@@ -186,7 +196,7 @@ class ActorBundleBuilder:
 
     def _create_targeted_regions_and_countries(
         self,
-    ) -> Tuple[List[Location], List[Location]]:
+    ) -> tuple[list[Location], list[Location]]:
         actor_target_countries = self.actor["target_countries"]
         if actor_target_countries is None:
             return [], []
@@ -194,27 +204,27 @@ class ActorBundleBuilder:
         return self._create_regions_and_countries_from_entities(actor_target_countries)
 
     def _create_regions_and_countries_from_entities(
-        self, entities: List
-    ) -> Tuple[List[Location], List[Location]]:
+        self, entities: list[Any]
+    ) -> tuple[list[Location], list[Location]]:
         return create_regions_and_countries_from_entities(entities, self.author)
 
-    def _create_targeted_sectors(self) -> List[Identity]:
+    def _create_targeted_sectors(self) -> list[Identity]:
         actor_target_industries = self.actor["target_industries"]
         if actor_target_industries is None:
             return []
 
         return self._create_sectors_from_entities(actor_target_industries)
 
-    def _create_sectors_from_entities(self, entities: List) -> List[Identity]:
+    def _create_sectors_from_entities(self, entities: list[Any]) -> list[Identity]:
         return create_sectors_from_entities(entities, self.author)
 
     def _create_targets_relationships(
-        self, sources: List[_DomainObject], targets: List[_DomainObject]
-    ) -> List[Relationship]:
+        self, sources: Sequence[_DomainObject], targets: Sequence[_DomainObject]
+    ) -> list[Relationship]:
         return create_targets_relationships(
             self.author,
-            sources,
-            targets,
+            list(sources),
+            list(targets),
             self.confidence_level,
             self.object_markings,
             start_time=self.first_seen,
@@ -222,28 +232,28 @@ class ActorBundleBuilder:
         )
 
     def _create_originates_from_relationships(
-        self, sources: List[_DomainObject], targets: List[_DomainObject]
-    ) -> List[Relationship]:
+        self, sources: Sequence[_DomainObject], targets: Sequence[_DomainObject]
+    ) -> list[Relationship]:
         return create_originates_from_relationships(
             self.author,
-            sources,
-            targets,
+            list(sources),
+            list(targets),
             self.confidence_level,
             self.object_markings,
         )
 
-    def _get_attack_patterns(self) -> List[AttackPattern]:
+    def _get_attack_patterns(self) -> list[AttackPattern]:
         """Get AttackPatterns data."""
         return self.attack_patterns
 
     def _create_uses_relationships(
-        self, sources: List[_DomainObject], targets: List[_DomainObject]
-    ) -> List[Relationship]:
+        self, sources: Sequence[_DomainObject], targets: Sequence[_DomainObject]
+    ) -> list[Relationship]:
         """Create 'uses' relationships between IntrusionSet and AttackPatterns."""
         return create_uses_relationships(
             self.author,
-            sources,
-            targets,
+            list(sources),
+            list(targets),
             self.confidence_level,
             self.object_markings,
             start_time=self.first_seen,
@@ -253,7 +263,8 @@ class ActorBundleBuilder:
     def build(self) -> Bundle:
         """Build actor bundle."""
         # Create bundle with author.
-        bundle_objects = [self.author]
+        # Explicitly type as heterogeneous STIX objects (author, markings, SDOs/SROs).
+        bundle_objects: list[Any] = [self.author]
 
         # Add object marking definitions to bundle.
         bundle_objects.extend(self.object_markings)

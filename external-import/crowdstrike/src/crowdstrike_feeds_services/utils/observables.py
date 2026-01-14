@@ -8,7 +8,7 @@ from pycti import (
     CustomObservableHostname,
     CustomObservableUserAgent,
 )
-from stix2 import DomainName  # type: ignore
+from stix2 import DomainName
 from stix2 import (
     URL,
     EmailAddress,
@@ -105,7 +105,7 @@ def create_observable_hostname(
         value=properties.value,
         object_marking_refs=properties.object_markings,
         custom_properties=_get_custom_properties(properties),
-    )  # type: ignore
+    )
 
 
 def create_observable_email_address(properties: ObservableProperties) -> EmailAddress:
@@ -188,7 +188,7 @@ def create_observable_cryptocurrency_wallet(
         value=properties.value,
         object_marking_refs=properties.object_markings,
         custom_properties=_get_custom_properties(properties),
-    )  # type: ignore
+    )
 
 
 def create_observable_windows_service_name(properties: ObservableProperties) -> Process:
@@ -243,7 +243,7 @@ def create_observable_user_agent(
         value=properties.value,
         object_marking_refs=properties.object_markings,
         custom_properties=_get_custom_properties(properties),
-    )  # type: ignore
+    )
 
 
 def create_observable_email_message_subject(
