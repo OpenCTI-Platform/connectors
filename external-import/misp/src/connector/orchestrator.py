@@ -1,26 +1,32 @@
-"""Report-specific orchestrator for fetching and processing report data."""
+"""Orchestrator for fetching and processing data.
+
+This orchestrator handles the fetching, conversion, and processing data
+using the proper fetchers/converters/batch processor pattern.
+"""
 
 import copy
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
-from api_client.models import EventRestSearchListItem
+from api_client.client import MISPClient
 from connector.threats_guesser import ThreatsGuesser
 from connector.use_cases import EventConverter
+from utils.batch_processors import GenericBatchProcessor
 from utils.batch_processors.configs import EVENT_BATCH_PROCESSOR_CONFIG
-from utils.batch_processors.generic_batch_processor import GenericBatchProcessor
-from utils.orchestrators import BaseOrchestrator
 
 if TYPE_CHECKING:
+    import stix2
+    from api_client.models import EventRestSearchListItem
     from connector.settings import MispConfig
     from utils.protocols import LoggerProtocol
     from utils.work_manager import WorkManager
 
-LOG_PREFIX = "[OrchestratorEvent]"
+
+LOG_PREFIX = "[Orchestrator]"
 
 
-class OrchestratorEvent(BaseOrchestrator):
-    """Event-specific orchestrator for fetching and processing event data."""
+class Orchestrator:
+    """Main orchestrator that delegates to specialized orchestrators."""
 
     def __init__(
         self,
@@ -28,7 +34,7 @@ class OrchestratorEvent(BaseOrchestrator):
         logger: "LoggerProtocol",
         config: "MispConfig",
     ) -> None:
-        """Initialize the Event Orchestrator.
+        """Initialize the Orchestrator.
 
         Args:
             work_manager: Work manager for handling OpenCTI work operations
@@ -36,17 +42,30 @@ class OrchestratorEvent(BaseOrchestrator):
             config: Configuration object containing connector settings
 
         """
-        super().__init__(work_manager, logger, config)
+        self.work_manager = work_manager
+        self.logger = logger
+        self.config = config
+
+        self.client_api: MISPClient = MISPClient(
+            url=self.config.url,
+            key=self.config.key.get_secret_value(),
+            verify_ssl=self.config.ssl_verify,
+            certificate=self.config.client_cert,
+        )
 
         self.logger.info(
-            "API URL",
-            {"prefix": LOG_PREFIX, "api_url": self.config.url.unicode_string()},
+            "MISP URL",
+            {"prefix": LOG_PREFIX, "url": self.config.url.unicode_string()},
         )
-        self.logger.info(
-            "Event import start date",
-            {"prefix": LOG_PREFIX, "start_date": self.config.import_from_date},
-        )
+        self.logger.info("Initializing orchestrator", {"prefix": LOG_PREFIX})
 
+        self.logger.info(
+            "Report import start date",
+            {
+                "prefix": LOG_PREFIX,
+                "start_date": self.config.import_from_date,
+            },
+        )
         self.converter = EventConverter(
             logger=self.logger,
             report_type=self.config.report_type,
@@ -72,9 +91,10 @@ class OrchestratorEvent(BaseOrchestrator):
                 else None
             ),
         )
-        self.batch_processor: GenericBatchProcessor = self._create_batch_processor()
+        self.batch_processor: "GenericBatchProcessor" = self._create_batch_processor()
+        self.logger.info("Orchestrator initialized", {"prefix": LOG_PREFIX})
 
-    def _create_batch_processor(self) -> GenericBatchProcessor:
+    def _create_batch_processor(self) -> "GenericBatchProcessor":
         """Create and configure the batch processor.
 
         Returns:
@@ -89,7 +109,96 @@ class OrchestratorEvent(BaseOrchestrator):
             logger=self.logger,
         )
 
-    def _validate_event(self, event: EventRestSearchListItem) -> bool:
+    def _log_entities_summary(
+        self,
+        all_entities: list[Any],
+        current_idx: int,
+        total: int,
+    ) -> None:
+        """Log summary of converted entities.
+
+        Args:
+            all_entities: list of all converted entities
+            current_idx: Current index in processing
+            total: Total number of entities
+
+        """
+        entity_types: dict[str, int] = {}
+        for entity in all_entities:
+            entity_type_attr = getattr(entity, "type", None)
+            if entity_type_attr:
+                entity_types[entity_type_attr] = (
+                    entity_types.get(entity_type_attr, 0) + 1
+                )
+        entities_summary = ", ".join([f"{k}: {v}" for k, v in entity_types.items()])
+        self.logger.info(
+            "Converted to STIX entities",
+            {
+                "prefix": LOG_PREFIX,
+                "current": current_idx + 1,
+                "total": total,
+                "entities_count": len(all_entities),
+                "entities_summary": entities_summary,
+            },
+        )
+
+    def _check_batch_size_and_flush(
+        self,
+        batch_processor: Any,
+        all_entities: list[Any],
+    ) -> None:
+        """Check if batch needs to be flushed and flush if necessary.
+
+        Args:
+            batch_processor: The batch processor to check
+            all_entities: list of entities to be added
+
+        """
+        if (
+            batch_processor.get_current_batch_size() + len(all_entities)
+        ) >= batch_processor.config.batch_size * 2:
+            self.logger.info(
+                "Need to Flush before adding next items to preserve consistency of the bundle",
+                {"prefix": LOG_PREFIX},
+            )
+            batch_processor.flush()
+
+    def _add_entities_to_batch(
+        self,
+        batch_processor: "GenericBatchProcessor",
+        all_entities: "list[stix2.v21._STIXBase21]",
+        author,
+        markings,
+    ) -> None:
+        """Add entities to the batch processor.
+
+        Args:
+            batch_processor: The batch processor to add entities to
+            all_entities: list of entities to add
+            converter: The converter instance to use for organization and tlp_marking
+
+        """
+        batch_processor.add_item(author)
+        batch_processor.add_items(markings)
+        batch_processor.add_items(all_entities)
+
+    def _flush_batch_processor(self) -> None:
+        """Flush any remaining items in the batch processor."""
+        try:
+            work_id = self.batch_processor.flush()
+            if work_id:
+                self.logger.info(
+                    "Batch processor: Flushed remaining items",
+                    {"prefix": LOG_PREFIX},
+                )
+            self.batch_processor.update_final_state()
+        except Exception as e:
+            self.logger.error(
+                "Failed to flush batch processor",
+                {"prefix": LOG_PREFIX, "error": str(e)},
+            )
+
+    def _validate_event(self, event: "EventRestSearchListItem") -> bool:
         """Validate the event.
 
         Args:
@@ -163,13 +272,15 @@ class OrchestratorEvent(BaseOrchestrator):
 
         return True
 
-    def run(self, initial_state: dict[str, Any] | None) -> None:
+    def run_event(self, initial_state: dict[str, Any] | None) -> None:
         """Run the event orchestrator.
 
         Args:
             initial_state: Initial state for the orchestrator
 
         """
+        self.logger.info("Starting MISP event orchestration", {"prefix": LOG_PREFIX})
+
         now = datetime.now(tz=timezone.utc)
 
         if initial_state is not None and (
@@ -337,19 +448,3 @@ class OrchestratorEvent(BaseOrchestrator):
 
         finally:
             self._flush_batch_processor()
-
-    def _flush_batch_processor(self) -> None:
-        """Flush any remaining items in the batch processor."""
-        try:
-            work_id = self.batch_processor.flush()
-            if work_id:
-                self.logger.info(
-                    "Batch processor: Flushed remaining items",
-                    {"prefix": LOG_PREFIX},
-                )
-            self.batch_processor.update_final_state()
-        except Exception as e:
-            self.logger.error(
-                "Failed to flush batch processor",
-                {"prefix": LOG_PREFIX, "error": str(e)},
-            )
