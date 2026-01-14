@@ -8,7 +8,6 @@ import requests
 import stix2
 import yaml
 from pycti import (
-    Indicator,
     Tool,
     ThreatActor,
     AttackPattern,
