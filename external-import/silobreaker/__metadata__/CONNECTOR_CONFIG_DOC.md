@@ -17,4 +17,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"PT1H"` | The period of time to await between two runs of the connector. |
 | SILOBREAKER_API_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"https://api.silobreaker.com/"` | The URL of the Silobreaker API. |
 | SILOBREAKER_LISTS | `array` |  | string | `["138809", "96910", "36592", "55112", "50774"]` | The lists of Silobreaker to import. |
-| SILOBREAKER_IMPORT_START_DATE | `string` |  | Format: [`date-time`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"2024-09-01T00:00:00Z"` | The start date for importing Silobreaker data. |
+| SILOBREAKER_IMPORT_START_DATE | `string` |  | Format: [`date-time`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"2025-12-01T00:00:00Z"` | The start date for importing Silobreaker data. (Default: 01/12/2025). |
