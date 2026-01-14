@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING
 
+from connector.orchestrator import Orchestrator
 from connector.settings import ConnectorSettings
 from exceptions.connector_errors import MispWorkProcessingError
 from pycti import OpenCTIConnectorHelper
-from utils.orchestrators import Orchestrator
 from utils.work_manager import WorkManager
 
 if TYPE_CHECKING:
