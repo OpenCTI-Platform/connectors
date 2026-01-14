@@ -24,7 +24,8 @@
         "StixFile",
         "IPv4-Addr",
         "Domain-Name",
-        "Hostname"
+        "Hostname",
+        "Url"
       ],
       "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
       "items": {
@@ -99,6 +100,11 @@
     "KASPERSKY_DOMAIN_SECTIONS": {
       "default": "LicenseInfo,Zone,DomainGeneralInfo",
       "description": "Sections wanted to investigate for the requested domain/hostname. LicenseInfo, Zone and DomainGeneralInfo are always set, can't be disabled. Only DomainDnsResolutions, FilesDownloaded, FilesAccessed and Industries are currently supported",
+      "type": "string"
+    },
+    "KASPERSKY_URL_SECTIONS": {
+      "default": "LicenseInfo,Zone,UrlGeneralInfo",
+      "description": "Sections wanted to investigate for the requested URL. LicenseInfo, Zone and UrlGeneralInfo are always set, can't be disabled. Only FilesDownloaded, FilesAccessed and Industries are currently supported",
       "type": "string"
     }
   },
