@@ -140,7 +140,7 @@ class WithaName:
             default=False,
         )
 
-        self.helper.connector_logger.debug(f"WithaName connector initialized.")
+        self.helper.connector_logger.debug("WithaName connector initialized.")
         self.helper.connector_logger.debug(f"WithaName url:            {self.withaname_url}.")
         self.helper.connector_logger.debug(f"WithaName save_domain:    {self.withaname_save_domain}.")
         self.helper.connector_logger.debug(f"WithaName save_ip:        {self.withaname_save_ip}.")
@@ -213,9 +213,9 @@ class WithaName:
                     self.helper.connector_logger.info("No new data from WithaName since last run, skipping processing.")
                     return {}
                 else:
-                    self.helper.connector_logger.debug(f"It's a new config from WithaName.")
+                    self.helper.connector_logger.debug("It's a new config from WithaName.")
             else:
-                self.helper.connector_logger.info(f"It's a dry run no WithaName last.")
+                self.helper.connector_logger.info("It's a dry run no WithaName last.")
             # Save the last data locally
             self.helper.connector_logger.info(f"Saving the last WithaName data locally to {Last_file}.")
             json.dump(_json, open(Last_file, "w"), indent=4)
@@ -294,7 +294,7 @@ class WithaName:
         description += "-------------------------------- \n"
         
         # STIX: Create Observables
-        self.helper.connector_logger.debug(f"New target to process")
+        self.helper.connector_logger.debug("New target to process")
         try:
             Observables = []
             master_observable_id = None
@@ -380,7 +380,7 @@ class WithaName:
             self.helper.connector_logger.debug(f"  -  Working on observable created: {observable['value']}.")
             try:
                 if self.withaname_link_tool_id is None:
-                    self.helper.connector_logger.debug(f"    [-] No Link with Tool requested.")
+                    self.helper.connector_logger.debug("    [-] No Link with Tool requested.")
                 else:
                     # STIX: StixCoreRelationship Observable --> Tool
                     self.helper.connector_logger.debug(f"    [+] StixCoreRelationship creation between Tool and Observable ({self.withaname_link_tool} > {observable["value"]}).")
@@ -404,7 +404,7 @@ class WithaName:
             # STIX: Linking Threat-Actor (StixCoreRelationship)
             try:
                 if self.withaname_link_ta_id is None:
-                    self.helper.connector_logger.debug(f"    [-] No Link with Threat Actor requested.")
+                    self.helper.connector_logger.debug("    [-] No Link with Threat Actor requested.")
                 else:
                     # STIX: StixCoreRelationship Observable --> Threat-Actor
                     self.helper.connector_logger.debug(f"    [+] StixCoreRelationship creation between Threat-Actor and Observable ({self.withaname_link_ta} > {observable["value"]}).")
@@ -428,7 +428,7 @@ class WithaName:
             # STIX: Linking Attack-Pattern (StixCoreRelationship)
             try:
                 if self.withaname_link_ap_id is None:
-                    self.helper.connector_logger.debug(f"    [-] No Link with Tool requested.")
+                    self.helper.connector_logger.debug("    [-] No Link with Tool requested.")
                 else:
                     # STIX: StixCoreRelationship Observable --> Attack-Pattern
                     self.helper.connector_logger.debug(f"    [+] StixCoreRelationship creation between Attack-Pattern and Observable ({self.withaname_link_ap} > {observable["value"]}).")
@@ -510,7 +510,7 @@ class WithaName:
             # STIX: Linking Campaign (StixCoreRelationship)
             try:
                 if self.withaname_link_campaign_id is None:
-                    self.helper.connector_logger.debug(f"    [-] No campaingn requested.")
+                    self.helper.connector_logger.debug("    [-] No campaingn requested.")
                 else:
                     # STIX: Relationship Observable --> campaign
                     self.helper.connector_logger.debug(f"    [+] StixCoreRelationship creation between Campaign and Observable ({self.withaname_link_campaign_id} > {observable["value"]}).")

@@ -87,7 +87,7 @@ class iCloudPrivateRelay:
         )
         
 
-        self.helper.connector_logger.debug(f"    Apple VPN connector initialized.")
+        self.helper.connector_logger.debug("    Apple VPN connector initialized.")
         self.helper.connector_logger.debug(f"    Apple VPN iCloud_vpn_endpoints_url: {self.iCloud_vpn_endpoints_url}.")
         self.helper.connector_logger.debug(f"    Apple VPN iCloud_vpn_interval: {self.iCloud_vpn_interval}.")
         self.helper.connector_logger.debug(f"    Apple VPN iCloud_vpn_tags: {self.iCloud_vpn_tags}.")
@@ -191,7 +191,7 @@ class iCloudPrivateRelay:
 
         # self.helper.connector_logger.info(f"  Working on {CIDR} / {City} / {CountryCode} / {RegionCode}.")
         
-        description  = f"Apple iCloud privacy VPN goes thrue this element: \n"
+        description  = "Apple iCloud privacy VPN goes thrue this element: \n"
         description += f"CIDR: {CIDR} \n"
         description += f"CountryCode: {CountryCode} \n"
         description += f"CIRegionCodeDR: {RegionCode} \n"
@@ -288,7 +288,7 @@ class iCloudPrivateRelay:
     def create_stix_bundle(self, AppleVPN_lines):
         
         if AppleVPN_lines is None:
-            self.helper.connector_logger.error(f"No Apple VPN returned.")
+            self.helper.connector_logger.error("No Apple VPN returned.")
             return None, None
         if self.iCloud_vpn_identity.startswith("identity--"):
             self.helper.connector_logger.info(f"We use the provided Identity ID for Microsoft Apple VPN: {self.iCloud_vpn_identity}.")
@@ -327,7 +327,7 @@ class iCloudPrivateRelay:
             with open("last_AppleVPN_run.csv", "w+") as f:
                 f.write("\n".join(one_AppleVPN_element))
                 f.close()
-            self.helper.connector_logger.info(f" We save the last processed lines for next run.")
+            self.helper.connector_logger.info(" We save the last processed lines for next run.")
 
         bundle = stix2.Bundle(
             objects=stix_objects,
@@ -340,7 +340,7 @@ class iCloudPrivateRelay:
         try:
             stix_bundle , AppleVPN_lines = self.create_stix_bundle(info)
             if stix_bundle is None:
-                self.helper.connector_logger.debug(f"No STIX bundle created from Apple VPN data (None was return).")
+                self.helper.connector_logger.debug("No STIX bundle created from Apple VPN data (None was return).")
             else:
                 # Convert the bundle to a dictionary
                 stix_bundle_dict = json.loads(stix_bundle.serialize())
