@@ -3,13 +3,13 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  id: 'ChangeMe'
-  name: 'Template Connector' # optional (default: 'Template Connector')
-  scope: 'ChangeMe'
+  id: 'Monty Security C2 Tracker'
+  name: 'Monty Security C2 Tracker' # optional # optional (default: 'Template Connector')
+  scope: 'IPv4, IPv6, Malware'
   log_level: 'error' # optional (default: 'error')
-  duration_period: 'PT1H' #  # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+  duration_period: 'P1W' # optional, interval in ISO-8601 format between two runs of the connector (default: 'P1W')
 
 montysecurity_c2_tracker:
-  api_base_url: 'ChangeMe'
-  api_key: 'ChangeMe'
   tlp_level: 'clear' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
+  malware_list_url: 'https://github.com/montysecurity/C2-Tracker/tree/main/data'
+  malware_ips_base_url: 'https://raw.githubusercontent.com/montysecurity/C2-Tracker/main/data/'

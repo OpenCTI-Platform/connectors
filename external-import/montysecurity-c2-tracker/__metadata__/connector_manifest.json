@@ -1,5 +1,5 @@
 {
-  "title": "Template Connector",
+  "title": "Monty Security C2 Tracker",
   "slug": "montysecurity-c2-tracker",
   "description": "Template description of the connector",
   "short_description": "Template short description (summary) of the connector",
@@ -9,7 +9,7 @@
   "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 50,
-  "support_version": ">=6.8.12",
+  "support_version": ">=6.9.7",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/montysecurity-c2-tracker",
   "manager_supported": false,

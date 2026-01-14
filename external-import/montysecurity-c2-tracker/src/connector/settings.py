@@ -21,7 +21,7 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
-        default=timedelta(hours=1),
+        default=timedelta(weeks=1),
     )
 
 
@@ -41,6 +41,15 @@ class MontysecurityC2TrackerConfig(BaseConfigModel):
         default="clear",
     )
 
+    malware_list_url: HttpUrl = Field(
+        description="The URL to the malware list page of the imported entities.",
+        default="https://github.com/montysecurity/C2-Tracker/tree/main/data",
+    )
+
+    malware_ips_base_url: HttpUrl = Field(
+        description="The base URL used to fetch malware ips.",
+        default="https://raw.githubusercontent.com/montysecurity/C2-Tracker/main/data/"
+    )
 
 class ConnectorSettings(BaseConnectorSettings):
     """
