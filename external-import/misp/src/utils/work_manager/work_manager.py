@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from connector.settings import ConnectorSettings
-    from pycti import OpenCTIApiClient
     from pycti import OpenCTIConnectorHelper as OctiHelper
     from utils.protocols import LoggerProtocol
 
@@ -35,11 +34,6 @@ class WorkManager:
         self._helper = helper
         self._logger = logger or logging.getLogger(__name__)
         self._current_work_id: str | None = None
-
-    @property
-    def opencti_api(self) -> "OpenCTIApiClient":
-        """Get the OpenCTI API client."""
-        return self._helper.api
 
     def get_state(self) -> dict[str, Any]:
         """Get the current state dict of the Connector.

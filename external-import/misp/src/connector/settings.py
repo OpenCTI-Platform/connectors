@@ -261,8 +261,8 @@ class BatchConfig(BaseConfigModel):
     Define config specific to batch processing.
     """
 
-    size: int = Field(
-        description="The size of the batch.",
+    chunk_size: int = Field(
+        description="The chunk size for splitting object bundles into batches",
         default=9999,
     )
 
