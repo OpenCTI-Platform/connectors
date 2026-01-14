@@ -78,7 +78,7 @@ export NAMESHIELD_MARKING="TLP:GREEN"
 # Venv activation
 source /root/opencti/running-connectors/.octi_con_venv/bin/activate
 # Run Connector
-python3 /root/raw_src/connectors/external-import/NameShield/src/redflag-domains.py
+python3 /root/raw_src/connectors/external-import/NameShield/src/NameShield.py
 
 ```
 Make it executable
@@ -119,6 +119,6 @@ WantedBy=multi-user.target
 
 ```bash
 systemctl daemon-reload
-systemctl enable opencti-con-red-flag-domains.service
-systemctl start opencti-con-red-flag-domains.service
+systemctl enable opencti-con-nameshield.service
+systemctl start opencti-con-nameshield.service
 ```
