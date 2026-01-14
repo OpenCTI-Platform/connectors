@@ -11,10 +11,9 @@ from datetime import datetime
 from typing import Any, Dict
 
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
-
 from echocti.client import EchoCTIClient
 from echocti.converter import STIXConverter
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class EchoCTI:

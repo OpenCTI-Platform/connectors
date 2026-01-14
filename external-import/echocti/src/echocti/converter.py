@@ -275,7 +275,7 @@ class STIXConverter:
             if self.marking_refs:
                 indicator_kwargs["object_marking_refs"] = self.marking_refs
 
-            indicator = Indicator(**indicator_kwargs)
+            indicator = Indicator(id=indicator_kwargs["id"], **indicator_kwargs)
             return indicator
 
         except Exception as e:
