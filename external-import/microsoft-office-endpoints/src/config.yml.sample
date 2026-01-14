@@ -1,0 +1,19 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'micosoft-office-endpoints'
+  scope: 'micosoft-office-endpoints'
+  log_level: 'info'
+
+
+o365:
+  endpoints_url: https://endpoints.office.com/endpoints/worldwide?clientrequestid=b10c5ed1-bad1-445f-b386-b919946339a7
+  identity: Microsoft Office Endpoints
+  interval: "24"
+  tags: Microsoft,Office,Cloud
+  marking: TLP:CLEAR

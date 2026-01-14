@@ -1,0 +1,17 @@
+version: '1'
+services:
+  micosoft-office-endpoints:
+    image: opencti/micosoft-office-endpoints:rolling
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=CHANGME
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=MSOfficeEndpoints
+      - CONNECTOR_LOG_LEVEL=info
+      - O365_ENDPOINTS_URL=https://endpoints.office.com/endpoints/worldwide?clientrequestid=b10c5ed1-bad1-445f-b386-b919946339a7
+      - O365_IDENTITY=Microsoft Office Endpoints
+      - O365_INTERVAL=24
+      - O365_TAGS=Microsoft,Office,Cloud
+      - O365_MARKING=TLP:CLEAR
+    restart: always
