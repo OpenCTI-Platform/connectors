@@ -8,6 +8,7 @@ import requests
 import stix2
 import yaml
 from pycti import (
+    Identity,
     MarkingDefinition,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
@@ -174,7 +175,8 @@ class MOEndpoints:
         
         self.helper.connector_logger.debug(f"    Office Endpoints identity: {O365_Element['serviceAreaDisplayName']}.")
         Serv_identity = stix2.Identity(
-            spec_version="2.1",
+            id=Identity.generate_id(f"[identity:name = '{O365_Element['serviceAreaDisplayName']}']",identity_class="system"),
+			spec_version="2.1",
             name=f"{O365_Element['serviceAreaDisplayName']}",
             confidence=75,
             created="2024-07-17T10:53:11.000Z",
@@ -291,7 +293,8 @@ class MOEndpoints:
             self.helper.connector_logger.info(f"We create: {self.o365_identity}.")
             
             identity = stix2.Identity(
-                spec_version="2.1",
+                id=Identity.generate_id(f"[identity:name = '{self.o365_identity}']",identity_class="organization"),
+				spec_version="2.1",
                 name=f"{self.o365_identity}",
                 confidence=75,
                 created="2024-07-17T10:53:11.000Z",

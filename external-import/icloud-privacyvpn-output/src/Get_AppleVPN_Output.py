@@ -8,6 +8,8 @@ import requests
 import stix2
 import yaml
 from pycti import (
+    Identity,
+    Location,
     MarkingDefinition,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
@@ -232,7 +234,7 @@ class iCloudPrivateRelay:
         self.helper.connector_logger.debug(f"     > Output {CountryCode} is a country code, linking country.")
         try:
             country_obj = stix2.Location(
-                # id=stix2.Location.generate_id(f"[location:value = '{CountryCode}']","Country"),
+                id=Location.generate_id(f"[location:value = '{CountryCode}']","Country"),
                 country=CountryCode,
                 custom_properties={"x_opencti_score": 50, },
             )
@@ -258,7 +260,7 @@ class iCloudPrivateRelay:
         self.helper.connector_logger.debug(f"     > Output {City} is a country code, linking country.")
         try:
             city_obj = stix2.Location(
-                # id=stix2.Location.generate_id(f"[location:value = '{CountryCode}']","City"),
+                id=Location.generate_id(f"[location:value = '{CountryCode}']","City"),
                 country=CountryCode,
                 region=RegionCode,
                 city=City,
@@ -297,6 +299,7 @@ class iCloudPrivateRelay:
             self.helper.connector_logger.info(f"We create: {self.iCloud_vpn_identity}.")
             
             identity = stix2.Identity(
+                id=Identity.generate_id(f"[identity:name = '{self.iCloud_vpn_identity}']",identity_class="organization"),
                 spec_version="2.1",
                 name=f"{self.iCloud_vpn_identity}",
                 confidence=75,

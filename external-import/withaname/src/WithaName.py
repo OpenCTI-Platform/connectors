@@ -662,7 +662,7 @@ class WithaName:
             if not ( self.withaname_link_campaign_id is None or self.withaname_link_ta_id is  None):
                 self.helper.connector_logger.debug(f"StixCoreRelationship 'attributed-to' creation between Campaign and ThreatActor ({self.withaname_link_campaign_id} > {self.withaname_link_ta_id} ).")
                 relation_CTA = stix2.Relationship(
-                    # id=StixCoreRelationship.generate_id("attributed-to", self.withaname_link_campaign_id, self.withaname_link_ta_id, start_time=start_date, stop_time=end_date),
+                    id=StixCoreRelationship.generate_id("attributed-to", self.withaname_link_campaign_id, self.withaname_link_ta_id, start_time=start_date, stop_time=end_date),
                     source_ref=self.withaname_link_campaign_id,
                     target_ref=self.withaname_link_ta_id,
                     relationship_type="attributed-to",
@@ -683,7 +683,7 @@ class WithaName:
             if not ( self.withaname_link_campaign_id is None or self.withaname_link_tool_id is  None):
                 self.helper.connector_logger.debug(f"StixCoreRelationship 'uses' creation between Campaign and Tool ({self.withaname_link_campaign_id} > {self.withaname_link_ta_id} ).")
                 relation_CTA = stix2.Relationship(
-                    # id=StixCoreRelationship.generate_id("uses", self.withaname_link_campaign_id, self.withaname_link_tool_id, start_time=start_date, stop_time=end_date),
+                    id=StixCoreRelationship.generate_id("uses", self.withaname_link_campaign_id, self.withaname_link_tool_id, start_time=start_date, stop_time=end_date),
                     source_ref=self.withaname_link_campaign_id,
                     target_ref=self.withaname_link_tool_id,
                     relationship_type="uses",
