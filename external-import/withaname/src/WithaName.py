@@ -236,14 +236,17 @@ class WithaName:
                 try:
                     target_domain = one_target["host"]
                 except Exception as inst:
+                    self.helper.connector_logger.error(f"Error during host retreiving {inst}")
                     target_domain = "Err"
                 try:
                     target_ip = one_target["ip"]
                 except Exception as inst:
+                    self.helper.connector_logger.error(f"Error during ip retreiving {inst}")
                     target_ip = "Err"
                 try:
                     target_url = f"{one_target['type']}://{one_target['host']}{one_target['path']}"
                 except Exception as inst:
+                    self.helper.connector_logger.error(f"Error during url retreiving {inst}")
                     target_url = "Err"
                 
                 Dict_key=f"{target_domain}:{target_ip}".lower()
@@ -281,11 +284,11 @@ class WithaName:
         # We generate STIX objects from each domain entry
         description  = "Imported from WithaName API at "+datetime.datetime.now().strftime("%Y-%m-%d")+". \n"
         description += "All informations: \n"
-        description += f" - Domain: {target["domain"]}"+" \n"
-        description += f" - IP: {target["ip"]}"+" \n"
+        description += f" - Domain: {target["domain"]} \n"
+        description += f" - IP: {target["ip"]} \n"
         description += " - URLs: \n"
         for one_url in target["urls"]:
-            description += f"   + {one_url}"+" \n"
+            description += f"   + {one_url} \n"
         description += "Full Raw Data \n"
         description += "-------------------------------- \n"
         description += json.dumps(target["raw"],indent=4)+" \n"

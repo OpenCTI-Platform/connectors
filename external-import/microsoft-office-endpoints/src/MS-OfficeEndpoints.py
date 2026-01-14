@@ -8,7 +8,6 @@ import requests
 import stix2
 import yaml
 from pycti import (
-    Indicator,
     MarkingDefinition,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
@@ -79,7 +78,7 @@ class MOEndpoints:
         )
         
 
-        self.helper.connector_logger.debug(f"    Office Endpoints connector initialized.")
+        self.helper.connector_logger.debug("    Office Endpoints connector initialized.")
         self.helper.connector_logger.debug(f"    Office Endpoints O365_ENDPOINTS_URL: {self.o365_endpoints_url}.")
         self.helper.connector_logger.debug(f"    Office Endpoints o365_identity: {self.o365_identity}.")
         self.helper.connector_logger.debug(f"    Office Endpoints o365_interval: {self.o365_interval}.")
@@ -165,11 +164,11 @@ class MOEndpoints:
         #     "required": true
         #   },
         stix_objects = []
-        description  = f"Microsoft Office 365 Endpoint Details:"+" \n"
-        description += f"serviceArea: {O365_Element['serviceArea']}"+" \n"
-        description += f"serviceAreaDisplayName: {O365_Element['serviceAreaDisplayName']}"+" \n"
-        if 'tcpPorts' in O365_Element: description += f"It use TCP Ports: {O365_Element['tcpPorts']}"+" \n"
-        if 'udpPorts' in O365_Element:description +=  f"It use UDP Ports: {O365_Element['udpPorts']}"+" \n"
+        description  = "Microsoft Office 365 Endpoint Details: \n"
+        description += f"serviceArea: {O365_Element['serviceArea']} \n"
+        description += f"serviceAreaDisplayName: {O365_Element['serviceAreaDisplayName']} \n"
+        if 'tcpPorts' in O365_Element: description += f"It use TCP Ports: {O365_Element['tcpPorts']} \n"
+        if 'udpPorts' in O365_Element:description +=  f"It use UDP Ports: {O365_Element['udpPorts']} \n"
         
         # We create an identity for the System
         
@@ -283,7 +282,7 @@ class MOEndpoints:
     def create_stix_bundle(self, O365_list):
         
         if O365_list is None:
-            self.helper.connector_logger.error(f"No Ms Office Endpoints returned.")
+            self.helper.connector_logger.error("No Ms Office Endpoints returned.")
             return None, None
         if self.o365_identity.startswith("identity--"):
             self.helper.connector_logger.info(f"We use the provided Identity ID for Microsoft Office Endpoints: {self.o365_identity}.")
@@ -320,7 +319,7 @@ class MOEndpoints:
         try:
             stix_bundle, O365_list = self.create_stix_bundle(info)
             if stix_bundle is None:
-                self.helper.connector_logger.debug(f"No STIX bundle created from Office Endpoints data (None was return).")
+                self.helper.connector_logger.debug("No STIX bundle created from Office Endpoints data (None was return).")
             else:
                 # Convert the bundle to a dictionary
                 stix_bundle_dict = json.loads(stix_bundle.serialize())

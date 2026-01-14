@@ -8,8 +8,6 @@ import requests
 import stix2
 import yaml
 from pycti import (
-    Indicator,
-    Location,
     MarkingDefinition,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
@@ -193,11 +191,11 @@ class iCloudPrivateRelay:
 
         # self.helper.connector_logger.info(f"  Working on {CIDR} / {City} / {CountryCode} / {RegionCode}.")
         
-        description  = f"Apple iCloud privacy VPN goes thrue this element:"+" \n"
-        description += f"CIDR: {CIDR}"+" \n"
-        description += f"CountryCode: {CountryCode}"+" \n"
-        description += f"CIRegionCodeDR: {RegionCode}"+" \n"
-        description += f"City: {City}"+" \n"
+        description  = f"Apple iCloud privacy VPN goes thrue this element: \n"
+        description += f"CIDR: {CIDR} \n"
+        description += f"CountryCode: {CountryCode} \n"
+        description += f"CIRegionCodeDR: {RegionCode} \n"
+        description += f"City: {City} \n"
         
         # We create IPAdress object for the CIDR
         # STIX: IPv4/IPv6

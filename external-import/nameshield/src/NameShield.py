@@ -112,7 +112,7 @@ class NameShield:
         )
         
 
-        self.helper.connector_logger.debug(f"NameShield connector initialized.")
+        self.helper.connector_logger.debug("NameShield connector initialized.")
         self.helper.connector_logger.debug(f"NameShield server: {self.nameshield_server}.")
         self.helper.connector_logger.debug(f"NameShield api_version: {self.nameshield_api_version}.")
         self.helper.connector_logger.debug(f"NameShield api_endpoint: {self.nameshield_api_endpoint}.")
@@ -196,7 +196,7 @@ class NameShield:
                     self.helper.connector_logger.error(f"NameShield send a message : {r_json['message']}")
                 # Check if data field is present
                 if not "data" in r_json:
-                    self.helper.connector_logger.error(f"NameShield response has no data field.")
+                    self.helper.connector_logger.error("NameShield response has no data field.")
                     self.helper.set_state({"Error": f"Error NameShield no data returned only thoses keys:  {str(",".join(r_json.keys()))}"})
                     return None
                 # We have to retreive details for each domain
@@ -311,7 +311,7 @@ class NameShield:
     def create_stix_bundle(self, domain_list):
         
         if domain_list is None:
-            self.helper.connector_logger.info(f"No NameShield domains returned.")
+            self.helper.connector_logger.info("No NameShield domains returned.")
             return None, None
 
         identity_id = "identity--d810a42f-59f5-5409-bb3a-6839c5087806"
@@ -344,7 +344,7 @@ class NameShield:
         try:
             stix_bundle, all_threats = self.create_stix_bundle(info)
             if stix_bundle is None:
-                self.helper.connector_logger.debug(f"No STIX bundle created from NameShield data (None was return).")
+                self.helper.connector_logger.debug("No STIX bundle created from NameShield data (None was return).")
             else:
                 # Convert the bundle to a dictionary
                 stix_bundle_dict = json.loads(stix_bundle.serialize())
