@@ -70,6 +70,7 @@ class MontysecurityC2TrackerClient:
             url = str(malwareIPsBaseUrl + str(malware_name).replace(" ", "%20"))
             response = self._request_data(url, params=params)
             ips = str(response.text).split("\n")
+            ips.pop()
 
             return ips
             #TODO: ask if better exception filtering is needed

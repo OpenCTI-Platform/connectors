@@ -1,5 +1,5 @@
 import ipaddress
-from typing import Literal
+from typing import Literal, Optional
 
 import stix2
 import validators
@@ -9,7 +9,15 @@ from pycti import (
     OpenCTIConnectorHelper,
     StixCoreRelationship,
 )
-from connectors_sdk.models import Malware, IPV4Address
+
+from connectors_sdk.models import (
+    IPV4Address,
+    Malware,
+    OrganizationAuthor,
+    Relationship,
+    TLPMarking,
+)
+
 
 class ConverterToStix:
     """
@@ -21,9 +29,9 @@ class ConverterToStix:
     """
 
     def __init__(
-        self,
-        helper: OpenCTIConnectorHelper,
-        tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"],
+            self,
+            helper: OpenCTIConnectorHelper,
+            tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"],
     ):
         """
         Initialize the converter with necessary configuration.
@@ -43,63 +51,38 @@ class ConverterToStix:
     def create_author() -> dict:
         """
         Create Author
-        :return: Author in Stix2 object
         """
-        author = stix2.Identity(
-            id=Identity.generate_id(name="Source Name", identity_class="organization"),
-            name="Source Name",
-            identity_class="organization",
-            description="DESCRIPTION",
-            external_references=[
-                stix2.ExternalReference(
-                    source_name="External Source",
-                    url="CHANGEME",
-                    description="DESCRIPTION",
-                )
-            ],
-        )
+        author = OrganizationAuthor(name="MontySecurity")
         return author
 
     @staticmethod
     def _create_tlp_marking(level):
-        mapping = {
-            "white": stix2.TLP_WHITE,
-            "clear": stix2.TLP_WHITE,
-            "green": stix2.TLP_GREEN,
-            "amber": stix2.TLP_AMBER,
-            "amber+strict": stix2.MarkingDefinition(
-                id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
-                definition_type="statement",
-                definition={"statement": "custom"},
-                custom_properties={
-                    "x_opencti_definition_type": "TLP",
-                    "x_opencti_definition": "TLP:AMBER+STRICT",
-                },
-            ),
-            "red": stix2.TLP_RED,
-        }
-        return mapping[level]
+        """
+        Create TLPMarking object
+        """
+        tlp_marking = TLPMarking(level=level)
+        return tlp_marking
 
     def create_relationship(
-        self, source_id: str, relationship_type: str, target_id: str
-    ) -> dict:
+            self,
+            relationship_type: str,
+            source_obj,
+            target_obj,
+            start_time: Optional[str] = None,
+            stop_time: Optional[str] = None,
+    ) -> Relationship:
         """
         Creates Relationship object
-        :param source_id: ID of source in string
-        :param relationship_type: Relationship type in string
-        :param target_id: ID of target in string
-        :return: Relationship STIX2 object
         """
-        relationship = stix2.Relationship(
-            id=StixCoreRelationship.generate_id(
-                relationship_type, source_id, target_id
-            ),
-            relationship_type=relationship_type,
-            source_ref=source_id,
-            target_ref=target_id,
-            created_by_ref=self.author,
+        return Relationship(
+            type=relationship_type,
+            source=source_obj,
+            target=target_obj,
+            author=self.author,
+            start_time=start_time,
+            stop_time=stop_time,
+            markings=[self.tlp_marking],
         )
-        return relationship
 
     # ===========================#
     # Other Examples
@@ -163,7 +146,7 @@ class ConverterToStix:
             stix_ipv4_address = IPV4Address(
                 value=value,
                 author=self.author["id"],
-                create_indicator=True, #Used to also create the indicator
+                create_indicator=True,  # Used to also create the indicator
             )
             return stix_ipv4_address
         elif self._is_domain(value) is True:

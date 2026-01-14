@@ -2,13 +2,13 @@ import sys
 from datetime import datetime, timezone
 
 import requests
-from connectors_sdk.models.enums import RelationshipType
+from montysecurity_c2_tracker_client import MontysecurityC2TrackerClient
+from pycti import OpenCTIConnectorHelper
 
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
-from pycti import OpenCTIConnectorHelper
-from montysecurity_c2_tracker_client import MontysecurityC2TrackerClient
-from connectors_sdk.models import Malware, IPV4Address, Relationship, Indicator
+from connectors_sdk.models import Indicator, IPV4Address, Malware, Relationship
+from connectors_sdk.models.enums import RelationshipType
 
 
 class MontysecurityC2TrackerConnector:
@@ -81,7 +81,9 @@ class MontysecurityC2TrackerConnector:
         entities = []
         self.helper.connector_logger.info("Get Malware IPs")
 
-        malwareIPsBaseUrl = "https://raw.githubusercontent.com/montysecurity/C2-Tracker/main/data/"
+        malwareIPsBaseUrl = (
+            "https://raw.githubusercontent.com/montysecurity/C2-Tracker/main/data/"
+        )
         malware_list = [str(malware).strip('"') for malware in malware_list]
         self.helper.connector_logger.debug(malware_list)
         for malware in malware_list:
@@ -95,39 +97,37 @@ class MontysecurityC2TrackerConnector:
                 is_family=True,
                 author=self.converter_to_stix.author,
                 markings=[self.converter_to_stix.tlp_marking],
-            ).to_stix2_object()
+            )
             entities.append(malware_stix)
-            self.helper.connector_logger.debug(malware_stix.get("name"))
+            self.helper.connector_logger.debug(malware_stix.name)
 
             ips = self.client.get_ips(malware)
 
-            #request = requests.get(url)
-            #ips = str(request.text).split("\n")
-            ips.pop()
+            # request = requests.get(url)
+            # ips = str(request.text).split("\n")
             for ip in ips:
                 indicatorIPV4 = Indicator(
                     name=ip,
-                    pattern="[ipv4-addr:value = '"+ip+"']",
+                    pattern="[ipv4-addr:value = '" + ip + "']",
                     pattern_type="stix",
                     main_observable_type="IPv4-Addr",
                     create_observables=True,
                     author=self.converter_to_stix.author,
                     markings=[self.converter_to_stix.tlp_marking],
-                ).to_stix2_object()
+                )
                 entities.append(indicatorIPV4)
 
                 relationship = self.converter_to_stix.create_relationship(
-                    source_id = indicatorIPV4.id,
-                    target_id = malware_stix.id,
+                    source_obj=indicatorIPV4,
+                    target_obj=malware_stix,
                     relationship_type=RelationshipType.INDICATES,
                 )
                 entities.append(relationship)
 
         # Convert into STIX2 object and add it on a list
         # for entity in entities:
-            # entity_to_stix = self.converter_to_stix.create_obs(entity["value"])
-            # stix_objects.append(entity)
-
+        # entity_to_stix = self.converter_to_stix.create_obs(entity["value"])
+        # stix_objects.append(entity)
 
         # ===========================
         # === Add your code above ===
@@ -220,8 +220,8 @@ class MontysecurityC2TrackerConnector:
             self.helper.set_state(current_state)
 
             message = (
-                f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                + str(last_run_datetime)
+                    f"{self.helper.connect_name} connector successfully run, storing last_run as "
+                    + str(last_run_datetime)
             )
 
             self.helper.api.work.to_processed(work_id, message)
