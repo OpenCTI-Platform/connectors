@@ -14,14 +14,13 @@ from connectors_sdk.settings.base_settings import (
     BaseInternalExportFileConnectorConfig,
     BaseInternalImportFileConnectorConfig,
     BaseStreamConnectorConfig,
+    SanitizingJsonSchema,
 )
 from connectors_sdk.settings.exceptions import (
     ConfigError,
     ConfigValidationError,
 )
 from connectors_sdk.utils.deprecations import (
-    DeprecatedNameSpace,
-    DeprecatedVariable,
     LegacyField,
 )
 
@@ -35,6 +34,7 @@ __all__ = [
     "BaseInternalExportFileConnectorConfig",
     "BaseInternalImportFileConnectorConfig",
     "BaseStreamConnectorConfig",
+    "SanitizingJsonSchema",
     # Exceptions
     "ConfigError",
     "ConfigValidationError",
@@ -43,6 +43,4 @@ __all__ = [
     "ListFromString",
     # Deprecations
     "LegacyField",
-    "DeprecatedNameSpace",
-    "DeprecatedVariable",
 ]

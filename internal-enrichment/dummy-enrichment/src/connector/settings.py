@@ -4,11 +4,9 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
-    DeprecatedNameSpace,
-    DeprecatedVariable,
     LegacyField,
 )
-from pydantic import Field, HttpUrl
+from pydantic import Field, HttpUrl, SkipValidation
 
 
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
@@ -50,10 +48,9 @@ class DummyConfig(BaseConfigModel):
 class TotoConfig(BaseConfigModel):
     image: str = Field(description="image")
     movie: str = Field(description="movie")
-    useless: DeprecatedVariable
-    mamama: DeprecatedVariable = LegacyField(new_variable_name="momomo")
+    mamama: SkipValidation[int] = LegacyField(new_variable_name="momomo")
     momomo: str = Field(description="momomo")
-    interval: DeprecatedVariable = LegacyField(
+    interval: SkipValidation[int] = LegacyField(
         deprecated="Use connector.duration_period instead",
         new_variable_name="duration_period",
         new_namespace="connector",
@@ -76,16 +73,16 @@ class ConnectorSettings(BaseConnectorSettings):
     )
 
     toto: TotoConfig = Field(default_factory=TotoConfig)
-    tata: DeprecatedNameSpace = LegacyField(
+    tata: SkipValidation[TotoConfig] = LegacyField(
         deprecated="Use toto",
         new_namespace="toto",
     )
-    dummy_enrichment: DeprecatedNameSpace = LegacyField(
+    dummy_enrichment: SkipValidation[DummyConfig] = LegacyField(
         deprecated="Use dummy_enrichment_new",
         new_namespace="dummy_enrichment_new",
     )
     dummy_enrichment_new: DummyConfig = Field(default_factory=DummyConfig)
     christmas: ChristmasConfig = Field(default_factory=ChristmasConfig)
-    christmas_old: DeprecatedNameSpace = LegacyField(
+    christmas_old: SkipValidation[ChristmasConfig] = LegacyField(
         deprecated="Use christmas", new_namespace="christmas"
     )

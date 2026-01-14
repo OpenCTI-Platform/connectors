@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/dummy-enrichment_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "DummyEnrichmentConnector",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Whether the connector should run automatically when an entity is created or updated.",
+      "type": "boolean"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "description": "The period (in seconds) between two runs of the connector.",
+      "type": "integer"
+    },
+    "TOTO_IMAGE": {
+      "description": "image",
+      "type": "string"
+    },
+    "TOTO_MOVIE": {
+      "description": "movie",
+      "type": "string"
+    },
+    "TOTO_USELESS": {
+      "default": null,
+      "deprecated": true,
+      "new_namespace": null,
+      "new_variable_name": null,
+      "set_to_empty_dict": false
+    },
+    "TOTO_MAMAMA": {
+      "default": null,
+      "deprecated": true,
+      "new_namespace": null,
+      "new_variable_name": "momomo",
+      "set_to_empty_dict": false
+    },
+    "TOTO_MOMOMO": {
+      "description": "momomo",
+      "type": "string"
+    },
+    "TOTO_INTERVAL": {
+      "default": null,
+      "deprecated": true,
+      "new_namespace": "connector",
+      "new_variable_name": "duration_period",
+      "set_to_empty_dict": false
+    },
+    "DUMMY_ENRICHMENT_NEW_API_BASE_URL": {
+      "description": "External API base URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "DUMMY_ENRICHMENT_NEW_API_KEY": {
+      "description": "API key for authentication.",
+      "type": "string"
+    },
+    "DUMMY_ENRICHMENT_NEW_MAX_TLP_LEVEL": {
+      "default": "amber+strict",
+      "description": "Max TLP level of the entities to enrich.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string"
+    },
+    "DUMMY_ENRICHMENT_NEW_TABLE": {
+      "description": "Table",
+      "type": "string"
+    },
+    "CHRISTMAS_OS": {
+      "description": "os",
+      "type": "string"
+    },
+    "CHRISTMAS_DAY": {
+      "description": "day",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_SCOPE",
+    "CONNECTOR_DURATION_PERIOD",
+    "TOTO_IMAGE",
+    "TOTO_MOVIE",
+    "TOTO_MOMOMO",
+    "DUMMY_ENRICHMENT_NEW_API_BASE_URL",
+    "DUMMY_ENRICHMENT_NEW_API_KEY",
+    "DUMMY_ENRICHMENT_NEW_TABLE",
+    "CHRISTMAS_OS",
+    "CHRISTMAS_DAY"
+  ],
+  "additionalProperties": true
+}

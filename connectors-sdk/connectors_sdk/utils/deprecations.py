@@ -55,6 +55,8 @@ def migrate_deprecated_namespace(data, old_namespace: str, new_namespace: str):
             # ex: 'settings_bad_api_key', mapped in 'settings' as 'bad_api_key', can be removed.
             new_config.pop(f"{diff_namespace}_{key}")
 
+    data.pop(old_namespace, None)
+
 
 def migrate_deprecated_variable(
     data,
@@ -99,8 +101,7 @@ def LegacyField(
     deprecated: str | bool = True,
     new_namespace: str | None = None,
     new_variable_name: str | None = None,
-    change_value: Callable | None = None,
-    set_to_empty_dict: bool = False,
+    change_value: Any | None = None,
 ) -> FieldInfo:
     """Define a deprecated field with migration information.
     The migration information is used in the BaseConnectorSettings to automatically
@@ -115,26 +116,9 @@ def LegacyField(
         FieldInfo: A Pydantic FieldInfo object with deprecation metadata.
     """
     return Field(
-        default=None,
         new_namespace=new_namespace,
         new_variable_name=new_variable_name,
         change_value=change_value,
         deprecated=deprecated,
-        set_to_empty_dict=set_to_empty_dict,
+        default=None,
     )
-
-
-DeprecatedNameSpace = Annotated[
-    dict, LegacyField(deprecated="This field is deprecated.", set_to_empty_dict=True)
-]
-"""Annotated dict representing a deprecated namespace.
-When used in the BaseConnectorSettings, this annotation indicates that the entire
-namespace is deprecated. The `LegacyField` metadata provides details about the
-deprecation, including a message and an instruction to set the field to an empty
-dictionary.
-"""
-DeprecatedVariable = Annotated[Any, LegacyField(deprecated="This field is deprecated.")]
-"""Annotated Any representing a deprecated variable.
-When used in a BaseConfigModel under the BaseConnectorSettings, this annotation indicates that the variable is
-deprecated. The `LegacyField` metadata provides details about the deprecation,
-including a message."""
