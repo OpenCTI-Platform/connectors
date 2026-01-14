@@ -74,7 +74,7 @@ Key features:
 | Parameter | Docker envvar | Mandatory | Description |
 |-----------|---------------|-----------|-------------|
 | `rst_whois_api_api_key` | `RST_WHOIS_API_API_KEY` | Yes | RST Cloud API key |
-| `rst_whois_api_base_url` | `RST_WHOIS_API_BASE_URL` | No | API base URL (default: https://api.rstcloud.net/v1/) |
+| `rst_whois_api_base_url` | `RST_WHOIS_API_BASE_URL` | No | API base URL (default: https://api.rstcloud.net/v1) |
 | `rst_whois_api_max_tlp` | `RST_WHOIS_API_MAX_TLP` | No | Maximum TLP (default: TLP:AMBER+STRICT) |
 | `rst_whois_api_timeout` | `RST_WHOIS_API_TIMEOUT` | No | API timeout in seconds (default: 10) |
 | `rst_whois_api_update_output_action` | `RST_WHOIS_API_UPDATE_OUTPUT_ACTION` | No | Update mode: `overwrite` or `append` |
@@ -105,7 +105,7 @@ services:
       - CONNECTOR_SCOPE=Domain-Name,Url,indicator
       - CONNECTOR_AUTO=false
       - CONNECTOR_LOG_LEVEL=info
-      - RST_WHOIS_API_BASE_URL=https://api.rstcloud.net/v1/
+      - RST_WHOIS_API_BASE_URL=https://api.rstcloud.net/v1
       - RST_WHOIS_API_API_KEY=ChangeMe
       - RST_WHOIS_API_MAX_TLP=TLP:AMBER+STRICT
       - RST_WHOIS_API_UPDATE_OUTPUT_ACTION=overwrite
