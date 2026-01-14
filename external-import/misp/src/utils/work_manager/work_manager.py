@@ -101,8 +101,10 @@ class WorkManager:
 
     def update_state(
         self,
-        state_key: str,
+        state_key: str | None = None,
         date_str: str = "",
+        state_value: str | None = None,
+        state_update: dict | None = None,
         error_flag: bool = False,
     ) -> None:
         """Update the state of the connector.
@@ -115,21 +117,28 @@ class WorkManager:
         """
         if not error_flag:
             current_state = self.get_state()
-            now = datetime.now(timezone.utc).isoformat()
-            if date_str != "" and isinstance(date_str, str):
-                if self._is_valid_iso_format(date_str):
-                    now = date_str
-                elif "T" not in date_str or not ("+" in date_str or "Z" in date_str):
-                    parsed_date = datetime.fromisoformat(
-                        date_str.replace("Z", "+00:00"),
-                    )
-                    now = parsed_date.isoformat()
-            current_state[state_key] = now
+            if state_value:
+                current_state[state_key] = state_value
+            elif state_update:
+                current_state.update(state_update)
+            else:
+                now = datetime.now(timezone.utc).isoformat()
+                if date_str != "" and isinstance(date_str, str):
+                    if self._is_valid_iso_format(date_str):
+                        now = date_str
+                    elif "T" not in date_str or not (
+                        "+" in date_str or "Z" in date_str
+                    ):
+                        parsed_date = datetime.fromisoformat(
+                            date_str.replace("Z", "+00:00"),
+                        )
+                        now = parsed_date.isoformat()
+                current_state[state_key] = now
             self._helper.set_state(state=current_state)
             self._helper.force_ping()
             self._logger.info(
                 "Updated state",
-                {"prefix": LOG_PREFIX, "state_key": state_key, "date": now},
+                {"prefix": LOG_PREFIX, "state": current_state},
             )
 
     def initiate_work(self, name: str, work_counter: int | None = None) -> str:
