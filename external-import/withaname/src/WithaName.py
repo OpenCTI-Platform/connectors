@@ -3,21 +3,14 @@ import json
 import os
 import sys
 import time
+
 import requests
 import stix2
 import yaml
+from pycti import (AttackPattern, Campaign, Location, MarkingDefinition,
+                   OpenCTIConnectorHelper, StixCoreRelationship, ThreatActor,
+                   Tool, get_config_variable)
 
-from pycti import (
-    Campaign,
-    Tool,
-    ThreatActor,
-    AttackPattern,
-    Location,
-    MarkingDefinition,
-    OpenCTIConnectorHelper,
-    StixCoreRelationship,
-    get_config_variable,
-)
 
 class WithaName:
     """WithaName connector"""

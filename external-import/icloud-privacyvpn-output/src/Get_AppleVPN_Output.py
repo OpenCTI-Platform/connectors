@@ -7,14 +7,9 @@ import time
 import requests
 import stix2
 import yaml
-from pycti import (
-    Identity,
-    Location,
-    MarkingDefinition,
-    OpenCTIConnectorHelper,
-    StixCoreRelationship,
-    get_config_variable,
-)
+from pycti import (Identity, Location, MarkingDefinition,
+                   OpenCTIConnectorHelper, StixCoreRelationship,
+                   get_config_variable)
 
 
 class iCloudPrivateRelay:
