@@ -3,10 +3,10 @@ import json
 import os
 import sys
 import time
-
 import requests
 import stix2
 import yaml
+
 from pycti import (
     Campaign,
     Tool,
@@ -18,7 +18,6 @@ from pycti import (
     StixCoreRelationship,
     get_config_variable,
 )
-
 
 class WithaName:
     """WithaName connector"""
