@@ -17,11 +17,11 @@ from crowdstrike_feeds_services.utils import (
     remove_html_tags,
     timestamp_to_datetime,
 )
-from stix2 import Identity
 from stix2 import (
     AttackPattern,
     Bundle,
     ExternalReference,
+    Identity,
     IntrusionSet,
     Location,
     MarkingDefinition,

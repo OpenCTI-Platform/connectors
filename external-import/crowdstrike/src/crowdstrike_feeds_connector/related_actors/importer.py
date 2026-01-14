@@ -4,11 +4,9 @@
 from typing import Any, Dict, List, Optional
 
 from crowdstrike_feeds_services.client.actors import ActorsAPI
-from stix2 import Identity, MarkingDefinition
-
 from pycti.connector.opencti_connector_helper import (
     OpenCTIConnectorHelper,
-)  # noqa: E501 # isort: skip
+)
 
 
 class RelatedActorImporter:

@@ -37,15 +37,17 @@ from pycti import OpenCTIConnectorHelper
 from stix2 import Bundle
 from stix2.v21 import (
     Identity,
-    Indicator as STIXIndicator,
+)
+from stix2.v21 import Indicator as STIXIndicator
+from stix2.v21 import (
     KillChainPhase,
     Malware,
     MarkingDefinition,
     Relationship,
     Vulnerability,
-    _RelationshipObject,
     _DomainObject,
     _Observable,
+    _RelationshipObject,
 )
 
 

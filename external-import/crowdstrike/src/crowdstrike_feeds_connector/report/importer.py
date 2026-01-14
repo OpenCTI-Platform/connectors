@@ -20,7 +20,6 @@ from pycti.connector.opencti_connector_helper import (  # noqa: E501
 from stix2 import Bundle, Identity, MarkingDefinition
 from stix2.v21 import _DomainObject
 
-
 from ..importer import BaseImporter
 from ..indicator.builder import IndicatorBundleBuilder
 from ..indicator.importer import (

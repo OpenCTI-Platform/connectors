@@ -8,9 +8,9 @@ from pycti import (
     CustomObservableHostname,
     CustomObservableUserAgent,
 )
-from stix2 import DomainName
 from stix2 import (
     URL,
+    DomainName,
     EmailAddress,
     EmailMessage,
     File,

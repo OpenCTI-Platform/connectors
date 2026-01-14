@@ -11,7 +11,6 @@ from crowdstrike_feeds_services.utils import (
     normalize_start_time_and_stop_time,
     timestamp_to_datetime,
 )
-
 from stix2 import (
     AttackPattern,
     ExternalReference,

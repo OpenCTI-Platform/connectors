@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike YARA master builder module."""
 
-from datetime import date, datetime, timezone
 from collections.abc import Mapping, Sequence
+from datetime import date, datetime, timezone
 from typing import Any, cast
 
 from crowdstrike_feeds_connector.related_actors.importer import RelatedActorImporter
@@ -17,6 +17,7 @@ from crowdstrike_feeds_services.utils import (
 )
 from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport
 from crowdstrike_feeds_services.utils.yara_parser import YaraRule
+from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from stix2 import (
     Bundle,
     Identity,
@@ -28,8 +29,6 @@ from stix2 import (
 )
 from stix2 import Report as STIXReport
 from stix2.v21 import _DomainObject, _RelationshipObject
-
-from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 
 
 class YaraRuleBundleBuilder:
