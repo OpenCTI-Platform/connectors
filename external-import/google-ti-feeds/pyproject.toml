@@ -20,7 +20,7 @@ requires-python = ">=3.11, <3.13"
 dependencies = [
     "pycti==6.9.7",
     "aiohttp~=3.13.2",
-    "Markdown~=3.9.0",
+    "Markdown~=3.10.0",
     "markdownify~=1.2.0",
     "pydantic~=2.11.7",
     "pydantic_settings~=2.11.0",
