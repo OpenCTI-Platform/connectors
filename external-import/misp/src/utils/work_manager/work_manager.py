@@ -51,6 +51,15 @@ class WorkManager:
         self._helper.force_ping()
         return self._helper.get_state() or {}
 
+    def check_connector_buffering(self) -> bool:
+        """Check if the connector is buffering.
+
+        Returns:
+            bool: True if the connector is buffering, False otherwise.
+
+        """
+        return self._helper.check_connector_buffering()
+
     @staticmethod
     def _is_valid_iso_format(date_string: str) -> bool:
         """Check if a string is a valid ISO format date.

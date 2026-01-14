@@ -287,7 +287,7 @@ class OrchestratorEvent(BaseOrchestrator):
                 if len(bundle_objects) > self.batch_processor.config.batch_size:
                     if (
                         not date_attr_used or date_changed
-                    ) and self.work_manager._helper.check_connector_buffering():
+                    ) and self.work_manager.check_connector_buffering():
                         self.logger.info(
                             "Connector is buffering, this event will be splitted in the next scheduler process",
                             {
