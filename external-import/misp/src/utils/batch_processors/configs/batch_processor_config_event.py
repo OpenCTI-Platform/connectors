@@ -1,9 +1,6 @@
 import logging
 from typing import Any
 
-from exceptions.connector_errors import MispWorkProcessingError
-from utils.batch_processors import GenericBatchProcessorConfig
-
 LOG_PREFIX = "[EventBatchProcessor]"
 
 
@@ -71,18 +68,3 @@ def log_batch_completion(stix_objects: list[Any], work_id: str) -> None:
             "type_summary": type_summary,
         },
     )
-
-
-EVENT_BATCH_PROCESSOR_CONFIG = GenericBatchProcessorConfig(
-    batch_size=9999,
-    work_name_template="MISP - Batch #{batch_num}",
-    state_key="last_event_date",
-    entity_type="stix_objects",
-    display_name="STIX objects",
-    exception_class=MispWorkProcessingError,
-    display_name_singular="STIX object",
-    auto_process=False,
-    postprocessing_function=log_batch_completion,
-    validation_function=validate_stix_object,
-    empty_batch_behavior="update_state",
-)
