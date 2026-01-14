@@ -31,7 +31,7 @@
 
 The OpenCTI Obstracts Connector syncs the intelligence created from blogs you subscribe to with OpenCTI, enabling automated extraction and import of indicators, attack patterns, and other threat intelligence from security blog posts.
 
-> **Note**: This connector only works with Obstracts Web. It does not support self-hosted Obstracts installations at this time.
+> **Note**: This connector only works with Obstracts Web ([https://www.obstracts.com](https://www.obstracts.com)). It does not support self-hosted Obstracts installations at this time.
 
 ---
 
@@ -45,11 +45,16 @@ The OpenCTI Obstracts Connector syncs the intelligence created from blogs you su
 
 ### Generating an API Key
 
+[![Creating an Obstracts API Key to Use with the Obstracts OpenCTI Connector](https://img.youtube.com/vi/IeP9blaF2U4/0.jpg)](https://www.youtube.com/watch?v=IeP9blaF2U4)
+
+[This video demonstrates the steps outlined below](https://www.youtube.com/watch?v=IeP9blaF2U4).
+
 1. Log in to your Obstracts account
 2. Navigate to "Account Settings"
 3. Locate the API section and select "Create Token"
 4. Select the team you want to use and generate the key
-5. Copy the key for configuration
+  * If you don't see a team listed, you do not belong to a team on a plan with API access. Please upgrade the teams account to continue.
+5. Copy the API Key for the OpenCTI Connector configuration
 
 ---
 
@@ -77,10 +82,10 @@ The OpenCTI Obstracts Connector syncs the intelligence created from blogs you su
 | Parameter | Docker envvar | config.yml | Required | Default | Description |
 |-----------|---------------|------------|----------|---------|-------------|
 | Base URL | `OBSTRACTS_BASE_URL` | `obstracts.base_url` | Yes | `https://api.obstracts.com/` | Obstracts API URL |
-| API Key | `OBSTRACTS_API_KEY` | `obstracts.api_key` | Yes | - | API key for authentication |
-| Feed IDs | `OBSTRACTS_FEED_IDS` | `obstracts.feed_ids` | No | - | Comma-separated feed IDs (blank = all subscribed feeds) |
-| Interval Hours | `OBSTRACTS_INTERVAL_HOURS` | `obstracts.interval_hours` | Yes | `12` | Polling interval in hours |
-| Days to Backfill | `OBSTRACTS_DAYS_TO_BACKFILL` | `obstracts.days_to_backfill` | Yes | `90` | Days of historical data to import (max `365`) |
+| API Key | `OBSTRACTS_API_KEY` | `obstracts.api_key` | Yes | - | The Obstracts API key for authentication (steps to generate described earlier in this document) |
+| Feed IDs | `OBSTRACTS_FEED_IDS` | `obstracts.feed_ids` | No | - | It is recommended you leave the value of this property blank. Leaving this property blank will download post content for all feeds your team is subscribed to in Obstracts. In some cases you might only want specific feeds in Obstracts that you are subscribe to in Obstracts to be ingested into OpenCTI. In this case you can pass a comma-separated feed IDs for the value of this property (e.g. `a0850464-c04e-42cc-9b4f-6e8094ad90ea,87295120-5ac0-4e91-907d-32f50cd50147`) |
+| Interval Hours | `OBSTRACTS_INTERVAL_HOURS` | `obstracts.interval_hours` | Yes | `12` | Polling interval in hours. Polling every `12` hours is more than sufficient for the blogs on Obstracts. |
+| Days to Backfill | `OBSTRACTS_DAYS_TO_BACKFILL` | `obstracts.days_to_backfill` | Yes | `90` | Days of historical data to import (maximum value is `365` days) |
 
 ---
 
@@ -125,26 +130,66 @@ services:
 
 ```mermaid
 graph LR
-    subgraph Obstracts
+    %% Box 1: Obstracts Web
+    subgraph Obstracts_Web["Obstracts Web"]
         Blogs[Security Blogs]
-        API[Obstracts API]
-        NLP[NLP Extraction]
+        NLP[NLP Extractions]
+        Blogs --> NLP
+    end
+
+    %% Box 2: Obstracts API
+    subgraph Obstracts_API["Obstracts API"]
+        API[API]
+        Bundle[STIX Bundle]
+        API --> Bundle
     end
     
-    Blogs --> NLP
+    %% Box 3: OpenCTI
+    subgraph OpenCTI["OpenCTI"]
+        Connector[Connector]
+        STIX[STIX Objects]
+
+        Connector --> STIX
+        STIX --> report[Report]
+        STIX --> attack-pattern[Attack Pattern]
+        STIX --> campaign[Campaign]
+        STIX --> course-of-action[Course of Action]
+        STIX --> identity[Identity]
+        STIX --> indicator[Indicator]
+        STIX --> infrastructure[Infrastructure]
+        STIX --> intrusion-set[Intrusion Set]
+        STIX --> location[Location]
+        STIX --> malware[Malware]
+        STIX --> threat-actor[Threat Actor]
+        STIX --> tool[Tool]
+        STIX --> vulnerability[Vulnerability]
+        STIX --> x-mitre-tactic[ATT&CK Tactic]
+        STIX --> x-mitre-data-source[ATT&CK Data Source]
+        STIX --> x-mitre-data-component[ATT&CK Data Component]
+
+        indicator --> autonomous-system[Autonomous System]
+        indicator --> bank-account[Bank Account]
+        indicator --> cryptocurrency-wallet[Cryptocurrency Wallet]
+        indicator --> directory[Directory]
+        indicator --> domain-name[Domain Name]
+        indicator --> email-addr[Email Address]
+        indicator --> file[File]
+        indicator --> ipv4-addr[IPv4 Address]
+        indicator --> ipv6-addr[IPv6 Address]
+        indicator --> network-traffic[Network Traffic]
+        indicator --> mac-addr[MAC Address]
+        indicator --> payment-card[Payment Card]
+        indicator --> phone-number[Phone Number]
+        indicator --> software[Software]
+        indicator --> url[URL]
+        indicator --> user-agent[User Agent]
+        indicator --> windows-registry-key[Windows Registry Key]
+    end
+
+    %% Cross-section flow
     NLP --> API
-    
-    subgraph Processing
-        API --> Connector[Obstracts Connector]
-        Connector --> STIX[STIX Objects]
-    end
-    
-    subgraph OpenCTI
-        STIX --> Report[Report]
-        STIX --> Indicator[Indicator]
-        STIX --> Observable[Observable]
-        STIX --> AttackPattern[Attack Pattern]
-    end
+    Bundle --> Connector
+
 ```
 
 ### Entity Mapping
@@ -152,10 +197,40 @@ graph LR
 | Obstracts Data | OpenCTI Entity | Notes |
 |----------------|----------------|-------|
 | Blog Post | Report | Original blog post as report |
-| Extracted IOCs | Indicator/Observable | IPs, domains, hashes, URLs |
-| Extracted TTPs | Attack Pattern | MITRE ATT&CK techniques |
+| Extracted Relationships | Relationships | Obstracts uses NLP to define descriptive relationships between extracted objects |
+| Extracted Attack Patterns | Attack Pattern | Extracted Attack Patterns, includes MITRE ATT&CK Techniques |
+| Extracted Campaigns | Campaign | Extracted Campaigns, includes MITRE ATT&CK Campaigns |
+| Extracted Course of Actions | Course of Action | Extracted Course of Actions, includes MITRE ATT&CK Mitigations |
+| Extracted Identities | Identity | Extracted Identities. Also includes Identities created for the Feed (blog) |
+| Extracted Infrastructure | Infrastructure | Extracted Infrastructure |
+| Extracted Intrusion Sets | Intrusion Set | Extracted Intrusion Sets, includes MITRE ATT&CK Groups |
+| Extracted Locations | Location | Extracted Locations |
+| Extracted Malwares | Malware | Extracted Malware families, includes MITRE ATT&CK Software |
 | Extracted Actors | Threat Actor | Named threat actors |
-| Extracted Malware | Malware | Malware families |
+| Extracted Tools | Tool | Extracted Tools, includes MITRE ATT&CK Software |
+| Extracted Vulnerabilities | Vulnerability | Named vulnerabilities |
+| Extracted ATT&CK Tactics | x-mitre-tactic | ATT&CK Tactics |
+| Extracted ATT&CK Data Sources | x-mitre-data-source | ATT&CK Data Sources |
+| Extracted ATT&CK Data Components | x-mitre-date-component | ATT&CK Data Components |
+| Extracted IOCs | Indicator/Observable | For each IOC extraction, an Indicator will also be created. The following Observables (SCOs) are supported; autonomous-system, bank-account, cryptocurrency-wallet, directory, domain-name, email-addr, file, ipv4-addr, ipv6-addr, network-traffic, mac-addr, payment-card, phone-number, software, url, user-agent, windows-registry-key |
+
+#### Custom STIX Objects and OpenCTI Compatibility
+
+Obstracts includes several custom STIX object types that are not currently supported by OpenCTI. These custom objects are:
+
+* `attack-action` (SDO)
+* `attack-flow` (SDO)
+* `exploit` (SDO)
+* `weaknesses` (SDO)
+* `x-mitre-asset` (SDO MITRE ATT&CK)
+* `x-mitre-analytic` (SDO MITRE ATT&CK)
+* `x-mitre-detection-strategy` (SDO MITRE ATT&CK)
+* `cryptocurrency-transaction` (SCO)
+* `data-source` (SCO)
+
+When a STIX Bundle associated with a Post contains any of these object types, OpenCTI will report import errors for those specific objects. This behavior is expected.
+
+All other supported STIX objects in the bundle will import successfully and remain usable in OpenCTI.
 
 ### Processing Details
 
