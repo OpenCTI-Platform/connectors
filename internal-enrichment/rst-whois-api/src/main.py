@@ -28,7 +28,7 @@ class RSTWhoisApiConnector:
                 "RST_WHOIS_API_BASE_URL",
                 ["rst-whois-api", "base_url"],
                 config,
-                default="https://api.rstcloud.net/v1/",
+                default="https://api.rstcloud.net/v1",
             )
         )
         self.api_key = str(
