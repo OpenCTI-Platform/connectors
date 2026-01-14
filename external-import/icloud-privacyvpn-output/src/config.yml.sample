@@ -1,0 +1,20 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'icloud-privacyvpn-output'
+  scope: 'icloud-privacyvpn-output'
+  log_level: 'info'
+
+
+icloudvpn:
+  endpoints_url: https://mask-api.icloud.com/egress-ip-ranges.csv
+  identity: iCloud Privacyvpn Output
+  interval: "24"
+  tags: Apple,VPN,Cloud
+  chunksize: 10000
+  marking: TLP:CLEAR

@@ -1,0 +1,21 @@
+{
+  "title": "Microsoft Office Endpoints",
+  "slug": "iCloud-privacyvpn-output",
+  "description": "Get Apple iCloud `Privacy` VPN egress IP ranges and create OpenCTI indicators from this data.",
+  "short_description": "Get Apple iCloud `Privacy` VPN egress IP ranges and create OpenCTI indicators from this data.",
+  "logo": "external-import/iCloud-privacyvpn-output/__metadata__/logo.png",
+  "use_cases": [
+    "Legitimate use case"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.9.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/iCloud-privacyvpn-output",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-icloud-privacyvpn-output",
+  "container_type": "EXTERNAL_IMPORT"
+}

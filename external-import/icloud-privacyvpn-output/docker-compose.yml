@@ -1,0 +1,17 @@
+version: '1'
+services:
+  micosoft-office-endpoints:
+    image: opencti/icloud-privacyvpn-output:rolling
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=CHANGME
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=ICloud-PrivacyVPN-Output
+      - CONNECTOR_LOG_LEVEL=error
+      - ICLOUDVPN_ENDPOINTS_URL=https://mask-api.icloud.com/egress-ip-ranges.csv
+      - ICLOUDVPN_IDENTITY="iCloud Privacyvpn Output"
+      - ICLOUDVPN_INTERVAL=24
+      - ICLOUDVPN_TAGS=Apple,VPN,Cloud
+      - ICLOUDVPN_MARKING=TLP:CLEAR
+    restart: always
