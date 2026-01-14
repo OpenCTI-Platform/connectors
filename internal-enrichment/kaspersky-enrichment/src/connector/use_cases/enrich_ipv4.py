@@ -1,21 +1,22 @@
+import logging
+
 from connector.converter_to_stix import ConverterToStix
 from connector.use_cases.common import BaseUseCases
 from connector.utils import get_first_and_last_seen_datetime
 from kaspersky_client import KasperskyClient
-from pycti import OpenCTIConnectorHelper
 
 
 class Ipv4Enricher(BaseUseCases):
     def __init__(
         self,
-        helper: OpenCTIConnectorHelper,
+        connector_logger: logging.Logger,
         client: KasperskyClient,
         sections: str,
         zone_octi_score_mapping: dict,
         converter_to_stix: ConverterToStix,
     ):
-        BaseUseCases.__init__(self, helper, converter_to_stix)
-        self.helper = helper
+        BaseUseCases.__init__(self, connector_logger, converter_to_stix)
+        self.connector_logger = connector_logger
         self.client = client
         self.sections = sections
         self.zone_octi_score_mapping = zone_octi_score_mapping
@@ -29,24 +30,25 @@ class Ipv4Enricher(BaseUseCases):
         observable_to_ref = self.converter_to_stix.create_reference(
             obs_id=observable["id"]
         )
-        self.helper.connector_logger.info("[CONNECTOR] Starting enrichment...")
+        self.connector_logger.info("[ENRICH FILE] Starting enrichment...")
 
         # Retrieve ipv4
         obs_ipv4 = observable["value"]
 
         # Get entity data from api client
-        entity_data = self.client.get_ipv4_info(obs_ipv4, self.sections)
+        entity_data = self.client.get_data("ip", obs_ipv4, self.sections)
 
         # Check Quota
         self.check_quota(entity_data["LicenseInfo"])
 
         # Create and add author, TLP clear and TLP amber to octi_objects
-        octi_objects += self.generate_author_and_tlp_markings()
+        octi_objects.extend(self.generate_author_and_tlp_markings())
 
         # Manage IpGeneralInfo data
 
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from IpGeneralInfo data..."
+        self.connector_logger.info(
+            "[ENRICH FILE] Process enrichment from IpGeneralInfo data...",
+            {"observable_id": observable["id"]},
         )
 
         # Score
@@ -59,7 +61,7 @@ class Ipv4Enricher(BaseUseCases):
         if entity_general_info.get("Categories"):
             observable["labels"] = observable.get("x_opencti_labels", [])
             for label in entity_general_info["Categories"]:
-                pretty_label = label.replace("CATEGORY_", "").replace("_", "")
+                pretty_label = label.replace("CATEGORY_", "").replace("_", " ")
                 if pretty_label not in observable["labels"]:
                     observable["labels"].append(pretty_label)
 
@@ -80,11 +82,12 @@ class Ipv4Enricher(BaseUseCases):
 
         # Manage FilesDownloadedFromIp data
 
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from FilesDownloadedFromIp data..."
-        )
-
         if entity_data.get("FilesDownloadedFromIp"):
+            self.connector_logger.info(
+                "[ENRICH FILE] Process enrichment from FilesDownloadedFromIp data...",
+                {"observable_id": observable["id"]},
+            )
+
             for file in entity_data["FilesDownloadedFromIp"]:
                 obs_file = self.converter_to_stix.create_file(
                     hashes={"MD5": file["Md5"]},
@@ -109,11 +112,12 @@ class Ipv4Enricher(BaseUseCases):
 
         # Manage HostedUrls data
 
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from HostedUrls data..."
-        )
-
         if entity_data.get("HostedUrls"):
+            self.connector_logger.info(
+                "[ENRICH FILE] Process enrichment from HostedUrls data...",
+                {"observable_id": observable["id"]},
+            )
+
             for url_entity in entity_data["HostedUrls"]:
                 obs_url = self.converter_to_stix.create_url(
                     obs_url_score=self.zone_octi_score_mapping[
@@ -140,11 +144,12 @@ class Ipv4Enricher(BaseUseCases):
 
         # Manage IpWhoIs data
 
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from IpWhoIs data..."
-        )
-
         if entity_data.get("IpWhoIs") and entity_data["IpWhoIs"].get("Asn"):
+            self.connector_logger.info(
+                "[ENRICH FILE] Process enrichment from IpWhoIs data...",
+                {"observable_id": observable["id"]},
+            )
+
             asn_entities = entity_data["IpWhoIs"]["Asn"]
             for asn_entity in asn_entities:
                 obs_asn = self.converter_to_stix.create_autonomous_system(
@@ -162,11 +167,12 @@ class Ipv4Enricher(BaseUseCases):
 
         # Manage IpDnsResolutions
 
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from IpDnsResolutions data..."
-        )
-
         if entity_data.get("IpDnsResolutions"):
+            self.connector_logger.info(
+                "[ENRICH FILE] Process enrichment from IpDnsResolutions data...",
+                {"observable_id": observable["id"]},
+            )
+
             for resolution in entity_data["IpDnsResolutions"]:
                 obs_domain = self.converter_to_stix.create_domain(
                     name=resolution["Domain"],
@@ -191,21 +197,9 @@ class Ipv4Enricher(BaseUseCases):
 
         # Manage Industries data
 
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from Industries data..."
-        )
-
         if entity_data.get("Industries"):
-            for industry in entity_data["Industries"]:
-                industry_object = self.converter_to_stix.create_sector(industry)
-
-                if industry_object:
-                    octi_objects.append(industry_object.to_stix2_object())
-                    industry_relation = self.converter_to_stix.create_relationship(
-                        relationship_type="related-to",
-                        source_obj=observable_to_ref,
-                        target_obj=industry_object,
-                    )
-                    octi_objects.append(industry_relation.to_stix2_object())
+            octi_objects.extend(
+                self.manage_industries(observable_to_ref, entity_data["Industries"])
+            )
 
         return octi_objects
