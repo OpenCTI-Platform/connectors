@@ -6,10 +6,9 @@ the Echo CTI API and sends them to OpenCTI.
 """
 
 import os
-import sys
 import time
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Any, Dict
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable

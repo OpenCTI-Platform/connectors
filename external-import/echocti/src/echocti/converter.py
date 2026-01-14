@@ -4,16 +4,12 @@ STIX 2.1 Converter
 Converts Echo CTI IOC data to STIX 2.1 format.
 """
 
-import re
 import logging
+import re
 from datetime import datetime
-from typing import List, Dict, Any, Optional
-from stix2 import (
-    Indicator,
-    Identity,
-    Bundle,
-    ExternalReference,
-)
+from typing import Any, Dict, List, Optional
+
+from stix2 import Bundle, ExternalReference, Identity, Indicator
 
 
 class STIXConverter:
@@ -267,6 +263,7 @@ class STIXConverter:
                 "created_by_ref": self.identity.id,
                 "confidence": min(100, max(0, confidence)),
                 "labels": [detected_type, "echocti"],
+                "id": Indicator.generate_id(pattern),
             }
 
             if modified:

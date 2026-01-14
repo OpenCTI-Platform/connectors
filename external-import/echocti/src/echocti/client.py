@@ -4,9 +4,10 @@ Echo CTI API Client
 This module connects to the Echo CTI API and fetches IOC feeds.
 """
 
-import requests
-from typing import Optional, List, Dict, Any
 import logging
+from typing import Any, Dict, List, Optional
+
+import requests
 
 
 class EchoCTIClient:
