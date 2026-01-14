@@ -1,0 +1,82 @@
+{
+  "default": {
+    "count": 1,
+    "cpu_size": 1024,
+    "memory_size": 2048
+  },
+  "environments": {
+    "development": { "enabled": false },
+    "main": { "enabled": false }
+  },
+  "environment": [
+    {
+      "name": "CONNECTOR_TYPE",
+      "value": "EXTERNAL_IMPORT"
+    },
+    {
+      "name": "CONNECTOR_AUTO",
+      "value": true
+    },
+    {
+      "name": "CONNECTOR_NAME",
+      "value": "DataDog Import"
+    },
+    {
+      "name": "CONNECTOR_SCOPE",
+      "value": "stix2"
+    },
+    {
+      "name": "CONNECTOR_UPDATE_EXISTING_DATA",
+      "value": "false"
+    },
+    {
+      "name": "CONNECTOR_LOG_LEVEL",
+      "value": "info"
+    },
+    {
+      "name": "DATADOG_API_BASE_URL",
+      "value": "https://api.datadoghq.com"
+    },
+    {
+      "name": "DATADOG_APP_BASE_URL",
+      "value": "ChangeMe"
+    },
+    {
+      "name": "DATADOG_IMPORT_INTERVAL",
+      "value": "60"
+    },
+    {
+      "name": "DATADOG_IMPORT_START_DATE",
+      "value": "ChangeMe"
+    },
+    {
+      "name": "DATADOG_MAX_TLP",
+      "value": "TLP:AMBER"
+    },
+    {
+      "name": "DATADOG_IMPORT_ALERTS",
+      "value": "true"
+    },
+    {
+      "name": "DATADOG_CREATE_INCIDENT_RESPONSE_CASES",
+      "value": "false"
+    },
+    {
+      "name": "DATADOG_ALERT_PRIORITIES",
+      "value": ""
+    },
+    {
+      "name": "DATADOG_ALERT_TAGS_FILTER",
+      "value": ""
+    },
+    {
+      "name": "DATADOG_EXTRACT_OBSERVABLES_FROM_ALERTS",
+      "value": "true"
+    },
+    {
+      "name": "DATADOG_INCLUDE_ALERT_CONTEXT",
+      "value": "true"
+    }
+  ],
+  "secrets": ["DATADOG_TOKEN", "DATADOG_APP_KEY"]
+}
