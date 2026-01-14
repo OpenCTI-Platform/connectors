@@ -8,10 +8,10 @@ import requests
 import stix2
 import yaml
 from pycti import (
+    Campaign,
     Tool,
     ThreatActor,
     AttackPattern,
-    Campaign,
     Location,
     MarkingDefinition,
     OpenCTIConnectorHelper,
