@@ -93,7 +93,7 @@ The OpenCTI Obstracts Connector synchronizes intelligence from the blogs you are
 | API Key | `OBSTRACTS_API_KEY` | `obstracts.api_key` | Yes | - | The Obstracts API key for authentication (steps to generate described earlier in this document) |
 | Feed IDs | `OBSTRACTS_FEED_IDS` | `obstracts.feed_ids` | No | - | It is recommended to leave this property empty. When left blank, the connector will download post content for all feeds your team is subscribed to in Obstracts. If you only want to ingest data into OpenCTI from specific feeds, you can instead provide a comma-separated list of feed IDs (for example: `a0850464-c04e-42cc-9b4f-6e8094ad90ea,87295120-5ac0-4e91-907d-32f50cd50147`). |
 | Interval Hours | `OBSTRACTS_INTERVAL_HOURS` | `obstracts.interval_hours` | Yes | `1` | Polling interval in hours. The connector polls Obstracts for new posts in your subscriptions at this interval. The minimum (and recommended) value is `1`. |
-| Days to Backfill | `OBSTRACTS_DAYS_TO_BACKFILL` | `obstracts.days_to_backfill` | Yes | `90` | Number of days of historical data to import (maximum: `365`). This setting only applies during the initial data polling (backfill). Changing it after the backfill has completed has no effect. |
+| Days to Backfill | `OBSTRACTS_DAYS_TO_BACKFILL` | `obstracts.days_to_backfill` | Yes | `90` | Number of days of historical data to import (maximum: `365`). Uses the `created` value of the report. This setting will be used if any new feed subscriptions are added in Obstracts to backfill the data for that feed. |
 
 ---
 

@@ -51,7 +51,7 @@ The OpenCTI Stixify Connector synchronizes intelligence from Stixify Dossiers in
 
 ### Generating an API Key
 
-[![Creating an Stixify API Key to Use with the Stixify OpenCTI Connector](https://img.youtube.com/vi/rpSMyLzInJw/0.jpg)](https://www.youtube.com/watch?v=rpSMyLzInJw)
+[![Creating a Stixify API Key to Use with the Stixify OpenCTI Connector](https://img.youtube.com/vi/rpSMyLzInJw/0.jpg)](https://www.youtube.com/watch?v=rpSMyLzInJw)
 
 [This video demonstrates the steps outlined below](https://www.youtube.com/watch?v=rpSMyLzInJw).
 
@@ -137,9 +137,9 @@ services:
 graph LR
     %% Box 1: Stixify Web
     subgraph Stixify_Web["Stixify Web"]
-        Blogs[Security Blogs]
+        Reports[Intel Reports]
         NLP[NLP Extractions]
-        Blogs --> NLP
+        Reports --> NLP
     end
 
     %% Box 2: Stixify API
@@ -219,7 +219,7 @@ graph LR
 | Extracted ATT&CK Data Components | x-mitre-date-component | ATT&CK Data Components |
 | Extracted IOCs | Indicator/Observable | For each IOC extraction, an Indicator will also be created. The following Observables (SCOs) are supported; autonomous-system, bank-account, cryptocurrency-wallet, directory, domain-name, email-addr, file, ipv4-addr, ipv6-addr, network-traffic, mac-addr, payment-card, phone-number, software, url, user-agent, windows-registry-key |
 
-#### Custom STIX Objects and OpenCTI Compatibility
+### Custom STIX Objects and OpenCTI Compatibility
 
 Stixify includes several custom STIX object types that are not currently supported by OpenCTI. These custom objects are:
 

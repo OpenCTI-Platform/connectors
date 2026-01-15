@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/vulmatch_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token used to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_ID": {
+      "description": "A unique UUIDv4 identifier for this connector.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Vulmatch",
+      "description": "The name of the connector as displayed in OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "vulmatch"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "info",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "P1D",
+      "description": "The period of time to wait between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "VULMATCH_BASE_URL": {
+      "default": "https://api.vulmatch.com/",
+      "description": "The base URL of the Vulmatch API.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "VULMATCH_API_KEY": {
+      "description": "The Vulmatch API key used for authentication.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "VULMATCH_SBOM_ONLY": {
+      "default": false,
+      "description": "If true, only vulnerabilities affecting software present in the Vulmatch SBoM are ingested.",
+      "type": "boolean"
+    },
+    "VULMATCH_EPSS_SCORE_MIN": {
+      "default": -1,
+      "description": "Minimum EPSS score for vulnerabilities to be ingested. Set to -1 to include vulnerabilities without EPSS scores.",
+      "type": "number",
+      "minimum": -1,
+      "maximum": 1
+    },
+    "VULMATCH_CVSS_V2_SCORE_MIN": {
+      "default": -1,
+      "description": "Minimum CVSS v2 base score for vulnerabilities to be ingested. Set to -1 to include vulnerabilities without CVSS v2 scores.",
+      "type": "number",
+      "minimum": -1,
+      "maximum": 10
+    },
+    "VULMATCH_CVSS_V3_SCORE_MIN": {
+      "default": -1,
+      "description": "Minimum CVSS v3 base score for vulnerabilities to be ingested. Set to -1 to include vulnerabilities without CVSS v3 scores.",
+      "type": "number",
+      "minimum": -1,
+      "maximum": 10
+    },
+    "VULMATCH_CVSS_V4_SCORE_MIN": {
+      "default": -1,
+      "description": "Minimum CVSS v4 base score for vulnerabilities to be ingested. Set to -1 to include vulnerabilities without CVSS v4 scores.",
+      "type": "number",
+      "minimum": -1,
+      "maximum": 10
+    },
+    "VULMATCH_INTERVAL_DAYS": {
+      "default": 1,
+      "description": "Polling interval in days. The connector polls Vulmatch for new and updated vulnerabilities at this interval.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "VULMATCH_DAYS_TO_BACKFILL": {
+      "default": 90,
+      "description": "Number of days of historical vulnerability data to import during the initial backfill.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 90
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_ID",
+    "VULMATCH_API_KEY"
+  ],
+  "additionalProperties": true
+}
