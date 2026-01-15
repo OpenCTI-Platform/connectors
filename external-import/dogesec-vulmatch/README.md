@@ -31,7 +31,7 @@
 
 The OpenCTI Vulmatch Connector syncs vulnerability intelligence from Vulmatch to OpenCTI, enabling automated import of CVE data with CVSS scores, EPSS predictions, CWE/ATT&CK/CAPEC mappings, Known Exploits, and CPE software associations.
 
-The OpenCTI Vulmatch Connector enriches vulnerability data with additional intelligence beyond what is available through the [NIST NVD CVE connector](https://hub.filigran.io/cybersecurity-solutions/open-cti-integrations/nist-nvd-cve).
+The OpenCTI Vulmatch Connector enriches vulnerability data with additional intelligence beyond what is available through the [NIST NVD CVE](https://hub.filigran.io/cybersecurity-solutions/open-cti-integrations/nist-nvd-cve), [CISA Known Exploited Vulnerabilities (KEV)](https://hub.filigran.io/cybersecurity-solutions/open-cti-integrations/cisa-kev), and [FIRST EPSS](https://hub.filigran.io/cybersecurity-solutions/open-cti-integrations/first-epss) Connectors.
 
 > **Note**: This connector only works with Vulmatch Web. It does not support self-hosted Vulmatch installations at this time.
 
