@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
 
-from connectors_sdk import ListFromString
+from connectors_sdk.core.pydantic import ListFromString
 from crowdstrike_feeds_services.utils import is_timestamp_in_future
 from models.configs.base_settings import ConfigBaseSettings
 from pydantic import Field, HttpUrl, PositiveInt, SecretStr, field_validator
