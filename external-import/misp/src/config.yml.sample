@@ -48,4 +48,4 @@ misp:
   propagate_labels: false # Optional (default: false)
 
 batch:
-  size: 9999 # Optional (default: 9999)
+  chunk_size: 9999 # Optional (default: 9999)

@@ -275,9 +275,9 @@
       "description": "Whether to apply labels from MISP events to OpenCTI observables on top of MISP Attribute labels or not.",
       "type": "boolean"
     },
-    "BATCH_SIZE": {
+    "BATCH_CHUNK_SIZE": {
       "default": 9999,
-      "description": "The size of the batch.",
+      "description": "The chunk size for splitting object bundles into batches",
       "type": "integer"
     }
   },
