@@ -7,6 +7,7 @@ import time
 import requests
 import stix2
 import yaml
+#Isort again (test fail and succeded n the same file)
 from pycti import (Indicator, MarkingDefinition, OpenCTIConnectorHelper,
                    StixCoreRelationship, get_config_variable)
 
