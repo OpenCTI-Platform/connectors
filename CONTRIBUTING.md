@@ -12,11 +12,18 @@ status: Accepted
 ## Table of Contents
 
 - [Introduction](#introduction)
+  - [What is a Connector?](#what-is-a-connector)
+  - [Connector Types Covered](#connector-types-covered)
 - [Prerequisites](#prerequisites)
 - [Getting Started](#getting-started)
+  - [Quick Start](#quick-start)
+  - [Initial Setup](#initial-setup)
+  - [Creating a New Connector](#creating-a-new-connector)
+  - [Understanding the Template Structure](#understanding-the-template-structure)
 - [Documentation Structure](#documentation-structure)
-- [Common Implementation Guidelines](#common-implementation-guidelines)
-- [Connector-Type Specific Guidelines](#connector-type-specific-guidelines)
+- [Quick Overview](#quick-overview)
+  - [Common Implementation Guidelines](#common-implementation-guidelines)
+  - [Connector-Type Specific Guidelines](#connector-type-specific-guidelines)
 - [Code Quality Standards](#code-quality-standards)
 - [Getting Help](#getting-help)
 
@@ -377,18 +384,14 @@ isort --profile black <path_to_connector>
 ### Resources
 
 - **OpenCTI Documentation**: [https://docs.opencti.io](https://docs.opencti.io)
-- **Connector Development Docs
-  **: [https://docs.opencti.io/latest/development/connectors](https://docs.opencti.io/latest/development/connectors)
-- **STIX 2.1 Specification
-  **: [https://docs.oasis-open.org/cti/stix/v2.1/stix-v2.1.html](https://docs.oasis-open.org/cti/stix/v2.1/stix-v2.1.html)
-- **OpenCTI Ecosystem
-  **: [https://filigran.notion.site/OpenCTI-Ecosystem](https://filigran.notion.site/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76)
+- **Connector Development Docs**: [https://docs.opencti.io/latest/development/connectors](https://docs.opencti.io/latest/development/connectors)
+- **STIX 2.1 Specification**: [https://docs.oasis-open.org/cti/stix/v2.1/stix-v2.1.html](https://docs.oasis-open.org/cti/stix/v2.1/stix-v2.1.html)
+- **OpenCTI Ecosystem**: [https://filigran.notion.site/OpenCTI-Ecosystem](https://filigran.notion.site/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76)
 
 ### Community Support
 
 - **Slack Community**: [https://community.filigran.io](https://community.filigran.io) (3K+ members)
-- **GitHub Issues
-  **: [https://github.com/OpenCTI-Platform/connectors/issues](https://github.com/OpenCTI-Platform/connectors/issues)
+- **GitHub Issues**: [https://github.com/OpenCTI-Platform/connectors/issues](https://github.com/OpenCTI-Platform/connectors/issues)
 - **GitHub Discussions**: For questions and community help
 
 ### Contributing
