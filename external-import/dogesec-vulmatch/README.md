@@ -7,6 +7,7 @@
 ## Table of Contents
 
 - [Introduction](#introduction)
+  - [Screenshots](#screenshots)
 - [Installation](#installation)
   - [Requirements](#requirements)
 - [Configuration](#configuration)
@@ -17,7 +18,8 @@
 - [Behavior](#behavior)
   - [Data Flow](#data-flow)
   - [Entity Mapping](#entity-mapping)
-- [Data Model](#data-model)
+  - [Custom STIX Objects and OpenCTI Compatibility](#custom-stix-objects-and-opencti-compatibility)
+  - [Processing Details](#processing-details)
 - [Debugging](#debugging)
 - [Additional Information](#additional-information)
 
