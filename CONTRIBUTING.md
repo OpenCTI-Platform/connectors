@@ -272,7 +272,13 @@ class MyConnectorConfig(BaseConfigModel):
 
 #### Using the Connectors SDK
 
-The **connectors-sdk** provides STIX-compliant models:
+The connectors-sdk project is a toolkit designed to simplify the development of connectors for various integrations on the OpenCTI platform. It provides models, exceptions, and utilities to streamline the process of building robust connectors.
+
+> [!NOTE]  
+> Note that not all OpenCTI models are available in the connectors-sdk and some may be missing. We recommend using the connectors-sdk models whenever possible for models that are available. 
+>We do our best to complete the connectors-sdk with missing models.
+
+Example of creating a STIX indicator object using the connectors-sdk:
 
 ```python
 from connectors_sdk.models import Indicator, OrganizationAuthor, TLPMarking
@@ -351,7 +357,7 @@ isort --profile black <path_to_connector>
 
 ### STIX 2.1 Compliance
 
-- Use **connectors-sdk models** for STIX object creation
+- Use **connectors-sdk models** for STIX object creation or using STIX 2.1 Python library
 - Never create STIX objects without deterministic IDs
 - Validate all STIX objects comply with STIX 2.1 specification
 - Include proper relationships between objects
@@ -359,7 +365,6 @@ isort --profile black <path_to_connector>
 ### Testing Requirements
 
 - **Unit tests** for all core functionality
-- **Integration tests** for external API interactions
 - Test configuration validation
 - Test error handling paths
 
