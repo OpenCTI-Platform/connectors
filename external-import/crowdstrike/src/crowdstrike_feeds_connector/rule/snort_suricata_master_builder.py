@@ -2,7 +2,7 @@
 """OpenCTI CrowdStrike Snort master builder module."""
 
 from datetime import date, datetime, timezone
-from typing import List, Mapping
+from typing import Any, List, Mapping, cast
 
 from crowdstrike_feeds_services.utils import (
     create_indicator,
@@ -53,7 +53,7 @@ class SnortRuleBundleBuilder:
     def build(self) -> Bundle:
         """Build Snort rule bundle."""
         # Create bundle with author.
-        bundle_objects = [self.author]
+        bundle_objects: List[Any] = [self.author]
 
         # Add object marking definitions to bundle.
         bundle_objects.extend(self.object_markings)
@@ -63,7 +63,7 @@ class SnortRuleBundleBuilder:
         bundle_objects.extend(indicators)
 
         # Create object references for the report.
-        object_refs = create_object_refs(indicators)
+        object_refs = create_object_refs(cast(List[_DomainObject], indicators))
 
         # Create reports and add to bundle.
         reports = self._create_reports(object_refs)
@@ -104,7 +104,7 @@ class SnortRuleBundleBuilder:
         self,
         report: dict,
         objects: List[_DomainObject],
-        files: List[Mapping[str, str]],
+        files: List[Mapping[str, str | bool]],
     ) -> STIXReport:
         return create_stix2_report_from_report(
             report,

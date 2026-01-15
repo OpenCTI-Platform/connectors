@@ -184,13 +184,15 @@ class YaraMasterImporter(BaseImporter):
     ) -> bytes | dict[str, Any]:
         rule_set_type = "yara-master"
 
+        kwargs: Dict[str, Any] = {}
+        if e_tag is not None:
+            kwargs["e_tag"] = e_tag
+        if last_modified is not None:
+            kwargs["last_modified"] = last_modified
+
         return cast(
             bytes | dict[str, Any],
-            self.rules_api_cs.get_latest_rule_file(
-                rule_set_type,
-                e_tag=e_tag,
-                last_modified=last_modified,
-            ),
+            self.rules_api_cs.get_latest_rule_file(rule_set_type, **kwargs),
         )
 
     def _parse_download(self, download) -> list[YaraRule]:

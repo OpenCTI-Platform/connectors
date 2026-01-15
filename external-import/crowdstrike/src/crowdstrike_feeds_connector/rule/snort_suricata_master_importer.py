@@ -2,11 +2,10 @@
 """OpenCTI CrowdStrike Snort master importer module."""
 
 import itertools
-import json
 import zipfile
 from datetime import datetime
 from io import BytesIO
-from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple, Union
+from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple, cast
 
 from crowdstrike_feeds_services.client.rules import RulesAPI
 from crowdstrike_feeds_services.utils import (
@@ -78,6 +77,9 @@ class SnortMasterImporter(BaseImporter):
         # XXX: Using Etag and Last-Modified results in HTTP 500.
         # snort_master = self._fetch_snort_master(e_tag, last_modified)
         snort_master = self._fetch_snort_master()
+
+        if snort_master is None:
+            return state
 
         latest_e_tag = snort_master.e_tag
         latest_last_modified = snort_master.last_modified
@@ -151,46 +153,42 @@ class SnortMasterImporter(BaseImporter):
 
     def _fetch_snort_master(
         self, e_tag: Optional[str] = None, last_modified: Optional[datetime] = None
-    ) -> SnortMaster:
+    ) -> SnortMaster | None:
         download = self._fetch_latest_snort_master(
             e_tag=e_tag, last_modified=last_modified
         )
-        download_bytes = self._ensure_zip_bytes(download)
-        download_converted = BytesIO(download_bytes)
+
+        if isinstance(download, dict):
+            self._error(
+                "Failed to retrieve Snort master from CrowdStrike (ignored). e_tag={0}, last_modified={1}, response={2}",
+                e_tag,
+                last_modified,
+                download,
+            )
+            return None
+
+        download_converted = BytesIO(download)
         return SnortMaster(
             rules=self._parse_download(download_converted),
             e_tag=None,
             last_modified=None,
         )
 
-    def _ensure_zip_bytes(self, download: Union[bytes, Dict[str, Any]]) -> bytes:
-        """Ensure the rule download payload is bytes.
-
-        The CS rules API should return a zip payload as bytes. In some error cases it may
-        return a JSON/dict payload; treat that as an error so we don't pass an invalid
-        buffer into `zipfile.ZipFile`.
-        """
-        if isinstance(download, (bytes, bytearray)):
-            return bytes(download)
-
-        # Defensive: some client stubs/type hints allow dict responses.
-        self._error(
-            "Expected Snort master zip payload as bytes, got dict instead: {0}",
-            json.dumps(download)[:1000],
-        )
-        raise ValueError("Snort master download is not bytes")
-
     def _fetch_latest_snort_master(
         self, e_tag: Optional[str] = None, last_modified: Optional[datetime] = None
-    ):
+    ) -> bytes | Dict[str, Any]:
         rule_set_type = "snort-suricata-master"
+
         kwargs: Dict[str, Any] = {}
         if e_tag is not None:
             kwargs["e_tag"] = e_tag
         if last_modified is not None:
             kwargs["last_modified"] = last_modified
 
-        return self.rules_api_cs.get_latest_rule_file(rule_set_type, **kwargs)
+        return cast(
+            bytes | Dict[str, Any],
+            self.rules_api_cs.get_latest_rule_file(rule_set_type, **kwargs),
+        )
 
     def _parse_download(self, download) -> List[SnortRule]:
         snort_str = self._unzip_content(download)
