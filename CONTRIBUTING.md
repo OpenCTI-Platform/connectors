@@ -390,13 +390,14 @@ isort --profile black <path_to_connector>
 - **OpenCTI Documentation**: [https://docs.opencti.io](https://docs.opencti.io)
 - **Connector Development Docs**: [https://docs.opencti.io/latest/development/connectors](https://docs.opencti.io/latest/development/connectors)
 - **STIX 2.1 Specification**: [https://docs.oasis-open.org/cti/stix/v2.1/stix-v2.1.html](https://docs.oasis-open.org/cti/stix/v2.1/stix-v2.1.html)
-- **OpenCTI Ecosystem**: [https://filigran.notion.site/OpenCTI-Ecosystem](https://filigran.notion.site/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76)
+- **OpenCTI Ecosystem**: [https://hub.filigran.io/cybersecurity-solutions/open-cti-integrations](https://hub.filigran.io/cybersecurity-solutions/open-cti-integrations)
 
 ### Community Support
 
-- **Slack Community**: [https://community.filigran.io](https://community.filigran.io) (3K+ members)
+For questions and community help:
+
+- **Slack Community**: [https://community.filigran.io](https://community.filigran.io)
 - **GitHub Issues**: [https://github.com/OpenCTI-Platform/connectors/issues](https://github.com/OpenCTI-Platform/connectors/issues)
-- **GitHub Discussions**: For questions and community help
 
 ### Contributing
 
