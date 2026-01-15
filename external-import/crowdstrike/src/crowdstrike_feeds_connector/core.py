@@ -86,8 +86,6 @@ class CrowdStrike:
         actor_start_timestamp = self.config.actor_start_timestamp
 
         malware_start_timestamp = self.config.malware_start_timestamp
-        if is_timestamp_in_future(malware_start_timestamp):
-            raise ValueError("Malware start timestamp is in the future")
 
         report_start_timestamp = self.config.report_start_timestamp
 
@@ -184,7 +182,6 @@ class CrowdStrike:
         importers: List[BaseImporter] = []
 
         if self._CONFIG_SCOPE_ACTOR in scopes:
-
             actor_importer = ActorImporter(
                 self.helper,
                 author,
