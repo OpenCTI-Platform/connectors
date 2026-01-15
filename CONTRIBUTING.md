@@ -435,5 +435,5 @@ Connectors that meet quality standards will be:
 
 ---
 
-**Ready to start?** Proceed to [Common Implementation Guidelines](./01-common-implementation.md) to begin developing
+**Ready to start?** Proceed to [Common Implementation Guidelines](./docs/01-common-implementation.md) to begin developing
 your connector.
