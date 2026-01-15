@@ -22,7 +22,7 @@ from stix2 import (
     AttackPattern,
     Bundle,
     ExternalReference,
-    Identity,
+    Identity,  # type: ignore
     IntrusionSet,
     Location,
     Malware,
@@ -63,7 +63,6 @@ class ActorBundleBuilder:
         object_markings: list[MarkingDefinition],
         confidence_level: int,
         attack_patterns: Optional[List] = None,
-        related_indicators: Optional[List] = None,
         malware: Optional[List] = None,
     ) -> None:
         """Initialize actor bundle builder."""
@@ -73,7 +72,6 @@ class ActorBundleBuilder:
         self.object_markings = object_markings
         self.confidence_level = confidence_level
         self.attack_patterns = attack_patterns or []
-        self.related_indicators = related_indicators or []
         self.malware = malware or []
 
         first_seen = None
