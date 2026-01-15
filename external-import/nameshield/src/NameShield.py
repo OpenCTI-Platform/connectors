@@ -111,19 +111,32 @@ class NameShield:
             config,
             default="",
         )
-        
 
         self.helper.connector_logger.debug("NameShield connector initialized.")
-        self.helper.connector_logger.debug(f"NameShield server: {self.nameshield_server}.")
-        self.helper.connector_logger.debug(f"NameShield api_version: {self.nameshield_api_version}.")
-        self.helper.connector_logger.debug(f"NameShield api_endpoint: {self.nameshield_api_endpoint}.")
-        self.helper.connector_logger.debug(f"NameShield url_list: {self.nameshield_url_list}.")
-        self.helper.connector_logger.debug(f"NameShield url_domain: {self.nameshield_url_domain}.")
-        self.helper.connector_logger.debug(f"NameShield marking: {self.nameshield_marking}.")
-        
-        
+        self.helper.connector_logger.debug(
+            f"NameShield server: {self.nameshield_server}."
+        )
+        self.helper.connector_logger.debug(
+            f"NameShield api_version: {self.nameshield_api_version}."
+        )
+        self.helper.connector_logger.debug(
+            f"NameShield api_endpoint: {self.nameshield_api_endpoint}."
+        )
+        self.helper.connector_logger.debug(
+            f"NameShield url_list: {self.nameshield_url_list}."
+        )
+        self.helper.connector_logger.debug(
+            f"NameShield url_domain: {self.nameshield_url_domain}."
+        )
+        self.helper.connector_logger.debug(
+            f"NameShield marking: {self.nameshield_marking}."
+        )
+
     def set_marking(self):
-        if self.nameshield_marking == "TLP:WHITE" or self.nameshield_marking == "TLP:CLEAR":
+        if (
+            self.nameshield_marking == "TLP:WHITE"
+            or self.nameshield_marking == "TLP:CLEAR"
+        ):
             marking = stix2.TLP_WHITE
         elif self.nameshield_marking == "TLP:GREEN":
             marking = stix2.TLP_GREEN
@@ -160,7 +173,7 @@ class NameShield:
         )
         self.helper.connector_logger.debug(f"NameShield url domain list:  {url}.")
         return url
-    
+
     def make_url_dom(self, domain):
         url = self.nameshield_url_domain.format(
             server=self.nameshield_server,
@@ -175,8 +188,8 @@ class NameShield:
         try:
             headers = {
                 "Authorization": "Bearer {}".format(self.nameshield_auth_bearer),
-                "ContentType": "application/json"
-                }
+                "ContentType": "application/json",
+            }
             ioc_types = ["host"]
             nameshield_result = []
             for ioc_type in ioc_types:
@@ -185,32 +198,51 @@ class NameShield:
                 response = requests.get(
                     url, headers=headers, verify=True, timeout=(80000, 80000)
                 )
-                self.helper.connector_logger.debug(f"We get a response from NameShield API: {response.status_code}.")
+                self.helper.connector_logger.debug(
+                    f"We get a response from NameShield API: {response.status_code}."
+                )
                 r_json = response.json()
                 # print(r_json)
                 if "errors" in r_json:
-                    self.helper.connector_logger.error(f"Error NameShield: {r_json['errors']['code']} {r_json['errors']['message']}")
-                    self.helper.set_state({"Error": f"Error NameShield: {r_json['errors']['code']} {r_json['errors']['message']}"})
+                    self.helper.connector_logger.error(
+                        f"Error NameShield: {r_json['errors']['code']} {r_json['errors']['message']}"
+                    )
+                    self.helper.set_state(
+                        {
+                            "Error": f"Error NameShield: {r_json['errors']['code']} {r_json['errors']['message']}"
+                        }
+                    )
                     return None
                 # Check is a message has arrived
                 if "message" in r_json:
-                    self.helper.connector_logger.error(f"NameShield send a message : {r_json['message']}")
+                    self.helper.connector_logger.error(
+                        f"NameShield send a message : {r_json['message']}"
+                    )
                 # Check if data field is present
                 if not "data" in r_json:
-                    self.helper.connector_logger.error("NameShield response has no data field.")
-                    self.helper.set_state({"Error": f"Error NameShield no data returned only thoses keys:  {str(",".join(r_json.keys()))}"})
+                    self.helper.connector_logger.error(
+                        "NameShield response has no data field."
+                    )
+                    self.helper.set_state(
+                        {
+                            "Error": f"Error NameShield no data returned only thoses keys:  {str(",".join(r_json.keys()))}"
+                        }
+                    )
                     return None
                 # We have to retreive details for each domain
                 self.helper.connector_logger.debug(f"We get : {str(r_json.keys())}.")
-                for domain_entry in r_json['data'][: self.nameshield_ioc_limit]:
+                for domain_entry in r_json["data"][: self.nameshield_ioc_limit]:
                     domain_name = domain_entry["domain"]
                     if domain_name:
                         url_domain = self.make_url_dom(domain_name)
                         response_domain = requests.get(
-                            url_domain, headers=headers, verify=True, timeout=(80000, 80000)
+                            url_domain,
+                            headers=headers,
+                            verify=True,
+                            timeout=(80000, 80000),
                         )
                         domain_info = response_domain.json()
-                        nameshield_result.append(domain_info['data'])
+                        nameshield_result.append(domain_info["data"])
             return nameshield_result
         except Exception as e:
             self.helper.connector_logger.error(
@@ -226,7 +258,7 @@ class NameShield:
         description = ""
         for one in threat.keys():
             value_loc = threat[one]
-            description += str(one).rjust(25," ")+" : "+str(value_loc)+"\n"
+            description += str(one).rjust(25, " ") + " : " + str(value_loc) + "\n"
         description += "\n\nImported from NameShield API."
         # STIX: Domain-Name
         try:
@@ -256,8 +288,12 @@ class NameShield:
             pattern_type="stix",
             description=description,
             created_by_ref=identity_id,
-            created=datetime.datetime.strptime(str(threat["nicCreationDate"]), "%Y-%m-%d"),
-            valid_until= datetime.datetime.strptime(str(threat["expirationDate"]), "%Y-%m-%d"),
+            created=datetime.datetime.strptime(
+                str(threat["nicCreationDate"]), "%Y-%m-%d"
+            ),
+            valid_until=datetime.datetime.strptime(
+                str(threat["expirationDate"]), "%Y-%m-%d"
+            ),
             modified=datetime.datetime.now(),
             labels=[threat["class"], threat["property"]],
             confidence=threat["confidence"],
@@ -277,16 +313,23 @@ class NameShield:
             source_ref=indicator["id"],
             target_ref=observable["id"],
             created_by_ref=identity_id,
-            start_time = datetime.datetime.strptime(str(threat["nicCreationDate"]), "%Y-%m-%d"),
-            stop_time = datetime.datetime.strptime(str(threat["expirationDate"]), "%Y-%m-%d"),
+            start_time=datetime.datetime.strptime(
+                str(threat["nicCreationDate"]), "%Y-%m-%d"
+            ),
+            stop_time=datetime.datetime.strptime(
+                str(threat["expirationDate"]), "%Y-%m-%d"
+            ),
             object_marking_refs=[self.nameshield_marking],
         )
         stix_objects.append(relationship)
-        
+
         # STIX: Relationships to Identities
-        if len(self.nameshield_link_to_identities)>20:
+        if len(self.nameshield_link_to_identities) > 20:
             try:
-                identities_list = [identity.strip() for identity in self.nameshield_link_to_identities.split(",")]
+                identities_list = [
+                    identity.strip()
+                    for identity in self.nameshield_link_to_identities.split(",")
+                ]
                 for identity_id in identities_list:
                     relationship_identity = stix2.Relationship(
                         id=StixCoreRelationship.generate_id(
@@ -295,8 +338,12 @@ class NameShield:
                         relationship_type="attributed-to",
                         source_ref=indicator["id"],
                         target_ref=identity_id,
-                        start_time = datetime.datetime.strptime(str(threat["nicCreationDate"]), "%Y-%m-%d"),
-                        stop_time = datetime.datetime.strptime(str(threat["expirationDate"]), "%Y-%m-%d"),
+                        start_time=datetime.datetime.strptime(
+                            str(threat["nicCreationDate"]), "%Y-%m-%d"
+                        ),
+                        stop_time=datetime.datetime.strptime(
+                            str(threat["expirationDate"]), "%Y-%m-%d"
+                        ),
                         created_by_ref=identity_id,
                         object_marking_refs=[self.nameshield_marking],
                     )
@@ -310,7 +357,7 @@ class NameShield:
         return stix_objects
 
     def create_stix_bundle(self, domain_list):
-        
+
         if domain_list is None:
             self.helper.connector_logger.info("No NameShield domains returned.")
             return None, None
@@ -345,7 +392,9 @@ class NameShield:
         try:
             stix_bundle, all_threats = self.create_stix_bundle(info)
             if stix_bundle is None:
-                self.helper.connector_logger.debug("No STIX bundle created from NameShield data (None was return).")
+                self.helper.connector_logger.debug(
+                    "No STIX bundle created from NameShield data (None was return)."
+                )
             else:
                 # Convert the bundle to a dictionary
                 stix_bundle_dict = json.loads(stix_bundle.serialize())
