@@ -184,6 +184,18 @@ graph LR
 
 ```
 
+### Entity Mapping
+
+| Vulmatch Data | OpenCTI Entity | Notes |
+|---------------------------|----------------|-------|
+| CVE | Vulnerability | Representing the named CVE |
+| CPE | Software | The hardware/OS/software impacted by CVE |
+| Indicator | Indicator | Contains the CPE pattern vulnerable to the CVE |
+| ATT&CK Enterprise Technique | Attack Pattern | MITRE ATT&CK techniques |
+| CAPEC Technique | Attack Pattern | MITRE CAPEC techniques |
+| KEV | Report | Known Exploited Vulnerabilities linked to a CVE |
+| EPSS | Report | EPSS history of a CVE |
+
 ### Custom STIX Objects and OpenCTI Compatibility
 
 #### Custom Objects

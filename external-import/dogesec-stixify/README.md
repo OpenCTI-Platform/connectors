@@ -36,7 +36,9 @@ The OpenCTI Stixify Connector synchronizes intelligence from Stixify Dossiers in
 ### Screenshots
 
 ![Stixify STIX extractions](media/stixify-graph.png)
+
 ![Stixify reports](media/stixify-reports.png)
+
 ![Stixify dossiers](media/stixify-dossiers.png)
 
 ---
