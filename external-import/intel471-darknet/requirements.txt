@@ -1,0 +1,5 @@
+pycti==6.0.7
+requests
+bs4
+lxml
+
