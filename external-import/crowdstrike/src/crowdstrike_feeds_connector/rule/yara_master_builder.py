@@ -129,8 +129,32 @@ class YaraRuleBundleBuilder:
             rule_id, rule_actors
         )
 
+        normalized_actor_names: list[str] = []
+        for actor in rule_actors or []:
+            if isinstance(actor, str):
+                name = actor.strip()
+                if name:
+                    normalized_actor_names.append(name)
+                continue
+
+            if isinstance(actor, Mapping):
+                raw_name = actor.get("name") or actor.get("slug")
+                if isinstance(raw_name, str):
+                    name = raw_name.strip()
+                    if name:
+                        normalized_actor_names.append(name)
+
+        # De-dupe while preserving order (case-insensitive)
+        seen: set[str] = set()
+        deduped_actor_names: list[str] = []
+        for name in normalized_actor_names:
+            key = name.casefold()
+            if key not in seen:
+                seen.add(key)
+                deduped_actor_names.append(name)
+
         return create_intrusion_sets_from_names(
-            rule_actors,
+            deduped_actor_names,
             created_by=self.author,
             confidence=self.confidence_level,
             object_markings=self.object_markings,

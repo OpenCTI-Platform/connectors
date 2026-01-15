@@ -162,6 +162,21 @@ class ReportImporter(BaseImporter):
         report_count = len(reports)
         self._info("Processing {0} reports...", report_count)
 
+        # Cache actor entities once per batch to avoid noisy per-report/per-actor updates.
+        # RelatedActorImporter expects: Dict[str, Dict[str, Any]]
+        batch_actor_cache: dict[str, dict[str, Any]] = {}
+        for report in reports:
+            for actor in report.get("actors") or []:
+                actor_id = actor.get("id")
+                actor_name = actor.get("name")
+                if actor_id is None or not actor_name:
+                    continue
+                # Use string keys for consistency with the rest of the connector.
+                batch_actor_cache[str(actor_id)] = {"id": actor_id, "name": actor_name}
+
+        if batch_actor_cache:
+            RelatedActorImporter._resolved_actor_entity_cache.update(batch_actor_cache)
+
         latest_modified_timestamp: Optional[int] = None
 
         for report in reports:
@@ -198,6 +213,14 @@ class ReportImporter(BaseImporter):
             "Processing reports completed (imported: {0}, latest: {1})",
             report_count,
             latest_modified_datetime,
+        )
+        self.helper.connector_logger.debug(
+            "Reports batch summary",
+            {
+                "count": report_count,
+                "latest_modified_timestamp": latest_modified_timestamp,
+                "cached_actor_ids": len(batch_actor_cache),
+            },
         )
 
         return latest_modified_datetime
@@ -281,7 +304,7 @@ class ReportImporter(BaseImporter):
                         indicator_unwanted_labels=self.indicator_config[
                             "indicator_unwanted_labels"
                         ],
-                        scopes=self.indicator_config["scopes"],
+                        scopes=self.scopes,
                     )
                     try:
                         bundle_builder = IndicatorBundleBuilder(
@@ -322,7 +345,7 @@ class ReportImporter(BaseImporter):
             self.helper.connector_logger.error(
                 "[ERROR] An unexpected error occurred when retrieving indicators for the report.",
                 {
-                    "error": err,
+                    "error": str(err),
                     "report_name": report_name,
                 },
             )
@@ -338,18 +361,6 @@ class ReportImporter(BaseImporter):
         report_type = self.report_type
         confidence_level = self._confidence_level()
         related_indicators_with_related_entities = []
-
-        # Important: Reports often already include actor stubs as dicts with `id`, `name`, and `slug`.
-        # In that case we should NOT perform additional API lookups (Romain's point).
-        raw_actors = report.get("actors") or []
-        RelatedActorImporter._resolved_actor_entity_cache.update(
-            {actor.get("id"): actor.get("name") for actor in raw_actors}
-        )
-
-        self.helper.connector_logger.debug(
-            "Report actors field (raw)",
-            {"report_id": report.get("id"), "actors": raw_actors},
-        )
 
         report_slug = report["slug"]
         if report_slug is not None:

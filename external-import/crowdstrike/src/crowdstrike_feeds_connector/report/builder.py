@@ -3,7 +3,7 @@
 
 import logging
 from collections.abc import Sequence
-from typing import Mapping, cast
+from typing import Any, Iterable, Mapping, cast
 
 from crowdstrike_feeds_connector.related_actors.builder import RelatedActorBundleBuilder
 from crowdstrike_feeds_services.utils import (
@@ -131,9 +131,13 @@ class ReportBundleBuilder:
                     object_markings=self.object_markings,
                     confidence_level=self.confidence_level,
                 )
-                intrusion_set = actor_builder.build()
+                built = actor_builder.build()
 
-                intrusion_sets.append(intrusion_set)
+                # Some builders may return a single IntrusionSet, others a list of IntrusionSet
+                if isinstance(built, list):
+                    intrusion_sets.extend(cast(list[IntrusionSet], built))
+                else:
+                    intrusion_sets.append(cast(IntrusionSet, built))
 
             except Exception:
                 logger.exception(
@@ -200,22 +204,20 @@ class ReportBundleBuilder:
             files.append(self.report_file)
         return files
 
-    def _create_report(
-        self, objects: list[_DomainObject | _RelationshipObject]
-    ) -> STIXReport:
+    def _create_report(self, object_refs: list[str]) -> STIXReport:
         files = self._create_files()
-        return self._create_stix2_report_from_report(objects, files)
+        return self._create_stix2_report_from_report(object_refs, files)
 
     def _create_stix2_report_from_report(
         self,
-        objects: list[_DomainObject | _RelationshipObject],
+        object_refs: list[str],
         files: list[Mapping[str, str | bool]],
     ) -> STIXReport:
         return create_stix2_report_from_report(
             self.report,
             self.source_name,
             self.author,
-            objects,
+            object_refs,
             [self.report_type],
             self.confidence_level,
             self.object_markings,
@@ -225,6 +227,41 @@ class ReportBundleBuilder:
 
     def _create_dummy_object(self) -> Identity:
         return create_organization(self._DUMMY_OBJECT_NAME, self.author)
+
+    def _normalize_report_object_refs(self, refs: Iterable[Any]) -> list[str]:
+        normalized: list[str] = []
+        for ref in refs or []:
+            if ref is None:
+                continue
+            if isinstance(ref, str):
+                normalized.append(ref)
+                continue
+
+            # STIX2 objects expose an .id attribute
+            stix_id = getattr(ref, "id", None)
+            if isinstance(stix_id, str):
+                normalized.append(stix_id)
+                continue
+
+            # Dict-like objects may carry an "id" key
+            if isinstance(ref, dict) and isinstance(ref.get("id"), str):
+                normalized.append(ref["id"])
+                continue
+
+            logger.warning(
+                "Skipping non-STIX object ref in report.object_refs (type=%s): %s",
+                type(ref),
+                str(ref)[:200],
+            )
+
+        # De-dupe while preserving order
+        seen: set[str] = set()
+        deduped: list[str] = []
+        for item in normalized:
+            if item not in seen:
+                deduped.append(item)
+                seen.add(item)
+        return deduped
 
     def build(self) -> Bundle:
         """Build report bundle."""
@@ -330,11 +367,12 @@ class ReportBundleBuilder:
             dummy_object = self._create_dummy_object()
 
             bundle_objects.append(dummy_object)
-            object_refs.append(dummy_object)
+            object_refs.append(dummy_object.id)
 
         # Add related indicator to object refs for report
         object_refs.extend(indicators_linked)
 
+        object_refs = self._normalize_report_object_refs(object_refs)
         report = self._create_report(object_refs)
         bundle_objects.append(report)
 

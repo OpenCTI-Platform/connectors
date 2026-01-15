@@ -165,9 +165,7 @@ class YaraMasterImporter(BaseImporter):
 
         if isinstance(download, dict):
             self._error(
-                "An error has occurred during the recovery of the yara master. "
-                "YARA master was not retrieved correctly and is ignored... ",
-                "e_tag: {0}, last_modified : {1}, download_dict: {2}",
+                "Failed to retrieve YARA master from CrowdStrike (ignored). e_tag={0}, last_modified={1}, response={2}",
                 e_tag,
                 last_modified,
                 download,
@@ -185,16 +183,14 @@ class YaraMasterImporter(BaseImporter):
         self, e_tag: Optional[str] = None, last_modified: Optional[datetime] = None
     ) -> bytes | dict[str, Any]:
         rule_set_type = "yara-master"
-        # RulesAPI.get_latest_rule_file expects non-None values for conditional headers.
-        kwargs: dict[str, Any] = {}
-        if e_tag is not None:
-            kwargs["e_tag"] = e_tag
-        if last_modified is not None:
-            kwargs["last_modified"] = last_modified
 
         return cast(
             bytes | dict[str, Any],
-            self.rules_api_cs.get_latest_rule_file(rule_set_type, **kwargs),
+            self.rules_api_cs.get_latest_rule_file(
+                rule_set_type,
+                e_tag=e_tag,
+                last_modified=last_modified,
+            ),
         )
 
     def _parse_download(self, download) -> list[YaraRule]:

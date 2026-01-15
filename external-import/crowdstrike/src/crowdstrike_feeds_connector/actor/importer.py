@@ -152,14 +152,21 @@ class ActorImporter(BaseImporter):
             ):
                 latest_modified_timestamp = modified_ts
 
-            RelatedActorImporter._resolved_actor_entity_cache.update(
-                {actor.get("id"): actor.get("name") for actor in actors}
-            )
+        RelatedActorImporter._resolved_actor_entity_cache.update(
+            {
+                a.get("id"): a.get("name")
+                for a in actors
+                if a.get("id") is not None and a.get("name") is not None
+            }
+        )
 
-            self.helper.connector_logger.debug(
-                "Report actors field (raw)",
-                {"actors": actors},
-            )
+        self.helper.connector_logger.debug(
+            "Actor batch processed",
+            {
+                "count": actor_count,
+                "latest_modified_timestamp": latest_modified_timestamp,
+            },
+        )
 
         self._info(
             "Processing actors completed (imported: {0}, latest: {1})",

@@ -63,32 +63,30 @@ class CrowdStrike:
         self.config = ConfigCrowdstrike()
 
         scopes_str = self.config.scopes
-        scopes: set[str] = set()
+        scopes_list: list[str] = []
         if scopes_str is not None:
-            scopes = set(convert_comma_separated_str_to_list(scopes_str))
+            scopes_list = convert_comma_separated_str_to_list(scopes_str)
 
-        scopes_list: list[str] = list(scopes)
+        scopes: set[str] = set(scopes_list)
 
         tlp = self.config.tlp
         tlp_marking = self._convert_tlp_to_marking_definition(tlp)
 
-        create_observables = self.config.create_observables
-        if create_observables is None:
-            create_observables = self._DEFAULT_CREATE_OBSERVABLES
-        else:
-            create_observables = bool(create_observables)
+        create_observables = self._to_bool(
+            self.config.create_observables, default=self._DEFAULT_CREATE_OBSERVABLES
+        )
 
-        create_indicators = self.config.create_indicators
-        if create_indicators is None:
-            create_indicators = self._DEFAULT_CREATE_INDICATORS
-        else:
-            create_indicators = bool(create_indicators)
+        create_indicators = self._to_bool(
+            self.config.create_indicators, default=self._DEFAULT_CREATE_INDICATORS
+        )
 
         actor_start_timestamp = self.config.actor_start_timestamp
 
         report_start_timestamp = self.config.report_start_timestamp
 
         report_status_str = self.config.report_status
+        if not report_status_str:
+            report_status_str = "new"
         report_status = self._convert_report_status_str_to_report_status_int(
             report_status_str
         )
@@ -111,8 +109,12 @@ class CrowdStrike:
                 report_target_industries_str
             )
 
-        report_guess_malware = bool(self.config.report_guess_malware)
-        report_guess_relations = bool(self.config.report_guess_relations)
+        report_guess_malware = self._to_bool(
+            self.config.report_guess_malware, default=False
+        )
+        report_guess_relations = self._to_bool(
+            self.config.report_guess_relations, default=False
+        )
 
         indicator_start_timestamp = self.config.indicator_start_timestamp
 
@@ -358,7 +360,7 @@ class CrowdStrike:
 
                 connect_name = self.helper.connect_name or "CrowdStrike"
                 message = (
-                    f"{connect_name} {importer.name} successfully run, storing last_run as "
+                    f"{connect_name} {importer_name} successfully run, storing last_run as "
                     + str(timestamp)
                 )
                 self.helper.api.work.to_processed(work_id, message)
@@ -402,8 +404,24 @@ class CrowdStrike:
         )
         work_id = cast(str, work_id)
 
-        self._info(f"New '{importer_name} work '{work_id}' initiated", work_id)
+        self._info(f"New '{importer_name}' work '{work_id}' initiated")
         return work_id
+
+    @staticmethod
+    def _to_bool(value: Any | None, default: bool = False) -> bool:
+        if value is None:
+            return default
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return bool(value)
+        if isinstance(value, str):
+            v = value.strip().lower()
+            if v in {"1", "true", "t", "yes", "y", "on"}:
+                return True
+            if v in {"0", "false", "f", "no", "n", "off", ""}:
+                return False
+        return bool(value)
 
     def _info(self, msg: str, *args: Any) -> None:
         fmt_msg = msg.format(*args)
