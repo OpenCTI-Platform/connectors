@@ -2,7 +2,7 @@
   "title": "SIEM Rules by dogesec",
   "slug": "dogesec-vulmatch",
   "description": "The OpenCTI SIEM Rules Connector syncs the detection rules held in SIEM Rules Detection Packs to OpenCTI.",
-  "short_description": "Information coming soon",
+  "short_description": "The OpenCTI SIEM Rules Connector enables organizations to operationalize threat intelligence by synchronizing detection rules derived from reports into OpenCTI. Powered by SIEM Rules, the connector imports detection content curated in SIEM Rules Detection Packs, where threat intelligence is transformed into actionable detection logic across multiple SIEM and security platforms.\n\nBy ingesting detection rules into OpenCTI, the connector allows analysts to correlate detection content with underlying threat actors, techniques, campaigns, and reports already present in OpenCTI. This creates a direct link between intelligence and detection engineering, helping teams track coverage, identify detection gaps, and maintain alignment between evolving threats and defensive controls through automated, scheduled updates.",
   "logo": "external-import/dogesec-siemrules/__metadata__/logo.png",
   "use_cases": [
     "Detection Rules"
