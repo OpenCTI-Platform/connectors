@@ -3,8 +3,8 @@ opencti:
   token: 'ChangeMe'
 
 connector:
+  id: 'ChangeMe'
   type: 'INTERNAL_ENRICHMENT'
-  id: '3582c335-cea7-45ec-b2a2-f46130762712'
   name: 'RST IoC Lookup'
   scope: 'IPv4-Addr,Domain-Name,Url,StixFile,indicator'
   auto: false # Enable/disable auto-enrichment of observables
