@@ -1,8 +1,13 @@
-# OpenCTI Connector Development Guidelines
+---
+version: 1.0
+category: Documentation
+audience: Partners, Customers, Community Contributors, Internal Team Members
+maintainers: XTM Integrations Team
+last updated: January 2026
+status: Accepted
+---
 
-**Version:** 1.0
-**Last Updated:** January 2026
-**Audience:** Partners, Customers, Community Contributors, Internal Team Members
+# OpenCTI Connector Development Guidelines
 
 ## Table of Contents
 
@@ -59,8 +64,7 @@ Before starting connector development, ensure you have:
 ### Knowledge Requirements
 
 - Proficiency in **Python programming**
-- Understanding of **STIX 2.1 specification
-  ** ([OASIS STIX 2.1 Spec](https://docs.oasis-open.org/cti/stix/v2.1/stix-v2.1.html))
+- Understanding of **STIX 2.1 specification** ([OASIS STIX 2.1 Spec](https://docs.oasis-open.org/cti/stix/v2.1/stix-v2.1.html))
 - Familiarity with **Docker** and containerization concepts
 - Basic understanding of **message queues** (RabbitMQ)
 - Experience with **RESTful APIs**
@@ -91,23 +95,58 @@ You can develop connectors using either:
 6. **Test thoroughly** following testing guidelines
 7. **Submit a pull request** for review
 
-Creating a New Connector
+### Initial Setup
+
+```bash
+# Fork and clone the repository
+git clone https://github.com/YOUR-USERNAME/connectors.git
+cd connectors
+git remote add upstream https://github.com/OpenCTI-Platform/connectors.git
+
+# Create a branch for your connector
+git checkout -b feature/my-connector-name
+```
+
+### Creating a New Connector
+
+#### Choosing the Right Template
+
 The fastest way to start is using the provided script:
 
+```bash
 cd templates
 sh create_connector_dir.sh -t <TYPE> -n <NAME>
+```
+
 Where:
 
-<TYPE> is one of: external-import, internal-enrichment, stream
-<NAME> is your connector's name (e.g., my-threat-feed)
+- `<TYPE>` is one of: external-import, internal-enrichment, stream
+- `<NAME>` is your connector's name (e.g., my-threat-feed)
+
 This creates a complete connector structure with:
 
-Pre-configured settings and configuration files
-Standardized directory structure
-Template implementation code
-Testing framework setup
-Docker deployment files
-Metadata files for documentation
+- Pre-configured settings and configuration files
+- Standardized directory structure
+- Template implementation code
+- Testing framework setup
+- Docker deployment files
+- Metadata files for documentation
+
+Navigate to the `templates/` folder and copy the appropriate template for your connector type:
+
+Or you can use command lines
+
+```bash
+# For External Import connector
+cp -r templates/external-import external-import/my-connector
+
+# For Internal Enrichment connector
+cp -r templates/internal-enrichment internal-enrichment/my-connector
+
+# For Stream connector
+cp -r templates/stream stream/my-connector
+```
+
 
 ### Understanding the Template Structure
 
@@ -136,6 +175,7 @@ my-connector/
 │   ├── conftest.py
 │   ├── test_main.py
 │   └── test-requirements.txt
+├── .dockerignore             
 ├── config.yml.sample             # Sample configuration
 ├── docker-compose.yml            # Docker Compose configuration
 ├── Dockerfile                    # Container definition
@@ -149,57 +189,59 @@ This guide is organized into multiple documents:
 
 ### Core Documentation
 
-1. **[Common Implementation Guidelines](./01-common-implementation.md)** (Start here!)
-    - Environment setup (Docker & Local)
-    - Directory structure and file organization
-    - Using the connectors-sdk
-    - Configuration management with Pydantic
-    - STIX 2.1 object creation
-    - Logging best practices
-    - State management
-    - Error handling patterns
-
-2. **[Code Quality & Standards](./05-code-quality-standards.md)**
-    - Code style requirements
-    - Pylint configuration and custom plugins
-    - STIX 2.1 compliance validation
-    - Testing requirements and frameworks
-    - Docker and deployment standards
-    - Documentation requirements
-    - Security best practices
-    - Performance guidelines
+**[Common Implementation Guidelines](./docs/01-common-implementation.md)** (Start here!)
+- Environment setup (Docker & Local)
+- Directory structure and file organization
+- Using the connectors-sdk
+- Configuration management with Pydantic
+- STIX 2.1 object creation
+- Logging best practices
+- State management
+- Error handling patterns
 
 ### Connector-Type Specific Guidelines
 
-3. **[External Import Connector Specifications](./02-external-import-specifications.md)**
-    - Scheduling and interval handling
-    - Work initialization and tracking
-    - State management for incremental imports
-    - Rate limiting and API quotas
-    - Data deduplication strategies
-    - External API client implementation
+**[External Import Connector Specifications](./docs/02-external-import-specifications.md)**
+- Scheduling and interval handling
+- Work initialization and tracking
+- State management for incremental imports
+- Rate limiting and API quotas
+- Data deduplication strategies
+- External API client implementation
 
-4. **[Internal Enrichment Connector Specifications](./03-internal-enrichment-specifications.md)**
-    - Event-driven architecture
-    - Entity scope validation
-    - TLP marking handling
-    - Playbook compatibility requirements
-    - Enrichment patterns and best practices
-    - Bundle handling for enrichment
+**[Internal Enrichment Connector Specifications](./docs/03-internal-enrichment-specifications.md)**
+- Event-driven architecture
+- Entity scope validation
+- TLP marking handling
+- Playbook compatibility requirements
+- Enrichment patterns and best practices
+- Bundle handling for enrichment
 
-5. **[Stream Connector Specifications](./04-stream-specifications.md)**
-    - Live stream listening
-    - Event type handling (create/update/delete)
-    - Stream ID configuration
-    - Real-time synchronization patterns
-    - Error recovery and reconnection
-    - Backpressure handling
+**[Stream Connector Specifications](./docs/04-stream-specifications.md)**
+- Live stream listening
+- Event type handling (create/update/delete)
+- Stream ID configuration
+- Real-time synchronization patterns
+- Error recovery and reconnection
+- Backpressure handling
 
-## Common Implementation Guidelines
+**[Code Quality & Standards](./docs/05-code-quality-standards.md)**
+- Code style requirements
+- Pylint configuration and custom plugins
+- STIX 2.1 compliance validation
+- Testing requirements and frameworks
+- Docker and deployment standards
+- Documentation requirements
+- Security best practices
+- Performance guidelines
+
+## Quick Overview
+
+### Common Implementation Guidelines
 
 All connector types share common implementation patterns:
 
-### Configuration with Pydantic
+#### Configuration with Pydantic
 
 All connectors use **Pydantic models** for configuration validation:
 
@@ -217,7 +259,7 @@ class MyConnectorConfig(BaseConfigModel):
     api_key: str = Field(description="API key for authentication.")
 ```
 
-### Using the Connectors SDK
+#### Using the Connectors SDK
 
 The **connectors-sdk** provides STIX-compliant models:
 
@@ -239,7 +281,7 @@ indicator = Indicator(
 stix_indicator = indicator.to_stix2_object()
 ```
 
-### Logging
+#### Logging
 
 Always use the helper's logger:
 
@@ -248,7 +290,7 @@ self.helper.connector_logger.info("Processing started", {"entity_id": entity_id}
 self.helper.connector_logger.error("Failed to connect", {"error": str(e)})
 ```
 
-### Sending Data to OpenCTI
+#### Sending Data to OpenCTI
 
 Standard pattern for sending STIX bundles:
 
@@ -264,7 +306,7 @@ bundles_sent = self.helper.send_stix2_bundle(
 )
 ```
 
-## Connector-Type Specific Guidelines
+### Connector-Type Specific Guidelines
 
 Each connector type has specific requirements and patterns. See the dedicated documentation:
 
@@ -272,7 +314,7 @@ Each connector type has specific requirements and patterns. See the dedicated do
 - **Internal Enrichment**: Focus on event handling, scope validation, and playbook compatibility
 - **Stream**: Focus on real-time event processing and external platform synchronization
 
-## Code Quality Standards
+### Code Quality Standards
 
 All connectors must meet these quality standards:
 
@@ -307,7 +349,6 @@ isort --profile black <path_to_connector>
 
 - **Unit tests** for all core functionality
 - **Integration tests** for external API interactions
-- **Minimum 70% code coverage** recommended
 - Test configuration validation
 - Test error handling paths
 
@@ -360,6 +401,9 @@ When your connector is ready:
 4. **Respond to review feedback** from maintainers
 5. **Update documentation** as needed
 
+> [!IMPORTANT]  
+> When creating a Pull Request on this repository, ALWAYS create along with an associated GitHub issue describing the purpose of your contribution (what problem it fixes, what improvement it brings, or what new integration it provides).
+
 Connectors that meet quality standards will be:
 
 - Integrated into CI/CD pipelines
@@ -370,16 +414,16 @@ Connectors that meet quality standards will be:
 
 ## Quick Reference
 
-| Need to...                     | See Document                                                      | Section              |
-|--------------------------------|-------------------------------------------------------------------|----------------------|
-| Set up development environment | [Common Implementation](./01-common-implementation.md)            | Environment Setup    |
-| Create STIX objects            | [Common Implementation](./01-common-implementation.md)            | STIX Object Creation |
-| Schedule periodic imports      | [External Import](./02-external-import-specifications.md)         | Scheduling           |
-| Handle enrichment events       | [Internal Enrichment](./03-internal-enrichment-specifications.md) | Event Processing     |
-| Listen to platform streams     | [Stream](./04-stream-specifications.md)                           | Stream Listening     |
-| Fix linting errors             | [Code Quality](./05-code-quality-standards.md)                    | Linting              |
-| Write tests                    | [Code Quality](./05-code-quality-standards.md)                    | Testing              |
-| Deploy with Docker             | [Code Quality](./05-code-quality-standards.md)                    | Docker Standards     |
+| Need to...                     | See Document                                                           | Section              |
+|--------------------------------|------------------------------------------------------------------------|----------------------|
+| Set up development environment | [Common Implementation](./docs/01-common-implementation.md)            | Environment Setup    |
+| Create STIX objects            | [Common Implementation](./docs/01-common-implementation.md)            | STIX Object Creation |
+| Schedule periodic imports      | [External Import](./docs/02-external-import-specifications.md)         | Scheduling           |
+| Handle enrichment events       | [Internal Enrichment](./docs/03-internal-enrichment-specifications.md) | Event Processing     |
+| Listen to platform streams     | [Stream](./docs/04-stream-specifications.md)                           | Stream Listening     |
+| Fix linting errors             | [Code Quality](./docs/05-code-quality-standards.md)                    | Linting              |
+| Write tests                    | [Code Quality](./docs/05-code-quality-standards.md)                    | Testing              |
+| Deploy with Docker             | [Code Quality](./docs/05-code-quality-standards.md)                    | Docker Standards     |
 
 ---
 
