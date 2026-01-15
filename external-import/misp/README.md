@@ -98,6 +98,13 @@ There are a number of configuration options, which are set either in `docker-com
 | Unsupported Observables Transparent    | misp.import_unsupported_observables_as_text_transparent | `MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT` | true  | No        | Make unsupported text observables transparent.                              |
 | Propagate Labels                       | misp.propagate_labels                       | `MISP_PROPAGATE_LABELS`                              | false          | No        | Propagate labels to related entities.                                       |
 
+### Connector batching parameters environment variables
+
+| Parameter                              | config.yml                                  | Docker environment variable                          | Default        | Mandatory | Description                                                                 |
+|----------------------------------------|---------------------------------------------|------------------------------------------------------|----------------|-----------|-----------------------------------------------------------------------------|
+| BATCH_CHUNK_SIZE | `integer` |  | integer | `9999` | The chunk size for splitting object bundles into batches |
+
+
 ## Deployment
 
 ### Docker Deployment
