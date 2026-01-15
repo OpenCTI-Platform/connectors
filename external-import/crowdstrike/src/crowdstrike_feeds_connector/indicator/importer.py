@@ -230,8 +230,10 @@ class IndicatorImporter(BaseImporter):
             if "actor" in self.scopes:
                 # Process related actors
                 related_actors = indicator.get("actors", [])
-                indicator["actors"] = self.related_actor_importer._process_related_actors(
-                    indicator.get("id"), related_actors
+                indicator["actors"] = (
+                    self.related_actor_importer._process_related_actors(
+                        indicator.get("id"), related_actors
+                    )
                 )
                 self.helper.connector_logger.debug(
                     "Resolved indicator actors",

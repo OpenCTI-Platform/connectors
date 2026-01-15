@@ -47,15 +47,19 @@ class RelatedActorImporter:
                     # Use name-only filter (validated to work best for ALLCAPS tokens like WICKEDPANDA)
                     fql_filter = f"(name:'{safe}')"
 
-                    response: Optional[Dict[str, Any]] = self.actors_api_cs.get_combined_actor_entities(
-                        fql_filter=fql_filter,
-                        limit=100,
-                        offset=0,
-                        sort="created_date|desc",
-                        fields="__full__",
+                    response: Optional[Dict[str, Any]] = (
+                        self.actors_api_cs.get_combined_actor_entities(
+                            fql_filter=fql_filter,
+                            limit=100,
+                            offset=0,
+                            sort="created_date|desc",
+                            fields="__full__",
+                        )
                     )
                     response_dict: Dict[str, Any] = response or {}
-                    actors_data = cast(List[Dict[str, Any]], response_dict.get("resources", []))
+                    actors_data = cast(
+                        List[Dict[str, Any]], response_dict.get("resources", [])
+                    )
 
                     if not actors_data:
                         unresolved.append(raw_actor)
@@ -76,9 +80,13 @@ class RelatedActorImporter:
                     best_name = best.get("name")
                     best_slug = best.get("slug")
                     if isinstance(best_name, str) and best_name:
-                        RelatedActorImporter._resolved_actor_entity_cache[best_name] = best
+                        RelatedActorImporter._resolved_actor_entity_cache[best_name] = (
+                            best
+                        )
                     if isinstance(best_slug, str) and best_slug:
-                        RelatedActorImporter._resolved_actor_entity_cache[best_slug] = best
+                        RelatedActorImporter._resolved_actor_entity_cache[best_slug] = (
+                            best
+                        )
 
             except Exception as err:
                 # If resolution fails, do not emit raw tokens as names because it can create incorrectly named
@@ -116,4 +124,3 @@ class RelatedActorImporter:
             )
 
         return resolved_entities
-

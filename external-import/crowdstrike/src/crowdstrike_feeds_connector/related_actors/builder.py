@@ -143,7 +143,9 @@ class RelatedActorBundleBuilder:
         if isinstance(actor, str):
             actor = {"name": actor}
         if not isinstance(actor, Mapping):
-            raise TypeError(f"Expected actor mapping or string, got {type(actor).__name__}")
+            raise TypeError(
+                f"Expected actor mapping or string, got {type(actor).__name__}"
+            )
 
         # Name
         name = actor.get("name") or ""
