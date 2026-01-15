@@ -485,27 +485,9 @@ class IndicatorBundleBuilder:
         malwares = self._create_malwares()
         bundle_objects.extend(malwares)
 
-        # Intrusion sets use malwares and add to bundle.
-        intrusion_sets_use_malwares = self._create_uses_relationships(
-            intrusion_sets, malwares
-        )
-        bundle_objects.extend(intrusion_sets_use_malwares)
-
         # Create target sectors and add to bundle.
         target_sectors = self._create_targeted_sectors()
         bundle_objects.extend(target_sectors)
-
-        # Intrusion sets target sectors and add to bundle.
-        intrusion_sets_target_sectors = self._create_targets_relationships(
-            intrusion_sets, target_sectors
-        )
-        bundle_objects.extend(intrusion_sets_target_sectors)
-
-        # Malwares target sectors and add to bundle.
-        malwares_target_sectors = self._create_targets_relationships(
-            malwares, target_sectors
-        )
-        bundle_objects.extend(malwares_target_sectors)
 
         # Create vulnerabilities and add to bundle.
         vulnerabilities = self._create_vulnerabilities()
