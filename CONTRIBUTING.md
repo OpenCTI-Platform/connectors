@@ -26,6 +26,10 @@ status: Accepted
   - [Connector-Type Specific Guidelines](#connector-type-specific-guidelines)
 - [Code Quality Standards](#code-quality-standards)
 - [Getting Help](#getting-help)
+  - [Resources](#resources)
+  - [Community Support](#community-support)
+  - [Contributing](#contributing)
+- [Quick Reference](#quick-reference)
 
 ## Introduction
 
