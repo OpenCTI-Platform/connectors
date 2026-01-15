@@ -28,7 +28,7 @@ class RSTIocLookupConnector:
                 "RST_IOC_LOOKUP_BASE_URL",
                 ["rst-ioc-lookup", "base_url"],
                 config,
-                default="https://api.rstcloud.net/v1/",
+                default="https://api.rstcloud.net/v1",
             )
         )
         self.api_key = str(
@@ -170,7 +170,21 @@ class RSTIocLookupConnector:
             # do not use the RST Cloud's decay algorithm
             # the score is set based on the last value
             # calculated by RST Cloud on a last seen day
-            new_score = int(resp["score"]["last"])
+            last_score = resp["score"].get("last")
+            if last_score is not None:
+                new_score = int(last_score)
+            else:
+                # fallback to total if last is missing
+                new_score = int(resp["score"]["total"])
+        elif self.score_type == "first":
+            # use the score for the IoC on the day it was first seen
+            # within the last period of activity
+            first_score = resp["score"].get("first")
+            if first_score is not None:
+                new_score = int(first_score)
+            else:
+                # fallback to total if first is missing
+                new_score = int(resp["score"]["total"])
         elif self.score_type == "total":
             # use the RST Cloud's decay algorithm
             # the score is set to the currect score value
@@ -279,7 +293,12 @@ class RSTIocLookupConnector:
                 raise ValueError("Unsupported description update action")
 
             external_references = list()
-            for ref in resp["src"]["report"].split(","):
+            src_reports = (
+                resp["src"]["report"]
+                if isinstance(resp["src"]["report"], list)
+                else resp["src"]["report"].split(",")
+            )
+            for ref in src_reports:
                 ref_name = urlparse(ref).netloc
                 if ref_name.strip() == "":
                     ref_name = ref
@@ -344,7 +363,12 @@ class RSTIocLookupConnector:
             )
 
             external_references = list()
-            for ref in resp["src"]["report"].split(","):
+            src_reports = (
+                resp["src"]["report"]
+                if isinstance(resp["src"]["report"], list)
+                else resp["src"]["report"].split(",")
+            )
+            for ref in src_reports:
                 ref_name = urlparse(ref).netloc
                 if ref_name.strip() == "":
                     ref_name = ref
@@ -397,6 +421,7 @@ class RSTIocLookupConnector:
         for value in values:
             url = self.base_url + "/ioc"
             headers = {
+                "User-Agent": "opencti_rst_ioc_lookup",
                 "Content-Type": "application/json",
                 "x-api-key": self.api_key,
             }

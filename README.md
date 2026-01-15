@@ -17,12 +17,15 @@ the [OpenCTI ecosystem dedicated space](https://filigran.notion.site/OpenCTI-Eco
 
 ## Contributing
 
-If you want to help use improve or develop new connector, please check out the **[development documentation for new connectors](https://docs.opencti.io/latest/development/connectors)** or go to our templates folder to find the right template for your connector, the README file will guide you through the process: [Connector templates](./templates). 
+**Contributions are welcome and appreciated!**.
 
-If you want to
-make your connector available to the community, **please create a Pull Request on this repository**, then we will
-integrate it to the CI and in
-the [OpenCTI ecosystem](https://filigran.notion.site/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76).
+If you want to help us improve existing connectors or develop new ones, please check out the [development documentation for new connectors](https://docs.opencti.io/latest/development/connectors) or go to our templates folder to find the right template for your connector. 
+The README file will guide you through the process: [Connector templates](./templates).
+
+To contribute, please create a **Pull Request** on this repository along with an associated **GitHub issue** describing the purpose of your contribution (what problem it fixes, what improvement it brings, or what new integration it provides). 
+
+Once reviewed, we will integrate your connector into the CI and add it to the [OpenCTI ecosystem](https://filigran.notion.site/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76).
+
 
 Any connector **should be validated** through pylint. Example of commands:
 

@@ -10,8 +10,8 @@ services:
       - CONNECTOR_SCOPE=Domain-Name,Url,indicator
       - CONNECTOR_AUTO=false
       - CONNECTOR_LOG_LEVEL=info
-      - RST_WHOIS_API_BASE_URL=https://api.rstcloud.net/v1/
-      - RST_WHOIS_API_API_KEY=ChangeMe
+      - RST_WHOIS_API_BASE_URL=https://api.rstcloud.net/v1
+      - RST_WHOIS_API_API_KEY=${RST_WHOIS_API_API_KEY}
       - RST_WHOIS_API_MAX_TLP=TLP:AMBER+STRICT
       - RST_WHOIS_API_UPDATE_OUTPUT_ACTION=overwrite # overwrite or append
       - RST_WHOIS_API_WHOIS_OUTPUT_OBJECT=note # note or description
