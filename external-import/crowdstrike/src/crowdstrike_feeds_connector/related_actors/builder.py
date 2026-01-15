@@ -3,7 +3,7 @@
 
 import logging
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, cast
 
 from crowdstrike_feeds_services.utils import (
     create_external_reference,
@@ -27,7 +27,7 @@ class RelatedActorBundleBuilder:
 
     def __init__(
         self,
-        actor: Mapping[str, Any],
+        actor: Any,
         author: Identity,
         source_name: str,
         object_markings: list[MarkingDefinition],
@@ -35,17 +35,35 @@ class RelatedActorBundleBuilder:
         attack_patterns: list[AttackPattern] | None = None,
     ) -> None:
         """Initialize actor bundle builder."""
-        self.actor = actor
+        if isinstance(actor, str):
+            self.actor: Mapping[str, Any] = {"name": actor}
+        elif isinstance(actor, Mapping):
+            self.actor = cast(Mapping[str, Any], actor)
+        else:
+            self.actor = cast(Any, actor)
         self.author = author
         self.source_name = source_name
         self.object_markings = object_markings
         self.confidence_level = confidence_level
         self.attack_patterns = attack_patterns or []
 
-    def build(self) -> IntrusionSet:
-        """Build and return an IntrusionSet for the provided actor entity."""
+    def build(self) -> list[IntrusionSet]:
+        """Build and return IntrusionSets for the provided actor entity."""
+        actor = self.actor
+
+        # Normalize string actor entries defensively
+        if isinstance(actor, str):
+            actor = {"name": actor}
+
+        if not isinstance(actor, Mapping):
+            logger.warning(
+                "Skipping unresolved actor entry (expected mapping or string)",
+                {"actor_entry_type": type(actor).__name__, "actor_entry": actor},
+            )
+            return []
+
         intrusion_set = self._create_intrusion_set_from_actor_entity(
-            self.actor,
+            cast(Mapping[str, Any], actor),
             created_by=self.author,
             confidence=self.confidence_level,
             object_markings=self.object_markings,
@@ -57,7 +75,7 @@ class RelatedActorBundleBuilder:
                 {"count": len(self.attack_patterns)},
             )
 
-        return intrusion_set
+        return [intrusion_set]
 
     def _normalize_aliases(self, name: str, actor: Mapping[str, Any]) -> list[str]:
         """Normalize CrowdStrike actor aliases into a clean, deduplicated list."""
@@ -111,7 +129,7 @@ class RelatedActorBundleBuilder:
 
     def _create_intrusion_set_from_actor_entity(
         self,
-        actor: Mapping[str, Any],
+        actor: Any,
         created_by: Identity | None = None,
         confidence: int | None = None,
         object_markings: list[MarkingDefinition] | None = None,
@@ -121,8 +139,14 @@ class RelatedActorBundleBuilder:
 
         Expects a full actor resource as returned by the Intel API.
         """
+        # Defensive normalization: actor may be a plain string (name/slug)
+        if isinstance(actor, str):
+            actor = {"name": actor}
+        if not isinstance(actor, Mapping):
+            raise TypeError(f"Expected actor mapping or string, got {type(actor).__name__}")
+
         # Name
-        name = actor.get("name")
+        name = actor.get("name") or ""
         if not name:
             raise ValueError("Actor entity is missing both 'name'")
 
@@ -168,15 +192,21 @@ class RelatedActorBundleBuilder:
         if isinstance(motivations_raw, list) and motivations_raw:
             # Use the first motivation as primary
             first = motivations_raw[0]
-            primary_motivation = (
-                first.get("value") or first.get("slug") or ""
-            ).strip() or None
+            if isinstance(first, Mapping):
+                primary_motivation = (
+                    str(first.get("value") or first.get("slug") or "").strip()
+                ) or None
+            else:
+                primary_motivation = str(first).strip() or None
 
             # Any additional motivations become secondary
             if len(motivations_raw) > 1:
                 secondary_values: list[str] = []
                 for mot in motivations_raw[1:]:
-                    val = (mot.get("value") or mot.get("slug") or "").strip()
+                    if isinstance(mot, Mapping):
+                        val = str(mot.get("value") or mot.get("slug") or "").strip()
+                    else:
+                        val = str(mot).strip()
                     if val:
                         secondary_values.append(val)
                 if secondary_values:
@@ -200,7 +230,10 @@ class RelatedActorBundleBuilder:
         if isinstance(goals_raw, list) and goals_raw:
             goal_values: list[str] = []
             for obj in goals_raw:
-                val = (obj.get("value") or obj.get("slug") or "").strip()
+                if isinstance(obj, Mapping):
+                    val = str(obj.get("value") or obj.get("slug") or "").strip()
+                else:
+                    val = str(obj).strip()
                 if val:
                     goal_values.append(val)
             if goal_values:

@@ -230,12 +230,20 @@ class IndicatorImporter(BaseImporter):
             if "actor" in self.scopes:
                 # Process related actors
                 related_actors = indicator.get("actors", [])
-
-                # Replace with normalized list (preserves ordering; falls back to raw token when unresolved).
-                indicator["actors"] = (
-                    self.related_actor_importer._process_related_actors(
-                        indicator.get("id"), related_actors
-                    )
+                indicator["actors"] = self.related_actor_importer._process_related_actors(
+                    indicator.get("id"), related_actors
+                )
+                self.helper.connector_logger.debug(
+                    "Resolved indicator actors",
+                    {
+                        "indicator_id": indicator.get("id"),
+                        "actor_count": len(indicator.get("actors", [])),
+                        "actor_entry_type": (
+                            type(indicator["actors"][0]).__name__
+                            if indicator.get("actors")
+                            else None
+                        ),
+                    },
                 )
 
             bundle_builder_config = IndicatorBundleBuilderConfig(

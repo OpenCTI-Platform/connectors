@@ -342,7 +342,7 @@ class ReportImporter(BaseImporter):
         # Important: Reports often already include actor stubs as dicts with `id`, `name`, and `slug`.
         # In that case we should NOT perform additional API lookups (Romain's point).
         raw_actors = report.get("actors") or []
-        RelatedActorImporter._resolved_actor_name_cache.update(
+        RelatedActorImporter._resolved_actor_entity_cache.update(
             {actor.get("id"): actor.get("name") for actor in raw_actors}
         )
 

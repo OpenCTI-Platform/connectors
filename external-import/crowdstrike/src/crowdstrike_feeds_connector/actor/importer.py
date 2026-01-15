@@ -152,7 +152,7 @@ class ActorImporter(BaseImporter):
             ):
                 latest_modified_timestamp = modified_ts
 
-            RelatedActorImporter._resolved_actor_name_cache.update(
+            RelatedActorImporter._resolved_actor_entity_cache.update(
                 {actor.get("id"): actor.get("name") for actor in actors}
             )
 

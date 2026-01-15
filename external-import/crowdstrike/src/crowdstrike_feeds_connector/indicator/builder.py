@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike indicator builder module."""
 
-from typing import Dict, List, NamedTuple, Optional, Sequence, Set, cast
+from collections.abc import Mapping
+from typing import Any, Dict, List, NamedTuple, Optional, Sequence, Set, cast
 
 from crowdstrike_feeds_connector.related_actors.builder import RelatedActorBundleBuilder
 from crowdstrike_feeds_services.utils import (
@@ -455,8 +456,24 @@ class IndicatorBundleBuilder:
         intrusion_sets = []
         if "actor" in self.scopes:
             for actor_entity in self.indicator.get("actors", []):
+                # Indicators may provide related actors as strings (e.g., "SALTYSPIDER")
+                # while reports provide full actor objects. Normalize here.
+                if isinstance(actor_entity, str):
+                    actor_entity = {"name": actor_entity}
+
+                if not isinstance(actor_entity, Mapping):
+                    self.helper.connector_logger.warning(
+                        "[WARNING] Skipping unresolved actor entry (expected mapping or string).",
+                        {
+                            "indicator_id": self.indicator.get("id"),
+                            "actor_entry_type": type(actor_entity).__name__,
+                            "actor_entry": cast(Any, actor_entity),
+                        },
+                    )
+                    continue
+
                 actor_builder = RelatedActorBundleBuilder(
-                    actor=actor_entity,
+                    actor=cast(Dict[str, Any], actor_entity),
                     author=self.author,
                     source_name=self.source_name,
                     object_markings=self.object_markings,

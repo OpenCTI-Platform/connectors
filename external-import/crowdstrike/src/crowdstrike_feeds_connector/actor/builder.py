@@ -39,12 +39,18 @@ class ActorBundleBuilder:
     _CS_MOTIVATION_DESTRUCTION = "Destruction"
     _CS_MOTIVATION_ESPIONAGE = "Espionage"
     _CS_MOTIVATION_HACKTIVIST = "Hacktivist"
+    _CS_MOTIVATION_STATE_SPONSORED = "State-Sponsored"
 
     _CS_MOTIVATION_TO_STIX_MOTIVATION = {
         _CS_MOTIVATION_CRIMINAL: "personal-gain",
         _CS_MOTIVATION_DESTRUCTION: "dominance",
         _CS_MOTIVATION_ESPIONAGE: "organizational-gain",
         _CS_MOTIVATION_HACKTIVIST: "ideology",
+        _CS_MOTIVATION_STATE_SPONSORED: "geopolitical",
+    }
+
+    _CS_MOTIVATION_TO_STIX_MOTIVATION_LOWER = {
+        k.lower(): v for k, v in _CS_MOTIVATION_TO_STIX_MOTIVATION.items()
     }
 
     def __init__(
@@ -168,9 +174,15 @@ class ActorBundleBuilder:
             if not value:
                 continue
 
-            motivation = self._CS_MOTIVATION_TO_STIX_MOTIVATION.get(value)
+            value_str = str(value).strip()
+            motivation = self._CS_MOTIVATION_TO_STIX_MOTIVATION.get(value_str)
             if motivation is None:
-                logger.warning("Unsupported actor motivation: %s", value)
+                motivation = self._CS_MOTIVATION_TO_STIX_MOTIVATION_LOWER.get(
+                    value_str.lower()
+                )
+
+            if motivation is None:
+                logger.warning("Unsupported actor motivation: %s", value_str)
                 continue
 
             motivations.append(motivation)
