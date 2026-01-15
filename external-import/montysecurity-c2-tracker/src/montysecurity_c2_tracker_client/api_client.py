@@ -1,5 +1,6 @@
-import requests
 import re
+
+import requests
 from pycti import OpenCTIConnectorHelper
 from pydantic import HttpUrl
 
@@ -49,11 +50,18 @@ class MontysecurityC2TrackerClient:
         try:
             self.helper.connector_logger.info("Get Malware Entities")
 
-            #TODO: move to conf
-            malware_list_url = "https://github.com/montysecurity/C2-Tracker/tree/main/data"
+            # TODO: move to conf
+            malware_list_url = (
+                "https://github.com/montysecurity/C2-Tracker/tree/main/data"
+            )
+            # self.helper.connector_logger.info(self.helper.config.get(malware_list_url))
             response = self._request_data(malware_list_url, params=params)
-            self.helper.connector_logger.info("Status code from github.com: ", response.status_code)
-            malware_list = list(set(re.findall("\"[\w|\s|\d|\.]+IPs\.txt\"", response.text)))
+            self.helper.connector_logger.info(
+                "Status code from github.com: ", response.status_code
+            )
+            malware_list = list(
+                set(re.findall('"[\w|\s|\d|\.]+IPs\.txt"', response.text))
+            )
 
             return malware_list
 
@@ -64,8 +72,10 @@ class MontysecurityC2TrackerClient:
         try:
             self.helper.connector_logger.info("Get Malware IPs")
 
-            #TODO: move to conf
-            malwareIPsBaseUrl = "https://raw.githubusercontent.com/montysecurity/C2-Tracker/main/data/"
+            # TODO: move to conf
+            malwareIPsBaseUrl = (
+                "https://raw.githubusercontent.com/montysecurity/C2-Tracker/main/data/"
+            )
 
             url = str(malwareIPsBaseUrl + str(malware_name).replace(" ", "%20"))
             response = self._request_data(url, params=params)
@@ -73,6 +83,6 @@ class MontysecurityC2TrackerClient:
             ips.pop()
 
             return ips
-            #TODO: ask if better exception filtering is needed
+            # TODO: ask if better exception filtering is needed
         except Exception as err:
             self.helper.connector_logger.error(err)

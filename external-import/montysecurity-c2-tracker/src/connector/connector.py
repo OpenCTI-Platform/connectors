@@ -2,13 +2,12 @@ import sys
 from datetime import datetime, timezone
 
 import requests
-from montysecurity_c2_tracker_client import MontysecurityC2TrackerClient
-from pycti import OpenCTIConnectorHelper
-
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from connectors_sdk.models import Indicator, IPV4Address, Malware, Relationship
 from connectors_sdk.models.enums import RelationshipType
+from montysecurity_c2_tracker_client import MontysecurityC2TrackerClient
+from pycti import OpenCTIConnectorHelper
 
 
 class MontysecurityC2TrackerConnector:
@@ -220,8 +219,8 @@ class MontysecurityC2TrackerConnector:
             self.helper.set_state(current_state)
 
             message = (
-                    f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                    + str(last_run_datetime)
+                f"{self.helper.connect_name} connector successfully run, storing last_run as "
+                + str(last_run_datetime)
             )
 
             self.helper.api.work.to_processed(work_id, message)

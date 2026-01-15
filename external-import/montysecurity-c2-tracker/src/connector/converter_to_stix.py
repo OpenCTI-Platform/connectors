@@ -3,19 +3,18 @@ from typing import Literal, Optional
 
 import stix2
 import validators
-from pycti import (
-    Identity,
-    MarkingDefinition,
-    OpenCTIConnectorHelper,
-    StixCoreRelationship,
-)
-
 from connectors_sdk.models import (
     IPV4Address,
     Malware,
     OrganizationAuthor,
     Relationship,
     TLPMarking,
+)
+from pycti import (
+    Identity,
+    MarkingDefinition,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
 )
 
 
@@ -29,9 +28,9 @@ class ConverterToStix:
     """
 
     def __init__(
-            self,
-            helper: OpenCTIConnectorHelper,
-            tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"],
+        self,
+        helper: OpenCTIConnectorHelper,
+        tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"],
     ):
         """
         Initialize the converter with necessary configuration.
@@ -64,12 +63,12 @@ class ConverterToStix:
         return tlp_marking
 
     def create_relationship(
-            self,
-            relationship_type: str,
-            source_obj,
-            target_obj,
-            start_time: Optional[str] = None,
-            stop_time: Optional[str] = None,
+        self,
+        relationship_type: str,
+        source_obj,
+        target_obj,
+        start_time: Optional[str] = None,
+        stop_time: Optional[str] = None,
     ) -> Relationship:
         """
         Creates Relationship object
