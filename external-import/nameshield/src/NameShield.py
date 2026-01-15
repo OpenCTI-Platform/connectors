@@ -11,7 +11,6 @@ import yaml
 from pycti import (Indicator, MarkingDefinition, OpenCTIConnectorHelper,
                    StixCoreRelationship, get_config_variable)
 
-
 class NameShield:
     """NameShield connector"""
 
