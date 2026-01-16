@@ -46,6 +46,4 @@ misp:
   import_unsupported_observables_as_text: false # Optional (default: false)
   import_unsupported_observables_as_text_transparent: true # Optional (default: true)
   propagate_labels: false # Optional (default: false)
-
-batch:
-  chunk_size: 9999 # Optional (default: 9999)
+  batch_count: 9999 # Optional (default: 9999)

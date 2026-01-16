@@ -48,4 +48,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT | `boolean` |  | boolean | `false` | Whether to import unsupported observable as x_opencti_text or not. |
 | MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT | `boolean` |  | boolean | `true` | Whether to import unsupported observable as x_opencti_text or not (just with the value). |
 | MISP_PROPAGATE_LABELS | `boolean` |  | boolean | `false` | Whether to apply labels from MISP events to OpenCTI observables on top of MISP Attribute labels or not. |
-| BATCH_CHUNK_SIZE | `integer` |  | integer | `9999` | The chunk size for splitting object bundles into batches |
+| MISP_BATCH_COUNT | `integer` |  | integer | `9999` | The max batch count for splitting bundles into batches |
