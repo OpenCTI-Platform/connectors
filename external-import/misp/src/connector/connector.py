@@ -4,11 +4,7 @@ from typing import TYPE_CHECKING
 from api_client.client import MISPClient, MISPClientError
 from connector.use_cases import ConverterError, EventConverter
 from exceptions.connector_errors import MispWorkProcessingError
-from utils.batch_processors import GenericBatchProcessor, GenericBatchProcessorConfig
-from utils.batch_processors.configs.batch_processor_config_event import (
-    log_batch_completion,
-    validate_stix_object,
-)
+from utils.batch_processor import BatchProcessor
 from utils.threats_guesser import ThreatsGuesser
 from utils.work_manager import WorkManager
 
@@ -64,32 +60,19 @@ class Misp:
         )
 
         self.work_manager = WorkManager(self.config, self.helper, self.logger)
-        self.batch_processor: "GenericBatchProcessor" = self._create_batch_processor()
+        self.batch_processor: "BatchProcessor" = self._create_batch_processor()
 
-    def _create_batch_processor(self) -> "GenericBatchProcessor":
+    def _create_batch_processor(self) -> "BatchProcessor":
         """Create and configure the batch processor.
 
         Returns:
-            Configured GenericBatchProcessor instance
+            Configured BatchProcessor instance
 
         """
-        processor_config = GenericBatchProcessorConfig(
-            batch_size=self.config.batch.chunk_size,
-            work_name_template="MISP - Batch #{batch_num}",
-            state_key="last_event_date",
-            entity_type="stix_objects",
-            display_name="STIX objects",
-            exception_class=MispWorkProcessingError,
-            display_name_singular="STIX object",
-            auto_process=False,
-            postprocessing_function=log_batch_completion,
-            validation_function=validate_stix_object,
-            empty_batch_behavior="update_state",
-        )
-        return GenericBatchProcessor(
+        return BatchProcessor(
             work_manager=self.work_manager,
-            config=processor_config,
             logger=self.logger,
+            batch_size=self.config.batch.chunk_size,
         )
 
     def _log_entities_summary(
@@ -275,7 +258,7 @@ class Misp:
             batch_chunk_size,
         ):
             now = datetime.now(tz=timezone.utc)
-            self.batch_processor.config.work_name_template = (
+            self.batch_processor.work_name_template = (
                 f"MISP run @ {now.isoformat(timespec='seconds')}"
                 f" - Event # {event_id}"
                 f" - Batch # {max(1, i // batch_chunk_size)}"
@@ -313,7 +296,7 @@ class Misp:
             self.helper.metric.state("running")
 
             if initial_state is not None and (
-                last_event := initial_state.get(self.batch_processor.config.state_key)
+                last_event := initial_state.get(self.batch_processor.state_key)
             ):
                 last_event_date = datetime.fromisoformat(last_event)
                 self.logger.info(

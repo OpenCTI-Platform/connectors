@@ -4,10 +4,8 @@ This package provides a configurable batch processor system that can work with a
 data type, batch size, and work management requirements.
 """
 
-from .generic_batch_processor import GenericBatchProcessor
-from .generic_batch_processor_config import GenericBatchProcessorConfig
+from .batch_processor import BatchProcessor
 
 __all__ = [
-    "GenericBatchProcessor",
-    "GenericBatchProcessorConfig",
+    "BatchProcessor",
 ]
