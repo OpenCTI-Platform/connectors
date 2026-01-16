@@ -278,8 +278,8 @@ class Misp:
             self.batch_processor.config.work_name_template = (
                 f"MISP run @ {now.isoformat(timespec='seconds')}"
                 f" - Event # {event_id}"
-                f" - Batch # {i // batch_chunk_size}"
-                f" / {len(bundle_objects) // batch_chunk_size}"
+                f" - Batch # {max(1, i // batch_chunk_size)}"
+                f" / {max(1, len(bundle_objects) // batch_chunk_size)}"
             )
 
             bundle_objects_chunk = bundle_objects[i : i + batch_chunk_size]
