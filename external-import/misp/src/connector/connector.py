@@ -2,7 +2,6 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from api_client.client import MISPClient, MISPClientError
-from connector.threats_guesser import ThreatsGuesser
 from connector.use_cases import ConverterError, EventConverter
 from exceptions.connector_errors import MispWorkProcessingError
 from utils.batch_processors import GenericBatchProcessor, GenericBatchProcessorConfig
@@ -10,6 +9,7 @@ from utils.batch_processors.configs.batch_processor_config_event import (
     log_batch_completion,
     validate_stix_object,
 )
+from utils.threats_guesser import ThreatsGuesser
 from utils.work_manager import WorkManager
 
 if TYPE_CHECKING:

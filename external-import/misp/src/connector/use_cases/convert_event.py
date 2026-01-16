@@ -6,7 +6,6 @@ import pycti
 import stix2
 import stix2.exceptions
 from api_client.models import EventRestSearchListItem, ExtendedAttributeItem
-from connector.threats_guesser import ThreatsGuesser
 from pydantic import HttpUrl
 
 from .common import TLP_CLEAR, ConverterConfig, ConverterConfigError, ConverterError
@@ -19,6 +18,8 @@ from .utils import find_type_by_uuid
 
 if TYPE_CHECKING:
     from utils.protocols import LoggerProtocol
+    from utils.threats_guesser import ThreatsGuesser
+
 
 LOG_PREFIX = "[EventConverter]"
 
@@ -82,7 +83,7 @@ class EventConverter:
         original_tags_to_keep_as_labels: list[str] = [],
         default_attribute_score: int | None = None,
         guess_threats_from_tags: bool = False,
-        threats_guesser: ThreatsGuesser | None = None,
+        threats_guesser: "ThreatsGuesser | None" = None,
     ):
         self.logger = logger
         self.config = ConverterConfig(
