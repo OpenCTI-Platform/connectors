@@ -17,7 +17,7 @@ from .convert_tag import TagConverter
 from .utils import find_type_by_uuid
 
 if TYPE_CHECKING:
-    from utils.protocols import LoggerProtocol
+    from custom_typings.protocols import LoggerProtocol
     from utils.threats_guesser import ThreatsGuesser
 
 

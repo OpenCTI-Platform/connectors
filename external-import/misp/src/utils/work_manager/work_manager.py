@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from connector.settings import ConnectorSettings
+    from custom_typings.protocols import LoggerProtocol
     from pycti import OpenCTIConnectorHelper as OctiHelper
-    from utils.protocols import LoggerProtocol
 
 
 LOG_PREFIX = "[Work Manager]"
