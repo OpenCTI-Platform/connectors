@@ -12,7 +12,7 @@ import stix2
 
 if TYPE_CHECKING:
     from utils.batch_processors import GenericBatchProcessorConfig
-    from utils.protocols import LoggerProtocol
+    from custom_typings.protocols import LoggerProtocol
     from utils.work_manager import WorkManager
 
 
