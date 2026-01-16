@@ -768,20 +768,67 @@ class Malware(RFStixEntity):
 class Vulnerability(RFStixEntity):
     """Converts a CyberVulnerability to a Vulnerability SDO"""
 
-    def __init__(self, name, _type, author=None, tlp=None, display_name=None):
+    def __init__(self, name, _type, author=None, tlp=None, display_name=None, first_seen=None, last_seen=None, risk_score=None):
         super().__init__(name, _type, author, tlp)
         self.display_name = display_name
+        self.tlp = TLP_MAP.get(tlp, None)
+        self.description = None
+        self.first_seen = first_seen
+        self.last_seen = last_seen
+        self.labels = []
+        self.risk_score = risk_score
+        self.objects = []
+        self.stix_vulnerability = None
 
-    # TODO: add vuln descriptions
+    def to_stix_objects(self):
+        """Returns a list of STIX objects"""
+        if not self.stix_vulnerability:
+            self.create_stix_objects()
+        return [self.stix_vulnerability]
+
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        self.stix_obj = stix2.Vulnerability(
+        self.stix_vulnerability = self._create_vulnerability()
+
+    def _create_vulnerability(self):
+        """Creates and returns STIX2 indicator object"""
+        return stix2.Vulnerability(
             id=pycti.Vulnerability.generate_id(self.name),
             name=self.name,
             created_by_ref=self.author.id,
             object_marking_refs=self.tlp,
+            description=self.description,
+            labels=self.labels,
+            created=self.first_seen,
+            modified=self.last_seen,
+            custom_properties={
+                "x_opencti_score": self.risk_score or None,
+            },
         )
+        pass
 
+    def add_description(self, description):
+        self.description = description
+
+    def add_labels(self, labels):
+        self.labels = labels
+
+    def map_data(self, rf_vuln):
+        try:
+            self.display_name = rf_vuln["Name"]
+            self.risk_score = int(rf_vuln["Risk"])
+        except ValueError:
+            self.risk_score = None
+
+    def build_bundle(self, stix_name):
+        self.objects.extend(stix_name.to_stix_objects())
+
+    def to_stix_bundle(self):
+        """Returns STIX objects as a Bundle"""
+        return stix2.Bundle(
+            objects=self.objects if self.objects else self.to_stix_objects(),
+            allow_custom=True,
+        )
 
 class DetectionRule(RFStixEntity):
     """Represents a Yara, Sigma or SNORT rule"""
