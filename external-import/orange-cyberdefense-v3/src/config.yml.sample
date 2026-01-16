@@ -1,0 +1,42 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'connector-orange-cyberdefense'
+  name: 'Orange Cyberdefense Cyber Threat Intelligence'
+  log_level: 'info'
+
+ocd:
+  import_datalake: true
+  import_threat_library: true
+  import_worldwatch: true
+  datalake_env: 'prod'
+  datalake_token: 'ChangeMe'
+  datalake_queries: '[{"query_hash":"bb08a750538baea3e1c8cda0ae5b3aca","label":"high_confidence_network_iocs"},{"query_hash":"1ac760cbaec854a6c463d92c8f862c98","label":"ocd_peerpressure_c2_tracker"}]'
+  datalake_create_observables: true
+  datalake_ignore_unscored_indicators: true
+  datalake_ignore_whitelisted_indicators: true
+  datalake_fallback_score: 0
+  datalake_add_tags_as_labels: true
+  datalake_add_scores_as_labels: true
+  datalake_add_score: true
+  datalake_add_tlp: true
+  datalake_add_extref: true
+  datalake_add_summary: true
+  datalake_add_related: true
+  datalake_add_sightings: true
+  datalake_add_createdby: true
+  datalake_curate_labels: true
+  datalake_threat_actor_as_intrusion_set: true
+  datalake_zip_file_path: '/opt/opencti-connector-orange-cyberdefense/data'
+  datalake_zip_file_delete: true
+  worldwatch_api_key: 'ChangeMe'
+  worldwatch_import_indicators: true
+  worldwatch_import_indicators_lookback: 2592000
+  worldwatch_import_threat_entities: true
+  worldwatch_start_date: '2026-01-01'
+  interval: 30
+  reset_state: false
