@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 import stix2
-from exceptions.connector_errors import MispWorkProcessingError
+from exceptions import MispWorkProcessingError
 
 if TYPE_CHECKING:
     from custom_typings.protocols import LoggerProtocol
