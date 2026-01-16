@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 from api_client.client import MISPClient, MISPClientError
 from connector.use_cases import ConverterError, EventConverter
-from exceptions.connector_errors import MispWorkProcessingError
+from exceptions import MispWorkProcessingError
 from utils.batch_processor import BatchProcessor
 from utils.threats_guesser import ThreatsGuesser
 from utils.work_manager import WorkManager

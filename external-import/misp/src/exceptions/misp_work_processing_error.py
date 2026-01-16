@@ -2,10 +2,8 @@
 
 from typing import Any
 
-from exceptions.misp_base_error import MispBaseError
 
-
-class MispWorkProcessingError(MispBaseError):
+class MispWorkProcessingError(Exception):
     """Exception raised when there's an error processing work in the connector."""
 
     def __init__(
@@ -29,7 +27,11 @@ class MispWorkProcessingError(MispBaseError):
         else:
             error_msg = message
 
-        super().__init__(error_msg, details)
+        super().__init__(error_msg)
+
+        self.message = error_msg
+        self.details = details or {}
+
         self.work_id = work_id
         self.batch_number = batch_number
 
@@ -49,3 +51,42 @@ class MispWorkProcessingError(MispBaseError):
                 }
             )
         self.details = structured_details
+
+    def get_logging_data(self) -> dict[str, Any]:
+        """Get structured data for logging this exception.
+
+        Returns:
+            dict containing structured data for logging, including error type,
+            message, and any additional details stored in the exception.
+
+        """
+        logging_data = {
+            "error_type": self.__class__.__name__,
+            "error_message": self.message,
+        }
+
+        # Add details
+        if self.details:
+            logging_data.update(self.details)
+
+        return logging_data
+
+    def log_error(
+        self,
+        logger: Any,
+        log_message: str,
+        additional_context: dict[str, Any] | None = None,
+    ) -> None:
+        """Log this exception with structured data.
+
+        Args:
+            logger: Logger instance to use
+            log_message: Human-readable log message
+            additional_context: Additional context to include in the log
+
+        """
+        logging_data = self.get_logging_data()
+        if additional_context:
+            logging_data.update(additional_context)
+
+        logger.error(log_message, logging_data)
