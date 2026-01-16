@@ -60,16 +60,7 @@ class Misp:
         )
 
         self.work_manager = WorkManager(self.config, self.helper, self.logger)
-        self.batch_processor: "BatchProcessor" = self._create_batch_processor()
-
-    def _create_batch_processor(self) -> "BatchProcessor":
-        """Create and configure the batch processor.
-
-        Returns:
-            Configured BatchProcessor instance
-
-        """
-        return BatchProcessor(
+        self.batch_processor: "BatchProcessor" = BatchProcessor(
             work_manager=self.work_manager,
             logger=self.logger,
             batch_size=self.config.batch.chunk_size,
