@@ -1,11 +1,15 @@
+from typing import TYPE_CHECKING
+
 import pycti
 import stix2
 import stix2.exceptions
 from api_client.models import ObjectItem
-from connector.threats_guesser import ThreatsGuesser
 
 from .common import ConverterConfig, ConverterError
 from .convert_attribute import AttributeConverter
+
+if TYPE_CHECKING:
+    from utils.threats_guesser import ThreatsGuesser
 
 
 class ObjectConverterError(ConverterError):
@@ -13,7 +17,9 @@ class ObjectConverterError(ConverterError):
 
 
 class ObjectConverter:
-    def __init__(self, config: ConverterConfig, threats_guesser: ThreatsGuesser = None):
+    def __init__(
+        self, config: ConverterConfig, threats_guesser: "ThreatsGuesser | None" = None
+    ):
         self.config = config
         self.threats_guesser = threats_guesser
 
