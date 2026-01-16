@@ -294,12 +294,21 @@ class RFClient:
         try:
             response = requests.head(VULNERABILITY_RISKLIST, headers=self.headers)
             if response.status_code != 200:
-                self.helper.connector_logger.info("[CONNECTOR] User does not have access to the Vulnerability module")
+                self.helper.connector_logger.info(
+                    "[CONNECTOR] User does not have access to the Vulnerability module"
+                )
                 return False
             else:
-                self.helper.connector_logger.info("[CONNECTOR] User has access to the Vulnerability module")
+                self.helper.connector_logger.info(
+                    "[CONNECTOR] User has access to the Vulnerability module"
+                )
                 return True
-        except (requests.exceptions.HTTPError, requests.exceptions.RequestException) as e:
-            self.helper.connector_logger.error(f'API access validation hit error={str(e)}. Assuming no access to the '
-                                               f'Vulnerability module')
+        except (
+            requests.exceptions.HTTPError,
+            requests.exceptions.RequestException,
+        ) as e:
+            self.helper.connector_logger.error(
+                f"API access validation hit error={str(e)}. Assuming no access to the "
+                f"Vulnerability module"
+            )
             return False

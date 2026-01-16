@@ -31,14 +31,16 @@ class RiskList(threading.Thread):
             vuln_permission = self.rfapi.check_vul_entitlement()
             if vuln_permission:
                 self.helper.connector_logger.info(
-                    "[CONNECTOR] The subscription allows to download the vulnerability risk list")
+                    "[CONNECTOR] The subscription allows to download the vulnerability risk list"
+                )
                 RISK_LIST_TYPE_MAPPER["Vuln"] = {
                     "class": Vulnerability,
                     "path": "/public/opencti/opencti_default_vulnerability_v2.csv",
                 }
             else:
                 self.helper.connector_logger.info(
-                    "[CONNECTOR] The subscription doesn't allow to download the vulnerability risk list")
+                    "[CONNECTOR] The subscription doesn't allow to download the vulnerability risk list"
+                )
 
             # Get the current state
             now = datetime.now()

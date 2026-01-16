@@ -768,7 +768,17 @@ class Malware(RFStixEntity):
 class Vulnerability(RFStixEntity):
     """Converts a CyberVulnerability to a Vulnerability SDO"""
 
-    def __init__(self, name, _type, author=None, tlp=None, display_name=None, first_seen=None, last_seen=None, risk_score=None):
+    def __init__(
+        self,
+        name,
+        _type,
+        author=None,
+        tlp=None,
+        display_name=None,
+        first_seen=None,
+        last_seen=None,
+        risk_score=None,
+    ):
         super().__init__(name, _type, author, tlp)
         self.display_name = display_name
         self.tlp = TLP_MAP.get(tlp, None)
@@ -829,6 +839,7 @@ class Vulnerability(RFStixEntity):
             objects=self.objects if self.objects else self.to_stix_objects(),
             allow_custom=True,
         )
+
 
 class DetectionRule(RFStixEntity):
     """Represents a Yara, Sigma or SNORT rule"""
