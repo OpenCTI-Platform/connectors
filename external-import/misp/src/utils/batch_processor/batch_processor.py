@@ -1,32 +1,31 @@
-"""Generic batch processor for any data type with configurable work management.
+"""Batch processor for any data type with configurable work management.
 
-This module provides a flexible batch processor that can work with any data type,
-handle configurable batch sizes, and provide consistent work management and state updates.
+This module provides a flexible processor that can work with any data type,
+handle configurable sizes, and provide consistent work management and state updates.
 """
 
-import logging
-import time
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 import stix2
+from exceptions.connector_errors import MispWorkProcessingError
 
 if TYPE_CHECKING:
-    from utils.batch_processors import GenericBatchProcessorConfig
     from custom_typings.protocols import LoggerProtocol
     from utils.work_manager import WorkManager
 
 
-LOG_PREFIX = "[GenericBatchProcessor]"
+LOG_PREFIX = "[BatchProcessor]"
 
 
-class GenericBatchProcessor:
-    """Generic batch processor for any data type with flexible work management."""
+class BatchProcessor:
+    """Batch processor for any data type with flexible work management."""
 
     def __init__(
         self,
-        config: "GenericBatchProcessorConfig",
         work_manager: "WorkManager",
-        logger: "LoggerProtocol | None" = None,
+        logger: "LoggerProtocol",
+        batch_size: int,
     ) -> None:
         """Initialize the generic batch processor.
 
@@ -36,9 +35,8 @@ class GenericBatchProcessor:
             logger: Logger for logging messages
 
         """
-        self.config = config
         self._work_manager = work_manager
-        self._logger = logger or logging.getLogger(__name__)
+        self._logger = logger
 
         self._current_batch: list[stix2.v21._STIXBase21] = []
         self._latest_date: str | None = None
@@ -48,6 +46,13 @@ class GenericBatchProcessor:
         self._total_items_sent = 0
 
         self._failed_items: list[Any] = []
+
+        self.batch_size = batch_size
+        self.work_name_template = "MISP - Batch #{batch_num}"
+        self.state_key = "last_event_date"
+        self.entity_type = "stix_objects"
+        self.display_name = "STIX objects"
+        self.exception_class = MispWorkProcessingError
 
     def add_item(self, item: stix2.v21._STIXBase21) -> bool:
         """Add an item to the current batch.
@@ -70,25 +75,12 @@ class GenericBatchProcessor:
             )
             return False
 
-        if not self.config.validate_item(processed_item):
+        if not self.validate_item(processed_item):
             self._logger.debug(
                 "Item validation failed, skipping item",
                 {"prefix": LOG_PREFIX},
             )
             return False
-
-        item_date = self.config.extract_date(processed_item)
-        if item_date and (not self._latest_date or item_date > self._latest_date):
-            old_latest = self._latest_date
-            self._latest_date = item_date
-            self._logger.debug(
-                "Updated latest_date",
-                {
-                    "prefix": LOG_PREFIX,
-                    "old_latest": old_latest,
-                    "new_latest": self._latest_date,
-                },
-            )
 
         self._current_batch.append(processed_item)
         self._logger.debug(
@@ -96,15 +88,9 @@ class GenericBatchProcessor:
             {
                 "prefix": LOG_PREFIX,
                 "current_size": len(self._current_batch),
-                "batch_size": self.config.batch_size,
+                "batch_size": self.batch_size,
             },
         )
-
-        if (
-            self.config.auto_process
-            and len(self._current_batch) >= self.config.batch_size
-        ):
-            self.process_current_batch()
 
         return True
 
@@ -127,7 +113,7 @@ class GenericBatchProcessor:
             {
                 "prefix": LOG_PREFIX,
                 "count": len(items),
-                "display_name": self.config.display_name,
+                "display_name": self.display_name,
             },
         )
 
@@ -141,7 +127,7 @@ class GenericBatchProcessor:
                 "prefix": LOG_PREFIX,
                 "added_count": added_count,
                 "total_count": len(items),
-                "display_name": self.config.display_name,
+                "display_name": self.display_name,
             },
         )
         return added_count
@@ -171,7 +157,7 @@ class GenericBatchProcessor:
                 "prefix": LOG_PREFIX,
                 "batch_num": batch_num,
                 "batch_size": len(batch_items),
-                "display_name": self.config.display_name,
+                "display_name": self.display_name,
                 "total_processed": self._total_items_processed + len(batch_items),
             },
         )
@@ -194,7 +180,7 @@ class GenericBatchProcessor:
                 {
                     "prefix": LOG_PREFIX,
                     "count": len(self._current_batch),
-                    "display_name": self.config.display_name,
+                    "display_name": self.display_name,
                 },
             )
             return self.process_current_batch()
@@ -210,7 +196,7 @@ class GenericBatchProcessor:
             )
             try:
                 self._work_manager.update_state(
-                    state_key=self.config.state_key,
+                    state_key=self.state_key,
                     date_str=self._latest_date,
                 )
             except Exception as state_err:
@@ -219,18 +205,18 @@ class GenericBatchProcessor:
                     {"prefix": LOG_PREFIX, "error": str(state_err)},
                 )
         else:
-            current_time = self.config.get_current_timestamp()
+            current_time = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S+00:00")
             self._logger.info(
                 "State update: Setting to current time",
                 {
                     "prefix": LOG_PREFIX,
-                    "state_key": self.config.state_key,
+                    "state_key": self.state_key,
                     "current_time": current_time,
                 },
             )
             try:
                 self._work_manager.update_state(
-                    state_key=self.config.state_key,
+                    state_key=self.state_key,
                     date_str=current_time,
                 )
             except Exception as state_err:
@@ -253,7 +239,7 @@ class GenericBatchProcessor:
             "current_batch_size": len(self._current_batch),
             "failed_items_count": len(self._failed_items),
             "latest_date": self._latest_date,
-            "batch_size_limit": self.config.batch_size,
+            "batch_size_limit": self.batch_size,
         }
 
     def get_current_batch_size(self) -> int:
@@ -298,31 +284,27 @@ class GenericBatchProcessor:
             Configured exception class: If empty_batch_behavior is 'error'
 
         """
-        if self.config.empty_batch_behavior == "error":
-            msg = "Cannot process empty batch"
-            raise self.config.create_exception(msg)
 
-        if self.config.empty_batch_behavior == "update_state":
-            current_time = self.config.get_current_timestamp()
-            self._logger.debug(
-                "Updating state with current time for empty batch",
-                {"prefix": LOG_PREFIX, "current_time": current_time},
+        current_time = self.datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S+00:00")
+        self._logger.debug(
+            "Updating state with current time for empty batch",
+            {"prefix": LOG_PREFIX, "current_time": current_time},
+        )
+        try:
+            self._work_manager.update_state(
+                state_key=self.state_key,
+                date_str=current_time,
             )
-            try:
-                self._work_manager.update_state(
-                    state_key=self.config.state_key,
-                    date_str=current_time,
-                )
-                self._latest_date = current_time
-            except Exception as state_err:
-                self._logger.warning(
-                    "Failed to update state for empty batch",
-                    {"prefix": LOG_PREFIX, "error": str(state_err)},
-                )
+            self._latest_date = current_time
+        except Exception as state_err:
+            self._logger.warning(
+                "Failed to update state for empty batch",
+                {"prefix": LOG_PREFIX, "error": str(state_err)},
+            )
 
         self._logger.info(
             "No items in batch to process",
-            {"prefix": LOG_PREFIX, "display_name": self.config.display_name},
+            {"prefix": LOG_PREFIX, "display_name": self.display_name},
         )
         return None
 
@@ -346,47 +328,23 @@ class GenericBatchProcessor:
         """
         last_exception = None
 
-        for attempt in range(self.config.max_retries + 1):
-            try:
-                if attempt > 0:
-                    self._logger.info(
-                        "Retrying batch",
-                        {
-                            "prefix": LOG_PREFIX,
-                            "batch_num": batch_num,
-                            "attempt": attempt + 1,
-                            "max_attempts": self.config.max_retries + 1,
-                        },
-                    )
-                    time.sleep(self.config.retry_delay)
+        try:
+            return self._process_single_batch(batch_items, batch_num)
 
-                return self._process_single_batch(batch_items, batch_num)
+        except Exception as e:
+            last_exception = e
+            self._logger.error(
+                "Batch failed after all retries",
+                {
+                    "prefix": LOG_PREFIX,
+                    "batch_num": batch_num,
+                    "error": str(e),
+                },
+            )
+            self._failed_items.extend(batch_items)
 
-            except Exception as e:
-                last_exception = e
-                if attempt < self.config.max_retries:
-                    self._logger.warning(
-                        "Batch failed, will retry",
-                        {
-                            "prefix": LOG_PREFIX,
-                            "batch_num": batch_num,
-                            "attempt": attempt + 1,
-                            "error": str(e),
-                        },
-                    )
-                else:
-                    self._logger.error(
-                        "Batch failed after all retries",
-                        {
-                            "prefix": LOG_PREFIX,
-                            "batch_num": batch_num,
-                            "error": str(e),
-                        },
-                    )
-                    self._failed_items.extend(batch_items)
-
-        msg = f"Batch #{batch_num} processing failed after {self.config.max_retries + 1} attempts: {last_exception}"
-        raise self.config.create_exception(msg) from last_exception
+        msg = f"Batch #{batch_num} processing failed"
+        raise self.create_exception(msg) from last_exception
 
     def _process_single_batch(self, batch_items: list[Any], batch_num: int) -> str:
         """Process a single batch without retries.
@@ -402,28 +360,27 @@ class GenericBatchProcessor:
             Configured exception class: If batch processing fails
 
         """
-        processed_items = self.config.preprocess_batch(batch_items)
 
-        work_name = self.config.format_work_name(
+        work_name = self.format_work_name(
             batch_num=batch_num,
-            entity_type=self.config.entity_type,
+            entity_type=self.entity_type,
         )
 
-        work_id = self._initiate_work(work_name, batch_num, processed_items)
+        work_id = self._initiate_work(work_name, batch_num, batch_items)
 
-        self._send_bundle(work_id, processed_items, batch_num)
+        self._send_bundle(work_id, batch_items, batch_num)
 
         self._mark_work_for_processing(work_id, batch_num)
 
         self._total_items_processed += len(batch_items)
-        self._total_items_sent += len(processed_items)
+        self._total_items_sent += len(batch_items)
 
         self._update_batch_state()
 
-        self.config.postprocess_batch(processed_items, work_id)
+        self.postprocess_batch(batch_items, work_id)
 
         self._logger.info(
-            f"Successfully processed batch #{batch_num}. Total {self.config.display_name} sent: {self._total_items_sent}",
+            f"Successfully processed batch #{batch_num}. Total {self.display_name} sent: {self._total_items_sent}",
             {
                 "prefix": LOG_PREFIX,
                 "batch_num": batch_num,
@@ -469,7 +426,7 @@ class GenericBatchProcessor:
                 },
             )
             msg = f"Work initiation failed for batch #{batch_num}: {work_init_err!s}"
-            raise self.config.create_exception(
+            raise self.create_exception(
                 msg, batch_number=batch_num, items_count=len(items)
             ) from work_init_err
 
@@ -509,7 +466,7 @@ class GenericBatchProcessor:
                 },
             )
             msg = f"Bundle sending failed for batch #{batch_num}: {bundle_err!s}"
-            raise self.config.create_exception(
+            raise self.create_exception(
                 msg, work_id=work_id, items_count=len(items)
             ) from bundle_err
 
@@ -544,7 +501,7 @@ class GenericBatchProcessor:
                 },
             )
             msg = f"Failed to mark work for processing for batch #{batch_num}: {process_err}"
-            raise self.config.create_exception(msg, work_id=work_id) from process_err
+            raise self.create_exception(msg, work_id=work_id) from process_err
 
     def _ensure_stix_format(self, item: Any) -> Any | None:
         """Ensure item is in STIX format by checking type and converting if needed.
@@ -608,7 +565,7 @@ class GenericBatchProcessor:
             )
             try:
                 self._work_manager.update_state(
-                    state_key=self.config.state_key,
+                    state_key=self.state_key,
                     date_str=self._latest_date,
                 )
             except Exception as state_err:
@@ -616,3 +573,140 @@ class GenericBatchProcessor:
                     "Failed to update state after batch processing",
                     {"prefix": LOG_PREFIX, "error": str(state_err)},
                 )
+
+    def format_work_name(self, batch_num: int, **kwargs: Any) -> str:
+        """Format the work name with batch number and optional parameters.
+
+        Args:
+            batch_num: The current batch number
+            **kwargs: Additional parameters for work name formatting
+
+        Returns:
+            Formatted work name
+
+        """
+        try:
+            return self.work_name_template.format(batch_num=batch_num, **kwargs)
+        except KeyError as e:
+            missing_param = str(e).strip("'")
+            msg = f"Missing required parameter '{missing_param}' for work name template '{self.work_name_template}'"
+            raise ValueError(msg) from e
+
+    def validate_item(self, item: Any) -> bool:
+        """Validate an item using the configured validation function.
+
+        Args:
+            item: The item to validate
+
+        Returns:
+            True if valid, False otherwise
+
+        """
+        try:
+            return self._validate_stix_object(item)
+        except Exception:
+            return False
+
+    def postprocess_batch(self, items: list[Any], work_id: str) -> None:
+        """Run postprocessing after successful batch processing.
+
+        Args:
+            items: list of items that were processed
+            work_id: ID of the work that was created
+
+        """
+        try:
+            self._log_batch_completion(items, work_id)
+        except Exception as e:
+            msg = f"Batch postprocessing failed: {e!s}"
+            raise self.exception_class(msg) from e
+
+    def create_exception(self, message: str, **kwargs: Any) -> Any:
+        """Create an exception instance with the configured exception class.
+
+        Args:
+            message: Error message
+            **kwargs: Additional parameters to pass to exception constructor
+
+        Returns:
+            Exception instance
+
+        """
+        try:
+            return self.exception_class(message, **kwargs)
+        except TypeError:
+            try:
+                return self.exception_class(message)
+            except TypeError:
+                try:
+                    return self.exception_class()
+                except TypeError:
+                    return Exception(message)
+
+    @staticmethod
+    def _validate_stix_object(stix_obj: "stix2.v21._STIXBase21") -> bool:
+        """Validate STIX object before adding to batch.
+
+        Args:
+            stix_obj: STIX object to validate
+
+        Returns:
+            True if valid, False otherwise
+
+        """
+        return (
+            hasattr(stix_obj, "id")
+            and hasattr(stix_obj, "type")
+            and stix_obj.id is not None
+            and stix_obj.type is not None
+        )
+
+    def _log_batch_completion(
+        self, stix_objects: list["stix2.v21._STIXBase21"], work_id: str
+    ) -> None:
+        """Log successful batch completion with object type breakdown.
+
+        Args:
+            stix_objects: list of processed STIX objects
+            work_id: Work ID that was created
+
+        """
+        object_types: dict[str, int] = {}
+        total_count = 0
+
+        for obj in stix_objects:
+            total_count += 1
+
+            if total_count <= 2500:
+                if hasattr(obj, "type"):
+                    obj_type = obj.type
+                elif hasattr(obj, "get"):
+                    obj_type = obj.get("type", "unknown")
+                else:
+                    obj_type = "unknown"
+                object_types[obj_type] = object_types.get(obj_type, 0) + 1
+
+        if total_count > 2500:
+            type_summary = (
+                ", ".join(
+                    [
+                        f"{obj_type}: {count}"
+                        for obj_type, count in object_types.items()
+                    ],
+                )
+                + " (first 2500 objects)"
+            )
+        else:
+            type_summary = ", ".join(
+                [f"{obj_type}: {count}" for obj_type, count in object_types.items()],
+            )
+
+        self._logger.info(
+            "Batch completed successfully",
+            {
+                "prefix": LOG_PREFIX,
+                "work_id": work_id,
+                "total_count": total_count,
+                "type_summary": type_summary,
+            },
+        )
