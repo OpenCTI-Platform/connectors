@@ -57,6 +57,7 @@ class MontysecurityC2TrackerConnector:
 
         self.client = MontysecurityC2TrackerClient(
             self.helper,
+            self.config.montysecurity_c2_tracker,
             # Pass any arguments necessary to the client
         )
         self.converter_to_stix = ConverterToStix(
@@ -78,19 +79,14 @@ class MontysecurityC2TrackerConnector:
         # Get entities from external sources
         malware_list = self.client.get_malwares()
         entities = []
-        self.helper.connector_logger.info("Get Malware IPs")
-
-        malwareIPsBaseUrl = (
-            "https://raw.githubusercontent.com/montysecurity/C2-Tracker/main/data/"
-        )
         malware_list = [str(malware).strip('"') for malware in malware_list]
+
         self.helper.connector_logger.debug(malware_list)
+
         for malware in malware_list:
             malware_name = str(malware).split(" IPs.txt")[0]
-            self.helper.connector_logger.info("Looking at: ", malware_name)
-            url = str(malwareIPsBaseUrl + str(malware).replace(" ", "%20"))
-            self.helper.connector_logger.debug("URL: ", url)
-            malware_stix = None
+            self.helper.connector_logger.info(f"Looking at: {malware_name}")
+            malware_stix = None #TODO: useful?
             malware_stix = Malware(
                 name=malware_name,
                 is_family=True,
@@ -98,12 +94,9 @@ class MontysecurityC2TrackerConnector:
                 markings=[self.converter_to_stix.tlp_marking],
             )
             entities.append(malware_stix)
-            self.helper.connector_logger.debug(malware_stix.name)
 
             ips = self.client.get_ips(malware)
 
-            # request = requests.get(url)
-            # ips = str(request.text).split("\n")
             for ip in ips:
                 indicatorIPV4 = Indicator(
                     name=ip,
@@ -122,11 +115,6 @@ class MontysecurityC2TrackerConnector:
                     relationship_type=RelationshipType.INDICATES,
                 )
                 entities.append(relationship)
-
-        # Convert into STIX2 object and add it on a list
-        # for entity in entities:
-        # entity_to_stix = self.converter_to_stix.create_obs(entity["value"])
-        # stix_objects.append(entity)
 
         # ===========================
         # === Add your code above ===

@@ -1,12 +1,15 @@
 import re
 
 import requests
+from connector.settings import MontysecurityC2TrackerConfig
 from pycti import OpenCTIConnectorHelper
 from pydantic import HttpUrl
 
 
 class MontysecurityC2TrackerClient:
-    def __init__(self, helper: OpenCTIConnectorHelper):
+    def __init__(
+        self, helper: OpenCTIConnectorHelper, config: MontysecurityC2TrackerConfig
+    ):
         """
         Initialize the client with necessary configuration.
         For log purpose, the connector's helper CAN be injected.
@@ -18,6 +21,7 @@ class MontysecurityC2TrackerClient:
             api_key (str): The API key to authenticate the connector to the external API.
         """
         self.helper = helper
+        self.config = config
 
         # Define headers in session and update when needed
         headers = {}
@@ -49,12 +53,9 @@ class MontysecurityC2TrackerClient:
     def get_malwares(self, params=None) -> dict:
         try:
             self.helper.connector_logger.info("Get Malware Entities")
-
-            # TODO: move to conf
             malware_list_url = (
-                "https://github.com/montysecurity/C2-Tracker/tree/main/data"
-            )
-            # self.helper.connector_logger.info(self.helper.config.get(malware_list_url))
+                self.config.malware_list_url.encoded_string()
+            )  # TODO: double check
             response = self._request_data(malware_list_url, params=params)
             self.helper.connector_logger.info(
                 "Status code from github.com: ", response.status_code
@@ -72,12 +73,11 @@ class MontysecurityC2TrackerClient:
         try:
             self.helper.connector_logger.info("Get Malware IPs")
 
-            # TODO: move to conf
-            malwareIPsBaseUrl = (
-                "https://raw.githubusercontent.com/montysecurity/C2-Tracker/main/data/"
-            )
+            malware_ips_base_url = (
+                self.config.malware_ips_base_url.encoded_string()
+            )  # TODO double check
 
-            url = str(malwareIPsBaseUrl + str(malware_name).replace(" ", "%20"))
+            url = str(malware_ips_base_url + str(malware_name).replace(" ", "%20")) #TODO: double check the method
             response = self._request_data(url, params=params)
             ips = str(response.text).split("\n")
             ips.pop()
