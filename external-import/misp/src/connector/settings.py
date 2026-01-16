@@ -246,6 +246,10 @@ class MispConfig(BaseConfigModel):
         description="Whether to apply labels from MISP events to OpenCTI observables on top of MISP Attribute labels or not.",
         default=False,
     )
+    batch_count: int = Field(
+        description="The max batch count for splitting bundles into batches",
+        default=9999,
+    )
 
     @field_validator("reference_url", mode="before")
     @classmethod
@@ -254,17 +258,6 @@ class MispConfig(BaseConfigModel):
         if isinstance(value, str):
             return value or None
         return value
-
-
-class BatchConfig(BaseConfigModel):
-    """
-    Define config specific to batch processing.
-    """
-
-    chunk_size: int = Field(
-        description="The chunk size for splitting object bundles into batches",
-        default=9999,
-    )
 
 
 class ConnectorSettings(BaseConnectorSettings):
@@ -276,7 +269,6 @@ class ConnectorSettings(BaseConnectorSettings):
         default_factory=ExternalImportConnectorConfig
     )
     misp: MispConfig = Field(default_factory=MispConfig)
-    batch: BatchConfig = Field(default_factory=BatchConfig)
 
     @model_validator(mode="before")
     @classmethod
