@@ -1,0 +1,46 @@
+{
+  "id": "_indicator_test_12345",
+  "indicator": "example.malicious-domain.com",
+  "type": "domain",
+  "last_update": 1640995200,
+  "published_date": 1640908800,
+  "malicious_confidence": "high",
+  "reports": ["CSIR-20001", "CSIT-54321"],
+  "actors": ["CYBER SPIDER"],
+  "malware_families": ["DarkComet", "AsyncRAT"],
+  "kill_chains": ["C2", "Delivery"],
+  "domain_types": [],
+  "ip_address_types": [],
+  "labels": [
+    {
+      "created_on": 1640908800,
+      "last_valid_on": 1640995200,
+      "name": "MalwareFamily/DarkComet"
+    },
+    {
+      "created_on": 1640908800,
+      "last_valid_on": 1640995200,
+      "name": "MalwareFamily/AsyncRAT"
+    },
+    {
+      "created_on": 1640908800,
+      "last_valid_on": 1640995200,
+      "name": "Malicious"
+    },
+    {
+      "created_on": 1640908800,
+      "last_valid_on": 1640995200,
+      "name": "ThreatType/Targeted"
+    }
+  ],
+  "relations": [],
+  "targets": ["Finance", "Healthcare"],
+  "threat_types": [
+    {
+      "id": 8001,
+      "slug": "targeted",
+      "value": "Targeted"
+    }
+  ],
+  "vulnerabilities": ["CVE-2021-44228", "CVE-2021-26855"]
+}

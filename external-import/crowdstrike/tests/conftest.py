@@ -3,7 +3,7 @@
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from pytest import fixture
 
@@ -16,10 +16,23 @@ if TYPE_CHECKING:
 
 def mock_env_vars(os_environ: "_Environ[str]", wanted_env: dict[str, str]) -> Any:
     """Fixture to mock environment variables dynamically and clean up after."""
-    mock_env = patch.dict(os_environ, wanted_env)
-    mock_env.start()
+    original_exists = Path.exists
 
-    return mock_env
+    def mock_exists(self):
+        if self.name in ("config.yml", ".env"):
+            return False
+        return original_exists(self)
+
+    mock_env = patch.dict(os_environ, wanted_env)
+    mock_path_exists = patch.object(Path, "exists", mock_exists)
+
+    mock_env.start()
+    mock_path_exists.start()
+
+    mock_manager = MagicMock()
+    mock_manager.stop = lambda: (mock_env.stop(), mock_path_exists.stop())
+
+    return mock_manager
 
 
 @fixture(autouse=True)
