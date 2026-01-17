@@ -4,3 +4,4 @@ pytest
 pytest-mock
 pylint
 black
+flake8
