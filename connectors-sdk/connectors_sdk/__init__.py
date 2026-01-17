@@ -19,6 +19,11 @@ from connectors_sdk.settings.exceptions import (
     ConfigError,
     ConfigValidationError,
 )
+from connectors_sdk.utils.deprecations import (
+    DeprecatedNameSpace,
+    DeprecatedVariable,
+    LegacyField,
+)
 
 __all__ = [
     # Base Settings
@@ -36,4 +41,8 @@ __all__ = [
     # Annotated types
     "DatetimeFromIsoString",
     "ListFromString",
+    # Deprecations
+    "LegacyField",
+    "DeprecatedNameSpace",
+    "DeprecatedVariable",
 ]
