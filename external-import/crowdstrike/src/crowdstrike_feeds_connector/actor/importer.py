@@ -158,6 +158,7 @@ class ActorImporter(BaseImporter):
 
         attack_patterns = self._get_and_create_attack_patterns(actor)
 
+        # MVP3
         bundle_builder = ActorBundleBuilder(
             actor,
             author,
