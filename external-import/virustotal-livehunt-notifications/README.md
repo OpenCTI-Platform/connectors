@@ -1,7 +1,7 @@
 # OpenCTI VirusTotal Livehunt Notifications Connector
 
-| Status | Date | Comment |
-|--------|------|---------|
+| Status    | Date | Comment |
+| --------- | ---- | ------- |
 | Community | -    | -       |
 
 The VirusTotal Livehunt Notifications connector imports malware samples matching YARA rules from VirusTotal Livehunt into OpenCTI.
@@ -44,36 +44,39 @@ There are a number of configuration options, which are set either in `docker-com
 ### OpenCTI environment variables
 
 | Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
+| ------------- | ---------- | --------------------------- | --------- | ---------------------------------------------------- |
 | OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
 | OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
 
 ### Base connector environment variables
 
-| Parameter       | config.yml | Docker environment variable | Default                            | Mandatory | Description                                                                 |
-|-----------------|------------|-----------------------------|------------------------------------|-----------|-----------------------------------------------------------------------------|
-| Connector ID    | id         | `CONNECTOR_ID`              |                                    | Yes       | A unique `UUIDv4` identifier for this connector instance.                   |
-| Connector Name  | name       | `CONNECTOR_NAME`            | VirusTotal Livehunt Notifications  | No        | Name of the connector.                                                      |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           | StixFile,Indicator,Incident        | No        | The scope or type of data the connector is importing.                       |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | error                              | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
+| Parameter       | config.yml      | Docker environment variable | Default                           | Mandatory | Description                                                                                 |
+| --------------- | --------------- | --------------------------- | --------------------------------- | --------- | ------------------------------------------------------------------------------------------- |
+| Connector ID    | id              | `CONNECTOR_ID`              |                                   | Yes       | A unique `UUIDv4` identifier for this connector instance.                                   |
+| Connector Name  | name            | `CONNECTOR_NAME`            | VirusTotal Livehunt Notifications | No        | Name of the connector.                                                                      |
+| Connector Scope | scope           | `CONNECTOR_SCOPE`           | StixFile,Indicator,Incident       | No        | The scope or type of data the connector is importing.                                       |
+| Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`       | error                             | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.                  |
+| Duration period | duration_period | `CONNECTOR_DURATION_PERIOD` | PT5M                              | No        | The period of time to await between two runs of the connector, in ISO-8601 duration format. |
 
 ### Connector extra parameters environment variables
 
-| Parameter            | config.yml                        | Docker environment variable                               | Default    | Mandatory | Description                                                                 |
-|----------------------|-----------------------------------|-----------------------------------------------------------|------------|-----------|-----------------------------------------------------------------------------|
-| API Key              | virustotal.api_key                | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_API_KEY`               |            | Yes       | VirusTotal Premium API key.                                                 |
-| Interval             | virustotal.interval_sec           | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_INTERVAL_SEC`          | 300        | No        | Time between requests in seconds.                                           |
-| Create Alert         | virustotal.create_alert           | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_ALERT`          | true       | No        | Create incident/alert for each notification.                                |
-| Extensions           | virustotal.extensions             | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_EXTENSIONS`            |            | No        | Comma-separated file extensions to filter (e.g., `exe,dll`).                |
-| Min File Size        | virustotal.min_file_size          | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MIN_FILE_SIZE`         |            | No        | Minimum file size in bytes.                                                 |
-| Max File Size        | virustotal.max_file_size          | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MAX_FILE_SIZE`         | 52428800   | No        | Maximum file size in bytes (default: 50MB).                                 |
-| Max Age Days         | virustotal.max_age_days           | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MAX_AGE_DAYS`          | 3          | No        | Only process files submitted within this many days.                         |
-| Min Positives        | virustotal.min_positives          | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MIN_POSITIVES`         |            | No        | Minimum number of AV detections.                                            |
-| Create File          | virustotal.create_file            | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_FILE`           | true       | No        | Create file observable for matched files.                                   |
-| Upload Artifact      | virustotal.upload_artifact        | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_UPLOAD_ARTIFACT`       | false      | No        | Upload file to OpenCTI as artifact.                                         |
-| Create YARA Rule     | virustotal.create_yara_rule       | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_YARA_RULE`      | true       | No        | Create YARA indicator for the matching rule.                                |
-| Delete Notification  | virustotal.delete_notification    | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_DELETE_NOTIFICATION`   | false      | No        | Delete notification from VT after processing.                               |
-| Filter with Tag      | virustotal.filter_with_tag        | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_FILTER_WITH_TAG`       |            | No        | Only process notifications with this tag.                                   |
+| Parameter           | config.yml                     | Docker environment variable                             | Default  | Mandatory | Description                                                                                  |
+| ------------------- | ------------------------------ | ------------------------------------------------------- | -------- | --------- | -------------------------------------------------------------------------------------------- |
+| API Key             | virustotal.api_key             | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_API_KEY`             |          | Yes       | VirusTotal Premium API key.                                                                  |
+| ~~Interval~~        | ~~virustotal.interval_sec~~    | ~~`VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_INTERVAL_SEC`~~    | ~~300~~  | ~~No~~    | ~~Time between requests in seconds.~~ (Deprecated, use `CONNECTOR_DURATION_PERIOD` instead.) |
+| Create Alert        | virustotal.create_alert        | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_ALERT`        | true     | No        | Create incident/alert for each notification.                                                 |
+| Extensions          | virustotal.extensions          | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_EXTENSIONS`          |          | No        | Comma-separated file extensions to filter (e.g., `exe,dll`).                                 |
+| Min File Size       | virustotal.min_file_size       | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MIN_FILE_SIZE`       |          | No        | Minimum file size in bytes.                                                                  |
+| Max File Size       | virustotal.max_file_size       | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MAX_FILE_SIZE`       | 52428800 | No        | Maximum file size in bytes (default: 50MB).                                                  |
+| Max Age Days        | virustotal.max_age_days        | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MAX_AGE_DAYS`        | 3        | No        | Only process files submitted within this many days.                                          |
+| Min Positives       | virustotal.min_positives       | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MIN_POSITIVES`       |          | No        | Minimum number of AV detections.                                                             |
+| Create File         | virustotal.create_file         | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_FILE`         | true     | No        | Create file observable for matched files.                                                    |
+| Upload Artifact     | virustotal.upload_artifact     | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_UPLOAD_ARTIFACT`     | false    | No        | Upload file to OpenCTI as artifact.                                                          |
+| Create YARA Rule    | virustotal.create_yara_rule    | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_YARA_RULE`    | true     | No        | Create YARA indicator for the matching rule.                                                 |
+| Delete Notification | virustotal.delete_notification | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_DELETE_NOTIFICATION` | false    | No        | Delete notification from VT after processing.                                                |
+| Filter with Tag     | virustotal.filter_with_tag     | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_FILTER_WITH_TAG`     |          | No        | Only process notifications with this tag.                                                    |
+
+⚠️ Please be aware that `CONNECTOR_DURATION_PERIOD` value takes precedence over `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_INTERVAL_SEC` value if both are explicitly set.
 
 ## Deployment
 
@@ -88,22 +91,22 @@ docker build -t opencti/connector-virustotal-livehunt-notifications:latest .
 Configure the connector in `docker-compose.yml`:
 
 ```yaml
-  connector-virustotal-livehunt-notifications:
-    image: opencti/connector-virustotal-livehunt-notifications:latest
-    environment:
-      - OPENCTI_URL=http://localhost
-      - OPENCTI_TOKEN=ChangeMe
-      - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_NAME=VirusTotal Livehunt Notifications
-      - CONNECTOR_SCOPE=StixFile,Indicator,Incident
-      - CONNECTOR_LOG_LEVEL=error
-      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_API_KEY=ChangeMe
-      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_INTERVAL_SEC=300
-      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_ALERT=True
-      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_FILE=True
-      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_YARA_RULE=True
-      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MAX_AGE_DAYS=3
-    restart: always
+connector-virustotal-livehunt-notifications:
+  image: opencti/connector-virustotal-livehunt-notifications:latest
+  environment:
+    - OPENCTI_URL=http://localhost
+    - OPENCTI_TOKEN=ChangeMe
+    - CONNECTOR_ID=ChangeMe
+    - CONNECTOR_NAME=VirusTotal Livehunt Notifications
+    - CONNECTOR_SCOPE=StixFile,Indicator,Incident
+    - CONNECTOR_LOG_LEVEL=error
+    - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_API_KEY=ChangeMe
+    - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_INTERVAL_SEC=300
+    - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_ALERT=True
+    - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_FILE=True
+    - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_YARA_RULE=True
+    - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MAX_AGE_DAYS=3
+  restart: always
 ```
 
 Start the connector:
@@ -168,29 +171,29 @@ graph LR
 
 ### Entity Mapping
 
-| VirusTotal Data      | OpenCTI Entity      | Description                                      |
-|----------------------|---------------------|--------------------------------------------------|
-| Notification         | Incident            | Alert for matched file                           |
-| File Metadata        | File                | File observable with hashes                      |
-| YARA Rule            | Indicator           | YARA pattern indicator                           |
-| File Download        | Artifact            | Actual file content (optional)                   |
+| VirusTotal Data | OpenCTI Entity | Description                    |
+| --------------- | -------------- | ------------------------------ |
+| Notification    | Incident       | Alert for matched file         |
+| File Metadata   | File           | File observable with hashes    |
+| YARA Rule       | Indicator      | YARA pattern indicator         |
+| File Download   | Artifact       | Actual file content (optional) |
 
 ### Relationships Created
 
-| Source               | Relationship   | Target                |
-|----------------------|----------------|-----------------------|
-| Incident             | related-to     | File                  |
-| Indicator (YARA)     | based-on       | File                  |
+| Source           | Relationship | Target |
+| ---------------- | ------------ | ------ |
+| Incident         | related-to   | File   |
+| Indicator (YARA) | based-on     | File   |
 
 ### Filtering Options
 
-| Filter               | Description                                          |
-|----------------------|------------------------------------------------------|
-| Extensions           | Only process specific file types                     |
-| File Size            | Min/max file size limits                             |
-| Age                  | Only recent submissions                              |
-| Positives            | Minimum AV detection threshold                       |
-| Tag                  | Filter by Livehunt rule tag                          |
+| Filter     | Description                      |
+| ---------- | -------------------------------- |
+| Extensions | Only process specific file types |
+| File Size  | Min/max file size limits         |
+| Age        | Only recent submissions          |
+| Positives  | Minimum AV detection threshold   |
+| Tag        | Filter by Livehunt rule tag      |
 
 ## Debugging
 
