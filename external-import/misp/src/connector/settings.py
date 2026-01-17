@@ -246,6 +246,10 @@ class MispConfig(BaseConfigModel):
         description="Whether to apply labels from MISP events to OpenCTI observables on top of MISP Attribute labels or not.",
         default=False,
     )
+    batch_count: int = Field(
+        description="The max batch count for splitting bundles into batches",
+        default=9999,
+    )
 
     @field_validator("reference_url", mode="before")
     @classmethod
