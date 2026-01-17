@@ -1,0 +1,47 @@
+# OpenCTI DataDog Connector Configuration
+# Copy this file to config.yml and update with your actual values
+
+# OpenCTI Configuration
+opencti:
+  url: 'http://localhost:4000'
+  token: 'ChangeMe'
+
+# Connector Configuration
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL'
+  name: 'DataDog Import'
+  scope: 'stix2'
+  auto: true
+  log_level: 'info'
+  update_existing_data: false
+
+# DataDog Configuration
+datadog:
+  # Authentication (Required)
+  token: 'ChangeMe'
+  app_key: 'ChangeMe'
+  
+  # API Configuration
+  api_base_url: 'https://api.datadoghq.com'
+  app_base_url: 'ChangeMe'
+  
+  # Import Settings
+  import_interval: 60  # Minutes between import cycles
+  import_start_date: 'ChangeMe'  # Import start date for initial connector run (ISO 8601 format, e.g., 2024-01-01T00:00:00Z)
+  max_tlp: 'TLP:AMBER'
+  
+  # Alert Configuration
+  import_alerts: true
+  create_incident_response_cases: false
+  
+  # Alert Filtering (optional - leave empty to import all)
+  # alert_priorities: ['P1', 'P2', 'P3', 'P4']
+  # alert_tags_filter: []
+  
+  # Observable Extraction
+  extract_observables_from_alerts: true
+  include_alert_context: true
+  
+  # Custom Tags (optional - comma-delimited)
+  # custom_tags: 'my-company,custom-tag'
