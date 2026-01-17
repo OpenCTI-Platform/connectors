@@ -53,6 +53,7 @@ def crowdstrike_config_with_guessing_disabled() -> dict[str, str]:
         "CROWDSTRIKE_CLIENT_ID": f"{uuid4()}",
         "CROWDSTRIKE_CLIENT_SECRET": f"{uuid4()}",
         "CROWDSTRIKE_REPORT_GUESS_RELATIONS": "False",
+        "CONNECTOR_LOG_LEVEL": "info",
     }
 
 
@@ -69,6 +70,7 @@ def crowdstrike_config_with_guessing_enabled() -> dict[str, str]:
         "CROWDSTRIKE_CLIENT_ID": f"{uuid4()}",
         "CROWDSTRIKE_CLIENT_SECRET": f"{uuid4()}",
         "CROWDSTRIKE_REPORT_GUESS_RELATIONS": "True",
+        "CONNECTOR_LOG_LEVEL": "info",
     }
 
 
@@ -90,6 +92,7 @@ def minimal_crowdstrike_config_without_guessing_param() -> dict[str, str]:
         "CROWDSTRIKE_BASE_URL": "https://api.crowdstrike.com",
         "CROWDSTRIKE_CLIENT_ID": f"{uuid4()}",
         "CROWDSTRIKE_CLIENT_SECRET": f"{uuid4()}",
+        "CONNECTOR_LOG_LEVEL": "info",
     }
 
 

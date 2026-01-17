@@ -5,7 +5,7 @@ import itertools
 import zipfile
 from datetime import datetime
 from io import BytesIO
-from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple
+from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple, cast
 
 from crowdstrike_feeds_services.client.rules import RulesAPI
 from crowdstrike_feeds_services.utils import (
@@ -14,12 +14,12 @@ from crowdstrike_feeds_services.utils import (
 )
 from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport, ReportFetcher
 from crowdstrike_feeds_services.utils.snort_parser import SnortParser, SnortRule
-from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
+from pycti.connector.opencti_connector_helper import (  # noqa: E501
     OpenCTIConnectorHelper,
 )
 from requests import RequestException
-from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
-from stix2.exceptions import STIXError  # type: ignore
+from stix2 import Bundle, Identity, MarkingDefinition
+from stix2.exceptions import STIXError
 
 from ..importer import BaseImporter
 from .snort_suricata_master_builder import SnortRuleBundleBuilder
@@ -77,6 +77,9 @@ class SnortMasterImporter(BaseImporter):
         # XXX: Using Etag and Last-Modified results in HTTP 500.
         # snort_master = self._fetch_snort_master(e_tag, last_modified)
         snort_master = self._fetch_snort_master()
+
+        if snort_master is None:
+            return state
 
         latest_e_tag = snort_master.e_tag
         latest_last_modified = snort_master.last_modified
@@ -150,10 +153,20 @@ class SnortMasterImporter(BaseImporter):
 
     def _fetch_snort_master(
         self, e_tag: Optional[str] = None, last_modified: Optional[datetime] = None
-    ) -> SnortMaster:
+    ) -> SnortMaster | None:
         download = self._fetch_latest_snort_master(
             e_tag=e_tag, last_modified=last_modified
         )
+
+        if isinstance(download, dict):
+            self._error(
+                "Failed to retrieve Snort master from CrowdStrike (ignored). e_tag={0}, last_modified={1}, response={2}",
+                e_tag,
+                last_modified,
+                download,
+            )
+            return None
+
         download_converted = BytesIO(download)
         return SnortMaster(
             rules=self._parse_download(download_converted),
@@ -163,10 +176,18 @@ class SnortMasterImporter(BaseImporter):
 
     def _fetch_latest_snort_master(
         self, e_tag: Optional[str] = None, last_modified: Optional[datetime] = None
-    ):
+    ) -> bytes | Dict[str, Any]:
         rule_set_type = "snort-suricata-master"
-        return self.rules_api_cs.get_latest_rule_file(
-            rule_set_type, e_tag=e_tag, last_modified=last_modified
+
+        kwargs: Dict[str, Any] = {}
+        if e_tag is not None:
+            kwargs["e_tag"] = e_tag
+        if last_modified is not None:
+            kwargs["last_modified"] = last_modified
+
+        return cast(
+            bytes | Dict[str, Any],
+            self.rules_api_cs.get_latest_rule_file(rule_set_type, **kwargs),
         )
 
     def _parse_download(self, download) -> List[SnortRule]:
@@ -253,6 +274,7 @@ class SnortMasterImporter(BaseImporter):
             )
             if snort_rule_bundle is None:
                 failed_count += 1
+                continue
 
             # with open(f"snort_rule_bundle_{snort_rule.name}.json", "w") as f:
             #     f.write(snort_rule_bundle.serialize(pretty=True))
