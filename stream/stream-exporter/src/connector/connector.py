@@ -16,13 +16,6 @@ from pycti import OpenCTIConnectorHelper, get_config_variable
 from .metrics import Metrics
 
 
-class UploadFailed(Exception):
-    """Exception raised when the upload of the file failed."""
-
-    def __init__(self, name: str):
-        super().__init__(f"File {name} was not uploaded to minio.")
-
-
 class StreamExporterConnector:
     """Stream Exporter connector."""
 
@@ -286,7 +279,10 @@ class StreamExporterConnector:
             except Exception as exc:
                 # Fail to upload the file, stopping connector.
                 self.metrics.write_error()
-                raise UploadFailed(object_path) from exc
+                self.helper.log_error(
+                    f"MinIO upload failed for {object_path}, stopping connector: {exc}"
+                )
+                os._exit(1)  # exit the current process, killing all threads
 
             self.helper.log_debug(f"Result of minio: {res}")
             self.metrics.write()
