@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/ctibutler_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_ID": {
+      "description": "A unique UUIDv4 identifier for this connector.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "CTIButler",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "ctibutler"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "P7D",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "CTIBUTLER_BASE_URL": {
+      "default": "https://api.ctibutler.com/",
+      "description": "The base URL for the CTI Butler API.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "CTIBUTLER_API_KEY": {
+      "description": "The CTI Butler API key.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CTIBUTLER_KNOWLEDGEBASES": {
+      "description": "A comma-separated list of knowledge bases to import (e.g., attack-enterprise,capec). Available options: attack-enterprise, attack-mobile, attack-ics, capec, disarm, atlas, location, sector.",
+      "type": "string",
+      "minLength": 1
+    },
+    "CTIBUTLER_INTERVAL_DAYS": {
+      "default": 7,
+      "description": "Polling interval in days. The connector polls CTI Butler for updates to the selected knowledge bases at this interval. The minimum (and recommended) value is 7.",
+      "type": "integer",
+      "minimum": 7
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_ID",
+    "CTIBUTLER_API_KEY",
+    "CTIBUTLER_KNOWLEDGEBASES"
+  ],
+  "additionalProperties": true
+}
