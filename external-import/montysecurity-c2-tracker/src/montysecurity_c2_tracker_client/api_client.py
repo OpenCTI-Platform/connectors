@@ -3,8 +3,6 @@ import re
 import requests
 from connector.settings import MontysecurityC2TrackerConfig
 from pycti import OpenCTIConnectorHelper
-from pydantic import HttpUrl
-
 
 class MontysecurityC2TrackerClient:
     def __init__(

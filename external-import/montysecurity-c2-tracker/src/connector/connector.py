@@ -1,13 +1,13 @@
 import sys
 from datetime import datetime, timezone
 
-import requests
+from connectors_sdk.models import Indicator, Malware
+from connectors_sdk.models.enums import RelationshipType
+from pycti import OpenCTIConnectorHelper
+
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
-from connectors_sdk.models import Indicator, IPV4Address, Malware, Relationship
-from connectors_sdk.models.enums import RelationshipType
 from montysecurity_c2_tracker_client import MontysecurityC2TrackerClient
-from pycti import OpenCTIConnectorHelper
 
 
 class MontysecurityC2TrackerConnector:

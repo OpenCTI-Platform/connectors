@@ -5,16 +5,12 @@ import stix2
 import validators
 from connectors_sdk.models import (
     IPV4Address,
-    Malware,
     OrganizationAuthor,
     Relationship,
     TLPMarking,
 )
 from pycti import (
-    Identity,
-    MarkingDefinition,
     OpenCTIConnectorHelper,
-    StixCoreRelationship,
 )
 
 
