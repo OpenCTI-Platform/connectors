@@ -85,7 +85,8 @@ class MontysecurityC2TrackerConnector:
 
         for malware in malware_list:
             malware_name = str(malware).split(" IPs.txt")[0]
-            self.helper.connector_logger.info(f"Looking at: {malware_name}")
+            #self.helper.connector_logger.info(f"Looking at: {malware_name}")
+            self.helper.connector_logger.info("Looking at malware. ", {"malware": malware_name}) #TODO more explanation
             malware_stix = None #TODO: useful?
             malware_stix = Malware(
                 name=malware_name,
@@ -179,7 +180,7 @@ class MontysecurityC2TrackerConnector:
                 bundles_sent = self.helper.send_stix2_bundle(
                     stix_objects_bundle,
                     work_id=work_id,
-                    cleanup_inconsistent_bundle=False,
+                    cleanup_inconsistent_bundle=True,
                 )
 
                 self.helper.connector_logger.info(
