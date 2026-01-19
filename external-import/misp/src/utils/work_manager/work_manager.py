@@ -88,7 +88,7 @@ class WorkManager:
 
         """
         self._current_work_id = work_id
-        self._logger.info(
+        self._logger.debug(
             "Current work ID set",
             {"prefix": LOG_PREFIX, "work_id": work_id},
         )
@@ -153,7 +153,7 @@ class WorkManager:
             name,
         )
         self._current_work_id = work_id
-        self._logger.info(
+        self._logger.debug(
             "Initiated work",
             {"prefix": LOG_PREFIX, "work_id": work_id, "work_name": name},
         )
@@ -184,7 +184,7 @@ class WorkManager:
         )
         if self._current_work_id == work_id:
             self._current_work_id = None
-        self._logger.info(
+        self._logger.debug(
             "Work marked to be processed",
             {"prefix": LOG_PREFIX, "work_id": work_id},
         )
@@ -212,7 +212,7 @@ class WorkManager:
                     error_message=error_message,
                 )
         self._current_work_id = None
-        self._logger.info(
+        self._logger.debug(
             "All remaining works marked to be process.",
             {"prefix": LOG_PREFIX},
         )
@@ -231,7 +231,7 @@ class WorkManager:
             work_id=work_id,
             cleanup_inconsistent_bundle=True,
         )
-        self._logger.info(
+        self._logger.debug(
             "STIX objects sent to OpenCTI queue",
             {"prefix": LOG_PREFIX, "bundles_sent": str(len(bundles_sent))},
         )
