@@ -14,7 +14,9 @@ class FeedlyRunner:
         self.helper = helper
         self.config = config
         self.interval_in_minutes: int = self.config.feedly.interval
-        self.connector = FeedlyConnector(self.config.feedly.api_key, self.helper)
+        self.connector = FeedlyConnector(
+            self.config.feedly.api_key.get_secret_value(), self.helper
+        )
         self.stream_ids = self.config.feedly.stream_ids
         self.days_to_back_fill: int = self.config.feedly.days_to_back_fill
 

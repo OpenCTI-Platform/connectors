@@ -23,8 +23,8 @@ class ConfigCrowdstrike:
 
         # Crowdstrike configurations
         self.base_url = str(self.config.crowdstrike.base_url)
-        self.client_id = self.config.crowdstrike.client_id
-        self.client_secret = self.config.crowdstrike.client_secret
+        self.client_id = self.config.crowdstrike.client_id.get_secret_value()
+        self.client_secret = self.config.crowdstrike.client_secret.get_secret_value()
         self.tlp = self.config.crowdstrike.tlp
         self.create_observables = self.config.crowdstrike.create_observables
         self.create_indicators = self.config.crowdstrike.create_indicators
@@ -50,6 +50,7 @@ class ConfigCrowdstrike:
 
         self.report_type = self.config.crowdstrike.report_type
         self.report_guess_malware = self.config.crowdstrike.report_guess_malware
+        self.report_guess_relations = self.config.crowdstrike.report_guess_relations
         self.indicator_start_timestamp = (
             self.config.crowdstrike.indicator_start_timestamp
         )

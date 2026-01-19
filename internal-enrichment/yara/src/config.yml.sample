@@ -1,10 +1,10 @@
 opencti:
-  url: 'http://localhost:8080'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
-  id: 'ChangeMe'
   type: 'INTERNAL_ENRICHMENT'
+  id: 'ChangeMe'
   name: 'YARA'
   scope: 'Artifact' # MIME type or SCO
   auto: true # Enable/disable auto-enrichment of observables

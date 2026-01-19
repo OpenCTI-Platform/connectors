@@ -4,9 +4,10 @@
 import json
 import os
 import ssl
+import sys
 import time
 import urllib
-from datetime import datetime
+from datetime import datetime, timezone
 from urllib import parse
 
 import stix2
@@ -54,13 +55,11 @@ class Malcore:
             ["connector", "update_existing_data"],
             config,
         )
-        self.identity = (
-            self.helper.api.identity.create(
-                type="Organization",
-                name="Malcore",
-                description="Malcore is a tool designed to simplify reverse engineering and malware analysis through "
-                "simple file analysis.",
-            ),
+        self.identity = self.helper.api.identity.create(
+            type="Organization",
+            name="Malcore",
+            description="Malcore is a tool designed to simplify reverse engineering and malware analysis through "
+            "simple file analysis.",
         )
 
     def get_interval(self):
@@ -68,7 +67,7 @@ class Malcore:
 
     def run_feed_ioc(self, timestamp):
         try:
-            now = datetime.utcfromtimestamp(timestamp)
+            now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
             friendly_name = "Malcore connector ioc run @ " + now.strftime(
                 "%Y-%m-%d %H:%M:%S"
             )
@@ -162,7 +161,7 @@ class Malcore:
 
     def run_feed_threat(self, timestamp):
         try:
-            now = datetime.utcfromtimestamp(timestamp)
+            now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
             friendly_name = "Malcore connector threat run @ " + now.strftime(
                 "%Y-%m-%d %H:%M:%S"
             )
@@ -212,14 +211,14 @@ class Malcore:
 
             # Filling the bundle
             for item in data_json["data"]["data"]:
-                hash = item["hash"]
+                hash_value = item["hash"]
                 score = item["score"]
-                pattern = "[file:hashes.'SHA-256' = '" + hash + "']"
+                pattern = "[file:hashes.'SHA-256' = '" + hash_value + "']"
 
                 stix_indicator = stix2.Indicator(
-                    id=Indicator.generate_id(hash),
-                    name="Indicator: {}".format(hash),  # The name may be to modify
-                    description="Hash: {}".format(hash),
+                    id=Indicator.generate_id(pattern),
+                    name="Indicator: {}".format(hash_value),
+                    description="Hash: {}".format(hash_value),
                     pattern_type="stix",
                     labels=labels,
                     pattern=pattern,
@@ -233,10 +232,10 @@ class Malcore:
                 indicators.append(stix_indicator)
 
                 stix_malware = stix2.Malware(
-                    id=Malware.generate_id(hash),
-                    name="Malware: {}".format(hash),  # The name may be to modify
+                    id=Malware.generate_id(hash_value),
+                    name="Malware: {}".format(hash_value),
                     description="Threat Tracked by Malcore",
-                    is_family=True,
+                    is_family=False,
                     confidence=score,
                     created_by_ref=malcore_org_id,
                     object_marking_refs=[stix2.TLP_WHITE],
@@ -281,7 +280,7 @@ class Malcore:
 
     def run_feed_hash(self, timestamp):
         try:
-            now = datetime.utcfromtimestamp(timestamp)
+            now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
             friendly_name = "Malcore connector hash run @ " + now.strftime(
                 "%Y-%m-%d %H:%M:%S"
             )
@@ -328,11 +327,11 @@ class Malcore:
 
             # Filling the bundle
             for item in data_json["data"]["data"]:
-                hash = item["hash"]
-                pattern = "[file:hashes.'SHA-256' = '" + hash + "']"
+                hash_value = item["hash"]
+                pattern = "[file:hashes.'SHA-256' = '" + hash_value + "']"
 
                 stix_indicator = stix2.Indicator(
-                    id=Indicator.generate_id(hash),
+                    id=Indicator.generate_id(hash_value),
                     pattern_type="stix",
                     pattern=pattern,
                     created_by_ref=malcore_org_id,
@@ -375,7 +374,7 @@ class Malcore:
                     last_run = current_state["last_run"]
                     self.helper.log_info(
                         "Connector last run: "
-                        + datetime.utcfromtimestamp(last_run).strftime(
+                        + datetime.fromtimestamp(last_run, tz=timezone.utc).strftime(
                             "%Y-%m-%d %H:%M:%S"
                         )
                     )
@@ -417,7 +416,7 @@ class Malcore:
                     time.sleep(6000)
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
-                exit(0)
+                sys.exit(0)
             except Exception as e:
                 self.helper.log_error(str(e))
                 time.sleep(60)

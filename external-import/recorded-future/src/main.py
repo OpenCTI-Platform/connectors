@@ -34,22 +34,29 @@ class BaseRFConnector:
         self.helper = OpenCTIConnectorHelper(self.config.model_dump_pycti())
 
         # Extract configuration values from the loaded config
-        self.rf_token = self.config.rf.token
-        self.rf_initial_lookback = self.config.rf.initial_lookback
-        self.tlp = self.config.rf.tlp.lower()
-        self.rf_pull_signatures = self.config.rf.pull_signatures
-        self.rf_pull_risk_list = self.config.rf.pull_risk_list
-        self.rf_riskrules_as_label = self.config.rf.riskrules_as_label
-        self.rf_insikt_only = self.config.rf.insikt_only
+        self.rf_token = self.config.recorded_future.token.get_secret_value()
+        self.rf_initial_lookback = self.config.recorded_future.initial_lookback
+        self.tlp = self.config.recorded_future.tlp.lower()
+        self.rf_pull_signatures = self.config.recorded_future.pull_signatures
+        self.rf_pull_risk_list = self.config.recorded_future.pull_risk_list
+        self.rf_riskrules_as_label = self.config.recorded_future.riskrules_as_label
+        self.rf_insikt_only = self.config.recorded_future.insikt_only
 
         # Handle topics - convert list to comma-separated string if needed
-        self.rf_topics = self.config.rf.topic if self.config.rf.topic else [None]
+        self.rf_topics = (
+            self.config.recorded_future.topic
+            if self.config.recorded_future.topic
+            else [None]
+        )
 
-        self.rf_person_to_TA = self.config.rf.person_to_ta
-        self.rf_TA_to_intrusion_set = self.config.rf.ta_to_intrusion_set
-        self.risk_as_score = self.config.rf.risk_as_score
-        self.risk_threshold = self.config.rf.risk_threshold
-        self.risk_list_threshold = self.config.rf.risk_list_threshold
+        self.rf_person_to_TA = self.config.recorded_future.person_to_ta
+        self.rf_TA_to_intrusion_set = self.config.recorded_future.ta_to_intrusion_set
+        self.risk_as_score = self.config.recorded_future.risk_as_score
+        self.risk_threshold = self.config.recorded_future.risk_threshold
+        self.risk_list_threshold = self.config.recorded_future.risk_list_threshold
+        self.analyst_notes_guess_relationships = (
+            self.config.recorded_future.analyst_notes_guess_relationships
+        )
 
         self.rfapi = RFClient(
             self.rf_token,
@@ -60,22 +67,26 @@ class BaseRFConnector:
         # In a crisis, smash glass and uncomment this line of code
         # self.helper.config['uri'] = self.helper.config['uri'].replace('rabbitmq', '172.19.0.6')
 
-        self.rf_pull_threat_maps = self.config.rf.pull_threat_maps
+        self.rf_pull_threat_maps = self.config.recorded_future.pull_threat_maps
 
         # Handle risk list related entities
-        if self.config.rf.risklist_related_entities is None:
+        if self.config.recorded_future.risklist_related_entities is None:
             if self.rf_pull_risk_list:
                 raise ValueError(
                     "Missing or incorrect value in configuration parameter 'Risk List Related Entities'"
                 )
             self.risklist_related_entities = []
         else:
-            self.risklist_related_entities = self.config.rf.risklist_related_entities
+            self.risklist_related_entities = (
+                self.config.recorded_future.risklist_related_entities
+            )
 
-        self.rf_pull_analyst_notes = self.config.rf.pull_analyst_notes
-        self.last_published_notes_interval = self.config.rf.last_published_notes
+        self.rf_pull_analyst_notes = self.config.recorded_future.pull_analyst_notes
+        self.last_published_notes_interval = (
+            self.config.recorded_future.last_published_notes
+        )
         self.duration_period = self.config.connector.duration_period
-        self.rf_interval = self.config.rf.interval
+        self.rf_interval = self.config.recorded_future.interval
         self.priority_alerts_only = self.config.alert.priority_alerts_only
 
         self.rf_alerts_api = RecordedFutureApiClient(
@@ -184,6 +195,7 @@ class RFConnector:
                 self.RF.rf_TA_to_intrusion_set,
                 self.RF.risk_as_score,
                 self.RF.risk_threshold,
+                self.RF.analyst_notes_guess_relationships,
             )
             self.analyst_notes.start()
         else:

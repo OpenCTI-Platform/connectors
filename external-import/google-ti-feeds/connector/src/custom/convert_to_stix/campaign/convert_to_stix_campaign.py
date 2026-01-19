@@ -1,7 +1,7 @@
 """Campaign-specific converter for fetching and processing campaign data."""
 
 import logging
-from typing import Any, List
+from typing import Any
 
 from connector.src.custom.convert_to_stix.convert_to_stix_base import BaseConvertToSTIX
 
@@ -15,14 +15,14 @@ class ConvertToSTIXCampaign(BaseConvertToSTIX):
         """Initialize Campaign Converter."""
         super().__init__(config, logger, tlp_level)
 
-    def convert_campaign_to_stix(self, campaign_data: Any) -> List[Any]:
+    def convert_campaign_to_stix(self, campaign_data: Any) -> list[Any]:
         """Convert campaign to location, identity, and campaign STIX objects.
 
         Args:
             campaign_data: GTICampaignData object from fetcher
 
         Returns:
-            List of STIX entities (location, identity, campaign)
+            list of STIX entities (location, identity, campaign)
 
         """
         try:

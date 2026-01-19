@@ -1,28 +1,25 @@
 opencti:
-  url: 'http://localhost:8080'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
-  id: 'ChangeMe'
   type: 'STREAM'
-  live_stream_id: 'live' # ID of the live stream created in the OpenCTI UI
-  live_stream_listen_delete: true
-  live_stream_no_dependencies: true
-  name: 'CrowdStrike Endpoint Security'
-  scope: 'crowdstrike' # Reserved
-  confidence_level: 80 # From 0 (Unknown) to 100 (Fully trusted)
-  log_level: 'info'
-  consumer_count: 5 # number of consumer/worker used to push data
-  ignore_types: 'label,marking-definition,identity'
+  id: 'ChangeMe'
+  live_stream_id: 'ChangeMe' # ID of the live stream created in the OpenCTI UI
+#   name: 'CrowdStrike Endpoint Security'
+#   scope: 'crowdstrike-endpoint-security'
+#   live_stream_listen_delete: true
+#   live_stream_no_dependencies: true
+#   log_level: 'error'
 
 crowdstrike:
-  api_base_url: 'FIXME'
-  client_id: 'FIXME'
-  client_secret: 'FIXME'
-  permanent_delete: False
-  falcon_for_mobile_active: False
+#   api_base_url: 'https://api.crowdstrike.com'
+  client_id: 'ChangeMe'
+  client_secret: 'ChangeMe'
+#   permanent_delete: false
+#   falcon_for_mobile_active: false
 
-metrics:
-  enable: true # set to true to expose prometheus metrics
-  port: 9113 # port on which metrics should be exposed
-  addr: 0.0.0.0 # ip on which metrics should be exposed
+# metrics:
+#   enable: false # set to true to expose prometheus metrics
+#   port: 9113 # port on which metrics should be exposed
+#   addr: 0.0.0.0 # ip on which metrics should be exposed

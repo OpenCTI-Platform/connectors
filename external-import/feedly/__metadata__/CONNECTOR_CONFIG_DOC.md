@@ -14,5 +14,5 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_TYPE | `string` |  | string | `"EXTERNAL_IMPORT"` | Should always be set to EXTERNAL_IMPORT for this connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | Determines the verbosity of the logs. |
 | FEEDLY_INTERVAL | `integer` |  | `0 < x ` | `60` | Polling interval in minutes for fetching and refreshing Feedly data. Determines how often the system checks for updates from Feedly streams. |
-| FEEDLY_STREAM_IDS | `array` |  | string | `null` | Comma separated list of Feedly stream IDs to monitor. Each stream ID represents a specific feed or collection to import from Feedly. |
+| FEEDLY_STREAM_IDS | `array` |  | string | `[]` | Comma separated list of Feedly stream IDs to monitor. Each stream ID represents a specific feed or collection to import from Feedly. |
 | FEEDLY_DAYS_TO_BACK_FILL | `integer` |  | `0 < x ` | `7` | Number of days to back fill for new streams. When a new stream is added, the connector will fetch articles from this many days in the past. |

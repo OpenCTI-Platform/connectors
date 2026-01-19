@@ -1,7 +1,7 @@
-pycti==6.8.0
-urllib3==2.5.0
-beautifulsoup4==4.13.5
-pdfminer.six==20250506
+pycti==6.9.8
+urllib3==2.6.3
+beautifulsoup4==4.14.2
+pdfminer.six==20251107
 stix==1.2.0.11
 pydantic>=2.8.2,<3.0.0
 ioc-finder==7.3.0

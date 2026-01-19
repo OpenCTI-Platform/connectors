@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/virustotal_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The OpenCTI platform URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "VirusTotal",
+      "description": "Name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "StixFile",
+        "Artifact",
+        "IPv4-Addr",
+        "Domain-Name",
+        "Url",
+        "Hostname"
+      ],
+      "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_TYPE": {
+      "default": "INTERNAL_ENRICHMENT",
+      "description": "Should always be set to INTERNAL_ENRICHMENT for this connector.",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Enables or disables automatic enrichment of observables for OpenCTI.",
+      "type": "boolean"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "Determines the verbosity of the logs.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "VIRUSTOTAL_TOKEN": {
+      "description": "VirusTotal API token for authentication.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "VIRUSTOTAL_MAX_TLP": {
+      "default": "TLP:AMBER",
+      "description": "Traffic Light Protocol (TLP) level to apply on objects imported into OpenCTI. Available values: TLP:CLEAR, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
+    },
+    "VIRUSTOTAL_REPLACE_WITH_LOWER_SCORE": {
+      "default": true,
+      "description": "Whether to keep the higher of the VT or existing score (false) or force the score to be updated with the VT score even if its lower than existing score (true).",
+      "type": "boolean"
+    },
+    "VIRUSTOTAL_FILE_CREATE_NOTE_FULL_REPORT": {
+      "default": true,
+      "description": "Whether or not to include the full report as a Note.",
+      "type": "boolean"
+    },
+    "VIRUSTOTAL_FILE_UPLOAD_UNSEEN_ARTIFACTS": {
+      "default": true,
+      "description": "Whether to upload artifacts (smaller than 32MB) that VirusTotal has no record of for analysis.",
+      "type": "boolean"
+    },
+    "VIRUSTOTAL_FILE_IMPORT_YARA": {
+      "default": true,
+      "description": "Whether or not to import Crowdsourced YARA rules.",
+      "type": "boolean"
+    },
+    "VIRUSTOTAL_FILE_INDICATOR_CREATE_POSITIVES": {
+      "default": 10,
+      "description": "Create an indicator for File/Artifact based observables once this positive threshold is reached.",
+      "type": "integer"
+    },
+    "VIRUSTOTAL_FILE_INDICATOR_VALID_MINUTES": {
+      "default": 2880,
+      "description": "How long the indicator is valid for in minutes.",
+      "type": "integer"
+    },
+    "VIRUSTOTAL_FILE_INDICATOR_DETECT": {
+      "default": true,
+      "description": "Whether or not to set detection for the indicator to true.",
+      "type": "boolean"
+    },
+    "VIRUSTOTAL_IP_ADD_RELATIONSHIPS": {
+      "default": false,
+      "description": "Whether or not to add ASN and location resolution relationships.",
+      "type": "boolean"
+    },
+    "VIRUSTOTAL_IP_INDICATOR_CREATE_POSITIVES": {
+      "default": 10,
+      "description": "Create an indicator for IPv4 based observables once this positive threshold is reached.",
+      "type": "integer"
+    },
+    "VIRUSTOTAL_IP_INDICATOR_VALID_MINUTES": {
+      "default": 2880,
+      "description": "How long the indicator is valid for in minutes.",
+      "type": "integer"
+    },
+    "VIRUSTOTAL_IP_INDICATOR_DETECT": {
+      "default": true,
+      "description": "Whether or not to set detection for the indicator to true.",
+      "type": "boolean"
+    },
+    "VIRUSTOTAL_DOMAIN_ADD_RELATIONSHIPS": {
+      "default": false,
+      "description": "Whether or not to add IP resolution relationships.",
+      "type": "boolean"
+    },
+    "VIRUSTOTAL_DOMAIN_INDICATOR_CREATE_POSITIVES": {
+      "default": 10,
+      "description": "Create an indicator for Domain based observables once this positive threshold is reached.",
+      "type": "integer"
+    },
+    "VIRUSTOTAL_DOMAIN_INDICATOR_VALID_MINUTES": {
+      "default": 2880,
+      "description": "How long the indicator is valid for in minutes.",
+      "type": "integer"
+    },
+    "VIRUSTOTAL_DOMAIN_INDICATOR_DETECT": {
+      "default": true,
+      "description": "Whether or not to set detection for the indicator to true.",
+      "type": "boolean"
+    },
+    "VIRUSTOTAL_URL_UPLOAD_UNSEEN": {
+      "default": true,
+      "description": "Whether to upload URLs that VirusTotal has no record of for analysis.",
+      "type": "boolean"
+    },
+    "VIRUSTOTAL_URL_INDICATOR_CREATE_POSITIVES": {
+      "default": 10,
+      "description": "Create an indicator for URL based observables once this positive threshold is reached.",
+      "type": "integer"
+    },
+    "VIRUSTOTAL_URL_INDICATOR_VALID_MINUTES": {
+      "default": 2880,
+      "description": "How long the indicator is valid for in minutes.",
+      "type": "integer"
+    },
+    "VIRUSTOTAL_URL_INDICATOR_DETECT": {
+      "default": true,
+      "description": "Whether or not to set detection for the indicator to true.",
+      "type": "boolean"
+    },
+    "VIRUSTOTAL_INCLUDE_ATTRIBUTES_IN_NOTE": {
+      "default": false,
+      "description": "Whether or not to include the attributes info in Note.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "VIRUSTOTAL_TOKEN"
+  ],
+  "additionalProperties": true
+}

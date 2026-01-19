@@ -1,6 +1,6 @@
 """The module defines the BaseSCOModel class, which serves as a base model for all STIX Cyber Observable (SCO) objects."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
@@ -20,27 +20,27 @@ class SCORequiredModel(BaseModel):
 class SCOOptionalModel(BaseModel):
     """Optional fields for all STIX Cyber Observable (SCO) objects."""
 
-    spec_version: Optional[str] = Field(
+    spec_version: str | None = Field(
         default=None,
         description="The STIX specification version, typically '2.1'.",
     )
-    object_marking_refs: Optional[List[str]] = Field(
+    object_marking_refs: list[str] | None = Field(
         default=None,
-        description="List of marking-definition IDs applied to this object.",
+        description="list of marking-definition IDs applied to this object.",
     )
-    granular_markings: Optional[List[Dict[str, Any]]] = Field(
+    granular_markings: list[dict[str, Any]] | None = Field(
         default=None,
-        description="List of granular markings on specific fields.",
+        description="list of granular markings on specific fields.",
     )
-    defanged: Optional[bool] = Field(
+    defanged: bool | None = Field(
         default=None,
         description="Whether the object has been defanged to prevent accidental execution.",
     )
-    extensions: Optional[Dict[str, Any]] = Field(
+    extensions: dict[str, Any] | None = Field(
         default=None,
         description="Custom STIX extensions applied to this object.",
     )
-    custom_properties: Optional[dict[str, Any]] = Field(
+    custom_properties: dict[str, Any] | None = Field(
         default=None,
         description="Custom properties that are not part of the STIX specification.",
     )

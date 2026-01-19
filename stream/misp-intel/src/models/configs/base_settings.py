@@ -9,6 +9,7 @@ class ConfigBaseSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_nested_delimiter="_",
         env_nested_max_split=1,
+        env_ignore_empty=True,
         frozen=True,
         str_strip_whitespace=True,
         str_min_length=1,

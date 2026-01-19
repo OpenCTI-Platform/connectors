@@ -76,8 +76,13 @@ class RiskList(threading.Thread):
                             continue
                     # Convert into stix object
                     first_seen = row["FirstSeen"] if row["FirstSeen"] else None
+                    last_seen = row["LastSeen"] if row["LastSeen"] else None
                     indicator = risk_list_type["class"](
-                        row["Name"], key, tlp=self.tlp, first_seen=first_seen
+                        row["Name"],
+                        key,
+                        tlp=self.tlp,
+                        first_seen=first_seen,
+                        last_seen=last_seen,
                     )
 
                     rule_criticality_list = (

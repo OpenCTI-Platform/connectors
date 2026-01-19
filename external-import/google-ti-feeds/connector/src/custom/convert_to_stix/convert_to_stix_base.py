@@ -1,7 +1,7 @@
 """Base converter class with common functionality."""
 
 import logging
-from typing import Any, Dict, List, Literal, Optional, cast
+from typing import Any, Literal, cast
 
 from connector.src.custom.configs import (
     GTIConfig,
@@ -115,16 +115,16 @@ class BaseConvertToSTIX:
         return tlp_marking
 
     def convert_subentities_to_stix(
-        self, subentities: Dict[str, List[Any]], main_entity: Optional[str] = None
-    ) -> List[Any]:
+        self, subentities: dict[str, list[Any]], main_entity: str | None = None
+    ) -> list[Any]:
         """Convert each subentity to STIX format.
 
         Args:
-            subentities: Dictionary mapping entity types to lists of entities
+            subentities: dictionary mapping entity types to lists of entities
             main_entity: Type of the main entity
 
         Returns:
-            List of converted STIX objects
+            list of converted STIX objects
 
         """
         all_stix_entities = []
@@ -137,8 +137,23 @@ class BaseConvertToSTIX:
                 continue
 
             try:
+                # Check if we need to pass additional dependencies for aliases
+                additional_deps = {}
+                if entity_type == "malware_families" and hasattr(
+                    self.config, "enable_malware_aliases"
+                ):
+                    additional_deps["enable_malware_aliases"] = (
+                        self.config.enable_malware_aliases
+                    )
+                elif entity_type == "threat_actors" and hasattr(
+                    self.config, "enable_threat_actor_aliases"
+                ):
+                    additional_deps["enable_threat_actor_aliases"] = (
+                        self.config.enable_threat_actor_aliases
+                    )
+
                 converter = self.converter_factory.create_converter_by_name(
-                    f"{_prefix}{entity_type}"
+                    f"{_prefix}{entity_type}", additional_dependencies=additional_deps
                 )
                 stix_entities = converter.convert_multiple(entities)
                 all_stix_entities.extend(stix_entities)
@@ -161,19 +176,19 @@ class BaseConvertToSTIX:
 
     def convert_subentities_to_stix_with_linking(
         self,
-        subentities: Dict[str, List[Any]],
+        subentities: dict[str, list[Any]],
         main_entity: str,
-        main_entities: List[Any],
-    ) -> Optional[List[Any]]:
+        main_entities: list[Any],
+    ) -> list[Any] | None:
         """Convert each subentity to STIX format with linking.
 
         Args:
-            subentities: Dictionary mapping entity types to lists of entities
+            subentities: dictionary mapping entity types to lists of entities
             main_entity: The main entity type
-            main_entities: List containing the main entity STIX object
+            main_entities: list containing the main entity STIX object
 
         Returns:
-            List of converted STIX objects
+            list of converted STIX objects
 
         """
         all_stix_entities = self.convert_subentities_to_stix(subentities, main_entity)

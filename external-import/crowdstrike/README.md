@@ -1,108 +1,261 @@
 # OpenCTI CrowdStrike Connector
 
-The OpenCTI CrowdStrike connector can be used to import knowledge from the CrowdStrike
-Falcon platform. The connector leverages the Intel APIs to get information about
-CrowdStrike’s intelligence, including data about actors, indicators, reports, and YARA
-rules.
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
-**Note**: Requires subscription to the CrowdStrike Falcon platform. The subscription
-details dictate what data is actually available to the connector.
+The CrowdStrike connector imports threat intelligence from CrowdStrike Falcon Intelligence into OpenCTI, including actors, reports, indicators, and detection rules.
+
+## Table of Contents
+
+- [OpenCTI CrowdStrike Connector](#opencti-crowdstrike-connector)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction](#introduction)
+  - [Installation](#installation)
+    - [Requirements](#requirements)
+  - [Configuration variables](#configuration-variables)
+    - [OpenCTI environment variables](#opencti-environment-variables)
+    - [Base connector environment variables](#base-connector-environment-variables)
+    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
+  - [Deployment](#deployment)
+    - [Docker Deployment](#docker-deployment)
+    - [Manual Deployment](#manual-deployment)
+  - [Usage](#usage)
+  - [Behavior](#behavior)
+  - [Debugging](#debugging)
+  - [Additional information](#additional-information)
+
+## Introduction
+
+CrowdStrike Falcon Intelligence provides comprehensive threat intelligence including threat actor profiles, intelligence reports, indicators of compromise, and detection rules (YARA/Snort/Suricata).
+
+This connector supports importing multiple data types:
+- **Actors**: Threat actor profiles and TTPs
+- **Reports**: Intelligence reports and analysis
+- **Indicators**: IOCs with confidence scoring
+- **YARA Master**: YARA detection rules
+- **Snort/Suricata Master**: Network detection rules
 
 ## Installation
 
-The OpenCTI CrowdStrike connector is a standalone Python process that must have access
-to the OpenCTI platform and the RabbitMQ. RabbitMQ credentials and connection parameters
-are provided by the API directly, as configured in the platform settings.
+### Requirements
 
-Enabling this connector could be done by launching the Python process directly after
-providing the correct configuration in the `config.yml` file or within a Docker with
-the image `opencti/connector-crowdstrike:latest`. We provide an example of
-[`docker-compose.yml`](docker-compose.yml) file that could be used independently or
-integrated to the global `docker-compose.yml` file of OpenCTI.
+- OpenCTI Platform >= 6.x
+- CrowdStrike Falcon Intelligence subscription
+- CrowdStrike API credentials (Client ID and Secret)
 
-If you are using it independently, remember that the connector will try to connect to
-the RabbitMQ on the port configured in the OpenCTI platform.
+## Configuration variables
 
-### Configuration variables
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
 
-Below are the parameters you'll need to set for OpenCTI:
+### OpenCTI environment variables
 
-| Parameter `OpenCTI` | config.yml  | Docker environment variable | Mandatory | Description                                          |
-|---------------------|-------------|-----------------------------|-----------|------------------------------------------------------|
-| URL                 | `url`       | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| Token               | `token`     | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
+|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
+| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
+| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
 
-Below are the parameters you'll need to set for running the connector properly:
+### Base connector environment variables
 
-| Parameter `Connector` | config.yml          | Docker environment variable   | Default | Mandatory | Example                                | Description                                                                                      |
-|-----------------------|---------------------|-------------------------------|---------|-----------|----------------------------------------|--------------------------------------------------------------------------------------------------|
-| ID                    | `id`                | `CONNECTOR_ID`                | /       | Yes       | `fe418972-1b42-42c9-a665-91544c1a9939` | A unique `UUIDv4` identifier for this connector instance.                                        |
-| Name                  | `name`              | `CONNECTOR_NAME`              | /       | Yes       | `CrowdStrike`                          | Full name of the connector : `CrowdStrike`.                                                      |
-| Scope                 | `scope`             | `CONNECTOR_SCOPE`             | /       | Yes       | `crowdStrike`                          | Must be `crowdStrike`, not used in this connector.                                               |
-| Run and Terminate     | `run_and_terminate` | `CONNECTOR_RUN_AND_TERMINATE` | `False` | No        | /                                      | Launch the connector once if set to True. Takes 2 available values: `True` or `False`.           |
-| Duration Period       | `duration_period`   | `CONNECTOR_DURATION_PERIOD`   | /       | Yes       | `PT30M`                                | Determines the time interval between each launch of the connector in ISO 8601, ex: .             |
-| Queue Threshold       | `queue_threshold`   | `CONNECTOR_QUEUE_THRESHOLD`   | `500`   | No        | /                                      | Used to determine the limit (RabbitMQ) in MB at which the connector must go into buffering mode. |
-| Log Level             | `log_level`         | `CONNECTOR_LOG_LEVEL`         | /       | Yes       | `error`                                | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.           |
+| Parameter         | config.yml      | Docker environment variable   | Default      | Mandatory | Description                                                                 |
+|-------------------|-----------------|-------------------------------|--------------|-----------|-----------------------------------------------------------------------------|
+| Connector ID      | id              | `CONNECTOR_ID`                |              | Yes       | A unique `UUIDv4` identifier for this connector instance.                   |
+| Connector Name    | name            | `CONNECTOR_NAME`              | CrowdStrike  | No        | Name of the connector.                                                      |
+| Connector Scope   | scope           | `CONNECTOR_SCOPE`             | crowdstrike  | No        | The scope or type of data the connector is importing.                       |
+| Log Level         | log_level       | `CONNECTOR_LOG_LEVEL`         | error        | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
+| Duration Period   | duration_period | `CONNECTOR_DURATION_PERIOD`   | PT30M        | No        | Time interval between connector runs in ISO 8601 format.                    |
 
-Below are the parameters you'll need to set for CrowdStrike Connector:
+### Connector extra parameters environment variables
 
-| Parameter `CrowdStrike`       | config.yml                      | Docker environment variable                 | Default                       | Mandatory | Example                                                              | Description                                                                                                        |
-|-------------------------------|---------------------------------|---------------------------------------------|-------------------------------|-----------|----------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
-| Base Url                      | `base_url`                      | `CROWDSTRIKE_BASE_URL`                      | `https://api.crowdstrike.com` | No        | /                                                                    | The base URL for the CrowdStrike APIs.                                                                             |
-| Client ID                     | `client_id`                     | `CROWDSTRIKE_CLIENT_ID`                     | `ChangeMe`                    | Yes       | `ChangeMe`                                                           | The CrowdStrike API client ID.                                                                                     |
-| Client Secret                 | `client_secret`                 | `CROWDSTRIKE_CLIENT_SECRET`                 | `ChangeMe`                    | Yes       | `ChangeMe`                                                           | The CrowdStrike API client secret.                                                                                 |
-| TLP                           | `tlp`                           | `CROWDSTRIKE_TLP`                           | `amber+strict`                | No        | /                                                                    | The TLP marking used for the imported objects in the OpenCTI.                                                      |
-| Create Observables            | `create_observables`            | `CROWDSTRIKE_CREATE_OBSERVABLES`            | /                             | Yes       | `true`                                                               | If true then observables will be created from the CrowdStrike indicators.                                          |
-| Create Indicators             | `create_indicators`             | `CROWDSTRIKE_CREATE_INDICATORS`             | /                             | Yes       | `true`                                                               | If true then indicators will be created from the CrowdStrike indicators.                                           |
-| Scopes                        | `scopes`                        | `CROWDSTRIKE_SCOPES`                        | /                             | Yes       | `actor,report,indicator,yara_master,snort_suricata_master`           | The scopes defines what data will be imported from the CrowdStrike.                                                |
-| Actor Start Timestamp         | `actor_start_timestamp`         | `CROWDSTRIKE_ACTOR_START_TIMESTAMP`         | /                             | Yes       | `0`                                                                  | The Actors created after this timestamp will be imported. Timestamp in UNIX Epoch time, UTC.                       |
-| Report Start Timestamp        | `report_start_timestamp`        | `CROWDSTRIKE_REPORT_START_TIMESTAMP`        | /                             | Yes       | `0`                                                                  | The Reports created after this timestamp will be imported. Timestamp in UNIX Epoch time, UTC.                      |
-| Report Status                 | `report_status`                 | `CROWDSTRIKE_REPORT_STATUS`                 | /                             | Yes       | `New`                                                                | The status of imported reports in the OpenCTI.                                                                     |
-| Report Include Types          | `report_include_types`          | `CROWDSTRIKE_REPORT_INCLUDE_TYPES`          | /                             | Yes       | `notice,tipper,intelligence report,periodic report`                  | The types of Reports included in the import. The types are defined by the CrowdStrike.                             |
-| Report Target Industries      | `report_target_industries`      | `CROWDSTRIKE_REPORT_TARGET_INDUSTRIES`      | /                             | Yes       | `defense,aviation,aerospace,government,military,national government` | The reports to be imported must contain this industry/sector. The industry's names are defined by the CrowdStrike. |
-| Report Type                   | `report_type`                   | `CROWDSTRIKE_REPORT_TYPE`                   | /                             | Yes       | `threat-report`                                                      | The type of imported reports in the OpenCTI.                                                                       |
-| Report Guess Malware          | `report_guess_malware`          | `CROWDSTRIKE_REPORT_GUESS_MALWARE`          | /                             | Yes       | `false`                                                              | The Report tags are used to guess (queries malwares in the OpenCTI) malwares related to the given Report.          |
-| Indicator Start Timestamp     | `indicator_start_timestamp`     | `CROWDSTRIKE_INDICATOR_START_TIMESTAMP`     | /                             | Yes       | `0`                                                                  | The Indicators published after this timestamp will be imported. Timestamp in UNIX Epoch time, UTC.                 |
-| Indicator Exclude Types       | `indicator_exclude_types`       | `CROWDSTRIKE_INDICATOR_EXCLUDE_TYPES`       | /                             | Yes       | `hash_ion,hash_md5,hash_sha1,password,username`                                       | The types of Indicators excluded from the import. The types are defined by the CrowdStrike.                        |
-| Indicator Low Score           | `indicator_low_score`           | `CROWDSTRIKE_INDICATOR_LOW_SCORE`           | /                             | No        | `40`                                                                 | If any of the low score labels are found on the indicator then this value is used as a score.                      |
-| Indicator Low Score Labels    | `indicator_low_score_labels`    | `CROWDSTRIKE_INDICATOR_LOW_SCORE_LABELS`    | /                             | No        | `MaliciousConfidence/Low` or `MaliciousConfidence/Medium`            | The labels used to determine the low score indicators.                                                             |
-| Indicator Medium Score        | `indicator_medium_score`        | `CROWDSTRIKE_INDICATOR_MEDIUM_SCORE`        | /                             | No        | `60`                                                                 | If any of the low score labels are found on the indicator then this value is used as a score.                      |
-| Indicator Medium Score Labels | `indicator_medium_score_labels` | `CROWDSTRIKE_INDICATOR_MEDIUM_SCORE_LABELS` | /                             | No        | `MaliciousConfidence/Medium`                                         | The labels used to determine the low score indicators.                                                             |
-| Indicator High Score          | `indicator_high_score`          | `CROWDSTRIKE_INDICATOR_HIGH_SCORE`          | /                             | No        | `80`                                                                 | If any of the low score labels are found on the indicator then this value is used as a score.                      |
-| Indicator High Score Labels   | `indicator_high_score_labels`   | `CROWDSTRIKE_INDICATOR_HIGH_SCORE_LABELS`   | /                             | No        | `MaliciousConfidence/High`                                           | The labels used to determine the low score indicators.                                                             |
-| Indicator Unwanted Labels     | `indicator_unwanted_labels`     | `CROWDSTRIKE_INDICATOR_UNWANTED_LABELS`     | /                             | No        | /                                                                    | Indicators to be excluded from import based on the labels affixed to them.                                         |
-| Trigger file import           | `no_file_trigger_import`        | `CROWDSTRIKE_NO_FILE_TRIGGER_IMPORT`        | `true`                        | No        | /                                                                    | Specify whether the file can trigger its import by other document import connectors or not.                        |
+| Parameter                   | config.yml                              | Docker environment variable                  | Default                                              | Mandatory | Description                                                                      |
+|-----------------------------|-----------------------------------------|----------------------------------------------|------------------------------------------------------|-----------|----------------------------------------------------------------------------------|
+| Base URL                    | crowdstrike.base_url                    | `CROWDSTRIKE_BASE_URL`                       | https://api.crowdstrike.com                          | No        | CrowdStrike API base URL.                                                        |
+| Client ID                   | crowdstrike.client_id                   | `CROWDSTRIKE_CLIENT_ID`                      |                                                      | Yes       | CrowdStrike API Client ID.                                                       |
+| Client Secret               | crowdstrike.client_secret               | `CROWDSTRIKE_CLIENT_SECRET`                  |                                                      | Yes       | CrowdStrike API Client Secret.                                                   |
+| TLP                         | crowdstrike.tlp                         | `CROWDSTRIKE_TLP`                            | amber+strict                                         | No        | TLP marking for imported data.                                                   |
+| Create Observables          | crowdstrike.create_observables          | `CROWDSTRIKE_CREATE_OBSERVABLES`             | true                                                 | No        | Create observables from indicators.                                              |
+| Create Indicators           | crowdstrike.create_indicators           | `CROWDSTRIKE_CREATE_INDICATORS`              | true                                                 | No        | Create indicators.                                                               |
+| Scopes                      | crowdstrike.scopes                      | `CROWDSTRIKE_SCOPES`                         | actor,report,indicator,yara_master                   | No        | Comma-separated list of data types to import.                                    |
+| Actor Start Timestamp       | crowdstrike.actor_start_timestamp       | `CROWDSTRIKE_ACTOR_START_TIMESTAMP`          | (30 days ago)                                        | No        | Unix timestamp. Empty = 30 days ago. 0 = ALL actors.                             |
+| Report Start Timestamp      | crowdstrike.report_start_timestamp      | `CROWDSTRIKE_REPORT_START_TIMESTAMP`         | (30 days ago)                                        | No        | Unix timestamp. Empty = 30 days ago. 0 = ALL reports.                            |
+| Report Status               | crowdstrike.report_status               | `CROWDSTRIKE_REPORT_STATUS`                  | New                                                  | No        | Status for imported reports.                                                     |
+| Report Include Types        | crowdstrike.report_include_types        | `CROWDSTRIKE_REPORT_INCLUDE_TYPES`           | notice,tipper,intelligence report,periodic report    | No        | Comma-separated report types to include.                                         |
+| Report Type                 | crowdstrike.report_type                 | `CROWDSTRIKE_REPORT_TYPE`                    | threat-report                                        | No        | OpenCTI report type.                                                             |
+| Report Target Industries    | crowdstrike.report_target_industries    | `CROWDSTRIKE_REPORT_TARGET_INDUSTRIES`       |                                                      | No        | Filter reports by target industry.                                               |
+| Report Guess Malware        | crowdstrike.report_guess_malware        | `CROWDSTRIKE_REPORT_GUESS_MALWARE`           | false                                                | No        | Use report tags to guess malware.                                                |
+| Report Guess Relations      | crowdstrike.report_guess_relations      | `CROWDSTRIKE_REPORT_GUESS_RELATIONS`         | false                                                | No        | Auto-create relationships between entities.                                      |
+| Indicator Start Timestamp   | crowdstrike.indicator_start_timestamp   | `CROWDSTRIKE_INDICATOR_START_TIMESTAMP`      | (30 days ago)                                        | No        | Unix timestamp. Empty = 30 days ago. 0 = ALL indicators.                         |
+| Indicator Exclude Types     | crowdstrike.indicator_exclude_types     | `CROWDSTRIKE_INDICATOR_EXCLUDE_TYPES`        | hash_ion,hash_md5,hash_sha1,password,username        | No        | Comma-separated indicator types to exclude.                                      |
+| Default Score               | crowdstrike.default_x_opencti_score     | `CROWDSTRIKE_DEFAULT_X_OPENCTI_SCORE`        | 50                                                   | No        | Default x_opencti_score for indicators.                                          |
+| Low Score                   | crowdstrike.indicator_low_score         | `CROWDSTRIKE_INDICATOR_LOW_SCORE`            | 40                                                   | No        | Score for low confidence indicators.                                             |
+| Low Score Labels            | crowdstrike.indicator_low_score_labels  | `CROWDSTRIKE_INDICATOR_LOW_SCORE_LABELS`     | MaliciousConfidence/Low                              | No        | Labels that trigger low score.                                                   |
+| Medium Score                | crowdstrike.indicator_medium_score      | `CROWDSTRIKE_INDICATOR_MEDIUM_SCORE`         | 60                                                   | No        | Score for medium confidence indicators.                                          |
+| Medium Score Labels         | crowdstrike.indicator_medium_score_labels | `CROWDSTRIKE_INDICATOR_MEDIUM_SCORE_LABELS` | MaliciousConfidence/Medium                          | No        | Labels that trigger medium score.                                                |
+| High Score                  | crowdstrike.indicator_high_score        | `CROWDSTRIKE_INDICATOR_HIGH_SCORE`           | 80                                                   | No        | Score for high confidence indicators.                                            |
+| High Score Labels           | crowdstrike.indicator_high_score_labels | `CROWDSTRIKE_INDICATOR_HIGH_SCORE_LABELS`    | MaliciousConfidence/High                             | No        | Labels that trigger high score.                                                  |
+| Unwanted Labels             | crowdstrike.indicator_unwanted_labels   | `CROWDSTRIKE_INDICATOR_UNWANTED_LABELS`      |                                                      | No        | Filter out indicators with these labels.                                         |
+| No File Trigger Import      | crowdstrike.no_file_trigger_import      | `CROWDSTRIKE_NO_FILE_TRIGGER_IMPORT`         | true                                                 | No        | Import indicator updates without file triggers.                                  |
 
-**Note**: It is not recommended to use the default value `0` for configuration parameters `report_start_timestamp` and `indicator_start_timestamp` because of the large data volumes.
+## Deployment
 
-## Known Issues and Workarounds for Crowdstrike Connector Scopes
+### Docker Deployment
 
-### Issue
+Build the Docker image:
 
-The Crowdstrike connector offers multiple scopes for data ingestion: 
-- **actor**
-- **report**
-- **indicator**
-- **yara_master**
+```bash
+docker build -t opencti/connector-crowdstrike:latest .
+```
 
-When the `yara_master` scope is enabled simultaneously with other scopes (i.e., `actor`, `report`, and `indicator`), ingestion speed can significantly slow down. Additionally, due to the large volume of data (about 13GB) in `yara_master` and lack of pagination, the connector state may not update accurately.
+Configure the connector in `docker-compose.yml`:
 
-### Root Cause
-The `yara_master` scope imports a high volume of data. Since pagination is not available, this overwhelms the connector when combined with other scopes, leading to:
-- Slow ingestion performance.
-- Incomplete or inaccurate updates to the connector state.
+```yaml
+  connector-crowdstrike:
+    image: opencti/connector-crowdstrike:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=CrowdStrike
+      - CONNECTOR_SCOPE=crowdstrike
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=PT30M
+      - CROWDSTRIKE_BASE_URL=https://api.crowdstrike.com
+      - CROWDSTRIKE_CLIENT_ID=ChangeMe
+      - CROWDSTRIKE_CLIENT_SECRET=ChangeMe
+      - CROWDSTRIKE_TLP=amber+strict
+      - CROWDSTRIKE_CREATE_OBSERVABLES=true
+      - CROWDSTRIKE_CREATE_INDICATORS=true
+      - CROWDSTRIKE_SCOPES=actor,report,indicator,yara_master
+      - CROWDSTRIKE_REPORT_STATUS=New
+      - CROWDSTRIKE_REPORT_INCLUDE_TYPES=notice,tipper,intelligence report,periodic report
+      - CROWDSTRIKE_REPORT_TYPE=threat-report
+      - CROWDSTRIKE_INDICATOR_EXCLUDE_TYPES=hash_ion,hash_md5,hash_sha1,password,username
+      - CROWDSTRIKE_DEFAULT_X_OPENCTI_SCORE=50
+    restart: always
+```
 
-### Workaround
-To address this issue, set up two separate Crowdstrike connectors, each dedicated to specific scopes:
+Start the connector:
 
-1. **Primary Connector**:
-   - Scopes: `actor`, `report`, and `indicator`
-   - This connector will handle the main threat intelligence data without `yara_master` data, ensuring timely ingestion and accurate updates.
+```bash
+docker compose up -d
+```
 
-2. **Secondary Connector**:
-   - Scope: `yara_master` only
-   - This connector will handle `yara_master` data independently, which allows it to manage the high data volume without interfering with the ingestion of other scope data.
+### Manual Deployment
 
-### Summary
+1. Create `config.yml` based on `config.yml.sample`.
 
-By isolating the `yara_master` scope in a dedicated connector, you avoid slow ingestion rates and inaccurate state updates, ensuring efficient and stable data processing across all scopes.
+2. Install dependencies:
+
+```bash
+pip3 install -r requirements.txt
+```
+
+3. Start the connector from the `src` directory:
+
+```bash
+python3 main.py
+```
+
+## Usage
+
+The connector runs automatically at the interval defined by `CONNECTOR_DURATION_PERIOD`. To force an immediate run:
+
+**Data Management → Ingestion → Connectors**
+
+Find the connector and click the refresh button to reset the state and trigger a new sync.
+
+## Behavior
+
+The connector imports threat intelligence from CrowdStrike Falcon Intelligence API.
+
+### Data Flow
+
+```mermaid
+graph LR
+    subgraph CrowdStrike API
+        direction TB
+        Actors[Actors]
+        Reports[Reports]
+        Indicators[Indicators]
+        YARA[YARA Rules]
+    end
+
+    subgraph OpenCTI
+        direction LR
+        IntrusionSet[Intrusion Set]
+        Report[Report]
+        Indicator[Indicator]
+        Observable[Observable]
+        YARAInd[YARA Indicator]
+        Malware[Malware]
+        AttackPattern[Attack Pattern]
+    end
+
+    Actors --> IntrusionSet
+    Actors --> AttackPattern
+    Reports --> Report
+    Reports --> Malware
+    Indicators --> Indicator
+    Indicators --> Observable
+    YARA --> YARAInd
+```
+
+### Supported Scopes
+
+| Scope         | Data Imported                                      |
+|---------------|---------------------------------------------------|
+| actor         | Threat actors as Intrusion Sets with TTPs         |
+| report        | Intelligence reports with related entities        |
+| indicator     | IOCs (IPs, domains, hashes, URLs, etc.)           |
+| yara_master   | YARA detection rules                              |
+| snort_master  | Snort/Suricata network detection rules            |
+
+### Entity Mapping
+
+| CrowdStrike Data     | OpenCTI Entity      | Description                                      |
+|----------------------|---------------------|--------------------------------------------------|
+| Actor                | Intrusion Set       | Threat actor with aliases, TTPs, targets         |
+| Report               | Report              | Intelligence report with object references       |
+| Indicator (IP)       | IPv4-Addr/IPv6-Addr | IP address observables                           |
+| Indicator (Domain)   | Domain-Name         | Domain observables                               |
+| Indicator (Hash)     | File                | File hash observables                            |
+| Indicator (URL)      | URL                 | URL observables                                  |
+| YARA Rule            | Indicator (YARA)    | YARA pattern indicators                          |
+| Snort Rule           | Indicator (Snort)   | Snort/Suricata pattern indicators                |
+
+### Confidence Scoring
+
+Indicators are scored based on CrowdStrike's MaliciousConfidence labels:
+
+| Label                    | Default Score |
+|--------------------------|---------------|
+| MaliciousConfidence/Low  | 40            |
+| MaliciousConfidence/Medium | 60          |
+| MaliciousConfidence/High | 80            |
+
+## Debugging
+
+Enable verbose logging:
+
+```env
+CONNECTOR_LOG_LEVEL=debug
+```
+
+Log output includes:
+- API authentication status
+- Entity processing progress
+- Bundle creation and sending
+
+## Additional information
+
+- **API Regions**: Use appropriate base URL for your CrowdStrike region
+- **Start Timestamps**: Setting to 0 imports ALL historical data (use with caution)
+- **Excluded Types**: Consider excluding weak hash types (MD5, SHA1) to reduce noise
+- **TLP Marking**: Default is `amber+strict` reflecting CrowdStrike's data sensitivity
+- **Subscription Required**: Active CrowdStrike Falcon Intelligence subscription required
+
+## Known Issues and Workarounds
+
+- **Large Historical Imports**: Use start timestamps to limit initial data volume
+- **Rate Limits**: CrowdStrike API has rate limits; connector handles them automatically
+- **Missing Actors/Reports**: Ensure your API credentials have appropriate permissions

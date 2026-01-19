@@ -1,12 +1,34 @@
 import json
 import os
+import re
 import sys
 import time
 import uuid
+from typing import Tuple
 
 import requests
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
+
+
+def parse_version(version) -> Tuple[int, int, int]:
+    """
+    Extracts major.minor.patch as a tuple of ints from a version string.
+    Accepts inputs like '2.1', '2.1.3', 'v2.1', etc.
+    """
+    nums = [int(n) for n in re.findall(r"\d+", str(version))]
+    if not nums:
+        raise ValueError(f"Invalid version: {version!r}")
+    while len(nums) < 3:
+        nums.append(0)
+    return nums[0], nums[1], nums[2]
+
+
+def media_type_by_version(version: str) -> str:
+    if parse_version(version) >= (2, 1, 0):
+        return f"application/taxii+json; version={version}"
+    else:
+        return f"application/vnd.oasis.taxii+json; version={version}"
 
 
 class TaxiiPostConnector:
@@ -50,6 +72,16 @@ class TaxiiPostConnector:
             "TAXII_STIX_VERSION", ["taxii", "stix_version"], config
         )
 
+    def check_stream_id(self):
+        """
+        In case of stream_id configuration is missing, raise ValueError
+        """
+        if (
+            not self.helper.connect_live_stream_id
+            or self.helper.connect_live_stream_id.lower() == "changeme"
+        ):
+            raise ValueError("Missing stream ID, please check your configurations.")
+
     def _process_message(self, msg):
         try:
             data = json.loads(msg.data)["data"]
@@ -63,9 +95,8 @@ class TaxiiPostConnector:
             + "/objects/"
         )
         headers = {
-            "Content-Type": "application/vnd.oasis.stix+json; version="
-            + self.taxii_stix_version,
-            "Accept": "application/vnd.oasis.taxii+json; version=" + self.taxii_version,
+            "Content-Type": media_type_by_version(self.taxii_stix_version),
+            "Accept": media_type_by_version(self.taxii_version),
         }
         try:
             data_object = data
@@ -123,6 +154,7 @@ class TaxiiPostConnector:
             self.helper.log_error(str(e))
 
     def start(self):
+        self.check_stream_id()
         self.helper.listen_stream(self._process_message)
 
 

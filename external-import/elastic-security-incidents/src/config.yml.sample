@@ -1,8 +1,9 @@
 opencti:
-  url: 'http://localhost:8080'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe' # Valid UUIDv4
   name: 'Elastic Security Incidents'
   scope: 'elastic-security-incidents'
@@ -17,4 +18,5 @@ elastic_security:
   import_alerts: true # Import security alerts
   import_cases: false # Import security cases (requires Kibana URL - set to true only if using Kibana)
   alert_statuses: '' # Alert statuses to import (comma-separated, leave empty to import all)
+  alert_rule_tags: '' # Alert rules tags to import (comma-separated, leave empty to import all)
   case_statuses: '' # Case statuses to import (comma-separated, leave empty to import all)

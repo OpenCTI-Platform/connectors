@@ -1,33 +1,20 @@
 version: '3'
 services:
   connector-template:
-    image: opencti/connector-template:rolling
+    image: opencti/connector-template:latest # 'template' being the name of connector's directory
     environment:
-      # Connector's generic execution parameters
+      # Generic parameters (connection with OpenCTI)
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=CHANGEME
-      # Connector's definition parameters REQUIRED
+      # Common parameters for connectors of type STREAM
       - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_NAME=CHANGEME
+      - CONNECTOR_NAME=CHANGEME # optional (default: 'Template Connector')
       - CONNECTOR_SCOPE=CHANGEME
-      - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_LIVE_STREAM_ID=live # ID of the live stream created in the OpenCTI UI
-      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
-      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
-
-      # Connector's custom execution parameters
-      - CONNECTOR_TEMPLATE_API_BASE_URL=CHANGEME
-      - CONNECTOR_TEMPLATE_API_KEY=CHANGEME
-
-      # Add proxy parameters below if needed
-      # - HTTP_PROXY=CHANGEME
-      # - HTTPS_PROXY=CHANGEME
-      # - NO_PROXY=CHANGEME
+      - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      - CONNECTOR_LIVE_STREAM_ID=live # optional, ID of the live stream created in the OpenCTI UI (default: 'live')
+      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true  # optional (default: true)
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true # optional (default: true)
+      # Custom parameters for connector-template
+      - TEMPLATE_API_BASE_URL=CHANGEME
+      - TEMPLATE_API_KEY=CHANGEME
     restart: always
-    # networks:
-    #   - docker_default
-
-# networks:
-#   default:
-#     external: true
-#     name: docker_default

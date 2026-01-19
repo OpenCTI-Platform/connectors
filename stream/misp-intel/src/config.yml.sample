@@ -1,15 +1,15 @@
 opencti:
-  url: 'ChangeMe'  # OpenCTI platform URL
+  url: 'http://localhost'
   token: 'ChangeMe'  # OpenCTI API token
 
 connector:
-  id: 'ChangeMe'  # Connector UUID
   type: 'STREAM'
+  id: 'ChangeMe'  # Connector UUID
   name: 'MISP Intel'
   scope: 'misp'
   confidence_level: 80  # From 0 (not confident) to 100 (fully confident)
   log_level: 'info'  # Logging level (debug, info, warning, error)
-  live_stream_id: 'live'  # ID of the live stream to listen to
+  live_stream_id: 'ChangeMe'  # ID of the live stream to listen to
   live_stream_listen_delete: true  # Listen to delete events
   live_stream_no_dependencies: false  # Do not auto-resolve dependencies
   # Comma-separated list of container types to process
@@ -21,7 +21,7 @@ misp:
   ssl_verify: true  # Verify SSL certificates
   
   # Organization configuration
-  owner_org: ''  # Optional: Organization that will own the events in MISP (leave empty to use MISP default)
+  # owner_org: 'ChangeMe'  # Optional: Organization that will own the events in MISP
   
   # Event configuration
   distribution_level: 1  # 0: Your organisation only, 1: This community only, 2: Connected communities, 3: All communities

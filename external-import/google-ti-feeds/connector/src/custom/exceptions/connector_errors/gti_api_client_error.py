@@ -1,6 +1,6 @@
 """Exception for errors related to API client setup and configuration."""
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 from connector.src.custom.exceptions.gti_base_error import GTIBaseError
 
@@ -11,8 +11,8 @@ class GTIApiClientError(GTIBaseError):
     def __init__(
         self,
         message: str,
-        client_component: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
+        client_component: str | None = None,
+        details: dict[str, Any] | None = None,
     ):
         """Initialize the exception.
 

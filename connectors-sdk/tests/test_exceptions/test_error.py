@@ -1,18 +1,5 @@
 import pytest
-from connectors_sdk.exceptions.error import (
-    ConfigError,
-    DataRetrievalError,
-    UseCaseError,
-)
-
-
-def test_config_error():
-    """Dummy test for ConfigError."""
-    # Given a ConfigError instance
-    # When raising the exception
-    # Then it should raise ConfigError with the correct message
-    with pytest.raises(ConfigError):
-        raise ConfigError("Configuration error occurred")
+from connectors_sdk.exceptions.error import DataRetrievalError, UseCaseError
 
 
 def test_data_retrieval_error():

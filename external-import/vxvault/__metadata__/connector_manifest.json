@@ -1,0 +1,21 @@
+{
+  "title": "VX Vault",
+  "slug": "vxvault",
+  "description": "Information coming soon",
+  "short_description": "Information coming soon",
+  "logo": "external-import/vxvault/__metadata__/logo.png",
+  "use_cases": [
+    "Open Source Threat Intel"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=5.5.0",
+  "subscription_link": "http://vxvault.net",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/vxvault",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-vxvault",
+  "container_type": "EXTERNAL_IMPORT"
+}

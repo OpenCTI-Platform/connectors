@@ -1,82 +1,208 @@
-# OpenCTI Intel 471 Connector
+# OpenCTI Intel 471 Connector (Legacy)
 
-This is the legacy version of the connector. Please use [OpenCTI Intel 471 Connector v2](../intel471_v2).
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner Verified | -    | -       |
 
-## Description
+> ⚠️ **DEPRECATED**: This is the legacy version of the connector. Please use [OpenCTI Intel 471 Connector v2](../intel471_v2) for new deployments.
 
-Intel 471 delivers structured technical and non-technical data and intelligence on cyber threats.
+The Intel 471 connector imports threat intelligence from Intel 471's Titan cybercrime intelligence platform into OpenCTI.
 
-This connector ingests STIX 2.1 objects from Intel 471's Titan cybercrime intelligence platform.
+## Table of Contents
 
-Intel 471 Website: [https://www.intel471.com](https://www.intel471.com)
+- [OpenCTI Intel 471 Connector (Legacy)](#opencti-intel-471-connector-legacy)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction](#introduction)
+  - [Installation](#installation)
+    - [Requirements](#requirements)
+  - [Configuration variables](#configuration-variables)
+    - [OpenCTI environment variables](#opencti-environment-variables)
+    - [Base connector environment variables](#base-connector-environment-variables)
+    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
+  - [Deployment](#deployment)
+    - [Docker Deployment](#docker-deployment)
+    - [Manual Deployment](#manual-deployment)
+  - [Usage](#usage)
+  - [Behavior](#behavior)
+  - [Debugging](#debugging)
+  - [Additional information](#additional-information)
 
-This connector runs four streams at this time:
+## Introduction
 
-| Stream                | Operation                                                                                      | Produced objects
-|-----------------------|------------------------------------------------------------------------------------------------|--------------------------------------------------
-| Intel471IndicatorsStream | Fetches malware indicators from `/indicators` application programming interface (API) endpoint | `Indicator` and `Malware` SDOs related using `Relationship` object; `URL`, `IPv4Address` or `File` Observable related with the `Indicator` SDO using `Relationship` object
-| Intel471YARAStream | Fetches YARA rules from `/yara` API endpoint                                                   | `Indicator` and `Malware` SDOs related using `Relationship` object
-| Intel471IOCsStream | Fetches indicators of compromise (IoCs) from `/iocs` API endpoint                              | `Indicator` and `Report` SDOs and one of following Observables: `URL`, `DomainName`, `IPv4Address`, `File`. Both `Indicator` and Observable objects are related with the `Report` using `Report`'s internal property `object_refs`. Observable and `Indicator` objects also are related using `Relationship` object
-| Intel471CVEsStream | Fetches Common Vulnerabilities and Exposures (CVE) reports from `/cve/reports` API endpoint    | `Vulnerability` SDO
+Intel 471 delivers structured technical and non-technical data and intelligence on cyber threats. This connector ingests STIX 2.1 objects from Intel 471's Titan cybercrime intelligence platform.
 
-Each stream can be enabled or disabled and configured separately (see "Configuration" section for more details).
+The connector runs four data streams:
 
-## Prerequisites
-
-Intel 471 account with API credentials.
-
-Available as part of Intel 471's paid subscriptions. For more information, please contact sales@intel471.com.
-
-## Configuration
-
-Configuration options can be set as environment variables, and in `docker-compose.yml`, or in `config.yml`.
-
-| Env variable                        | config.yaml variable       | Description
-|-------------------------------------|----------------------------|--------------------------------------------------
-| INTEL471_API_USERNAME               | api_username               | Titan API username
-| INTEL471_API_KEY                    | api_key                    | Titan API key
-| INTEL471_INTERVAL_INDICATORS        | interval_indicators        | How often malware indicators should be fetched in minutes. If not set, the stream will not be enabled.
-| INTEL471_INITIAL_HISTORY_INDICATORS | initial_history_indicators | Initial date in epoch milliseconds UTC, such as 1643989649000, the malware indicators should be fetched from on the connector's first run. If not set, they will be fetched from the connector's start date. Excludes historical dates.
-| INTEL471_INTERVAL_IOCS              | interval_iocs              | Same as INTEL471_INTERVAL_INDICATORS variable, but for IoCs.
-| INTEL471_INITIAL_HISTORY_IOCS       | initial_history_iocs       | Same as INTEL471_INITIAL_HISTORY_INDICATORS variable, but for IoCs.
-| INTEL471_INTERVAL_CVES              | interval_cves              | Same as INTEL471_INTERVAL_INDICATORS variable, but for CVE reports.
-| INTEL471_INITIAL_HISTORY_CVES       | initial_history_cves       | Same as INTEL471_INITIAL_HISTORY_INDICATORS variable, but for CVE reports.
-| INTEL471_INTERVAL_YARA              | interval_yara              | Same as INTEL471_INTERVAL_INDICATORS variable, but for YARA rules.
-| INTEL471_INITIAL_HISTORY_YARA       | initial_history_yara       | Same as INTEL471_INITIAL_HISTORY_INDICATORS variable, but for YARA rules.
-| INTEL471_PROXY                      | proxy                      | Optional Proxy URL, for example `http://user@pass:localhost:3128`
-
-_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
-For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://www.notion.so/Connectors-4586c588462d4a1fb5e661f2d9837db8)._
+| Stream                    | Description                                          | Produced Objects                                        |
+|---------------------------|------------------------------------------------------|--------------------------------------------------------|
+| Intel471IndicatorsStream  | Fetches malware indicators from `/indicators` API    | Indicator, Malware, URL/IPv4/File Observables          |
+| Intel471YARAStream        | Fetches YARA rules from `/yara` API                  | Indicator (YARA), Malware                              |
+| Intel471IOCsStream        | Fetches IOCs from `/iocs` API                        | Indicator, Report, URL/Domain/IPv4/File Observables    |
+| Intel471CVEsStream        | Fetches CVE reports from `/cve/reports` API          | Vulnerability                                          |
 
 ## Installation
 
-For the installation process, please refer to [OpenCTI's documentation on connectors](https://www.notion.so/Connectors-4586c588462d4a1fb5e661f2d9837db8).
+### Requirements
 
-## Running locally
+- OpenCTI Platform >= 6.x
+- Intel 471 account with API credentials (paid subscription required)
 
-### Stand-alone
+## Configuration variables
 
-This connector can run as a stand-alone Python program. It does require access to the running OpenCTI API instance
-and the RabbitMQ queue. Provide configuration in `src/config.yaml`, install Python [dependencies](src/requirements.txt) and run it by calling [main.py](src/main.py).
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
 
-### Docker
+### OpenCTI environment variables
 
-Build a Docker Image using the provided `Dockerfile`. Example: `docker build . -t connector-intel471:latest`.
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your environment.
-Then, start the docker container with the provided `docker-compose.yml` or integrate it into the global `docker-compose.yml` file of OpenCTI.
+| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
+|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
+| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
+| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+
+### Base connector environment variables
+
+| Parameter         | config.yml      | Docker environment variable   | Default   | Mandatory | Description                                                                 |
+|-------------------|-----------------|-------------------------------|-----------|-----------|-----------------------------------------------------------------------------|
+| Connector ID      | id              | `CONNECTOR_ID`                |           | Yes       | A unique `UUIDv4` identifier for this connector instance.                   |
+| Connector Name    | name            | `CONNECTOR_NAME`              | Intel 471 | No        | Name of the connector.                                                      |
+| Connector Scope   | scope           | `CONNECTOR_SCOPE`             | intel471  | No        | The scope or type of data the connector is importing.                       |
+| Log Level         | log_level       | `CONNECTOR_LOG_LEVEL`         | info      | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
+
+### Connector extra parameters environment variables
+
+| Parameter                         | config.yml                   | Docker environment variable              | Default | Mandatory | Description                                                                 |
+|-----------------------------------|------------------------------|------------------------------------------|---------|-----------|-----------------------------------------------------------------------------|
+| API Username                      | api_username                 | `INTEL471_API_USERNAME`                  |         | Yes       | Titan API username.                                                         |
+| API Key                           | api_key                      | `INTEL471_API_KEY`                       |         | Yes       | Titan API key.                                                              |
+| Indicators Interval               | interval_indicators          | `INTEL471_INTERVAL_INDICATORS`           |         | No        | Minutes between indicator fetches. Leave empty to disable.                  |
+| Indicators Initial History        | initial_history_indicators   | `INTEL471_INITIAL_HISTORY_INDICATORS`    |         | No        | Epoch milliseconds for initial fetch start date.                            |
+| IOCs Interval                     | interval_iocs                | `INTEL471_INTERVAL_IOCS`                 |         | No        | Minutes between IOC fetches. Leave empty to disable.                        |
+| IOCs Initial History              | initial_history_iocs         | `INTEL471_INITIAL_HISTORY_IOCS`          |         | No        | Epoch milliseconds for initial fetch start date.                            |
+| CVEs Interval                     | interval_cves                | `INTEL471_INTERVAL_CVES`                 |         | No        | Minutes between CVE report fetches. Leave empty to disable.                 |
+| CVEs Initial History              | initial_history_cves         | `INTEL471_INITIAL_HISTORY_CVES`          |         | No        | Epoch milliseconds for initial fetch start date.                            |
+| YARA Interval                     | interval_yara                | `INTEL471_INTERVAL_YARA`                 |         | No        | Minutes between YARA rule fetches. Leave empty to disable.                  |
+| YARA Initial History              | initial_history_yara         | `INTEL471_INITIAL_HISTORY_YARA`          |         | No        | Epoch milliseconds for initial fetch start date.                            |
+| Proxy                             | proxy                        | `INTEL471_PROXY`                         |         | No        | Optional proxy URL (e.g., `http://user:pass@localhost:3128`).               |
+
+## Deployment
+
+### Docker Deployment
+
+Build the Docker image:
+
+```bash
+docker build -t opencti/connector-intel471:latest .
+```
+
+Configure the connector in `docker-compose.yml`:
+
+```yaml
+  connector-intel471:
+    image: opencti/connector-intel471:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Intel 471
+      - CONNECTOR_SCOPE=intel471
+      - CONNECTOR_LOG_LEVEL=info
+      - INTEL471_API_USERNAME=ChangeMe
+      - INTEL471_API_KEY=ChangeMe
+      - INTEL471_INTERVAL_INDICATORS=60
+      - INTEL471_INTERVAL_IOCS=60
+      - INTEL471_INTERVAL_CVES=60
+      - INTEL471_INTERVAL_YARA=60
+    restart: always
+```
+
+Start the connector:
+
+```bash
+docker compose up -d
+```
+
+### Manual Deployment
+
+1. Create `config.yml` based on `config.yml.sample`.
+
+2. Install dependencies:
+
+```bash
+pip3 install -r requirements.txt
+```
+
+3. Start the connector:
+
+```bash
+python3 main.py
+```
 
 ## Usage
 
-Navigate to **Data->Connectors->Intel471** and observe completed works and works in progress. They should start to appear after
-configured intervals, if new data was available in Titan.
+Navigate to **Data → Connectors → Intel471** to observe completed and in-progress work items. Data appears after configured intervals when new data is available in Titan.
 
-To see the indicators created by `Intel471IndicatorsStream`, `Intel471IOCsStream` and `Intel471YARAStream`, navigate to **Observations->Indicators**.
+**View imported data:**
+- **Indicators**: Observations → Indicators
+- **Malware**: Arsenal → Malwares
+- **Reports**: Analysis → Reports
+- **CVEs**: Arsenal → Vulnerabilities
 
-To see the malware objects created by `Intel471IndicatorsStream` and `Intel471YARAStream`, navigate to **Arsenal->Malwares**.
+## Behavior
 
-To see the Reports created by `Intel471IOCsStream`, navigate to **Analysis->Reports**.
+The connector fetches data from Intel 471's Titan API across multiple streams.
 
-To see the CVEs created by `Intel471CVEsStream`, navigate to **Arsenal->Vulnerabilities**.
+### Data Flow
 
+```mermaid
+graph LR
+    subgraph Intel 471 Titan
+        direction TB
+        Indicators[/indicators API]
+        IOCs[/iocs API]
+        CVEs[/cve/reports API]
+        YARA[/yara API]
+    end
 
-**Pro-tip**: Creating a new user and API token for the connector can help you more easily track which STIX2 objects were created by the connector.
+    subgraph OpenCTI
+        direction LR
+        Indicator[Indicator]
+        Observable[Observable]
+        Malware[Malware]
+        Report[Report]
+        Vulnerability[Vulnerability]
+    end
+
+    Indicators --> Indicator
+    Indicators --> Malware
+    Indicators --> Observable
+    IOCs --> Report
+    IOCs --> Indicator
+    CVEs --> Vulnerability
+    YARA --> Indicator
+```
+
+### Entity Mapping
+
+| Intel 471 Data       | OpenCTI Entity      | Description                                      |
+|----------------------|---------------------|--------------------------------------------------|
+| Malware Indicator    | Indicator           | IOC with pattern                                 |
+| Malware Family       | Malware             | Malware family SDO                               |
+| IOC                  | Report + Indicator  | Intelligence report with IOCs                    |
+| CVE Report           | Vulnerability       | CVE vulnerability                                |
+| YARA Rule            | Indicator (YARA)    | YARA detection rule                              |
+| URL/Domain/IP/Hash   | Observable          | Technical observables                            |
+
+## Debugging
+
+Enable verbose logging:
+
+```env
+CONNECTOR_LOG_LEVEL=debug
+```
+
+## Additional information
+
+- **Paid Subscription**: Intel 471 API access requires a paid subscription
+- **Stream Control**: Each stream can be independently enabled/disabled
+- **Pro Tip**: Create a dedicated API token for the connector to track created objects
+- **Contact**: For API access, contact sales@intel471.com
+- **Reference**: [Intel 471](https://www.intel471.com)

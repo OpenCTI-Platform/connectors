@@ -1,7 +1,5 @@
 """Base class for entity conversion errors."""
 
-from typing import Optional
-
 from connector.src.custom.exceptions.gti_converting_error import GTIConvertingError
 
 
@@ -14,8 +12,8 @@ class GTIEntityConversionError(GTIConvertingError):
     def __init__(
         self,
         message: str,
-        entity_id: Optional[str] = None,
-        entity_type: Optional[str] = None,
+        entity_id: str | None = None,
+        entity_type: str | None = None,
     ):
         """Initialize the exception.
 

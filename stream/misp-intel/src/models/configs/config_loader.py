@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from connectors_sdk.core.pydantic import ListFromString
+from connectors_sdk import ListFromString
 from pydantic import Field
 from pydantic_settings import (
     BaseSettings,
@@ -33,11 +33,6 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
     scope: ListFromString = Field(
         default=["misp"],
         description="The scope or type of data the connector is processing.",
-    )
-    live_stream_id: str = Field(
-        default="live",
-        alias="CONNECTOR_LIVE_STREAM_ID",
-        description="The ID of the live stream to listen to.",
     )
     container_types: ListFromString = Field(
         default=["report", "grouping", "case-incident", "case-rfi", "case-rft"],
@@ -84,7 +79,6 @@ class ConfigLoader(ConfigBaseSettings):
                 DotEnvSettingsSource(
                     settings_cls,
                     env_file=env_path,
-                    env_ignore_empty=True,
                     env_file_encoding="utf-8",
                 ),
             )
@@ -100,7 +94,6 @@ class ConfigLoader(ConfigBaseSettings):
             return (
                 EnvSettingsSource(
                     settings_cls,
-                    env_ignore_empty=True,
                 ),
             )
 

@@ -1,50 +1,51 @@
-# OpenCTI FIRST EPSS enrichment connector
+# OpenCTI FIRST EPSS Connector
 
-<!--
-General description of the connector
-* What it does
-* How it works
-* Special requirements
-* Use case description
-* ...
-* Please find an example of expected documentation below
-* REQUIRED CHANGES => Check https://docs.opencti.io/latest/development/connectors/
--->
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
-Table of Contents
-- [Introduction](#introduction)
-- [Installation](#installation)
-  - [Requirements](#requirements)
-- [Configuration variables](#configuration-variables)
-  - [OpenCTI environment variables](#opencti-environment-variables)
-  - [Base connector environment variables](#base-connector-environment-variables)
-  - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
-- [Deployment](#deployment)
-  - [Docker Deployment](#docker-deployment)
-  - [Manual Deployment](#manual-deployment)
-- [Usage](#usage)
-- [Behavior](#behavior)
-- [Debugging](#debugging)
-- [Additional information](#additional-information)
+The FIRST EPSS connector enriches CVE Vulnerability entities with Exploit Prediction Scoring System (EPSS) scores and percentiles from the FIRST.org API, helping prioritize vulnerability remediation efforts.
+
+## Table of Contents
+
+- [OpenCTI FIRST EPSS Connector](#opencti-first-epss-connector)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction](#introduction)
+  - [Installation](#installation)
+    - [Requirements](#requirements)
+  - [Configuration variables](#configuration-variables)
+    - [OpenCTI environment variables](#opencti-environment-variables)
+    - [Base connector environment variables](#base-connector-environment-variables)
+    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
+  - [Deployment](#deployment)
+    - [Docker Deployment](#docker-deployment)
+    - [Manual Deployment](#manual-deployment)
+  - [Usage](#usage)
+  - [Behavior](#behavior)
+  - [Debugging](#debugging)
+  - [Additional information](#additional-information)
 
 ## Introduction
 
-The OpenCTI FIRST EPSS enrichment connector can be used to enrich CVE vulnerabilities with EPSS information provided by the [FIRST EPSS API](https://www.first.org/epss/api). 
+The Exploit Prediction Scoring System (EPSS) is a data-driven effort for estimating the probability that a software vulnerability will be exploited in the wild. Developed by [FIRST.org](https://www.first.org/epss/), EPSS produces daily scores based on CVE information combined with evidence of exploitation activity.
+
+This connector integrates the FIRST EPSS API with OpenCTI to:
+- Query EPSS scores for CVE vulnerabilities
+- Add EPSS score (probability of exploitation) to vulnerability entities
+- Add EPSS percentile (relative ranking) to vulnerability entities
+- Help security teams prioritize patching based on exploitation likelihood
 
 ## Installation
 
 ### Requirements
 
-- OpenCTI Platform >= 6.8.0
+- OpenCTI Platform >= 6.9.8
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
-in `config.yml` (for manual deployment).
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
 
 ### OpenCTI environment variables
-
-Below are the parameters you'll need to set for OpenCTI:
 
 | Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
 |---------------|------------|-----------------------------|-----------|------------------------------------------------------|
@@ -53,104 +54,168 @@ Below are the parameters you'll need to set for OpenCTI:
 
 ### Base connector environment variables
 
-Below are the parameters you'll need to set for running the connector properly:
-
-| Parameter           | config.yml | Docker environment variable | Default         | Mandatory | Description                                                                              |
-|---------------------|------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID        | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type      | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `INTERNAL_ENRICHMENT` for this connector.                        |
-| Connector Name      | name       | `CONNECTOR_NAME`            | /               | Yes       | Name of the connector.                                                                   |
-| Connector Scope     | scope      | `CONNECTOR_SCOPE`           | `vulnerability` | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Connector Log Level | log_level  | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
-| Connector Auto      | auto 	     | `CONNECTOR_AUTO`            | False           | Yes       | Must be `true` or `false` to enable or disable auto-enrichment of observables            |
+| Parameter       | config.yml | Docker environment variable | Default                               | Mandatory | Description                                                                 |
+|-----------------|------------|-----------------------------|-----------------------------------------|-----------|-----------------------------------------------------------------------------|
+| Connector ID    | id         | `CONNECTOR_ID`              | 18f1a9e6-a82b-4ef4-9699-ae406fe4a1a6 | No        | A unique `UUIDv4` identifier for this connector instance.                   |
+| Connector Name  | name       | `CONNECTOR_NAME`            | First EPSS                            | No        | Name of the connector.                                                      |
+| Connector Scope | scope      | `CONNECTOR_SCOPE`           | vulnerability                         | No        | Should be `vulnerability` for this connector.                               |
+| Connector Type  | type       | `CONNECTOR_TYPE`            | INTERNAL_ENRICHMENT                   | Yes       | Should always be `INTERNAL_ENRICHMENT` for this connector.                  |
+| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | error                                 | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
+| Auto Mode       | auto       | `CONNECTOR_AUTO`            | false                                 | No        | Enables or disables automatic enrichment of vulnerabilities.                |
 
 ### Connector extra parameters environment variables
 
-Below are the parameters you'll need to set for the connector:
-
-| Parameter    | config.yml   | Docker environment variable | Default                              | Mandatory | Description |
-|--------------|--------------|-----------------------------|--------------------------------------|-----------|-------------|
-| API base URL | api_base_url | FIRST_EPSS_API_BASE_URL     | `https://api.first.org/data/v1/epss` | No        |             |
-| Max TLP      | max_tlp      | FIRST_EPSS_MAX_TLP          | /                                    | No        |             |
+| Parameter     | config.yml              | Docker environment variable  | Default                              | Mandatory | Description                                         |
+|---------------|-------------------------|------------------------------|--------------------------------------|-----------|-----------------------------------------------------|
+| API Base URL  | first_epss.api_base_url | `FIRST_EPSS_API_BASE_URL`    | https://api.first.org/data/v1/epss  | No        | FIRST EPSS API endpoint URL.                        |
+| Max TLP       | first_epss.max_tlp      | `FIRST_EPSS_MAX_TLP`         | TLP:AMBER                           | No        | Maximum TLP level for vulnerabilities to be enriched.|
 
 ## Deployment
 
 ### Docker Deployment
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
-sometimes the OpenCTI SDK fails to initialize.
+Build the Docker image:
 
-Build a Docker Image using the provided `Dockerfile`.
-
-Example:
-
-```shell
-# Replace the IMAGE NAME with the appropriate value
-docker build . -t [IMAGE NAME]:latest
+```bash
+docker build -t opencti/connector-first-epss:latest .
 ```
 
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
-environment. Then, start the docker container with the provided docker-compose.yml
+Configure the connector in `docker-compose.yml`:
 
-```shell
+```yaml
+  connector-first-epss:
+    image: opencti/connector-first-epss:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=18f1a9e6-a82b-4ef4-9699-ae406fe4a1a6
+      - CONNECTOR_NAME=First EPSS
+      - CONNECTOR_SCOPE=vulnerability
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_AUTO=false
+      - FIRST_EPSS_API_BASE_URL=https://api.first.org/data/v1/epss
+      - FIRST_EPSS_MAX_TLP=TLP:AMBER
+    restart: always
+```
+
+Start the connector:
+
+```bash
 docker compose up -d
-# -d for detached
 ```
 
 ### Manual Deployment
 
-Create a file `config.yml` based on the provided `config.yml.sample`.
+1. Copy and configure `config.yml` from the provided `config.yml.sample`.
 
-Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
+2. Install dependencies:
 
-Install the required python dependencies (preferably in a virtual environment):
-
-```shell
+```bash
 pip3 install -r requirements.txt
 ```
 
-Then, start the connector from recorded-future/src:
+3. Start the connector from the `src` directory:
 
-```shell
+```bash
 python3 main.py
 ```
 
 ## Usage
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
+The connector enriches Vulnerability entities (CVEs) with EPSS scores.
 
-However, if you would like to force an immediate download of a new batch of entities, navigate to:
+**Arsenal → Vulnerabilities**
 
-`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform.
-
-Find the connector, and click on the refresh button to reset the connector's state and force a new
-download of data by re-running the connector.
+Select a Vulnerability (CVE), then click the enrichment button and choose FIRST EPSS.
 
 ## Behavior
 
-<!--
-Describe how the connector functions:
-* What data is ingested, updated, or modified
-* Important considerations for users when utilizing this connector
-* Additional relevant details
--->
+The connector queries the FIRST EPSS API for CVE identifiers and updates vulnerability entities with exploitation probability data.
 
+### Data Flow
+
+```mermaid
+graph LR
+    subgraph OpenCTI Input
+        CVE[Vulnerability / CVE]
+    end
+
+    subgraph FIRST EPSS API
+        API[EPSS API v1]
+    end
+
+    subgraph OpenCTI Output
+        EnrichedCVE[Enriched Vulnerability]
+        EPSSScore[EPSS Score]
+        EPSSPercentile[EPSS Percentile]
+    end
+
+    CVE --> API
+    API --> EnrichedCVE
+    EnrichedCVE --> EPSSScore
+    EnrichedCVE --> EPSSPercentile
+```
+
+### Enrichment Mapping
+
+| FIRST EPSS Data  | OpenCTI Property              | Description                                            |
+|------------------|-------------------------------|--------------------------------------------------------|
+| cve              | Vulnerability name            | CVE identifier (validation check)                      |
+| epss             | x_opencti_epss_score          | Probability of exploitation (0.0 - 1.0)                |
+| percentile       | x_opencti_epss_percentile     | Percentile ranking compared to all CVEs (0.0 - 1.0)    |
+
+### Processing Details
+
+1. **Scope Validation**: Verifies entity type is `vulnerability`
+2. **CVE Format Check**: Validates CVE identifier format (CVE-YYYY-NNNNN)
+3. **TLP Validation**: Checks TLP against max_tlp configuration
+4. **API Query**: Queries FIRST EPSS API with CVE identifier
+5. **Score Update**: Updates vulnerability with EPSS score and percentile
+
+### EPSS Score Interpretation
+
+| Score Range    | Interpretation                                             |
+|----------------|-----------------------------------------------------------|
+| 0.0 - 0.1      | Low probability of exploitation                            |
+| 0.1 - 0.3      | Moderate probability of exploitation                       |
+| 0.3 - 0.7      | High probability of exploitation                           |
+| 0.7 - 1.0      | Very high probability of exploitation                      |
+
+### EPSS Percentile Interpretation
+
+| Percentile    | Interpretation                                              |
+|---------------|-------------------------------------------------------------|
+| 0.90 - 1.00   | Top 10% most likely to be exploited                         |
+| 0.70 - 0.90   | Above average exploitation likelihood                       |
+| 0.30 - 0.70   | Average exploitation likelihood                             |
+| 0.00 - 0.30   | Below average exploitation likelihood                       |
+
+### Generated STIX Objects
+
+| STIX Property              | Description                                         |
+|----------------------------|-----------------------------------------------------|
+| x_opencti_epss_score       | EPSS probability score (float, 0.0-1.0)             |
+| x_opencti_epss_percentile  | EPSS percentile ranking (float, 0.0-1.0)            |
 
 ## Debugging
 
-The connector can be debugged by setting the appropiate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
-e., `self.helper.connector_logger.error("An error message")`.
+Enable verbose logging by setting:
 
-<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
+```env
+CONNECTOR_LOG_LEVEL=debug
+```
+
+Log output includes:
+- CVE processing status
+- API query details
+- EPSS score retrieval results
+- Bundle sending status
 
 ## Additional information
 
-<!--
-Any additional information about this connector
-* What information is ingested/updated/changed
-* What should the user take into account when using this connector
-* ...
--->
+- **API Documentation**: [FIRST EPSS API](https://www.first.org/epss/api)
+- **EPSS Model**: Scores are updated daily based on current exploitation evidence
+- **CVE Format Required**: Only CVE-formatted vulnerability names are processed
+- **Free API**: The FIRST EPSS API is publicly available without authentication
+- **Playbook Support**: This connector supports OpenCTI playbook automation
+- **Organization Identity**: Creates a "FIRST EPSS" organization identity for attribution

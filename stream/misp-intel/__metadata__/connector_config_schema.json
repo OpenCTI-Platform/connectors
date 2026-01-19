@@ -54,7 +54,6 @@
       "type": "integer"
     },
     "CONNECTOR_LIVE_STREAM_ID": {
-      "default": "live",
       "description": "The ID of the live stream to listen to.",
       "type": "string"
     },
@@ -99,7 +98,7 @@
     },
     "MISP_OWNER_ORG": {
       "default": null,
-      "description": "Organization that will own the events in MISP (leave empty to use MISP default).",
+      "description": "Organization that will own the events in MISP",
       "type": "string"
     },
     "MISP_DISTRIBUTION_LEVEL": {
@@ -163,6 +162,7 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
+    "CONNECTOR_LIVE_STREAM_ID",
     "MISP_URL",
     "MISP_API_KEY"
   ],

@@ -1,109 +1,207 @@
-# VirusTotal Connector
+# OpenCTI VirusTotal Connector
 
-* This connector checks files, IP addresses, domains, and URLs against the VirusTotal API for enrichment.
-* It requires a VirusTotal API Key.
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
-* The following outputs are enabled by default, and are configurable:
-  * Full findings are reported as a table in a new note that is attached to the entity being enriched
-  * The score of the indicator will be adjusted to the count of VT engines that find the entity to be a positive
-  * If an observable has a count of positive findings over 10, a corresponding indicator will be created.
-  * For the corresponding indicator, the **Detection** flag will be set to TRUE
-  * If a sample of the artifact is available and not yet in OpenCTI, it will be imported (if under 32MB)
+## Table of Contents
 
-  
+- [Introduction](#introduction)
+- [Installation](#installation)
+  - [Requirements](#requirements)
+- [Configuration](#configuration)
+  - [OpenCTI Configuration](#opencti-configuration)
+  - [Base Connector Configuration](#base-connector-configuration)
+  - [VirusTotal Configuration](#virustotal-configuration)
+- [Deployment](#deployment)
+  - [Docker Deployment](#docker-deployment)
+  - [Manual Deployment](#manual-deployment)
+- [Usage](#usage)
+- [Behavior](#behavior)
+  - [Data Flow](#data-flow)
+  - [Enrichment Mapping](#enrichment-mapping)
+  - [Indicator Creation](#indicator-creation)
+  - [Generated STIX Objects](#generated-stix-objects)
+- [Debugging](#debugging)
+- [Additional Information](#additional-information)
+
+---
+
+## Introduction
+
+VirusTotal is a service that analyzes files, URLs, domains, and IPs to detect malware and other breaches. This connector enriches observables by querying the VirusTotal API and importing threat intelligence.
+
+Key features:
+- Multi-engine malware detection
+- File hash reputation
+- IP, domain, and URL analysis
+- YARA rule import
+- Automatic indicator creation
+- Sample import for artifacts
+
+---
 
 ## Installation
 
 ### Requirements
 
 - OpenCTI Platform >= 6.0.6
-
-### Configuration
-
-Configuration parameters are provided using environment variables as described below.
-
-#### Common OpenCTI Parameters
-
-| Parameter `opencti` | config.yml | Docker environment variable | Mandatory | Description                                                                       |
-|---------------------|------------|-----------------------------|-----------|-----------------------------------------------------------------------------------|
-| OpenCTI URL         | `url`      | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform. No trailing `/`. Example: `http://opencti:8080`. |
-| OpenCTI Token       | `token`    | `OPENCTI_TOKEN`             | Yes       | The default admin token from OpenCTI platform settings.                           |
+- VirusTotal API key
+- Network access to VirusTotal API
 
 ---
 
-#### Base connector environment variables
+## Configuration
 
-| Parameter `connector` | config.yml  | Docker environment variable | Default               | Mandatory | Description                                                                              |
-|-----------------------|-------------|-----------------------------|-----------------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID          | `id`        | `CONNECTOR_ID`              | /                     | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type        | `type`      | `CONNECTOR_TYPE`            | `INTERNAL_ENRICHMENT` | Yes       | Should always be set to `INTERNAL_ENRICHMENT` for this connector.                        |
-| Connector Name        | `name`      | `CONNECTOR_NAME`            | `VirusTotal`          | Yes       | Name of the connector.                                                                   |
-| Connector Scope       | `scope`     | `CONNECTOR_SCOPE`           | /                     | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Connector Log Level   | `log_level` | `CONNECTOR_LOG_LEVEL`       | `info`                | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
-| Connector Auto        | `auto`      | `CONNECTOR_AUTO`            | `True`                | Yes       | Must be `true` or `false` to enable or disable auto-enrichment of observables            |
+### OpenCTI Configuration
 
----
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `opencti_url` | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
+| `opencti_token` | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
 
-## File/Artifact Specific Config Settings
+### Base Connector Configuration
 
-| Parameter `virustotal`          | config.yml                        | Docker environment variable                  | Default | Mandatory | Description                                                                                     |
-|---------------------------------|-----------------------------------|----------------------------------------------|---------|-----------|-------------------------------------------------------------------------------------------------|
-| File create note full report    | `file_create_note_full_report`    | `VIRUSTOTAL_FILE_CREATE_NOTE_FULL_REPORT`    | `True`  | No        | Whether or not to include the full report as a Note                                             |
-| File upload unseen artifacts    | `file_upload_unseen_artifacts`    | `VIRUSTOTAL_FILE_UPLOAD_UNSEEN_ARTIFACTS`    | `True`  | No        | Whether to upload artifacts (smaller than 32MB) that VirusTotal has no record of for analysis   |
-| File indicator create positives | `file_indicator_create_positives` | `VIRUSTOTAL_FILE_INDICATOR_CREATE_POSITIVES` | `10`    | No        | Create an indicator for File/Artifact based observables once this positive threshold is reached |
-| File indicator valid minutes    | `file_indicator_valid_minutes`    | `VIRUSTOTAL_FILE_INDICATOR_VALID_MINUTES`    | `2880`  | No        | How long the indicator is valid for in minutes                                                  |
-| File indicator detect           | `file_indicator_detect`           | `VIRUSTOTAL_FILE_INDICATOR_DETECT`           | `True`  | No        | Whether or not to set detection for the indicator to true                                       |
-| File import yara                | `file_import_yara`                | `VIRUSTOTAL_FILE_IMPORT_YARA`                | `True`  | No        | Whether or not to import Crowdsourced YARA rules                                                |
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `connector_id` | `CONNECTOR_ID` | No | A valid arbitrary `UUIDv4` unique for this connector |
+| `connector_name` | `CONNECTOR_NAME` | No | The name of the connector instance |
+| `connector_scope` | `CONNECTOR_SCOPE` | No | Supported: `StixFile`, `Artifact`, `IPv4-Addr`, `Domain-Name`, `Url`, `Hostname` |
+| `connector_auto` | `CONNECTOR_AUTO` | No | Enable/disable auto-enrichment |
+| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | No | Log level (`debug`, `info`, `warn`, `error`) |
 
----
+### VirusTotal Configuration
 
-## IP Specific Config Settings
-
-| Parameter `virustotal`        | config.yml                      | Docker environment variable                | Default | Mandatory | Description                                                                            |
-|-------------------------------|---------------------------------|--------------------------------------------|---------|-----------|----------------------------------------------------------------------------------------|
-| IP indicator create positives | `ip_indicator_create_positives` | `VIRUSTOTAL_IP_INDICATOR_CREATE_POSITIVES` | `10`    | No        | Create an indicator for IPv4 based observables once this positive threshold is reached |
-| IP indicator valid minutes    | `ip_indicator_valid_minutes`    | `VIRUSTOTAL_IP_INDICATOR_VALID_MINUTES`    | `2880`  | No        | How long the indicator is valid for in minutes                                         |
-| IP indicator detect           | `ip_indicator_detect`           | `VIRUSTOTAL_IP_INDICATOR_DETECT`           | `True`  | No        | Whether or not to set detection for the indicator to true                              |
-| IP add relationships          | `ip_add_relationships`          | `VIRUSTOTAL_IP_ADD_RELATIONSHIPS`          | /       | No        | Whether or not to add ASN and location resolution relationships                        |
-
----
-
-## Domain Specific Config Settings
-
-| Parameter `virustotal`            | config.yml                          | Docker environment variable                    | Default | Mandatory | Description                                                                              |
-|-----------------------------------|-------------------------------------|------------------------------------------------|---------|-----------|------------------------------------------------------------------------------------------|
-| Domain indicator create positives | `domain_indicator_create_positives` | `VIRUSTOTAL_DOMAIN_INDICATOR_CREATE_POSITIVES` | `10`    | No        | Create an indicator for Domain based observables once this positive threshold is reached |
-| Domain indicator valid minutes    | `domain_indicator_valid_minutes`    | `VIRUSTOTAL_DOMAIN_INDICATOR_VALID_MINUTES`    | `2880`  | No        | How long the indicator is valid for in minutes                                           |
-| Domain indicator detect           | `domain_indicator_detect`           | `VIRUSTOTAL_DOMAIN_INDICATOR_DETECT`           | `True`  | No        | Whether or not to set detection for the indicator to true                                |
-| Domain add relationships          | `domain_add_relationships`          | `VIRUSTOTAL_DOMAIN_ADD_RELATIONSHIPS`          | /       | No        | Whether or not to add IP resolution relationships                                        |
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `virustotal_token` | `VIRUSTOTAL_TOKEN` | Yes | VirusTotal API key |
+| `virustotal_max_tlp` | `VIRUSTOTAL_MAX_TLP` | No | Maximum TLP for processing |
+| `virustotal_replace_with_lower_score` | `VIRUSTOTAL_REPLACE_WITH_LOWER_SCORE` | No | Replace score even if lower (default: true) |
+| `virustotal_file_create_note_full_report` | `VIRUSTOTAL_FILE_CREATE_NOTE_FULL_REPORT` | No | Include full report as Note |
+| `virustotal_file_upload_unseen_artifacts` | `VIRUSTOTAL_FILE_UPLOAD_UNSEEN_ARTIFACTS` | No | Upload unknown artifacts (<32MB) |
+| `virustotal_file_indicator_create_positives` | `VIRUSTOTAL_FILE_INDICATOR_CREATE_POSITIVES` | No | Create indicator threshold (default: 10) |
+| `virustotal_file_indicator_valid_minutes` | `VIRUSTOTAL_FILE_INDICATOR_VALID_MINUTES` | No | Indicator validity in minutes |
+| `virustotal_file_indicator_detect` | `VIRUSTOTAL_FILE_INDICATOR_DETECT` | No | Set detection flag on indicator |
+| `virustotal_file_import_yara` | `VIRUSTOTAL_FILE_IMPORT_YARA` | No | Import YARA rules |
+| `virustotal_ip_indicator_create_positives` | `VIRUSTOTAL_IP_INDICATOR_CREATE_POSITIVES` | No | IP indicator creation threshold |
+| `virustotal_ip_add_relationships` | `VIRUSTOTAL_IP_ADD_RELATIONSHIPS` | No | Add ASN and location relationships |
+| `virustotal_domain_indicator_create_positives` | `VIRUSTOTAL_DOMAIN_INDICATOR_CREATE_POSITIVES` | No | Domain indicator creation threshold |
+| `virustotal_domain_add_relationships` | `VIRUSTOTAL_DOMAIN_ADD_RELATIONSHIPS` | No | Add IP resolution relationships |
+| `virustotal_url_upload_unseen` | `VIRUSTOTAL_URL_UPLOAD_UNSEEN` | No | Upload unknown URLs for analysis |
+| `virustotal_url_indicator_create_positives` | `VIRUSTOTAL_URL_INDICATOR_CREATE_POSITIVES` | No | URL indicator creation threshold |
 
 ---
 
-## URL Specific Config Settings
+## Deployment
 
-| Parameter `virustotal`         | config.yml                       | Docker environment variable                 | Default | Mandatory | Description                                                                           |
-|--------------------------------|----------------------------------|---------------------------------------------|---------|-----------|---------------------------------------------------------------------------------------|
-| URL upload unseen              | `url_upload_unseen`              | `VIRUSTOTAL_URL_UPLOAD_UNSEEN`              | `True`  | No        | Whether to upload URLs that VirusTotal has no record of for analysis                  |
-| URL indicator create positives | `url_indicator_create_positives` | `VIRUSTOTAL_URL_INDICATOR_CREATE_POSITIVES` | `10`    | No        | Create an indicator for URL based observables once this positive threshold is reached |
-| URL indicator valid minutes    | `url_indicator_valid_minutes`    | `VIRUSTOTAL_URL_INDICATOR_VALID_MINUTES`    | `2880`  | No        | How long the indicator is valid for in minutes                                        |
-| URL indicator detect           | `url_indicator_detect`           | `VIRUSTOTAL_URL_INDICATOR_DETECT`           | `True`  | No        | Whether or not to set detection for the indicator to true                             |
+### Docker Deployment
+
+Build a Docker Image using the provided `Dockerfile`.
+
+Example `docker-compose.yml`:
+
+```yaml
+version: '3'
+services:
+  connector-virustotal:
+    image: opencti/connector-virustotal:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - VIRUSTOTAL_TOKEN=ChangeMe
+    restart: always
+```
+
+### Manual Deployment
+
+1. Clone the repository
+2. Copy `config.yml.sample` to `config.yml` and configure
+3. Install dependencies: `pip install -r requirements.txt`
+4. Run the connector
 
 ---
 
-## Generic Config Settings for File, Artifact IP, Domain, URL
+## Usage
 
-| Parameter `virustotal`         | config.yml                       | Docker environment variable                 | Default | Mandatory | Description                                                                           |
-|--------------------------------|----------------------------------|---------------------------------------------|---------|-----------|---------------------------------------------------------------------------------------|
-| Include Attributes in Note              | `include_attributes_in_note`              | `VIRUSTOTAL_INCLUDE_ATTRIBUTES_IN_NOTE`              | `False`  | No        | Whether or not to include the attributes info in Note                 |
+The connector enriches observables by:
+1. Querying the VirusTotal API for detection results
+2. Creating notes with full analysis reports
+3. Adjusting scores based on positive detections
+4. Creating indicators when threshold is met
+5. Importing YARA rules (for files)
 
+Trigger enrichment:
+- Manually via the OpenCTI UI
+- Automatically if `CONNECTOR_AUTO=true`
+- Via playbooks
 
 ---
 
-### Debugging
+## Behavior
 
-Set the appropriate log level for debugging. Use `self.helper.log_{LOG_LEVEL}("Message")` for logging, e.g., `self.helper.log_error("Error message")`.
+### Data Flow
 
-### Additional Information
+```mermaid
+flowchart LR
+    A[Observable] --> B[VirusTotal Connector]
+    B --> C{VirusTotal API}
+    C --> D[Detection Results]
+    D --> E[Score Update]
+    D --> F{Positive >= Threshold?}
+    F -->|Yes| G[Create Indicator]
+    F -->|No| H[Skip Indicator]
+    D --> I[Full Report Note]
+    C --> J[YARA Rules]
+    J --> K[Import Rules]
+```
 
-The VirusTotal connector performs enrichment for files, IP addresses, domains, and URLs. It sends observables to the VirusTotal API and creates indicators in OpenCTI based on threat intelligence from VirusTotal.
-Information when creating a note full report ‘Last Analysis Results’ any value returned by virustotal that is falsy will return ‘N/A’.
+### Enrichment Mapping
+
+| Observable Type | Enrichment Data | Relationships |
+|-----------------|-----------------|---------------|
+| StixFile/Artifact | Hash, detections, YARA | Indicator based-on |
+| IPv4-Addr | Detection count, ASN | ASN, Location |
+| Domain-Name | Detection count, resolution | Resolved IPs |
+| URL | Detection count | Indicator based-on |
+| Hostname | Detection count | Similar to domain |
+
+### Indicator Creation
+
+| Observable Type | Default Threshold | Detection Flag |
+|-----------------|-------------------|----------------|
+| File/Artifact | 10 positives | TRUE |
+| IPv4-Addr | 10 positives | TRUE |
+| Domain-Name | 10 positives | TRUE |
+| URL | 10 positives | TRUE |
+
+### Generated STIX Objects
+
+| Object Type | Description |
+|-------------|-------------|
+| Note | Full analysis results table |
+| Indicator | Created when positive threshold met |
+| YARA Indicator | Crowdsourced YARA rules (for files) |
+| Autonomous System | ASN for IP addresses |
+| Location | Geolocation for IPs |
+| Relationship | Various entity links |
+
+---
+
+## Debugging
+
+Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug`.
+
+Use logging with:
+```python
+self.helper.log_{LOG_LEVEL}("Message")
+```
+
+**Note**: Values returned by VirusTotal that are falsy will display as 'N/A' in notes.
+
+---
+
+## Additional Information
+
+- [VirusTotal](https://www.virustotal.com/)
+- [VirusTotal API Documentation](https://developers.virustotal.com/)
+- [Get API Key](https://www.virustotal.com/gui/join-us)

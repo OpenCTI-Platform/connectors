@@ -1,7 +1,5 @@
 """Exception for pagination-related errors when fetching data from Google Threat Intelligence."""
 
-from typing import Optional
-
 from connector.src.custom.exceptions.fetch_errors.gti_api_error import GTIApiError
 
 
@@ -11,10 +9,10 @@ class GTIPaginationError(GTIApiError):
     def __init__(
         self,
         message: str,
-        endpoint: Optional[str] = None,
-        page: Optional[str] = None,
-        page_size: Optional[str] = None,
-        status_code: Optional[str] = None,
+        endpoint: str | None = None,
+        page: str | None = None,
+        page_size: str | None = None,
+        status_code: str | None = None,
     ):
         """Initialize the exception.
 

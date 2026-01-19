@@ -101,7 +101,6 @@ def _validate_required_fields(domain_object, required_fields):
         if field not in domain_object or _is_empty(domain_object[field])
     ]
     if missing_fields:
-        print(f"Skipping domain due to missing fields: {missing_fields}")
         return False
     return True
 
@@ -305,9 +304,9 @@ class ComlaudeConnector:
 
     def _refresh_work_id(self):
         """
-        Load the configuration from the YAML file.
+        Refresh the work ID for the connector.
 
-        :return: Configuration dictionary.
+        :return: None
         """
         try:
             update_end_time = _format_time(

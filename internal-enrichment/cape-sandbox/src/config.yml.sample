@@ -22,12 +22,12 @@
 #          sudo python3 /opt/CAPEv2/web/manage.py migrate
 
 opencti:
-  url: 'ChangeMe'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
-  id: 'CAPEv2_Sandbox'
   type: 'INTERNAL_ENRICHMENT'
+  id: 'CAPEv2_Sandbox'
   name: 'CAPEv2 Sandbox'
   scope: 'StixFile,Artifact'
   auto: false # Enable/disable auto-enrichment of observables

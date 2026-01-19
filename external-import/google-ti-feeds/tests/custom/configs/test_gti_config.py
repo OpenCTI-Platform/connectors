@@ -1,7 +1,7 @@
 """Module to test the OpenCTI connector GTI configuration loading and instantiation."""
 
 from os import environ as os_environ
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -16,6 +16,7 @@ from connector.src.octi.exceptions.configuration_error import ConfigurationError
 from connector.src.octi.global_config import GlobalConfig
 from pycti import OpenCTIConnectorHelper  # type: ignore
 from pydantic import HttpUrl, SecretStr
+
 from tests.conftest import mock_env_vars
 
 # =====================
@@ -49,15 +50,15 @@ def min_required_config(request) -> dict[str, str]:  # type: ignore
             "gti_report_import_start_date": "P3D",
             "gti_api_url": "https://api.gti.com/",
             "gti_import_reports": "False",
-            "gti_report_types": '["Actor Profile"]',
-            "gti_report_origins": '["google threat intelligence"]',
+            "gti_report_types": "Actor Profile",
+            "gti_report_origins": "google threat intelligence",
         },
         {
             "gti_report_import_start_date": "P20D",
             "gti_api_url": "https://api2.gti.com/",
             "gti_import_reports": "True",
-            "gti_report_types": '["Patch Report", "TTP Deep Dive"]',
-            "gti_report_origins": '["google threat intelligence", "partner"]',
+            "gti_report_types": "Patch Report,TTP Deep Dive",
+            "gti_report_origins": "google threat intelligence,partner",
         },
     ]
 )
@@ -77,8 +78,8 @@ def all_optional_config(request) -> dict[str, str]:
         {"gti_report_import_start_date": "P1D"},
         {"gti_api_url": "https://www.virustotal.com/api/v3"},
         {"gti_import_reports": "True"},
-        {"gti_report_types": '["All"]'},
-        {"gti_report_origins": '["google threat intelligence"]'},
+        {"gti_report_types": "All"},
+        {"gti_report_origins": "google threat intelligence"},
     ]
 )
 def all_defaulted_config(request) -> dict[str, str]:
@@ -90,22 +91,22 @@ def all_defaulted_config(request) -> dict[str, str]:
 
 @pytest.fixture(
     params=[
-        {"gti_report_types": '["All"]'},
-        {"gti_report_types": '["Actor Profile"]'},
-        {"gti_report_types": '["Country Profile"]'},
-        {"gti_report_types": '["Cyber Physical Security Roundup"]'},
-        {"gti_report_types": '["Event Coverage/Implication"]'},
-        {"gti_report_types": '["Industry Reporting"]'},
-        {"gti_report_types": '["Malware Profile"]'},
-        {"gti_report_types": '["Net Assessment"]'},
-        {"gti_report_types": '["Network Activity Reports"]'},
-        {"gti_report_types": '["News Analysis"]'},
-        {"gti_report_types": '["OSINT Article"]'},
-        {"gti_report_types": '["Patch Report"]'},
-        {"gti_report_types": '["Strategic Perspective"]'},
-        {"gti_report_types": '["TTP Deep Dive"]'},
-        {"gti_report_types": '["Threat Activity Alert"]'},
-        {"gti_report_types": '["Actor Profile", "Country Profile"]'},
+        {"gti_report_types": "All"},
+        {"gti_report_types": "Actor Profile"},
+        {"gti_report_types": "Country Profile"},
+        {"gti_report_types": "Cyber Physical Security Roundup"},
+        {"gti_report_types": "Event Coverage/Implication"},
+        {"gti_report_types": "Industry Reporting"},
+        {"gti_report_types": "Malware Profile"},
+        {"gti_report_types": "Net Assessment"},
+        {"gti_report_types": "Network Activity Reports"},
+        {"gti_report_types": "News Analysis"},
+        {"gti_report_types": "OSINT Article"},
+        {"gti_report_types": "Patch Report"},
+        {"gti_report_types": "Strategic Perspective"},
+        {"gti_report_types": "TTP Deep Dive"},
+        {"gti_report_types": "Threat Activity Alert"},
+        {"gti_report_types": "Actor Profile,Country Profile"},
     ]
 )
 def valid_gti_report_types(request) -> dict[str, str]:
@@ -115,12 +116,10 @@ def valid_gti_report_types(request) -> dict[str, str]:
 
 @pytest.fixture(
     params=[
-        {"gti_report_types": '["invalid report type"]'},
-        {"gti_report_types": '["Actor Profile", "Invalid Report Type"]'},
-        {"gti_report_types": '["Country Profile", "Invalid Report Type"]'},
-        {
-            "gti_report_types": '["Cyber Physical Security Roundup", "Invalid Report Type"]'
-        },
+        {"gti_report_types": "invalid report type"},
+        {"gti_report_types": "Actor Profile,Invalid Report Type"},
+        {"gti_report_types": "Country Profile,Invalid Report Type"},
+        {"gti_report_types": "Cyber Physical Security Roundup,Invalid Report Type"},
     ]
 )
 def invalid_gti_report_types(request) -> dict[str, str]:
@@ -130,11 +129,11 @@ def invalid_gti_report_types(request) -> dict[str, str]:
 
 @pytest.fixture(
     params=[
-        {"gti_report_origins": '["All"]'},
-        {"gti_report_origins": '["google threat intelligence"]'},
-        {"gti_report_origins": '["partner"]'},
-        {"gti_report_origins": '["crowdsourced"]'},
-        {"gti_report_origins": '["google threat intelligence", "partner"]'},
+        {"gti_report_origins": "All"},
+        {"gti_report_origins": "google threat intelligence"},
+        {"gti_report_origins": "partner"},
+        {"gti_report_origins": "crowdsourced"},
+        {"gti_report_origins": "google threat intelligence,partner"},
     ]
 )
 def valid_gti_report_origins(request) -> dict[str, str]:
@@ -144,8 +143,8 @@ def valid_gti_report_origins(request) -> dict[str, str]:
 
 @pytest.fixture(
     params=[
-        {"gti_report_origins": '["invalid origin"]'},
-        {"gti_report_origins": '["google threat intelligence", "partner", "other"]'},
+        {"gti_report_origins": '"invalid origin"'},
+        {"gti_report_origins": "google threat intelligence,partner,other"},
     ]
 )
 def invalid_gti_report_origins(request) -> dict[str, str]:
@@ -161,7 +160,7 @@ def invalid_gti_report_origins(request) -> dict[str, str]:
 # Scenario: Create a connector with minimum required configuration for GTI
 @pytest.mark.order(0)
 def test_gti_connector_min_required_config(  # type: ignore
-    capfd, min_required_config: Dict[str, str]
+    capfd, min_required_config: dict[str, str]
 ) -> None:
     """Test GTI connector with minimum required configuration."""
     # Given a minimum required configuration for GTI
@@ -177,7 +176,7 @@ def test_gti_connector_min_required_config(  # type: ignore
 # Scenario: Create a connector with all optional configuration for GTI
 @pytest.mark.order(0)
 def test_gti_connector_all_optional_config(  # type: ignore
-    capfd, min_required_config: Dict[str, str], all_optional_config: Dict[str, str]
+    capfd, min_required_config: dict[str, str], all_optional_config: dict[str, str]
 ) -> None:
     """Test GTI connector with all optional configuration."""
     data = {**min_required_config, **all_optional_config}
@@ -192,7 +191,7 @@ def test_gti_connector_all_optional_config(  # type: ignore
 # Scenario: Ensure that all defaulted configuration values are set correctly
 @pytest.mark.order(0)
 def test_gti_connector_all_defaulted_config(  # type: ignore
-    capfd, min_required_config: Dict[str, str], all_defaulted_config: Dict[str, str]
+    capfd, min_required_config: dict[str, str], all_defaulted_config: dict[str, str]
 ) -> None:
     """Test GTI connector with all defaulted configuration."""
     # Given a minimum required configuration for GTI and all defaulted configuration
@@ -208,7 +207,7 @@ def test_gti_connector_all_defaulted_config(  # type: ignore
 # Scenario: Create a connector with valid GTI report types
 @pytest.mark.order(0)
 def test_gti_connector_valid_gti_report_types(  # type: ignore
-    capfd, min_required_config: Dict[str, str], valid_gti_report_types: Dict[str, str]
+    capfd, min_required_config: dict[str, str], valid_gti_report_types: dict[str, str]
 ) -> None:
     """Test GTI connector with valid GTI report types."""
     # Given a minimum required configuration for GTI and valid GTI report types
@@ -223,7 +222,7 @@ def test_gti_connector_valid_gti_report_types(  # type: ignore
 # Scenario: Create a connector with invalid GTI report types
 @pytest.mark.order(0)
 def test_gti_connector_invalid_gti_report_types(  # type: ignore
-    min_required_config: Dict[str, str], invalid_gti_report_types: Dict[str, str]
+    min_required_config: dict[str, str], invalid_gti_report_types: dict[str, str]
 ) -> None:
     """Test GTI connector with invalid GTI report types."""
     # Given a minimum required configuration for GTI and invalid GTI report types
@@ -239,7 +238,7 @@ def test_gti_connector_invalid_gti_report_types(  # type: ignore
 # Scenario: Create a connector with valid GTI report origins
 @pytest.mark.order(0)
 def test_gti_connector_valid_gti_report_origins(  # type: ignore
-    capfd, min_required_config: Dict[str, str], valid_gti_report_origins: Dict[str, str]
+    capfd, min_required_config: dict[str, str], valid_gti_report_origins: dict[str, str]
 ) -> None:
     """Test GTI connector with valid GTI report origins."""
     # Given a minimum required configuration for GTI and valid GTI report origins
@@ -254,7 +253,7 @@ def test_gti_connector_valid_gti_report_origins(  # type: ignore
 # Scenario: Create a connector with invalid GTI report origins
 @pytest.mark.order(0)
 def test_gti_connector_invalid_gti_report_origins(  # type: ignore
-    min_required_config: Dict[str, str], invalid_gti_report_origins: Dict[str, str]
+    min_required_config: dict[str, str], invalid_gti_report_origins: dict[str, str]
 ) -> None:
     """Test GTI connector with invalid GTI report origins."""
     # Given a minimum required configuration for GTI and invalid GTI report origins
@@ -324,10 +323,7 @@ def _then_connector_created_successfully(capfd, mock_env, connector, data) -> No
                 elif isinstance(val, SecretStr):
                     assert val.get_secret_value() == value  # noqa: S101
                 elif isinstance(val, list):
-                    # For ListFromString fields, convert the list back to JSON string for comparison
-                    import json
-
-                    assert json.dumps(val) == value  # noqa: S101
+                    assert ",".join(val) == value  # noqa: S101
                 else:
                     assert str(val) == value  # noqa: S101
 

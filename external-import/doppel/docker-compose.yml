@@ -1,10 +1,10 @@
 version: '3'
 services:
   connector-doppel:
-    image: opencti/connector-doppel:rolling
+    image: opencti/connector-doppel:latest
     environment:
       # OpenCTI connection
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=changeMe
 
       # Connector required config
@@ -17,6 +17,7 @@ services:
       # Doppel-specific config
       - DOPPEL_API_BASE_URL=https://api.doppel.com/v1
       - DOPPEL_API_KEY=changeMe
+      - DOPPEL_USER_API_KEY=changeMe
       - DOPPEL_TLP_LEVEL=clear
       - DOPPEL_ALERTS_ENDPOINT=/alerts
       - DOPPEL_HISTORICAL_POLLING_DAYS=30

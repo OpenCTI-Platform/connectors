@@ -1,6 +1,6 @@
 from typing import Annotated, Literal, Optional
 
-from connectors_sdk.core.pydantic import ListFromString
+from connectors_sdk import ListFromString
 from models.configs.base_settings import ConfigBaseSettings
 from pydantic import (
     Field,
@@ -39,7 +39,7 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     name: str
     scope: ListFromString
     duration_period: Optional[str] = Field(
-        default="PT1H",
+        default="PT24H",
         description="ISO8601 Duration format starting with 'P' for Period (e.g., 'PT24H' for 24 hours).",
     )
 

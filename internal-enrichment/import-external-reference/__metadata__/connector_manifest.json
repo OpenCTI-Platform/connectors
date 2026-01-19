@@ -1,0 +1,21 @@
+{
+  "title": "Import External Reference",
+  "slug": "import-external-reference",
+  "description": "This connector allows organizations to import external references as PDF files or MarkDown files.",
+  "short_description": "This connector allows organizations to import external references as PDF files or MarkDown files.",
+  "logo": "internal-enrichment/import-external-reference/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=5.6.1",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/import-external-reference",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-import-external-reference",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

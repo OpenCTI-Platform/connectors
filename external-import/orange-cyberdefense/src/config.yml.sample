@@ -1,11 +1,11 @@
 opencti:
-  url: 'http://localhost:8080'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 
 connector:
-  id: 'connector-orange-cyberdefense'
   type: 'EXTERNAL_IMPORT'
+  id: 'connector-orange-cyberdefense'
   name: 'Orange Cyberdefense Cyber Threat Intelligence'
   scope: 'identity,attack-pattern,intrusion-set,malware,tool,report,location,vulnerability,indicator,campaign,relationship'
   confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
@@ -26,3 +26,6 @@ ocd:
   threat_actor_as_intrusion_set: true
   interval: 30 # Required, in minutes. Minimum recommended 30
   reset_state: false # force the use of the start_dates from the config instead of getting the state saved in opencti
+  ignore_unscored_indicators: true
+  ignore_whitelisted_indicators: true
+  fallback_score: 0

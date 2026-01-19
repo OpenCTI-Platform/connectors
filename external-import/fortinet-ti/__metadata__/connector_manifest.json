@@ -1,0 +1,21 @@
+{
+  "title": "Fortinet Ti",
+  "slug": "fortinet-ti",
+  "description": "This connector imports data from the Fortinet database.",
+  "short_description": "This connector imports data from the Fortinet database\n. The connector creates the following OpenCTI entities:\n\n- Indicator (URL, Domain Name, and IPv4),\n- Observable URL,\n- Observable Domain Name,\n- Observable IPv4,\n- The Fortinet Organization.\n.",
+  "logo": "external-import/fortinet-ti/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.2.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/fortinet-ti",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-fortinet-ti",
+  "container_type": "EXTERNAL_IMPORT"
+}
