@@ -247,7 +247,7 @@ class MispConfig(BaseConfigModel):
         default=False,
     )
     batch_count: int = Field(
-        description="The max batch count for splitting bundles into batches",
+        description="The max number of items per batch when splitting STIX bundles.",
         default=9999,
     )
 
