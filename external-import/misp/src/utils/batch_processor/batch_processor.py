@@ -285,7 +285,7 @@ class BatchProcessor:
 
         """
 
-        current_time = self.datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S+00:00")
+        current_time = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S+00:00")
         self._logger.debug(
             "Updating state with current time for empty batch",
             {"prefix": LOG_PREFIX, "current_time": current_time},
