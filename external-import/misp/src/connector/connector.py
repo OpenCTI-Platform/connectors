@@ -86,7 +86,7 @@ class Misp:
                     entity_types.get(entity_type_attr, 0) + 1
                 )
         entities_summary = ", ".join([f"{k}: {v}" for k, v in entity_types.items()])
-        self.logger.info(
+        self.logger.debug(
             "Converted to STIX entities",
             {
                 "prefix": LOG_PREFIX,
@@ -108,7 +108,7 @@ class Misp:
         if (
             self.batch_processor.get_current_batch_size() + len(all_entities)
         ) >= self.config_misp.batch_count * 2:
-            self.logger.info(
+            self.logger.debug(
                 "Need to Flush before adding next items to preserve consistency of the bundle",
                 {"prefix": LOG_PREFIX},
             )
@@ -137,7 +137,7 @@ class Misp:
         try:
             work_id = self.batch_processor.flush()
             if work_id:
-                self.logger.info(
+                self.logger.debug(
                     "Batch processor: Flushed remaining items",
                     {"prefix": LOG_PREFIX},
                 )

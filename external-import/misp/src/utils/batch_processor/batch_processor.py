@@ -108,7 +108,7 @@ class BatchProcessor:
 
         """
         added_count = 0
-        self._logger.info(
+        self._logger.debug(
             "Adding items to batch processor",
             {
                 "prefix": LOG_PREFIX,
@@ -121,7 +121,7 @@ class BatchProcessor:
             if self.add_item(item):
                 added_count += 1
 
-        self._logger.info(
+        self._logger.debug(
             "Successfully added items",
             {
                 "prefix": LOG_PREFIX,
@@ -151,7 +151,7 @@ class BatchProcessor:
         self._total_batches_processed += 1
         batch_num = self._total_batches_processed
 
-        self._logger.info(
+        self._logger.debug(
             "Processing batch",
             {
                 "prefix": LOG_PREFIX,
@@ -175,7 +175,7 @@ class BatchProcessor:
 
         """
         if self._current_batch:
-            self._logger.info(
+            self._logger.debug(
                 "Flushing remaining items",
                 {
                     "prefix": LOG_PREFIX,
@@ -190,7 +190,7 @@ class BatchProcessor:
     def update_final_state(self) -> None:
         """Update the state with the final latest date after all processing is complete."""
         if self._latest_date:
-            self._logger.info(
+            self._logger.debug(
                 "State update: Setting next_cursor_date",
                 {"prefix": LOG_PREFIX, "latest_date": self._latest_date},
             )
@@ -206,7 +206,7 @@ class BatchProcessor:
                 )
         else:
             current_time = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S+00:00")
-            self._logger.info(
+            self._logger.debug(
                 "State update: Setting to current time",
                 {
                     "prefix": LOG_PREFIX,
@@ -302,7 +302,7 @@ class BatchProcessor:
                 {"prefix": LOG_PREFIX, "error": str(state_err)},
             )
 
-        self._logger.info(
+        self._logger.debug(
             "No items in batch to process",
             {"prefix": LOG_PREFIX, "display_name": self.display_name},
         )
@@ -379,7 +379,7 @@ class BatchProcessor:
 
         self.postprocess_batch(batch_items, work_id)
 
-        self._logger.info(
+        self._logger.debug(
             f"Successfully processed batch #{batch_num}. Total {self.display_name} sent: {self._total_items_sent}",
             {
                 "prefix": LOG_PREFIX,
@@ -452,10 +452,6 @@ class BatchProcessor:
                 },
             )
             self._work_manager.send_bundle(work_id=work_id, bundle=items)
-            self._logger.info(
-                "Sent batch to OpenCTI",
-                {"prefix": LOG_PREFIX, "batch_num": batch_num},
-            )
         except Exception as bundle_err:
             self._logger.warning(
                 "Failed to send bundle",
