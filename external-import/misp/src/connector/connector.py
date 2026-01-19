@@ -63,7 +63,7 @@ class Misp:
         self.batch_processor: "BatchProcessor" = BatchProcessor(
             work_manager=self.work_manager,
             logger=self.logger,
-            batch_size=self.config.batch.chunk_size,
+            batch_size=self.config_misp.batch_count,
         )
 
     def _log_entities_summary(
@@ -107,7 +107,7 @@ class Misp:
         """
         if (
             self.batch_processor.get_current_batch_size() + len(all_entities)
-        ) >= self.config.batch.chunk_size * 2:
+        ) >= self.config_misp.batch_count * 2:
             self.logger.info(
                 "Need to Flush before adding next items to preserve consistency of the bundle",
                 {"prefix": LOG_PREFIX},
@@ -242,7 +242,7 @@ class Misp:
         """
         bundle_size = len(bundle_objects)
         object_index = bundle_size - remaining_objects_count
-        batch_chunk_size = self.config.batch.chunk_size
+        batch_chunk_size = self.config_misp.batch_count
         for i in range(
             object_index,
             bundle_size,
