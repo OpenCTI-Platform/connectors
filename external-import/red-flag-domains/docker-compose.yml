@@ -1,4 +1,5 @@
-version: '3'
+version: "3"
+services:
   connector-redflag-domains:
     image: opencti/connector-red-flag-domains:latest
     environment:
@@ -11,4 +12,3 @@ version: '3'
       - CONNECTOR_LOG_LEVEL=info
       - REDFLAGDOMAINS_URL=https://dl.red.flag.domains/daily/
     restart: always
-
