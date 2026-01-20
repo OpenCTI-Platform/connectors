@@ -1,7 +1,9 @@
-# Common Implementation Guidelines
+---
+document: 01-common-implementation.md
+applies to: All connector types (External Import, Internal Enrichment, Stream)
+---
 
-**Document:** 01-common-implementation.md
-**Applies to:** All connector types (External Import, Internal Enrichment, Stream)
+# Common Implementation Guidelines
 
 ## Table of Contents
 
@@ -37,19 +39,56 @@ cd docker
 
 ```bash
 cat << EOF > .env
-OPENCTI_ADMIN_EMAIL=admin@opencti.io
-OPENCTI_ADMIN_PASSWORD=ChangeMePlease
-OPENCTI_ADMIN_TOKEN=$(cat /proc/sys/kernel/random/uuid)
-MINIO_ROOT_USER=$(cat /proc/sys/kernel/random/uuid)
-MINIO_ROOT_PASSWORD=$(cat /proc/sys/kernel/random/uuid)
-RABBITMQ_DEFAULT_USER=guest
-RABBITMQ_DEFAULT_PASS=guest
+###########################
+# DEPENDENCIES            #
+###########################
+
+MINIO_ROOT_USER=opencti
+MINIO_ROOT_PASSWORD=changeme
+RABBITMQ_DEFAULT_USER=opencti
+RABBITMQ_DEFAULT_PASS=changeme
+SMTP_HOSTNAME=localhost
+OPENSEARCH_ADMIN_PASSWORD=changeme
 ELASTIC_MEMORY_SIZE=4G
-CONNECTOR_HISTORY_ID=$(cat /proc/sys/kernel/random/uuid)
-CONNECTOR_EXPORT_FILE_STIX_ID=$(cat /proc/sys/kernel/random/uuid)
-CONNECTOR_EXPORT_FILE_CSV_ID=$(cat /proc/sys/kernel/random/uuid)
-CONNECTOR_IMPORT_FILE_STIX_ID=$(cat /proc/sys/kernel/random/uuid)
-CONNECTOR_IMPORT_REPORT_ID=$(cat /proc/sys/kernel/random/uuid)
+
+###########################
+# COMMON                  #
+###########################
+
+XTM_COMPOSER_ID=8215614c-7139-422e-b825-b20fd2a13a23
+COMPOSE_PROJECT_NAME=xtm
+
+###########################
+# OPENCTI                 #
+###########################
+
+OPENCTI_HOST=localhost
+OPENCTI_PORT=8080
+OPENCTI_EXTERNAL_SCHEME=http
+OPENCTI_ADMIN_EMAIL=admin@opencti.io
+OPENCTI_ADMIN_PASSWORD=changeme
+OPENCTI_ADMIN_TOKEN=ChangeMe_UUIDv4
+OPENCTI_HEALTHCHECK_ACCESS_KEY=changeme
+
+###########################
+# OPENCTI CONNECTORS      #
+###########################
+
+CONNECTOR_EXPORT_FILE_STIX_ID=dd817c8b-abae-460a-9ebc-97b1551e70e6
+CONNECTOR_EXPORT_FILE_CSV_ID=7ba187fb-fde8-4063-92b5-c3da34060dd7
+CONNECTOR_EXPORT_FILE_TXT_ID=ca715d9c-bd64-4351-91db-33a8d728a58b
+CONNECTOR_IMPORT_FILE_STIX_ID=72327164-0b35-482b-b5d6-a5a3f76b845f
+CONNECTOR_IMPORT_DOCUMENT_ID=c3970f8a-ce4b-4497-a381-20b7256f56f0
+CONNECTOR_IMPORT_FILE_YARA_ID=7eb45b60-069b-4f7f-83a2-df4d6891d5ec
+CONNECTOR_IMPORT_EXTERNAL_REFERENCE_ID=d52dcbc8-fa06-42c7-bbc2-044948c87024
+CONNECTOR_ANALYSIS_ID=4dffd77c-ec11-4abe-bca7-fd997f79fa36
+
+###########################
+# OPENCTI DEFAULT DATA    #
+###########################
+
+CONNECTOR_OPENCTI_ID=dd010812-9027-4726-bf7b-4936979955ae
+CONNECTOR_MITRE_ID=8307ea1e-9356-408c-a510-2d7f8b28a0e2
 EOF
 ```
 
@@ -61,7 +100,8 @@ docker compose up -d
 
 #### Docker Networking
 
-When OpenCTI is deployed in a folder named `docker`, a network called `docker_default` is created. Your connector must attach to this network to communicate with OpenCTI services.
+When OpenCTI is deployed in a folder named `docker`, a network called `docker_default` is created. Your connector must
+attach to this network to communicate with OpenCTI services.
 
 In your connector's `docker-compose.yml`:
 
@@ -183,20 +223,20 @@ my-connector/
 
 ### File Descriptions
 
-| File/Directory | Purpose |
-|----------------|---------|
-| `__metadata__/` | Contains metadata for connector catalog and documentation |
-| `connector_manifest.json` | Connector information, version, capabilities |
-| `src/connector/connector.py` | Main connector logic and processing |
-| `src/connector/converter_to_stix.py` | STIX object creation and conversion |
-| `src/connector/settings.py` | Configuration models with Pydantic validation |
-| `src/connector/utils.py` | Utility functions and helpers |
-| `src/my_client/api_client.py` | External API client implementation |
-| `src/main.py` | Entry point, initializes connector |
-| `tests/` | Unit and integration tests |
-| `config.yml.sample` | Sample configuration for users |
-| `Dockerfile` | Container image definition |
-| `docker-compose.yml` | Docker Compose service definition |
+| File/Directory                       | Purpose                                                   |
+|--------------------------------------|-----------------------------------------------------------|
+| `__metadata__/`                      | Contains metadata for connector catalog and documentation |
+| `connector_manifest.json`            | Connector information, version, capabilities              |
+| `src/connector/connector.py`         | Main connector logic and processing                       |
+| `src/connector/converter_to_stix.py` | STIX object creation and conversion                       |
+| `src/connector/settings.py`          | Configuration models with Pydantic validation             |
+| `src/connector/utils.py`             | Utility functions and helpers                             |
+| `src/my_client/api_client.py`        | External API client implementation                        |
+| `src/main.py`                        | Entry point, initializes connector                        |
+| `tests/`                             | Unit and integration tests                                |
+| `config.yml.sample`                  | Sample configuration for users                            |
+| `Dockerfile`                         | Container image definition                                |
+| `docker-compose.yml`                 | Docker Compose service definition                         |
 
 ---
 
@@ -317,6 +357,7 @@ MY_CONNECTOR_IMPORT_FROM_DATE=2024-01-01
 ```
 
 **Naming Convention:**
+
 - Section name + field name in UPPERCASE
 - Separate with underscores
 - Example: `my_connector.api_base_url` → `MY_CONNECTOR_API_BASE_URL`
@@ -329,7 +370,6 @@ MY_CONNECTOR_IMPORT_FROM_DATE=2024-01-01
 from connector import MyConnector
 from connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
-
 
 if __name__ == "__main__":
     try:
@@ -375,11 +415,13 @@ connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#s
 Common models include:
 
 **Identity/Author:**
+
 - `OrganizationAuthor`
 - `IndividualAuthor`
 - `SystemAuthor`
 
 **Observable:**
+
 - `IPV4Address`
 - `IPV6Address`
 - `DomainName`
@@ -388,20 +430,25 @@ Common models include:
 - `FileHash`
 
 **Indicator:**
+
 - `Indicator`
 
 **Threat Actor & Intrusion Set:**
+
 - `ThreatActor`
 - `IntrusionSet`
 
 **Malware & Tool:**
+
 - `Malware`
 - `Tool`
 
 **Vulnerability:**
+
 - `Vulnerability`
 
 **Marking:**
+
 - `TLPMarking`
 - `StatementMarking`
 
@@ -513,7 +560,8 @@ indicator = stix2.Indicator(
 )
 ```
 
-**⚠️ Warning:** Always generate IDs using `pycti` helper methods. Never let stix2 auto-generate IDs as they won't be deterministic.
+**⚠️ Warning:** Always generate IDs using `pycti` helper methods. Never let stix2 auto-generate IDs as they won't be
+deterministic.
 
 ### Creating Relationships
 
@@ -733,6 +781,7 @@ def enrich_entity(self, entity):
 import time
 from requests.exceptions import RequestException
 
+
 def fetch_with_retry(self, url, max_retries=3):
     for attempt in range(max_retries):
         try:
@@ -834,13 +883,13 @@ indicators = self.helper.api.indicator.list(
 
 ### Helper Properties
 
-| Property | Description |
-|----------|-------------|
-| `helper.connect_id` | Connector's unique ID |
-| `helper.connect_name` | Connector's name |
-| `helper.connect_scope` | Connector's scope |
+| Property                        | Description                       |
+|---------------------------------|-----------------------------------|
+| `helper.connect_id`             | Connector's unique ID             |
+| `helper.connect_name`           | Connector's name                  |
+| `helper.connect_scope`          | Connector's scope                 |
 | `helper.connect_live_stream_id` | Stream ID (for stream connectors) |
-| `helper.api` | OpenCTI API client |
+| `helper.api`                    | OpenCTI API client                |
 
 ---
 
@@ -849,6 +898,7 @@ indicators = self.helper.api.indicator.list(
 After understanding these common implementation patterns:
 
 1. **External Import Connectors**: Read [External Import Specifications](./02-external-import-specifications.md)
-2. **Internal Enrichment Connectors**: Read [Internal Enrichment Specifications](./03-internal-enrichment-specifications.md)
+2. **Internal Enrichment Connectors**:
+   Read [Internal Enrichment Specifications](./03-internal-enrichment-specifications.md)
 3. **Stream Connectors**: Read [Stream Connector Specifications](./04-stream-specifications.md)
 4. **Code Quality**: Review [Code Quality & Standards](./05-code-quality-standards.md)
