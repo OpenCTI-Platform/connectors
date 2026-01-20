@@ -3,7 +3,6 @@ from datetime import datetime
 from re import T
 
 TEAMT5_API_BASE_URL = "https://api.threatvision.org"
-FOUND_STIX_ITEMS = set() 
 
 class BaseHandler(ABC):
     
@@ -179,11 +178,6 @@ class BaseHandler(ABC):
 
         #Append TLP Marking
         stix_object["object_marking_refs"] = stix_object.get("object_marking_refs",[]) + [self.tlp_ref["id"]]
-
-
-        #TODO: remove
-        FOUND_STIX_ITEMS.add(obj_type)
-        self.helper.connector_logger.info(FOUND_STIX_ITEMS)
 
         return stix_object
 
