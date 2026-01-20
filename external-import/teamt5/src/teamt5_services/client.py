@@ -1,5 +1,7 @@
-import requests
 import time
+
+import requests
+
 
 class Teamt5Client:
 
@@ -15,13 +17,14 @@ class Teamt5Client:
         self.config = config
 
         self.session = requests.Session()
-        headers = {"Authorization": f"Bearer {self.config.teamt5.api_key.get_secret_value()}"}
+        headers = {
+            "Authorization": f"Bearer {self.config.teamt5.api_key.get_secret_value()}"
+        }
         self.session.headers.update(headers)
-        
 
     def _request_data(self, url: str, params=None) -> dict:
         """
-        Make a get request based upon the specified URL. 
+        Make a get request based upon the specified URL.
 
         :param url: The URL to request data from.
         :param params: Optional dictionary of query parameters.

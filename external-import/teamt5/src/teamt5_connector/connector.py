@@ -2,29 +2,27 @@ import sys
 from datetime import datetime, timezone
 
 import stix2
-from pycti import MarkingDefinition, OpenCTIConnectorHelper
-
-from teamt5_services import Teamt5Client
-from .ReportHandler import ReportHandler
-from .IndicatorBundleHandler import IndicatorBundleHandler
-from stix2 import Identity
 from pycti import Identity as pyctiIdentity
+from pycti import MarkingDefinition, OpenCTIConnectorHelper
+from stix2 import Identity
 
 from teamt5_connector.settings import ConnectorSettings
+from teamt5_services import Teamt5Client
+
+from .IndicatorBundleHandler import IndicatorBundleHandler
+from .ReportHandler import ReportHandler
 
 
 class TeamT5Connector:
-
 
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """
         Initialize the Connector with necessary configurations
         """
-        
+
         self.config = config
         self.helper = helper
         self.client = Teamt5Client(self.helper, self.config)
-
 
         self.author = Identity(
             id=pyctiIdentity.generate_id(self.config.connector.name, "organization"),
@@ -34,14 +32,17 @@ class TeamT5Connector:
 
         self.tlp_ref = self._create_tlp_marking(self.config.teamt5.tlp_level.lower())
 
-        self.report_hanlder = ReportHandler(self.client, helper, config, self.author, self.tlp_ref)
-        self.indicator_bundle_handler = IndicatorBundleHandler(self.client, helper, config, self.author, self.tlp_ref)
-
+        self.report_hanlder = ReportHandler(
+            self.client, helper, config, self.author, self.tlp_ref
+        )
+        self.indicator_bundle_handler = IndicatorBundleHandler(
+            self.client, helper, config, self.author, self.tlp_ref
+        )
 
     def process_message(self) -> None:
-        
+
         self.helper.connector_logger.info(f"{self.config.connector.name}: Starting Run")
-        
+
         try:
             now = datetime.now(tz=timezone.utc)
             current_timestamp = int(datetime.timestamp(now))
@@ -59,17 +60,21 @@ class TeamT5Connector:
             # If the connector has never run, we should retrieve from the timestamp specified in configs
             else:
                 self.helper.connector_logger.info("Connector has never run...")
-                last_run_timestamp = int(self.config.teamt5.first_run_retrieval_timestamp)
+                last_run_timestamp = int(
+                    self.config.teamt5.first_run_retrieval_timestamp
+                )
 
             # For each handler (Reports and IOC Bundles) retrieve bundle references and push to OpenCTI
             for handler in [self.report_hanlder, self.indicator_bundle_handler]:
                 self.helper.connector_logger.info(
                     f"Retrieving {handler.name} references from after: {datetime.fromtimestamp(last_run_timestamp)}"
                 )
-                retrieved_bundle_refs = handler.retrieve_bundle_references(last_run_timestamp)
-                
+                retrieved_bundle_refs = handler.retrieve_bundle_references(
+                    last_run_timestamp
+                )
+
                 if retrieved_bundle_refs:
-                    
+
                     self.helper.connector_logger.info(
                         f"Retrieval complete. {len(retrieved_bundle_refs)} new {handler.name} references found."
                     )
@@ -84,8 +89,6 @@ class TeamT5Connector:
 
                 else:
                     self.helper.connector_logger.info(f"No new {handler.name}s found")
-
-
 
             current_state = self.helper.get_state()
             current_state_datetime = now.isoformat(timespec="seconds")
@@ -103,7 +106,6 @@ class TeamT5Connector:
             )
             self.helper.connector_logger.info(message)
 
-
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
                 "Connector stopped...",
@@ -112,7 +114,6 @@ class TeamT5Connector:
             sys.exit(0)
         except Exception as err:
             self.helper.connector_logger.error(str(err))
-
 
     def _create_tlp_marking(self, level: str) -> stix2.MarkingDefinition:
         """
@@ -140,11 +141,12 @@ class TeamT5Connector:
             "red": stix2.TLP_RED,
         }
         if level not in mapping:
-            self.helper.connector_logger.info(f"Invalid TLP Marking: {level} defaulting to TLP_WHITE / clear")
+            self.helper.connector_logger.info(
+                f"Invalid TLP Marking: {level} defaulting to TLP_WHITE / clear"
+            )
             return mapping["clear"]
-            
-        return mapping[level]
 
+        return mapping[level]
 
     def run(self) -> None:
         self.helper.schedule_iso(

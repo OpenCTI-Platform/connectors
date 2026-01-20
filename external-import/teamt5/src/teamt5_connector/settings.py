@@ -34,7 +34,9 @@ class TeamT5Config(BaseConfigModel):
     Define parameters and/or defaults for the configuration specific to the `TemplateConnector`.
     """
 
-    api_key: SecretStr = Field(description="The API key for authentication to TeamT5's ThreatVision Platform.")
+    api_key: SecretStr = Field(
+        description="The API key for authentication to TeamT5's ThreatVision Platform."
+    )
     tlp_level: Literal[
         "clear",
         "white",

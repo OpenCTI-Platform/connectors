@@ -1,5 +1,6 @@
 from .BaseHandler import BaseHandler
 
+
 class IndicatorBundleHandler(BaseHandler):
 
     name = "Indicator Bundle"
@@ -12,7 +13,6 @@ class IndicatorBundleHandler(BaseHandler):
             "created_at": raw_bundle_ref.get("created_at", 0),
             "stix_url": raw_bundle_ref.get("stix_url"),
         }
-
 
     def create_additional_objects(self, stix_content: list, bundle_ref: dict) -> list:
         # No additional objects are required
