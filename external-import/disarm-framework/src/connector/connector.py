@@ -8,7 +8,6 @@ import urllib
 from datetime import datetime, timezone
 from typing import Optional
 
-import yaml
 from connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
@@ -19,9 +18,6 @@ class DisarmFramework:
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         self.config = config
         self.helper = helper
-
-    def get_interval(self):
-        return int(self.config.disarm_framework.interval) * 60 * 60 * 24
 
     def retrieve_data(self, url: str) -> Optional[str]:
         """
@@ -80,62 +76,43 @@ class DisarmFramework:
             else:
                 last_run = None
                 self.helper.log_info("Connector has never run")
+
+            self.helper.log_info("Connector will run!")
+            now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
+            friendly_name = "DISARM Framework run @ " + now.strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, friendly_name
+            )
             if (
-                last_run is None
-                or timestamp - last_run
-                > (int(self.config.disarm_framework.interval) - 1) * 60 * 60 * 24
+                self.config.disarm_framework.url is not None
+                and len(self.config.disarm_framework.url) > 0
             ):
-                self.helper.log_info("Connector will run!")
-                now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
-                friendly_name = "DISARM Framework run @ " + now.strftime(
-                    "%Y-%m-%d %H:%M:%S"
+                disarm_data = self.retrieve_data(str(self.config.disarm_framework.url))
+                disarm_data_with_proper_kill_chain = self.change_kill_chain_name(
+                    disarm_data
                 )
-                work_id = self.helper.api.work.initiate_work(
-                    self.helper.connect_id, friendly_name
-                )
-                if (
-                    self.config.disarm_framework.url is not None
-                    and len(self.config.disarm_framework.url) > 0
-                ):
-                    disarm_data = self.retrieve_data(self.config.disarm_framework.url)
-                    disarm_data_with_proper_kill_chain = self.change_kill_chain_name(
-                        disarm_data
-                    )
-                    self.send_bundle(work_id, disarm_data_with_proper_kill_chain)
-                message = "Connector successfully run, storing last_run as " + str(
-                    timestamp
-                )
-                self.helper.log_info(message)
-                self.helper.set_state({"last_run": timestamp})
-                self.helper.api.work.to_processed(work_id, message)
-                self.helper.log_info(
-                    "Last_run stored, next run in: "
-                    + str(round(self.get_interval() / 60 / 60 / 24, 2))
-                    + " days"
-                )
-            else:
-                new_interval = self.get_interval() - (timestamp - last_run)
-                self.helper.log_info(
-                    "Connector will not run, next run in: "
-                    + str(round(new_interval / 60 / 60 / 24, 2))
-                    + " days"
-                )
+                self.send_bundle(work_id, disarm_data_with_proper_kill_chain)
+            message = "Connector successfully run, storing last_run as " + str(
+                timestamp
+            )
+            self.helper.log_info(message)
+            self.helper.set_state({"last_run": timestamp})
+            self.helper.api.work.to_processed(work_id, message)
         except (KeyboardInterrupt, SystemExit):
-            self.helper.log_info("Connector stop")
+            self.helper.log_info("Connector stopped")
             sys.exit(0)
         except Exception as e:
             self.helper.log_error(str(e))
 
     def run(self):
         self.helper.log_info("Fetching DISARM Framework datasets...")
-        get_run_and_terminate = getattr(self.helper, "get_run_and_terminate", None)
-        if callable(get_run_and_terminate) and self.helper.get_run_and_terminate():
-            self.process_data()
-            self.helper.force_ping()
-        else:
-            while True:
-                self.process_data()
-                time.sleep(60)
+
+        self.helper.schedule_process(
+            message_callback=self.process_data,
+            duration_period=self.config.connector.duration_period.total_seconds(),
+        )
 
     def send_bundle(self, work_id: str, serialized_bundle: str) -> None:
         try:

@@ -1,3 +1,4 @@
+import warnings
 from datetime import timedelta
 
 from connectors_sdk import (
@@ -6,7 +7,7 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, HttpUrl, SecretStr
+from pydantic import Field, HttpUrl, model_validator
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -29,7 +30,7 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
-        default=timedelta(hours=1),
+        default=timedelta(days=7),
     )
 
 
@@ -38,13 +39,11 @@ class DisarmFrameworkConfig(BaseConfigModel):
     Define parameters and/or defaults for the configuration specific to the `DisarmFrameworkConnector`.
     """
 
-    url: str = Field(
+    url: HttpUrl = Field(
         description="URL of the DISARM STIX bundle.",
-        default="https://raw.githubusercontent.com/DISARMFoundation/DISARMframeworks/main/generated_files/DISARM_STIX/DISARM.json",
-    )
-    interval: int = Field(
-        description="Polling interval in days.",
-        default=7,
+        default=HttpUrl(
+            "https://raw.githubusercontent.com/DISARMFoundation/DISARMframeworks/main/generated_files/DISARM_STIX/DISARM.json"
+        ),
     )
 
 
@@ -59,3 +58,26 @@ class ConnectorSettings(BaseConnectorSettings):
     disarm_framework: DisarmFrameworkConfig = Field(
         default_factory=DisarmFrameworkConfig
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_deprecated_interval(cls, data: dict) -> dict:
+        """
+        Env var `DISARM_FRAMEWORK_INTERVAL_SEC` is deprecated.
+        This is a workaround to keep the old config working while we migrate to `CONNECTOR_DURATION_PERIOD`.
+        """
+        connector_data: dict = data.get("connector", {})
+        disarm_framework_data: dict = data.get("disarm_framework", {})
+        if interval := disarm_framework_data.pop("interval_sec", None):
+            if connector_data.get("duration_period") is not None:
+                warnings.warn(
+                    "Both 'DISARM_FRAMEWORK_INTERVAL_SEC' and 'CONNECTOR_DURATION_PERIOD' are set. "
+                    "'CONNECTOR_DURATION_PERIOD' will take precedence."
+                )
+            else:
+                warnings.warn(
+                    "Env var 'DISARM_FRAMEWORK_INTERVAL_SEC' is deprecated. Use 'CONNECTOR_DURATION_PERIOD' instead."
+                )
+                connector_data["duration_period"] = timedelta(days=int(interval))
+
+        return data
