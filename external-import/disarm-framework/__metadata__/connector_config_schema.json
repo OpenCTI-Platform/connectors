@@ -45,7 +45,7 @@
       "type": "string"
     },
     "CONNECTOR_DURATION_PERIOD": {
-      "default": "PT1H",
+      "default": "P7D",
       "description": "The period of time to await between two runs of the connector.",
       "format": "duration",
       "type": "string"
@@ -53,12 +53,10 @@
     "DISARM_FRAMEWORK_URL": {
       "default": "https://raw.githubusercontent.com/DISARMFoundation/DISARMframeworks/main/generated_files/DISARM_STIX/DISARM.json",
       "description": "URL of the DISARM STIX bundle.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
-    },
-    "DISARM_FRAMEWORK_INTERVAL": {
-      "default": 7,
-      "description": "Polling interval in days.",
-      "type": "integer"
     }
   },
   "required": [
