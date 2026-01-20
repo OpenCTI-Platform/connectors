@@ -1,16 +1,16 @@
 import traceback
 
 from pycti import OpenCTIConnectorHelper
-from teamt5 import TeamT5Connector
-from teamt5.config_loader import ConfigConnector
+from teamt5_connector import TeamT5Connector
+from teamt5_connector.settings import ConnectorSettings
 
 if __name__ == "__main__":
 
     try:
-        config = ConfigConnector()
-        helper = OpenCTIConnectorHelper(config=config.load)
+        settings = ConnectorSettings()
+        helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
 
-        connector = TeamT5Connector(config=config, helper=helper)
+        connector = TeamT5Connector(config=settings, helper=helper)
         connector.run()
     except Exception:
         traceback.print_exc()
