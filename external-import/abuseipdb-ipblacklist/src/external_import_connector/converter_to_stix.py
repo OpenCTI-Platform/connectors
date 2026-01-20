@@ -17,7 +17,9 @@ class ConverterToStix:
         self.config = config
         self.author = self._create_author()
         self.external_reference = self._create_external_reference()
-        self.tlp_marking = self._create_tlp_marking(self.config.tlp_level.lower())
+        self.tlp_marking = self._create_tlp_marking(
+            self.config.abuseipdb.tlp_level.lower()
+        )
 
     @staticmethod
     def _create_external_reference() -> list[stix2.ExternalReference]:
@@ -140,7 +142,7 @@ class ConverterToStix:
                 f"- abuseConfidenceScore: {confidence_score} - lastReportedAt: {last_reported}"
             ),
             "x_opencti_score": int(confidence_score),
-            "x_opencti_create_indicator": self.config.create_indicator,
+            "x_opencti_create_indicator": self.config.abuseipdb.create_indicator,
         }
         if self._is_ipv6(value):
             return stix2.IPv6Address(

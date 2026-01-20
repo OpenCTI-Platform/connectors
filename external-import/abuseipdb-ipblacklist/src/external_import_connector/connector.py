@@ -1,11 +1,11 @@
 import sys
 from datetime import datetime, timezone
 
-from external_import_connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
 from .client_api import ConnectorClient
 from .converter_to_stix import ConverterToStix
+from .settings import ConnectorSettings
 
 
 class ConnectorAbuseIPDB:
