@@ -16,17 +16,14 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     to the configuration for connectors of type `EXTERNAL_IMPORT`.
     """
 
-    id: str = Field(
-        description="A UUID v4 to identify the connector in OpenCTI.",
-        default="905c3d83-9e5e-45c6-a85a-89e9a6796dae",
-    )
+    id: str = Field(description="A UUID v4 to identify the connector in OpenCTI.")
     name: str = Field(
         description="The name of the connector.",
         default="AbuseIPDB IP Blacklist",
     )
     scope: ListFromString = Field(
         description="The scope of the connector.",
-        default=[],
+        default=["abuseipdb"],
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
