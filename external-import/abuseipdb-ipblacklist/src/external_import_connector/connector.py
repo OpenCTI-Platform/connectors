@@ -21,7 +21,7 @@ class ConnectorAbuseIPDB:
     ---
 
     Attributes
-        - `config (ConfigConnector())`:
+        - `config (ConnectorSettings())`:
             Initialize the connector with necessary configuration environment variables
 
         - `helper (OpenCTIConnectorHelper(config))`:

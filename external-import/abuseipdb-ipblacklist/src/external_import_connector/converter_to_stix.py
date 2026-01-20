@@ -6,7 +6,6 @@ from pycti import (
     Identity,
     MarkingDefinition,
     OpenCTIConnectorHelper,
-    StixCoreRelationship,
 )
 
 if TYPE_CHECKING:
@@ -81,27 +80,6 @@ class ConverterToStix:
         if level not in mapping:
             return mapping["clear"]
         return mapping[level]
-
-    def create_relationship(
-        self, source_id: str, relationship_type: str, target_id: str
-    ) -> stix2.Relationship:
-        """
-        Creates Relationship object
-        :param source_id: ID of source in string
-        :param relationship_type: Relationship type in string
-        :param target_id: ID of target in string
-        :return: Relationship STIX2 object
-        """
-        relationship = stix2.Relationship(
-            id=StixCoreRelationship.generate_id(
-                relationship_type, source_id, target_id
-            ),
-            relationship_type=relationship_type,
-            source_ref=source_id,
-            target_ref=target_id,
-            object_marking_refs=[self.tlp_marking],
-        )
-        return relationship
 
     @staticmethod
     def _is_ipv6(value: str) -> bool:
