@@ -10,7 +10,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |
 | KASPERSKY_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | API key used to authenticate requests to the Kaspersky service. |
 | CONNECTOR_NAME | `string` |  | string | `"Kaspersky Enrichment"` | Name of the connector. |
-| CONNECTOR_SCOPE | `array` |  | string | `["StixFile", "IPv4-Addr", "Domain-Name", "Hostname"]` | The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only). |
+| CONNECTOR_SCOPE | `array` |  | string | `["StixFile", "IPv4-Addr", "Domain-Name", "Hostname", "Url"]` | The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only). |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` | `"INTERNAL_ENRICHMENT"` |  |
 | CONNECTOR_AUTO | `boolean` |  | boolean | `true` | If True, the connector will automatically import data from the API. |
@@ -20,3 +20,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | KASPERSKY_FILE_SECTIONS | `string` |  | string | `"LicenseInfo,Zone,FileGeneralInfo"` | Sections wanted to investigate for the requested hash. LicenseInfo, Zone and FileGeneralInfo are always set, can't be disabled. Only DetectionsInfo, FileDownloadedFromUrls, Industries and FileNames are currently supported |
 | KASPERSKY_IPV4_SECTIONS | `string` |  | string | `"LicenseInfo,Zone,IpGeneralInfo"` | Sections wanted to investigate for the requested IPV4. LicenseInfo, Zone and IpGeneralInfo are always set, can't be disabled. Only FilesDownloadedFromIp, HostedUrls, IpWhoIs, IpDnsResolutions and Industries are currently supported |
 | KASPERSKY_DOMAIN_SECTIONS | `string` |  | string | `"LicenseInfo,Zone,DomainGeneralInfo"` | Sections wanted to investigate for the requested domain/hostname. LicenseInfo, Zone and DomainGeneralInfo are always set, can't be disabled. Only DomainDnsResolutions, FilesDownloaded, FilesAccessed and Industries are currently supported |
+| KASPERSKY_URL_SECTIONS | `string` |  | string | `"LicenseInfo,Zone,UrlGeneralInfo"` | Sections wanted to investigate for the requested URL. LicenseInfo, Zone and UrlGeneralInfo are always set, can't be disabled. Only FilesDownloaded, FilesAccessed and Industries are currently supported |
