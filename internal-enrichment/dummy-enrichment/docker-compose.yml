@@ -1,0 +1,32 @@
+version: '3'
+services:
+  connector-dummy-enrichment:
+    image: opencti/connector-dummy-enrichment:latest # 'dummy-enrichment' being the name of connector's directory
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      # Common parameters for connectors of type INTERNAL_ENRICHMENT
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=CHANGEME # optional (default: 'Template Connector')
+      - CONNECTOR_SCOPE=CHANGEME
+      - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      - CONNECTOR_AUTO=false # optional (default: false)
+      # Custom parameters for connector-dummy-enrichment
+      - DUMMY_ENRICHMENT_API_BASE_URL=CHANGEME
+      - DUMMY_ENRICHMENT_API_KEY=CHANGEME
+      - DUMMY_ENRICHMENT_MAX_TLP_LEVEL=amber+strict # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber+strict')
+
+      # Add proxy parameters below if needed
+      # - HTTP_PROXY=CHANGEME
+      # - HTTPS_PROXY=CHANGEME
+      # - NO_PROXY=CHANGEME
+    restart: always
+    # networks:
+    #   - docker_default
+
+# networks:
+#   default:
+#     external: true
+#     name: docker_default
+
