@@ -9,6 +9,17 @@ from .client_api import ConnectorClient
 from .converter_to_stix import ConverterToStix
 
 
+class ConnectorState:
+    """
+    Encapsulates mutable state for the connector
+    """
+
+    def __init__(self):
+        self.threat_cache = {}
+        self.last_processed_entry_old = 0
+        self.last_processed_entry_new = 0
+
+
 class ConnectorURLhaus:
     """
     Specifications of the external import connector
@@ -51,8 +62,11 @@ class ConnectorURLhaus:
         """
         self.config = config
         self.helper = helper
-        self.client = ConnectorClient(self.helper, self.config)
-        self.converter_to_stix = ConverterToStix(self.helper, self.config)
+        self.state = ConnectorState()
+        self.client = ConnectorClient(self.helper, self.config, self.state)
+        self.converter_to_stix = ConverterToStix(
+            self.helper, self.config, self.state.threat_cache
+        )
 
     def _collect_intelligence(self) -> Generator[list, None, None]:
         """
@@ -103,6 +117,16 @@ class ConnectorURLhaus:
             now = datetime.now()
             current_timestamp = int(datetime.timestamp(now))
             current_state = self.helper.get_state()
+
+            # Initialize last_processed_entry from state
+            if current_state and "last_processed_entry" in current_state:
+                self.state.last_processed_entry_old = current_state[
+                    "last_processed_entry"
+                ]
+            else:
+                self.state.last_processed_entry_old = 0
+            self.state.last_processed_entry_new = self.state.last_processed_entry_old
+
             friendly_name = "Connector urlhaus feed"
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
@@ -111,14 +135,14 @@ class ConnectorURLhaus:
                 "[CONNECTOR] Running connector...",
                 {"connector_name": self.helper.connect_name},
             )
-            self.config.threat_cache = {}
+            self.state.threat_cache = {}
             stix_objects_generator = self._collect_intelligence()
             for stix_objects in stix_objects_generator:
                 if len(stix_objects) == 0:
                     continue
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
                 bundles_sent = self.helper.send_stix2_bundle(
-                    stix_objects_bundle, update=False, work_id=work_id
+                    stix_objects_bundle, work_id=work_id
                 )
                 self.helper.connector_logger.info(
                     "Sending STIX objects to OpenCTI...",
@@ -137,7 +161,7 @@ class ConnectorURLhaus:
                 current_state["last_run"] = current_state_datetime
             else:
                 current_state = {"last_run": current_state_datetime}
-            current_state["last_processed_entry"] = self.config.last_processed_entry_new
+            current_state["last_processed_entry"] = self.state.last_processed_entry_new
             self.helper.set_state(current_state)
             message = (
                 f"{self.helper.connect_name} connector successfully run, storing last_run as "
@@ -167,5 +191,5 @@ class ConnectorURLhaus:
         """
         self.helper.schedule_iso(
             message_callback=self.process_message,
-            duration_period=f"P{self.config.urlhaus.interval}D",
+            duration_period=self.config.connector.duration_period,
         )

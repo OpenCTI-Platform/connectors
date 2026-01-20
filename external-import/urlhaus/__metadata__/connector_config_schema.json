@@ -45,7 +45,7 @@
       "type": "string"
     },
     "CONNECTOR_DURATION_PERIOD": {
-      "default": "PT1H",
+      "default": "PT3H",
       "description": "The period of time to await between two runs of the connector.",
       "format": "duration",
       "type": "string"
@@ -67,6 +67,7 @@
     },
     "URLHAUS_INTERVAL": {
       "default": 3,
+      "deprecated": true,
       "description": "Polling interval in hours.",
       "type": "integer"
     },
