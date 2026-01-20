@@ -8,7 +8,6 @@ from stix2 import Identity
 
 from teamt5_connector.settings import ConnectorSettings
 from teamt5_services import Teamt5Client
-
 from .IndicatorBundleHandler import IndicatorBundleHandler
 from .ReportHandler import ReportHandler
 
