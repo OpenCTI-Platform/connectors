@@ -1,7 +1,6 @@
 """DISARM Framework connector module."""
 
 import json
-import os
 import ssl
 import sys
 import time
@@ -10,36 +9,19 @@ from datetime import datetime, timezone
 from typing import Optional
 
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from connector.settings import ConnectorSettings
+from pycti import OpenCTIConnectorHelper
 
 
 class DisarmFramework:
     """DISARM Framework connector."""
 
-    def __init__(self):
-        # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config)
-        # Extra config
-        self.disarm_framework_file_url = get_config_variable(
-            "DISARM_FRAMEWORK_URL", ["disarm_framework", "url"], config
-        )
-        self.disarm_framework_interval = get_config_variable(
-            "DISARM_FRAMEWORK_INTERVAL", ["disarm_framework", "interval"], config, True
-        )
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-        )
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+        self.config = config
+        self.helper = helper
 
     def get_interval(self):
-        return int(self.disarm_framework_interval) * 60 * 60 * 24
+        return int(self.config.disarm_framework.interval) * 60 * 60 * 24
 
     def retrieve_data(self, url: str) -> Optional[str]:
         """
@@ -57,10 +39,7 @@ class DisarmFramework:
         """
         try:
             return (
-                urllib.request.urlopen(
-                    url,
-                    context=ssl.create_default_context(),
-                )
+                urllib.request.urlopen(url, context=ssl.create_default_context())
                 .read()
                 .decode("utf-8")
             )
@@ -88,7 +67,6 @@ class DisarmFramework:
 
     def process_data(self):
         try:
-            # Get the current timestamp and check
             timestamp = int(time.time())
             current_state = self.helper.get_state()
             if current_state is not None and "last_run" in current_state:
@@ -102,13 +80,12 @@ class DisarmFramework:
             else:
                 last_run = None
                 self.helper.log_info("Connector has never run")
-            # If the last_run is more than interval-1 day
-            if last_run is None or (
-                (timestamp - last_run)
-                > ((int(self.disarm_framework_interval) - 1) * 60 * 60 * 24)
+            if (
+                last_run is None
+                or timestamp - last_run
+                > (int(self.config.disarm_framework.interval) - 1) * 60 * 60 * 24
             ):
                 self.helper.log_info("Connector will run!")
-
                 now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
                 friendly_name = "DISARM Framework run @ " + now.strftime(
                     "%Y-%m-%d %H:%M:%S"
@@ -116,18 +93,15 @@ class DisarmFramework:
                 work_id = self.helper.api.work.initiate_work(
                     self.helper.connect_id, friendly_name
                 )
-                # DISARM FRAMEWORK
                 if (
-                    self.disarm_framework_file_url is not None
-                    and len(self.disarm_framework_file_url) > 0
+                    self.config.disarm_framework.url is not None
+                    and len(self.config.disarm_framework.url) > 0
                 ):
-                    disarm_data = self.retrieve_data(self.disarm_framework_file_url)
+                    disarm_data = self.retrieve_data(self.config.disarm_framework.url)
                     disarm_data_with_proper_kill_chain = self.change_kill_chain_name(
                         disarm_data
                     )
                     self.send_bundle(work_id, disarm_data_with_proper_kill_chain)
-
-                # Store the current timestamp as a last run
                 message = "Connector successfully run, storing last_run as " + str(
                     timestamp
                 )
@@ -168,18 +142,8 @@ class DisarmFramework:
             self.helper.send_stix2_bundle(
                 serialized_bundle,
                 entities_types=self.helper.connect_scope,
-                update=self.update_existing_data,
+                update=False,
                 work_id=work_id,
             )
         except Exception as e:
             self.helper.log_error(f"Error while sending bundle: {e}")
-
-
-if __name__ == "__main__":
-    try:
-        connector = DisarmFramework()
-        connector.run()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        sys.exit(1)
