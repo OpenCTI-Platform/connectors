@@ -8,29 +8,19 @@ services:
       - OPENCTI_TOKEN=ChangeMe
       # Connector's definition parameters REQUIRED
       - CONNECTOR_ID=ChangeMe
-      - "CONNECTOR_NAME=AbuseIPDB IP Blacklist"
+      - CONNECTOR_NAME=AbuseIPDB IP Blacklist
       - CONNECTOR_SCOPE=abuseipdb
       - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_DURATION_PERIOD=PT12H # ISO8601 format in String, start with 'P...' for Perio
-
-      # Connector's definition parameters OPTIONAL
-      # - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo, Float accepted
-      # - CONNECTOR_RUN_AND_TERMINATE=False # Default False, True run connector once
-      # - CONNECTOR_SEND_TO_QUEUE=True # Default True
-      # - CONNECTOR_SEND_TO_DIRECTORY=False # Default False
-      # - CONNECTOR_SEND_TO_DIRECTORY_PATH=ChangeMe # if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path
-      # - CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7 # Default 7, in days
+      # - CONNECTOR_DURATION_PERIOD=PT1H # ISO8601 format in String, start with 'P...' for Period
 
       # Connector's custom execution parameters
-      # - ABUSEIPDB_API_KEY=ChangeMe
-      # - ABUSEIPDB_IPVERSION=4 # Value possible: mixed, 4, 6
-      # - ABUSEIPDB_CREATE_INDICATOR=true
-      - ABUSEIPDB_TLP_LEVEL=clear
-      - ABUSEIPDB_SCORE=75
-      # - ABUSEIPDB_LIMIT=10000
-      # When you provide API key, you can use the following parameters
-      # 500000 feat the maximum limit of your subscription plan
+      # - ABUSEIPDB_API_URL=https://api.abuseipdb.com/api/v2/blacklist
+      - ABUSEIPDB_API_KEY=ChangeME
+      # - ABUSEIPDB_SCORE=75
       # - ABUSEIPDB_LIMIT=500000
-      # - ABUSEIPDB_EXCEPT_COUNTRY=RU,CN
-      # - ABUSEIPDB_ONLY_COUNTRY=RU
+      # - ABUSEIPDB_CREATE_INDICATOR=false
+      # - ABUSEIPDB_TLP_LEVEL=clear
+      # - ABUSEIPDB_IPVERSION=mixed
+      # - ABUSEIPDB_EXCEPT_COUNTRY=
+      # - ABUSEIPDB_ONLY_COUNTRY=
     restart: always
