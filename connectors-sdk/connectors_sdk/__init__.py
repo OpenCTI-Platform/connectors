@@ -19,6 +19,9 @@ from connectors_sdk.settings.exceptions import (
     ConfigError,
     ConfigValidationError,
 )
+from connectors_sdk.utils.deprecations import (
+    LegacyField,
+)
 
 __all__ = [
     # Base Settings
@@ -36,4 +39,6 @@ __all__ = [
     # Annotated types
     "DatetimeFromIsoString",
     "ListFromString",
+    # Deprecations
+    "LegacyField",
 ]
