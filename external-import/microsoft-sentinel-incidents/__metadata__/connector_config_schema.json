@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/microsoft-sentinel-incidents_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "MicrosoftSentinelIncidents",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "MICROSOFT_SENTINEL_INCIDENTS_TENANT_ID": {
+      "description": "Your Azure App Tenant ID, see the screenshot to help you find this information.",
+      "type": "string"
+    },
+    "MICROSOFT_SENTINEL_INCIDENTS_CLIENT_ID": {
+      "description": "Your Azure App Client ID, see the screenshot to help you find this information.",
+      "type": "string"
+    },
+    "MICROSOFT_SENTINEL_INCIDENTS_CLIENT_SECRET": {
+      "description": "Your Azure App Client secret, See the screenshot to help you find this information.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "MICROSOFT_SENTINEL_INCIDENTS_SUBSCRIPTION_ID": {
+      "description": "Your Microsoft Sentinel subscription ID.",
+      "type": "string"
+    },
+    "MICROSOFT_SENTINEL_INCIDENTS_RESOURCE_GROUP": {
+      "description": "Your Microsoft Sentinel resource group.",
+      "type": "string"
+    },
+    "MICROSOFT_SENTINEL_INCIDENTS_WORKSPACE_ID": {
+      "description": "Your Microsoft Sentinel workspace ID.",
+      "type": "string"
+    },
+    "MICROSOFT_SENTINEL_INCIDENTS_IMPORT_START_DATE": {
+      "default": "2020-01-01T00:00:00Z",
+      "description": "Import starting date (in YYYY-MM-DD format or YYYY-MM-DDTHH:MM:SSZ format) - used only if connector's state is not set.",
+      "type": "string"
+    },
+    "MICROSOFT_SENTINEL_INCIDENTS_FILTER_LABELS": {
+      "default": null,
+      "description": "Only incidents containing these specified labels will be retrieved and ingested (comma separated values).",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "MICROSOFT_SENTINEL_INCIDENTS_TENANT_ID",
+    "MICROSOFT_SENTINEL_INCIDENTS_CLIENT_ID",
+    "MICROSOFT_SENTINEL_INCIDENTS_CLIENT_SECRET",
+    "MICROSOFT_SENTINEL_INCIDENTS_SUBSCRIPTION_ID",
+    "MICROSOFT_SENTINEL_INCIDENTS_RESOURCE_GROUP",
+    "MICROSOFT_SENTINEL_INCIDENTS_WORKSPACE_ID"
+  ],
+  "additionalProperties": true
+}
