@@ -1,7 +1,16 @@
 import ipaddress
+from typing import TYPE_CHECKING
 
 import stix2
-from pycti import Identity, MarkingDefinition, StixCoreRelationship
+from pycti import (
+    Identity,
+    MarkingDefinition,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
+)
+
+if TYPE_CHECKING:
+    from external_import_connector import ConnectorSettings
 
 
 class ConverterToStix:
@@ -12,7 +21,7 @@ class ConverterToStix:
     - generate_id() for each entity from OpenCTI pycti library except observables to create
     """
 
-    def __init__(self, helper, config):
+    def __init__(self, helper: "OpenCTIConnectorHelper", config: "ConnectorSettings"):
         self.helper = helper
         self.config = config
         self.author = self._create_author()
