@@ -1,17 +1,14 @@
 FROM python:3.12-alpine
-ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
+# hadolint ignore=DL3003
+RUN apk --no-cache add git build-base libmagic libffi-dev
 # Copy the connector
 COPY src /opt/opencti-connector-mitre-atlas
+WORKDIR /opt/opencti-connector-mitre-atlas
 
 # Install Python modules
-# hadolint ignore=DL3003
-RUN apk --no-cache add git build-base libmagic libffi-dev && \
-    cd /opt/opencti-connector-mitre-atlas && \
-    pip3 install --no-cache-dir -r requirements.txt && \
+RUN pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
 # Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["python", "main.py"]
