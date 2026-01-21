@@ -5,24 +5,36 @@ import sys
 import time
 import urllib
 from datetime import datetime, timezone
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
-from connector.settings import ConnectorSettings
-from pycti import OpenCTIConnectorHelper
+if TYPE_CHECKING:
+    from connector.settings import ConnectorSettings
+    from pycti import OpenCTIConnectorHelper
 
 
 class MitreAtlas:
     """MITRE ATLAS connector."""
 
-    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+    def __init__(self, config: "ConnectorSettings", helper: "OpenCTIConnectorHelper"):
         self.config = config
         self.helper = helper
         self.mitre_atlas_file_url = self.config.mitre_atlas.url
         self.mitre_atlas_interval = self.config.mitre_atlas.interval
         self.update_existing_data = False
 
-    def get_interval(self):
-        return int(self.mitre_atlas_interval) * 60 * 60 * 24
+    def get_interval(self) -> int:
+        """Get the interval in seconds between two imports."""
+        return self.days_to_seconds(self.mitre_atlas_interval)
+
+    @staticmethod
+    def days_to_seconds(days: int) -> int:
+        """Convert days to seconds."""
+        return days * 60 * 60 * 24
+
+    @staticmethod
+    def seconds_to_days(seconds: int) -> float:
+        """Convert seconds to days."""
+        return seconds / (60 * 60 * 24)
 
     def retrieve_data(self, url: str) -> Optional[str]:
         """
@@ -67,10 +79,8 @@ class MitreAtlas:
             else:
                 last_run = None
                 self.helper.log_info("Connector has never run")
-            if (
-                last_run is None
-                or timestamp - last_run
-                > (int(self.mitre_atlas_interval) - 1) * 60 * 60 * 24
+            if last_run is None or timestamp - last_run > (
+                self.days_to_seconds(self.mitre_atlas_interval) - 1
             ):
                 self.helper.log_info("Connector will run!")
                 now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
@@ -91,16 +101,13 @@ class MitreAtlas:
                 self.helper.set_state({"last_run": timestamp})
                 self.helper.api.work.to_processed(work_id, message)
                 self.helper.log_info(
-                    "Last_run stored, next run in: "
-                    + str(round(self.get_interval() / 60 / 60 / 24, 2))
-                    + " days"
+                    f"Last_run stored, next run in: {self.mitre_atlas_interval} days"
                 )
             else:
                 new_interval = self.get_interval() - (timestamp - last_run)
                 self.helper.log_info(
                     "Connector will not run, next run in: "
-                    + str(round(new_interval / 60 / 60 / 24, 2))
-                    + " days"
+                    f"{round(self.seconds_to_days(new_interval), 2)} days"
                 )
         except (KeyboardInterrupt, SystemExit):
             self.helper.log_info("Connector stop")
