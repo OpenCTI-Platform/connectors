@@ -6,9 +6,9 @@ from typing import Any
 
 from pycti import OpenCTIConnectorHelper
 from pydantic import ValidationError
+from tenable_vuln_management.settings import ConnectorSettings
 
 from .client_api import ConnectorClient
-from .config_variables import ConfigConnector
 from .converter_to_stix import ConverterToStix
 from .models.common import ValidationWarning
 from .models.tenable import VulnerabilityFinding
@@ -50,19 +50,17 @@ class Connector:
 
     """
 
-    def __init__(self):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """
         Initialize the Connector with necessary configurations
         """
-
-        # Load configuration file and connection helper
-        self.config = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
+        self.config = config
+        self.helper = helper
         self.client = ConnectorClient(self.helper, self.config)
         self.converter_to_stix = ConverterToStix(
             helper=self.helper,
             config=self.config,
-            default_marking=self.config.tio_marking_definition,
+            default_marking=self.config.tio.marking_definition,
         )
         self.work_id: str | None = None
         self._metadata: list[dict[str, Any]] | None = None
@@ -77,40 +75,31 @@ class Connector:
             4. Returns the work ID for future use.
         """
         now_isodatetime = datetime.now(timezone.utc).isoformat()
-
         state = self.helper.get_state() or {}
         self.helper.connector_logger.debug(
             "[CONNECTOR] Connector current state", {"state": state}
         )
-
         last_run = state.get("last_run_start_datetime")
         last_successful_run = state.get("last_successful_run_start_datetime")
-
-        # Update state
         state.update({"last_run_start_datetime": now_isodatetime})
         self.helper.set_state(state=state)
-
-        # Update data retrieval start datetime
         if last_successful_run is not None:
             self.helper.connector_logger.info(
                 "[CONNECTOR] Connector last run", {"last_run_start_datetime": last_run}
             )
-            previous_since = str(self.config.tio_export_since)
-            self.config.tio_export_since = last_successful_run
+            previous_since = str(self.config.tio.export_since)
+            self.config.tio.export_since = last_successful_run
             self.helper.connector_logger.warning(
                 "[CONNECTOR] Connector acquisition SINCE parameter overwritten",
-                {"previous": previous_since, "current": self.config.tio_export_since},
+                {"previous": previous_since, "current": self.config.tio.export_since},
             )
         else:
             self.helper.connector_logger.info(
                 "[CONNECTOR] Connector has never run successfully..."
             )
-
-        # Initiate a new work
         self.work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id, self.helper.connect_name
         )
-        # reset metadata
         self._metadata = None
         self.helper.connector_logger.info(
             "[CONNECTOR] Running connector...",
@@ -145,11 +134,9 @@ class Connector:
             [Accessed on September 29, 2024]
 
         """
-        _ = export_uuid, export_type, export_chunk_id
-        vuln_findings, entities, stix_objects = [], [], []  # results holder
+        _ = (export_uuid, export_type, export_chunk_id)
+        vuln_findings, entities, stix_objects = ([], [], [])
         success_flag = True
-
-        # Acquire vulnerability uuids
         try:
             self._metadata = (
                 self.client.get_finding_ids() if self._metadata is None else None
@@ -158,12 +145,8 @@ class Connector:
             self.helper.connector_logger.error(
                 "Error when trying to acquire tenable finding ids", {"error": str(e)}
             )
-
-        # Acquire
         for item in data:
             try:
-                # even though we implemented the ability to bulk convert api response, we do it one by one to maximize
-                # the amount of ingested data in case of a corrupted line
                 with warnings.catch_warnings(
                     action="error", category=ValidationWarning
                 ):
@@ -188,7 +171,6 @@ class Connector:
                 self.helper.connector_logger.error(
                     "Error when trying to acquire tenable findings", {"error": str(e)}
                 )
-        # Revamp
         for vuln_finding in vuln_findings:
             try:
                 entities.extend(
@@ -202,14 +184,8 @@ class Connector:
                     "Error when trying to process a tenable finding",
                     {"tenable_finding": vuln_finding, "error": str(e)},
                 )
-        # Deduplicate chunk if needed to lighten stress on queue later
-        # E.g. Assets are repeated in vuln findings => leading to duplicated Systems
         entities = list(set(entities))
-
-        # Convert
         stix_objects.extend([entity.to_stix2_object() for entity in entities])
-
-        # Load
         if stix_objects:
             stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
             bundles_sent = self.helper.send_stix2_bundle(
@@ -231,7 +207,7 @@ class Connector:
             results(list[bool]): True if job succeeded False otherwise.
         """
         jobs = self.client.export_vulnerabilities().run_threaded(
-            func=self._process, kwargs=None, num_threads=self.config.num_threads
+            func=self._process, kwargs=None, num_threads=self.config.tio.num_thread
         )
         return [job.result() for job in concurrent.futures.as_completed(jobs)]
 
@@ -257,14 +233,11 @@ class Connector:
                 {
                     "last_successful_run_start_datetime": state.get(
                         "last_run_start_datetime"
-                    ),
+                    )
                 }
             )
         self.helper.set_state(state=state)
-        message = (
-            f"{self.helper.connect_name} connector {'successfully' if success_flag else ''} run, "
-            f"storing last_run as {now_isodatetime}"
-        )
+        message = f"{self.helper.connect_name} connector {('successfully' if success_flag else '')} run, storing last_run as {now_isodatetime}"
         self.helper.connector_logger.info(message)
 
     def process_message(self) -> None:
@@ -277,9 +250,7 @@ class Connector:
             self._initiate_work()
             results = self._run_threaded_jobs()
             self._finalize_work(results)
-            in_error = (
-                not all(results) if len(results) != 0 else False
-            )  # no error if nothing to retrieve
+            in_error = not all(results) if len(results) != 0 else False
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
                 "[CONNECTOR] Connector stopped...",
@@ -288,7 +259,6 @@ class Connector:
             sys.exit(0)
         except Exception as err:
             self.helper.connector_logger.error(str(err))
-
         finally:
             self.helper.api.work.to_processed(
                 work_id=self.work_id,
@@ -311,5 +281,5 @@ class Connector:
         """
         self.helper.schedule_iso(
             message_callback=self.process_message,
-            duration_period=self.config.duration_period,
+            duration_period=self.config.connector.duration_period,
         )

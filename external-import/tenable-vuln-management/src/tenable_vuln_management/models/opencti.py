@@ -101,7 +101,6 @@ class Author(BaseEntity):
             description=self.description,
             contact_information=self.contact_information,
             confidence=self.confidence,
-            # unused
             created=None,
             modified=None,
             created_by_ref=None,
@@ -112,7 +111,6 @@ class Author(BaseEntity):
             labels=None,
             lang=None,
             external_references=None,
-            # customs
             allow_custom=True,
             x_opencti_organization_type=self.x_opencti_organization_type,
             x_opencti_reliability=self.x_opencti_reliability,
@@ -136,8 +134,7 @@ class System(BaseEntity):
     description: Optional[str] = Field(None, description="Description of the system.")
     object_marking_refs: Optional[list[Any]] = Field(
         None,
-        description="References for object marking, "
-        "usually TLP:xxx objects or their marking ids",
+        description="References for object marking, usually TLP:xxx objects or their marking ids",
     )
 
     def to_stix2_object(self) -> Any:
@@ -153,7 +150,6 @@ class System(BaseEntity):
             modified=self.modified,
             description=self.description,
             object_marking_refs=self.object_marking_refs,
-            # unused
             confidence=None,
             roles=None,
             sectors=None,
@@ -192,7 +188,6 @@ class MACAddress(Observable):
         return stix2.MACAddress(
             value=self.value,
             object_marking_refs=self.object_marking_refs,
-            # customs
             allow_custom=True,
             created_by_ref=self.author.id if self.author else None,
         )
@@ -211,10 +206,7 @@ class IPAddress(Observable):
     )
 
     def to_stix2_object(self) -> Any:
-        builders = {
-            "v4": stix2.IPv4Address,
-            "v6": stix2.IPv6Address,
-        }
+        builders = {"v4": stix2.IPv4Address, "v6": stix2.IPv6Address}
         return builders[self.version](
             value=self.value,
             object_marking_refs=self.object_marking_refs,
@@ -223,9 +215,7 @@ class IPAddress(Observable):
                 if self.resolves_to_mac_addresses
                 else None
             ),
-            # unused
-            belongs_to_refs=None,  # 'autonomous system' id only
-            # customs
+            belongs_to_refs=None,
             allow_custom=True,
             created_by_ref=self.author.id if self.author else None,
         )
@@ -241,7 +231,6 @@ class DomainName(Observable):
     resolves_to_domain_names: Optional[list["DomainName"]] = Field(
         None, description="the domain names it resolves to."
     )
-
     __value_validator = field_validator("value", mode="after")(
         make_validator("value", validators.domain)
     )
@@ -257,10 +246,8 @@ class DomainName(Observable):
         resolves_to_ref_ids = [item.id for item in resolves_to_objects]
         return stix2.DomainName(
             value=self.value,
-            # 'ipv4-addr', 'ipv6-addr', 'domain-name' ids only
             resolves_to_refs=resolves_to_ref_ids if resolves_to_ref_ids else None,
             object_marking_refs=self.object_marking_refs,
-            # customs
             allow_custom=True,
             created_by_ref=self.author.id if self.author else None,
         )
@@ -278,7 +265,6 @@ class Hostname(Observable):
         return PyCTIHostname(
             value=self.value,
             object_marking_refs=self.object_marking_refs,
-            # customs
             allow_custom=True,
             created_by_ref=self.author.id if self.author else None,
         )
@@ -292,7 +278,6 @@ class Software(Observable):
         ..., description="Common Platform Enumeration (CPE) identifier.", min_length=1
     )
     vendor: str = Field(..., description="The Software vendor Name", min_length=1)
-
     __value_validator = field_validator("cpe", mode="after")(
         make_validator("cpe", lambda v: v.startswith("cpe:"))
     )
@@ -303,11 +288,9 @@ class Software(Observable):
             cpe=self.cpe,
             vendor=self.vendor,
             object_marking_refs=self.object_marking_refs,
-            # unused
-            swid=None,  # see https://csrc.nist.gov/projects/Software-Identification-SWID
+            swid=None,
             languages=None,
             version=None,
-            # custom
             allow_custom=True,
             created_by_ref=self.author.id if self.author else None,
         )
@@ -322,13 +305,11 @@ class OperatingSystem(Observable):
         return stix2.Software(
             name=self.name,
             object_marking_refs=self.object_marking_refs,
-            # unused
             cpe=None,
             vendor=None,
-            swid=None,  # see https://csrc.nist.gov/projects/Software-Identification-SWID
+            swid=None,
             languages=None,
             version=None,
-            # custom
             allow_custom=True,
             created_by_ref=self.author.id if self.author else None,
         )
@@ -353,8 +334,7 @@ class Vulnerability(BaseEntity):
     )
     object_marking_refs: Optional[list[Any]] = Field(
         None,
-        description="References for object marking, "
-        "usually TLP:xxx objects or their marking ids",
+        description="References for object marking, usually TLP:xxx objects or their marking ids",
     )
     cvss3_score: Optional[float] = Field(
         None, description="The CVSS v3 base score.", ge=0, le=10
@@ -409,10 +389,8 @@ class Vulnerability(BaseEntity):
             description=self.description,
             confidence=self.confidence,
             object_marking_refs=self.object_marking_refs,
-            # unused
             lang=None,
             external_references=None,
-            # custom
             allow_custom=True,
             x_opencti_aliases=[],
             x_opencti_cvss_base_score=self.cvss3_score,
@@ -456,12 +434,10 @@ class BaseRelationship(BaseEntity):
     )
     object_marking_refs: Optional[list[Any]] = Field(
         None,
-        description="References for object marking, "
-        "usually TLP:xxx objects or their marking ids",
+        description="References for object marking, usually TLP:xxx objects or their marking ids",
     )
     external_references: Optional[list[Any]] = Field(
-        None,
-        description="External references",
+        None, description="External references"
     )
 
     @abstractmethod
@@ -471,7 +447,6 @@ class BaseRelationship(BaseEntity):
         return {
             "source_ref": self.source_ref,
             "target_ref": self.target_ref,
-            # optional
             "created_by_ref": self.author.id if self.author else None,
             "created": self.created,
             "modified": self.modified,
@@ -500,7 +475,7 @@ class RelatedToRelationship(BaseRelationship):
                 stop_time=self.stop_time,
             ),
             relationship_type="related-to",
-            **self._common_stix2_args(),
+            **self._common_stix2_args()
         )
 
 
@@ -522,5 +497,5 @@ class HasRelationship(BaseRelationship):
                 start_time=self.start_time,
             ),
             relationship_type="has",
-            **self._common_stix2_args(),
+            **self._common_stix2_args()
         )
