@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/phishunt_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Phishunt",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "PHISHUNT_API_KEY": {
+      "default": null,
+      "description": "The API key for Phishunt.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "PHISHUNT_CREATE_INDICATORS": {
+      "default": true,
+      "description": "If true then indicators will be created from Pulse indicators and added to the report.",
+      "type": "boolean"
+    },
+    "PHISHUNT_DEFAULT_X_OPENCTI_SCORE": {
+      "default": 40,
+      "description": "The default x_opencti_score to use for indicators. If a per indicator type score is not set, this is used.",
+      "type": "integer"
+    },
+    "PHISHUNT_X_OPENCTI_SCORE_DOMAIN": {
+      "default": 40,
+      "description": "The x_opencti_score to use for Domain indicators. If not set, the default value is default_x_opencti_score.",
+      "type": "integer"
+    },
+    "PHISHUNT_X_OPENCTI_SCORE_IP": {
+      "default": 40,
+      "description": "The x_opencti_score to use for IP indicators. If not set, the default value is default_x_opencti_score.",
+      "type": "integer"
+    },
+    "PHISHUNT_X_OPENCTI_SCORE_URL": {
+      "default": 40,
+      "description": "The x_opencti_score to use for URL indicators. If not set, the default value is default_x_opencti_score.",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}
