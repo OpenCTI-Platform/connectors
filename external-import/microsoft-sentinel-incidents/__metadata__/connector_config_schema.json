@@ -15,12 +15,14 @@
       "type": "string"
     },
     "CONNECTOR_NAME": {
-      "default": "MicrosoftSentinelIncidents",
+      "default": "Microsoft Sentinel Incidents",
       "description": "The name of the connector.",
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": [],
+      "default": [
+        "sentinel"
+      ],
       "description": "The scope of the connector.",
       "items": {
         "type": "string"
@@ -69,6 +71,7 @@
       "type": "string"
     },
     "MICROSOFT_SENTINEL_INCIDENTS_RESOURCE_GROUP": {
+      "default": null,
       "description": "Your Microsoft Sentinel resource group.",
       "type": "string"
     },
@@ -82,9 +85,12 @@
       "type": "string"
     },
     "MICROSOFT_SENTINEL_INCIDENTS_FILTER_LABELS": {
-      "default": null,
+      "default": [],
       "description": "Only incidents containing these specified labels will be retrieved and ingested (comma separated values).",
-      "type": "string"
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     }
   },
   "required": [
@@ -94,7 +100,6 @@
     "MICROSOFT_SENTINEL_INCIDENTS_CLIENT_ID",
     "MICROSOFT_SENTINEL_INCIDENTS_CLIENT_SECRET",
     "MICROSOFT_SENTINEL_INCIDENTS_SUBSCRIPTION_ID",
-    "MICROSOFT_SENTINEL_INCIDENTS_RESOURCE_GROUP",
     "MICROSOFT_SENTINEL_INCIDENTS_WORKSPACE_ID"
   ],
   "additionalProperties": true
