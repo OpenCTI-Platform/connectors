@@ -15,12 +15,20 @@
       "type": "string"
     },
     "CONNECTOR_NAME": {
-      "default": "MitreAtlas",
+      "default": "MITRE ATLAS",
       "description": "The name of the connector.",
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": [],
+      "default": [
+        "identity",
+        "attack - pattern",
+        "course - of - action",
+        "relationship",
+        "x - mitre - collection",
+        "x - mitre - matrix",
+        "x - mitre - tactic"
+      ],
       "description": "The scope of the connector.",
       "items": {
         "type": "string"
