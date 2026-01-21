@@ -2,7 +2,7 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from connector import ConnectorSettings, CPEConnector
+from cpe import ConnectorSettings, CPEConnector
 from pycti import OpenCTIConnectorHelper
 
 

@@ -7,10 +7,11 @@ from uuid import uuid4
 import langcodes
 import requests
 import stix2
-from connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
+
+from .settings import ConnectorSettings
 
 APP_VERSION = "1.0.0"
 

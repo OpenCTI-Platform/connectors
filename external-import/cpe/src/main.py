@@ -1,6 +1,6 @@
 import traceback
 
-from connector import ConnectorSettings, CPEConnector
+from cpe import ConnectorSettings, CPEConnector
 from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
