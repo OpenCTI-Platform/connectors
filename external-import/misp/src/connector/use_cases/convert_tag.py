@@ -2,7 +2,7 @@ import pycti
 import stix2
 import stix2.exceptions
 from api_client.models import TagItem
-from connector.threats_guesser import ThreatsGuesser
+from utils.threats_guesser import ThreatsGuesser
 
 from .common import (
     PAP_AMBER,
