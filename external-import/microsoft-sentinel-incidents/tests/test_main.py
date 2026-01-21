@@ -49,7 +49,6 @@ class StubConnectorSettings(ConnectorSettings):
                     "client_id": "str",
                     "client_secret": "SecretStr",
                     "subscription_id": "str",
-                    "resource_group": "str",
                     "workspace_id": "str",
                     "import_start_date": "2020-01-01T00:00:00Z",
                     "filter_labels": [],

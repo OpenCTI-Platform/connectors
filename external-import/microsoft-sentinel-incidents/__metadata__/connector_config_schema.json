@@ -70,11 +70,6 @@
       "description": "Your Microsoft Sentinel subscription ID.",
       "type": "string"
     },
-    "MICROSOFT_SENTINEL_INCIDENTS_RESOURCE_GROUP": {
-      "default": null,
-      "description": "Your Microsoft Sentinel resource group.",
-      "type": "string"
-    },
     "MICROSOFT_SENTINEL_INCIDENTS_WORKSPACE_ID": {
       "description": "Your Microsoft Sentinel workspace ID.",
       "type": "string"
