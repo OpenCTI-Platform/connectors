@@ -52,7 +52,7 @@ class StubConnectorSettings(ConnectorSettings):
                     "resource_group": "str",
                     "workspace_id": "str",
                     "import_start_date": "2020-01-01T00:00:00Z",
-                    "filter_labels": None,
+                    "filter_labels": [],
                 },
             }
         )
