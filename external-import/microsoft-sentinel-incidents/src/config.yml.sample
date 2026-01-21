@@ -14,7 +14,6 @@ microsoft_sentinel_incidents:
   client_id: 'ChangeMe'
   client_secret: 'ChangeMe'
   subscription_id: 'ChangeMe'
-  # resource_group: ''
   workspace_id: 'ChangeMe'
   # import_start_date: '2020-01-01T00:00:00Z'
   # filter_labels: 'ChangeMe,OrDeleteMe'
