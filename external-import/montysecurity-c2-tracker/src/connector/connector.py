@@ -83,9 +83,9 @@ class MontysecurityC2TrackerConnector:
 
         self.helper.connector_logger.debug(malware_list)
 
+        #TODO: move entity creation to converter to stix
         for malware in malware_list:
             malware_name = str(malware).split(" IPs.txt")[0]
-            #self.helper.connector_logger.info(f"Looking at: {malware_name}")
             self.helper.connector_logger.info("Looking at malware. ", {"malware": malware_name}) #TODO more explanation
             malware_stix = None #TODO: useful?
             malware_stix = Malware(
@@ -98,6 +98,7 @@ class MontysecurityC2TrackerConnector:
 
             ips = self.client.get_ips(malware)
 
+            #TODO: check if IPV4 or IPV6
             for ip in ips:
                 indicatorIPV4 = Indicator(
                     name=ip,
