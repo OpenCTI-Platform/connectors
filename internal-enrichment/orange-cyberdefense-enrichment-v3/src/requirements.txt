@@ -1,2 +1,2 @@
-pycti==6.9.7
+pycti==6.9.8
 datalake-scripts==3.0.0rc7
