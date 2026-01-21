@@ -34,7 +34,9 @@ from microsoft_sentinel_incidents_connector import ConnectorSettings
         pytest.param(
             {
                 "opencti": {"url": "http://localhost:8080", "token": "test-token"},
-                "connector": {},
+                "connector": {
+                    "id": "connector-id",
+                },
                 "microsoft_sentinel_incidents": {
                     "tenant_id": "str",
                     "client_id": "str",
