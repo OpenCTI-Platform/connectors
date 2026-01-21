@@ -39,7 +39,7 @@ class MicrosoftSentinelIncidentsConnector:
     ---
 
     Attributes
-        - `config (ConfigConnector())`:
+        - `config (ConnectorSettings())`:
             Initialize the connector with necessary configuration environment variables
         - `helper (OpenCTIConnectorHelper(config))`:
             This is the helper to use.
