@@ -17,15 +17,22 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
 
     id: str = Field(
         description="A UUID v4 to identify the connector in OpenCTI.",
-        default="2b8cdcb6-ae91-4f2c-ae1f-b0eb52b57f40",
     )
     name: str = Field(
         description="The name of the connector.",
-        default="MitreAtlas",
+        default="MITRE ATLAS",
     )
     scope: ListFromString = Field(
         description="The scope of the connector.",
-        default=[],
+        default=[
+            "identity",
+            "attack - pattern",
+            "course - of - action",
+            "relationship",
+            "x - mitre - collection",
+            "x - mitre - matrix",
+            "x - mitre - tactic",
+        ],
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
