@@ -17,7 +17,6 @@ class DnsTwistConnector:
 
     Attributes:
         helper (OpenCTIConnectorHelper): The helper to use.
-        update_existing_data (str): Whether to update existing data or not in OpenCTI.
     """
 
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
@@ -25,13 +24,6 @@ class DnsTwistConnector:
         self.helper = helper
         self.dictonary_path = "/dictionaries/"
         self.total_threads = self.config.dnstwist.dns_twist_threads
-        update_existing_data = self.config.connector.update_existing_data
-        if update_existing_data.lower() in ["true", "false"]:
-            self.update_existing_data = update_existing_data.lower()
-        else:
-            msg = f"Error when grabbing CONNECTOR_UPDATE_EXISTING_DATA environment variable: '{self.interval}'. It SHOULD be either `true` or `false`. `false` is assumed. "
-            self.helper.log_warning(msg)
-            self.update_existing_data = "false"
 
     def detect_ip_version(self, value, type=False):
         if re.match(
