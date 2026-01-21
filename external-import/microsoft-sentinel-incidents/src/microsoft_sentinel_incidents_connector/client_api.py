@@ -1,14 +1,19 @@
 import json
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 import requests
 from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
 from urllib3.util.retry import Retry
 
+if TYPE_CHECKING:
+    from microsoft_sentinel_incidents_connector import ConnectorSettings
+    from pycti import OpenCTIConnectorHelper
+
 
 class ConnectorClient:
-    def __init__(self, helper, config):
+    def __init__(self, helper: "OpenCTIConnectorHelper", config: "ConnectorSettings"):
         """
         Initialize the client with necessary configurations
         """
@@ -19,11 +24,16 @@ class ConnectorClient:
         self.session = requests.Session()
 
     def set_oauth_token(self):
+        sentinel_cfg = self.config.microsoft_sentinel_incidents
         try:
-            url = f"https://login.microsoftonline.com/{self.config.tenant_id}/oauth2/v2.0/token"
+            url = (
+                f"https://login.microsoftonline.com"
+                f"/{sentinel_cfg.tenant_id}"
+                "/oauth2/v2.0/token"
+            )
             oauth_data = {
-                "client_id": self.config.client_id,
-                "client_secret": self.config.client_secret,
+                "client_id": sentinel_cfg.client_id,
+                "client_secret": sentinel_cfg.client_secret.get_secret_value(),
                 "grant_type": "client_credentials",
                 "scope": "https://api.loganalytics.io/.default",
             }
@@ -64,15 +74,16 @@ class ConnectorClient:
         :return: A list of all incidents as dictionaries containing mixed data types.
         """
         all_incidents = []
+        sentinel_cfg = self.config.microsoft_sentinel_incidents
         next_page_url = (
-            f"{self.log_analytics_url}/workspaces/{self.config.workspace_id}/query"
+            f"{self.log_analytics_url}/workspaces/{sentinel_cfg.workspace_id}/query"
         )
         body = {
             "query": "SecurityIncident | sort by LastModifiedTime asc"
             f"| where LastModifiedTime > todatetime('{date_str}')"
         }
-        if self.config.filter_labels:
-            labels = ", ".join(f'"{label}"' for label in self.config.filter_labels)
+        if labels := sentinel_cfg.filter_labels:
+            labels = ", ".join(f'"{label}"' for label in labels)
             body["query"] += (
                 "| mv-apply labelsFiltered=Labels on ("
                 f"where labelsFiltered.labelName has_any ({labels})"
@@ -129,7 +140,7 @@ class ConnectorClient:
                 break
         return all_incidents
 
-    def get_incidents(self, last_incident_timestamp: int) -> list[dict]:
+    def get_incidents(self, last_incident_timestamp: int) -> list[dict] | None:
         """
         Retrieves incidents and manages the API request lifecycle.
 
@@ -166,17 +177,16 @@ class ConnectorClient:
         """
         all_alerts = []
         next_page_url = (
-            self.log_analytics_url
-            + "/workspaces/"
-            + self.config.workspace_id
-            + "/query"
+            f"{self.log_analytics_url}/workspaces"
+            f"/{self.config.microsoft_sentinel_incidents.workspace_id}"
+            "/query"
         )
         body = {
-            "query": "SecurityAlert | summarize arg_max(TimeGenerated, *) by SystemAlertId | where TimeGenerated > todatetime('"
-            + date_str
-            + "') and SystemAlertId in("
-            + alert_ids.replace("[", "").replace("]", "")
-            + ")"
+            "query": (
+                "SecurityAlert | summarize arg_max(TimeGenerated, *) by SystemAlertId"
+                f" | where TimeGenerated > todatetime('{date_str}')"
+                f" and SystemAlertId in({alert_ids.replace('[', '').replace(']', '')})"
+            )
         }
         while next_page_url:
             try:
@@ -256,3 +266,4 @@ class ConnectorClient:
                 "An unknown error occurred during the recovery of all alerts",
                 {"error": str(err)},
             )
+            return []
