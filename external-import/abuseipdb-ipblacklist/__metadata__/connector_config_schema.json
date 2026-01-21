@@ -15,7 +15,7 @@
       "type": "string"
     },
     "CONNECTOR_NAME": {
-      "default": "AbuseipdbIpblacklist",
+      "default": "AbuseIPDB IP Blacklist",
       "description": "The name of the connector.",
       "type": "string"
     },
@@ -47,7 +47,7 @@
       "type": "string"
     },
     "CONNECTOR_DURATION_PERIOD": {
-      "default": "PT1H",
+      "default": "PT12H",
       "description": "The period of time to await between two runs of the connector.",
       "format": "duration",
       "type": "string"
@@ -64,7 +64,6 @@
       "writeOnly": true
     },
     "ABUSEIPDB_SCORE": {
-      "default": 75,
       "description": "Minimum confidence score threshold for IP addresses.",
       "type": "integer"
     },
@@ -81,6 +80,13 @@
     "ABUSEIPDB_TLP_LEVEL": {
       "default": "clear",
       "description": "TLP marking for imported data (`clear`, `green`, `amber`, `amber+strict`, `red`).",
+      "enum": [
+        "clear",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
       "type": "string"
     },
     "ABUSEIPDB_IPVERSION": {
@@ -93,21 +99,28 @@
       ],
       "type": "string"
     },
-    "ABUSEIPDB_EXCEPTCOUNTRY": {
-      "default": null,
+    "ABUSEIPDB_EXCEPT_COUNTRY": {
+      "default": [],
       "description": "Comma-separated country codes to exclude (e.g., `RU,CN`).",
-      "type": "string"
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
-    "ABUSEIPDB_ONLYCOUNTRY": {
-      "default": null,
+    "ABUSEIPDB_ONLY_COUNTRY": {
+      "default": [],
       "description": "Comma-separated country codes to include only.",
-      "type": "string"
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     }
   },
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "ABUSEIPDB_API_KEY"
+    "ABUSEIPDB_API_KEY",
+    "ABUSEIPDB_SCORE"
   ],
   "additionalProperties": true
 }
