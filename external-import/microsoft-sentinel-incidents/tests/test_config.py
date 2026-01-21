@@ -5,7 +5,6 @@ from src.microsoft_sentinel_incidents_connector.config_variables import ConfigCo
 @pytest.mark.parametrize(
     "input_filter_labels,expected",
     [
-        (None, []),
         ("", []),
         ("   ", []),
         ("tag1", ["tag1"]),
