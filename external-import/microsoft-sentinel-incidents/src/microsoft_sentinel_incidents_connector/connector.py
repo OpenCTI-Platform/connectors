@@ -3,15 +3,17 @@ import re
 import sys
 from collections import OrderedDict
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import stix2
-from microsoft_sentinel_incidents_connector.settings import ConnectorSettings
 from pycti import CustomObjectCaseIncident, OpenCTIConnectorHelper
 
 from .client_api import ConnectorClient
 from .converter_to_stix import ConverterToStix
 from .utils import format_date
+
+if TYPE_CHECKING:
+    from microsoft_sentinel_incidents_connector.settings import ConnectorSettings
 
 
 def detect_ip_version(value):
@@ -58,7 +60,7 @@ class MicrosoftSentinelIncidentsConnector:
 
     """
 
-    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+    def __init__(self, config: "ConnectorSettings", helper: "OpenCTIConnectorHelper"):
         """
         Initialize the Connector with necessary configurations
         """
@@ -79,7 +81,8 @@ class MicrosoftSentinelIncidentsConnector:
         if state and "last_incident_timestamp" in state:
             last_timestamp = state["last_incident_timestamp"]
             return last_timestamp
-        if self.config.microsoft_sentinel_incidents.import_start_date:
+
+        else:
             datetime_obj = datetime.fromisoformat(
                 self.config.microsoft_sentinel_incidents.import_start_date
             )
@@ -418,7 +421,7 @@ class MicrosoftSentinelIncidentsConnector:
         It allows you to schedule the process to run at a certain intervals
         This specific scheduler from the pycti connector helper will also check the queue size of a connector
         If `CONNECTOR_QUEUE_THRESHOLD` is set, if the connector's queue size exceeds the queue threshold,
-        the connector's main process will not run until the queue is ingested and reduced sufficiently,
+        the connector's main process will not  run until the queue is ingested and reduced sufficiently,
         allowing it to restart during the next scheduler check. (default is 500MB)
         It requires the `duration_period` connector variable in ISO-8601 standard format
         Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
@@ -426,5 +429,5 @@ class MicrosoftSentinelIncidentsConnector:
         """
         self.helper.schedule_iso(
             message_callback=self.process_message,
-            duration_period=self.config.connector.duration_period,
+            duration_period=self.config.connector.duration_period,  # type:ignore[invalid-argument-type]
         )
