@@ -6,7 +6,7 @@ import pytz
 import stix2
 from pycti import StixCoreRelationship
 
-from .constants import TLP_MAP
+from .constants import SUPPORTED_PLAYBOOK_ALERT_CATEGORIES, TLP_MAP
 from .utils import make_markdown_table
 
 
@@ -15,9 +15,11 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
         self,
         helper,
         rf_alerts_api,
+        categories,
         severity_threshold_domain_abuse,
         severity_threshold_identity_novel_exposures,
         severity_threshold_code_repo_leakage,
+        severity_threshold_cyber_vulnerability,
         debug,
         tlp,
     ):
@@ -32,17 +34,20 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
         self.work_id = None
         self.author = self._create_author()
         self.tlp = self.tlp = TLP_MAP.get(tlp, None)
+        self.playbook_categories = []
         self.threshold_domain_abuse = severity_threshold_domain_abuse
         self.threshold_identity_novel_exposure = (
             severity_threshold_identity_novel_exposures
         )
         self.threshold_code_repo_leakage = severity_threshold_code_repo_leakage
+        self.threshold_cyber_vulnerability = severity_threshold_cyber_vulnerability
         self.debug_var = debug
 
         self.playbook_alert_priority_threshold = {
             "identity_novel_exposures": self.threshold_identity_novel_exposure,
             "domain_abuse": self.threshold_domain_abuse,
             "code_repo_leakage": self.threshold_code_repo_leakage,
+            "cyber_vulnerability": self.threshold_cyber_vulnerability,
         }
 
         self.api_recorded_future = rf_alerts_api
@@ -52,6 +57,18 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
             "Moderate": "medium",
             "Informational": "low",
         }
+
+        # option categories is empty means all supported categories
+        if not categories:
+            self.playbook_categories = SUPPORTED_PLAYBOOK_ALERT_CATEGORIES
+        else:
+            for category in categories:
+                if category in SUPPORTED_PLAYBOOK_ALERT_CATEGORIES:
+                    self.playbook_categories.append(category)
+                else:
+                    self.helper.connector_logger.error(
+                        f"Invalid or unsupported playbook alert category: {category}"
+                    )
 
     @staticmethod
     def _create_author():
@@ -69,12 +86,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
             "Recorded Future Playbook Alerts",
         )
         current_state = self.helper.get_state()
-        playbook_types = [
-            "domain_abuse",
-            "identity_novel_exposures",
-            "code_repo_leakage",
-        ]
-        for playbook_type in playbook_types:
+        for playbook_type in self.playbook_categories:
             self.api_recorded_future.playbook_alerts_summaries = []
             if (
                 current_state is not None
@@ -125,6 +137,10 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                             self.create_incident_from_playbook_alert_code_repo_leakage(
                                 playbook_alert
                             )
+                        elif plb_alert.category == "cyber_vulnerability":
+                            self.create_incident_from_playbook_alert_cyber_vulnerability(
+                                playbook_alert
+                            )
                     else:
                         self.debug(
                             str("Dismissed : ")
@@ -134,7 +150,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                     self.helper.connector_logger.error(err)
                 self.update_state(plb_alert.category)
 
-        for playbook_type in playbook_types:
+        for playbook_type in self.playbook_categories:
             self.update_state(playbook_type)
 
         message = (
@@ -172,6 +188,172 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
             )
 
             self.helper.set_state(current_state)
+
+    def create_incident_from_playbook_alert_cyber_vulnerability(self, playbook_alert):
+        """
+        :param playbook_alert:
+        :return:
+        """
+
+        bundle_objects = []
+        vulnerability_name = (
+            playbook_alert.get("data").get("panel_status", {}).get("entity_name", "")
+        )
+        playbook_alert_summary = make_markdown_table(
+            [
+                ["Attribute", "Value"],
+                [
+                    "Alert category",
+                    playbook_alert.get("data")
+                    .get("panel_status", {})
+                    .get("case_rule_label", ""),
+                ],
+                [
+                    "Alert created",
+                    playbook_alert.get("data")
+                    .get("panel_status", {})
+                    .get("created", ""),
+                ],
+                [
+                    "Alert updated",
+                    playbook_alert.get("data")
+                    .get("panel_status", {})
+                    .get("updated", ""),
+                ],
+                [
+                    "Alert priority",
+                    self.severity_links[
+                        playbook_alert.get("data")
+                        .get("panel_status", {})
+                        .get("priority", "Moderate")
+                    ],
+                ],
+                ["Alert ID", playbook_alert.get("data").get("playbook_alert_id", "")],
+                [
+                    "Alert Rule",
+                    playbook_alert.get("data")
+                    .get("panel_status", {})
+                    .get("alert_rule", {})
+                    .get("name", ""),
+                ],
+            ]
+        )
+
+        targets = []
+        for target in (
+            playbook_alert.get("data")
+            .get("panel_evidence_summary", {})
+            .get("summary", {})
+            .get("targets", [])
+        ):
+            targets.append(target.get("name"))
+        playbook_alert_evidence = make_markdown_table(
+            [
+                ["Attribute", "Value"],
+                ["Vulnerability", vulnerability_name],
+                [
+                    "Vulnerability Lifecycle Stage",
+                    playbook_alert.get("data")
+                    .get("panel_status", {})
+                    .get("lifecycle_stage", ""),
+                ],
+                [
+                    "Vulnerability Risk Score",
+                    str(
+                        playbook_alert.get("data")
+                        .get("panel_status", {})
+                        .get("risk_score", "")
+                    ),
+                ],
+                [
+                    "Vulnerability Criticality",
+                    playbook_alert.get("data")
+                    .get("panel_status", {})
+                    .get("entity_criticality", ""),
+                ],
+                ["Vulnerability Targets", ", ".join(targets)],
+            ]
+        )
+
+        markdown_array = [["Name", "Description"]]
+        for risk_rule in (
+            playbook_alert.get("data")
+            .get("panel_evidence_summary", {})
+            .get("summary", {})
+            .get("risk_rules", [])
+        ):
+            markdown_array.append([risk_rule.get("rule"), risk_rule.get("description")])
+        playbook_risk_rule = make_markdown_table(markdown_array)
+
+        playbook_alert_description = f"""
+### Alert Metadata \n
+{playbook_alert_summary} \n
+
+### Evidences \n
+{playbook_alert_evidence} \n
+
+### Risk Rules \n
+{playbook_risk_rule} \n
+        """
+
+        playbook_alert_name = str(
+            "["
+            + playbook_alert["data"]["panel_status"]["case_rule_label"]
+            + "] "
+            + playbook_alert["data"]["panel_status"]["entity_name"]
+        )
+
+        # added an external reference to point the alert in RF portal
+        stix_external_ref = stix2.ExternalReference(
+            source_name="Recorded Future",
+            url="https://app.recordedfuture.com/portal/alerts/"
+            + playbook_alert["data"]["playbook_alert_id"],
+        )
+
+        stix_incident = stix2.Incident(
+            id=pycti.Incident.generate_id(
+                playbook_alert_name, playbook_alert["data"]["panel_status"]["created"]
+            ),
+            name=playbook_alert_name,
+            object_marking_refs=self.tlp,
+            description=playbook_alert_description,
+            first_seen=playbook_alert["data"]["panel_status"]["created"],
+            last_seen=playbook_alert["data"]["panel_status"]["updated"],
+            created=playbook_alert["data"]["panel_status"]["created"],
+            modified=playbook_alert["data"]["panel_status"]["updated"],
+            allow_custom=True,
+            severity=self.severity_links[
+                playbook_alert["data"]["panel_status"]["priority"]
+            ],
+            incident_type=playbook_alert["data"]["panel_status"]["case_rule_label"],
+            labels=[str(playbook_alert["data"]["panel_status"]["case_rule_label"])],
+            external_references=[stix_external_ref],
+            created_by_ref=self.author["id"],
+        )
+        bundle_objects.append(stix_incident)
+
+        stix_vulnerability = stix2.Vulnerability(
+            id=pycti.Vulnerability.generate_id(name=vulnerability_name),
+            name=playbook_alert["data"]["panel_status"]["entity_name"],
+            created_by_ref=self.author["id"],
+            object_marking_refs=[stix2.TLP_WHITE],
+        )
+        bundle_objects.append(stix_vulnerability)
+
+        relationship = stix2.Relationship(
+            id=pycti.StixCoreRelationship.generate_id(
+                relationship_type="targets",
+                source_ref=stix_incident.id,
+                target_ref=stix_vulnerability.id,
+            ),
+            source_ref=stix_incident.id,
+            target_ref=stix_vulnerability.id,
+            relationship_type="targets",
+        )
+        bundle_objects.append(relationship)
+
+        bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
+        self.helper.send_stix2_bundle(bundle, update=True, work_id=self.work_id)
 
     def create_incident_from_playbook_alert_code_repo_leakage(self, playbook_alert):
         bundle_objects = []

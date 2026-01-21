@@ -99,6 +99,9 @@ class BaseRFConnector:
         self.rf_alert_enable = self.config.alert.enable
         self.opencti_default_severity = self.config.alert.default_opencti_severity
         self.rf_playbook_alert_enable = self.config.playbook_alert.enable
+
+        self.playbook_alert_categories = self.config.playbook_alert.categories
+
         self.severity_threshold_domain_abuse = (
             self.config.playbook_alert.severity_threshold_domain_abuse
         )
@@ -107,6 +110,9 @@ class BaseRFConnector:
         )
         self.severity_threshold_code_repo_leakage = (
             self.config.playbook_alert.severity_threshold_code_repo_leakage
+        )
+        self.severity_threshold_cyber_vulnerability = (
+            self.config.playbook_alert.severity_threshold_cyber_vulnerability
         )
         self.debug_var = self.config.playbook_alert.debug
 
@@ -138,9 +144,11 @@ class RFConnector:
             self.alerts_playbook = RecordedFuturePlaybookAlertConnector(
                 self.RF.helper,
                 self.RF.rf_alerts_api,
+                self.RF.playbook_alert_categories,
                 self.RF.severity_threshold_domain_abuse,
                 self.RF.severity_threshold_identity_novel_exposures,
                 self.RF.severity_threshold_code_repo_leakage,
+                self.RF.severity_threshold_cyber_vulnerability,
                 self.RF.debug_var,
                 self.RF.tlp,
             )

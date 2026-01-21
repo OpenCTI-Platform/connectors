@@ -40,7 +40,9 @@ alert:
 
 playbook_alert:
   enable: False # required
+  categories: 'domain_abuse,identity_novel_exposures,code_repo_leakage'
   severity_threshold_domain_abuse: 'Informational' # optional
   severity_threshold_identity_novel_exposures: 'Informational' # optional
   severity_threshold_code_repo_leakage: 'Informational' # optional
+  severity_threshold_cyber_vulnerability: 'Informational' # optional
   debug: False # optional
