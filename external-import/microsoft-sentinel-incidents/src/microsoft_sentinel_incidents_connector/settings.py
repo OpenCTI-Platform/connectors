@@ -59,9 +59,9 @@ class MicrosoftSentinelIncidentsConfig(BaseConfigModel):
         description="Import starting date (in YYYY-MM-DD format or YYYY-MM-DDTHH:MM:SSZ format) - used only if connector's state is not set.",
         default="2020-01-01T00:00:00Z",
     )
-    filter_labels: str | None = Field(
+    filter_labels: ListFromString = Field(
         description="Only incidents containing these specified labels will be retrieved and ingested (comma separated values).",
-        default=None,
+        default=[],
     )
 
 
