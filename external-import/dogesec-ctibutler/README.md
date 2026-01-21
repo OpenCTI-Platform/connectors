@@ -7,6 +7,7 @@
 ## Table of Contents
 
 - [Introduction](#introduction)
+  - [Screenshots](#screenshots)
 - [Installation](#installation)
   - [Requirements](#requirements)
 - [Configuration](#configuration)
@@ -17,6 +18,7 @@
 - [Behavior](#behavior)
   - [Data Flow](#data-flow)
   - [Entity Mapping](#entity-mapping)
+  - [Processing Details](#processing-details)
 - [Debugging](#debugging)
 - [Additional Information](#additional-information)
 
@@ -24,14 +26,19 @@
 
 ## Introduction
 
-[CTI Butler](https://www.ctibutler.com/) is a web application that stores common cyber threat intelligence knowledge bases (e.g., MITRE ATT&CK, MITRE CWE, MITRE CAPEC, etc.) as STIX Objects.
-
-![](media/ctibutler-attack.png)
-![](media/ctibutler-object.png)
+[CTI Butler](https://www.ctibutler.com/) is a web application that stores common cyber threat intelligence knowledge bases (e.g., MITRE ATT&CK, MITRE CWE, MITRE CAPEC, MITRE ATLAS...) as STIX Objects.
 
 The OpenCTI CTI Butler Connector syncs intelligence from CTI Butler's knowledge bases to OpenCTI, enabling automated import of standardized threat intelligence frameworks.
 
+The OpenCTI CTI Butler Connector can be used to replace the following connectors, [MITRE ATLAS](https://hub.filigran.io/cybersecurity-solutions/open-cti-integrations/mitre-atlas), [MITRE ATT&CK](https://hub.filigran.io/cybersecurity-solutions/open-cti-integrations/mitre), and [DISARM Framework](https://hub.filigran.io/cybersecurity-solutions/open-cti-integrations/disarm-framework).
+
 > **Note**: This connector only works with CTI Butler Web. It does not support self-hosted CTI Butler installations at this time.
+
+### Screenshots
+
+![CTI Butler MITRE ATT&CK](media/ctibutler-attack.png)
+
+![CTI Butler STIX Butler](media/ctibutler-object.png)
 
 ---
 
@@ -45,10 +52,15 @@ The OpenCTI CTI Butler Connector syncs intelligence from CTI Butler's knowledge 
 
 ### Generating an API Key
 
+[![Creating a CTI Butler API Key](https://img.youtube.com/vi/AENI22ybO14/0.jpg)](https://www.youtube.com/watch?v=AENI22ybO14)
+
+[This video demonstrates the steps outlined below](https://www.youtube.com/watch?v=AENI22ybO14).
+
 1. Log in to your CTI Butler account
 2. Navigate to "Account Settings"
 3. Locate the API section and select "Create Token"
 4. Select the team you want to use and generate the key
+  * If you don't see a team listed, you do not belong to a team on a plan with API access. Please upgrade the teams account to continue.
 5. Copy the key for configuration
 
 ---
@@ -78,21 +90,21 @@ The OpenCTI CTI Butler Connector syncs intelligence from CTI Butler's knowledge 
 |-----------|---------------|------------|----------|---------|-------------|
 | Base URL | `CTIBUTLER_BASE_URL` | `ctibutler.base_url` | Yes | `https://api.ctibutler.com/` | CTI Butler API URL |
 | API Key | `CTIBUTLER_API_KEY` | `ctibutler.api_key` | Yes | - | API key for authentication |
-| Knowledge Bases | `CTIBUTLER_KNOWLEDGEBASES` | `ctibutler.knowledgebases` | Yes | - | Comma-separated list of knowledge bases |
-| Interval Days | `CTIBUTLER_INTERVAL_DAYS` | `ctibutler.interval_days` | Yes | `7` | Polling interval in days |
+| Knowledge Bases | `CTIBUTLER_KNOWLEDGEBASES` | `ctibutler.knowledgebases` | Yes | - | Comma-separated list of knowledge bases. See Available Knowledgebases section for a full list of available options. |
+| Interval Days | `CTIBUTLER_INTERVAL_DAYS` | `ctibutler.interval_days` | Yes | `7` | Polling interval in days. Minimum and recommended is `7` days is recommended (because knowledgebases change very infrequently). |
 
-### Available Knowledge Bases
+##### Available Knowledge Bases
 
 | Knowledge Base | Description |
 |----------------|-------------|
 | `attack-enterprise` | MITRE ATT&CK for Enterprise |
 | `attack-mobile` | MITRE ATT&CK for Mobile |
 | `attack-ics` | MITRE ATT&CK for ICS |
-| `cwe` | Common Weakness Enumeration |
 | `capec` | Common Attack Pattern Enumeration and Classification |
 | `disarm` | DISARM Framework |
 | `atlas` | MITRE ATLAS (AI/ML threats) |
 | `location` | Location data |
+| `sector` | Industry sector data |
 
 ---
 
@@ -110,11 +122,11 @@ services:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
       - CONNECTOR_ID=${CONNECTOR_CTIBUTLER_ID}
-      - CONNECTOR_NAME=CTI Butler
+      - CONNECTOR_NAME=CTIButler
       - CONNECTOR_LOG_LEVEL=info
       - CTIBUTLER_BASE_URL=https://api.ctibutler.com/
       - CTIBUTLER_API_KEY=${CTIBUTLER_API_KEY}
-      - CTIBUTLER_KNOWLEDGEBASES=attack-enterprise,cwe,capec
+      - CTIBUTLER_KNOWLEDGEBASES=attack-enterprise,capec
       - CTIBUTLER_INTERVAL_DAYS=7
     restart: always
     depends_on:
@@ -140,7 +152,7 @@ connector:
 ctibutler:
   base_url: 'https://api.ctibutler.com/'
   api_key: 'your-api-key'
-  knowledgebases: 'attack-enterprise,cwe,capec'
+  knowledgebases: 'attack-enterprise,capec'
   interval_days: 7
 ```
 
@@ -154,38 +166,103 @@ ctibutler:
 
 ```mermaid
 graph LR
-    subgraph CTI Butler
-        API[CTI Butler API]
-        KB[Knowledge Bases]
+    %% Box 1: CTI Butler Web
+    subgraph CTIButler_Web["CTI Butler Web"]
+        Knowledgebases[Knowledgebases]
+    end
+
+    %% Box 2: CTI Butler
+    subgraph CTIButler_API["CTI Butler"]
+        API[API]
+        Bundle[STIX Bundle]
+        API --> Bundle
     end
     
-    KB --> API
-    
-    subgraph Processing
-        API --> Connector[CTI Butler Connector]
-        Connector --> STIX[STIX Objects]
+    %% Box 3: OpenCTI
+    subgraph OpenCTI["OpenCTI"]
+        Connector[Connector]
+        AttckEnterprise[MITRE ATT&CK Enterprise]
+        AttckMobile[MITRE ATT&CK Mobile]
+        AttckICS[MITRE ATT&CK ICS]
+        Capec[MITRE CAPEC]
+        Atlas[MITRE ATLAS]
+        Disarm[DISARM]
+        Location[Locations]
+        Sectors[Sectors]
     end
-    
-    subgraph OpenCTI
-        STIX --> AttackPattern[Attack Pattern]
-        STIX --> Weakness[Vulnerability/Weakness]
-        STIX --> CAPEC[Attack Pattern - CAPEC]
-        STIX --> Location[Location]
-    end
+
+    %% Cross-section flow
+    Knowledgebases --> API
+    Bundle --> Connector
+
+    %% Connector links
+    Connector --> AttckEnterprise
+    Connector --> AttckMobile
+    Connector --> AttckICS
+    Connector --> Capec
+    Connector --> Atlas
+    Connector --> Location
+    Connector --> Sectors
+
 ```
 
 ### Entity Mapping
 
-| CTI Butler Knowledge Base | OpenCTI Entity | Notes |
+#### MITRE ATT&CK Enterprise/Mobile/ICS
+
+| CTI Butler Data | OpenCTI Entity | Notes |
 |---------------------------|----------------|-------|
-| attack-enterprise | Attack Pattern | MITRE ATT&CK Enterprise techniques |
-| attack-mobile | Attack Pattern | MITRE ATT&CK Mobile techniques |
-| attack-ics | Attack Pattern | MITRE ATT&CK ICS techniques |
-| cwe | Vulnerability | Common Weakness Enumeration entries |
-| capec | Attack Pattern | Common Attack Patterns |
-| disarm | Attack Pattern | Disinformation techniques |
-| atlas | Attack Pattern | AI/ML adversarial techniques |
-| location | Location | Geographic location data |
+| Tactic | x-mitre-tactic | ATT&CK Tactics |
+| Technique/Sub-technique | Attack Pattern | ATT&CK Techniques |
+| Campaign | Campaign | ATT&CK Campaigns |
+| Mitigation | Course of Action | ATT&CK Mitigations |
+| Software | Tool / Malware | ATT&CK Softwares |
+| Group | Intrusion Set | ATT&CK Intrusion Set |
+| Data Source | x-mitre-data-source | ATT&CK Data Sources |
+| Data Component | x-mitre-data-component | ATT&CK Data Components |
+| Asset | x-mitre-asset| ATT&CK ICS Assets |
+
+Note, Detection Stratergy (`x-mitre-detection-strategy`) and Analytic (`x-mitre-analytic`) objects (introduced in ATT&CK v18 are not currently supported in OpenCTI but are supported by Open CTI. You will see failures in the logs when the connector tries to import these objects
+
+#### MITRE CWE
+
+CTI Butler also has a CWE Knowledgebase. You cannot use this connector to import the CWE knowledgebase because OpenCTI does not support the custom STIX `weakness` objects used by CTI Butler to represent CWEs.
+
+#### MITRE CAPEC
+
+| CTI Butler Data | OpenCTI Entity | Notes |
+|---------------------------|----------------|-------|
+| Technique | Attack Pattern | CAPEC Techniques |
+
+#### MITRE ATLAS
+
+| CTI Butler Data | OpenCTI Entity | Notes |
+|---------------------------|----------------|-------|
+| Tactic | x-mitre-tactic | ATLAS Tactics |
+| Technique/Sub-technique | Attack Pattern | ATLAS Techniques |
+| Mitigation | Course of Action | ATLAS Mitigations |
+
+#### DISARM
+
+| CTI Butler Data | OpenCTI Entity | Notes |
+|---------------------------|----------------|-------|
+| Tactic | x-mitre-tactic | DISARM Tactics |
+| Technique/Sub-technique | Attack Pattern | DISARM Techniques |
+
+#### MITRE Location
+
+| CTI Butler Data | OpenCTI Entity | Notes |
+|---------------------------|----------------|-------|
+| Country | Location | Countries |
+| Region | Location | Regions |
+| Sub-region | Location | Sub-regions |
+| Intermediate Region | Location | Intermediate Regions |
+
+#### MITRE Sector
+
+| CTI Butler Data | OpenCTI Entity | Notes |
+|---------------------------|----------------|-------|
+| Sectors | Identity | Industrial Sectors |
 
 ### Processing Details
 
