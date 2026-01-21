@@ -1,4 +1,3 @@
-import os
 import re
 import ssl
 import sys
@@ -9,7 +8,6 @@ from typing import Any
 
 import requests
 import stix2
-import yaml
 from connector.settings import ConnectorSettings
 from pycti import (
     Identity,
@@ -17,7 +15,6 @@ from pycti import (
     Location,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
-    get_config_variable,
 )
 
 
@@ -27,7 +24,6 @@ class Phishunt:
         self.config = config
         self.helper = helper
         self.connector_duration_period = self.config.connector.duration_period
-        self.phishunt_interval = os.environ.get("PHISHUNT_INTERVAL")
         self.phishunt_api_key = self.config.phishunt.api_key
         self.create_indicators = self.config.phishunt.create_indicators
         self.default_x_opencti_score = self.config.phishunt.default_x_opencti_score
@@ -265,19 +261,6 @@ class Phishunt:
                 "[Phishunt] Http error during private feed process.", {"error": err}
             )
 
-    def run(self):
-        if self.connector_duration_period:
-            self.helper.schedule_iso(
-                message_callback=self.process_message,
-                duration_period=self.connector_duration_period,
-            )
-        else:
-            self.helper.schedule_unit(
-                message_callback=self.process_message,
-                duration_period=self.phishunt_interval,
-                time_unit=self.helper.TimeUnit.DAYS,
-            )
-
     def _load_state(self) -> dict[str, Any]:
         return self.helper.get_state() or {}
 
@@ -350,3 +333,9 @@ class Phishunt:
             self.helper.connector_logger.error(
                 "Phishunt connector internal error", {"error": error}
             )
+
+    def run(self):
+        self.helper.schedule_iso(
+            message_callback=self.process_message,
+            duration_period=self.connector_duration_period,
+        )
