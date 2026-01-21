@@ -179,6 +179,50 @@ class VirustotalLivehuntNotifications:
             default=True,
         )
 
+        get_malware_config = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_GET_MALWARE_CONFIG",
+            ["virustotal_livehunt_notifications", "get_malware_config"],
+            config,
+            default=False,
+        )
+
+        tlp = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_TLP",
+            ["virustotal_livehunt_notifications", "tlp"],
+            config,
+            default=None,
+        )
+
+        file_indicators = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_FILE_INDICATORS",
+            ["virustotal_livehunt_notifications", "file_indicators"],
+            config,
+            default=False,
+        )
+        domain_name_indicators = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_DOMAIN_NAME_INDICATORS",
+            ["virustotal_livehunt_notifications", "domain_name_indicators"],
+            config,
+            default=False,
+        )
+        ip_indicators = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_IP_INDICATORS",
+            ["virustotal_livehunt_notifications", "ip_indicators"],
+            config,
+            default=False,
+        )
+        url_indicators = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_URL_INDICATORS",
+            ["virustotal_livehunt_notifications", "url_indicators"],
+            config,
+            default=False,
+        )
+        limit = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_LIMIT",
+            ["virustotal_livehunt_notifications", "limit"],
+            config,
+            isNumber=True,
+        )
         self.builder = LivehuntBuilder(
             client,
             self.helper,
@@ -201,6 +245,13 @@ class VirustotalLivehuntNotifications:
             livehunt_label_prefix,
             livehunt_tag_prefix,
             enable_label_enrichment,
+            get_malware_config,
+            tlp,
+            file_indicators,
+            domain_name_indicators,
+            ip_indicators,
+            url_indicators,
+            limit,
         )
 
     @staticmethod
@@ -269,6 +320,9 @@ class VirustotalLivehuntNotifications:
                 current_state = self._load_state()
                 self.helper.connector_logger.info(
                     f"[Virustotal Livehunt Notifications] loaded state: {current_state}"
+                )
+                self.helper.connector_logger.debug(
+                    f"[Virustotal Livehunt Notifications] /n file_indicators: {self.builder.file_indicators}/n domain_name_indicators: {self.builder.domain_name_indicators}/n ip_indicators: {self.builder.ip_indicators}/n url_indicators: {self.builder.url_indicators}"
                 )
 
                 last_run = self._get_state_value(
