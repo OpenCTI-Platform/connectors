@@ -213,6 +213,18 @@
       "description": "Whether to enable fetching Recorded Future playbook alerts.",
       "type": "boolean"
     },
+    "PLAYBOOK_ALERT_CATEGORIES": {
+      "default": [
+        "domain_abuse",
+        "identity_novel_exposures",
+        "code_repo_leakage"
+      ],
+      "description": "Comma-separated list of Playbook Alert categories to import. Leave blank to fetch all categories available to your licence.Supported values: 'domain_abuse', 'identity_novel_exposures', 'code_repo_leakage'.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
     "PLAYBOOK_ALERT_SEVERITY_THRESHOLD_DOMAIN_ABUSE": {
       "default": "Informational",
       "description": "Minimum severity threshold for domain abuse playbook alerts.",
@@ -236,6 +248,16 @@
     "PLAYBOOK_ALERT_SEVERITY_THRESHOLD_CODE_REPO_LEAKAGE": {
       "default": "Informational",
       "description": "Minimum severity threshold for code repository leakage playbook alerts.",
+      "enum": [
+        "Informational",
+        "Moderate",
+        "High"
+      ],
+      "type": "string"
+    },
+    "PLAYBOOK_ALERT_SEVERITY_THRESHOLD_CYBER_VULNERABILITY": {
+      "default": "Informational",
+      "description": "Minimum severity threshold for cyber vulnerabilities playbook alerts.",
       "enum": [
         "Informational",
         "Moderate",
