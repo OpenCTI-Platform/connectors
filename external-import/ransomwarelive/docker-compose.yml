@@ -1,12 +1,34 @@
 version: '3'
 services:
-  connector-ransomwarelive:
-    image: opencti/connector-ransomwarelive:latest
+  connector_ransomwarelive:
+    image: opencti/connector-ransomwarelive:rolling
+    container_name: connector_ransomwarelive
     environment:
-      - OPENCTI_URL=http://localhost
-      - OPENCTI_TOKEN=ChangeMe
-      - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_NAME=RansomwareLive
-      - CONNECTOR_SCOPE=ransomwarelive
-      - CONNECTOR_LOG_LEVEL=error
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_ID=d87764df-add3-499f-9816-60c974f7b888
+      - "CONNECTOR_NAME=Ransomware Connector"
+      - CONNECTOR_SCOPE=identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report
+      - CONNECTOR_CONFIDENCE_LEVEL=70
+      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      - CONNECTOR_LOG_LEVEL=info # Log level: debug, info, warn, error
+      - CONNECTOR_DURATION_PERIOD=PT12H # ISO8601 format in String, start with 'P...' for Period
+      - CONNECTOR_PULL_HISTORY=true # If true, the connector will pull the history of the data. But it is not recommended to set it to true as there will a large influx of data.
+      - CONNECTOR_HISTORY_START_YEAR=2025 # Data only goes back till 2020
+      - CONNECTOR_RUN_EVERY=1h # DEPRECATED, use CONNECTOR_DURATION_PERIOD instead
+      - CONNECTOR_CREATE_THREAT_ACTOR=true
+      - CONNECTOR_CREATE_INTRUSION_SET=true
+      - CONNECTOR_CREATE_REPORT=true
+      - CONNECTOR_CREATE_CAMPAIGN=true
+      - MARKING_VALUE=TLP:CLEAR
+
     restart: always
+    depends_on:
+      - opencti
+    networks:
+      - opencti_network
+    deploy:
+      resources:
+        limits:
+          memory: 500m
+
