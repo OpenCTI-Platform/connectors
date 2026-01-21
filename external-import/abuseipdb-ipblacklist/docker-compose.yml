@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 services:
   connector-abuseipdb-ipblacklist:
     image: opencti/connector-abuseipdb-ipblacklist:latest
@@ -11,12 +11,12 @@ services:
       - CONNECTOR_NAME=AbuseIPDB IP Blacklist
       - CONNECTOR_SCOPE=abuseipdb
       - CONNECTOR_LOG_LEVEL=error
-      # - CONNECTOR_DURATION_PERIOD=PT1H # ISO8601 format in String, start with 'P...' for Period
+      # - CONNECTOR_DURATION_PERIOD=PT12H # ISO8601 format in String, start with 'P...' for Period
 
       # Connector's custom execution parameters
       # - ABUSEIPDB_API_URL=https://api.abuseipdb.com/api/v2/blacklist
-      - ABUSEIPDB_API_KEY=ChangeME
-      # - ABUSEIPDB_SCORE=75
+      - ABUSEIPDB_API_KEY=ChangeMe
+      - ABUSEIPDB_SCORE=ChangeMe
       # - ABUSEIPDB_LIMIT=500000
       # - ABUSEIPDB_CREATE_INDICATOR=false
       # - ABUSEIPDB_TLP_LEVEL=clear

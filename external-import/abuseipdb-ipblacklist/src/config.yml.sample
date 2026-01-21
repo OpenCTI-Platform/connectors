@@ -11,10 +11,10 @@ connector:
 abuseipdb:
   # api_url: 'https://api.abuseipdb.com/api/v2/blacklist'
   api_key: 'ChangeMe'
-  # score: 75
+  score: 'ChangeMe'
   # limit: 500000
   # create_indicator: false
   # tlp_level: 'clear'
   # ipversion: "mixed"
-  # exceptcountry:
-  # onlycountry: 
+  # except_country:
+  # only_country:

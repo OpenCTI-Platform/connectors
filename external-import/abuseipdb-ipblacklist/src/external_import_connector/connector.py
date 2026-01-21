@@ -70,10 +70,10 @@ class ConnectorAbuseIPDB:
             ipversion = int(self.config.abuseipdb.ipversion)
             if ipversion in [4, 6]:
                 params["ipVersion"] = self.config.abuseipdb.ipversion
-        if self.config.abuseipdb.exceptcountry:
-            params["exceptCountries"] = self.config.abuseipdb.exceptcountry
-        if self.config.abuseipdb.onlycountry:
-            params["onlyCountries"] = self.config.abuseipdb.onlycountry
+        if self.config.abuseipdb.except_country:
+            params["exceptCountries"] = self.config.abuseipdb.except_country
+        if self.config.abuseipdb.only_country:
+            params["onlyCountries"] = self.config.abuseipdb.only_country
         entities = self.client.get_entities(params)
         if not entities:
             return stix_objects

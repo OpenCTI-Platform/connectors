@@ -49,8 +49,8 @@ class StubConnectorSettings(ConnectorSettings):
                     "create_indicator": False,
                     "tlp_level": "clear",
                     "ipversion": "mixed",
-                    "exceptcountry": None,
-                    "onlycountry": None,
+                    "except_country": [],
+                    "only_country": [],
                 },
             }
         )

@@ -27,7 +27,7 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
-        default=timedelta(hours=1),
+        default=timedelta(hours=12),
     )
 
 
@@ -44,25 +44,25 @@ class AbuseipdbIpblacklistConfig(BaseConfigModel):
         description="Your AbuseIPDB API key.",
     )
     score: int = Field(
-        description="Minimum confidence score threshold for IP addresses.", default=75
+        description="Minimum confidence score threshold for IP addresses."
     )
     limit: int = Field(description="Maximum number of IPs to fetch.", default=500000)
     create_indicator: bool = Field(
         description="Whether to create Indicators from observables.", default=False
     )
-    tlp_level: str = Field(
+    tlp_level: Literal["clear", "green", "amber", "amber+strict", "red"] = Field(
         description="TLP marking for imported data (`clear`, `green`, `amber`, `amber+strict`, `red`).",
         default="clear",
     )
-    ipversion: Literal["4", "6", "mixed"] | None = Field(
+    ipversion: Literal["4", "6", "mixed"] = Field(
         description="IP version filter: `4`, `6`, or `mixed`.", default="mixed"
     )
-    exceptcountry: str | None = Field(
+    except_country: ListFromString = Field(
         description="Comma-separated country codes to exclude (e.g., `RU,CN`).",
-        default=None,
+        default=[],
     )
-    onlycountry: str | None = Field(
-        description="Comma-separated country codes to include only.", default=None
+    only_country: ListFromString = Field(
+        description="Comma-separated country codes to include only.", default=[]
     )
 
 
