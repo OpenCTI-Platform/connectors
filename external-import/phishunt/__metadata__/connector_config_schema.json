@@ -20,7 +20,9 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": [],
+      "default": [
+        "phishunt"
+      ],
       "description": "The scope of the connector.",
       "items": {
         "type": "string"
@@ -45,14 +47,14 @@
       "type": "string"
     },
     "CONNECTOR_DURATION_PERIOD": {
-      "default": "PT1H",
+      "default": "P3D",
       "description": "The period of time to await between two runs of the connector.",
       "format": "duration",
       "type": "string"
     },
     "PHISHUNT_API_KEY": {
       "default": null,
-      "description": "The API key for Phishunt.",
+      "description": "The API key for Phishunt. If not set, the connector will use the public feed.",
       "format": "password",
       "type": "string",
       "writeOnly": true
@@ -64,22 +66,22 @@
     },
     "PHISHUNT_DEFAULT_X_OPENCTI_SCORE": {
       "default": 40,
-      "description": "The default x_opencti_score to use for indicators. If a per indicator type score is not set, this is used.",
+      "description": "The default `x_opencti_score` to use for indicators. If no per indicator type score is set, this is the fallback default score.",
       "type": "integer"
     },
     "PHISHUNT_X_OPENCTI_SCORE_DOMAIN": {
-      "default": 40,
-      "description": "The x_opencti_score to use for Domain indicators. If not set, the default value is default_x_opencti_score.",
+      "default": null,
+      "description": "The `x_opencti_score` to use for Domain indicators. If not set, the default value is `default_x_opencti_score`.",
       "type": "integer"
     },
     "PHISHUNT_X_OPENCTI_SCORE_IP": {
-      "default": 40,
-      "description": "The x_opencti_score to use for IP indicators. If not set, the default value is default_x_opencti_score.",
+      "default": null,
+      "description": "The `x_opencti_score` to use for IP indicators. If not set, the default value is `default_x_opencti_score`.",
       "type": "integer"
     },
     "PHISHUNT_X_OPENCTI_SCORE_URL": {
-      "default": 40,
-      "description": "The x_opencti_score to use for URL indicators. If not set, the default value is default_x_opencti_score.",
+      "default": null,
+      "description": "The `x_opencti_score` to use for URL indicators. If not set, the default value is `default_x_opencti_score`.",
       "type": "integer"
     }
   },
