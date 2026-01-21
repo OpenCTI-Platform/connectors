@@ -49,8 +49,9 @@ class MicrosoftSentinelIncidentsConfig(BaseConfigModel):
     subscription_id: str = Field(
         description="Your Microsoft Sentinel subscription ID.",
     )
-    resource_group: str = Field(
-        description="Your Microsoft Sentinel resource group.",
+    # TODO This settings is not used and should be marked as deprecated
+    resource_group: str | None = Field(
+        description="Your Microsoft Sentinel resource group.", default=None
     )
     workspace_id: str = Field(
         description="Your Microsoft Sentinel workspace ID.",
