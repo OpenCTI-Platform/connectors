@@ -438,7 +438,6 @@ class ReportImporter:
                     object_marking_refs=object_markings,
                     custom_properties={
                         "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
                     },
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "Domain-Name.value":
@@ -447,7 +446,6 @@ class ReportImporter:
                     object_marking_refs=object_markings,
                     custom_properties={
                         "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
                     },
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "Email-Addr.value":
@@ -456,7 +454,6 @@ class ReportImporter:
                     object_marking_refs=object_markings,
                     custom_properties={
                         "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
                     },
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "File.name":
@@ -465,7 +462,6 @@ class ReportImporter:
                     object_marking_refs=object_markings,
                     custom_properties={
                         "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
                     },
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "IPv4-Addr.value":
@@ -474,7 +470,6 @@ class ReportImporter:
                     object_marking_refs=object_markings,
                     custom_properties={
                         "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
                     },
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "IPv6-Addr.value":
@@ -483,7 +478,6 @@ class ReportImporter:
                     object_marking_refs=object_markings,
                     custom_properties={
                         "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
                     },
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "Mac-Addr.value":
@@ -492,7 +486,6 @@ class ReportImporter:
                     object_marking_refs=object_markings,
                     custom_properties={
                         "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
                     },
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "File.hashes.MD5":
@@ -501,7 +494,6 @@ class ReportImporter:
                     object_marking_refs=object_markings,
                     custom_properties={
                         "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
                     },
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "File.hashes.SHA-1":
@@ -510,7 +502,6 @@ class ReportImporter:
                     object_marking_refs=object_markings,
                     custom_properties={
                         "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
                     },
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "File.hashes.SHA-256":
@@ -519,7 +510,6 @@ class ReportImporter:
                     object_marking_refs=object_markings,
                     custom_properties={
                         "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
                     },
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "Windows-Registry-Key.key":
@@ -528,7 +518,6 @@ class ReportImporter:
                     object_marking_refs=object_markings,
                     custom_properties={
                         "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
                     },
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "Url.value":
@@ -540,7 +529,6 @@ class ReportImporter:
                     object_marking_refs=object_markings,
                     custom_properties={
                         "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
                     },
                 )
             if observable is not None and observables is not None:
