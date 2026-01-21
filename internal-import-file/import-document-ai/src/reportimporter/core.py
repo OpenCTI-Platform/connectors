@@ -437,24 +437,10 @@ class ReportImporter:
                             only_entity=True,
                         )
                     else:
-                        stix_object = create_stix_object(
-                            category,
-                            txt,
-                            object_markings,
-                            custom_properties={
-                                "created_by_ref": author,
-                            },
-                        )
+                        stix_object = create_stix_object(category, txt, object_markings)
                 else:
                     # Other SDOs: create directly; OpenCTI will merge on deterministic IDs
-                    stix_object = create_stix_object(
-                        category,
-                        txt,
-                        object_markings,
-                        custom_properties={
-                            "created_by_ref": author,
-                        },
-                    )
+                    stix_object = create_stix_object(category, txt, object_markings)
 
                 if stix_object:
                     entities.append(stix_object)
@@ -474,7 +460,6 @@ class ReportImporter:
                     object_markings,
                     custom_properties={
                         "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
                     },
                 )
                 if stix_object:
