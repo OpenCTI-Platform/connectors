@@ -116,7 +116,13 @@ class Phishunt:
             resp = requests.request(
                 "GET",
                 "https://api.phishunt.io/suspicious/feed_json",
-                headers={"x-api-key": self.phishunt_api_key},
+                headers={
+                    "x-api-key": (
+                        self.phishunt_api_key.get_secret_value()
+                        if self.phishunt_api_key
+                        else None
+                    )
+                },
             )
             resp.raise_for_status()
             data = resp.json()
