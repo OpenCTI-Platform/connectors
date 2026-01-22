@@ -3,13 +3,12 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'
-  name: 'Common Platform Enumeration'
-  scope: 'software'
-  log_level: 'info'
+  # name: 'Common Platform Enumeration'
+  # scope: 'software'
+  # log_level: 'error'
+  # duration_period: PT6H
 
 cpe:
-  base_url: 'https://services.nvd.nist.gov/rest/json/cpes/2.0' # Required
+  # base_url: 'https://services.nvd.nist.gov/rest/json/cpes/2.0'
   api_key: 'ChangeMe' # Required
-  interval: '6h' # Required, in hours advice min 6
