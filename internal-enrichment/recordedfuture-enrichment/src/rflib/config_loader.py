@@ -185,6 +185,10 @@ class _RecordedFutureConfig(_ConfigBaseModel):
         description="A list of optional fields to enrich vulnerabilities with. (For vulnerability enrichment only)",
         default=[],
     )
+    threat_actor_to_intrusion_set: bool = Field(
+        default=False,
+        description="Whether to convert Threat Actor entities to Intrusion Set entities.",
+    )
 
     @field_validator("vulnerability_enrichment_optional_fields", mode="after")
     @classmethod
