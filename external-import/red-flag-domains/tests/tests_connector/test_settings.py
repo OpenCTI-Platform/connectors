@@ -25,8 +25,7 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
         pytest.param(
             {
                 "opencti": {"url": "http://localhost:8080", "token": "test-token"},
-                "connector": {},
-                "red_flag_domains": {"url": "https://dl.red.flag.domains/daily/"},
+                "connector": {"id": "connector-id"},
             },
             id="minimal_valid_settings_dict",
         ),

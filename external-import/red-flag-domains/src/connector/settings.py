@@ -17,15 +17,14 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
 
     id: str = Field(
         description="A UUID v4 to identify the connector in OpenCTI.",
-        default="16146fa8-f9dd-4fe8-9061-18787424fcb6",
     )
     name: str = Field(
         description="The name of the connector.",
-        default="RedFlagDomains",
+        default="Red Flag Domains",
     )
     scope: ListFromString = Field(
         description="The scope of the connector.",
-        default=[],
+        default=["red-flag-domains"],
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
