@@ -41,9 +41,9 @@ class StubConnectorSettings(ConnectorSettings):
                     "log_level": "error",
                     "auto": True,
                 },
-                "dnstwist": {
+                "dnst_wist": {
                     "fetch_registered": True,
-                    "dns_twist_threads": 80,
+                    "threads": 80,
                 },
             }
         )

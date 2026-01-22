@@ -10,7 +10,10 @@ from lib import ConnectorSettings
     [
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
                 "connector": {
                     "id": "connector-id",
                     "name": "Test Connector",
@@ -18,14 +21,23 @@ from lib import ConnectorSettings
                     "log_level": "error",
                     "auto": True,
                 },
-                "dnstwist": {"fetch_registered": True, "dns_twist_threads": 80},
+                "dns_twist": {
+                    "fetch_registered": True,
+                    "threads": 80,
+                },
             },
             id="full_valid_settings_dict",
         ),
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
-                "dnstwist": {"fetch_registered": True, "dns_twist_threads": 80},
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "dns_twist": {
+                    "fetch_registered": True,
+                    "threads": 80,
+                },
             },
             id="minimal_valid_settings_dict",
         ),
@@ -53,7 +65,7 @@ def test_settings_should_accept_valid_input(settings_dict):
     settings = FakeConnectorSettings()
     assert isinstance(settings.opencti, BaseConfigModel) is True
     assert isinstance(settings.connector, BaseConfigModel) is True
-    assert isinstance(settings.dnstwist, BaseConfigModel) is True
+    assert isinstance(settings.dns_twist, BaseConfigModel) is True
 
 
 @pytest.mark.parametrize(
@@ -62,28 +74,39 @@ def test_settings_should_accept_valid_input(settings_dict):
         pytest.param({}, "settings", id="empty_settings_dict"),
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080"},
+                "opencti": {
+                    "url": "http://localhost:8080",
+                },
                 "connector": {
                     "id": "connector-id",
                     "name": "Test Connector",
                     "scope": "test, connector",
                     "log_level": "error",
                 },
-                "dnstwist": {"fetch_registered": True, "dns_twist_threads": 80},
+                "dns_twist": {
+                    "fetch_registered": True,
+                    "threads": 80,
+                },
             },
             "opencti.token",
             id="missing_opencti_token",
         ),
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
                 "connector": {
                     "id": 123456,
                     "name": "Test Connector",
                     "scope": "test, connector",
                     "log_level": "error",
                 },
-                "dnstwist": {"fetch_registered": True, "dns_twist_threads": 80},
+                "dns_twist": {
+                    "fetch_registered": True,
+                    "threads": 80,
+                },
             },
             "connector.id",
             id="invalid_connector_id",

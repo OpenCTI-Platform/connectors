@@ -23,7 +23,7 @@ class DnsTwistConnector:
         self.config = config
         self.helper = helper
         self.dictonary_path = "/dictionaries/"
-        self.total_threads = self.config.dnstwist.dns_twist_threads
+        self.total_threads = self.config.dns_twist.threads
 
     def detect_ip_version(self, value, type=False):
         if re.match(
@@ -42,7 +42,7 @@ class DnsTwistConnector:
         """Enriching the domain name using DNS Twist"""
         tld_file = os.path.join(self.dictonary_path, "common_tlds.dict")
         stix_objects = []
-        self.registered = self.config.dnstwist.fetch_registered
+        self.registered = self.config.dns_twist.fetch_registered
         if self.registered == "true":
             self.registered = True
         else:
