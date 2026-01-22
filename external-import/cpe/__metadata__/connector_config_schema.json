@@ -15,12 +15,14 @@
       "type": "string"
     },
     "CONNECTOR_NAME": {
-      "default": "Cpe",
+      "default": "Common Platform Enumeration",
       "description": "The name of the connector.",
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": [],
+      "default": [
+        "software"
+      ],
       "description": "The scope of the connector.",
       "items": {
         "type": "string"
@@ -45,7 +47,7 @@
       "type": "string"
     },
     "CONNECTOR_DURATION_PERIOD": {
-      "default": "PT1H",
+      "default": "PT6H",
       "description": "The period of time to await between two runs of the connector.",
       "format": "duration",
       "type": "string"
@@ -56,21 +58,16 @@
       "type": "string"
     },
     "CPE_API_KEY": {
-      "default": "**********",
       "description": "API Key for the NIST NVD API.",
       "format": "password",
       "type": "string",
       "writeOnly": true
-    },
-    "CPE_INTERVAL": {
-      "default": "6h",
-      "description": "Interval between collections (format: `6h` for hours, `3600s` for seconds). Minimum recommended: 6 hours.",
-      "type": "string"
     }
   },
   "required": [
     "OPENCTI_URL",
-    "OPENCTI_TOKEN"
+    "OPENCTI_TOKEN",
+    "CPE_API_KEY"
   ],
   "additionalProperties": true
 }
