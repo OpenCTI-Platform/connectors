@@ -1,11 +1,13 @@
+import time
+
 import requests
 
 
-class ConnectorClient:
+class Teamt5Client:
 
     def __init__(self, helper, config) -> None:
         """
-        Initialises the the ConnectorClient.
+        Initialises the the Teamt5Client.
 
         :param helper: The OpenCTI connector helper object.
         :param config: The connector configuration object.
@@ -15,29 +17,32 @@ class ConnectorClient:
         self.config = config
 
         self.session = requests.Session()
-        headers = {"Authorization": f"Bearer {self.config.api_key}"}
+        headers = {
+            "Authorization": f"Bearer {self.config.teamt5.api_key.get_secret_value()}"
+        }
         self.session.headers.update(headers)
 
-    def _request_data(self, url: str, params=None):
+    def _request_data(self, url: str, params=None) -> dict:
         """
-        Makes a get request to a Team T5 API url.
+        Make a get request based upon the specified URL.
 
         :param url: The URL to request data from.
         :param params: Optional dictionary of query parameters.
-        :return: A response object on success, or None on failure.
+        :return: The json of the response object on success, or None on failure.
         """
-        timeout = 10
+        timeout = 15
 
         try:
             # validate the response and add a small delay as to not overload the API
             response = self.session.get(url, params=params, timeout=timeout)
-
             response.raise_for_status()
-            return response
+            time.sleep(1)
+            return response.json()
 
-        except requests.RequestException as err:
-            self.helper.connector_logger.error(
-                "Request Error while fetching data",
-                {"url_path": {url}, "error": {str(err)}},
-            )
+        except (
+            requests.exceptions.HTTPError,
+            requests.ConnectionError,
+            requests.ConnectTimeout,
+        ) as e:
+            self.helper.connector_logger.warning(f"Failed request to: {url} {e}")
         return None
