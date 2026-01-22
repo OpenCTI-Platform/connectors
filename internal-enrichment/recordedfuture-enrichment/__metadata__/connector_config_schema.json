@@ -15,12 +15,19 @@
       "type": "string"
     },
     "CONNECTOR_NAME": {
-      "default": "RecordedfutureEnrichment",
+      "default": "RecordedFutureEnrichment",
       "description": "The name of the connector.",
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": [],
+      "default": [
+        "ipv4-addr",
+        "ipv6-addr",
+        "domain-name",
+        "url",
+        "stixfile",
+        "vulnerability"
+      ],
       "description": "The scope of the connector.",
       "items": {
         "type": "string"
@@ -50,7 +57,6 @@
       "type": "boolean"
     },
     "RECORDED_FUTURE_TOKEN": {
-      "default": "**********",
       "description": "API Token for Recorded Future.",
       "format": "password",
       "type": "string",
@@ -76,15 +82,24 @@
       ],
       "type": "string"
     },
+    "RECORDED_FUTURE_THREAT_ACTOR_TO_INTRUSION_SET": {
+      "default": false,
+      "description": "Whether to convert Threat Actor entities to Intrusion Set entities.",
+      "type": "boolean"
+    },
     "RECORDED_FUTURE_VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS": {
-      "default": "aiInsights,cpe,risk",
+      "default": [],
       "description": "A list of optional fields to enrich vulnerabilities with. (For vulnerability enrichment only)",
-      "type": "string"
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     }
   },
   "required": [
     "OPENCTI_URL",
-    "OPENCTI_TOKEN"
+    "OPENCTI_TOKEN",
+    "RECORDED_FUTURE_TOKEN"
   ],
   "additionalProperties": true
 }

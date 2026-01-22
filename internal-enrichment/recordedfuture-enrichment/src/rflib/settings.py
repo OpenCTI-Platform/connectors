@@ -6,7 +6,17 @@ from connectors_sdk import (
     BaseInternalEnrichmentConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator
+
+SCOPE_ENTITIES = [
+    "ipv4-addr",
+    "ipv6-addr",
+    "domain-name",
+    "url",
+    "stixfile",
+    "vulnerability",
+]
+VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS = ["aiInsights", "cpe", "risk"]
 
 
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
@@ -21,12 +31,21 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     )
     name: str = Field(
         description="The name of the connector.",
-        default="RecordedfutureEnrichment",
+        default="RecordedFutureEnrichment",
     )
     scope: ListFromString = Field(
         description="The scope of the connector.",
-        default=[],
+        default=SCOPE_ENTITIES,
     )
+
+    @field_validator("scope", mode="after")
+    @classmethod
+    def validate_scope_entities(cls, scope: list[str]) -> list[str]:
+        if invalids := [entity for entity in scope if entity not in SCOPE_ENTITIES]:
+            raise ValueError(
+                f"Invalid scope: {', '.join(invalids)} are not in {', '.join(SCOPE_ENTITIES)}"
+            )
+        return scope
 
 
 class RecordedfutureEnrichmentConfig(BaseConfigModel):
@@ -36,7 +55,6 @@ class RecordedfutureEnrichmentConfig(BaseConfigModel):
 
     token: SecretStr = Field(
         description="API Token for Recorded Future.",
-        default=SecretStr("ChangeMe"),
     )
     create_indicator_threshold: int = Field(
         description="The risk score threshold at which an indicator will be created for enriched observables.",
@@ -55,10 +73,29 @@ class RecordedfutureEnrichmentConfig(BaseConfigModel):
         description="Max TLP marking of the entity to enrich (inclusive).",
         default="TLP:AMBER",
     )
-    vulnerability_enrichment_optional_fields: str = Field(
-        description="A list of optional fields to enrich vulnerabilities with. (For vulnerability enrichment only)",
-        default="aiInsights,cpe,risk",
+    threat_actor_to_intrusion_set: bool = Field(
+        default=False,
+        description="Whether to convert Threat Actor entities to Intrusion Set entities.",
     )
+    vulnerability_enrichment_optional_fields: ListFromString = Field(
+        description="A list of optional fields to enrich vulnerabilities with. (For vulnerability enrichment only)",
+        default=[],
+    )
+
+    @field_validator("vulnerability_enrichment_optional_fields", mode="after")
+    @classmethod
+    def validate_vulnerability_enrichment_optional_fields(
+        cls, vulnerability_enrichment_optional_fields: list[str]
+    ) -> list[str]:
+        if invalids := [
+            field
+            for field in vulnerability_enrichment_optional_fields
+            if field not in VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS
+        ]:
+            raise ValueError(
+                f"Invalid vulnerability enrichment optional field(s): {', '.join(invalids)} are not in {', '.join(VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS)}"
+            )
+        return vulnerability_enrichment_optional_fields
 
 
 class ConnectorSettings(BaseConnectorSettings):

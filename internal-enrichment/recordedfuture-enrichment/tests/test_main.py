@@ -37,15 +37,19 @@ class StubConnectorSettings(ConnectorSettings):
                 "connector": {
                     "id": "connector-id",
                     "name": "Test Connector",
-                    "scope": "test, connector",
+                    "scope": "ipv4-addr, ipv6-addr, domain-name, url, stixfile, vulnerability",
                     "log_level": "error",
                     "auto": True,
                 },
                 "recorded_future": {
                     "token": "SecretStr",
                     "create_indicator_threshold": 42,
-                    "info_max_tlp": "str",
-                    "vulnerability_enrichment_optional_fields": "str",
+                    "info_max_tlp": "TLP:CLEAR",
+                    "vulnerability_enrichment_optional_fields": [
+                        "aiInsights",
+                        "cpe",
+                        "risk",
+                    ],
                 },
             }
         )
@@ -78,7 +82,10 @@ def test_opencti_connector_helper_is_instantiated(mock_opencti_connector_helper)
     assert helper.opencti_token == "test-token"
     assert helper.connect_id == "connector-id"
     assert helper.connect_name == "Test Connector"
-    assert helper.connect_scope == "test,connector"
+    assert (
+        helper.connect_scope
+        == "ipv4-addr,ipv6-addr,domain-name,url,stixfile,vulnerability"
+    )
     assert helper.log_level == "ERROR"
     assert helper.connect_auto == True
 

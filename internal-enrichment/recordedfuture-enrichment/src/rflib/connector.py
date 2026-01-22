@@ -1,7 +1,7 @@
 """Connector to enrich IOCs with Recorded Future data"""
 
-from connectors_sdk.models import octi
-from connectors_sdk.models.octi.enums import TLPLevel
+from connectors_sdk.models import BaseIdentifiedEntity
+from connectors_sdk.models.enums import TLPLevel
 from pycti import OpenCTIConnectorHelper
 from rf_client import RFClient, RFClientError, RFClientNotFoundError
 from rflib.settings import ConnectorSettings
@@ -20,7 +20,7 @@ class RFEnrichmentConnector:
         """Instantiate the connector with config variables"""
         self.config = config
         self.helper = helper
-        self.rf_client = RFClient(self.config.recorded_future.token)
+        self.rf_client = RFClient(self.config.recorded_future.token.get_secret_value())
         self.vulnerability_enricher = VulnerabilityEnricher(helper=self.helper)
         self.observable_enricher = ObservableEnricher(
             helper=self.helper,
@@ -68,7 +68,7 @@ class RFEnrichmentConnector:
             return f"[file:hashes.'{algorithm.lower()}' = '{ioc}']"
         return f"[{data_type.lower()}:value = '{ioc}']"
 
-    def enrich_observable(self, octi_entity: dict) -> list[octi.BaseIdentifiedEntity]:
+    def enrich_observable(self, octi_entity: dict) -> list[BaseIdentifiedEntity]:
         observable_type = octi_entity["entity_type"]
         observable_value = octi_entity["observable_value"]
         observable_id = octi_entity["standard_id"]
@@ -83,9 +83,7 @@ class RFEnrichmentConnector:
             observable_enrichment=data
         )
 
-    def enrich_vulnerability(
-        self, octi_entity: dict
-    ) -> list[octi.BaseIdentifiedEntity]:
+    def enrich_vulnerability(self, octi_entity: dict) -> list[BaseIdentifiedEntity]:
         vulnerability_id = octi_entity["standard_id"]
         vulnerability_name = octi_entity["name"]
         self.helper.connector_logger.info(

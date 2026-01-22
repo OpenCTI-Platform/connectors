@@ -1,7 +1,7 @@
 from copy import deepcopy
 from datetime import datetime, timezone
 
-from connectors_sdk.models.octi import (
+from connectors_sdk.models import (
     URL,
     AttackPattern,
     BaseIdentifiedEntity,
@@ -21,7 +21,7 @@ from connectors_sdk.models.octi import (
     TLPMarking,
     Vulnerability,
 )
-from connectors_sdk.models.octi.enums import TLPLevel
+from connectors_sdk.models.enums import TLPLevel
 from pycti import OpenCTIConnectorHelper
 
 # Import ValidationError from pydantic because it's the type of errors raised by connectors-sdk models

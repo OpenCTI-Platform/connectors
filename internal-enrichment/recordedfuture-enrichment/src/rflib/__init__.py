@@ -12,11 +12,7 @@
 from rflib.connector import RFEnrichmentConnector
 from rflib.settings import ConnectorSettings
 
-from .config_loader import ConfigRetrievalError, ConnectorConfig
-
 __all__ = [
-    "ConnectorConfig",
-    "ConfigRetrievalError",
     "RFEnrichmentConnector",
     "ConnectorSettings",
 ]
