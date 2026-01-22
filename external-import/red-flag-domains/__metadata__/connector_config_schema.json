@@ -15,12 +15,14 @@
       "type": "string"
     },
     "CONNECTOR_NAME": {
-      "default": "RedFlagDomains",
+      "default": "Red Flag Domains",
       "description": "The name of the connector.",
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": [],
+      "default": [
+        "red-flag-domains"
+      ],
       "description": "The scope of the connector.",
       "items": {
         "type": "string"
