@@ -6,7 +6,7 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, SecretStr
+from pydantic import AliasChoices, Field, SecretStr
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -38,21 +38,15 @@ class TenableVulnManagementConfig(BaseConfigModel):
     Define parameters and/or defaults for the configuration specific to the `TenableVulnManagementConnector`.
     """
 
-    num_thread: int = Field(
-        description="Number of threads to use for the connector.",
-        default=1,
-    )
     api_base_url: str = Field(
         description="Base URL for the Tenable API.",
         default="https://cloud.tenable.com",
     )
     api_access_key: SecretStr = Field(
         description="Tenable API access key.",
-        default=SecretStr("ChangeMe"),
     )
     api_secret_key: SecretStr = Field(
         description="Tenable API secret key.",
-        default=SecretStr("ChangeMe"),
     )
     api_timeout: int = Field(
         description="Timeout for API requests in seconds.",
@@ -78,10 +72,9 @@ class TenableVulnManagementConfig(BaseConfigModel):
         description="Default marking definition for imported data (e.g., `TLP:AMBER`, `TLP:GREEN`, `TLP:CLEAR`).",
         default="TLP:CLEAR",
     )
-    num_threads: str | None = Field(
+    num_threads: int = Field(
         description="Number of threads to use for the connector.",
-        default=None,
-        deprecated=True,
+        default=1,
     )
 
 
@@ -94,5 +87,6 @@ class ConnectorSettings(BaseConnectorSettings):
         default_factory=ExternalImportConnectorConfig
     )
     tio: TenableVulnManagementConfig = Field(
-        default_factory=TenableVulnManagementConfig
+        default_factory=TenableVulnManagementConfig,
+        alias=AliasChoices("tenable_vuln_management", "tio"),
     )

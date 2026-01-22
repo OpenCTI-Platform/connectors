@@ -207,7 +207,7 @@ class Connector:
             results(list[bool]): True if job succeeded False otherwise.
         """
         jobs = self.client.export_vulnerabilities().run_threaded(
-            func=self._process, kwargs=None, num_threads=self.config.tio.num_thread
+            func=self._process, kwargs=None, num_threads=self.config.tio.num_threads
         )
         return [job.result() for job in concurrent.futures.as_completed(jobs)]
 

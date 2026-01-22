@@ -102,11 +102,11 @@ class ConnectorClient:
         self.helper = helper
         self.config = config
         self._tio_client = TenableIO(
-            access_key=self.config.tio_api_access_key,
-            secret_key=self.config.tio_api_secret_key,
-            url=self.config.tio_api_base_url,
-            backoff=self.config.tio_api_backoff,
-            retries=self.config.tio_api_retries,
+            access_key=self.config.tio.api_access_key.get_secret_value(),
+            secret_key=self.config.tio.api_secret_key.get_secret_value(),
+            url=self.config.tio.api_base_url,
+            backoff=self.config.tio.api_backoff,
+            retries=self.config.tio.api_retries,
             # Tenable integration best practice.
             # See https://developer.tenable.com/docs/tenableio-integrations [consulted on September 27th, 2024]
             vendor="Filigran",
@@ -183,8 +183,8 @@ class ConnectorClient:
             [Consulted on September 27th, 2024].
         """
         return self._tio_client.exports.vulns(
-            since=int(parser.parse(self.config.tio_export_since).timestamp()),
-            severity=SeverityLevel.levels_above(self.config.tio_severity_min_level),
+            since=int(parser.parse(self.config.tio.export_since).timestamp()),
+            severity=SeverityLevel.levels_above(self.config.tio.min_severity),
         )
 
     def _since_filter_api_v3(self):
@@ -197,7 +197,7 @@ class ConnectorClient:
             https://community.tenable.com/s/article/since-filter-changes-for-Tenable-io-vulns-exports-API
 
         """
-        parsed_with_tz = parser.parse(self.config.tio_export_since)
+        parsed_with_tz = parser.parse(self.config.tio.export_since)
         utc_datetime = (
             datetime.datetime.fromtimestamp(parsed_with_tz.timestamp()).isoformat()
             + "Z"
@@ -299,9 +299,7 @@ class ConnectorClient:
         filter_since = self._since_filter_api_v3()
         filter_severity = {
             "operator": "eq",
-            "value": SeverityLevel.levels_index_above(
-                self.config.tio_severity_min_level
-            ),
+            "value": SeverityLevel.levels_index_above(self.config.tio.min_severity),
             "property": "severity",
         }
         fields = [
