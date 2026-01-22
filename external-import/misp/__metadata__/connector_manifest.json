@@ -10,7 +10,7 @@
   "verified": true,
   "last_verified_date": "2025-01-01",
   "playbook_supported": false,
-  "max_confidence_level": 55,
+  "max_confidence_level": 50,
   "support_version": ">= 6.5.1",
   "subscription_link": "https://www.misp-project.org",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/misp",
