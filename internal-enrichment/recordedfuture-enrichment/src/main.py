@@ -1,18 +1,7 @@
-"""
-############################## TERMS OF USE ####################################
-# The following code is provided for demonstration purposes only, and should   #
-# not be used without independent verification. Recorded Future makes no       #
-# representations or warranties, express, implied, statutory, or otherwise,    #
-# regarding this code, and provides it strictly "as-is".                       #
-# Recorded Future shall not be liable for, and you assume all risk of          #
-# using the foregoing.                                                         #
-################################################################################
-"""
-
 import traceback
 
 from pycti import OpenCTIConnectorHelper
-from rflib import ConnectorConfig, RFEnrichmentConnector
+from rflib import ConnectorSettings, RFEnrichmentConnector
 
 if __name__ == "__main__":
     """
@@ -25,14 +14,13 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        config = ConnectorConfig()
+        settings = ConnectorSettings()
         helper = OpenCTIConnectorHelper(
-            config=config.model_dump_pycti(),
-            playbook_compatible=True,
+            config=settings.to_helper_config(), playbook_compatible=True
         )
 
-        connector = RFEnrichmentConnector(config, helper)
-        connector.start()
+        connector = RFEnrichmentConnector(config=settings, helper=helper)
+        connector.run()
     except Exception:
         traceback.print_exc()
         exit(1)

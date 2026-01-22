@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/recordedfuture-enrichment_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "RecordedfutureEnrichment",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Whether the connector should run automatically when an entity is created or updated.",
+      "type": "boolean"
+    },
+    "RECORDED_FUTURE_TOKEN": {
+      "default": "**********",
+      "description": "API Token for Recorded Future.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "RECORDED_FUTURE_CREATE_INDICATOR_THRESHOLD": {
+      "default": 0,
+      "description": "The risk score threshold at which an indicator will be created for enriched observables.",
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "RECORDED_FUTURE_INFO_MAX_TLP": {
+      "default": "TLP:AMBER",
+      "description": "Max TLP marking of the entity to enrich (inclusive).",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
+    },
+    "RECORDED_FUTURE_VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS": {
+      "default": "aiInsights,cpe,risk",
+      "description": "A list of optional fields to enrich vulnerabilities with. (For vulnerability enrichment only)",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}

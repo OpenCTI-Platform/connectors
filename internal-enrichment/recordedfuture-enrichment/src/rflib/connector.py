@@ -4,9 +4,8 @@ from connectors_sdk.models import octi
 from connectors_sdk.models.octi.enums import TLPLevel
 from pycti import OpenCTIConnectorHelper
 from rf_client import RFClient, RFClientError, RFClientNotFoundError
-from rflib import APP_VERSION
+from rflib.settings import ConnectorSettings
 
-from .config_loader import ConnectorConfig
 from .use_cases.enrich_observable import ObservableEnricher, ObservableEnrichmentError
 from .use_cases.enrich_vulnerability import (
     VulnerabilityEnricher,
@@ -17,13 +16,11 @@ from .use_cases.enrich_vulnerability import (
 class RFEnrichmentConnector:
     """Enrichment connector class"""
 
-    def __init__(self, config: ConnectorConfig, helper: OpenCTIConnectorHelper):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """Instantiate the connector with config variables"""
         self.config = config
         self.helper = helper
-
-        self.rf_client = RFClient(self.config.recorded_future.token, APP_VERSION)
-
+        self.rf_client = RFClient(self.config.recorded_future.token)
         self.vulnerability_enricher = VulnerabilityEnricher(helper=self.helper)
         self.observable_enricher = ObservableEnricher(
             helper=self.helper,
@@ -43,7 +40,6 @@ class RFEnrichmentConnector:
         Returns:
             Recorded Future object type as string
         """
-
         match observable_type:
             case "IPv4-Addr" | "IPv6-Addr":
                 return "ip"
@@ -68,32 +64,23 @@ class RFEnrichmentConnector:
 
         Returns the STIX2 pattern as a string
         """
-
         if data_type == "StixFile":
             return f"[file:hashes.'{algorithm.lower()}' = '{ioc}']"
-
         return f"[{data_type.lower()}:value = '{ioc}']"
 
     def enrich_observable(self, octi_entity: dict) -> list[octi.BaseIdentifiedEntity]:
         observable_type = octi_entity["entity_type"]
         observable_value = octi_entity["observable_value"]
         observable_id = octi_entity["standard_id"]
-
         self.helper.connector_logger.info(
             "Enriching observable...",
-            {
-                "observable_id": observable_id,
-                "observable_value": observable_value,
-            },
+            {"observable_id": observable_id, "observable_value": observable_value},
         )
-
         data = self.rf_client.get_observable_enrichment(
-            self.to_rf_type(observable_type),
-            observable_value,
+            self.to_rf_type(observable_type), observable_value
         )
-
         return self.observable_enricher.process_observable_enrichment(
-            observable_enrichment=data,
+            observable_enrichment=data
         )
 
     def enrich_vulnerability(
@@ -101,7 +88,6 @@ class RFEnrichmentConnector:
     ) -> list[octi.BaseIdentifiedEntity]:
         vulnerability_id = octi_entity["standard_id"]
         vulnerability_name = octi_entity["name"]
-
         self.helper.connector_logger.info(
             "Enriching vulnerability...",
             {
@@ -109,12 +95,10 @@ class RFEnrichmentConnector:
                 "vulnerability_name": vulnerability_name,
             },
         )
-
         vulnerability_enrichment = self.rf_client.get_vulnerability_enrichment(
             name=vulnerability_name,
             optional_fields=self.config.recorded_future.vulnerability_enrichment_optional_fields,
         )
-
         return self.vulnerability_enricher.process_vulnerability_enrichment(
             octi_vulnerability_data=octi_entity,
             vulnerability_enrichment=vulnerability_enrichment,
@@ -128,27 +112,22 @@ class RFEnrichmentConnector:
             - In case of success, return a success message a string
             - In case of error, raise the error (pycti will handle it)
         """
-        enrichment_completed = False  # Enrichment state flag
-
+        enrichment_completed = False
         original_stix_objects: list[dict] = data["stix_objects"]
         enrichment_entity: dict = data["enrichment_entity"]
-
         entity_type: str = enrichment_entity["entity_type"]
         entity_stix_id: str = enrichment_entity["standard_id"]
-
         try:
             if entity_type.lower() not in self.config.connector.scope:
                 message = (
                     f"Recorded Future enrichment does not support type {entity_type}"
                 )
                 self.helper.connector_logger.error(message)
-                raise ValueError(message)  # pycti will send it to OCTI
-
+                raise ValueError(message)
             tlp = "TLP:CLEAR"
             for marking_definition in enrichment_entity["objectMarking"]:
                 if marking_definition["definition_type"] == "TLP":
                     tlp = marking_definition["definition"]
-
             if not self.helper.check_max_tlp(
                 tlp, self.config.recorded_future.info_max_tlp
             ):
@@ -156,49 +135,31 @@ class RFEnrichmentConnector:
                 f"which is greater than MAX TLP: ({self.config.recorded_future.info_max_tlp})"
                 self.helper.connector_logger.warning(
                     message,
-                    {
-                        "entity_type": entity_type,
-                        "entity_stix_id": entity_stix_id,
-                    },
+                    {"entity_type": entity_type, "entity_stix_id": entity_stix_id},
                 )
                 return message
-
             octi_objects = []
             if entity_type == "Vulnerability":
                 octi_objects = self.enrich_vulnerability(enrichment_entity)
             else:
                 octi_objects = self.enrich_observable(enrichment_entity)
-
             self.helper.connector_logger.info(
                 "Sending bundle...",
-                {
-                    "entity_type": entity_type,
-                    "entity_stix_id": entity_stix_id,
-                },
+                {"entity_type": entity_type, "entity_stix_id": entity_stix_id},
             )
-
             bundle_objects = original_stix_objects + [
                 octi_object.to_stix2_object() for octi_object in octi_objects
             ]
             bundle = self.helper.stix2_create_bundle(bundle_objects)
             bundles_sent = self.helper.send_stix2_bundle(
-                bundle=bundle,
-                cleanup_inconsistent_bundle=True,
+                bundle=bundle, cleanup_inconsistent_bundle=True
             )
-
             enrichment_completed = True
-
             message = f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
             self.helper.connector_logger.info(
-                message,
-                {
-                    "entity_type": entity_type,
-                    "entity_stix_id": entity_stix_id,
-                },
+                message, {"entity_type": entity_type, "entity_stix_id": entity_stix_id}
             )
-
             return message
-
         except RFClientNotFoundError as err:
             self.helper.connector_logger.warning(
                 str(err),
@@ -208,7 +169,7 @@ class RFEnrichmentConnector:
                     "error": err,
                 },
             )
-            return str(err)  # do not display error on OCTI
+            return str(err)
         except (
             RFClientError,
             ObservableEnrichmentError,
@@ -222,8 +183,7 @@ class RFEnrichmentConnector:
                     "error": err,
                 },
             )
-            raise err  # pycti will send it to OCTI
-
+            raise err
         except Exception as err:
             self.helper.connector_logger.error(
                 "An unexpected error occured",
@@ -233,15 +193,12 @@ class RFEnrichmentConnector:
                     "error": err,
                 },
             )
-            raise err  # pycti will send it to OCTI
-
+            raise err
         finally:
-            # Ensure objects in original bundle are always sent back,
-            # even if they have not been enriched (for compatibility with playbooks)
             if not enrichment_completed:
                 bundle = self.helper.stix2_create_bundle(original_stix_objects)
                 self.helper.send_stix2_bundle(bundle)
 
-    def start(self):
+    def run(self):
         """Start the main loop"""
         self.helper.listen(message_callback=self._process_message)

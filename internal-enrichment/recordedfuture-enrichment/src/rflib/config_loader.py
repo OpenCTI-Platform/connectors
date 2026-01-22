@@ -21,7 +21,6 @@ from pydantic_settings import (
 )
 
 MAIN_DIRECTORY_PATH = os.path.dirname(os.path.abspath(__main__.__file__))
-
 SCOPE_ENTITIES = [
     "ipv4-addr",
     "ipv6-addr",
@@ -30,33 +29,8 @@ SCOPE_ENTITIES = [
     "stixfile",
     "vulnerability",
 ]
-
-VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS = [
-    "aiInsights",
-    "cpe",
-    "risk",
-]
-
-"""
-All the variables that have default values will override configuration from the OpenCTI helper.
-
-All the variables of this classes are customizable through:
-    - config.yml 
-    - .env
-    - environment variables.
-
-If a variable is set in 2 different places, the first one will be used in this order:
-    1. YAML file
-    2. .env file
-    3. Environment variables
-    4. Default value
-    
-WARNING:
-    The Environment variables in the .env or global environment must be set in the following format:
-    OPENCTI_<variable>
-    CONNECTOR_<variable>
-    RECORDED_FUTURE_<variable>
-"""
+VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS = ["aiInsights", "cpe", "risk"]
+"\nAll the variables that have default values will override configuration from the OpenCTI helper.\n\nAll the variables of this classes are customizable through:\n    - config.yml \n    - .env\n    - environment variables.\n\nIf a variable is set in 2 different places, the first one will be used in this order:\n    1. YAML file\n    2. .env file\n    3. Environment variables\n    4. Default value\n    \nWARNING:\n    The Environment variables in the .env or global environment must be set in the following format:\n    OPENCTI_<variable>\n    CONNECTOR_<variable>\n    RECORDED_FUTURE_<variable>\n"
 
 
 class ConfigRetrievalError(Exception):
@@ -87,7 +61,11 @@ def pycti_list_serializer(value: list[str], info: SerializationInfo) -> str | li
         > serialized_values = pycti_list_serializer([ "e1", "e2", "e3" ])
         > print(serialized_values) # "e1,e2,e3"
     """
-    if isinstance(value, list) and info.context and info.context.get("mode") == "pycti":
+    if (
+        isinstance(value, list)
+        and info.context
+        and (info.context.get("mode") == "pycti")
+    ):
         return ",".join(value)
     return value
 
@@ -104,11 +82,7 @@ class _ConfigBaseModel(BaseModel):
     Base class for frozen config models, i.e. not alter-able after `model_post_init()`.
     """
 
-    model_config = ConfigDict(
-        frozen=True,
-        extra="allow",
-        validate_default=True,
-    )
+    model_config = ConfigDict(frozen=True, extra="allow", validate_default=True)
 
 
 class _OpenCTIConfig(_ConfigBaseModel):
@@ -131,21 +105,14 @@ class _ConnectorConfig(_ConfigBaseModel):
     type: str = "INTERNAL_ENRICHMENT"
     name: str = Field(default="Recorded Future Enrichment")
     scope: ListFromString = Field(default=SCOPE_ENTITIES)
-    log_level: Literal[
-        "debug",
-        "info",
-        "warning",
-        "error",
-    ] = Field(default="error")
+    log_level: Literal["debug", "info", "warning", "error"] = Field(default="error")
     auto: bool = Field(default=False)
-
     expose_metrics: bool = Field(default=False)
     metrics_port: int = Field(default=9095)
     only_contextual: bool = Field(default=False)
     queue_protocol: str = Field(default="amqp")
     queue_threshold: int = Field(default=500)
     validate_before_import: bool = Field(default=False)
-
     send_to_queue: bool = Field(default=True)
     send_to_directory: bool = Field(default=False)
     send_to_directory_path: str | None = Field(default=None)
@@ -161,9 +128,7 @@ class _ConnectorConfig(_ConfigBaseModel):
 
 
 class _RecordedFutureConfig(_ConfigBaseModel):
-    token: str = Field(
-        description="API Token for Recorded Future.",
-    )
+    token: str = Field(description="API Token for Recorded Future.")
     create_indicator_threshold: int = Field(
         description="The risk score threshold at which an indicator will be created for enriched observables.",
         ge=0,
@@ -212,8 +177,6 @@ class ConnectorConfig(BaseSettings):
     opencti: _OpenCTIConfig
     connector: _ConnectorConfig
     recorded_future: _RecordedFutureConfig
-
-    # Setup model config and env vars parsing
     model_config = SettingsConfigDict(
         frozen=True,
         extra="allow",
@@ -259,8 +222,8 @@ class ConnectorConfig(BaseSettings):
             3. Environment variables
             4. Default values
         """
-        if Path(settings_cls.model_config["yaml_file"] or "").is_file():  # type: ignore
+        if Path(settings_cls.model_config["yaml_file"] or "").is_file():
             return (YamlConfigSettingsSource(settings_cls),)
-        if Path(settings_cls.model_config["env_file"] or "").is_file():  # type: ignore
+        if Path(settings_cls.model_config["env_file"] or "").is_file():
             return (dotenv_settings,)
         return (env_settings,)
