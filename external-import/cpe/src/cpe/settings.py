@@ -1,3 +1,4 @@
+import warnings
 from datetime import timedelta
 
 from connectors_sdk import (
@@ -6,7 +7,7 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, model_validator
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -29,7 +30,7 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
-        default=timedelta(hours=1),
+        default=timedelta(hours=6),
     )
 
 
@@ -46,10 +47,30 @@ class CpeConfig(BaseConfigModel):
         description="API Key for the NIST NVD API.",
         default=SecretStr("ChangeMe"),
     )
-    interval: str = Field(
-        description="Interval between collections (format: `6h` for hours, `3600s` for seconds). Minimum recommended: 6 hours.",
-        default="6h",
-    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_deprecated_interval(cls, data: dict) -> dict:
+        """
+        Env var `CPE_INTERVAL` is deprecated.
+        This is a workaround to keep the old config working while we migrate to `CONNECTOR_DURATION_PERIOD`.
+        """
+        connector_data: dict = data.get("connector", {})
+        cpe_data: dict = data.get("cpe", {})
+        if interval := cpe_data.pop("interval", None):
+            if connector_data.get("duration_period") is not None:
+                warnings.warn(
+                    "Both 'CPE_INTERVAL' and 'CONNECTOR_DURATION_PERIOD' are set. "
+                    "'CONNECTOR_DURATION_PERIOD' will take precedence."
+                )
+            else:
+                warnings.warn(
+                    "Env var 'CPE_INTERVAL' is deprecated. "
+                    "Use 'CONNECTOR_DURATION_PERIOD' instead."
+                )
+                connector_data["duration_period"] = timedelta(hours=int(interval))
+
+        return data
 
 
 class ConnectorSettings(BaseConnectorSettings):
