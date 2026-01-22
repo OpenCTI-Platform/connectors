@@ -4,16 +4,14 @@ import traceback
 
 from filigran_sseclient.sseclient import Event
 from microsoft_sentinel_intel.client import ConnectorClient
-from microsoft_sentinel_intel.config import ConnectorSettings
-from microsoft_sentinel_intel.errors import (
-    ConnectorError,
-    ConnectorWarning,
-)
+from microsoft_sentinel_intel.errors import ConnectorError, ConnectorWarning
+from microsoft_sentinel_intel.settings import ConnectorSettings
 from microsoft_sentinel_intel.utils import is_stix_indicator
 from pycti import OpenCTIConnectorHelper
 
 
 class Connector:
+
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
@@ -27,12 +25,10 @@ class Connector:
     def _prepare_stix_object(self, stix_object: dict) -> dict:
         if self.config.microsoft_sentinel_intel.delete_extensions:
             del stix_object["extensions"]
-
         if extra_labels := self.config.microsoft_sentinel_intel.extra_labels:
             stix_object["labels"] = list(
                 set(stix_object.get("labels", []) + extra_labels)
             )
-
         return stix_object
 
     def _process_event(self, event_type: str, stix_object: dict) -> None:
@@ -63,14 +59,12 @@ class Connector:
                 message="[ERROR] Data cannot be parsed to JSON",
                 metadata={"message_data": event.data, "error": str(err)},
             ) from err
-
         if is_stix_indicator(data):
             self.helper.connector_logger.info(
                 message=f"[{event.event.upper()}] Processing message",
                 meta={"data": data, "event": event.event},
             )
             self._process_event(event_type=event.event, stix_object=data)
-
             self.helper.connector_logger.info(
                 message=f"[{event.event.upper()}] Indicator processed",
                 meta={"opencti_id": data["id"]},
@@ -96,15 +90,11 @@ class Connector:
         except ConnectorWarning as err:
             self.helper.connector_logger.warning(message=err.message)
         except ConnectorError as err:
-            self.helper.connector_logger.error(
-                message=err.message,
-                meta=err.metadata,
-            )
+            self.helper.connector_logger.error(message=err.message, meta=err.metadata)
         except Exception as err:
             traceback.print_exc()
             self.helper.connector_logger.error(
-                message=f"Unexpected error: {err}",
-                meta={"error": str(err)},
+                message=f"Unexpected error: {err}", meta={"error": str(err)}
             )
 
     def run(self) -> None:

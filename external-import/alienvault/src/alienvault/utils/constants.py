@@ -10,9 +10,6 @@ TLP_MARKING_DEFINITION_MAPPING = {
     "red": TLP_RED,
 }
 
-DEFAULT_TLP_MARKING_DEFINITION = TLP_WHITE
-
-
 X_OPENCTI_ALIASES = "x_opencti_aliases"
 X_OPENCTI_ORGANIZATION_TYPE = "x_opencti_organization_type"
 X_OPENCTI_RELIABILITY = "x_opencti_reliability"

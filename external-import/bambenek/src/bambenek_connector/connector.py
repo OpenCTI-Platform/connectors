@@ -150,7 +150,3 @@ class ConnectorBambenek:
             message_callback=self.process_message,
             duration_period=self.config.duration_period,
         )
-
-    @staticmethod
-    def collection_transform_function(collection):
-        pass

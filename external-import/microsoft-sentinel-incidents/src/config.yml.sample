@@ -1,10 +1,10 @@
 opencti:
-  url: 'http://localhost:PORT'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
-  id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
   name: 'Microsoft Sentinel Incidents'
   scope: 'sentinel'
   log_level: 'info'

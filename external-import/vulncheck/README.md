@@ -1,8 +1,8 @@
 # OpenCTI VulnCheck Connector
 
-| Status            | Date       | Comment |
-| ----------------- |------------| ------- |
-| Filigran Verified | 2025-06-12 |    -    |
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner Verified | -    | -       |
 
 The VulnCheck Connector for OpenCTI is a standalone Python process designed to
 integrate VulnCheck's extensive threat intelligence into the OpenCTI platform.
@@ -10,8 +10,10 @@ VulnCheck aggregates data from a wide range of sources, providing actionable
 insights into vulnerabilities, exploits, ransomware activity, threat actors,
 and more.
 
-<!--toc:start-->
+## Table of Contents
+
 - [OpenCTI VulnCheck Connector](#opencti-vulncheck-connector)
+  - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -23,12 +25,8 @@ and more.
     - [Manual Deployment](#manual-deployment)
   - [Usage](#usage)
   - [Behavior](#behavior)
-    - [Data Sources](#data-sources)
-    - [Data Volume](#data-volume)
   - [Debugging](#debugging)
-  - [Useful Resources](#useful-resources)
-  - [Maintainers](#maintainers)
-<!--toc:end-->
+  - [Additional information](#additional-information)
 
 ## Introduction
 
@@ -99,7 +97,7 @@ Below are the parameters you'll need to set for running the connector:
 
 Before building the Docker container, you need to set the version of pycti in
 `requirements.txt` equal to whatever version of OpenCTI you're running.
-Example, `pycti==6.9.3`. If you don't, it will take the latest version, but
+Example, `pycti==6.9.8`. If you don't, it will take the latest version, but
 sometimes the OpenCTI SDK fails to initialize.
 
 Build a Docker Image using the provided `Dockerfile`.

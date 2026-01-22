@@ -8,6 +8,8 @@ from connectors_sdk.models import (
     Country,
     DomainName,
     File,
+    IPV4Address,
+    IPV6Address,
     Note,
     OrganizationAuthor,
     Reference,
@@ -64,7 +66,7 @@ class ConverterToStix:
         """
         return Country(name=country_name, author=self.author, markings=[self.tlp_clear])
 
-    def create_domain(self, name: str, score: int) -> DomainName:
+    def create_domain(self, name: str, score: int = None) -> DomainName:
         """
         Create a Domain object
         """
@@ -80,6 +82,18 @@ class ConverterToStix:
             hashes=hashes, score=score, author=self.author, markings=[self.tlp_amber]
         )
         return file
+
+    def create_ipv4(self, ip: str) -> IPV4Address:
+        """
+        Create an IPv4 object
+        """
+        return IPV4Address(value=ip, author=self.author, markings=[self.tlp_amber])
+
+    def create_ipv6(self, ip: str) -> IPV4Address:
+        """
+        Create an IPv6 object
+        """
+        return IPV6Address(value=ip, author=self.author, markings=[self.tlp_amber])
 
     def create_note(self, observable: Reference, content: str) -> Note:
         """
@@ -127,13 +141,13 @@ class ConverterToStix:
         """
         return Sector(name=industry, author=self.author, markings=[self.tlp_clear])
 
-    def create_url(self, obs_url_score: int, url_info: dict) -> URL:
+    def create_url(self, obs_url_score: int, url_info: str) -> URL:
         """
         Create an URL object
         """
         return URL(
             score=obs_url_score,
-            value=url_info["Url"],
+            value=url_info,
             author=self.author,
             markings=[self.tlp_amber],
         )

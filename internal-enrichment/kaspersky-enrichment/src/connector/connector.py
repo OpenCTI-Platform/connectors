@@ -1,7 +1,9 @@
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
+from connector.use_cases.enrich_domain import DomainEnricher
 from connector.use_cases.enrich_file import FileEnricher
 from connector.use_cases.enrich_ipv4 import Ipv4Enricher
+from connector.use_cases.enrich_url import UrlEnricher
 from connector.utils import entity_in_scope
 from kaspersky_client import KasperskyClient
 from pycti import OpenCTIConnectorHelper
@@ -52,6 +54,8 @@ class KasperskyConnector:
         self.helper = helper
         file_sections = self.config.kaspersky.file_sections
         ipv4_sections = self.config.kaspersky.ipv4_sections
+        domain_sections = self.config.kaspersky.domain_sections
+        url_sections = self.config.kaspersky.url_sections
         zone_octi_score_mapping = self.config.kaspersky.zone_octi_score_mapping
         api_key = self.config.kaspersky.api_key.get_secret_value()
 
@@ -68,16 +72,30 @@ class KasperskyConnector:
         converter_to_stix = ConverterToStix(self.helper)
 
         self.file_enricher = FileEnricher(
-            helper=self.helper,
+            connector_logger=self.helper.connector_logger,
             client=client,
             sections=file_sections,
             zone_octi_score_mapping=zone_octi_score_mapping,
             converter_to_stix=converter_to_stix,
         )
         self.ipv4_enricher = Ipv4Enricher(
-            helper=self.helper,
+            connector_logger=self.helper.connector_logger,
             client=client,
             sections=ipv4_sections,
+            zone_octi_score_mapping=zone_octi_score_mapping,
+            converter_to_stix=converter_to_stix,
+        )
+        self.domain_enricher = DomainEnricher(
+            connector_logger=self.helper.connector_logger,
+            client=client,
+            sections=domain_sections,
+            zone_octi_score_mapping=zone_octi_score_mapping,
+            converter_to_stix=converter_to_stix,
+        )
+        self.url_enricher = UrlEnricher(
+            connector_logger=self.helper.connector_logger,
+            client=client,
+            sections=url_sections,
             zone_octi_score_mapping=zone_octi_score_mapping,
             converter_to_stix=converter_to_stix,
         )
@@ -146,14 +164,14 @@ class KasperskyConnector:
                         octi_objects = self.ipv4_enricher.process_ipv4_enrichment(
                             observable
                         )
-                    # case "Domain-Name" | "Hostname":
-                    #     octi_objects = self.domain_enricher.process_domain_enrichment(
-                    #         observable
-                    #     )
-                    # case "Url":
-                    #     octi_objects = self.url_enricher.process_url_enrichment(
-                    #         observable
-                    #     )
+                    case "Domain-Name" | "Hostname":
+                        octi_objects = self.domain_enricher.process_domain_enrichment(
+                            observable
+                        )
+                    case "Url":
+                        octi_objects = self.url_enricher.process_url_enrichment(
+                            observable
+                        )
                     case _:
                         raise ValueError(
                             "Entity type is not supported",

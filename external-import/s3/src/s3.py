@@ -12,6 +12,7 @@ from pycti import (
     CourseOfAction,
     Identity,
     Infrastructure,
+    Malware,
     Note,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
@@ -101,14 +102,12 @@ class S3Connector:
             "S3_ATTACH_ORIGINAL_FILE",
             ["s3", "attach_original_file"],
             config,
-            isNumber=False,
             default=False,
         )
         self.s3_delete_after_import = get_config_variable(
             "S3_DELETE_AFTER_IMPORT",
             ["s3", "delete_after_import"],
             config,
-            isNumber=False,
             default=True,
         )
 
@@ -152,7 +151,7 @@ class S3Connector:
                 new_id = Vulnerability.generate_id(obj["name"])
                 id_mapping[old_id] = new_id
 
-            if obj_type == "infrastructure":
+            elif obj_type == "infrastructure":
                 old_id = obj["id"]
                 new_id = Infrastructure.generate_id(obj["name"])
                 id_mapping[old_id] = new_id
@@ -165,6 +164,11 @@ class S3Connector:
             elif obj_type == "course-of-action":
                 old_id = obj["id"]
                 new_id = CourseOfAction.generate_id(obj["name"], obj.get("x_mitre_id"))
+                id_mapping[old_id] = new_id
+
+            elif obj_type == "malware":
+                old_id = obj["id"]
+                new_id = Malware.generate_id(obj["name"])
                 id_mapping[old_id] = new_id
 
         # Second pass: Update all objects with new IDs and references
@@ -201,6 +205,7 @@ class S3Connector:
                 "identity",
                 "course-of-action",
                 "vulnerability",
+                "malware",
             ):
                 # Update the object's ID from the mapping
                 old_id = obj["id"]
@@ -385,7 +390,13 @@ class S3Connector:
             # History Note
             if obj.get("x_history", None) and obj.get("x_acti_uuid", None):
                 note_content = "| Timestamp | Comment |\n|---------|---------|\n"
-                for history in obj.get("x_history"):
+                # Sort history entries by timestamp from most recent to oldest
+                sorted_history = sorted(
+                    obj.get("x_history"),
+                    key=lambda h: h.get("timestamp", ""),
+                    reverse=True,
+                )
+                for history in sorted_history:
                     note_content += f"| {history.get('timestamp', '')} | {history.get('comment', '')} |\n"
 
                 note_key = obj.get("x_acti_uuid") + " - History"
@@ -513,7 +524,7 @@ class S3Connector:
                 self.helper.log_warning(
                     "Removing relationship from "
                     + obj["source_ref"]
-                    + " because object if not in bundle"
+                    + " because object is not in bundle"
                 )
                 continue
             if (
@@ -523,7 +534,7 @@ class S3Connector:
                 self.helper.log_warning(
                     "Removing relationship to "
                     + obj["target_ref"]
-                    + " because object if not in bundle"
+                    + " because object is not in bundle"
                 )
                 continue
             new_bundle_objects.append(obj)

@@ -1,114 +1,231 @@
-# OpenCTI Recorded Future Enrichment Connector
+# OpenCTI Recorded Future Connector
 
-_Contact: support@recordedfuture.com_
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner Verified | -    | -       |
 
-## Description
+## Table of Contents
 
-This connector enriches individual OpenCTI Observables and Vulnerabilities with Recorded Future Information.  
-For observables, currently enrichment of IP Address (ipv4 and ipv6), URLs, Domains, and Hashes (MD5, SHA1, and SHA256) only is supported.
+- [Introduction](#introduction)
+- [Installation](#installation)
+  - [Requirements](#requirements)
+- [Configuration](#configuration)
+  - [OpenCTI Configuration](#opencti-configuration)
+  - [Base Connector Configuration](#base-connector-configuration)
+  - [Recorded Future Configuration](#recorded-future-configuration)
+- [Deployment](#deployment)
+  - [Docker Deployment](#docker-deployment)
+  - [Manual Deployment](#manual-deployment)
+- [Usage](#usage)
+- [Behavior](#behavior)
+  - [Data Flow](#data-flow)
+  - [Observable Enrichment](#observable-enrichment)
+  - [Vulnerability Enrichment](#vulnerability-enrichment)
+  - [Generated STIX Objects](#generated-stix-objects)
+- [Debugging](#debugging)
+- [Additional Information](#additional-information)
 
-## Dependency
+---
 
-- `external-import/mitre` - Maps TTPs to Existing Mitre Att&ck IDs. If the ID does not exist the relationship does not occur.
+## Introduction
 
-## Data Model
+The [Recorded Future](https://www.recordedfuture.com/) connector enriches OpenCTI observables (IPv4, IPv6, URLs, Domains, Hashes) and Vulnerabilities with comprehensive threat intelligence from Recorded Future's Intelligence Cloud.
 
-### Observables
+Key features:
+- Risk score enrichment with detailed notes
+- Risk rule mapping to ATT&CK patterns
+- Evidence string documentation
+- Related entity linking
+- Vulnerability lifecycle tracking
+- CVSS score integration
 
-Each enrichment pulls down an Indicator's Recorded Future Risk Score, any triggered Risk Rules, and Strings of Evidence to justify a rule being triggered.
-Their equivalent OpenCTI models are
-
-- Indicator -> Indicator
-- Risk Score -> Note attached to Indicator
-- Risk Rule:
-  - Attack Pattern, the relationship defined as Indicator "indicates" Attack Pattern
-  - Risk Rules are added as notes and attached to Observable
-- Evidence String -> Note Attached to Indicator
-- Links:
-  - Mitre T codes-> Attack Patterns
-  - Indicators -> Indicators and Observables
-  - Malware -> Malware
-  - Threat Actors -> Threat Actors or Intrusion Sets
-  - Organization-> Organization
-
-Please note that not every link type from Recorded Future is supported at this time
-
-### Vulnerabilities
-
-Each vulnerability pulls down a RecordedFuture's Enriched Vulnerability with its common names, its lifecycle stage, a reference to the vulnerability's page on RecordedFuture and its CVSS properties.
-Their equivalent OpenCTI models are
-
-- Vulnerability:
-  - common names are added as aliases
-  - lifecycle stage is added as label
-  - reference to RecordedFuture's page is added as external reference
-  - CVSS properties are added as CVSS properties, depending on CVSS version
-
-## Configuration variables
-
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment). Since the `opencti` and `connector` options are the same as any other Connector, this doc only addresses the `recordedfuture-enrichment` options
-
-Please note that if you don't want to use an optional variable, best practice is to remove it from `config.yml` or `docker-compose.yml`
-
-### OpenCTI environment variables
-
-Below are the parameters you'll need to set for OpenCTI:
-
-| Parameter     | Config variable (`config.yml`) | Env variable (`docker-compose.yml` or `.env`) | Default | Mandatory | Description                                          |
-|---------------|--------------------------------|-----------------------------------------------|---------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url                            | `OPENCTI_URL`                                 | /       | yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token                          | `OPENCTI_TOKEN`                               | /       | yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-Below are the parameters you'll need to set for running an internal-enrichment connector properly:
-
-| Parameter           | Config variable (`config.yml`) | Env variable (`docker-compose.yml` or `.env`) | Default                                                      | Mandatory | Description                                                                                                                                                |
-|---------------------|--------------------------------|-----------------------------------------------|--------------------------------------------------------------|-----------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Connector ID        | id                             | `CONNECTOR_ID`                                | /                                                            | yes       | A unique `UUIDv4` identifier for this connector instance.                                                                                                  |
-| Connector Name      | name                           | `CONNECTOR_NAME`                              | `Recorded Future Enrichment`                                 | no        | Name of the connector.                                                                                                                                     |
-| Connector Scope     | scope                          | `CONNECTOR_SCOPE`                             | `ipv4-addr,ipv6-addr,domain-name,url,stixfile,vulnerability` | no        | Comma-separated list of OCTI entities the connector is enriching. Options are `ipv4-addr`, `ipv6-addr`, `domain-name`, `url`, `stixfile`, `vulnerability`. |
-| Connector log Level | log_level                      | `CONNECTOR_LOG_LEVEL`                         | `error`                                                      | no        | Determines the verbosity of the logs. Options are `debug`, `info`, `warning`, or `error`.                                                                  |
-| Connector Auto      | connector_auto                 | `CONNECTOR_AUTO`                              | `False`                                                      | no        | Must be `true` or `false` to enable or disable auto-enrichment of observables                                                                              |
-
-### Connector extra parameters environment variables
-
-Below are the parameters you'll need to set for this connector:
-
-| Parameter                                | Config variable (`config.yml`)           | Env variable (`docker-compose.yml` or `.env`)              | Default     | Mandatory | Description                                                                                                                                                                                                                                                                                   |
-|------------------------------------------|------------------------------------------|------------------------------------------------------------|-------------|-----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Recorded Future API token                | token                                    | `RECORDED_FUTURE_TOKEN`                                    | /           | yes       | API Token for Recorded Future.                                                                                                                                                                                                                                                                |
-| Max TLP                                  | info_max_tlp                             | `RECORDED_FUTURE_INFO_MAX_TLP`                             | `TLP:AMBER` | no        | Max TLP marking of the entity to enrich (inclusive). One of `TLP:CLEAR`, `TLP:WHITE`, `TLP:GREEN`, `TLP:AMBER`, `TLP:AMBER+STRICT`, `TLP:RED`.                                                                                                                                                |
-| Indicator creation threshold             | create_indicator_threshold               | `RECORDED_FUTURE_CREATE_INDICATOR_THRESHOLD`               | `0`         | no        | The risk score threshold at which an indicator will be created for enriched observables. If set to zero, all enriched observables will automatically create an indicator. If set to 100, no enriched observables will create an indicator. Reccomended thresholds are: `0`, `25`, `65`, `100` |
-| Vulnerability enrichment optional fields | vulnerability_enrichment_optional_fields | `RECORDED_FUTURE_VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS` | `''`        | no        | A comma-separated list of optional fields to enrich vulnerabilities with. Currently, available fields are `aiInsights`, `cpe`and `risk`. See [RecordedFuture enrichment fields doc](https://docs.recordedfuture.com/reference/enrichment-field-attributes) for more details.                  |
-| Threat Actor to Intrusion Set            | threat_actor_to_intrusion_set            | `RECORDED_FUTURE_THREAT_ACTOR_TO_INTRUSION_SET`            | `False`     | no        | Converts all Recorded Future Threat Actors to STIX Object "Intrusion Set" instead of "Threat Actor". DO NOT USE unless you **really** know what you're doing.                                                                                                                                 |
-
-Notes:
-
-- the Indicator's STIX2 confidence field is set to the Risk Score. However, at this time OpenCTI does not automatically import the STIX2 confidence field as the OpenCTI score, it's logical equivalent.
-- the following fields are _always_ queried during vulnerabilities enrichment: `commonNames`, `cvss`, `cvssv3`, `cvssv4`, `intelCard`, `lifecycleStage`, `nvdDescription`, `nvdReferences`, `relatedLinks`.
-  The connector supports some other optional fields, see `RECORDED_FUTURE_VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS` environment variable's description.
-- the optional field `aiInsights` for vulnerability enrichment can result in a few seconds delay in requesting RecordedFuture API
+---
 
 ## Installation
 
-Please refer to [these](https://www.notion.so/Connectors-4586c588462d4a1fb5e661f2d9837db8) [three](https://www.notion.so/Introduction-9a614638a75746a391cd93a45fe3dc6c) [articles](https://www.notion.so/HowTo-Build-your-first-connector-06b2690697404b5ebc6e3556a1385940) in OpenCTI's documentation as the authoritative source on installing connectors.
+### Requirements
 
-### Docker
+- OpenCTI Platform >= 6.0.0
+- Recorded Future API token
+- Network access to Recorded Future API
 
-Build a Docker Image using the provided `Dockerfile`. Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your environment. Then, start the docker container with the provided `docker-compose.yml`
+---
 
-### Manual/VM Deployment
+## Configuration
 
-Create a file `config.yml` based off the provided `config.yml.sample`. Replace the configuration variables (especially the "ChangeMe" variables) with the appropriate configurations for you environment.
-The `id` attribute of the `connector` should be a freshly generated UUID.
-Install the required python dependencies (preferably in a virtual environment) with `pip3 install -r src/requirements.txt`
-Then, run the `python3 src/main.py` command to start the connector
+### OpenCTI Configuration
+
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `opencti_url` | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
+| `opencti_token` | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
+
+### Base Connector Configuration
+
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `connector_id` | `CONNECTOR_ID` | Yes | A valid arbitrary `UUIDv4` unique for this connector |
+| `connector_name` | `CONNECTOR_NAME` | Yes | The name of the connector instance |
+| `connector_scope` | `CONNECTOR_SCOPE` | Yes | Supported: `IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Vulnerability` |
+| `connector_auto` | `CONNECTOR_AUTO` | Yes | Enable/disable auto-enrichment |
+| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
+
+### Recorded Future Configuration
+
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `recorded_future_api_token` | `RECORDED_FUTURE_API_TOKEN` | Yes | Recorded Future API token |
+| `recorded_future_max_tlp` | `RECORDED_FUTURE_MAX_TLP` | No | Maximum TLP for enrichment |
+| `recorded_future_indicator_threshold` | `RECORDED_FUTURE_INDICATOR_THRESHOLD` | No | Risk score threshold for indicator creation |
+| `recorded_future_enrich_vuln_aliases` | `RECORDED_FUTURE_ENRICH_VULN_ALIASES` | No | Enrich vulnerability aliases |
+| `recorded_future_enrich_vuln_lifecycle` | `RECORDED_FUTURE_ENRICH_VULN_LIFECYCLE` | No | Enrich vulnerability lifecycle stage |
+| `recorded_future_enrich_vuln_ext_ref` | `RECORDED_FUTURE_ENRICH_VULN_EXT_REF` | No | Add external references to vulnerabilities |
+| `recorded_future_enrich_vuln_cvss` | `RECORDED_FUTURE_ENRICH_VULN_CVSS` | No | Enrich with CVSS properties |
+
+---
+
+## Deployment
+
+### Docker Deployment
+
+Build a Docker Image using the provided `Dockerfile`.
+
+Example `docker-compose.yml`:
+
+```yaml
+version: '3'
+services:
+  connector-recordedfuture-enrichment:
+    image: opencti/connector-recordedfuture-enrichment:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Recorded Future Enrichment
+      - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Vulnerability
+      - CONNECTOR_AUTO=false
+      - CONNECTOR_LOG_LEVEL=error
+      - RECORDED_FUTURE_API_TOKEN=ChangeMe
+      - RECORDED_FUTURE_MAX_TLP=TLP:AMBER
+      - RECORDED_FUTURE_INDICATOR_THRESHOLD=65
+    restart: always
+```
+
+### Manual Deployment
+
+1. Clone the repository
+2. Copy `config.yml.sample` to `config.yml` and configure
+3. Install dependencies: `pip install -r requirements.txt`
+4. Run the connector
+
+---
 
 ## Usage
 
-To enrich an observable, first click on it in the Observations->Observables tab of the OpenCTI platform (or navigate to an observable another way). Click on the cloud in the upper right, and under "Enrichment Connectors", select the Recorded Future Enrichment connector. Depending on your configuraiton, the connector may have already run automatically. If not (or if you want to re-enrich the indicator), click on the refresh button next to the indicator to enrich
+The connector enriches:
+1. **Observables**: IPv4, IPv6, URLs, domains, file hashes
+2. **Vulnerabilities**: CVE enrichment with lifecycle and CVSS
 
-## Verification
+Trigger enrichment:
+- Manually via the OpenCTI UI
+- Automatically if `CONNECTOR_AUTO=true`
+- Via playbooks
 
-After enriching the indicator, you should now see it has a number of notes, as well as relationships with Attack Patterns, Malware, and Indicators. Those Notes from Recorded Future contain Evidence Strings and the Risk Score. Depending on your configuration, it will also have created an Indicator, which can be seen under "Indicators composed with this observable"
+---
+
+## Behavior
+
+### Data Flow
+
+```mermaid
+flowchart LR
+    A[Observable/Vulnerability] --> B[Recorded Future Connector]
+    B --> C{RF Intelligence Cloud}
+    C --> D[Risk Score]
+    C --> E[Risk Rules]
+    C --> F[Evidence]
+    C --> G[Related Entities]
+    D --> H[Note]
+    E --> I[Attack-Pattern]
+    F --> J[Note]
+    G --> K[Relationships]
+    H --> L[OpenCTI]
+    I --> L
+    J --> L
+    K --> L
+```
+
+### Observable Enrichment
+
+For observables (IPv4, IPv6, URL, Domain, Hash):
+
+| Data Element | OpenCTI Entity | Description |
+|--------------|----------------|-------------|
+| Risk Score | Note | Numerical risk assessment |
+| Risk Rules | Attack-Pattern | MITRE ATT&CK mapping |
+| Evidence Strings | Note | Supporting evidence |
+| Intel Card Link | External Reference | Link to RF Intel Card |
+| Related Entities | Relationship | Links to related observables |
+
+### Indicator Creation
+
+When risk score exceeds `RECORDED_FUTURE_INDICATOR_THRESHOLD`:
+- Creates an Indicator entity
+- Links to the observable
+- Applies risk-based scoring
+
+### Vulnerability Enrichment
+
+For CVE vulnerabilities:
+
+| Data Element | OpenCTI Field | Description |
+|--------------|---------------|-------------|
+| Aliases | aliases | Alternative CVE names |
+| Lifecycle Stage | Label | Exploitation status |
+| External Reference | External Reference | Link to RF Intel Card |
+| CVSS Properties | cvss_* fields | CVSS scoring data |
+
+### Lifecycle Stages
+
+| Stage | Description |
+|-------|-------------|
+| New | Recently disclosed |
+| Developing | Active development of exploits |
+| Exploited | Known exploitation in the wild |
+| Mitigated | Patches/mitigations available |
+
+### Generated STIX Objects
+
+| Object Type | Description |
+|-------------|-------------|
+| Indicator | High-risk observables |
+| Note | Risk scores and evidence |
+| Attack-Pattern | Risk rule ATT&CK mapping |
+| External Reference | Intel Card links |
+| Labels | Lifecycle stages |
+| Relationship | Entity links |
+
+---
+
+## Debugging
+
+Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug` to see:
+- API request/response details
+- Risk score calculations
+- Entity creation progress
+
+---
+
+## Additional Information
+
+- [Recorded Future](https://www.recordedfuture.com/)
+- [Intelligence Cloud](https://www.recordedfuture.com/platform)
+
+### Risk Scores
+
+Recorded Future risk scores range from 0-99:
+- 0-24: Unusual
+- 25-64: Suspicious
+- 65-99: Malicious
+
+Configure `RECORDED_FUTURE_INDICATOR_THRESHOLD` to control when indicators are created.

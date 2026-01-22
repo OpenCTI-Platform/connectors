@@ -1,8 +1,12 @@
 # OpenCTI SentinelOne Intel Stream Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
+
 The SentinelOne Intel Stream Connector is a standalone Python process that monitors the creation of STIX Indicators in OpenCTI and automatically creates them in a SentinelOne Instance. 
 
-Table of Contents
+## Table of Contents
 
 - [OpenCTI SentinelOne Intel Stream Connector](#opencti-sentinelone-intel-stream-connector)
     - [Introduction](#introduction)
@@ -23,10 +27,6 @@ Table of Contents
     - [Additional information](#additional-information)
 
 ## Status Filigran
-
-| Status            | Date | Comment |
-|-------------------|------|---------|
-| Filigran Verified | -    | -       |
 
 ## Introduction
 
@@ -64,8 +64,6 @@ As such, the connector supports Indicators with **single-element** patterns corr
 Your SentinelOne URL is simply the first component of the URL you use to access the console.
 
 When configuring the connector, do not include the terminating `/`. For example, for the above image, you would input `https://mysentinelone.instance.net`
-
-
 
 ## Configuration variables
 
@@ -158,7 +156,6 @@ python3 main.py
 After Installation, the connector should require minimal interaction to use, and should update automatically at a
 regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
 
-
 <br>
 
 ### Creating the Connector User
@@ -189,8 +186,6 @@ It is best practice to create a new user under the `Connectors` group and to use
 
 <br>
 
-
-
 ## Behavior
 
 The connector simply consumes the assigned stream, filtering for events where Indicators that use STIX patterns are found. The connector will determine if the Indicator's pattern is of a format SentinelOne can accept and will enact the required processing in order to push it to a SentinelOne instance as such. 
@@ -203,10 +198,8 @@ Alongside this, the connector is only able to consume basic **single-expression*
 
 Compound patterns containing logical operators (AND, OR, FOLLOWEDBY, etc.) or multiple observables are **not supported** and will thus be ignored.
 
-
 ## Debugging
 
 The connector can be debugged by setting the appropiate log level.
 Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
 e., `self.helper.connector_logger.error("An error message")`.
-

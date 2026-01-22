@@ -1,19 +1,22 @@
+import logging
+
 from connector.converter_to_stix import ConverterToStix
-from connector.utils import is_quota_exceeded, resolve_file_hash
+from connector.use_cases.common import BaseUseCases
+from connector.utils import resolve_file_hash
 from kaspersky_client import KasperskyClient
-from pycti import STIX_EXT_OCTI_SCO, OpenCTIConnectorHelper, OpenCTIStix2
 
 
-class FileEnricher:
+class FileEnricher(BaseUseCases):
     def __init__(
         self,
-        helper: OpenCTIConnectorHelper,
+        connector_logger: logging.Logger,
         client: KasperskyClient,
         sections: str,
         zone_octi_score_mapping: dict,
         converter_to_stix: ConverterToStix,
     ):
-        self.helper = helper
+        BaseUseCases.__init__(self, connector_logger, converter_to_stix)
+        self.connector_logger = connector_logger
         self.client = client
         self.sections = sections
         self.zone_octi_score_mapping = zone_octi_score_mapping
@@ -27,48 +30,35 @@ class FileEnricher:
         observable_to_ref = self.converter_to_stix.create_reference(
             obs_id=observable["id"]
         )
-        self.helper.connector_logger.info("[CONNECTOR] Starting enrichment...")
+        self.connector_logger.info(
+            "[ENRICH FILE] Starting enrichment...",
+            {"observable_id": observable["id"]},
+        )
 
         # Retrieve file hash
         obs_hash = resolve_file_hash(observable)
 
         # Get entity data from api client
-        entity_data = self.client.get_file_info(obs_hash, self.sections)
+        entity_data = self.client.get_data("hash", obs_hash, self.sections)
 
         # Check Quota
-        if is_quota_exceeded(entity_data["LicenseInfo"]):
-            self.helper.connector_logger.warning(
-                "[CONNECTOR] The daily quota has been exceeded",
-                {
-                    "day_requests": entity_data["LicenseInfo"]["DayRequests"],
-                    "day_quota": entity_data["LicenseInfo"]["DayQuota"],
-                },
-            )
+        self.check_quota(entity_data["LicenseInfo"])
 
-        # Prepare author object
-        author = self.converter_to_stix.create_author()
-        octi_objects.append(author.to_stix2_object())
-
-        # Prepare TLPMarkings
-        tlp_clear = self.converter_to_stix.create_tlp_marking("clear")
-        octi_objects.append(tlp_clear.to_stix2_object())
-        tlp_amber = self.converter_to_stix.create_tlp_marking("amber")
-        octi_objects.append(tlp_amber.to_stix2_object())
+        # Create and add author, TLP clear and TLP amber to octi_objects
+        octi_objects.extend(self.generate_author_and_tlp_markings())
 
         # Manage FileGeneralInfo data
 
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from FileGeneralInfo data..."
+        self.connector_logger.info(
+            "[ENRICH FILE] Process enrichment from FileGeneralInfo data...",
+            {"observable_id": observable["id"]},
         )
-
-        entity_file_general_info = entity_data["FileGeneralInfo"]
 
         # Score
         if entity_data.get("Zone"):
-            score = self.zone_octi_score_mapping[entity_data["Zone"].lower()]
-            observable = OpenCTIStix2.put_attribute_in_extension(
-                observable, STIX_EXT_OCTI_SCO, "score", score
-            )
+            observable = self.update_observable_score(entity_data["Zone"], observable)
+
+        entity_file_general_info = entity_data["FileGeneralInfo"]
 
         # Hashes
         if entity_file_general_info.get("Md5"):
@@ -88,15 +78,16 @@ class FileEnricher:
         if entity_file_general_info.get("Categories"):
             observable["labels"] = observable.get("x_opencti_labels", [])
             for label in entity_file_general_info["Categories"]:
-                pretty_label = label.replace("CATEGORY_", "").replace("_", "")
+                pretty_label = label.replace("CATEGORY_", "").replace("_", " ")
                 if pretty_label not in observable["labels"]:
                     observable["labels"].append(pretty_label)
 
         # Manage FileNames data
 
         if entity_data.get("FileNames"):
-            self.helper.connector_logger.info(
-                "[CONNECTOR] Process enrichment from FileNames data..."
+            self.connector_logger.info(
+                "[ENRICH FILE] Process enrichment from FileNames data...",
+                {"observable_id": observable["id"]},
             )
 
             observable["additional_names"] = observable.get(
@@ -109,16 +100,17 @@ class FileEnricher:
         # Manage DetectionsInfo data
 
         if entity_data.get("DetectionsInfo"):
-            self.helper.connector_logger.info(
-                "[CONNECTOR] Process enrichment from DetectionsInfo data..."
+            self.connector_logger.info(
+                "[ENRICH FILE] Process enrichment from DetectionsInfo data...",
+                {"observable_id": observable["id"]},
             )
 
             content = "| Detection Date | Detection Name | Detection Method |\n"
             content += "|----------------|----------------|------------------|\n"
 
             for obs_detection_info in entity_data["DetectionsInfo"]:
-                detection_name = f"[{obs_detection_info["DetectionName"]}]({obs_detection_info["DescriptionUrl"]})"
-                content += f"| {obs_detection_info["LastDetectDate"]} | {detection_name} | {obs_detection_info["DetectionMethod"]} |\n"
+                detection_name = f"[{obs_detection_info['DetectionName']}]({obs_detection_info['DescriptionUrl']})"
+                content += f"| {obs_detection_info['LastDetectDate']} | {detection_name} | {obs_detection_info['DetectionMethod']} |\n"
 
             obs_note = self.converter_to_stix.create_note(observable_to_ref, content)
             octi_objects.append(obs_note.to_stix2_object())
@@ -126,13 +118,16 @@ class FileEnricher:
         # Manage FileDownloadedFromUrls data
 
         if entity_data.get("FileDownloadedFromUrls"):
-            self.helper.connector_logger.info(
-                "[CONNECTOR] Process enrichment from FileDownloadedFromUrls data..."
+            self.connector_logger.info(
+                "[ENRICH FILE] Process enrichment from FileDownloadedFromUrls data...",
+                {"observable_id": observable["id"]},
             )
 
             for url_info in entity_data["FileDownloadedFromUrls"]:
                 obs_url_score = self.zone_octi_score_mapping[url_info["Zone"].lower()]
-                url_object = self.converter_to_stix.create_url(obs_url_score, url_info)
+                url_object = self.converter_to_stix.create_url(
+                    obs_url_score, url_info["Url"]
+                )
 
                 if url_object:
                     octi_objects.append(url_object.to_stix2_object())
@@ -146,20 +141,8 @@ class FileEnricher:
         # Manage Industries data
 
         if entity_data.get("Industries"):
-            self.helper.connector_logger.info(
-                "[CONNECTOR] Process enrichment from Industries data..."
+            octi_objects.extend(
+                self.manage_industries(observable_to_ref, entity_data["Industries"])
             )
-
-            for industry in entity_data["Industries"]:
-                industry_object = self.converter_to_stix.create_sector(industry)
-
-                if industry_object:
-                    octi_objects.append(industry_object.to_stix2_object())
-                    industry_relation = self.converter_to_stix.create_relationship(
-                        relationship_type="related-to",
-                        source_obj=observable_to_ref,
-                        target_obj=industry_object,
-                    )
-                    octi_objects.append(industry_relation.to_stix2_object())
 
         return octi_objects

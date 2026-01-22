@@ -47,3 +47,7 @@ class _ConfigLoaderSekoia(ConfigBaseSettings):
         default=True,
         description="Import IOCs relationships and related objects.",
     )
+    confidence_score: int | None = Field(
+        default=None,
+        description="This will be the score assigned to the indicators. Defaults to null, maximum 100.",
+    )

@@ -42,7 +42,7 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
         description="Determines the verbosity of the logs.",
     )
     duration_period: timedelta = Field(
-        default="PT5H",
+        default="P7D",
         description="Duration between two scheduled runs of the connector (ISO 8601 format).",
     )
 

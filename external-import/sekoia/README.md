@@ -1,132 +1,178 @@
-# Sekoia CTI Connector
+# OpenCTI Sekoia Connector
 
-## Status Filigran
-
-| Status            | Date | Comment |
-|-------------------|------|---------|
+| Status | Date | Comment |
+|--------|------|---------|
 | Filigran Verified | -    | -       |
 
-## Objective
-Collect Sekoia.io CTI data in an existing OpenCTI instance for any operational purpose (such as CTI aggregation, dissemination, hunting...).
+The Sekoia connector imports threat intelligence from the Sekoia.io threat intelligence platform into OpenCTI.
 
-## Prerequisites
-- An operational OpenCTI on-prem instance with administrator privileges or an OpenCTI Saas version
-- An active Sekoia CTI subscription (Sekoia Intelligence) : https://www.sekoia.io/en/product/cti/. If you want to test Sekoia CTI please contact : contact@sekoia.io
-- [Creating a Sekoia.io API KEY](https://docs.sekoia.io/getting_started/manage_api_keys/) with the "View intelligence" premission (at least)
+## Table of Contents
 
-## Requirements
-- pycti==6.7.17
-- pydantic>=2.10, <3
-- pydantic-settings==2.10.1
-- python-dateutil==2.9.0.post0
+- [OpenCTI Sekoia Connector](#opencti-sekoia-connector)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction](#introduction)
+  - [Installation](#installation)
+    - [Requirements](#requirements)
+  - [Configuration variables](#configuration-variables)
+    - [OpenCTI environment variables](#opencti-environment-variables)
+    - [Base connector environment variables](#base-connector-environment-variables)
+    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
+  - [Deployment](#deployment)
+    - [Docker Deployment](#docker-deployment)
+    - [Manual Deployment](#manual-deployment)
+  - [Usage](#usage)
+  - [Behavior](#behavior)
+  - [Debugging](#debugging)
+  - [Additional information](#additional-information)
 
-## Configuration variables environment
-Find all the configuration variables available (default/required) here: [Connector Configurations](./__metadata__)
+## Introduction
 
-## OpenCTI on-prem version configuration
+Sekoia.io is an extended detection and response (XDR) platform that includes a comprehensive threat intelligence feed. This connector synchronizes Sekoia's threat intelligence data with OpenCTI, providing access to indicators, threat actors, malware, and campaign intelligence.
 
-1. Add the following code to the end of docker-compose.yml file in the OpenCTI docker repository
+## Installation
 
+### Requirements
+
+- OpenCTI Platform >= 6.x
+- Sekoia.io account with API access
+- Sekoia API key
+
+## Configuration variables
+
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+
+### OpenCTI environment variables
+
+| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
+|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
+| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
+| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+
+### Base connector environment variables
+
+| Parameter         | config.yml      | Docker environment variable   | Default  | Mandatory | Description                                                                 |
+|-------------------|-----------------|-------------------------------|----------|-----------|-----------------------------------------------------------------------------|
+| Connector ID      | id              | `CONNECTOR_ID`                |          | Yes       | A unique `UUIDv4` identifier for this connector instance.                   |
+| Connector Name    | name            | `CONNECTOR_NAME`              | Sekoia   | No        | Name of the connector.                                                      |
+| Connector Scope   | scope           | `CONNECTOR_SCOPE`             | sekoia   | No        | The scope or type of data the connector is importing.                       |
+| Log Level         | log_level       | `CONNECTOR_LOG_LEVEL`         | info     | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
+| Duration Period   | duration_period | `CONNECTOR_DURATION_PERIOD`   | PT5M     | No        | Time interval between connector runs in ISO 8601 format.                    |
+
+### Connector extra parameters environment variables
+
+| Parameter     | config.yml       | Docker environment variable | Default | Mandatory | Description                       |
+|---------------|------------------|-----------------------------|---------|-----------|-----------------------------------|
+| API Key       | sekoia.api_key   | `SEKOIA_API_KEY`            |         | Yes       | Sekoia.io API key.                |
+
+## Deployment
+
+### Docker Deployment
+
+Build the Docker image:
+
+```bash
+docker build -t opencti/connector-sekoia:latest .
 ```
-connector-sekoia:
-    image: opencti/connector-sekoia:6.9.3
+
+Configure the connector in `docker-compose.yml`:
+
+```yaml
+  connector-sekoia:
+    image: opencti/connector-sekoia:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
-      - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
-      - CONNECTOR_NAME=SEKOIA.IO
-      - CONNECTOR_SCOPE=identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report,location,vulnerability,indicator,campaign,infrastructure,relationship
-      - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_DURATION_PERIOD=ChangeMe # by default PT60S
-      - SEKOIA_BASE_URL=ChangeMe # by default 'https://api.sekoia.io'
-      - SEKOIA_API_KEY=<Replace_by_Sekoia_API_key>
-      - SEKOIA_COLLECTION=d6092c37-d8d7-45c3-8aff-c4dc26030608
-      - SEKOIA_START_DATE=2022-01-01    # Optional, the date to start consuming data from. Maybe in the formats YYYY-MM-DD or YYYY-MM-DDT00:00:00
-      - SEKOIA_LIMIT=100                # Optional, the number of elements to fetch in each request. Defaults to 200, maximum 2000
-      - SEKOIA_CREATE_OBSERVABLES=true  # Create observables from indicators
-      - SEKOIA_IMPORT_SOURCE_LIST=false # Create the list of sources observed by Sekoia as label
-      - SEKOIA_IMPORT_IOC_RELATIONSHIPS=true # Optional, Import IOCs relationships and related objects - Default: true
+      - SEKOIA_API_KEY=ChangeMe
     restart: always
-    depends_on:
-      - opencti
-
-volumes:
-  esdata:
-  s3data:
-  redisdata:
-  amqpdata:
 ```
 
-2. Replace the following parameters:
+Start the connector:
 
-- CONNECTOR_ID = Replace_by_email or an UUID4
-- CONNECTOR_SCOPE = identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report,location,vulnerability,indicator,campaign,infrastructure,relationship => Sekoia Intelligence elements set to be exported in OpenCTI that can be chosen from this list
-- SEKOIA_API_KEY = Sekoia API key with CTI_Permissions
-- SEKOIA_START_DATE = e.g. 2023-05-01
+```bash
+docker compose up -d
+```
 
-3. Build and launch Sekoia connector
+### Manual Deployment
 
-- Build `docker-compose pull connector-sekoia`
-- Run `docker-compose up -d connector-sekoia`
+1. Create `config.yml` based on `config.yml.sample`.
 
-Note:Sekoia connector should be named **connector-sekoia** as described in the previous section. To check all connectors available and set in the server, type `docker-compose ps`.
+2. Install dependencies:
 
-4. Check if Sekoia connector is running
+```bash
+pip3 install -r requirements.txt
+```
 
-`docker-compose ps connector-sekoia`
+3. Start the connector:
 
-## OpenCTI SaaS version configuration
+```bash
+python3 main.py
+```
 
-Contact the Filigran support (support@filigran.com) to configure the Sekoia CTI connector.
+## Usage
 
-## Sekoia Intelligence in OpenCTI
+The connector runs automatically at the interval defined by `CONNECTOR_DURATION_PERIOD`. To force an immediate run:
 
-1. First of all, check if the connector is running and up to date. Go to Sekoia connector Data > Ingestion > Connectors > Sekoia.io
-On this page, you can find the following information:
-- Update date: Last update date of the connector in OpenCTI
-- Status: Status of the connector in OpenCTI
-- Perimeter: Sekoia Intelligence feed set for import in docker-compose.yml file under CONNECTOR_SCOPE
-- Last cursor: SEKOIA_START_DATE set in docker-compose.yml file in base64 format
-![image](https://github.com/OpenCTI-Platform/connectors/assets/104078945/6b01a85d-464e-4e6c-a2f5-86bd6d9d6cda)
+**Data Management → Ingestion → Connectors**
 
-2. Navigate the Sekoia Intelligence Feed
-Here are the elements of the Sekoia feed that can be found on OpenCTI after export:
+Find the connector and click the refresh button to reset the state and trigger a new sync.
 
-| **OpenCTI**   | **Sekoia.io**  |
-|---------------|----------------|
-| Reports       | Threat-reports |
-| Observables   | Sightings      |
-| Malwares      | Malwares       |
-| Intrusion Set | Intrusion-sets |
-| Indicators    | Indicators     |
+## Behavior
 
-## Known behavior
+The connector fetches threat intelligence from Sekoia's API and imports it as STIX 2.1 objects.
 
-The configuration option `SEKOIA_IMPORT_IOC_RELATIONSHIPS` is setting to `true` by default to obtain in OpenCTI the same richness of information as offered through your portal BUT please note that as we ingest more data, the process of ingesting an IOC may take longer.
+### Data Flow
 
-To enhance ingestion performance, deploy two specialized connectors:
+```mermaid
+graph LR
+    subgraph Sekoia.io
+        direction TB
+        API[Sekoia API]
+        STIX[STIX Objects]
+    end
 
-- Primary Connector: Rapidly ingests IOCs without related objects for immediate processing
+    subgraph OpenCTI
+        direction LR
+        ThreatActor[Threat Actor]
+        IntrusionSet[Intrusion Set]
+        Malware[Malware]
+        Indicator[Indicator]
+        Report[Report]
+    end
 
-- Secondary Connector: Asynchronously enriches IOCs with related objects during off-peak periods
+    API --> STIX
+    STIX --> ThreatActor
+    STIX --> IntrusionSet
+    STIX --> Malware
+    STIX --> Indicator
+    STIX --> Report
+```
 
-This parallel approach decouples initial ingestion from relationship processing, significantly reducing latency while maintaining data completeness. The separation of concerns allows:
+### Entity Mapping
 
-- Near-real-time IOC availability
+| Sekoia Data          | OpenCTI Entity      | Description                                      |
+|----------------------|---------------------|--------------------------------------------------|
+| Threat Actor         | Threat-Actor        | Threat actor profiles                            |
+| Intrusion Set        | Intrusion-Set       | Threat groups                                    |
+| Malware              | Malware             | Malware families and samples                     |
+| Tool                 | Tool                | Attack tools                                     |
+| Attack Pattern       | Attack-Pattern      | MITRE ATT&CK techniques                          |
+| Indicator            | Indicator           | IOCs with patterns                               |
+| Observable           | Observable          | Technical observables                            |
+| Report               | Report              | Intelligence reports                             |
+| Campaign             | Campaign            | Attack campaigns                                 |
+| Vulnerability        | Vulnerability       | CVE data                                         |
 
-- Reduced load during peak ingestion windows
+## Debugging
 
-- Gradual relationship mapping without blocking core ingestion
+Enable verbose logging:
 
-## Troubleshoot
+```env
+CONNECTOR_LOG_LEVEL=debug
+```
 
-| Issue	                   | Action	                   | Linux command      |
-|--------------------------|---------------------------|--------------------|
-| Space disk full	         | check the logs	           | docker logs        |
-| Conflict with containers | list containers on server | docker-compose ps  |
+## Additional information
 
-## Other resources
-
-- [OpenCTI documentation - Connectors](https://docs.opencti.io/latest/deployment/connectors/)
-- [Sekoia.io API documentation](https://docs.sekoia.io/developer/api/)
+- **STIX Native**: Sekoia provides data in STIX 2.1 format, ensuring high compatibility
+- **API Key**: Obtain your API key from the Sekoia.io platform settings
+- **Rate Limits**: The connector respects Sekoia's API rate limits
+- **Reference**: [Sekoia.io Documentation](https://docs.sekoia.io/)

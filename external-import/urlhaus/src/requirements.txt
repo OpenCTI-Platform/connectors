@@ -1,5 +1,5 @@
-pycti==6.9.3
-urllib3==2.6.2
+pycti==6.9.8
+urllib3==2.6.3
 pyyaml~=6.0.2
 requests~=2.32.3
 python_dateutil==2.9.0.post0

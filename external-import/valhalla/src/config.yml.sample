@@ -1,10 +1,10 @@
 opencti:
-  url: 'http://localhost:8080'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
-  id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
   name: 'Valhalla'
   scope: 'valhalla'
   update_existing_data: false

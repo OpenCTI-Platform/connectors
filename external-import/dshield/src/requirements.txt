@@ -1,2 +1,2 @@
-pycti==6.9.3
+pycti==6.9.8
 requests~=2.32.3

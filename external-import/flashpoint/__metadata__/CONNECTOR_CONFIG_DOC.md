@@ -19,6 +19,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | FLASHPOINT_IMPORT_START_DATE | `string` |  | Format: [`date-time`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The date from which to start importing data. |
 | FLASHPOINT_IMPORT_REPORTS | `boolean` |  | boolean | `true` | Whether to import reports from Flashpoint or not. |
 | FLASHPOINT_INDICATORS_IN_REPORTS | `boolean` |  | boolean | `false` | Whether to include indicators in the reports imported from MispFeed or not. |
+| FLASHPOINT_CREATE_REPORTS | `boolean` |  | boolean | `false` | Whether to create reports or groupings from MispFeed events or not. |
 | FLASHPOINT_GUESS_RELATIONSHIPS_FROM_REPORTS | `boolean` |  | boolean | `false` | Whether to guess relationships between entities or not. |
 | FLASHPOINT_IMPORT_INDICATORS | `boolean` |  | boolean | `true` | WHether to import indicators of compromise (IoCs) or not. |
 | FLASHPOINT_IMPORT_ALERTS | `boolean` |  | boolean | `true` | Whether to import alert data from Flashpoint or not. |
