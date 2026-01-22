@@ -72,13 +72,9 @@ class CrowdStrike:
         tlp = self.config.tlp
         tlp_marking = self._convert_tlp_to_marking_definition(tlp)
 
-        create_observables = self._to_bool(
-            self.config.create_observables, default=self._DEFAULT_CREATE_OBSERVABLES
-        )
+        create_observables = self.config.create_observables
 
-        create_indicators = self._to_bool(
-            self.config.create_indicators, default=self._DEFAULT_CREATE_INDICATORS
-        )
+        create_indicators = self.config.create_indicators
 
         actor_start_timestamp = self.config.actor_start_timestamp
 
@@ -109,12 +105,8 @@ class CrowdStrike:
                 report_target_industries_str
             )
 
-        report_guess_malware = self._to_bool(
-            self.config.report_guess_malware, default=False
-        )
-        report_guess_relations = self._to_bool(
-            self.config.report_guess_relations, default=False
-        )
+        report_guess_malware = self.config.report_guess_malware
+        report_guess_relations = self.config.report_guess_relations
 
         indicator_start_timestamp = self.config.indicator_start_timestamp
 
@@ -406,22 +398,6 @@ class CrowdStrike:
 
         self._info(f"New '{importer_name}' work '{work_id}' initiated")
         return work_id
-
-    @staticmethod
-    def _to_bool(value: Any | None, default: bool = False) -> bool:
-        if value is None:
-            return default
-        if isinstance(value, bool):
-            return value
-        if isinstance(value, (int, float)):
-            return bool(value)
-        if isinstance(value, str):
-            v = value.strip().lower()
-            if v in {"1", "true", "t", "yes", "y", "on"}:
-                return True
-            if v in {"0", "false", "f", "no", "n", "off", ""}:
-                return False
-        return bool(value)
 
     def _info(self, msg: str, *args: Any) -> None:
         fmt_msg = msg.format(*args)
