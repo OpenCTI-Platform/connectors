@@ -1,6 +1,7 @@
 import os
 import re
 import time
+from pathlib import Path
 
 import dnstwist
 from lib.settings import ConnectorSettings
@@ -22,7 +23,17 @@ class DnsTwistConnector:
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         self.config = config
         self.helper = helper
-        self.dictonary_path = "/dictionaries/"
+
+        local_dictionaries_directory = os.path.abspath(
+            Path(__file__).parents[2] / Path("dictionaries")
+        )
+        docker_dictionaries_directory = Path("/dictionaries/")
+
+        self.dictonaries_path = (
+            local_dictionaries_directory
+            if os.path.exists(local_dictionaries_directory)
+            else docker_dictionaries_directory
+        )
         self.total_threads = self.config.dns_twist.threads
 
     def detect_ip_version(self, value, type=False):
@@ -40,7 +51,7 @@ class DnsTwistConnector:
 
     def dns_twist_enrichment(self, observable):
         """Enriching the domain name using DNS Twist"""
-        tld_file = os.path.join(self.dictonary_path, "common_tlds.dict")
+        tld_file = os.path.join(self.dictonaries_path, "common_tlds.dict")
         stix_objects = []
         self.registered = self.config.dns_twist.fetch_registered
 
