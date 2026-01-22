@@ -72,7 +72,7 @@ class BaseImporter(ABC):
         return self.author["name"]
 
     def _confidence_level(self) -> int:
-        return self.helper.connect_confidence_level or 10
+        return self.helper.connect_confidence_level
 
     def _set_state(self, state: Dict[str, Any]) -> None:
         self.helper.set_state(state)
