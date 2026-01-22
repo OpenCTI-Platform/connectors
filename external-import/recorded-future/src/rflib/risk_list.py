@@ -115,12 +115,12 @@ class RiskList(threading.Thread):
                     # Parse data
                     if key == "Vuln":
                         description = (
-                                "Triggered risk rules:"
-                                + "\n\n"
-                                + "|Rule|Risk Rule Severity|Evidence|Mitigation|"
-                                + "\n"
-                                + "|--|--|--|--|"
-                                + "\n"
+                            "Triggered risk rules:"
+                            + "\n\n"
+                            + "|Rule|Risk Rule Severity|Evidence|Mitigation|"
+                            + "\n"
+                            + "|--|--|--|--|"
+                            + "\n"
                         )
 
                         labels = []
@@ -134,18 +134,21 @@ class RiskList(threading.Thread):
                                 mitigation = evidence.get("mitigationString", "")
 
                                 for corresponding_rule in RISK_RULES_MAPPER:
-                                    if rule_criticality == corresponding_rule["rule_score"]:
+                                    if (
+                                        rule_criticality
+                                        == corresponding_rule["rule_score"]
+                                    ):
                                         description += (
-                                                "|"
-                                                + risk_rule_name
-                                                + "|"
-                                                + corresponding_rule["severity"]
-                                                + "|"
-                                                + evidence_string
-                                                + "|"
-                                                + mitigation
-                                                + "|"
-                                                + "\n"
+                                            "|"
+                                            + risk_rule_name
+                                            + "|"
+                                            + corresponding_rule["severity"]
+                                            + "|"
+                                            + evidence_string
+                                            + "|"
+                                            + mitigation
+                                            + "|"
+                                            + "\n"
                                         )
                                         labels.append(risk_rule_name)
 
@@ -154,7 +157,9 @@ class RiskList(threading.Thread):
                             row["RuleCriticality"].strip("][").split(",")
                         )
                         risk_rules_list_str = row["RiskRules"].strip("][")
-                        risk_rules_list = re.sub(r"\"", "", risk_rules_list_str).split(",")
+                        risk_rules_list = re.sub(r"\"", "", risk_rules_list_str).split(
+                            ","
+                        )
                         description = (
                             "Triggered risk rules:"
                             + "\n\n"
@@ -173,7 +178,10 @@ class RiskList(threading.Thread):
                             criticality_score = int(criticality)
 
                             for corresponding_rule in RISK_RULES_MAPPER:
-                                if criticality_score == corresponding_rule["rule_score"]:
+                                if (
+                                    criticality_score
+                                    == corresponding_rule["rule_score"]
+                                ):
                                     description += (
                                         "|"
                                         + risk_rules_list[index]

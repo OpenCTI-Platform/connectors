@@ -844,7 +844,8 @@ class Vulnerability(RFStixEntity):
         # If there are related entities
         if related_entities_links and len(related_entities_links) > 0:
             if (
-                    related_entities_links and len(related_entities_links[0]["sections"]) > 0
+                related_entities_links
+                and len(related_entities_links[0]["sections"]) > 0
             ):  # Sometimes, hits is not empty but sections is
                 rf_related_entities = []
                 rf_related_entities_sections = related_entities_links[0]["sections"]
