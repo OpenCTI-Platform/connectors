@@ -18,15 +18,14 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
 
     id: str = Field(
         description="A UUID v4 to identify the connector in OpenCTI.",
-        default="44bc8c82-bb5f-4cd1-85a4-6f1d4c89e8b6",
     )
     name: str = Field(
         description="The name of the connector.",
-        default="Cpe",
+        default="Common Platform Enumeration",
     )
     scope: ListFromString = Field(
         description="The scope of the connector.",
-        default=[],
+        default=["software"],
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
@@ -45,7 +44,6 @@ class CpeConfig(BaseConfigModel):
     )
     api_key: SecretStr = Field(
         description="API Key for the NIST NVD API.",
-        default=SecretStr("ChangeMe"),
     )
 
     @model_validator(mode="before")
