@@ -51,8 +51,7 @@ class ScoutSearchConnectorClient:
 
             if response.status_code == 204 or not response.content:
                 self.helper.connector_logger.info(
-                    "[ScoutSearchConnector] Empty response received",
-                    {"endpoint": endpoint},
+                    "[ScoutSearchConnector] Empty response received", {"endpoint": endpoint}
                 )
                 return {}
 
@@ -105,30 +104,30 @@ class ScoutSearchConnectorClient:
         days = self.config.search_interval
         return self._request_data(endpoint, params={"query": query, "days": days})
 
-    def get_entity(self, observable_type: str, observable_value: str) -> dict:
+    def get_entity(self, observable_type: str, pattern: str) -> dict:
         """
         Fetch the STIX bundle for the given observable.
-        Supports: Text
+        Supports: Indicator
         """
         try:
             self.helper.connector_logger.info(
                 "[ScoutSearchConnector] Processing observable",
-                {"type": observable_type, "value": observable_value},
+                {"type": observable_type, "value": pattern},
             )
 
-            if observable_type == "Text":
-                return self.search_query(observable_value)
+            if observable_type == "Indicator":
+                return self.search_query(pattern)
 
             # No else needed here
             self.helper.connector_logger.warning(
                 "[ScoutSearchConnector] Unsupported observable type",
-                {"observable_type": observable_type, "value": observable_value},
+                {"observable_type": observable_type, "value": pattern},
             )
             return {}
 
         except Exception as e:
             self.helper.connector_logger.error(
                 "[ScoutSearchConnector] Error processing entity",
-                {"type": observable_type, "value": observable_value, "error": str(e)},
+                {"type": observable_type, "value": pattern, "error": str(e)},
             )
             return {}

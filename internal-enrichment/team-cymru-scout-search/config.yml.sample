@@ -6,7 +6,7 @@ connector:
   type: 'INTERNAL_ENRICHMENT'
   id: 'scout-search-connector'
   name: 'Scout Search Connector'
-  scope: 'Text'
+  scope: 'Indicator'
   confidence_level: 100
   log_level: 'error'
 
@@ -15,3 +15,5 @@ pure_signal_scout:
   api_token: 'Changeme'
   max_tlp: 'TLP:AMBER'
   search_interval: 1
+  pattern_type: 'pure_signal_scout'
+  pattern_description: 'Scout Search Query Pattern'
