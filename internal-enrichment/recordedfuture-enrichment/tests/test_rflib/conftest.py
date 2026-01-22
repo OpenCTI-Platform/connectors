@@ -40,6 +40,7 @@ def fixture_config_dict() -> dict[str, dict[str, Any]]:
             "create_indicator_threshold": 0,
             "info_max_tlp": "TLP:CLEAR",
             "vulnerability_enrichment_optional_fields": "",  # empty comma-separated list
+            "threat_actor_to_intrusion_set": False,
         },
     }
 
