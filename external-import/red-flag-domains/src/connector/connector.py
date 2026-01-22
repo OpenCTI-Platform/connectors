@@ -1,52 +1,24 @@
-import os
 import time
 from datetime import datetime, timedelta, timezone
 
 import requests
 import stix2
-import yaml
-from pycti import (
-    Identity,
-    Indicator,
-    OpenCTIConnectorHelper,
-    StixCoreRelationship,
-    get_config_variable,
-)
+from connector.settings import ConnectorSettings
+from pycti import Identity, Indicator, OpenCTIConnectorHelper, StixCoreRelationship
 
 
 class RedFlagDomainImportConnector:
-    def __init__(self):
-        config_file_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "config.yml"
-        )
-        if os.path.isfile(config_file_path):
-            with open(config_file_path, "r") as f:
-                config = yaml.safe_load(f)
-        else:
-            config = {}
-        try:
-            self.helper = OpenCTIConnectorHelper(config)
-        except Exception as e:
-            print(e)
-        name = get_config_variable(
-            "CONNECTOR_NAME", ["connector", "name"], config
-        ).capitalize()
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+        self.config = config
+        self.helper = helper
+        name = self.config.connector.name.capitalize()
         self.author = stix2.Identity(
             id=Identity.generate_id(name, "organization"),
             name=name,
             identity_class="organization",
         )
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-        )
-
-        self.api_url = get_config_variable(
-            "REDFLAGDOMAINS_URL",
-            ["redflagdomains", "url"],
-            config,
-        )
+        self.update_existing_data = False
+        self.api_url = self.config.red_flag_domains.url
 
     def run(self):
         while True:
@@ -59,33 +31,25 @@ class RedFlagDomainImportConnector:
                 work_id = self.helper.api.work.initiate_work(
                     self.helper.connect_id, friendly_name
                 )
-
                 if current_state is not None and "last_run" in current_state:
                     last_seen = datetime.fromtimestamp(current_state["last_run"])
                     self.helper.log_info(f"Connector last ran at: {last_seen} (UTC)")
                 else:
                     self.helper.log_info("Connector has never run")
-
                 domain_list = self.get_domains(self.api_url)
                 observables = self.create_observables(domain_list)
                 indicators = self.create_indicators(observables)
                 relationships = self.create_relationships(observables, indicators)
                 bundle = self.create_bundle(observables, indicators, relationships)
                 self.send_bundle(bundle, work_id)
-
                 message = (
                     "Connector successfully run ("
-                    + str((len(indicators) + len(observables) + len(relationships)))
+                    + str(len(indicators) + len(observables) + len(relationships))
                     + " events have been processed), storing last_run as "
                     + str(now)
                 )
                 self.helper.log_info(message)
-                self.helper.set_state(
-                    {
-                        "last_run": now.timestamp(),
-                    }
-                )
-
+                self.helper.set_state({"last_run": now.timestamp()})
                 time_now = datetime.now(timezone(timedelta(hours=2)))
                 time_until_2am = timedelta(
                     days=1,
@@ -97,7 +61,6 @@ class RedFlagDomainImportConnector:
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
                 exit(0)
-
             except Exception as exception:
                 self.helper.log_error(str(exception))
 
@@ -151,9 +114,7 @@ class RedFlagDomainImportConnector:
                 pattern=pattern,
                 labels=["phishing", "red-flag-domains"],
                 object_marking_refs=[stix2.TLP_WHITE],
-                custom_properties={
-                    "x_opencti_main_observable_type": "Domain-Name",
-                },
+                custom_properties={"x_opencti_main_observable_type": "Domain-Name"},
             )
             indicators.append(indicator)
         return indicators
@@ -194,13 +155,3 @@ class RedFlagDomainImportConnector:
             )
         except Exception as e:
             self.helper.log_error(str(e))
-
-
-if __name__ == "__main__":
-    try:
-        RedFlagDomainImportConnector = RedFlagDomainImportConnector()
-        RedFlagDomainImportConnector.run()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        exit(0)
