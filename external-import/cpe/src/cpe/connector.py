@@ -23,46 +23,8 @@ class CPEConnector:
         """
         self.config = config
         self.helper = helper
-        try:
-            self.interval = self.config.cpe.interval
-            self.helper.log_info(
-                f"Verifying integrity of the INTERVAL value: '{self.interval}'"
-            )
-            unit = self.interval[-1]
-            if unit not in ["h", "s"]:
-                raise TypeError
-            int(self.interval[:-1])
-        except TypeError as _:
-            msg = f"Error ({_}) when grabbing INTERVAL environment variable: '{self.interval}'. It SHOULD be a string in the format '12h' where the final letter SHOULD be 'h' standing for hour. "
-            self.helper.log_error(msg)
-            raise ValueError(msg)
         self.base_url = self.config.cpe.base_url
         self.api_key = self.config.cpe.api_key.get_secret_value()
-
-    def _get_interval(self) -> int:
-        """
-        Returns the interval to use for the connector
-
-        This SHOULD return always the interval in seconds.
-        If the connector is expecting that the parameter is received as hours uncomment as necessary.
-
-        Returns:
-            int: The interval to use for the connector
-        """
-        unit = self.interval[-1:]
-        value = self.interval[:-1]
-        try:
-            if unit == "h":
-                return int(value) * 60 * 60
-            elif unit == "s":
-                return int(value)
-        except Exception as e:
-            self.helper.log_error(
-                f"Error when converting CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. {str(e)}"
-            )
-            raise ValueError(
-                f"Error when converting CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. {str(e)}"
-            )
 
     def _get_request_params(self, api_url) -> dict:
         """
@@ -347,6 +309,7 @@ class CPEConnector:
         Runs the CPE connector
         """
         self.helper.log_info(f"Starting {self.helper.connect_name} connector...")
+        interval = self.config.connector.duration_period.seconds
         while True:
             try:
                 self.current_run = int(time.time())
@@ -404,10 +367,10 @@ class CPEConnector:
                     self.helper.api.work.to_processed(work_id, message)
                     self.helper.log_info(
                         "Last_run stored, next run in: "
-                        + str(round(self._get_interval() / 60 / 60, 2))
+                        + str(round(interval / 60 / 60, 2))
                         + " hours"
                     )
-                elif self.current_run - last_run >= self._get_interval():
+                elif self.current_run - last_run >= interval:
                     self.helper.log_info(
                         f"{self.helper.connect_name} will run and collect the CPEs based on a time difference!"
                     )
@@ -439,11 +402,11 @@ class CPEConnector:
                     self.helper.api.work.to_processed(work_id, message)
                     self.helper.log_info(
                         "Last_run stored, next run in: "
-                        + str(round(self._get_interval() / 60 / 60, 2))
+                        + str(round(interval / 60 / 60, 2))
                         + " hours"
                     )
                 else:
-                    new_interval = self._get_interval() - (self.current_run - last_run)
+                    new_interval = interval - (self.current_run - last_run)
                     self.helper.log_info(
                         f"{self.helper.connect_name} connector will not run, next run in: "
                         + str(round(new_interval / 60 / 60, 2))

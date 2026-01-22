@@ -31,13 +31,8 @@ from cpe import ConnectorSettings
                 "opencti": {"url": "http://localhost:8080", "token": "test-token"},
                 "connector": {
                     "id": "connector-id",
-                    "name": "Test Connector",
-                    "scope": "test, connector",
-                    "log_level": "error",
-                    "duration_period": "PT5M",
                 },
                 "cpe": {
-                    "base_url": "https://services.nvd.nist.gov/rest/json/cpes/2.0",
                     "api_key": "test-api-key",
                 },
             },
