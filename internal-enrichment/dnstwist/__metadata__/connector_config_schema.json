@@ -15,13 +15,15 @@
       "type": "string"
     },
     "CONNECTOR_NAME": {
-      "default": "Dnstwist",
+      "default": "DNS_TWISTER",
       "description": "The name of the connector.",
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": [],
-      "description": "The scope of the connector.",
+      "default": [
+        "Domain-Name"
+      ],
+      "description": "The scope of observables the connector will enrich. Currently, only 'Domain-Name' is supported.",
       "items": {
         "type": "string"
       },
@@ -49,12 +51,12 @@
       "description": "Whether the connector should run automatically when an entity is created or updated.",
       "type": "boolean"
     },
-    "DNSTWIST_FETCH_REGISTERED": {
+    "DNS_TWIST_FETCH_REGISTERED": {
       "default": true,
       "description": "Only return domains that are actually registered.",
       "type": "boolean"
     },
-    "DNSTWIST_DNS_TWIST_THREADS": {
+    "DNS_TWIST_THREADS": {
       "default": 20,
       "description": "Number of threads for DNS lookups.",
       "type": "integer"
