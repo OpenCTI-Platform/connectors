@@ -1,4 +1,5 @@
 import csv
+import json
 import re
 import threading
 from datetime import datetime, timezone
@@ -112,41 +113,78 @@ class RiskList(threading.Thread):
                             continue
 
                     # Parse data
-                    rule_criticality_list = (
-                        row["RuleCriticality"].strip("][").split(",")
-                    )
-                    risk_rules_list_str = row["RiskRules"].strip("][")
-                    risk_rules_list = re.sub(r"\"", "", risk_rules_list_str).split(",")
-                    description = (
-                        "Triggered risk rules:"
-                        + "\n\n"
-                        + "|Rule|Risk Rule Severity|Risk Score Severity|"
-                        + "\n"
-                        + "|--|--|--|"
-                        + "\n"
-                    )
-                    labels = []
+                    if key == "Vuln":
+                        description = (
+                                "Triggered risk rules:"
+                                + "\n\n"
+                                + "|Rule|Risk Rule Severity|Evidence|Mitigation|"
+                                + "\n"
+                                + "|--|--|--|--|"
+                                + "\n"
+                        )
 
-                    for index, criticality in enumerate(rule_criticality_list):
-                        # If criticality comes with empty string, replace value at 0
-                        if not criticality:
-                            criticality = 0
+                        labels = []
+                        evidence_details = row.get("EvidenceDetails")
+                        if evidence_details:
+                            evidences = json.loads(evidence_details)
+                            for evidence in evidences:
+                                risk_rule_name = evidence.get("rule", "")
+                                rule_criticality = int(evidence.get("criticality", "0"))
+                                evidence_string = evidence.get("evidenceString", "")
+                                mitigation = evidence.get("mitigationString", "")
 
-                        criticality_score = int(criticality)
+                                for corresponding_rule in RISK_RULES_MAPPER:
+                                    if rule_criticality == corresponding_rule["rule_score"]:
+                                        description += (
+                                                "|"
+                                                + risk_rule_name
+                                                + "|"
+                                                + corresponding_rule["severity"]
+                                                + "|"
+                                                + evidence_string
+                                                + "|"
+                                                + mitigation
+                                                + "|"
+                                                + "\n"
+                                        )
+                                        labels.append(risk_rule_name)
 
-                        for corresponding_rule in RISK_RULES_MAPPER:
-                            if criticality_score == corresponding_rule["rule_score"]:
-                                description += (
-                                    "|"
-                                    + risk_rules_list[index]
-                                    + "|"
-                                    + corresponding_rule["severity"]
-                                    + "|"
-                                    + corresponding_rule["risk_score"]
-                                    + "|"
-                                    + "\n"
-                                )
-                                labels.append(risk_rules_list[index])
+                    else:
+                        rule_criticality_list = (
+                            row["RuleCriticality"].strip("][").split(",")
+                        )
+                        risk_rules_list_str = row["RiskRules"].strip("][")
+                        risk_rules_list = re.sub(r"\"", "", risk_rules_list_str).split(",")
+                        description = (
+                            "Triggered risk rules:"
+                            + "\n\n"
+                            + "|Rule|Risk Rule Severity|Risk Score Severity|"
+                            + "\n"
+                            + "|--|--|--|"
+                            + "\n"
+                        )
+                        labels = []
+
+                        for index, criticality in enumerate(rule_criticality_list):
+                            # If criticality comes with empty string, replace value at 0
+                            if not criticality:
+                                criticality = 0
+
+                            criticality_score = int(criticality)
+
+                            for corresponding_rule in RISK_RULES_MAPPER:
+                                if criticality_score == corresponding_rule["rule_score"]:
+                                    description += (
+                                        "|"
+                                        + risk_rules_list[index]
+                                        + "|"
+                                        + corresponding_rule["severity"]
+                                        + "|"
+                                        + corresponding_rule["risk_score"]
+                                        + "|"
+                                        + "\n"
+                                    )
+                                    labels.append(risk_rules_list[index])
 
                     # Convert into stix object
                     stix_obj = risk_list_type["class"](
@@ -157,14 +195,11 @@ class RiskList(threading.Thread):
                         last_seen=last_seen,
                     )
 
+                    stix_obj.map_data(row, self.tlp, self.risklist_related_entities)
+
                     stix_obj.add_description(description)
                     if self.riskrules_as_label:
                         stix_obj.add_labels(labels)
-
-                    if key == "Vuln":
-                        stix_obj.map_data(row)
-                    else:
-                        stix_obj.map_data(row, self.tlp, self.risklist_related_entities)
 
                     stix_obj.build_bundle(stix_obj)
                     # Create bundle
