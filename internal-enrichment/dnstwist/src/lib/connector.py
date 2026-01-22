@@ -43,10 +43,7 @@ class DnsTwistConnector:
         tld_file = os.path.join(self.dictonary_path, "common_tlds.dict")
         stix_objects = []
         self.registered = self.config.dns_twist.fetch_registered
-        if self.registered == "true":
-            self.registered = True
-        else:
-            self.registered = False
+
         data = dnstwist.run(
             domain=observable.get("value"),
             registered=self.registered,
