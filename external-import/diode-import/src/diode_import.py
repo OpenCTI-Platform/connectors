@@ -1,10 +1,13 @@
+import datetime
 import glob
 import json
 import os
 import sys
 import time
 
+import boto3
 import yaml
+from botocore.config import Config as BotoConfig
 from pycti import OpenCTIConnector, OpenCTIConnectorHelper, get_config_variable
 
 
@@ -17,6 +20,7 @@ class DiodeImport:
             if os.path.isfile(config_file_path)
             else {}
         )
+
         # Build applicant mappings
         opencti_applicant_mappings = get_config_variable(
             "DIODE_IMPORT_APPLICANT_MAPPINGS",
@@ -25,11 +29,21 @@ class DiodeImport:
             False,
         )
         mappings_dict = {}  # mapping of source applicant ID to target applicant ID
-        for mapping in opencti_applicant_mappings.split(","):
-            mapping_def = mapping.split(":")
-            mappings_dict[mapping_def[0]] = mapping_def[1]
+        if opencti_applicant_mappings:
+            for mapping in opencti_applicant_mappings.split(","):
+                mapping_def = mapping.split(":")
+                if len(mapping_def) == 2:
+                    mappings_dict[mapping_def[0]] = mapping_def[1]
         self.applicant_mappings = mappings_dict
-        # Other configurations
+
+        # Directory consumption configuration
+        self.get_from_directory = get_config_variable(
+            "DIODE_IMPORT_GET_FROM_DIRECTORY",
+            ["diode_import", "get_from_directory"],
+            config,
+            False,
+            True,
+        )
         self.get_from_directory_path = get_config_variable(
             "DIODE_IMPORT_GET_FROM_DIRECTORY_PATH",
             ["diode_import", "get_from_directory_path"],
@@ -43,6 +57,76 @@ class DiodeImport:
             True,
             7,
         )
+
+        # S3 consumption configuration
+        self.get_from_s3 = get_config_variable(
+            "DIODE_IMPORT_GET_FROM_S3",
+            ["diode_import", "get_from_s3"],
+            config,
+            False,
+            False,
+        )
+        self.get_from_s3_bucket = get_config_variable(
+            "DIODE_IMPORT_GET_FROM_S3_BUCKET",
+            ["diode_import", "get_from_s3_bucket"],
+            config,
+            False,
+        )
+        self.get_from_s3_folder = get_config_variable(
+            "DIODE_IMPORT_GET_FROM_S3_FOLDER",
+            ["diode_import", "get_from_s3_folder"],
+            config,
+            False,
+            "connectors",
+        )
+        self.get_from_s3_retention = get_config_variable(
+            "DIODE_IMPORT_GET_FROM_S3_RETENTION",
+            ["diode_import", "get_from_s3_retention"],
+            config,
+            True,
+            7,
+        )
+
+        # S3 credentials override (if empty, will use OpenCTI credentials from helper)
+        self.s3_endpoint = get_config_variable(
+            "DIODE_IMPORT_S3_ENDPOINT",
+            ["diode_import", "s3_endpoint"],
+            config,
+            False,
+        )
+        self.s3_port = get_config_variable(
+            "DIODE_IMPORT_S3_PORT",
+            ["diode_import", "s3_port"],
+            config,
+            True,
+        )
+        self.s3_access_key = get_config_variable(
+            "DIODE_IMPORT_S3_ACCESS_KEY",
+            ["diode_import", "s3_access_key"],
+            config,
+            False,
+        )
+        self.s3_secret_key = get_config_variable(
+            "DIODE_IMPORT_S3_SECRET_KEY",
+            ["diode_import", "s3_secret_key"],
+            config,
+            False,
+        )
+        self.s3_use_ssl = get_config_variable(
+            "DIODE_IMPORT_S3_USE_SSL",
+            ["diode_import", "s3_use_ssl"],
+            config,
+            False,
+            None,  # Default to None to allow OpenCTI config to take precedence
+        )
+        self.s3_bucket_region = get_config_variable(
+            "DIODE_IMPORT_S3_BUCKET_REGION",
+            ["diode_import", "s3_bucket_region"],
+            config,
+            False,
+        )
+
+        # Common configuration
         self.delete_after_import = get_config_variable(
             "DIODE_IMPORT_DELETE_AFTER_IMPORT",
             ["diode_import", "delete_after_import"],
@@ -50,110 +134,314 @@ class DiodeImport:
             False,
             True,
         )
+
         self.connectors_cache = {}
         self.helper = OpenCTIConnectorHelper(config)
 
-    def process(self):
+        # Initialize S3 configuration from helper if needed
+        self._init_s3_config()
+
+    def _init_s3_config(self):
+        """Initialize S3 configuration from OpenCTI helper or use overrides."""
+        if not self.get_from_s3:
+            return
+
+        # Use OpenCTI credentials from helper if no local override provided
+        # The helper stores S3 config as individual attributes after registration
+        if not self.s3_endpoint:
+            self.s3_endpoint = getattr(self.helper, "s3_endpoint", None)
+        if not self.s3_port:
+            self.s3_port = getattr(self.helper, "s3_port", None)
+        if not self.s3_access_key:
+            self.s3_access_key = getattr(self.helper, "s3_access_key", None)
+        if not self.s3_secret_key:
+            self.s3_secret_key = getattr(self.helper, "s3_secret_key", None)
+        if self.s3_use_ssl is None:
+            helper_use_ssl = getattr(self.helper, "s3_use_ssl", None)
+            self.s3_use_ssl = helper_use_ssl if helper_use_ssl is not None else True
+        if not self.s3_bucket_region:
+            self.s3_bucket_region = getattr(self.helper, "s3_bucket_region", None)
+        # Use OpenCTI bucket if not overridden
+        if not self.get_from_s3_bucket:
+            self.get_from_s3_bucket = getattr(
+                self.helper, "bundle_send_to_s3_bucket", None
+            )
+
+        self.helper.connector_logger.info(
+            "S3 configuration initialized",
+            {
+                "endpoint": self.s3_endpoint,
+                "port": self.s3_port,
+                "bucket": self.get_from_s3_bucket,
+                "folder": self.get_from_s3_folder,
+                "use_ssl": self.s3_use_ssl,
+            },
+        )
+
+    def _get_s3_client(self):
+        """Create and return a configured S3 client."""
+        protocol = "https" if self.s3_use_ssl else "http"
+        endpoint_url = f"{protocol}://{self.s3_endpoint}:{self.s3_port}"
+
+        return boto3.client(
+            "s3",
+            endpoint_url=endpoint_url,
+            aws_access_key_id=self.s3_access_key,
+            aws_secret_access_key=self.s3_secret_key,
+            region_name=self.s3_bucket_region,
+            config=BotoConfig(signature_version="s3v4"),
+        )
+
+    def _get_s3_prefix(self):
+        """Get S3 prefix based on folder configuration."""
+        folder = self.get_from_s3_folder
+        if folder and folder not in ("/", "."):
+            return f"{folder}/"
+        return ""
+
+    def _process_bundle(self, file_content, file_identifier, file_time):
+        """Process a bundle from either directory or S3.
+
+        :param file_content: JSON string content of the bundle file
+        :param file_identifier: File path or S3 key for logging
+        :param file_time: Modification time of the file (timestamp)
+        :return: True if processed successfully, False otherwise
+        """
         current_state = self.helper.get_state()
+
+        # Check current state to prevent duplication
+        if current_state and current_state.get("last_run", 0) > file_time:
+            return False
+
+        # Parse JSON content
+        try:
+            json_content = json.loads(file_content)
+        except json.JSONDecodeError as e:
+            self.helper.connector_logger.warning(
+                f"Invalid JSON in file '{file_identifier}': {e}"
+            )
+            return False
+
+        connector = json_content.get("connector")
+        applicant_id = json_content.get("applicant_id")
+
+        if connector is None or applicant_id is None:
+            self.helper.connector_logger.error(
+                "An error occurred because JSON keys are incorrect or missing.",
+                {"connector": connector, "applicant_id": applicant_id},
+            )
+            return False
+
+        connector_id = connector.get("id")
+
+        # Register the connector in OpenCTI if not in cache
+        if self.connectors_cache.get(connector_id) is None:
+            connector_registration = OpenCTIConnector(
+                connector_id=connector.get("id"),
+                connector_name=connector.get("name"),
+                connector_type=connector.get("type"),
+                scope=connector.get("scope"),
+                auto=connector.get("auto"),
+                only_contextual=False,
+                playbook_compatible=False,
+                auto_update=False,
+                enrichment_resolution="none",
+            )
+            connector_configuration = self.helper.api.connector.register(
+                connector_registration
+            )
+            self.connectors_cache[connector_id] = connector_configuration
+
+        # Setup the helper
+        self.helper.connect_id = connector_id
+        self.helper.connector_config = self.connectors_cache[connector_id]["config"]
+        self.helper.connect_validate_before_import = connector.get(
+            "validate_before_import", False
+        )
+        self.helper.applicant_id = self.applicant_mappings.get(applicant_id, None)
+
+        # Send data to the correct queue
+        friendly_name = f"{connector.get('name')} run @ {time.ctime(file_time)}"
+        work_id = self.helper.api.work.initiate_work(
+            self.helper.connect_id, friendly_name
+        )
+        self.helper.send_stix2_bundle(
+            json.dumps(json_content.get("bundle")),
+            update=json_content.get("update", False),
+            work_id=work_id,
+        )
+        self.helper.api.work.to_processed(work_id, "Connector successfully run")
+        self.helper.set_state({"last_run": time.time()})
+
+        self.helper.connector_logger.info(
+            f"Successfully processed bundle: {file_identifier}"
+        )
+        return True
+
+    def _process_directory(self):
+        """Process bundles from directory."""
+        if not self.get_from_directory or not self.get_from_directory_path:
+            return
+
+        self.helper.connector_logger.info(
+            f"Processing directory: {self.get_from_directory_path}"
+        )
+
         # Build path pattern to find all JSON files
         path = os.path.join(self.get_from_directory_path, "*.json")
-        # Get all JSON files matching the pattern
         file_paths = glob.glob(path, recursive=True)
-        file_paths.sort(key=os.path.getmtime)  # Use mtime consistently
+        file_paths.sort(key=os.path.getmtime)
+
         for file_path in file_paths:
             # Fetch file content
-            file = open(file_path, mode="r")
-            file_content = file.read()
-            file.close()
-            ti_m = os.path.getmtime(file_path)  # Use mtime consistently
-            # Check current state to prevent duplication (use > not >= to handle same-timestamp files)
-            if current_state and current_state.get("last_run", 0) > ti_m:
-                continue
-            # region Parse and handle
-            try:
-                json_content = json.loads(file_content)
-            except json.JSONDecodeError as e:
-                self.helper.connector_logger.warning(
-                    f"Invalid JSON in file '{file_path}', deleting: {e}"
-                )
-                os.remove(file_path)
-                continue
+            with open(file_path, mode="r") as file:
+                file_content = file.read()
 
-            connector = json_content.get("connector")
-            applicant_id = json_content.get("applicant_id")
+            file_time = os.path.getmtime(file_path)
 
-            if connector is None or applicant_id is None:
-                self.helper.connector_logger.error(
-                    "An error occurred because JSON keys are incorrect or missing.",
-                    {"connector": connector, "applicant_id": applicant_id},
-                )
-                continue
+            # Process the bundle
+            success = self._process_bundle(file_content, file_path, file_time)
 
-            connector_id = connector.get("id")
-
-            # endregion
-            # region Register the connector in OpenCTI to simulate the real activity if not in cache
-            if self.connectors_cache.get(connector_id) is None:
-                connector_registration = OpenCTIConnector(
-                    connector_id=connector.get("id"),
-                    connector_name=connector.get("name"),
-                    connector_type=connector.get("type"),
-                    scope=connector.get("scope"),
-                    auto=connector.get("auto"),
-                    only_contextual=False,  # default
-                    playbook_compatible=False,  # default
-                    auto_update=False,  # default
-                    enrichment_resolution="none",  # default
-                )
-                connector_configuration = self.helper.api.connector.register(
-                    connector_registration
-                )
-                # Put configuration in the cache
-                self.connectors_cache[connector_id] = connector_configuration
-            # endregion
-
-            # region Setup the helper
-            self.helper.connect_id = connector_id
-            ### Connector config is IMPORTANT as it is containing the new RabbitMQ configuration including routing key
-            self.helper.connector_config = self.connectors_cache[connector_id]["config"]
-            self.helper.connect_validate_before_import = connector.get(
-                "validate_before_import", False
-            )
-            self.helper.applicant_id = self.applicant_mappings.get(applicant_id, None)
-            # endregion
-            # region Send data to the correct queue with the correct options
-            friendly_name = f"{connector.get('name')} run @ {time.ctime(ti_m)}"
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
-            )
-            self.helper.send_stix2_bundle(
-                json.dumps(json_content.get("bundle")),
-                update=json_content.get("update", False),
-                work_id=work_id,
-            )
-            self.helper.api.work.to_processed(work_id, "Connector successfully run")
-            # Use current time for state to avoid issues with files having older timestamps
-            self.helper.set_state({"last_run": time.time()})
-            # Delete file immediately after successful processing to prevent re-ingestion
-            if self.delete_after_import:
+            # Delete file after successful processing
+            if success and self.delete_after_import:
                 os.remove(file_path)
                 self.helper.connector_logger.info(
-                    f"Successfully processed and deleted file: {file_path}"
+                    f"Deleted file after import: {file_path}"
                 )
-            # endregion
-        # Remove expired files (retention-based cleanup for files not deleted above)
-        if self.get_from_directory_retention > 0:  # If 0, disable the auto remove
+
+        # Retention-based cleanup
+        if self.get_from_directory_retention > 0:
             current_time = time.time()
-            for delete_file in file_paths:
-                # Skip files already deleted by delete_after_import
-                if not os.path.exists(delete_file):
+            for file_path in file_paths:
+                if not os.path.exists(file_path):
                     continue
-                file_time = os.stat(delete_file).st_mtime
-                is_expired_file = (
+                file_time = os.stat(file_path).st_mtime
+                is_expired = (
                     file_time < current_time - 86400 * self.get_from_directory_retention
-                )  # 86400 = 1 day
-                if is_expired_file:
-                    os.remove(delete_file)
+                )
+                if is_expired:
+                    os.remove(file_path)
+                    self.helper.connector_logger.debug(
+                        f"Deleted expired file: {file_path}"
+                    )
+
+    def _process_s3(self):
+        """Process bundles from S3 bucket."""
+        if not self.get_from_s3:
+            return
+
+        # Validate required S3 configuration
+        if not self.s3_endpoint or not self.get_from_s3_bucket:
+            self.helper.connector_logger.warning(
+                "S3 consumption enabled but missing required configuration "
+                "(endpoint or bucket). Skipping S3 processing. "
+                "Provide S3 credentials via config or ensure OpenCTI provides them."
+            )
+            return
+
+        self.helper.connector_logger.info(
+            f"Processing S3 bucket: {self.get_from_s3_bucket}"
+        )
+
+        s3_client = self._get_s3_client()
+        prefix = self._get_s3_prefix()
+
+        try:
+            # List objects in the bucket/folder
+            paginator = s3_client.get_paginator("list_objects_v2")
+            paginate_args = {"Bucket": self.get_from_s3_bucket}
+            if prefix:
+                paginate_args["Prefix"] = prefix
+
+            objects_to_process = []
+
+            for page in paginator.paginate(**paginate_args):
+                for obj in page.get("Contents", []):
+                    key = obj["Key"]
+                    # Only process JSON files
+                    if key.endswith(".json"):
+                        objects_to_process.append(
+                            {
+                                "key": key,
+                                "last_modified": obj["LastModified"],
+                            }
+                        )
+
+            # Sort by last modified time
+            objects_to_process.sort(key=lambda x: x["last_modified"])
+
+            for obj in objects_to_process:
+                key = obj["key"]
+                last_modified = obj["last_modified"]
+                file_time = last_modified.timestamp()
+
+                # Download the object content
+                try:
+                    response = s3_client.get_object(
+                        Bucket=self.get_from_s3_bucket, Key=key
+                    )
+                    file_content = response["Body"].read().decode("utf-8")
+                except Exception as e:
+                    self.helper.connector_logger.warning(
+                        f"Failed to download S3 object '{key}': {e}"
+                    )
+                    continue
+
+                # Process the bundle
+                success = self._process_bundle(
+                    file_content,
+                    f"s3://{self.get_from_s3_bucket}/{key}",
+                    file_time,
+                )
+
+                # Delete object after successful processing
+                if success and self.delete_after_import:
+                    s3_client.delete_object(Bucket=self.get_from_s3_bucket, Key=key)
+                    self.helper.connector_logger.info(
+                        f"Deleted S3 object after import: {key}"
+                    )
+
+            # Retention-based cleanup
+            if self.get_from_s3_retention > 0:
+                self._cleanup_old_s3_objects(s3_client)
+
+        except Exception as e:
+            self.helper.connector_logger.error(f"Error processing S3 bucket: {e}")
+
+    def _cleanup_old_s3_objects(self, s3_client):
+        """Remove expired objects from S3 based on retention policy."""
+        prefix = self._get_s3_prefix()
+        cutoff_time = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(
+            days=self.get_from_s3_retention
+        )
+
+        try:
+            paginator = s3_client.get_paginator("list_objects_v2")
+            paginate_args = {"Bucket": self.get_from_s3_bucket}
+            if prefix:
+                paginate_args["Prefix"] = prefix
+
+            for page in paginator.paginate(**paginate_args):
+                for obj in page.get("Contents", []):
+                    if obj["LastModified"] < cutoff_time:
+                        s3_client.delete_object(
+                            Bucket=self.get_from_s3_bucket, Key=obj["Key"]
+                        )
+                        self.helper.connector_logger.debug(
+                            f"Deleted expired S3 object: {obj['Key']}"
+                        )
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                f"Failed to cleanup old S3 objects: {e}"
+            )
+
+    def process(self):
+        """Process bundles from all configured sources."""
+        # Process directory if enabled
+        self._process_directory()
+
+        # Process S3 if enabled
+        self._process_s3()
 
     def run(self):
         get_run_and_terminate = getattr(self.helper, "get_run_and_terminate", False)
