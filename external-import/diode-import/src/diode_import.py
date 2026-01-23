@@ -29,11 +29,24 @@ class DiodeImport:
             False,
         )
         mappings_dict = {}  # mapping of source applicant ID to target applicant ID
+        self._malformed_mappings = (
+            []
+        )  # Track malformed entries for logging after helper init
         if opencti_applicant_mappings:
             for mapping in opencti_applicant_mappings.split(","):
+                mapping = mapping.strip()
+                if not mapping:
+                    continue  # Skip empty entries (e.g., trailing comma)
                 mapping_def = mapping.split(":")
                 if len(mapping_def) == 2:
-                    mappings_dict[mapping_def[0]] = mapping_def[1]
+                    source = mapping_def[0].strip()
+                    target = mapping_def[1].strip()
+                    if source and target:
+                        mappings_dict[source] = target
+                    else:
+                        self._malformed_mappings.append(mapping)
+                else:
+                    self._malformed_mappings.append(mapping)
         self.applicant_mappings = mappings_dict
 
         # Directory consumption configuration
@@ -138,8 +151,23 @@ class DiodeImport:
         self.connectors_cache = {}
         self.helper = OpenCTIConnectorHelper(config)
 
+        # Log any configuration warnings now that helper is available
+        self._log_config_warnings()
+
         # Initialize S3 configuration from helper if needed
         self._init_s3_config()
+
+    def _log_config_warnings(self):
+        """Log warnings for any configuration issues detected during initialization."""
+        # Warn about malformed applicant mappings
+        if self._malformed_mappings:
+            for entry in self._malformed_mappings:
+                self.helper.connector_logger.warning(
+                    f"Malformed applicant mapping entry ignored: '{entry}'. "
+                    "Expected format: 'source_id:target_id'"
+                )
+            # Clean up temporary storage
+            del self._malformed_mappings
 
     def _init_s3_config(self):
         """Initialize S3 configuration from OpenCTI helper or use overrides."""
@@ -181,7 +209,11 @@ class DiodeImport:
     def _get_s3_client(self):
         """Create and return a configured S3 client."""
         protocol = "https" if self.s3_use_ssl else "http"
-        endpoint_url = f"{protocol}://{self.s3_endpoint}:{self.s3_port}"
+        # Build endpoint URL, omitting port if not set (uses protocol default)
+        if self.s3_port:
+            endpoint_url = f"{protocol}://{self.s3_endpoint}:{self.s3_port}"
+        else:
+            endpoint_url = f"{protocol}://{self.s3_endpoint}"
 
         return boto3.client(
             "s3",
@@ -215,7 +247,8 @@ class DiodeImport:
             - (False, True) = invalid bundle, should delete to avoid retries
         """
         # Check against snapshot to prevent duplication (allows multiple bundles per run)
-        if last_run_snapshot > file_time:
+        # Use >= to ensure files with file_time == last_run are skipped on subsequent runs
+        if last_run_snapshot >= file_time:
             return (False, False)  # Skipped, don't delete
 
         # Parse JSON content
@@ -335,11 +368,16 @@ class DiodeImport:
         file_paths.sort(key=os.path.getmtime)
 
         for file_path in file_paths:
+            file_time = os.path.getmtime(file_path)
+
+            # Skip files already processed (check before reading to save disk I/O)
+            # Use >= to ensure files with file_time == last_run are skipped on subsequent runs
+            if last_run_snapshot >= file_time:
+                continue
+
             # Fetch file content
             with open(file_path, mode="r") as file:
                 file_content = file.read()
-
-            file_time = os.path.getmtime(file_path)
 
             # Process the bundle
             success, should_delete = self._process_bundle(
@@ -431,6 +469,11 @@ class DiodeImport:
                 last_modified = obj["last_modified"]
                 file_time = last_modified.timestamp()
 
+                # Skip objects already processed (check before downloading to save I/O)
+                # Use >= to ensure objects with file_time == last_run are skipped on subsequent runs
+                if last_run_snapshot >= file_time:
+                    continue
+
                 # Download the object content
                 try:
                     response = s3_client.get_object(
@@ -491,12 +534,14 @@ class DiodeImport:
 
             for page in paginator.paginate(**paginate_args):
                 for obj in page.get("Contents", []):
+                    key = obj["Key"]
+                    # Only delete .json files (matching ingestion filter)
+                    if not key.endswith(".json"):
+                        continue
                     if obj["LastModified"] < cutoff_time:
-                        s3_client.delete_object(
-                            Bucket=self.get_from_s3_bucket, Key=obj["Key"]
-                        )
+                        s3_client.delete_object(Bucket=self.get_from_s3_bucket, Key=key)
                         self.helper.connector_logger.debug(
-                            f"Deleted expired S3 object: {obj['Key']}"
+                            f"Deleted expired S3 object: {key}"
                         )
         except Exception as e:
             self.helper.connector_logger.warning(
