@@ -68,7 +68,7 @@ class ConnectorSettings(BaseConnectorSettings):
         """
         connector_data: dict = data.get("connector", {})
         disarm_framework_data: dict = data.get("disarm_framework", {})
-        if interval := disarm_framework_data.pop("interval_sec", None):
+        if interval := disarm_framework_data.pop("interval", None):
             if connector_data.get("duration_period") is not None:
                 warnings.warn(
                     "Both 'DISARM_FRAMEWORK_INTERVAL_SEC' and 'CONNECTOR_DURATION_PERIOD' are set. "
