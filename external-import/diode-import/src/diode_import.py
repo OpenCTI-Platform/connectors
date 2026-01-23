@@ -199,38 +199,47 @@ class DiodeImport:
             return f"{folder}/"
         return ""
 
-    def _process_bundle(self, file_content, file_identifier, file_time):
+    def _process_bundle(
+        self, file_content, file_identifier, file_time, last_run_snapshot, state_key
+    ):
         """Process a bundle from either directory or S3.
 
         :param file_content: JSON string content of the bundle file
         :param file_identifier: File path or S3 key for logging
         :param file_time: Modification time of the file (timestamp)
-        :return: True if processed successfully, False otherwise
+        :param last_run_snapshot: The last_run timestamp from state snapshot taken at start of source processing
+        :param state_key: The state key to update (e.g., 'last_run_directory' or 'last_run_s3')
+        :return: Tuple of (success, should_delete) where:
+            - (True, True) = processed successfully, delete if configured
+            - (False, False) = skipped (already processed), don't delete
+            - (False, True) = invalid bundle, should delete to avoid retries
         """
-        current_state = self.helper.get_state()
-
-        # Check current state to prevent duplication
-        if current_state and current_state.get("last_run", 0) > file_time:
-            return False
+        # Check against snapshot to prevent duplication (allows multiple bundles per run)
+        if last_run_snapshot > file_time:
+            return (False, False)  # Skipped, don't delete
 
         # Parse JSON content
         try:
             json_content = json.loads(file_content)
         except json.JSONDecodeError as e:
             self.helper.connector_logger.warning(
-                f"Invalid JSON in file '{file_identifier}': {e}"
+                f"Invalid JSON in file '{file_identifier}', will delete: {e}"
             )
-            return False
+            return (False, True)  # Invalid, should delete
 
         connector = json_content.get("connector")
         applicant_id = json_content.get("applicant_id")
 
         if connector is None or applicant_id is None:
             self.helper.connector_logger.error(
-                "An error occurred because JSON keys are incorrect or missing.",
-                {"connector": connector, "applicant_id": applicant_id},
+                "Invalid bundle structure (missing connector or applicant_id), will delete.",
+                {
+                    "file": file_identifier,
+                    "connector": connector,
+                    "applicant_id": applicant_id,
+                },
             )
-            return False
+            return (False, True)  # Invalid, should delete
 
         connector_id = connector.get("id")
 
@@ -271,21 +280,54 @@ class DiodeImport:
             work_id=work_id,
         )
         self.helper.api.work.to_processed(work_id, "Connector successfully run")
-        self.helper.set_state({"last_run": time.time()})
+        # Store file_time (not current time) to allow processing multiple bundles per run
+        # while still preventing reprocessing across runs
+        # Use separate state keys for directory vs S3 to avoid cross-source interference
+        current_state = self.helper.get_state() or {}
+        current_state[state_key] = file_time
+        # Clean up legacy 'last_run' key if present (migrated to 'last_run_directory')
+        if "last_run" in current_state:
+            del current_state["last_run"]
+        self.helper.set_state(current_state)
 
         self.helper.connector_logger.info(
             f"Successfully processed bundle: {file_identifier}"
         )
-        return True
+        return (True, True)  # Success, delete if configured
 
     def _process_directory(self):
         """Process bundles from directory."""
-        if not self.get_from_directory or not self.get_from_directory_path:
+        if not self.get_from_directory:
+            return
+
+        if not self.get_from_directory_path:
+            self.helper.connector_logger.warning(
+                "Directory consumption enabled but no path configured. "
+                "Set DIODE_IMPORT_GET_FROM_DIRECTORY_PATH or disable directory mode."
+            )
             return
 
         self.helper.connector_logger.info(
             f"Processing directory: {self.get_from_directory_path}"
         )
+
+        # Take state snapshot once at the start of directory processing
+        # This allows multiple bundles to be processed in a single run
+        # Use separate state key for directory to avoid interference with S3 processing
+        state_key = "last_run_directory"
+        current_state = self.helper.get_state() or {}
+        # Backward compatibility: migrate legacy 'last_run' to 'last_run_directory'
+        # The old 'last_run' was only used for directory processing (S3 is new)
+        if state_key in current_state:
+            last_run_snapshot = current_state.get(state_key, 0)
+        elif "last_run" in current_state:
+            # Migrate legacy state: use old value and it will be saved with new key
+            last_run_snapshot = current_state.get("last_run", 0)
+            self.helper.connector_logger.info(
+                "Migrating legacy state 'last_run' to 'last_run_directory'"
+            )
+        else:
+            last_run_snapshot = 0
 
         # Build path pattern to find all JSON files
         path = os.path.join(self.get_from_directory_path, "*.json")
@@ -300,14 +342,21 @@ class DiodeImport:
             file_time = os.path.getmtime(file_path)
 
             # Process the bundle
-            success = self._process_bundle(file_content, file_path, file_time)
+            success, should_delete = self._process_bundle(
+                file_content, file_path, file_time, last_run_snapshot, state_key
+            )
 
-            # Delete file after successful processing
-            if success and self.delete_after_import:
+            # Delete file after successful processing or if invalid
+            if should_delete and (success and self.delete_after_import or not success):
                 os.remove(file_path)
-                self.helper.connector_logger.info(
-                    f"Deleted file after import: {file_path}"
-                )
+                if success:
+                    self.helper.connector_logger.info(
+                        f"Deleted file after import: {file_path}"
+                    )
+                else:
+                    self.helper.connector_logger.info(
+                        f"Deleted invalid file: {file_path}"
+                    )
 
         # Retention-based cleanup
         if self.get_from_directory_retention > 0:
@@ -342,6 +391,13 @@ class DiodeImport:
         self.helper.connector_logger.info(
             f"Processing S3 bucket: {self.get_from_s3_bucket}"
         )
+
+        # Take state snapshot once at the start of S3 processing
+        # This allows multiple bundles to be processed in a single run
+        # Use separate state key for S3 to avoid interference with directory processing
+        state_key = "last_run_s3"
+        current_state = self.helper.get_state()
+        last_run_snapshot = current_state.get(state_key, 0) if current_state else 0
 
         s3_client = self._get_s3_client()
         prefix = self._get_s3_prefix()
@@ -380,7 +436,10 @@ class DiodeImport:
                     response = s3_client.get_object(
                         Bucket=self.get_from_s3_bucket, Key=key
                     )
-                    file_content = response["Body"].read().decode("utf-8")
+                    try:
+                        file_content = response["Body"].read().decode("utf-8")
+                    finally:
+                        response["Body"].close()
                 except Exception as e:
                     self.helper.connector_logger.warning(
                         f"Failed to download S3 object '{key}': {e}"
@@ -388,18 +447,27 @@ class DiodeImport:
                     continue
 
                 # Process the bundle
-                success = self._process_bundle(
+                success, should_delete = self._process_bundle(
                     file_content,
                     f"s3://{self.get_from_s3_bucket}/{key}",
                     file_time,
+                    last_run_snapshot,
+                    state_key,
                 )
 
-                # Delete object after successful processing
-                if success and self.delete_after_import:
+                # Delete object after successful processing or if invalid
+                if should_delete and (
+                    success and self.delete_after_import or not success
+                ):
                     s3_client.delete_object(Bucket=self.get_from_s3_bucket, Key=key)
-                    self.helper.connector_logger.info(
-                        f"Deleted S3 object after import: {key}"
-                    )
+                    if success:
+                        self.helper.connector_logger.info(
+                            f"Deleted S3 object after import: {key}"
+                        )
+                    else:
+                        self.helper.connector_logger.info(
+                            f"Deleted invalid S3 object: {key}"
+                        )
 
             # Retention-based cleanup
             if self.get_from_s3_retention > 0:
