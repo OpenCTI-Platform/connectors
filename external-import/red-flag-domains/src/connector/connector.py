@@ -17,7 +17,7 @@ class RedFlagDomainImportConnector:
             name=name,
             identity_class="organization",
         )
-        self.update_existing_data = False
+        self.update_existing_data = self.config.connector.update_existing_data
         self.api_url = self.config.red_flag_domains.url
 
     def run(self):
