@@ -76,7 +76,7 @@ class ConnectorSettings(BaseConnectorSettings):
                 )
             else:
                 warnings.warn(
-                    "Env var 'DISARM_FRAMEWORK_INTERVAL_SEC' is deprecated. Use 'CONNECTOR_DURATION_PERIOD' instead."
+                    "Env var 'DISARM_FRAMEWORK_INTERVAL' is deprecated. Use 'CONNECTOR_DURATION_PERIOD' instead."
                 )
                 connector_data["duration_period"] = timedelta(days=int(interval))
 
