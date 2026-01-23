@@ -31,7 +31,9 @@ class VirustotalLivehuntNotifications:
             description="Download/upload files from Virustotal Livehunt Notifications.",
         )
 
-        client = vt.Client(apikey=self.config.virustotal_livehunt_notifications.api_key)
+        client = vt.Client(
+            apikey=self.config.virustotal_livehunt_notifications.api_key.get_secret_value()
+        )
 
         # TODO: to remove - for dev purpose only
         self.interval_sec = self.config.connector.duration_period.total_seconds()

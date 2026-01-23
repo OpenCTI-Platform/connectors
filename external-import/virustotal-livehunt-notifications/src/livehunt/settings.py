@@ -7,7 +7,7 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, model_validator
+from pydantic import Field, SecretStr, model_validator
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -39,7 +39,7 @@ class VirusTotalLiveHuntNotificationsConfig(BaseConfigModel):
     Define parameters and/or defaults for the configuration specific to the `VirusTotalLiveHuntNotificationsConfig`.
     """
 
-    api_key: str = Field(
+    api_key: SecretStr = Field(
         description="VirusTotal Premium API key.",
     )
     create_alert: bool = Field(
