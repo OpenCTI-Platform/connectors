@@ -1,8 +1,8 @@
 {
   "title": "Diode Import",
   "slug": "diode-import",
-  "description": "Import bundles exported by the send_to_directory mode\nThis connector will impersonate sources connectors registration.\nUser of the source will also be impersonated if correctly mapped to the target applicant id.Mapping is required as internal id of the exported user bundle will be different from the target user.",
-  "short_description": "Import bundles exported by the send_to_directory mode\nThis connector will impersonate sources connectors registration.\nUser of the source will also be impersonated if correctly mapped to the target applicant id.Mapping is required as internal id of the exported user bundle will be different from the target user.",
+  "description": "Import bundles exported by the send_to_directory or send_to_s3 modes.\nThis connector will impersonate source connectors registration.\nUser of the source will also be impersonated if correctly mapped to the target applicant id. Mapping is required as internal id of the exported user bundle will be different from the target user.",
+  "short_description": "Import bundles exported by the send_to_directory or send_to_s3 modes, enabling data synchronization between OpenCTI instances or air-gapped environments.",
   "logo": null,
   "use_cases": [],
   "verified": true,
