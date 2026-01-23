@@ -2,8 +2,8 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from connector import ConnectorSettings, RedFlagDomainImportConnector
 from pycti import OpenCTIConnectorHelper
+from red_flag_domains import ConnectorSettings, RedFlagDomainImportConnector
 
 
 @pytest.fixture

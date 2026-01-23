@@ -1,8 +1,8 @@
 from typing import Any
 
 import pytest
-from connector import ConnectorSettings
 from connectors_sdk import BaseConfigModel, ConfigValidationError
+from red_flag_domains import ConnectorSettings
 
 
 @pytest.mark.parametrize(
