@@ -88,7 +88,7 @@ class ConnectorSettings(BaseConnectorSettings):
         """
         connector_data: dict = data.get("connector", {})
         phishunt_data: dict = data.get("phishunt", {})
-        if interval := phishunt_data.pop("interval_sec", None):
+        if interval := phishunt_data.pop("interval", None):
             if connector_data.get("duration_period") is not None:
                 warnings.warn(
                     "Both 'PHISHUNT_INTERVAL' and 'CONNECTOR_DURATION_PERIOD' are set. "
