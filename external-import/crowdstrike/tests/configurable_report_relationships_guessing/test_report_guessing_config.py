@@ -34,6 +34,7 @@ def min_required_crowdstrike_config(request) -> dict[str, str]:
         "CROWDSTRIKE_BASE_URL": request.param["base_url"],
         "CROWDSTRIKE_CLIENT_ID": request.param["client_id"],
         "CROWDSTRIKE_CLIENT_SECRET": request.param["client_secret"],
+        "CONNECTOR_LOG_LEVEL": "info",
     }
 
 

@@ -21,12 +21,12 @@ from typing import (
 )
 
 import stix2
-from lxml.html import fromstring  # type: ignore
+from lxml.html import fromstring
 from pycti import AttackPattern, Identity, Indicator, IntrusionSet, Location, Malware
 from pycti import Report as PyCTIReport
 from pycti import StixCoreRelationship, Vulnerability
-from pycti.utils.constants import LocationTypes  # type: ignore
-from stix2.v21 import _DomainObject, _Observable, _RelationshipObject  # type: ignore
+from pycti.utils.constants import LocationTypes
+from stix2.v21 import _DomainObject, _Observable, _RelationshipObject
 
 from .constants import (
     DEFAULT_X_OPENCTI_SCORE,

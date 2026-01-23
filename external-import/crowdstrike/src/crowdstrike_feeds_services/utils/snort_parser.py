@@ -115,7 +115,7 @@ class SnortParser:
         rule = SnortRule(
             name=name,
             description=description,
-            last_modified=last_modified,  # type: ignore
+            last_modified=last_modified,
             reports=reports,
             rule=snort_rule,
         )
@@ -134,7 +134,7 @@ class SnortParser:
         return cls._match_regex(cls._DESCRIPTION_REGEX, snort_rule)
 
     @classmethod
-    def _get_last_modified(cls, snort_rule: str) -> Optional[str]:
+    def _get_last_modified(cls, snort_rule: str) -> Optional[date]:
         if last_modified_str := cls._match_regex(cls._LAST_MODIFIED_REGEX, snort_rule):
             dt = datetime.strptime(last_modified_str, "%Y%m%d")
             return date(dt.year, dt.month, dt.day)

@@ -4,6 +4,9 @@
 from datetime import datetime
 from typing import Any, Dict, Generator, List, Optional
 
+from crowdstrike_feeds_connector.related_actors.importer import (
+    RelatedActorImporter,
+)
 from crowdstrike_feeds_services.client.actors import ActorsAPI
 from crowdstrike_feeds_services.utils import (
     create_attack_pattern,
@@ -11,10 +14,8 @@ from crowdstrike_feeds_services.utils import (
     paginate,
     timestamp_to_datetime,
 )
-from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
-    OpenCTIConnectorHelper,
-)
-from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
+from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
+from stix2 import Bundle, Identity, MarkingDefinition
 
 from ..importer import BaseImporter
 from .builder import ActorBundleBuilder
@@ -106,7 +107,11 @@ class ActorImporter(BaseImporter):
         )
 
         actors = self.actors_api_cs.get_combined_actor_entities(
-            limit=limit, offset=offset, sort=sort, fql_filter=fql_filter, fields=fields
+            limit=limit,
+            offset=offset,
+            sort=sort,
+            fql_filter=fql_filter,
+            fields=fields,
         )
 
         return actors
@@ -115,33 +120,64 @@ class ActorImporter(BaseImporter):
         actor_count = len(actors)
         self._info("Processing {0} actors...", actor_count)
 
-        latest_modified_datetime = None
+        latest_modified_timestamp: int | None = None
 
         for actor in actors:
             self._process_actor(actor)
 
-            modified_date = actor["last_modified_date"]
+            modified_date = actor.get("last_modified_date")
             if modified_date is None:
                 self._error(
-                    "Missing created date for actor {0} ({1})",
-                    actor["name"],
-                    actor["id"],
+                    "Missing last_modified_date for actor {0} ({1})",
+                    actor.get("name"),
+                    actor.get("id"),
+                )
+                continue
+
+            # CrowdStrike returns dates as timestamps; normalize to int for comparisons.
+            try:
+                modified_ts = int(modified_date)
+            except (TypeError, ValueError):
+                self._error(
+                    "Invalid last_modified_date for actor {0} ({1}): {2}",
+                    actor.get("name"),
+                    actor.get("id"),
+                    modified_date,
                 )
                 continue
 
             if (
-                latest_modified_datetime is None
-                or modified_date > latest_modified_datetime
+                latest_modified_timestamp is None
+                or modified_ts > latest_modified_timestamp
             ):
-                latest_modified_datetime = modified_date
+                latest_modified_timestamp = modified_ts
+
+        RelatedActorImporter._resolved_actor_entity_cache.update(
+            {
+                a.get("id"): a.get("name")
+                for a in actors
+                if a.get("id") is not None and a.get("name") is not None
+            }
+        )
+
+        self.helper.connector_logger.debug(
+            "Actor batch processed",
+            {
+                "count": actor_count,
+                "latest_modified_timestamp": latest_modified_timestamp,
+            },
+        )
 
         self._info(
             "Processing actors completed (imported: {0}, latest: {1})",
             actor_count,
-            latest_modified_datetime,
+            latest_modified_timestamp,
         )
 
-        return timestamp_to_datetime(latest_modified_datetime)
+        if latest_modified_timestamp is None:
+            return None
+
+        return timestamp_to_datetime(latest_modified_timestamp)
 
     def _process_actor(self, actor) -> None:
         self._info("Processing actor {0} ({1})...", actor["name"], actor["id"])
@@ -181,6 +217,10 @@ class ActorImporter(BaseImporter):
             )
 
             ttps_response = self.actors_api_cs.query_mitre_attacks(actor_id)
+            if not ttps_response:
+                self._info("No MITRE ATT&CK response for actor: {0}", actor_name)
+                return []
+
             ttp_ids = ttps_response.get("resources", [])
 
             if not ttp_ids:

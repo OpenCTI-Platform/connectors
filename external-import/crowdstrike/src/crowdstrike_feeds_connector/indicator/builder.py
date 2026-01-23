@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike indicator builder module."""
 
-from typing import Dict, List, NamedTuple, Optional, Set
+from collections.abc import Mapping
+from typing import Any, Dict, List, NamedTuple, Optional, Sequence, Set, cast
 
+from crowdstrike_feeds_connector.related_actors.builder import RelatedActorBundleBuilder
 from crowdstrike_feeds_services.utils import (
     OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,
     OBSERVATION_FACTORY_DOMAIN_NAME,
@@ -22,7 +24,6 @@ from crowdstrike_feeds_services.utils import (
     create_based_on_relationships,
     create_indicates_relationships,
     create_indicator,
-    create_intrusion_sets_from_names,
     create_kill_chain_phase,
     create_malware,
     create_object_refs,
@@ -34,20 +35,21 @@ from crowdstrike_feeds_services.utils import (
     timestamp_to_datetime,
 )
 from pycti import OpenCTIConnectorHelper
-from stix2 import (
-    Bundle,
+from stix2 import Bundle
+from stix2.v21 import (
     Identity,
 )
-from stix2 import Indicator as STIXIndicator  # type: ignore
-from stix2 import (
-    IntrusionSet,
+from stix2.v21 import Indicator as STIXIndicator
+from stix2.v21 import (
     KillChainPhase,
     Malware,
     MarkingDefinition,
     Relationship,
     Vulnerability,
+    _DomainObject,
+    _Observable,
+    _RelationshipObject,
 )
-from stix2.v21 import _DomainObject, _Observable  # type: ignore
 
 
 class Observation(NamedTuple):
@@ -76,6 +78,7 @@ class IndicatorBundleBuilderConfig(NamedTuple):
     indicator_high_score: int
     indicator_high_score_labels: Set[str]
     indicator_unwanted_labels: Set[str]
+    scopes: set[str]
 
 
 class IndicatorBundleBuilder:
@@ -149,6 +152,7 @@ class IndicatorBundleBuilder:
         self.indicator_high_score = config.indicator_high_score
         self.indicator_high_score_labels = config.indicator_high_score_labels
         self.indicator_unwanted_labels = config.indicator_unwanted_labels
+        self.scopes = config.scopes
 
         self.observation_factory = self._get_observation_factory(self.indicator["type"])
 
@@ -158,18 +162,6 @@ class IndicatorBundleBuilder:
         if factory is None:
             raise TypeError(f"Unsupported indicator type: {indicator_type}")
         return factory
-
-    def _create_intrusion_sets(self) -> List[IntrusionSet]:
-        indicator_actors = self.indicator["actors"]
-        if not indicator_actors:
-            return []
-
-        return create_intrusion_sets_from_names(
-            indicator_actors,
-            created_by=self.author,
-            confidence=self.confidence_level,
-            object_markings=self.object_markings,
-        )
 
     def _create_kill_chain_phases(self) -> List[KillChainPhase]:
         kill_chain_phases = []
@@ -222,12 +214,12 @@ class IndicatorBundleBuilder:
         )
 
     def _create_uses_relationships(
-        self, sources: List[_DomainObject], targets: List[_DomainObject]
+        self, sources: Sequence[_DomainObject], targets: Sequence[_DomainObject]
     ) -> List[Relationship]:
         return create_uses_relationships(
             self.author,
-            sources,
-            targets,
+            list(sources),
+            list(targets),
             self.confidence_level,
             self.object_markings,
         )
@@ -240,12 +232,12 @@ class IndicatorBundleBuilder:
         return target_sectors
 
     def _create_targets_relationships(
-        self, sources: List[_DomainObject], targets: List[_DomainObject]
+        self, sources: Sequence[_DomainObject], targets: Sequence[_DomainObject]
     ) -> List[Relationship]:
         return create_targets_relationships(
             self.author,
-            sources,
-            targets,
+            list(sources),
+            list(targets),
             self.confidence_level,
             self.object_markings,
         )
@@ -431,23 +423,23 @@ class IndicatorBundleBuilder:
             return None
 
     def _create_based_on_relationships(
-        self, sources: List[_DomainObject], targets: List[_DomainObject]
+        self, sources: Sequence[_DomainObject], targets: Sequence[_DomainObject]
     ) -> List[Relationship]:
         return create_based_on_relationships(
             self.author,
-            sources,
-            targets,
+            list(sources),
+            list(targets),
             self.confidence_level,
             self.object_markings,
         )
 
     def _create_indicates_relationships(
-        self, sources: List[_DomainObject], targets: List[_DomainObject]
+        self, sources: Sequence[_DomainObject], targets: Sequence[_DomainObject]
     ) -> List[Relationship]:
         return create_indicates_relationships(
             self.author,
-            sources,
-            targets,
+            list(sources),
+            list(targets),
             self.confidence_level,
             self.object_markings,
         )
@@ -461,8 +453,35 @@ class IndicatorBundleBuilder:
         bundle_objects.extend(self.object_markings)
 
         # Create intrusion sets and add to bundle.
-        intrusion_sets = self._create_intrusion_sets()
-        bundle_objects.extend(intrusion_sets)
+        intrusion_sets = []
+        if "actor" in self.scopes:
+            for actor_entity in self.indicator.get("actors", []):
+                # Indicators may provide related actors as strings (e.g., "SALTYSPIDER")
+                # while reports provide full actor objects. Normalize here.
+                if isinstance(actor_entity, str):
+                    actor_entity = {"name": actor_entity}
+
+                if not isinstance(actor_entity, Mapping):
+                    self.helper.connector_logger.warning(
+                        "[WARNING] Skipping unresolved actor entry (expected mapping or string).",
+                        {
+                            "indicator_id": self.indicator.get("id"),
+                            "actor_entry_type": type(actor_entity).__name__,
+                            "actor_entry": cast(Any, actor_entity),
+                        },
+                    )
+                    continue
+
+                actor_builder = RelatedActorBundleBuilder(
+                    actor=cast(Dict[str, Any], actor_entity),
+                    author=self.author,
+                    source_name=self.source_name,
+                    object_markings=self.object_markings,
+                    confidence_level=self.confidence_level,
+                )
+
+                intrusion_sets.extend(actor_builder.build())
+            bundle_objects.extend(intrusion_sets)
 
         # Create kill chain phases.
         kill_chain_phases = self._create_kill_chain_phases()
@@ -549,19 +568,19 @@ class IndicatorBundleBuilder:
 
         # Create object references for the report.
         object_refs = create_object_refs(
-            intrusion_sets,
-            malwares,
-            intrusion_sets_use_malwares,
-            target_sectors,
-            intrusion_sets_target_sectors,
-            malwares_target_sectors,
-            vulnerabilities,
-            intrusion_sets_target_vulnerabilities,
-            malwares_target_vulnerabilities,
-            observables,
-            indicators,
-            indicators_based_on_observables,
-            indicator_indicates_entities,
+            cast(List[_DomainObject], intrusion_sets),
+            cast(List[_DomainObject], malwares),
+            cast(List[_RelationshipObject], intrusion_sets_use_malwares),
+            cast(List[_DomainObject], target_sectors),
+            cast(List[_RelationshipObject], intrusion_sets_target_sectors),
+            cast(List[_RelationshipObject], malwares_target_sectors),
+            cast(List[_DomainObject], vulnerabilities),
+            cast(List[_RelationshipObject], intrusion_sets_target_vulnerabilities),
+            cast(List[_RelationshipObject], malwares_target_vulnerabilities),
+            cast(List[_DomainObject], observables),
+            cast(List[_DomainObject], indicators),
+            cast(List[_RelationshipObject], indicators_based_on_observables),
+            cast(List[_RelationshipObject], indicator_indicates_entities),
         )
 
         # XXX: Without allow_custom=True the observable with the custom property
