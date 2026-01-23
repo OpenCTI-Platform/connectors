@@ -3,8 +3,9 @@ from datetime import datetime, timedelta, timezone
 
 import requests
 import stix2
-from connector.settings import ConnectorSettings
 from pycti import Identity, Indicator, OpenCTIConnectorHelper, StixCoreRelationship
+
+from .settings import ConnectorSettings
 
 
 class RedFlagDomainImportConnector:
@@ -42,11 +43,10 @@ class RedFlagDomainImportConnector:
                 relationships = self.create_relationships(observables, indicators)
                 bundle = self.create_bundle(observables, indicators, relationships)
                 self.send_bundle(bundle, work_id)
+                events_count = len(indicators) + len(observables) + len(relationships)
                 message = (
-                    "Connector successfully run ("
-                    + str(len(indicators) + len(observables) + len(relationships))
-                    + " events have been processed), storing last_run as "
-                    + str(now)
+                    f"Connector successfully run ({events_count} events have"
+                    f"been processed), storing last_run as {now}"
                 )
                 self.helper.log_info(message)
                 self.helper.set_state({"last_run": now.timestamp()})
