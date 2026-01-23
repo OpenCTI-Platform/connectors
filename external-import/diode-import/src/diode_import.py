@@ -226,10 +226,15 @@ class DiodeImport:
 
     def _get_s3_prefix(self):
         """Get S3 prefix based on folder configuration."""
-        folder = self.get_from_s3_folder
-        if folder and folder not in ("/", "."):
-            return f"{folder}/"
-        return ""
+        folder = (self.get_from_s3_folder or "").strip()
+        # Treat root and current directory as "no prefix"
+        if folder in ("/", "."):
+            return ""
+        # Normalize by removing leading/trailing slashes, then add single trailing slash
+        normalized_folder = folder.strip("/")
+        if not normalized_folder:
+            return ""
+        return f"{normalized_folder}/"
 
     def _process_bundle(
         self, file_content, file_identifier, file_time, last_run_snapshot, state_key
