@@ -54,7 +54,7 @@ Key features:
 ### Requirements
 
 - OpenCTI Platform >= 6.4.0
-- Python >= 3.9
+- Python >= 3.10
 - MISP instance with API access
 - Valid API keys for both OpenCTI and MISP
 

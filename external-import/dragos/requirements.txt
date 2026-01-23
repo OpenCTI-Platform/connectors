@@ -1,2 +1,0 @@
-# FOR LEGACY PURPOSE ONLY 
--e .[all]

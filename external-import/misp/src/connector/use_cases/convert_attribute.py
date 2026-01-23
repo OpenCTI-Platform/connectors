@@ -1,15 +1,17 @@
 import ipaddress
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pycti
 import stix2
 from api_client.models import ExtendedAttributeItem
-from connector.threats_guesser import ThreatsGuesser
 
 from .common import ConverterConfig, ConverterError
 from .convert_galaxy import GalaxyConverter
 from .convert_tag import TagConverter
+
+if TYPE_CHECKING:
+    from utils.threats_guesser import ThreatsGuesser
 
 """
     Mapping of STIX observable types to OCTI ones.
@@ -120,7 +122,9 @@ class AttributeConverterError(ConverterError):
 
 
 class AttributeConverter:
-    def __init__(self, config: ConverterConfig, threats_guesser: ThreatsGuesser = None):
+    def __init__(
+        self, config: ConverterConfig, threats_guesser: "ThreatsGuesser | None" = None
+    ):
         self.config = config
         self.threats_guesser = threats_guesser
 
