@@ -63,7 +63,7 @@ class ConnectorSettings(BaseConnectorSettings):
     @classmethod
     def migrate_deprecated_interval(cls, data: dict) -> dict:
         """
-        Env var `DISARM_FRAMEWORK_INTERVAL_SEC` is deprecated.
+        Env var `DISARM_FRAMEWORK_INTERVAL` is deprecated.
         This is a workaround to keep the old config working while we migrate to `CONNECTOR_DURATION_PERIOD`.
         """
         connector_data: dict = data.get("connector", {})
