@@ -71,7 +71,7 @@ class ConnectorSettings(BaseConnectorSettings):
         if interval := disarm_framework_data.pop("interval", None):
             if connector_data.get("duration_period") is not None:
                 warnings.warn(
-                    "Both 'DISARM_FRAMEWORK_INTERVAL_SEC' and 'CONNECTOR_DURATION_PERIOD' are set. "
+                    "Both 'DISARM_FRAMEWORK_INTERVAL' and 'CONNECTOR_DURATION_PERIOD' are set. "
                     "'CONNECTOR_DURATION_PERIOD' will take precedence."
                 )
             else:
