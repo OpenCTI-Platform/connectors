@@ -1,7 +1,7 @@
 import traceback
 
-from connector import ConnectorSettings, RedFlagDomainImportConnector
 from pycti import OpenCTIConnectorHelper
+from red_flag_domains import ConnectorSettings, RedFlagDomainImportConnector
 
 if __name__ == "__main__":
     """
