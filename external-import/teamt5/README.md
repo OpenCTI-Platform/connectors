@@ -33,7 +33,7 @@ The TeamT5 External Import Connector enables automatic Ingestion of Threat Intel
 ### Requirements
 
 - OpenCTI Platform >= 6.x
-- Python 3.9+
+- Python 3.10+
 - Access to TeamT5 API (API key required)
 
 ## Configuration variables

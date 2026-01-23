@@ -1,2 +1,3 @@
 pycti==6.9.9
+boto3
 connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.9.9#subdirectory=connectors-sdk

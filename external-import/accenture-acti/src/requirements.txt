@@ -5,3 +5,4 @@ validators==0.35.0
 html-to-markdown
 pycognito
 isodate
+boto3

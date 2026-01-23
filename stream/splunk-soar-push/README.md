@@ -44,7 +44,7 @@ Key features:
 
 - OpenCTI Platform >= 5.12.0
 - Splunk SOAR >= 5.0
-- Python >= 3.9
+- Python >= 3.10
 - SOAR API access with appropriate permissions
 
 ## Configuration variables
