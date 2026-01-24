@@ -18,6 +18,7 @@ from pycti import (
     StixCoreRelationship,
     Vulnerability,
     get_config_variable,
+    resolve_aliases_field,
 )
 
 mapped_keys = [
@@ -307,9 +308,10 @@ class S3Connector:
                     elif obj["x_severity"] == "low":
                         obj["x_opencti_score"] = 30
 
-            # Aliases
+            # Aliases - use correct field based on entity type
             if "x_alias" in obj:
-                obj["x_opencti_aliases"] = (
+                aliases_field = resolve_aliases_field(obj["type"])
+                obj[aliases_field] = (
                     obj["x_alias"]
                     if isinstance(obj["x_alias"], list)
                     else [obj["x_alias"]]
