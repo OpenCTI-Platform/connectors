@@ -16,7 +16,8 @@ if __name__ == "__main__":
     try:
         settings = ConnectorSettings()
         helper = OpenCTIConnectorHelper(
-            config=settings.to_helper_config(), playbook_compatible=True
+            config=settings.to_helper_config(),
+            playbook_compatible=False,
         )
 
         connector = DnsTwistConnector(config=settings, helper=helper)
