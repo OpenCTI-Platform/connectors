@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
 import stix2
-from pycti import OpenCTIConnectorHelper  # type: ignore
+from pycti import OpenCTIConnectorHelper
 
 
 class BaseImporter(ABC):
@@ -55,6 +55,10 @@ class BaseImporter(ABC):
     def _info(self, msg: str, *args: Any) -> None:
         fmt_msg = msg.format(*args)
         self.helper.log_info(fmt_msg)
+
+    def _debug(self, msg: str, *args: Any) -> None:
+        fmt_msg = msg.format(*args)
+        self.helper.log_debug(fmt_msg)
 
     def _error(self, msg: str, *args: Any) -> None:
         fmt_msg = msg.format(*args)

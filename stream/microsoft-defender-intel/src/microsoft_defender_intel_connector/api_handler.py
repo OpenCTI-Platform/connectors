@@ -1,18 +1,19 @@
 from datetime import datetime, timedelta
+from typing import Literal
 
 import requests
-from pycti import OpenCTIConnectorHelper
-from requests.adapters import HTTPAdapter
-from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
-from urllib3.util.retry import Retry
-
-from .utils import (
+from microsoft_defender_intel_connector.utils import (
     IOC_TYPES,
     get_action,
     get_description,
     get_expiration_datetime,
     get_severity,
 )
+from pycti import OpenCTIConnectorHelper
+from pydantic import HttpUrl
+from requests.adapters import HTTPAdapter
+from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
+from urllib3.util.retry import Retry
 
 
 class DefenderApiHandlerError(Exception):
@@ -22,14 +23,39 @@ class DefenderApiHandlerError(Exception):
 
 
 class DefenderApiHandler:
-    def __init__(self, helper, config):
+    def __init__(
+        self,
+        helper,
+        tenant_id: str,
+        client_id: str,
+        client_secret: str,
+        base_url: HttpUrl,
+        resource_path: str,
+        action: Literal[
+            "Warn",
+            "Block",
+            "Audit",
+            "Alert",
+            "AlertAndBlock",
+            "BlockAndRemediate",
+            "Allowed",
+        ],
+        expired_after: int,
+    ):
         """
         Init Defender Intel API handler.
         :param helper: PyCTI helper instance
         :param config: Connector config variables
         """
         self.helper = helper
-        self.config = config
+
+        self.tenant_id = tenant_id
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.base_url = str(base_url)
+        self.resource_path = resource_path
+        self.action = action
+        self.expired_after = expired_after
 
         # Define headers in session and update when needed
         self.session = requests.Session()
@@ -42,12 +68,14 @@ class DefenderApiHandler:
         """
         response_json = {}
         try:
-            url = f"https://login.microsoftonline.com/{self.config.tenant_id}/oauth2/v2.0/token"
+            url = (
+                f"https://login.microsoftonline.com/{self.tenant_id}/oauth2/v2.0/token"
+            )
             body = {
-                "client_id": self.config.client_id,
-                "client_secret": self.config.client_secret,
+                "client_id": self.client_id,
+                "client_secret": self.client_secret,
                 "grant_type": "client_credentials",
-                "scope": self.config.base_url + "/.default",
+                "scope": self.base_url + "/.default",
             }
             response = requests.post(url, data=body)
             response_json = response.json()
@@ -136,7 +164,7 @@ class DefenderApiHandler:
                 "indicatorType": IOC_TYPES[observable["type"]],
                 "indicatorValue": observable["value"],
                 "application": "OpenCTI Microsoft Defender Intel",
-                "action": self.config.action or get_action(observable),
+                "action": self.action or get_action(observable),
                 "title": observable["value"],
                 "description": get_description(observable),
                 "externalId": OpenCTIConnectorHelper.get_attribute_in_extension(
@@ -146,7 +174,7 @@ class DefenderApiHandler:
                     "updated_at", observable
                 ),
                 "expirationTime": get_expiration_datetime(
-                    observable, int(self.config.expire_time)
+                    observable, int(self.expired_after)
                 ),
                 "severity": get_severity(observable),
                 "generateAlert": True,
@@ -160,9 +188,7 @@ class DefenderApiHandler:
         Get Threat Intelligence Indicators from Defender.
         :return: List of Threat Intelligence Indicators if request is successful, None otherwise
         """
-        data = self._send_request(
-            "get", f"{self.config.base_url}{self.config.resource_path}"
-        )
+        data = self._send_request("get", f"{self.base_url}{self.resource_path}")
         result = data["value"]
         while "@odata.nextLink" in data and data["@odata.nextLink"] is not None:
             data = self._send_request("get", data["@odata.nextLink"])
@@ -177,7 +203,7 @@ class DefenderApiHandler:
         """
         params = f"$filter=indicatorValue eq '{value}'"
         data = self._send_request(
-            "get", f"{self.config.base_url}{self.config.resource_path}", params=params
+            "get", f"{self.base_url}{self.resource_path}", params=params
         )
         result = data["value"]
         while "@odata.nextLink" in data and data["@odata.nextLink"] is not None:
@@ -195,7 +221,7 @@ class DefenderApiHandler:
         request_body_observable = self._build_request_body(observable, defender_id)
         data = self._send_request(
             "post",
-            f"{self.config.base_url}{self.config.resource_path}",
+            f"{self.base_url}{self.resource_path}",
             json=request_body_observable,
         )
         return data
@@ -214,7 +240,7 @@ class DefenderApiHandler:
 
         data = self._send_request(
             "post",
-            f"{self.config.base_url}{self.config.resource_path}/import",
+            f"{self.base_url}{self.resource_path}/import",
             json=request_body,
         )
         return data
@@ -228,7 +254,7 @@ class DefenderApiHandler:
         request_body = {"IndicatorIds": indicators_ids}
         self._send_request(
             "post",
-            f"{self.config.base_url}{self.config.resource_path}/BatchDelete",
+            f"{self.base_url}{self.resource_path}/BatchDelete",
             json=request_body,
         )
         return True
@@ -241,6 +267,6 @@ class DefenderApiHandler:
         """
         self._send_request(
             "delete",
-            f"{self.config.base_url}{self.config.resource_path}/{indicator_id}",
+            f"{self.base_url}{self.resource_path}/{indicator_id}",
         )
         return True

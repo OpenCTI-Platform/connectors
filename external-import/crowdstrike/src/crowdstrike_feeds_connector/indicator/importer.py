@@ -1,18 +1,20 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike indicator importer module."""
 
+from datetime import datetime
 from typing import Any, Dict, List, NamedTuple, Optional, Set
 
+from crowdstrike_feeds_connector.related_actors.importer import RelatedActorImporter
 from crowdstrike_feeds_services.client.indicators import IndicatorsAPI
 from crowdstrike_feeds_services.utils import (
     datetime_to_timestamp,
     timestamp_to_datetime,
 )
 from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport, ReportFetcher
-from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
+from pycti.connector.opencti_connector_helper import (  # noqa: E501
     OpenCTIConnectorHelper,
 )
-from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
+from stix2 import Bundle, Identity, MarkingDefinition
 
 from ..importer import BaseImporter
 from .builder import IndicatorBundleBuilder, IndicatorBundleBuilderConfig
@@ -39,6 +41,7 @@ class IndicatorImporterConfig(NamedTuple):
     indicator_high_score_labels: Set[str]
     indicator_unwanted_labels: Set[str]
     no_file_trigger_import: bool
+    scopes: set[str]
 
 
 class IndicatorImporter(BaseImporter):
@@ -57,6 +60,10 @@ class IndicatorImporter(BaseImporter):
         )
 
         self.indicators_api_cs = IndicatorsAPI(config.helper)
+        self.related_actor_importer = RelatedActorImporter(
+            config.helper,
+        )
+        # Simple per-run cache to avoid repeated actor resolution calls.
         self.create_observables = config.create_observables
         self.create_indicators = config.create_indicators
         self.default_latest_timestamp = config.default_latest_timestamp
@@ -73,6 +80,7 @@ class IndicatorImporter(BaseImporter):
         self.indicator_unwanted_labels = config.indicator_unwanted_labels
         self.next_page: Optional[str] = None
         self.no_file_trigger_import = config.no_file_trigger_import
+        self.scopes = config.scopes
 
         if not (self.create_observables or self.create_indicators):
             msg = "'create_observables' and 'create_indicators' false at the same time"
@@ -90,7 +98,7 @@ class IndicatorImporter(BaseImporter):
             self._LATEST_INDICATOR_TIMESTAMP, self.default_latest_timestamp
         )
 
-        latest_indicator_updated_datetime = None
+        latest_indicator_updated_datetime: datetime | None = None
 
         indicator_batch = self._fetch_indicators(fetch_timestamp)
         if indicator_batch:
@@ -119,7 +127,7 @@ class IndicatorImporter(BaseImporter):
     def _clear_report_fetcher_cache(self) -> None:
         self.report_fetcher.clear_cache()
 
-    def _fetch_indicators(self, fetch_timestamp: int) -> [List, None, None]:
+    def _fetch_indicators(self, fetch_timestamp: int) -> List[dict] | None:
         limit = 1000
         sort = "last_updated|asc"
         fql_filter = f"last_updated:>{fetch_timestamp}"
@@ -129,7 +137,7 @@ class IndicatorImporter(BaseImporter):
 
         return self._query_indicators(limit, sort, fql_filter)
 
-    def _query_indicators(self, limit, sort, fql_filter) -> [List]:
+    def _query_indicators(self, limit: int, sort: str, fql_filter: str) -> List[dict]:
         _limit = limit
         _sort = sort
         _fql_filter = fql_filter
@@ -167,7 +175,7 @@ class IndicatorImporter(BaseImporter):
 
         return resources
 
-    def _process_indicators(self, indicators: List) -> Optional[int]:
+    def _process_indicators(self, indicators: List[dict]) -> datetime | None:
         indicator_count = len(indicators)
         self._info("Processing {0} indicators...", indicator_count)
 
@@ -219,6 +227,27 @@ class IndicatorImporter(BaseImporter):
 
     def _create_indicator_bundle(self, indicator: dict) -> Optional[Bundle]:
         try:
+            if "actor" in self.scopes:
+                # Process related actors
+                related_actors = indicator.get("actors", [])
+                indicator["actors"] = (
+                    self.related_actor_importer._process_related_actors(
+                        indicator.get("id"), related_actors
+                    )
+                )
+                self.helper.connector_logger.debug(
+                    "Resolved indicator actors",
+                    {
+                        "indicator_id": indicator.get("id"),
+                        "actor_count": len(indicator.get("actors", [])),
+                        "actor_entry_type": (
+                            type(indicator["actors"][0]).__name__
+                            if indicator.get("actors")
+                            else None
+                        ),
+                    },
+                )
+
             bundle_builder_config = IndicatorBundleBuilderConfig(
                 indicator=indicator,
                 author=self.author,
@@ -235,6 +264,7 @@ class IndicatorImporter(BaseImporter):
                 indicator_high_score=self.indicator_high_score,
                 indicator_high_score_labels=self.indicator_high_score_labels,
                 indicator_unwanted_labels=self.indicator_unwanted_labels,
+                scopes=self.scopes,
             )
 
             bundle_builder = IndicatorBundleBuilder(self.helper, bundle_builder_config)

@@ -11,7 +11,7 @@
   "verified": true,
   "last_verified_date": "2025-01-06",
   "playbook_supported": false,
-  "max_confidence_level": 100,
+  "max_confidence_level": 80,
   "support_version": ">= 6.8.0",
   "subscription_link": "https://www.splunk.com/en_us/products/splunk-security-orchestration-and-automation.html",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/splunk-soar-push",
