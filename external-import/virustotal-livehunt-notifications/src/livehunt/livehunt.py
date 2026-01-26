@@ -35,9 +35,6 @@ class VirustotalLivehuntNotifications:
             apikey=self.config.virustotal_livehunt_notifications.api_key.get_secret_value()
         )
 
-        # TODO: to remove - for dev purpose only
-        self.interval_sec = self.config.connector.duration_period.total_seconds()
-
         self.builder = LivehuntBuilder(
             client,
             self.helper,
