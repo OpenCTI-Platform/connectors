@@ -8,7 +8,7 @@ services:
       - OPENCTI_TOKEN=CHANGEME
       # Common parameters for connectors of type INTERNAL_ENRICHMENT
       - CONNECTOR_ID=CHANGEME # Optional (default: '9ff0437e-dfeb-4340-98c5-3d88d5e1c31e')
-      - CONNECTOR_NAME=DNS_TWISTER # Optional (default: 'DNS_TWISTER')
+      - CONNECTOR_NAME=DNSTwist # Optional (default: 'DNSTwist')
       - CONNECTOR_SCOPE=Domain-Name # Optional (default: 'Domain-Name')
       - CONNECTOR_LOG_LEVEL=error # Optional (default: 'error')
       - CONNECTOR_AUTO=false # Optional (default: false) /!\ Do not run the connector automatically, you will flood your opencti instance

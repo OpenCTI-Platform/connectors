@@ -70,7 +70,7 @@ connector-dnstwist:
     - OPENCTI_URL=http://localhost
     - OPENCTI_TOKEN=ChangeMe
     - CONNECTOR_ID=ChangeMe_UUID4
-    - CONNECTOR_NAME=DNS_TWISTER
+    - CONNECTOR_NAME=DNSTwist
     - CONNECTOR_SCOPE=Domain-Name
     - CONNECTOR_AUTO=false
     - CONNECTOR_UPDATE_EXISTING_DATA=true

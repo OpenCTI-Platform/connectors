@@ -21,7 +21,7 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     )
     name: str = Field(
         description="The name of the connector.",
-        default="DNS_TWISTER",
+        default="DNSTwist",
     )
     scope: ListFromString = Field(
         description="The scope of observables the connector will enrich. Currently, only 'Domain-Name' is supported.",
