@@ -10,7 +10,7 @@
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,
-  "max_confidence_level": 55,
+  "max_confidence_level": 70,
   "support_version": ">= 6.5.1",
   "subscription_link": "https://red.flag.domains",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/red-flag-domains",

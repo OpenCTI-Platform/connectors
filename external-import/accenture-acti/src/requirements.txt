@@ -1,8 +1,8 @@
-pycti==6.9.8
+pycti==6.9.10
 pyyaml~=6.0.2
 requests~=2.32.3
 validators==0.35.0
-boto3
 html-to-markdown
 pycognito
 isodate
+boto3
