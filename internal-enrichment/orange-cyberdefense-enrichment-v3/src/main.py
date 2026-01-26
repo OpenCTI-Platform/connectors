@@ -5,6 +5,7 @@ import re
 import sys
 
 import stix2
+import utils
 import yaml
 from datalake import AtomType, Datalake, Output
 from pycti import (
@@ -15,8 +16,6 @@ from pycti import (
     StixCoreRelationship,
     get_config_variable,
 )
-
-import utils
 
 
 def validate_scope(value: str) -> str:
@@ -34,9 +33,7 @@ def validate_scope(value: str) -> str:
     }
     scope_splitted = [scope.strip().lower() for scope in value.split(",")]
     valid_scope = [
-        available_values[scope]
-        for scope in scope_splitted
-        if scope in available_values
+        available_values[scope] for scope in scope_splitted if scope in available_values
     ]
 
     if not valid_scope:
@@ -55,9 +52,7 @@ class OrangeCyberdefenseEnrichment:
         self._init_datalake_instance()
 
     def _init_config(self):
-        config_file_path = (
-            os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        )
+        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
         if os.path.isfile(config_file_path):
             with open(config_file_path, encoding="utf8") as f:
                 config = yaml.load(f, Loader=yaml.FullLoader)
@@ -79,9 +74,7 @@ class OrangeCyberdefenseEnrichment:
             **config.get("connector", {}),
         }
 
-        config["connector"]["scope"] = validate_scope(
-            config["connector"]["scope"]
-        )
+        config["connector"]["scope"] = validate_scope(config["connector"]["scope"])
         config["connector"]["type"] = "INTERNAL_ENRICHMENT"
 
         self.helper = OpenCTIConnectorHelper(config)
@@ -247,9 +240,9 @@ class OrangeCyberdefenseEnrichment:
             external_references = []
             for external_reference in stix_obj["external_references"]:
                 if "url" in external_reference:
-                    external_reference["url"] = external_reference[
-                        "url"
-                    ].replace("api/v3/mrti/threats", "gui/threat")
+                    external_reference["url"] = external_reference["url"].replace(
+                        "api/v3/mrti/threats", "gui/threat"
+                    )
                     external_references.append(external_reference)
                 else:
                     external_references.append(external_reference)
@@ -264,9 +257,7 @@ class OrangeCyberdefenseEnrichment:
             and self.ocd_enrich_threat_actor_as_intrusion_set
         ):
             stix_obj["type"] = "intrusion-set"
-            stix_obj["id"] = stix_obj["id"].replace(
-                "threat-actor", "intrusion-set"
-            )
+            stix_obj["id"] = stix_obj["id"].replace("threat-actor", "intrusion-set")
         if stix_obj["type"] == "relationship":
             if self.ocd_enrich_threat_actor_as_intrusion_set:
                 stix_obj["source_ref"] = stix_obj["source_ref"].replace(
@@ -315,7 +306,9 @@ class OrangeCyberdefenseEnrichment:
             "| DDoS | Fraud | Hack | Leak | Malware | Phishing | Scam | Scan |"
             " Spam |\n"
         )
-        markdown_str += "|------|-------|------|------|---------|----------|------|------|------|\n"
+        markdown_str += (
+            "|------|-------|------|------|---------|----------|------|------|------|\n"
+        )
 
         threat_scores = indicator_object.get("x_datalake_score", {})
         ddos = threat_scores.get("ddos", "-")
@@ -341,9 +334,7 @@ class OrangeCyberdefenseEnrichment:
         )
         markdown_str += "|-----------|-------|------------|--------------|-----------|-----------|\n"
         threat_sources = indicator_object.get("x_datalake_sources", [])
-        threat_sources.sort(
-            key=lambda x: x.get("last_updated", ""), reverse=True
-        )
+        threat_sources.sort(key=lambda x: x.get("last_updated", ""), reverse=True)
 
         for source in threat_sources:
             source_id = source.get("source_id", "-")
@@ -366,9 +357,7 @@ class OrangeCyberdefenseEnrichment:
             )
 
         # Generate whitelist sources table
-        whitelist_sources = indicator_object.get(
-            "x_datalake_whitelist_sources", []
-        )
+        whitelist_sources = indicator_object.get("x_datalake_whitelist_sources", [])
         if len(whitelist_sources) > 0:
             markdown_str += "## Whitelist sources\n"
             markdown_str += "| source_id |\n"
@@ -456,7 +445,7 @@ class OrangeCyberdefenseEnrichment:
                 and processed_object["identity_class"] == "organization"
                 and processed_object["name"] == "Orange Cyberdefense"
             ):
-                self.identity = processed_object # pylint: disable=W0201
+                self.identity = processed_object  # pylint: disable=W0201
             if processed_object is None:
                 continue
             related_objects.append(processed_object)
@@ -505,24 +494,19 @@ class OrangeCyberdefenseEnrichment:
                     True,
                 )
 
-        if (
-            "external_references" in indicator_object
-            and self.ocd_enrich_add_extref
-        ):
+        if "external_references" in indicator_object and self.ocd_enrich_add_extref:
             for external_reference in indicator_object["external_references"]:
                 if "url" in external_reference:
                     try:
-                        external_reference["url"] = external_reference[
-                            "url"
-                        ].replace("api/v3/mrti/threats", "gui/threat")
+                        external_reference["url"] = external_reference["url"].replace(
+                            "api/v3/mrti/threats", "gui/threat"
+                        )
                         ext_ref = self.helper.api.external_reference.create(
                             source_name=external_reference.get(
                                 "source_name", "Orange Cyberdefense"
                             ),
                             url=external_reference["url"],
-                            external_id=external_reference.get(
-                                "external_id", None
-                            ),
+                            external_id=external_reference.get("external_id", None),
                         )
                         self.helper.api.stix_cyber_observable.add_external_reference(
                             id=observable_object["id"],
@@ -540,9 +524,7 @@ class OrangeCyberdefenseEnrichment:
                 )
                 stix_objects.append(json.loads(note_stix.serialize()))
             except Exception as e:
-                self.helper.log_error(
-                    f"Unable to create enrichment note: {str(e)}"
-                )
+                self.helper.log_error(f"Unable to create enrichment note: {str(e)}")
 
         if self.ocd_enrich_add_related:
             stix_objects.extend(related_objects)
@@ -556,9 +538,7 @@ class OrangeCyberdefenseEnrichment:
                 source_ref=indicator_object["id"],
                 target_ref=observable_object["id"],
                 created_by_ref=(
-                    self.identity["id"]
-                    if self.ocd_enrich_add_createdby
-                    else None
+                    self.identity["id"] if self.ocd_enrich_add_createdby else None
                 ),
             )
             stix_objects.append(json.loads(relationship.serialize()))

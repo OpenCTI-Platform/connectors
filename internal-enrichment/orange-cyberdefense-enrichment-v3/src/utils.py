@@ -133,9 +133,7 @@ def curate_labels(labels):
             label_value = label_value.replace('="', "-")[:-1]
         curated_labels.append(label_value)
     curated_labels = [
-        label
-        for label in curated_labels
-        if label is not None and len(label) > 0
+        label for label in curated_labels if label is not None and len(label) > 0
     ]
     return curated_labels
 
@@ -147,9 +145,7 @@ def get_less_restrictive_tlp(tlp_a, tlp_b):
     if tlp_b is None:
         return tlp_a
     mapping_indices = list(TLP_MAPPINGS.keys())
-    if mapping_indices.index(tlp_a["name"]) <= mapping_indices.index(
-        tlp_b["name"]
-    ):
+    if mapping_indices.index(tlp_a["name"]) <= mapping_indices.index(tlp_b["name"]):
         return tlp_a
     return tlp_b
 
