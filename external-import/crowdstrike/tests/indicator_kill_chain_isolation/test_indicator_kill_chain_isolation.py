@@ -164,6 +164,7 @@ def _when_indicator_is_ingested(
         indicator_high_score=80,
         indicator_high_score_labels=["high", "Malicious"],
         indicator_unwanted_labels=[],
+        scopes=["malware", "vulnerability", "indicator", "actor"],
     )
 
     builder = IndicatorBundleBuilder(helper=helper, config=builder_config)

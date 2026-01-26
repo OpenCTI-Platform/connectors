@@ -189,6 +189,84 @@ def test_no_inferred_targets_relationships_between_malware_and_sectors(
         mock_env.stop()
 
 
+# Scenario: Ingest indicators with associated actors should not create inferred targets relationships with associated vulnerabilities
+@pytest.mark.order(1)
+def test_no_inferred_targets_relationships_between_actors_and_vulnerabilities(
+    crowdstrike_config_standard: dict[str, str],
+    fake_indicator_data: dict,
+    author_identity: Identity,
+    tlp_marking: MarkingDefinition,
+    mock_helper: MagicMock,
+) -> None:
+    """
+    Feature: Remove Inferred Relationships from Indicator Associations
+      As a Threat Intel Analyst
+      I want to have only verified relationships from CrowdStrike's database
+      Because inferred relationships can lead to misinformation and inaccuracies in threat intelligence
+
+    Scenario: Ingest indicators with associated actors should not create inferred targets relationships with associated vulnerabilities
+    """
+    # Given an indicator with associated threat actors and vulnerabilities
+    mock_env, config, indicator_data = _given_indicator_with_actors_and_vulnerabilities(
+        crowdstrike_config_standard, fake_indicator_data
+    )
+
+    try:
+        # When the indicator is ingested into the system
+        bundle = _when_indicator_is_ingested(
+            config=config,
+            indicator_data=indicator_data,
+            author=author_identity,
+            tlp_marking=tlp_marking,
+            helper=mock_helper,
+        )
+
+        # Then no inferred targets relationships should be created between the actor and the associated vulnerabilities
+        _then_no_targets_relationships_between_actors_and_vulnerabilities(bundle)
+    finally:
+        mock_env.stop()
+
+
+# Scenario: Ingest indicators with associated malware should not create inferred targets relationships with associated vulnerabilities
+@pytest.mark.order(1)
+def test_no_inferred_targets_relationships_between_malware_and_vulnerabilities(
+    crowdstrike_config_standard: dict[str, str],
+    fake_indicator_data: dict,
+    author_identity: Identity,
+    tlp_marking: MarkingDefinition,
+    mock_helper: MagicMock,
+) -> None:
+    """
+    Feature: Remove Inferred Relationships from Indicator Associations
+      As a Threat Intel Analyst
+      I want to have only verified relationships from CrowdStrike's database
+      Because inferred relationships can lead to misinformation and inaccuracies in threat intelligence
+
+    Scenario: Ingest indicators with associated malware should not create inferred targets relationships with associated vulnerabilities
+    """
+    # Given an indicator with associated malware and vulnerabilities
+    mock_env, config, indicator_data = (
+        _given_indicator_with_malware_and_vulnerabilities(
+            crowdstrike_config_standard, fake_indicator_data
+        )
+    )
+
+    try:
+        # When the indicator is ingested into the system
+        bundle = _when_indicator_is_ingested(
+            config=config,
+            indicator_data=indicator_data,
+            author=author_identity,
+            tlp_marking=tlp_marking,
+            helper=mock_helper,
+        )
+
+        # Then no inferred targets relationships should be created between the malware and the associated vulnerabilities
+        _then_no_targets_relationships_between_malware_and_vulnerabilities(bundle)
+    finally:
+        mock_env.stop()
+
+
 # =====================
 # GWT Gherkin-style functions
 # =====================
@@ -235,6 +313,7 @@ def _when_indicator_is_ingested(
         indicator_high_score=80,
         indicator_high_score_labels=["high", "Malicious"],
         indicator_unwanted_labels=[],
+        scopes=["actor", "malware", "vulnerability"],
     )
 
     builder = IndicatorBundleBuilder(helper=helper, config=builder_config)
@@ -319,6 +398,114 @@ def _then_no_targets_relationships_between_actors_and_sectors(bundle: Bundle) ->
         and rel.source_ref in intrusion_set_ids
         and hasattr(rel, "target_ref")
         and rel.target_ref in sector_ids
+    ]
+
+    assert len(targets_relationships) == 0  # noqa: S101
+
+
+def _given_indicator_with_actors_and_vulnerabilities(
+    config_data: dict[str, str], indicator_data: dict
+) -> tuple[Any, ConfigLoader, dict]:
+    """Given an indicator with associated threat actors and vulnerabilities."""
+    mock_env = mock_env_vars(os_environ, config_data)
+    config = ConfigLoader()
+
+    assert "actors" in indicator_data  # noqa: S101
+    assert len(indicator_data["actors"]) > 0  # noqa: S101
+    assert "vulnerabilities" in indicator_data  # noqa: S101
+    assert len(indicator_data["vulnerabilities"]) > 0  # noqa: S101
+
+    return mock_env, config, indicator_data
+
+
+def _given_indicator_with_malware_and_vulnerabilities(
+    config_data: dict[str, str], indicator_data: dict
+) -> tuple[Any, ConfigLoader, dict]:
+    """Given an indicator with associated malware and vulnerabilities."""
+    mock_env = mock_env_vars(os_environ, config_data)
+    config = ConfigLoader()
+
+    assert "malware_families" in indicator_data  # noqa: S101
+    assert len(indicator_data["malware_families"]) > 0  # noqa: S101
+    assert "vulnerabilities" in indicator_data  # noqa: S101
+    assert len(indicator_data["vulnerabilities"]) > 0  # noqa: S101
+
+    return mock_env, config, indicator_data
+
+
+def _then_no_targets_relationships_between_actors_and_vulnerabilities(
+    bundle: Bundle,
+) -> None:
+    """Then no inferred targets relationships should be created between the actor and the associated vulnerabilities."""
+    intrusion_sets = [
+        obj
+        for obj in bundle.objects
+        if hasattr(obj, "type") and obj.type == "intrusion-set"
+    ]
+    vulnerabilities = [
+        obj
+        for obj in bundle.objects
+        if hasattr(obj, "type") and obj.type == "vulnerability"
+    ]
+    relationship_objects = [
+        obj
+        for obj in bundle.objects
+        if hasattr(obj, "type") and obj.type == "relationship"
+    ]
+
+    assert len(intrusion_sets) > 0  # noqa: S101
+    assert len(vulnerabilities) > 0  # noqa: S101
+
+    intrusion_set_ids = [actor.id for actor in intrusion_sets]
+    vulnerability_ids = [vuln.id for vuln in vulnerabilities]
+
+    targets_relationships = [
+        rel
+        for rel in relationship_objects
+        if hasattr(rel, "relationship_type")
+        and rel.relationship_type == "targets"
+        and hasattr(rel, "source_ref")
+        and rel.source_ref in intrusion_set_ids
+        and hasattr(rel, "target_ref")
+        and rel.target_ref in vulnerability_ids
+    ]
+
+    assert len(targets_relationships) == 0  # noqa: S101
+
+
+def _then_no_targets_relationships_between_malware_and_vulnerabilities(
+    bundle: Bundle,
+) -> None:
+    """Then no inferred targets relationships should be created between the malware and the associated vulnerabilities."""
+    malware_objects = [
+        obj for obj in bundle.objects if hasattr(obj, "type") and obj.type == "malware"
+    ]
+    vulnerabilities = [
+        obj
+        for obj in bundle.objects
+        if hasattr(obj, "type") and obj.type == "vulnerability"
+    ]
+    relationship_objects = [
+        obj
+        for obj in bundle.objects
+        if hasattr(obj, "type") and obj.type == "relationship"
+    ]
+
+    assert len(malware_objects) > 0  # noqa: S101
+    assert len(vulnerabilities) > 0  # noqa: S101
+
+    malware_ids = [malware.id for malware in malware_objects]
+    vulnerability_ids = [vuln.id for vuln in vulnerabilities]
+
+    targets_relationships = [
+        rel
+        for rel in relationship_objects
+        if hasattr(rel, "relationship_type")
+        and rel.relationship_type == "targets"
+        and hasattr(rel, "source_ref")
+        and rel.source_ref in malware_ids
+        and hasattr(rel, "target_ref")
+        and rel.target_ref in vulnerability_ids
     ]
 
     assert len(targets_relationships) == 0  # noqa: S101
