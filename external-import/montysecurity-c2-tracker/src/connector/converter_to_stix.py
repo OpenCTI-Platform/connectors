@@ -7,7 +7,7 @@ from connectors_sdk.models import (
     IPV4Address,
     OrganizationAuthor,
     Relationship,
-    TLPMarking,
+    TLPMarking, Malware, Indicator
 )
 from pycti import (
     OpenCTIConnectorHelper,
@@ -41,6 +41,42 @@ class ConverterToStix:
 
         self.author = self.create_author()
         self.tlp_marking = self._create_tlp_marking(level=tlp_level.lower())
+
+    def convert_malware(self, malware: str) -> Malware:
+
+        malware_name = malware.split(" IPs.txt")[0]
+        self.helper.connector_logger.info("Looking at malware. ", {"malware": malware_name})
+
+        malware_stix = Malware(
+            name=malware_name,
+            is_family=True,
+            author=self.author,
+            markings=[self.tlp_marking],
+        )
+
+        return malware_stix
+
+    def convert_ip(self, ip: str) -> Indicator:
+
+        ip_pattern = "[ipv4-addr:value = '" + ip + "']"
+        ip_type= "IPv4-Addr"
+
+        if self._is_ipv6(ip):
+            ip_pattern = "[ipv6-addr:value = '" + ip + "']"
+            ip_type = "IPv6-Addr"
+
+        ip_indicator = Indicator(
+            name=ip,
+            pattern=ip_pattern,
+            pattern_type="stix",
+            main_observable_type=ip_type,
+            create_observables=True,
+            author=self.author,
+            markings=[self.tlp_marking],
+        )
+
+        return ip_indicator
+
 
     @staticmethod
     def create_author() -> dict:

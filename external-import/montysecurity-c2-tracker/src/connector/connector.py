@@ -71,11 +71,6 @@ class MontysecurityC2TrackerConnector:
         Collect intelligence from the source and convert into STIX object
         :return: List of STIX objects
         """
-
-        # ===========================
-        # === Add your code below ===
-        # ===========================
-
         # Get entities from external sources
         malware_list = self.client.get_malwares()
         entities = []
@@ -83,44 +78,22 @@ class MontysecurityC2TrackerConnector:
 
         self.helper.connector_logger.debug(malware_list)
 
-        #TODO: move entity creation to converter to stix
         for malware in malware_list:
-            malware_name = str(malware).split(" IPs.txt")[0]
-            self.helper.connector_logger.info("Looking at malware. ", {"malware": malware_name}) #TODO more explanation
-            malware_stix = None #TODO: useful?
-            malware_stix = Malware(
-                name=malware_name,
-                is_family=True,
-                author=self.converter_to_stix.author,
-                markings=[self.converter_to_stix.tlp_marking],
-            )
+            malware_stix: Malware = self.converter_to_stix.convert_malware(malware)
             entities.append(malware_stix)
 
             ips = self.client.get_ips(malware)
 
-            #TODO: check if IPV4 or IPV6
             for ip in ips:
-                indicatorIPV4 = Indicator(
-                    name=ip,
-                    pattern="[ipv4-addr:value = '" + ip + "']",
-                    pattern_type="stix",
-                    main_observable_type="IPv4-Addr",
-                    create_observables=True,
-                    author=self.converter_to_stix.author,
-                    markings=[self.converter_to_stix.tlp_marking],
-                )
-                entities.append(indicatorIPV4)
+                ip_indicator: Indicator = self.converter_to_stix.convert_ip(ip)
+                entities.append(ip_indicator)
 
                 relationship = self.converter_to_stix.create_relationship(
-                    source_obj=indicatorIPV4,
+                    source_obj=ip_indicator,
                     target_obj=malware_stix,
                     relationship_type=RelationshipType.INDICATES,
                 )
                 entities.append(relationship)
-
-        # ===========================
-        # === Add your code above ===
-        # ===========================
 
         # Ensure consistent bundle by adding the author and TLP marking
         if len(entities):
@@ -158,12 +131,7 @@ class MontysecurityC2TrackerConnector:
                 )
 
             # Friendly name will be displayed on OpenCTI platform
-            friendly_name = "Connector montysecurity_c2_tracker feed"
-
-            # Initiate a new work
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
-            )
+            friendly_name = "Connector Monty Security C2 Tracker feed"
 
             self.helper.connector_logger.info(
                 "[CONNECTOR] Running connector...",
@@ -176,7 +144,13 @@ class MontysecurityC2TrackerConnector:
             # ===========================
             stix_objects = self._collect_intelligence()
 
+            work_id: str | None = None
+
             if len(stix_objects):
+                # Initiate a new work
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id, friendly_name
+                )
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
                 bundles_sent = self.helper.send_stix2_bundle(
                     stix_objects_bundle,
@@ -213,7 +187,9 @@ class MontysecurityC2TrackerConnector:
                 + str(last_run_datetime)
             )
 
-            self.helper.api.work.to_processed(work_id, message)
+            if work_id:
+                self.helper.api.work.to_processed(work_id, message)
+
             self.helper.connector_logger.info(message)
 
         except (KeyboardInterrupt, SystemExit):
@@ -237,7 +213,7 @@ class MontysecurityC2TrackerConnector:
         Example:
             - If `CONNECTOR_DURATION_PERIOD=PT5M`, then the connector is running every 5 minutes.
         """
-        self.helper.schedule_process(
+        self.helper.schedule_iso(
             message_callback=self.process_message,
-            duration_period=self.config.connector.duration_period.total_seconds(),
+            duration_period=self.config.connector.duration_period,
         )
