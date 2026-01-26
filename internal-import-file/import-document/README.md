@@ -245,19 +245,23 @@ Entities are matched against the OpenCTI knowledge base using name and aliases:
 
 Observables are extracted using regex patterns and the `ioc_finder` library:
 
-| Observable Type | STIX Field | Supported | Notes |
-|-----------------|------------|-----------|-------|
-| Autonomous System | `AutonomousSystem.number` | ✅ | |
-| Domain Name | `DomainName.value` | ✅ | |
-| Email Address | `Email-Addr.value` | ✅ | |
+| Observable Type | STIX Field | Supported | Notes   |
+|-----------------|------------|-----------|---------|
+| Autonomous System | `AutonomousSystem.number` | ✅ |         |
+| Domain Name | `DomainName.value` | ✅ |         |
+| Email Address | `Email-Addr.value` | ✅ |         |
+| Phone Number | Phone-Number.value | ✅ |         |
+| IMEI | IMEI.value | ✅ |         |
+| ICCID | ICCID.value | ✅ |         |
+| IMSI | IMSI.value | ✅ |         |
 | File (name) | `File.name` | ⚠️ | Partial |
-| File (MD5) | `File.hashes.MD5` | ✅ | |
-| File (SHA-1) | `File.hashes.SHA-1` | ✅ | |
-| File (SHA-256) | `File.hashes.SHA-256` | ✅ | |
-| IPv4 Address | `IPv4-Addr.value` | ✅ | |
-| IPv6 Address | `IPv6-Addr.value` | ✅ | |
-| MAC Address | `Mac-Addr.value` | ✅ | |
-| URL | `Url.value` | ✅ | |
+| File (MD5) | `File.hashes.MD5` | ✅ |         |
+| File (SHA-1) | `File.hashes.SHA-1` | ✅ |         |
+| File (SHA-256) | `File.hashes.SHA-256` | ✅ |         |
+| IPv4 Address | `IPv4-Addr.value` | ✅ |         |
+| IPv6 Address | `IPv6-Addr.value` | ✅ |         |
+| MAC Address | `Mac-Addr.value` | ✅ |         |
+| URL | `Url.value` | ✅ |         |
 | Windows Registry Key | `WindowsRegistryKey.key` | ⚠️ | Partial |
 
 ✅ = Fully implemented | ⚠️ = Partially implemented
