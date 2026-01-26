@@ -1,0 +1,25 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Echo CTI'
+  scope: 'echocti'
+  log_level: 'info'
+  duration_period: 'PT1H' # ISO8601 Format starting with "P" for Period ex: "PT1H" // Period time of 1 hour
+
+echocti:
+  api_url: 'https://api.echocti.com/ioc2/feeds'
+  client_id: 'ChangeMe'
+  client_secret: 'ChangeMe'
+  verify_ssl: true
+  type: 'all'                    # IOC type: ip, url, hash, ip-range, all (comma-separated for multiple)
+  state: 'active'                # IOC state: active, removed, false-positive, white-listed, all
+  time_since_created: null       # Time filter: 1h, 1d, 7d, 30d, 1y
+  time_since_updated: null       # Time filter: 1h, 1d, 7d, 30d, 1y
+  max_count: 0                   # Maximum IOC count (0 = all)
+  vendor: null                   # Vendor filter (optional)
+  tag: null                      # Tag filter (optional)
+  default_confidence: 50         # Default confidence score (0-100)
