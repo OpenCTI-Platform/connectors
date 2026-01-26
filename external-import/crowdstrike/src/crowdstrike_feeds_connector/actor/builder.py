@@ -18,11 +18,11 @@ from crowdstrike_feeds_services.utils import (
     remove_html_tags,
     timestamp_to_datetime,
 )
+from stix2 import Identity  # type: ignore
 from stix2 import (
     AttackPattern,
     Bundle,
     ExternalReference,
-    Identity,  # type: ignore
     IntrusionSet,
     Location,
     Malware,
@@ -62,8 +62,8 @@ class ActorBundleBuilder:
         source_name: str,
         object_markings: list[MarkingDefinition],
         confidence_level: int,
-        attack_patterns: Optional[List] = None,
-        malware: Optional[List] = None,
+        attack_patterns: list[AttackPattern] | None = None,
+        malware: list[Malware] | None = None,
     ) -> None:
         """Initialize actor bundle builder."""
         self.actor = actor
@@ -276,11 +276,11 @@ class ActorBundleBuilder:
             stop_time=self.last_seen,
         )
 
-    def _get_malware(self) -> List[Malware]:
+    def _get_malware(self) -> list[Malware]:
         """Get Malware entities."""
         return self.malware
 
-    def _get_malware_by_field(self, field_name: str) -> List[Malware]:
+    def _get_malware_by_field(self, field_name: str) -> list[Malware]:
         """Get Malware entities filtered by the specified threat field."""
         threats = self.actor.get(field_name)
         if not threats:
@@ -293,17 +293,17 @@ class ActorBundleBuilder:
 
         return [malware for malware in self.malware if malware.name in family_names]
 
-    def _get_uses_malware(self) -> List[Malware]:
+    def _get_uses_malware(self) -> list[Malware]:
         """Get Malware entities that are used (from uses_threats field)."""
         return self._get_malware_by_field("uses_threats")
 
-    def _get_develops_malware(self) -> List[Malware]:
+    def _get_develops_malware(self) -> list[Malware]:
         """Get Malware entities that are developed (from develops_threats field)."""
         return self._get_malware_by_field("develops_threats")
 
     def _create_authored_by_relationships(
-        self, sources: List[_DomainObject], targets: List[_DomainObject]
-    ) -> List[Relationship]:
+        self, sources: list[_DomainObject], targets: list[_DomainObject]
+    ) -> list[Relationship]:
         """Create 'authored-by' relationships between Malware and IntrusionSet."""
         return create_authored_by_relationships(
             self.author,
