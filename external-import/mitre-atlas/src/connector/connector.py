@@ -19,7 +19,6 @@ class MitreAtlas:
         self.config = config
         self.helper = helper
         self.mitre_atlas_file_url = self.config.mitre_atlas.url
-        self.update_existing_data = False
 
     def retrieve_data(self, url: str) -> Optional[str]:
         """
@@ -114,7 +113,6 @@ class MitreAtlas:
             self.helper.send_stix2_bundle(
                 serialized_bundle,
                 entities_types=self.helper.connect_scope,
-                update=self.update_existing_data,
                 work_id=work_id,
             )
         except Exception as e:
