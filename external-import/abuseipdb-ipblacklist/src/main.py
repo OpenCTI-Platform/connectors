@@ -1,6 +1,7 @@
 import traceback
 
-from external_import_connector import ConnectorAbuseIPDB
+from external_import_connector import ConnectorAbuseIPDB, ConnectorSettings
+from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
     """
@@ -13,7 +14,10 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        connector = ConnectorAbuseIPDB()
+        settings = ConnectorSettings()
+        helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+
+        connector = ConnectorAbuseIPDB(config=settings, helper=helper)
         connector.run()
     except Exception:
         traceback.print_exc()

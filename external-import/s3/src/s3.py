@@ -2,6 +2,7 @@ import base64
 import datetime
 import json
 import os
+import re
 import time
 
 import boto3
@@ -18,6 +19,7 @@ from pycti import (
     StixCoreRelationship,
     Vulnerability,
     get_config_variable,
+    resolve_aliases_field,
 )
 
 mapped_keys = [
@@ -44,6 +46,23 @@ mapped_keys = [
     "x_credit",
 ]
 ignored_keys = ["x_acti_guid", "x_version", "x_vendor", "x_opencti_files"]
+
+# Pattern to match invisible/zero-width Unicode characters that can break URLs
+INVISIBLE_CHARS_PATTERN = re.compile(
+    r"[\u200b\u200c\u200d\u200e\u200f\ufeff\u00a0\u2060\u2061\u2062\u2063\u2064]"
+)
+
+
+def sanitize_url(url):
+    """
+    Remove invisible Unicode characters from URLs.
+    These include BOM, zero-width spaces, and other non-printable characters
+    that can be accidentally included in data but break URL processing.
+    """
+    if not url or not isinstance(url, str):
+        return url
+    # Remove invisible characters and strip whitespace
+    return INVISIBLE_CHARS_PATTERN.sub("", url).strip()
 
 
 class S3Connector:
@@ -284,6 +303,15 @@ class S3Connector:
             if "object_marking_refs" not in obj:
                 obj["object_marking_refs"] = [self.s3_marking["id"]]
 
+            # Sanitize URLs in external_references (remove invisible Unicode characters)
+            if "external_references" in obj:
+                sanitized_refs = []
+                for ext_ref in obj["external_references"]:
+                    if "url" in ext_ref:
+                        ext_ref["url"] = sanitize_url(ext_ref["url"])
+                    sanitized_refs.append(ext_ref)
+                obj["external_references"] = sanitized_refs
+
             if "x_severity" in obj:
                 # handle mapping of "x_severity" on Vulnerability object
                 if obj["type"] == "vulnerability":
@@ -307,9 +335,10 @@ class S3Connector:
                     elif obj["x_severity"] == "low":
                         obj["x_opencti_score"] = 30
 
-            # Aliases
+            # Aliases - use correct field based on entity type
             if "x_alias" in obj:
-                obj["x_opencti_aliases"] = (
+                aliases_field = resolve_aliases_field(obj["type"])
+                obj[aliases_field] = (
                     obj["x_alias"]
                     if isinstance(obj["x_alias"], list)
                     else [obj["x_alias"]]
@@ -397,7 +426,9 @@ class S3Connector:
                     reverse=True,
                 )
                 for history in sorted_history:
-                    note_content += f"| {history.get('timestamp', '')} | {history.get('comment', '')} |\n"
+                    comment = (history.get("comment") or "").strip()
+                    timestamp = (history.get("timestamp") or "").strip()
+                    note_content += f"| {timestamp} | {comment} |\n"
 
                 note_key = obj.get("x_acti_uuid") + " - History"
                 abstract = obj.get("name") + " - History"
