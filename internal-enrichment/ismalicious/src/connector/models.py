@@ -56,9 +56,7 @@ class ConfigLoader(BaseModel):
                 token=SecretStr(os.environ.get("OPENCTI_TOKEN", "")),
             ),
             connector=ConnectorConfig(
-                id=os.environ.get(
-                    "CONNECTOR_ID", "ismalicious-enrichment"
-                ),
+                id=os.environ.get("CONNECTOR_ID", "ismalicious-enrichment"),
                 type=os.environ.get("CONNECTOR_TYPE", "INTERNAL_ENRICHMENT"),
                 name=os.environ.get("CONNECTOR_NAME", "isMalicious"),
                 scope=os.environ.get(
@@ -73,18 +71,15 @@ class ConfigLoader(BaseModel):
                 ),
                 api_key=SecretStr(os.environ.get("ISMALICIOUS_API_KEY", "")),
                 max_tlp=os.environ.get("ISMALICIOUS_MAX_TLP", "TLP:AMBER"),
-                enrich_ipv4=os.environ.get(
-                    "ISMALICIOUS_ENRICH_IPV4", "true"
-                ).lower() == "true",
-                enrich_ipv6=os.environ.get(
-                    "ISMALICIOUS_ENRICH_IPV6", "true"
-                ).lower() == "true",
+                enrich_ipv4=os.environ.get("ISMALICIOUS_ENRICH_IPV4", "true").lower()
+                == "true",
+                enrich_ipv6=os.environ.get("ISMALICIOUS_ENRICH_IPV6", "true").lower()
+                == "true",
                 enrich_domain=os.environ.get(
                     "ISMALICIOUS_ENRICH_DOMAIN", "true"
-                ).lower() == "true",
-                min_score_to_report=int(
-                    os.environ.get("ISMALICIOUS_MIN_SCORE", "0")
-                ),
+                ).lower()
+                == "true",
+                min_score_to_report=int(os.environ.get("ISMALICIOUS_MIN_SCORE", "0")),
             ),
         )
 
@@ -93,13 +88,13 @@ class ConfigLoader(BaseModel):
         """Load configuration from YAML file."""
         if path is None:
             path = Path(__file__).parent.parent / "config.yml"
-        
+
         if not path.exists():
             return cls.from_env()
-        
+
         with open(path) as f:
             data = yaml.safe_load(f)
-        
+
         return cls(
             opencti=OpenCTIConfig(
                 url=data.get("opencti", {}).get("url", "http://localhost:8080"),
@@ -119,9 +114,7 @@ class ConfigLoader(BaseModel):
                 api_url=data.get("ismalicious", {}).get(
                     "api_url", "https://ismalicious.com"
                 ),
-                api_key=SecretStr(
-                    data.get("ismalicious", {}).get("api_key", "")
-                ),
+                api_key=SecretStr(data.get("ismalicious", {}).get("api_key", "")),
                 max_tlp=data.get("ismalicious", {}).get("max_tlp", "TLP:AMBER"),
                 enrich_ipv4=data.get("ismalicious", {}).get("enrich_ipv4", True),
                 enrich_ipv6=data.get("ismalicious", {}).get("enrich_ipv6", True),

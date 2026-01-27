@@ -18,7 +18,6 @@ from pycti import (
 
 from .models import ConfigLoader
 
-
 # Threat category mapping to OpenCTI labels
 THREAT_CATEGORY_LABELS = {
     "phishing": "phishing",
@@ -76,9 +75,7 @@ class IsMaliciousConnector:
 
         for label, color in label_colors.items():
             try:
-                self.helper.api.label.read_or_create_unchecked(
-                    value=label, color=color
-                )
+                self.helper.api.label.read_or_create_unchecked(value=label, color=color)
             except Exception as e:
                 self.helper.log_warning(f"Could not create label {label}: {e}")
 
@@ -158,11 +155,15 @@ class IsMaliciousConnector:
         """Build external references from sources."""
         refs = []
 
-        # Add isMalicious reference
+        # Add isMalicious reference with UTM tracking
+        report_url = (
+            f"https://ismalicious.com/report?query={observable_value}"
+            "&utm_source=opencti&utm_medium=integration&utm_campaign=connector"
+        )
         refs.append(
             {
                 "source_name": "isMalicious",
-                "url": f"https://ismalicious.com/report?query={observable_value}",
+                "url": report_url,
                 "description": "isMalicious threat intelligence report",
             }
         )
