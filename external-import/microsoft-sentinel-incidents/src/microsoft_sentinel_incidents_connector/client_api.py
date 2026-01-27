@@ -8,32 +8,37 @@ from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
 from urllib3.util.retry import Retry
 
 if TYPE_CHECKING:
-    from microsoft_sentinel_incidents_connector import ConnectorSettings
+    from microsoft_sentinel_incidents_connector.settings import (
+        MicrosoftSentinelIncidentsConfig,
+    )
     from pycti import OpenCTIConnectorHelper
 
 
 class ConnectorClient:
-    def __init__(self, helper: "OpenCTIConnectorHelper", config: "ConnectorSettings"):
+    def __init__(
+        self,
+        helper: "OpenCTIConnectorHelper",
+        sentinel_cfg: "MicrosoftSentinelIncidentsConfig",
+    ):
         """
         Initialize the client with necessary configurations
         """
         self.helper = helper
-        self.config = config
+        self.sentinel_cfg = sentinel_cfg
 
         self.log_analytics_url = "https://api.loganalytics.azure.com/v1"
         self.session = requests.Session()
 
     def set_oauth_token(self):
-        sentinel_cfg = self.config.microsoft_sentinel_incidents
         try:
             url = (
                 f"https://login.microsoftonline.com"
-                f"/{sentinel_cfg.tenant_id}"
+                f"/{self.sentinel_cfg.tenant_id}"
                 "/oauth2/v2.0/token"
             )
             oauth_data = {
-                "client_id": sentinel_cfg.client_id,
-                "client_secret": sentinel_cfg.client_secret.get_secret_value(),
+                "client_id": self.sentinel_cfg.client_id,
+                "client_secret": self.sentinel_cfg.client_secret.get_secret_value(),
                 "grant_type": "client_credentials",
                 "scope": "https://api.loganalytics.io/.default",
             }
@@ -74,15 +79,12 @@ class ConnectorClient:
         :return: A list of all incidents as dictionaries containing mixed data types.
         """
         all_incidents = []
-        sentinel_cfg = self.config.microsoft_sentinel_incidents
-        next_page_url = (
-            f"{self.log_analytics_url}/workspaces/{sentinel_cfg.workspace_id}/query"
-        )
+        next_page_url = f"{self.log_analytics_url}/workspaces/{self.sentinel_cfg.workspace_id}/query"
         body = {
             "query": "SecurityIncident | sort by LastModifiedTime asc"
             f"| where LastModifiedTime > todatetime('{date_str}')"
         }
-        if labels := sentinel_cfg.filter_labels:
+        if labels := self.sentinel_cfg.filter_labels:
             labels = ", ".join(f'"{label}"' for label in labels)
             body["query"] += (
                 "| mv-apply labelsFiltered=Labels on ("
@@ -178,7 +180,7 @@ class ConnectorClient:
         all_alerts = []
         next_page_url = (
             f"{self.log_analytics_url}/workspaces"
-            f"/{self.config.microsoft_sentinel_incidents.workspace_id}"
+            f"/{self.sentinel_cfg.workspace_id}"
             "/query"
         )
         body = {
