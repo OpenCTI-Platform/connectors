@@ -21,5 +21,5 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CROWDSTRIKE_PERMANENT_DELETE | `boolean` |  | boolean | `false` | Select whether or not to permanently delete data in Crowdstrike when data is deleted in OpenCTI. If set to `True`, `CONNECTOR_LIVE_STREAM_LISTEN_DELETE` must be set to `True`. |
 | CROWDSTRIKE_FALCON_FOR_MOBILE_ACTIVE | `boolean` |  | boolean | `false` | Enable Android and iOS platform support. |
 | METRICS_ENABLE | `boolean` |  | boolean | `false` | Whether or not Prometheus metrics should be enabled. |
-| METRICS_PORT | `integer` |  | integer | `9113` | Port to use for metrics endpoint. |
+| METRICS_PORT | `integer` or `string` |  | integer and/or string | `9113` | Port to use for metrics endpoint. |
 | METRICS_ADDR | `string` |  | string | `"0.0.0.0"` | Bind IP address to use for metrics endpoint. |
