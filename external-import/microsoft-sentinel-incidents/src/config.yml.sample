@@ -3,7 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  id: 'ChangeMe'
+  # id: '34936E68-9C5B-4AA9-A1DE-372D9134C534'
   # name: 'Microsoft Sentinel Incidents'
   # scope: 'sentinel'
   # log_level: 'error'
