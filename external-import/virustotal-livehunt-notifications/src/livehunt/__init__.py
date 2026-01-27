@@ -1,6 +1,9 @@
-# -*- coding: utf-8 -*-
 """Virustotal Livehunt Notifications connector module."""
 
 from .livehunt import VirustotalLivehuntNotifications
+from .settings import ConnectorSettings
 
-__all__ = ["VirustotalLivehuntNotifications"]
+__all__ = [
+    "ConnectorSettings",
+    "VirustotalLivehuntNotifications",
+]
