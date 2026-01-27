@@ -377,7 +377,12 @@ class S3Connector:
             # Title Note
             if obj.get("x_title", None) and obj.get("x_acti_uuid", None):
                 # generate a unique note identifier that don't change in the time even of the obj_name change or x_title change
-                note_key = obj.get("x_acti_uuid") + " - Title"
+                # For non-CVE entries, include the name in the key to ensure uniqueness
+                obj_name = obj.get("name", "")
+                if obj_name.startswith("CVE-"):
+                    note_key = obj.get("x_acti_uuid") + " - Title"
+                else:
+                    note_key = obj.get("x_acti_uuid") + " - " + obj_name + " - Title"
                 note_abstract = obj.get("name") + " - Title"
                 note = stix2.Note(
                     id=Note.generate_id(obj["created"], note_key),
@@ -398,7 +403,12 @@ class S3Connector:
             # Analysis Note
             if obj.get("x_analysis", None) and obj.get("x_acti_uuid", None):
                 # generate a unique note identifier that don't change in the time even of the obj_name change or x_analysis change
-                note_key = obj.get("x_acti_uuid") + " - Analysis"
+                # For non-CVE entries, include the name in the key to ensure uniqueness
+                obj_name = obj.get("name", "")
+                if obj_name.startswith("CVE-"):
+                    note_key = obj.get("x_acti_uuid") + " - Analysis"
+                else:
+                    note_key = obj.get("x_acti_uuid") + " - " + obj_name + " - Analysis"
                 note_abstract = obj.get("name") + " - Analysis"
                 note = stix2.Note(
                     id=Note.generate_id(obj["created"], note_key),
@@ -430,7 +440,12 @@ class S3Connector:
                     timestamp = (history.get("timestamp") or "").strip()
                     note_content += f"| {timestamp} | {comment} |\n"
 
-                note_key = obj.get("x_acti_uuid") + " - History"
+                # For non-CVE entries, include the name in the key to ensure uniqueness
+                obj_name = obj.get("name", "")
+                if obj_name.startswith("CVE-"):
+                    note_key = obj.get("x_acti_uuid") + " - History"
+                else:
+                    note_key = obj.get("x_acti_uuid") + " - " + obj_name + " - History"
                 abstract = obj.get("name") + " - History"
                 note = stix2.Note(
                     id=Note.generate_id(obj["created"], note_key),
