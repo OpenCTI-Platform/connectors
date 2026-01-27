@@ -22,29 +22,7 @@ from pydantic_settings import (
 )
 
 _FILE_PATH = os.path.dirname(os.path.abspath(__file__))
-
-
-"""
-All the variables that have default values will override configuration from the OpenCTI helper.
-
-All the variables of this classes are customizable through:
-    - config.yml 
-    - .env
-    - environment variables.
-
-If a variable is set in 2 different places, the first one will be used in this order:
-    1. YAML file
-    2. .env file
-    3. Environment variables
-    4. Default value
-    
-WARNING:
-    The Environment variables in the .env or global environment must be set in the following format:
-    OPENCTI_<variable>
-    CONNECTOR_<variable>
-    
-    the split is made on the first occurrence of the "_" character.
-"""
+'\nAll the variables that have default values will override configuration from the OpenCTI helper.\n\nAll the variables of this classes are customizable through:\n    - config.yml \n    - .env\n    - environment variables.\n\nIf a variable is set in 2 different places, the first one will be used in this order:\n    1. YAML file\n    2. .env file\n    3. Environment variables\n    4. Default value\n    \nWARNING:\n    The Environment variables in the .env or global environment must be set in the following format:\n    OPENCTI_<variable>\n    CONNECTOR_<variable>\n    \n    the split is made on the first occurrence of the "_" character.\n'
 
 
 class ConfigRetrievalError(Exception):
@@ -66,13 +44,13 @@ def environ_list_validator(value: str | list[str]) -> list[str]:
 
 
 def pycti_list_serializer(v: list[str], info: SerializationInfo) -> str | list[str]:
-    if isinstance(v, list) and info.context and info.context.get("mode") == "pycti":
-        return ",".join(v)  # [ "e1", "e2", "e3" ] -> "e1,e2,e3"
+    if isinstance(v, list) and info.context and (info.context.get("mode") == "pycti"):
+        return ",".join(v)
     return v
 
 
 ListFromString = Annotated[
-    list[str],  # Final type
+    list[str],
     BeforeValidator(environ_list_validator),
     PlainSerializer(pycti_list_serializer, when_used="json"),
 ]
@@ -89,7 +67,7 @@ class _OpenCTIConfig(_BaseModel):
 
 class _ConnectorConfig(_BaseModel):
     id: str
-    type: str = "EXTERNAL_IMPORT"  # FIXME: double check
+    type: str = "EXTERNAL_IMPORT"
     name: str = Field(default="Shadowserver")
     scope: ListFromString = Field(default=["stix2"])
     log_level: LogLevelType = Field(default=LogLevelType.ERROR)
@@ -99,8 +77,6 @@ class _ConnectorConfig(_BaseModel):
     @classmethod
     def migrate_deprecated(cls, data: Any) -> datetime.timedelta:
         if run_every := data.pop("run_every", "").upper():
-            # run_every is deprecated. This is a workaround to keep the old config working
-            # while we migrate to duration_period.
             warnings.warn(
                 "CONNECTOR_RUN_EVERY is deprecated. Use CONNECTOR_DURATION_PERIOD instead."
             )
@@ -136,7 +112,6 @@ class _ShadowserverConfig(_BaseModel):
 
 
 class ConnectorSettings(BaseSettings):
-    # files needs to be at the same level as the module
     model_config = SettingsConfigDict(
         env_nested_delimiter="_",
         env_nested_max_split=1,
@@ -145,7 +120,6 @@ class ConnectorSettings(BaseSettings):
         env_file=f"{_FILE_PATH}/../../.env",
         extra="allow",
     )
-
     opencti: _OpenCTIConfig = Field(default_factory=lambda: _OpenCTIConfig())
     connector: _ConnectorConfig = Field(default_factory=lambda: _ConnectorConfig())
     shadowserver: _ShadowserverConfig = Field(default_factory=_ShadowserverConfig)
@@ -176,9 +150,9 @@ class ConnectorSettings(BaseSettings):
             3. Environment variables
             4. Default values
         """
-        if Path(settings_cls.model_config["yaml_file"] or "").is_file():  # type: ignore
+        if Path(settings_cls.model_config["yaml_file"] or "").is_file():
             return (YamlConfigSettingsSource(settings_cls),)
-        if Path(settings_cls.model_config["env_file"] or "").is_file():  # type: ignore
+        if Path(settings_cls.model_config["env_file"] or "").is_file():
             return (dotenv_settings,)
         return (env_settings,)
 
