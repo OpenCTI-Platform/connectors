@@ -289,7 +289,6 @@ class TheHive:
                 "Attachment import DISABLED (THEHIVE_IMPORT_ATTACHMENTS=false)"
             )
 
-
         # Now that we have the files, we create the actual object.
         stix_case = self.process_main_case(case, markings, case_object_refs)
 
