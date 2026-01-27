@@ -5,7 +5,7 @@ services:
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
-      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_ID=AA0852B9-D7BE-4C09-A4A8-B1FC202A6851
       # - CONNECTOR_NAME=MITRE ATLAS
       # - CONNECTOR_SCOPE=identity,attack-pattern,course-of-action,relationship,x-mitre-collection,x-mitre-matrix,x-mitre-tactic
       # - CONNECTOR_LOG_LEVEL=error

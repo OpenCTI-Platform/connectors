@@ -3,7 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  id: 'ChangeMe'
+  # id: 'AA0852B9-D7BE-4C09-A4A8-B1FC202A6851'
   # name: 'MITRE ATLAS'
   # scope: 'identity,attack-pattern,course-of-action,relationship,x-mitre-collection,x-mitre-matrix,x-mitre-tactic'
   # log_level: 'error'
