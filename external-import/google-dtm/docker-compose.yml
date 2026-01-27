@@ -23,6 +23,7 @@ services:
       # Connector's custom execution parameters
       - GOOGLE_DTM_API_KEY=ChangeMe # Google DTM API Key
       - GOOGLE_DTM_TLP=red # Default Traffic Light Protocol (TLP) marking for imported data. Available values are: clear, white, green, amber, amber+strict, red. Default: 'clear'
+      - GOOGLE_DTM_IMPORT_START_DATE=PD10 # ISO 8601 duration string specifying how far back to import alerts (e.g., P1D for 1 day, P7D for 7 days). Default: 'P10D'
       - GOOGLE_DTM_ALERT_SEVERITY= # Comma-separated list of alert types to ingest. Leave blank to retrieve alerts of all types. Available values are: "Compromised Credentials, Domain Discovery, Email, Forum Post, Message, Paste, Shop Listing, Tweet, Web Content". Default: empty (all alert types)
       - GOOGLE_DTM_ALERT_TYPE= # Comma-separated list of alert severities to ingest. Leave blank to retrieve alerts of all severities. Supported values: 'high', 'medium', 'low'. Default: empty (all alert severities)
     restart: always

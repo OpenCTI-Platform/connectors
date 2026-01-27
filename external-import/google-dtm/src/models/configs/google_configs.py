@@ -21,7 +21,7 @@ class _ConfigGoogleDTM(ConfigBaseSettings):
     )
     import_start_date: timedelta = Field(
         default="P10D",
-        description="ISO 8601 duration string specifying how far back to import reports (e.g., P1D for 1 day, P7D for 7 days)",
+        description="ISO 8601 duration string specifying how far back to import alerts (e.g., P1D for 1 day, P7D for 7 days)",
     )
     alert_type: Optional[ListFromString] = Field(
         default=[],

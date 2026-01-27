@@ -30,22 +30,8 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
         description="Name of the connector.",
     )
     scope: ListFromString = Field(
-        default=[
-            "tool",
-            "report",
-            "malware",
-            "identity",
-            "campaign",
-            "intrusion-set",
-            "attack-pattern",
-            "course-of-action",
-            "x-mitre-data-source",
-            "x-mitre-data-component",
-            "x-mitre-matrix",
-            "x-mitre-tactic",
-            "x-mitre-collection",
-        ],
-        description="The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+        description="The scope of the connector, e.g. 'google-dtm'.",
+        default=["google-dtm"],
     )
 
 
