@@ -26,7 +26,7 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     )
     scope: ListFromString = Field(
         description="The scope of the connector.",
-        default=[],
+        default=["valhalla"],
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
