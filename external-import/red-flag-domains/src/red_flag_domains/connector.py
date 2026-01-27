@@ -15,7 +15,7 @@ class RedFlagDomainImportConnector:
         name = self.config.connector.name.capitalize()
         self.author = stix2.Identity(
             id=Identity.generate_id(name, "organization"),
-            name=name,
+            name="Red Flag Domains",
             identity_class="organization",
         )
         self.api_url = self.config.red_flag_domains.url
