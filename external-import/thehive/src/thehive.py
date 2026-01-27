@@ -78,6 +78,14 @@ class TheHive:
         self.thehive_import_alerts = get_config_variable(
             "THEHIVE_IMPORT_ALERTS", ["thehive", "import_alerts"], config, False, True
         )
+        self.thehive_import_attachments = get_config_variable(
+            "THEHIVE_IMPORT_ATTACHMENTS",
+            ["thehive", "import_attachments"],
+            config,
+            False,
+            False,  # ← default value: attachments DISABLED
+        )
+
         self.thehive_severity_mapping = get_config_variable(
             "THEHIVE_SEVERITY_MAPPING",
             ["thehive", "severity_mapping"],
@@ -270,8 +278,17 @@ class TheHive:
             ),
             custom_properties={"dummy": True},
         )
-        # Attachments relations are later redirected to the real stix_case
-        attachments, opencti_files = self.process_attachments(case, dummy_case)
+        attachments = []
+        opencti_files = []
+
+        if self.thehive_import_attachments:
+            self.helper.log_info("Attachment import ENABLED")
+            attachments, opencti_files = self.process_attachments(case, dummy_case)
+        else:
+            self.helper.log_info(
+                "Attachment import DISABLED (THEHIVE_IMPORT_ATTACHMENTS=false)"
+            )
+
 
         # Now that we have the files, we create the actual object.
         stix_case = self.process_main_case(case, markings, case_object_refs)
