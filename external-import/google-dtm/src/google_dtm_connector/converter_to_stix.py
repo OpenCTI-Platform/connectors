@@ -3,7 +3,14 @@ import ipaddress
 
 import stix2
 import validators
-from pycti import Identity, MarkingDefinition, StixCoreRelationship, Incident, Channel, CustomObjectChannel
+from pycti import (
+    Channel,
+    CustomObjectChannel,
+    Identity,
+    Incident,
+    MarkingDefinition,
+    StixCoreRelationship,
+)
 
 
 class ConverterToStix:

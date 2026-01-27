@@ -1,12 +1,13 @@
 from datetime import timedelta
 from typing import Literal, Optional
 
+from connectors_sdk import ListFromString
 from pydantic import (
     Field,
     SecretStr,
 )
 from src.models.configs import ConfigBaseSettings
-from connectors_sdk import ListFromString
+
 
 class _ConfigGoogleDTM(ConfigBaseSettings):
     """Interface for loading dedicated configuration."""

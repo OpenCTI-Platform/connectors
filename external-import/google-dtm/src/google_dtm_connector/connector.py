@@ -3,10 +3,10 @@ from datetime import datetime, timezone
 from typing import Any
 
 from pycti import OpenCTIConnectorHelper
+from src import ConfigLoader
 
 from .client_api import GoogleDTMAPIClient
 from .converter_to_stix import ConverterToStix
-from src import ConfigLoader
 
 
 class GoogleDTMConnector:
