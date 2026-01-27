@@ -55,11 +55,10 @@ class GoogleDTMConnector:
         # Load configuration file and connection helper
         self.client = GoogleDTMAPIClient(
             helper=self.helper,
-            api_key=self.config.google_dtm.api_key.get_secret_value()
+            api_key=self.config.google_dtm.api_key.get_secret_value(),
         )
         self.converter_to_stix = ConverterToStix(
-            self.helper,
-            tlp=self.config.google_dtm.tlp
+            self.helper, tlp=self.config.google_dtm.tlp
         )
 
     def _collect_intelligence(self, since_date) -> tuple[list[Any], Any | None]:
@@ -72,10 +71,12 @@ class GoogleDTMConnector:
         dtm_alerts = self.client.get_dtm_alerts(
             since_date=since_date,
             alert_severity=self.config.google_dtm.alert_severity,
-            alert_type=self.config.google_dtm.alert_type
+            alert_type=self.config.google_dtm.alert_type,
         )
 
-        self.helper.connector_logger.info(f"Going to convert and ingest {len(dtm_alerts)} alerts")
+        self.helper.connector_logger.info(
+            f"Going to convert and ingest {len(dtm_alerts)} alerts"
+        )
 
         # Convert into STIX2 object and add it on a list
         most_recent_alert_date = None
@@ -122,7 +123,9 @@ class GoogleDTMConnector:
                 first_fetch_time = datetime.now(timezone.utc) - first_fetch_delta
                 last_alert_date = first_fetch_time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-            self.helper.connector_logger.info(f"Going to fetch alerts since: {last_alert_date}")
+            self.helper.connector_logger.info(
+                f"Going to fetch alerts since: {last_alert_date}"
+            )
 
             # Friendly name will be displayed on OpenCTI platform
             now_utc_str = now.strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -139,7 +142,9 @@ class GoogleDTMConnector:
             )
 
             # Performing the collection of intelligence
-            stix_objects, most_recent_alert = self._collect_intelligence(since_date=last_alert_date)
+            stix_objects, most_recent_alert = self._collect_intelligence(
+                since_date=last_alert_date
+            )
 
             if len(stix_objects):
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)

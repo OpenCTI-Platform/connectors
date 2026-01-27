@@ -11,10 +11,7 @@ class GoogleDTMAPIClient:
         """
         self.helper = helper
         self.base_url = "https://www.virustotal.com/api/v3/dtm"
-        headers = {
-            "accept": "application/json",
-            "x-apikey": api_key
-        }
+        headers = {"accept": "application/json", "x-apikey": api_key}
         self.session = requests.Session()
         self.session.headers.update(headers)
 
@@ -25,7 +22,7 @@ class GoogleDTMAPIClient:
         """
         try:
             response = self.session.get(api_url, params=params)
-            #print(response.content)
+            # print(response.content)
             self.helper.connector_logger.info(
                 "[API] HTTP Get Request to endpoint", {"url_path": api_url}
             )
@@ -55,9 +52,9 @@ class GoogleDTMAPIClient:
             "size": 25,
             "severity": alert_severity,
             "alert_type": alert_type,
-            "order" : "asc"
+            "order": "asc",
         }
-        dtm_alerts_url = self.base_url+"/alerts"
+        dtm_alerts_url = self.base_url + "/alerts"
         has_more = True
         while has_more:
             try:
@@ -67,11 +64,15 @@ class GoogleDTMAPIClient:
                 if "alerts" in data and data.get("alerts"):
                     alerts.extend(data.get("alerts"))
                 if "link" in response.headers:
-                    dtm_alerts_url = response.links['next']['url']
+                    dtm_alerts_url = response.links["next"]["url"]
                     params = {}
                 else:
                     has_more = False
             except Exception as err:
-                ex = Exception("An exception occurred while fetching alerts, error: {}".format(str(err)))
+                ex = Exception(
+                    "An exception occurred while fetching alerts, error: {}".format(
+                        str(err)
+                    )
+                )
                 raise ex
         return alerts

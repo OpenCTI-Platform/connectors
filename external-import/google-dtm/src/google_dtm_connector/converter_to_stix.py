@@ -33,9 +33,11 @@ class ConverterToStix:
         :return: Author in Stix2 object
         """
         author = stix2.Identity(
-            id=Identity.generate_id(name="Google Threat Intelligence", identity_class="organization"),
+            id=Identity.generate_id(
+                name="Google Threat Intelligence", identity_class="organization"
+            ),
             name="Google Threat Intelligence",
-            identity_class="organization"
+            identity_class="organization",
         )
         return author
 
@@ -122,7 +124,7 @@ class ConverterToStix:
             description=channel_description,
             channel_types=[channel_type],
             external_references=external_refs,
-            object_marking_refs=[self.tlp_marking.get("id")]
+            object_marking_refs=[self.tlp_marking.get("id")],
         )
         return channel
 
@@ -160,7 +162,9 @@ class ConverterToStix:
 """
         return markdown_content
 
-    def convert_document_analysis_alert_to_markdown_content(self, dtm_alert: dict) -> str:
+    def convert_document_analysis_alert_to_markdown_content(
+        self, dtm_alert: dict
+    ) -> str:
         """
         :param dtm_alert:
         :return:
@@ -208,7 +212,9 @@ class ConverterToStix:
 """
         return markdown_content
 
-    def convert_account_discovery_alert_to_markdown_content(self, dtm_alert: dict) -> str:
+    def convert_account_discovery_alert_to_markdown_content(
+        self, dtm_alert: dict
+    ) -> str:
         """
         :param dtm_alert:
         :return:
@@ -277,7 +283,9 @@ class ConverterToStix:
 """
         return markdown_content
 
-    def convert_domain_discovery_alert_to_markdown_content(self, dtm_alert: dict) -> str:
+    def convert_domain_discovery_alert_to_markdown_content(
+        self, dtm_alert: dict
+    ) -> str:
         """
         :param dtm_alert:
         :return:
@@ -353,19 +361,33 @@ class ConverterToStix:
         files = []
         try:
             if dtm_alert.get("doc").get("__type") == "message":
-                markdown_content = self.convert_message_type_alert_to_markdown_content(dtm_alert)
+                markdown_content = self.convert_message_type_alert_to_markdown_content(
+                    dtm_alert
+                )
             elif dtm_alert.get("doc").get("__type") == "web_content_publish":
-                markdown_content = self.convert_web_content_alert_to_markdown_content(dtm_alert)
+                markdown_content = self.convert_web_content_alert_to_markdown_content(
+                    dtm_alert
+                )
             elif dtm_alert.get("doc").get("__type") == "account_discovery":
-                markdown_content = self.convert_account_discovery_alert_to_markdown_content(dtm_alert)
+                markdown_content = (
+                    self.convert_account_discovery_alert_to_markdown_content(dtm_alert)
+                )
             elif dtm_alert.get("doc").get("__type") == "document_analysis":
-                markdown_content = self.convert_document_analysis_alert_to_markdown_content(dtm_alert)
+                markdown_content = (
+                    self.convert_document_analysis_alert_to_markdown_content(dtm_alert)
+                )
             elif dtm_alert.get("doc").get("__type") == "paste":
-                markdown_content = self.convert_paste_alert_to_markdown_content(dtm_alert)
+                markdown_content = self.convert_paste_alert_to_markdown_content(
+                    dtm_alert
+                )
             elif dtm_alert.get("doc").get("__type") == "shop_listing":
-                markdown_content = self.convert_shop_list_alert_to_markdown_content(dtm_alert)
+                markdown_content = self.convert_shop_list_alert_to_markdown_content(
+                    dtm_alert
+                )
             elif dtm_alert.get("doc").get("__type") == "domain_discovery":
-                markdown_content = self.convert_domain_discovery_alert_to_markdown_content(dtm_alert)
+                markdown_content = (
+                    self.convert_domain_discovery_alert_to_markdown_content(dtm_alert)
+                )
             else:
                 markdown_content = self.convert_alert_to_markdown_content(dtm_alert)
 
@@ -381,20 +403,19 @@ class ConverterToStix:
                 }
             )
         except Exception as ex:
-            self.helper.connector_logger.error(f"An error occurred while generating alert content for alert.id: {dtm_alert.get('id')}, exception: {str(ex)}")
+            self.helper.connector_logger.error(
+                f"An error occurred while generating alert content for alert.id: {dtm_alert.get('id')}, exception: {str(ex)}"
+            )
 
         # generate external_reference
         stix_external_ref = stix2.ExternalReference(
             source_name="Google DTM",
-            url="https://advantage.mandiant.com/dtm/alerts/"+dtm_alert.get("id"),
+            url="https://advantage.mandiant.com/dtm/alerts/" + dtm_alert.get("id"),
         )
 
         # create the incident
         stix_incident = stix2.Incident(
-            id=Incident.generate_id(
-                name=incident_name,
-                created=incident_created
-            ),
+            id=Incident.generate_id(name=incident_name, created=incident_created),
             name=incident_name,
             created=incident_created,
             first_seen=incident_created,
@@ -435,11 +456,15 @@ class ConverterToStix:
         related_stix_entities = []
         # process 'account_discovery' related entities
         if dtm_alert.get("doc").get("__type") == "account_discovery":
-            related_stix_entities = self.generate_account_discovery_related_entities(dtm_alert)
+            related_stix_entities = self.generate_account_discovery_related_entities(
+                dtm_alert
+            )
 
         # process 'domain_discovery' related entities
         if dtm_alert.get("doc").get("__type") == "domain_discovery":
-            related_stix_entities = self.generate_domain_discovery_related_entities(dtm_alert)
+            related_stix_entities = self.generate_domain_discovery_related_entities(
+                dtm_alert
+            )
 
         # attach alert related entities to incident
         if related_stix_entities:
@@ -471,9 +496,21 @@ class ConverterToStix:
         stix_related_entities = []
         if "login" in dtm_alert.get("doc").get("service_account", {}):
             password = None
-            if ("plain_text" in dtm_alert.get("doc").get("service_account", {}).get("password", {})
-                    and dtm_alert.get("doc").get("service_account", {}).get("password", {}).get("plain_text") != "********"):
-                password = dtm_alert.get("doc").get("service_account", {}).get("password", {}).get("plain_text")
+            if (
+                "plain_text"
+                in dtm_alert.get("doc").get("service_account", {}).get("password", {})
+                and dtm_alert.get("doc")
+                .get("service_account", {})
+                .get("password", {})
+                .get("plain_text")
+                != "********"
+            ):
+                password = (
+                    dtm_alert.get("doc")
+                    .get("service_account", {})
+                    .get("password", {})
+                    .get("plain_text")
+                )
             stix_account = stix2.UserAccount(
                 account_login=dtm_alert.get("doc").get("service_account").get("login"),
                 credential=password,
@@ -483,27 +520,45 @@ class ConverterToStix:
                 },
             )
             stix_related_entities.append(stix_account)
-        if "email" in dtm_alert.get("doc").get("service_account", {}).get("profile", {}).get("contact", {}):
+        if "email" in dtm_alert.get("doc").get("service_account", {}).get(
+            "profile", {}
+        ).get("contact", {}):
             stix_email = stix2.EmailAddress(
-                value=dtm_alert.get("doc").get("service_account", {}).get("profile", {}).get("contact", {}).get("email"),
+                value=dtm_alert.get("doc")
+                .get("service_account", {})
+                .get("profile", {})
+                .get("contact", {})
+                .get("email"),
                 object_marking_refs=[self.tlp_marking.get("id")],
                 custom_properties={
                     "created_by_ref": self.author.id,
                 },
             )
             stix_related_entities.append(stix_email)
-        if "url" in dtm_alert.get("doc").get("service_account", {}).get("service", {}).get("inet_location", {}):
+        if "url" in dtm_alert.get("doc").get("service_account", {}).get(
+            "service", {}
+        ).get("inet_location", {}):
             stix_url = stix2.URL(
-                value=dtm_alert.get("doc").get("service_account", {}).get("service", {}).get("inet_location", {}).get("url"),
+                value=dtm_alert.get("doc")
+                .get("service_account", {})
+                .get("service", {})
+                .get("inet_location", {})
+                .get("url"),
                 object_marking_refs=[self.tlp_marking.get("id")],
                 custom_properties={
                     "created_by_ref": self.author.id,
                 },
             )
             stix_related_entities.append(stix_url)
-        if "domain" in dtm_alert.get("doc").get("service_account", {}).get("service", {}).get("inet_location", {}):
+        if "domain" in dtm_alert.get("doc").get("service_account", {}).get(
+            "service", {}
+        ).get("inet_location", {}):
             stix_domain = stix2.DomainName(
-                value=dtm_alert.get("doc").get("service_account", {}).get("service", {}).get("inet_location", {}).get("domain"),
+                value=dtm_alert.get("doc")
+                .get("service_account", {})
+                .get("service", {})
+                .get("inet_location", {})
+                .get("domain"),
                 object_marking_refs=[self.tlp_marking.get("id")],
                 custom_properties={
                     "created_by_ref": self.author.id,
@@ -513,9 +568,18 @@ class ConverterToStix:
         if "filename" in dtm_alert.get("doc").get("source_file", {}):
             stix_file = stix2.File(
                 hashes={
-                    "SHA-256": dtm_alert.get("doc").get("source_file", {}).get("hashes", {}).get("sha256"),
-                    "SHA-1": dtm_alert.get("doc").get("source_file", {}).get("hashes", {}).get("sha1"),
-                    "MD5": dtm_alert.get("doc").get("source_file", {}).get("hashes", {}).get("md5"),
+                    "SHA-256": dtm_alert.get("doc")
+                    .get("source_file", {})
+                    .get("hashes", {})
+                    .get("sha256"),
+                    "SHA-1": dtm_alert.get("doc")
+                    .get("source_file", {})
+                    .get("hashes", {})
+                    .get("sha1"),
+                    "MD5": dtm_alert.get("doc")
+                    .get("source_file", {})
+                    .get("hashes", {})
+                    .get("md5"),
                 },
                 name=dtm_alert.get("doc").get("source_file", {}).get("name"),
                 object_marking_refs=[self.tlp_marking.get("id")],

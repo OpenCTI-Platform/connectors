@@ -29,13 +29,12 @@ class _ConfigGoogleDTM(ConfigBaseSettings):
         description=(
             "Comma-separated list of alert types to ingest. Leave blank to retrieve alerts of all types."
             "Supported values: 'Compromised Credentials', 'Document', 'Domain Discovery', 'Email', 'Forum Post', 'Message', 'Paste', 'Shop Listing', 'Tweet', 'Web Content'"
-        )
+        ),
     )
     alert_severity: Optional[ListFromString] = Field(
         default=[],
         description=(
             "Comma-separated list of alert severities to ingest. Leave blank to retrieve alerts of all severities."
             "Supported values: 'high', 'medium', 'low'"
-        )
+        ),
     )
-
