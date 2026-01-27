@@ -53,7 +53,7 @@ class ScoutSearchConnectorConnector:
         else:
             config = {}
 
-        self.helper = OpenCTIConnectorHelper(config)
+        self.helper = OpenCTIConnectorHelper(config, playbook_compatible=True)
         self.config = ScoutSearchConnectorConfig(config)
         self.tlp = None
 
