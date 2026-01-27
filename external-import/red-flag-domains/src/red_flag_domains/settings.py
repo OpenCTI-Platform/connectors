@@ -6,7 +6,7 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
-from pydantic import Field
+from pydantic import Field, HttpUrl
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -38,9 +38,9 @@ class RedFlagDomainsConfig(BaseConfigModel):
     Define parameters and/or defaults for the configuration specific to the `RedFlagDomainsConnector`.
     """
 
-    url: str = Field(
+    url: HttpUrl = Field(
         description="The Red Flag Domains URL.",
-        default="https://dl.red.flag.domains/daily/",
+        default=HttpUrl("https://dl.red.flag.domains/daily/"),
     )
 
 
