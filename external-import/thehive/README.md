@@ -21,13 +21,37 @@ Setting up TheHive Connector is straightforward. The following table provides de
 | `thehive.organization_name`     | `THEHIVE_ORGANIZATION_NAME`   | Yes       | Name of your organization in TheHive.                           |
 | `thehive.import_from_date`      | `THEHIVE_IMPORT_FROM_DATE`    | No        | Date from which to start importing data.                        |
 | `thehive.import_only_tlp`       | `THEHIVE_IMPORT_ONLY_TLP`     | No        | Levels of the Traffic Light Protocol (TLP) to be imported. e.g., `0,1,2,3,4`      |
-| `thehive.import_alerts`         | `THEHIVE_IMPORT_ALERTS`       | No        | Whether to import alerts from TheHive.                          |
+| `thehive.import_alerts`         | `THEHIVE_IMPORT_ALERTS`       | No        | Whether to import alerts from TheHive.
+| `thehive.import_attachments`    | `THEHIVE_IMPORT_ATTACHMENTS`  | No        | Enable or disable the import of TheHive case attachments Default: `false`. |                          |
 | `thehive.severity_mapping`      | `THEHIVE_SEVERITY_MAPPING`    | No        | Mapping of severity levels between TheHive and OpenCTI. e.g., `1:low,2:medium,3:high,4:critical`         |
 | `thehive.case_status_mapping`   | `THEHIVE_CASE_STATUS_MAPPING` | No        | Status mapping for cases. e.g., `hive_status_1:opencti_status_id_2,hive_status_2:opencti_status_id_2`                                       |
 | `thehive.task_status_mapping`   | `THEHIVE_TASK_STATUS_MAPPING` | No        | Status mapping for tasks. e.g., `hive_status_1:opencti_status_id_2,hive_status_2:opencti_status_id_2`                                             |
 | `thehive.alert_status_mapping`  | `THEHIVE_ALERT_STATUS_MAPPING`| No        | Status mapping for alerts. e.g., `hive_status_1:opencti_status_id_2,hive_status_2:opencti_status_id_2`                                            |
 | `thehive.user_mapping`          | `THEHIVE_USER_MAPPING`        | No        | Mapping of TheHive assignees to OpenCTI users. e.g., `user@contoso.com:opencti_user_id,user2@contoso.com:opencti_user_id_2`                 |
 | `thehive.interval`              | `THEHIVE_INTERVAL`            | Yes       | Frequency of running the connector in minutes.                  |
+
+## Attachments import
+
+By default, attachments from TheHive cases are **not imported**.
+This behavior is intentional to prevent issues with large files and message size limits in the messaging system.
+
+### How to enable attachments import
+
+Attachments import can be enabled using one of the following options:
+
+**Environment variable**
+```bash
+THEHIVE_IMPORT_ATTACHMENTS=true
+
+### RabbitMQ message size limitation
+
+OpenCTI relies on RabbitMQ for message transport.  
+By default, RabbitMQ has a maximum message size limit of **512 MB**.
+
+When importing large attachments, this limit may be exceeded and result in errors such as:
+
+PRECONDITION_FAILED - message size is larger than configured max size
+
 
 ## Supported Indicator Field Names
 The following is a list of indicator Field Names supported by this integration and the prescribed value types. Indicators of this field name will be imported into OpenCTI as the STIX object defined. Please ensure that the field names are receiving standardized values to avoid potential import errors (e.g., and IP is an IP).
