@@ -1,15 +1,13 @@
-# -*- coding: utf-8 -*-
 """OpenCTI valhalla connector core module."""
 
-import os
 import sys
 import time
 from datetime import datetime
 from typing import Any, Dict, Mapping, Optional
 
-import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper
 from stix2 import TLP_AMBER, TLP_WHITE
+from valhalla.settings import ConnectorSettings
 from valhallaAPI.valhalla import ValhallaAPI
 
 from .knowledge import KnowledgeImporter
@@ -23,39 +21,23 @@ class Valhalla:
     _STATE_LAST_RUN = "last_run"
     _VALHALLA_LAST_VERSION = "valhalla_last_version"
 
-    def __init__(self):
-        # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/../config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+        self.config = config
+        self.helper = helper
+        self.update_existing_data = False
+        self.API_KEY = (
+            self.config.valhalla.api_key.get_secret_value()
+            if self.config.valhalla.api_key
+            else None
         )
-        # Extra config
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-        )
-        self.API_KEY = get_config_variable(
-            "VALHALLA_API_KEY", ["valhalla", "api_key"], config
-        )
-        self.INTERVAL_SEC = get_config_variable(
-            "VALHALLA_INTERVAL_SEC", ["valhalla", "interval_sec"], config, isNumber=True
-        )
-
-        self.helper = OpenCTIConnectorHelper(config)
-        self.helper.log_info(f"loaded valhalla config: {config}")
-
-        # If we run without API key we can assume all data is TLP:WHITE else we
-        # default to TLP:AMBER to be safe.
+        self.INTERVAL_SEC = self.config.valhalla.interval_sec
+        self.helper.log_info(f"loaded valhalla config: {self.config}")
         if self.API_KEY == "" or self.API_KEY is None:
             self.default_marking = TLP_WHITE
             self.valhalla_client = ValhallaAPI()
         else:
             self.default_marking = TLP_AMBER
             self.valhalla_client = ValhallaAPI(api_key=self.API_KEY)
-
         self.knowledge_importer = KnowledgeImporter(
             self.helper,
             self.update_existing_data,
@@ -71,26 +53,19 @@ class Valhalla:
                 status_data = self.valhalla_client.get_status()
                 api_status = Status.parse_obj(status_data)
                 self.helper.log_info(f"current valhalla status: {api_status}")
-
                 current_time = int(datetime.utcnow().timestamp())
                 current_state = self._load_state()
-
                 self.helper.log_info(f"loaded state: {current_state}")
-
                 last_run = self._get_state_value(current_state, self._STATE_LAST_RUN)
-
                 last_valhalla_version = self._get_state_value(
                     current_state, self._VALHALLA_LAST_VERSION
                 )
-
                 if self._is_scheduled(last_run, current_time) and self._check_version(
                     last_valhalla_version, api_status.version
                 ):
                     self.helper.log_info("running valhalla importer")
                     self.helper.metric.inc("run_count")
                     self.helper.metric.state("running")
-
-                    # Announce upcoming work to OpenCTI
                     friendly_name = (
                         "Valhalla run @ "
                         + datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
@@ -100,16 +75,12 @@ class Valhalla:
                     work_id = self.helper.api.work.initiate_work(
                         self.helper.connect_id, friendly_name
                     )
-
                     knowledge_importer_state = self.knowledge_importer.run(work_id)
-
                     self.helper.log_info("done with running valhalla importer")
-
                     new_state = current_state.copy()
                     new_state.update(knowledge_importer_state)
                     new_state[self._STATE_LAST_RUN] = int(datetime.utcnow().timestamp())
                     new_state[self._VALHALLA_LAST_VERSION] = api_status.version
-
                     self.helper.log_info(f"storing new state: {new_state}")
                     self.helper.set_state(new_state)
                     self.helper.log_info(
@@ -124,7 +95,6 @@ class Valhalla:
                     self.helper.log_info(
                         f"connector will not run, next run in: {new_interval} seconds"
                     )
-
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("connector stop")
                 self.helper.metric.state("stopped")
@@ -133,14 +103,11 @@ class Valhalla:
                 self.helper.log_error(str(e))
                 self.helper.metric.state("stopped")
                 sys.exit(0)
-
             if self.helper.connect_run_and_terminate:
                 self.helper.log_info("Connector stop")
                 self.helper.metric.state("stopped")
                 self.helper.force_ping()
                 sys.exit(0)
-
-            # After a successful run pause at least 60sec
             time.sleep(60)
 
     def _get_interval(self) -> int:
