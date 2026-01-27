@@ -15,6 +15,6 @@ if __name__ == "__main__":
     try:
         connector = GoogleDTMConnector()
         connector.run()
-    except Exception as e:
+    except Exception:
         traceback.print_exc()
         exit(1)
