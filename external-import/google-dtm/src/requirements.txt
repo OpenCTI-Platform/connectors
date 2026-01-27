@@ -1,0 +1,5 @@
+pycti==6.9.11
+pyyaml~=6.0.2
+requests~=2.32.3
+validators==0.34.0
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.9.11#subdirectory=connectors-sdk
