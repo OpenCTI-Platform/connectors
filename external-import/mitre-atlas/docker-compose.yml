@@ -9,6 +9,6 @@ services:
       # - CONNECTOR_NAME=MITRE ATLAS
       # - CONNECTOR_SCOPE=identity,attack-pattern,course-of-action,relationship,x-mitre-collection,x-mitre-matrix,x-mitre-tactic
       # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_DURATION_PERIOD=P7D
       # - MITRE_ATLAS_URL=https://raw.githubusercontent.com/mitre-atlas/atlas-navigator-data/main/dist/stix-atlas.json
-      # - MITRE_ATLAS_INTERVAL=7 # In days, must be strictly greater than 1
     restart: always

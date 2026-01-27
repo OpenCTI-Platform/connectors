@@ -19,22 +19,7 @@ class MitreAtlas:
         self.config = config
         self.helper = helper
         self.mitre_atlas_file_url = self.config.mitre_atlas.url
-        self.mitre_atlas_interval = self.config.mitre_atlas.interval
         self.update_existing_data = False
-
-    def get_interval(self) -> int:
-        """Get the interval in seconds between two imports."""
-        return self.days_to_seconds(self.mitre_atlas_interval)
-
-    @staticmethod
-    def days_to_seconds(days: int) -> int:
-        """Convert days to seconds."""
-        return days * 60 * 60 * 24
-
-    @staticmethod
-    def seconds_to_days(seconds: int) -> float:
-        """Convert seconds to days."""
-        return seconds / (60 * 60 * 24)
 
     def retrieve_data(self, url: str) -> Optional[str]:
         """
@@ -79,52 +64,50 @@ class MitreAtlas:
             else:
                 last_run = None
                 self.helper.log_info("Connector has never run")
-            if last_run is None or timestamp - last_run > (
-                self.days_to_seconds(self.mitre_atlas_interval) - 1
+
+            now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
+            friendly_name = "MITRE ATLAS run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, friendly_name
+            )
+            if (
+                self.mitre_atlas_file_url is not None
+                and len(self.mitre_atlas_file_url) > 0
             ):
-                self.helper.log_info("Connector will run!")
-                now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
-                friendly_name = "MITRE ATLAS run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
-                work_id = self.helper.api.work.initiate_work(
-                    self.helper.connect_id, friendly_name
-                )
-                if (
-                    self.mitre_atlas_file_url is not None
-                    and len(self.mitre_atlas_file_url) > 0
-                ):
-                    atlas_data = self.retrieve_data(self.mitre_atlas_file_url)
-                    self.send_bundle(work_id, atlas_data)
-                message = "Connector successfully run, storing last_run as " + str(
-                    timestamp
-                )
-                self.helper.log_info(message)
-                self.helper.set_state({"last_run": timestamp})
-                self.helper.api.work.to_processed(work_id, message)
-                self.helper.log_info(
-                    f"Last_run stored, next run in: {self.mitre_atlas_interval} days"
-                )
-            else:
-                new_interval = self.get_interval() - (timestamp - last_run)
-                self.helper.log_info(
-                    "Connector will not run, next run in: "
-                    f"{round(self.seconds_to_days(new_interval), 2)} days"
-                )
+                atlas_data = self.retrieve_data(self.mitre_atlas_file_url)
+                self.send_bundle(work_id, atlas_data)
+            message = "Connector successfully run, storing last_run as " + str(
+                timestamp
+            )
+            self.helper.log_info(message)
+            self.helper.set_state({"last_run": timestamp})
+            self.helper.api.work.to_processed(work_id, message)
+            self.helper.log_info(
+                f"Last_run stored, next run in: {self.config.connector.duration_period.days} days"
+            )
+
         except (KeyboardInterrupt, SystemExit):
             self.helper.log_info("Connector stop")
             sys.exit(0)
         except Exception as e:
             self.helper.log_error(str(e))
 
-    def run(self):
-        self.helper.log_info("Fetching MITRE ATLAS datasets...")
-        get_run_and_terminate = getattr(self.helper, "get_run_and_terminate", None)
-        if callable(get_run_and_terminate) and self.helper.get_run_and_terminate():
-            self.process_data()
-            self.helper.force_ping()
-        else:
-            while True:
-                self.process_data()
-                time.sleep(60)
+    def run(self) -> None:
+        """
+        Run the main process encapsulated in a scheduler
+        It allows you to schedule the process to run at a certain intervals
+        This specific scheduler from the pycti connector helper will also check the queue size of a connector
+        If `CONNECTOR_QUEUE_THRESHOLD` is set, if the connector's queue size exceeds the queue threshold,
+        the connector's main process will not run until the queue is ingested and reduced sufficiently,
+        allowing it to restart during the next scheduler check. (default is 500MB)
+        It requires the `duration_period` connector variable in ISO-8601 standard format
+        Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
+        :return: None
+        """
+        self.helper.schedule_iso(
+            message_callback=self.process_data,
+            duration_period=self.config.connector.duration_period,
+        )
 
     def send_bundle(self, work_id: str, serialized_bundle: str) -> None:
         try:
