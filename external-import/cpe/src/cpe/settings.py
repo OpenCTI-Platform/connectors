@@ -18,6 +18,7 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
 
     id: str = Field(
         description="A UUID v4 to identify the connector in OpenCTI.",
+        default="2A52C9F0-2E35-4ED4-A628-FF18E9631985",
     )
     name: str = Field(
         description="The name of the connector.",

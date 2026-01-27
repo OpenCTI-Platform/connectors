@@ -3,7 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  id: 'ChangeMe'
+  # id: '2A52C9F0-2E35-4ED4-A628-FF18E9631985'
   # name: 'Common Platform Enumeration'
   # scope: 'software'
   # log_level: 'error'
