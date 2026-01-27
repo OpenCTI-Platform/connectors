@@ -17,6 +17,6 @@
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/google-dtm",
   "manager_supported": false,
   "container_version": "rolling",
-  "container_image": "opencti/google-dtm",
+  "container_image": "opencti/connector-google-dtm",
   "container_type": "EXTERNAL_IMPORT"
 }
