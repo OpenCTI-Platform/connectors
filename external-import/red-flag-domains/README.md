@@ -28,7 +28,6 @@ connector-redflag-domains:
     - CONNECTOR_ID=CONNECTOR_ID
     - "CONNECTOR_NAME=Red Flag Domains"
     - CONNECTOR_SCOPE=red-flag-domains
-    - CONNECTOR_UPDATE_EXISTING_DATA=False
     - CONNECTOR_LOG_LEVEL=info
     - REDFLAGDOMAINS_URL=https://dl.red.flag.domains/daily/
   restart: always
