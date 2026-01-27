@@ -47,7 +47,7 @@
       "type": "string"
     },
     "CONNECTOR_DURATION_PERIOD": {
-      "default": "PT1H",
+      "default": "P1D",
       "description": "The period of time to await between two runs of the connector.",
       "format": "duration",
       "type": "string"
@@ -55,6 +55,9 @@
     "RED_FLAG_DOMAINS_URL": {
       "default": "https://dl.red.flag.domains/daily/",
       "description": "The Red Flag Domains URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     }
   },
