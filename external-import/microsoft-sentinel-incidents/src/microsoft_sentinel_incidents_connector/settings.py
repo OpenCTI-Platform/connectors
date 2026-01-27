@@ -1,9 +1,10 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    DatetimeFromIsoString,
     ListFromString,
 )
 from pydantic import Field, SecretStr
@@ -53,9 +54,9 @@ class MicrosoftSentinelIncidentsConfig(BaseConfigModel):
     workspace_id: str = Field(
         description="Your Microsoft Sentinel workspace ID.",
     )
-    import_start_date: str = Field(
+    import_start_date: DatetimeFromIsoString = Field(
         description="Import starting date (in YYYY-MM-DD format or YYYY-MM-DDTHH:MM:SSZ format) - used only if connector's state is not set.",
-        default="2020-01-01T00:00:00Z",
+        default=datetime.fromisoformat("2020-01-01T00:00:00Z"),
     )
     filter_labels: ListFromString = Field(
         description="Only incidents containing these specified labels will be retrieved and ingested (comma separated values).",
