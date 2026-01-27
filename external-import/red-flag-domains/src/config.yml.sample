@@ -2,8 +2,8 @@ opencti:
   url: 'http://localhost'
   token: 'ChangeMe'
 
-connector:
-  id: 'ChangeMe'
+# connector:
+  # id: '971377CA-CA0E-41C2-BC96-8B8CCD8216BE'
   # name: 'Red Flag Domains'
   # scope: 'red-flag-domains'
   # log_level: 'error'
