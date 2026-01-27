@@ -53,7 +53,7 @@
       "type": "string"
     },
     "CONNECTOR_DURATION_PERIOD": {
-      "default": "PT1H",
+      "default": "P7D",
       "description": "The period of time to await between two runs of the connector.",
       "format": "duration",
       "type": "string"
@@ -62,11 +62,6 @@
       "default": "https://raw.githubusercontent.com/mitre-atlas/atlas-navigator-data/main/dist/stix-atlas.json",
       "description": "The URL of the MITRE ATLAS file to import.",
       "type": "string"
-    },
-    "MITRE_ATLAS_INTERVAL": {
-      "default": 7,
-      "description": "The interval in days between two imports of the MITRE ATLAS file.",
-      "type": "integer"
     }
   },
   "required": [
