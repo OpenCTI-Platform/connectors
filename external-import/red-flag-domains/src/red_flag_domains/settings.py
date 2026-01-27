@@ -31,10 +31,6 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
         description="The period of time to await between two runs of the connector.",
         default=timedelta(hours=1),
     )
-    update_existing_data: bool = Field(
-        description="Whether to update existing data in OpenCTI.",
-        default=False,
-    )
 
 
 class RedFlagDomainsConfig(BaseConfigModel):

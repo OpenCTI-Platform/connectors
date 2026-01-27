@@ -18,7 +18,6 @@ class RedFlagDomainImportConnector:
             name=name,
             identity_class="organization",
         )
-        self.update_existing_data = self.config.connector.update_existing_data
         self.api_url = self.config.red_flag_domains.url
 
     def run(self):
@@ -150,8 +149,6 @@ class RedFlagDomainImportConnector:
     def send_bundle(self, bundle, work_id):
         self.helper.log_info("Sending STIX Bundle")
         try:
-            self.helper.send_stix2_bundle(
-                bundle, work_id=work_id, update=self.update_existing_data
-            )
+            self.helper.send_stix2_bundle(bundle, work_id=work_id)
         except Exception as e:
             self.helper.log_error(str(e))
