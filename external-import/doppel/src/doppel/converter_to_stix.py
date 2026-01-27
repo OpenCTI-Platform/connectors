@@ -17,6 +17,7 @@ from pycti import (
     Indicator as PyctiIndicator,
     Note as PyctiNote,
     StixCoreRelationship as PyctiStixCoreRelationship,
+    MarkingDefinition as PyctiMarkingDefinition
 )
 from stix2 import (
     TLP_AMBER,
@@ -70,7 +71,7 @@ class ConverterToStix:
             "green": TLP_GREEN,
             "amber": TLP_AMBER,
             "amber+strict": Stix2MarkingDefinition(
-                id=Stix2MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+                id=PyctiMarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
                 definition_type="statement",
                 definition={"statement": "custom"},
                 custom_properties={
@@ -351,7 +352,11 @@ class ConverterToStix:
             except Exception as e:
                 self.helper.connector_logger.error(
                     "[DoppelConverter] Error revoking indicator via API",
-                    {"alert_id": alert_id, "indicator_id": indicator_id, "error": str(e)},
+                    {
+                        "alert_id": alert_id,
+                        "indicator_id": indicator_id,
+                        "error": str(e),
+                    },
                 )
 
         # Add reversion note to observable
@@ -581,14 +586,14 @@ class ConverterToStix:
         for alert in alerts:
             try:
                 alert_id = alert.get("id", "unknown")
-                current_queue_state = alert.get("queue_state", "")
+                current_queue_state = alert.get("queue_state")
                 previous_queue_state = state.get(alert_id, {}).get("queue_state")
 
                 # Extract required fields
                 entity_content = alert.get("entity_content", {})
                 root_domain = entity_content.get("root_domain", {})
                 domain_name = root_domain.get("domain")
-                ip_address = root_domain.get("ip_address", "")
+                ip_address = root_domain.get("ip_address")
 
                 domain_observable_id = None
                 ip_observable_id = None
