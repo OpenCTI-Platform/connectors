@@ -1,7 +1,7 @@
 import math
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 import langcodes
@@ -109,7 +109,7 @@ class CPEConnector:
         Returns:
             str: The date formatted as "AAAA-MM-JJTHH:MM:SS.ss"
         """
-        return datetime.utcfromtimestamp(timestamp).isoformat()
+        return datetime.fromtimestamp(timestamp, tz=timezone.utc).isoformat()
 
     def _get_id(self, type: str) -> str:
         """
@@ -309,7 +309,7 @@ class CPEConnector:
         Runs the CPE connector
         """
         self.helper.log_info(f"Starting {self.helper.connect_name} connector...")
-        interval = self.config.connector.duration_period.seconds
+        interval = self.config.connector.duration_period.total_seconds()
         while True:
             try:
                 self.current_run = int(time.time())
@@ -319,7 +319,7 @@ class CPEConnector:
                     last_run = current_state["last_run"]
                     self.helper.log_info(
                         f"{self.helper.connect_name} connector last run: "
-                        + datetime.utcfromtimestamp(last_run).strftime(
+                        + datetime.fromtimestamp(last_run, tz=timezone.utc).strftime(
                             "%Y-%m-%d %H:%M:%S"
                         )
                     )
@@ -339,7 +339,7 @@ class CPEConnector:
                     self.helper.log_info(
                         f"{self.helper.connect_name} will run and collect all the CPEs!"
                     )
-                    now = datetime.utcfromtimestamp(self.current_run)
+                    now = datetime.fromtimestamp(self.current_run, tz=timezone.utc)
                     friendly_name = f"{self.helper.connect_name} run @ " + now.strftime(
                         "%Y-%m-%d %H:%M:%S"
                     )
@@ -374,7 +374,7 @@ class CPEConnector:
                     self.helper.log_info(
                         f"{self.helper.connect_name} will run and collect the CPEs based on a time difference!"
                     )
-                    now = datetime.utcfromtimestamp(self.current_run)
+                    now = datetime.fromtimestamp(self.current_run, tz=timezone.utc)
                     friendly_name = f"{self.helper.connect_name} run @ " + now.strftime(
                         "%Y-%m-%d %H:%M:%S"
                     )
