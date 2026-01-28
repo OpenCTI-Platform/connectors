@@ -3,13 +3,12 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  type: 'INTERNAL_ENRICHMENT'
-  id: 'ChangeMe'
-  name: 'anyrun_task'
-  scope: 'Artifact,Url'
+  # id: '30c40257-9514-4b54-bcc9-15445fe21e5e'
+  # name: 'ANY.RUN task'
+  # scope: 'Artifact,Url'
   auto: false # Enable/disable auto-enrichment of observables
   confidence_level: 75 # From 0 (Unknown) to 100 (Fully trusted)
-  log_level: 'info'
+  # log_level: 'error'
 
 anyrun:
   token: 'ChangeMe'

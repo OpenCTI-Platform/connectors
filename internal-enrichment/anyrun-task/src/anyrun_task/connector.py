@@ -130,6 +130,7 @@ class AnyRunTask:
             self.helper.log_info(
                 f"ANY.RUN task started url: https://app.any.run/tasks/{task['data']['taskid']}"
             )
+            # Create external reference to ANY.RUN task
             external_reference_task = self.helper.api.external_reference.create(
                 source_name=f"ANY.RUN task {task['data']['taskid']}",
                 url=f"https://app.any.run/tasks/{task['data']['taskid']}",
@@ -141,11 +142,15 @@ class AnyRunTask:
             result = self.wait_for_task(
                 task["data"]["taskid"], timer=self.task_timer + 20
             )
+
+            # Add labels from ANY.RUN task result
             for tag in result["data"]["analysis"]["tags"]:
                 label = self.helper.api.label.create(value=tag["tag"])
                 self.helper.api.stix_cyber_observable.add_label(
                     id=opencti_entity["id"], label_id=label["id"]
                 )
+
+            # Update observable score
             anyrun_score = result["data"]["analysis"]["scores"]["verdict"]["score"]
             opencti_score = opencti_entity.get("x_opencti_score", anyrun_score)
             if opencti_score is None:
@@ -163,6 +168,8 @@ class AnyRunTask:
                     id=opencti_entity["id"],
                     input={"key": "x_opencti_score", "value": str(anyrun_score)},
                 )
+
+            # Add MITRE ATT&CK relationships
             if self.enable_mitre:
                 for pattern_anyrun in result["data"]["mitre"]:
                     patterns_opencti = self.helper.api.attack_pattern.list(
@@ -178,6 +185,8 @@ class AnyRunTask:
                                 relationship_type="related-to",
                                 description="Attack pattern",
                             )
+
+            # Add malicious IOCs
             if self.enable_ioc:
                 response = self.call_anyrun_api(
                     "GET", f"report/{task['data']['taskid']}/ioc/json"
@@ -235,6 +244,8 @@ class AnyRunTask:
                                 id=indicator["id"],
                                 stix_cyber_observable_id=new_observable["id"],
                             )
+
+            # Add malicious processes
             if self.enable_processes:
                 procs_links = []
                 for proc in result["data"]["processes"]:
