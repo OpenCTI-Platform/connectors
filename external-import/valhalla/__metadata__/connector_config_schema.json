@@ -20,7 +20,9 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": [],
+      "default": [
+        "valhalla"
+      ],
       "description": "The scope of the connector.",
       "items": {
         "type": "string"
@@ -45,7 +47,7 @@
       "type": "string"
     },
     "CONNECTOR_DURATION_PERIOD": {
-      "default": "PT1H",
+      "default": "P1D",
       "description": "The period of time to await between two runs of the connector.",
       "format": "duration",
       "type": "string"
@@ -56,11 +58,6 @@
       "format": "password",
       "type": "string",
       "writeOnly": true
-    },
-    "VALHALLA_INTERVAL_SEC": {
-      "default": 86400,
-      "description": "Interval in seconds between runs (default: 86400 = 1 day).",
-      "type": "integer"
     }
   },
   "required": [
