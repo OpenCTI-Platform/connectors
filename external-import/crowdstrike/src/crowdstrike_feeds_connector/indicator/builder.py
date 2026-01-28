@@ -524,7 +524,7 @@ class IndicatorBundleBuilder:
         bundle_objects.extend(indicators_based_on_observables)
 
         # Indicator(s) indicate entities and add to bundle.
-        indicator_indicates = intrusion_sets + malwares
+        indicator_indicates = intrusion_sets + malwares + vulnerabilities
 
         indicator_indicates_entities = self._create_indicates_relationships(
             indicators, indicator_indicates
