@@ -8,9 +8,6 @@ The following repository is used to store the OpenCTI connectors for the platfor
 applications. To know how to enable connectors on OpenCTI, please read
 the [dedicated documentation](https://docs.opencti.io/latest/deployment/connectors).
 
-> **Indicator pattern type note (Team Cymru Scout Search)**  
-> To enrich an Indicator with the Scout Search connector, the Indicator's pattern type must match the value provided in the `PURE_SIGNAL_SCOUT_INDICATOR_PATTERN_TYPE` environment variable (default: `pure-signal-scout`).
-
 ## Connectors list and statuses
 
 This repository is used to host connectors that are supported by the core development team of OpenCTI. Nevertheless, the
