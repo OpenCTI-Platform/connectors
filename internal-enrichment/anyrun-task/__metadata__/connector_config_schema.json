@@ -15,12 +15,15 @@
       "type": "string"
     },
     "CONNECTOR_NAME": {
-      "default": "AnyrunTask",
+      "default": "ANY.RUN task",
       "description": "The name of the connector.",
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": [],
+      "default": [
+        "Artifact",
+        "Url"
+      ],
       "description": "The scope of the connector.",
       "items": {
         "type": "string"
@@ -50,7 +53,6 @@
       "type": "boolean"
     },
     "ANYRUN_TOKEN": {
-      "default": "**********",
       "description": "ANY.RUN API token for authentication.",
       "format": "password",
       "type": "string",
@@ -59,6 +61,14 @@
     "ANYRUN_MAX_TLP": {
       "default": "TLP:AMBER",
       "description": "Maximum TLP level for the connector.",
+      "enum": [
+        "TLP:WHITE",
+        "TLP:CLEAR",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
       "type": "string"
     },
     "ANYRUN_URL": {
@@ -66,7 +76,7 @@
       "description": "Base URL for the ANY.RUN API.",
       "type": "string"
     },
-    "ANYRUN_TIMER": {
+    "ANYRUN_TASK_TIMER": {
       "default": 60,
       "description": "Sandbox execution time in seconds.",
       "type": "integer"
@@ -76,29 +86,52 @@
       "description": "Operating system for sandbox environment.",
       "type": "string"
     },
-    "ANYRUN_BITNESS": {
+    "ANYRUN_OS_BITNESS": {
       "default": "64",
       "description": "Operating system bitness: `32` or `64`.",
+      "enum": [
+        "32",
+        "64"
+      ],
       "type": "string"
     },
-    "ANYRUN_VERSION": {
+    "ANYRUN_OS_VERSION": {
       "default": "10",
       "description": "Windows version: `7`, `8.1`, `10`, or `11`.",
+      "enum": [
+        "7",
+        "8.1",
+        "10",
+        "11"
+      ],
       "type": "string"
     },
-    "ANYRUN_LOCALE": {
+    "ANYRUN_OS_LOCALE": {
       "default": "en-US",
       "description": "Operating system language locale.",
       "type": "string"
     },
-    "ANYRUN_BROWSER": {
+    "ANYRUN_OS_BROWSER": {
       "default": "Google Chrome",
       "description": "Browser for URL analysis: `Google Chrome`, `Mozilla Firefox`, `Opera`, `Internet Explorer`, `Microsoft Edge`.",
+      "enum": [
+        "Google Chrome",
+        "Mozilla Firefox",
+        "Opera",
+        "Internet Explorer",
+        "Microsoft Edge"
+      ],
       "type": "string"
     },
     "ANYRUN_PRIVACY": {
       "default": "bylink",
       "description": "Task privacy: `public`, `bylink`, `owner`, `team`.",
+      "enum": [
+        "public",
+        "bylink",
+        "owner",
+        "team"
+      ],
       "type": "string"
     },
     "ANYRUN_AUTOMATED_INTERACTIVITY": {
@@ -120,41 +153,12 @@
       "default": false,
       "description": "Import malicious process observables.",
       "type": "boolean"
-    },
-    "ANYRUN_TASK_TIMER": {
-      "default": "60",
-      "deprecated": true,
-      "description": "Sandbox execution time in seconds.",
-      "type": "string"
-    },
-    "ANYRUN_OS_BITNESS": {
-      "default": "64",
-      "deprecated": true,
-      "description": "Operating system bitness: `32` or `64`.",
-      "type": "string"
-    },
-    "ANYRUN_OS_VERSION": {
-      "default": "10",
-      "deprecated": true,
-      "description": "Windows version: `7`, `8.1`, `10`, or `11`.",
-      "type": "string"
-    },
-    "ANYRUN_OS_LOCALE": {
-      "default": "en-US",
-      "deprecated": true,
-      "description": "Operating system language locale.",
-      "type": "string"
-    },
-    "ANYRUN_OS_BROWSER": {
-      "default": "Google Chrome",
-      "deprecated": true,
-      "description": "Browser for URL analysis: `Google Chrome`, `Mozilla Firefox`, `Opera`, `Internet Explorer`, `Microsoft Edge`.",
-      "type": "string"
     }
   },
   "required": [
     "OPENCTI_URL",
-    "OPENCTI_TOKEN"
+    "OPENCTI_TOKEN",
+    "ANYRUN_TOKEN"
   ],
   "additionalProperties": true
 }
