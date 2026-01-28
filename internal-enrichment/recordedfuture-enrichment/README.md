@@ -53,36 +53,10 @@ Key features:
 
 ## Configuration
 
-### OpenCTI Configuration
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `opencti_url` | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
-| `opencti_token` | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
-
-### Base Connector Configuration
-
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `connector_id` | `CONNECTOR_ID` | Yes | A valid arbitrary `UUIDv4` unique for this connector |
-| `connector_name` | `CONNECTOR_NAME` | Yes | The name of the connector instance |
-| `connector_scope` | `CONNECTOR_SCOPE` | Yes | Supported: `IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Vulnerability` |
-| `connector_auto` | `CONNECTOR_AUTO` | Yes | Enable/disable auto-enrichment |
-| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
-
-### Recorded Future Configuration
-
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `recorded_future_api_token` | `RECORDED_FUTURE_API_TOKEN` | Yes | Recorded Future API token |
-| `recorded_future_max_tlp` | `RECORDED_FUTURE_MAX_TLP` | No | Maximum TLP for enrichment |
-| `recorded_future_indicator_threshold` | `RECORDED_FUTURE_INDICATOR_THRESHOLD` | No | Risk score threshold for indicator creation |
-| `recorded_future_enrich_vuln_aliases` | `RECORDED_FUTURE_ENRICH_VULN_ALIASES` | No | Enrich vulnerability aliases |
-| `recorded_future_enrich_vuln_lifecycle` | `RECORDED_FUTURE_ENRICH_VULN_LIFECYCLE` | No | Enrich vulnerability lifecycle stage |
-| `recorded_future_enrich_vuln_ext_ref` | `RECORDED_FUTURE_ENRICH_VULN_EXT_REF` | No | Add external references to vulnerabilities |
-| `recorded_future_enrich_vuln_cvss` | `RECORDED_FUTURE_ENRICH_VULN_CVSS` | No | Enrich with CVSS properties |
-
----
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 

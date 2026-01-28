@@ -1,4 +1,4 @@
-pycti==6.9.10
+pycti==6.9.12
 countryinfo
 validators
 ipinfo

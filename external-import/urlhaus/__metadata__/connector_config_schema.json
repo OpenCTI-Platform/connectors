@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/urlhaus_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Urlhaus",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT3H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "URLHAUS_CSV_URL": {
+      "default": "https://urlhaus.abuse.ch/downloads/csv_recent/",
+      "description": "URLhaus CSV feed URL.",
+      "type": "string"
+    },
+    "URLHAUS_DEFAULT_X_OPENCTI_SCORE": {
+      "default": 80,
+      "description": "Default x_opencti_score for imported indicators.",
+      "type": "integer"
+    },
+    "URLHAUS_IMPORT_OFFLINE": {
+      "default": true,
+      "description": "Import URLs marked as 'offline' in addition to 'online'.",
+      "type": "boolean"
+    },
+    "URLHAUS_INTERVAL": {
+      "default": 3,
+      "deprecated": true,
+      "description": "Polling interval in hours.",
+      "type": "integer"
+    },
+    "URLHAUS_THREATS_FROM_LABELS": {
+      "default": true,
+      "description": "Create relationships to existing threats based on URL tags.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}
