@@ -1,7 +1,7 @@
 # OpenCTI Valhalla Connector
 
-| Status | Date | Comment |
-|--------|------|---------|
+| Status    | Date | Comment |
+|-----------|------|---------|
 | Community | -    | -       |
 
 The Valhalla connector imports YARA detection rules from Nextron Systems' Valhalla YARA rule feed into OpenCTI.
@@ -78,18 +78,17 @@ docker compose up -d
 ### Manual Deployment
 
 1. Create `config.yml` based on `config.yml.sample`.
-
 2. Install dependencies:
 
-```bash
-pip3 install -r requirements.txt
-```
+    ```bash
+    pip3 install -r requirements.txt
+    ```
 
 3. Start the connector:
 
-```bash
-python3 main.py
-```
+    ```bash
+    python3 main.py
+    ```
 
 ## Usage
 
@@ -147,6 +146,7 @@ For each YARA rule from Valhalla:
 ### Rule Categories
 
 Valhalla provides rules for:
+
 - APT malware and tools
 - Commodity malware
 - Webshells

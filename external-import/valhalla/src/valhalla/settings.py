@@ -44,6 +44,17 @@ class ValhallaConfig(BaseConfigModel):
         default=None,
     )
 
+
+class ConnectorSettings(BaseConnectorSettings):
+    """
+    Override `BaseConnectorSettings` to include `ExternalImportConnectorConfig` and `ValhallaConfig`.
+    """
+
+    connector: ExternalImportConnectorConfig = Field(
+        default_factory=ExternalImportConnectorConfig
+    )
+    valhalla: ValhallaConfig = Field(default_factory=ValhallaConfig)
+
     @model_validator(mode="before")
     @classmethod
     def migrate_deprecated_interval(cls, data: dict) -> dict:
@@ -66,14 +77,3 @@ class ValhallaConfig(BaseConfigModel):
                 connector_data["duration_period"] = timedelta(seconds=int(interval))
 
         return data
-
-
-class ConnectorSettings(BaseConnectorSettings):
-    """
-    Override `BaseConnectorSettings` to include `ExternalImportConnectorConfig` and `ValhallaConfig`.
-    """
-
-    connector: ExternalImportConnectorConfig = Field(
-        default_factory=ExternalImportConnectorConfig
-    )
-    valhalla: ValhallaConfig = Field(default_factory=ValhallaConfig)
