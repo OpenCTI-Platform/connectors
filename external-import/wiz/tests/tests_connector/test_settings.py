@@ -18,11 +18,9 @@ from external_import_connector import ConnectorSettings
                     "log_level": "error",
                     "duration_period": "PT5M",
                 },
-                "wiz_t": {
+                "wiz": {
                     "threat_actor_as_intrusion_set": "False",
                     "tlp_level": "clear",
-                    "hreat_actor_as_intrusion_set": "False",
-                    "lp_level": "clear",
                 },
             },
             id="full_valid_settings_dict",
@@ -31,11 +29,9 @@ from external_import_connector import ConnectorSettings
             {
                 "opencti": {"url": "http://localhost:8080", "token": "test-token"},
                 "connector": {},
-                "wiz_t": {
+                "wiz": {
                     "threat_actor_as_intrusion_set": "False",
                     "tlp_level": "clear",
-                    "hreat_actor_as_intrusion_set": "False",
-                    "lp_level": "clear",
                 },
             },
             id="minimal_valid_settings_dict",
@@ -64,7 +60,7 @@ def test_settings_should_accept_valid_input(settings_dict):
     settings = FakeConnectorSettings()
     assert isinstance(settings.opencti, BaseConfigModel) is True
     assert isinstance(settings.connector, BaseConfigModel) is True
-    assert isinstance(settings.wiz_t, BaseConfigModel) is True
+    assert isinstance(settings.wiz, BaseConfigModel) is True
 
 
 @pytest.mark.parametrize(
@@ -81,11 +77,9 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "log_level": "error",
                     "duration_period": "PT5M",
                 },
-                "wiz_t": {
+                "wiz": {
                     "threat_actor_as_intrusion_set": "False",
                     "tlp_level": "clear",
-                    "hreat_actor_as_intrusion_set": "False",
-                    "lp_level": "clear",
                 },
             },
             "opencti.token",
@@ -101,11 +95,9 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "log_level": "error",
                     "duration_period": "PT5M",
                 },
-                "wiz_t": {
+                "wiz": {
                     "threat_actor_as_intrusion_set": "False",
                     "tlp_level": "clear",
-                    "hreat_actor_as_intrusion_set": "False",
-                    "lp_level": "clear",
                 },
             },
             "connector.id",

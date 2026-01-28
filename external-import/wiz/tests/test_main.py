@@ -41,11 +41,9 @@ class StubConnectorSettings(ConnectorSettings):
                     "log_level": "error",
                     "duration_period": "PT5M",
                 },
-                "wiz_t": {
+                "wiz": {
                     "threat_actor_as_intrusion_set": "False",
                     "tlp_level": "clear",
-                    "hreat_actor_as_intrusion_set": "False",
-                    "lp_level": "clear",
                 },
             }
         )
