@@ -186,9 +186,7 @@ class IndicatorBundleBuilder:
     def _create_kill_chain_phase(phase_name: str) -> KillChainPhase:
         return create_kill_chain_phase("lockheed-martin-cyber-kill-chain", phase_name)
 
-    def _create_malwares(
-        self, kill_chain_phases: List[KillChainPhase]
-    ) -> List[Malware]:
+    def _create_malwares(self) -> List[Malware]:
         indicator_malware_families = self.indicator["malware_families"]
         if not indicator_malware_families:
             return []
@@ -196,19 +194,16 @@ class IndicatorBundleBuilder:
         malwares = []
 
         for indicator_malware_family in indicator_malware_families:
-            malware = self._create_malware(indicator_malware_family, kill_chain_phases)
+            malware = self._create_malware(indicator_malware_family)
             malwares.append(malware)
 
         return malwares
 
-    def _create_malware(
-        self, name: str, kill_chain_phases: List[KillChainPhase]
-    ) -> Malware:
+    def _create_malware(self, name: str) -> Malware:
         return create_malware(
             name,
             created_by=self.author,
             is_family=True,
-            kill_chain_phases=kill_chain_phases,
             confidence=self.confidence_level,
             object_markings=self.object_markings,
         )
@@ -487,7 +482,7 @@ class IndicatorBundleBuilder:
         kill_chain_phases = self._create_kill_chain_phases()
 
         # Create malwares and add to bundle.
-        malwares = self._create_malwares(kill_chain_phases)
+        malwares = self._create_malwares()
         bundle_objects.extend(malwares)
 
         # Intrusion sets use malwares and add to bundle.
