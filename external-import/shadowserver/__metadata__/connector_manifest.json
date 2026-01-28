@@ -14,7 +14,7 @@
   "support_version": ">=6.2.0",
   "subscription_link": "https://www.shadowserver.org",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/shadowserver",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-shadowserver",
   "container_type": "EXTERNAL_IMPORT"
