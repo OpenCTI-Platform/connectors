@@ -741,6 +741,28 @@ def create_originates_from_relationships(
     )
 
 
+def create_authored_by_relationships(
+    created_by: stix2.Identity,
+    sources: List[_DomainObject],
+    targets: List[_DomainObject],
+    confidence: int,
+    object_markings: List[stix2.MarkingDefinition],
+    start_time: Optional[datetime] = None,
+    stop_time: Optional[datetime] = None,
+) -> List[stix2.Relationship]:
+    """Create 'authored-by' relationships."""
+    return create_relationships(
+        "authored-by",
+        created_by,
+        sources,
+        targets,
+        confidence,
+        object_markings,
+        start_time=start_time,
+        stop_time=stop_time,
+    )
+
+
 def create_based_on_relationships(
     created_by: stix2.Identity,
     sources: List[_DomainObject],
