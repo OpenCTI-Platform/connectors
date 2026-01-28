@@ -20,7 +20,9 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": [],
+      "default": [
+        "stix2"
+      ],
       "description": "The scope of the connector.",
       "items": {
         "type": "string"
@@ -45,28 +47,34 @@
       "type": "string"
     },
     "CONNECTOR_DURATION_PERIOD": {
-      "default": "PT1H",
+      "default": "P1D",
       "description": "The period of time to await between two runs of the connector.",
       "format": "duration",
       "type": "string"
     },
     "SHADOWSERVER_API_KEY": {
-      "default": "**********",
       "description": "Shadowserver API key.",
       "format": "password",
       "type": "string",
       "writeOnly": true
     },
     "SHADOWSERVER_API_SECRET": {
-      "default": "**********",
       "description": "Shadowserver API secret.",
       "format": "password",
       "type": "string",
       "writeOnly": true
     },
     "SHADOWSERVER_MARKING": {
-      "default": "TLP:CLEAR",
-      "description": "TLP marking: `TLP:CLEAR`, `TLP:GREEN`, `TLP:AMBER`, `TLP:AMBER+STRICT`, `TLP:RED`.",
+      "default": "TLP:WHITE",
+      "description": "TLP marking: `TLP:CLEAR`, `TLP:WHITE`, `TLP:GREEN`, `TLP:AMBER`, `TLP:AMBER+STRICT`, `TLP:RED`.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
       "type": "string"
     },
     "SHADOWSERVER_CREATE_INCIDENT": {
@@ -87,7 +95,9 @@
   },
   "required": [
     "OPENCTI_URL",
-    "OPENCTI_TOKEN"
+    "OPENCTI_TOKEN",
+    "SHADOWSERVER_API_KEY",
+    "SHADOWSERVER_API_SECRET"
   ],
   "additionalProperties": true
 }
