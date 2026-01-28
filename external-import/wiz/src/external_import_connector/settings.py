@@ -46,16 +46,6 @@ class WizConfig(BaseConfigModel):
         description="TLP marking: `white`, `green`, `amber`, `amber+strict`, `red`.",
         default="clear",
     )
-    hreat_actor_as_intrusion_set: str = Field(
-        description="Convert Threat Actor objects to Intrusion Set objects.",
-        default="False",
-        deprecated=True,
-    )
-    lp_level: str = Field(
-        description="TLP marking: `white`, `green`, `amber`, `amber+strict`, `red`.",
-        default="clear",
-        deprecated=True,
-    )
 
 
 class ConnectorSettings(BaseConnectorSettings):
@@ -66,4 +56,4 @@ class ConnectorSettings(BaseConnectorSettings):
     connector: ExternalImportConnectorConfig = Field(
         default_factory=ExternalImportConnectorConfig
     )
-    wiz_t: WizConfig = Field(default_factory=WizConfig)
+    wiz: WizConfig = Field(default_factory=WizConfig)

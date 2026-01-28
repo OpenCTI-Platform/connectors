@@ -50,13 +50,13 @@ class ConnectorWiz:
                     del entity["malware_types"]
             if (
                 entity["type"] == "threat-actor"
-                and self.config.threat_actor_to_intrusion_set
+                and self.config.wiz.threat_actor_as_intrusion_set == "True"
             ):
                 entity["type"] = "intrusion-set"
                 entity["id"] = entity["id"].replace("threat-actor", "intrusion-set")
             if (
                 entity["type"] == "relationship"
-                and self.config.threat_actor_to_intrusion_set
+                and self.config.wiz.threat_actor_as_intrusion_set == "True"
             ):
                 entity["source_ref"] = entity["source_ref"].replace(
                     "threat-actor", "intrusion-set"
@@ -160,5 +160,5 @@ class ConnectorWiz:
         """
         self.helper.schedule_iso(
             message_callback=self.process_message,
-            duration_period=self.config.duration_period,
+            duration_period=self.config.connector.duration_period,
         )
