@@ -20,12 +20,14 @@ class CrowdstrikeConnector:
         self.config = config
         self.helper = helper
         self.client = CrowdstrikeClient(config.crowdstrike, helper)
-        self.metrics = Metrics(
-            config.connector.name,
-            str(config.metrics.addr),
-            config.metrics.port,
-        )
         self.metrics_enabled = config.metrics.enable
+        self.metrics = None
+        if self.metrics_enabled:
+            self.metrics = Metrics(
+                config.connector.name,
+                str(config.metrics.addr),
+                config.metrics.port,
+            )
 
     def handle_logger_info(self, action: str, data: dict) -> None:
         """
@@ -46,7 +48,7 @@ class CrowdstrikeConnector:
         :return: None
         """
         try:
-            if self.metrics_enabled:
+            if self.metrics_enabled and self.metrics is not None:
                 self.metrics.handle_metrics(msg)
             data = json.loads(msg.data)["data"]
         except Exception:
@@ -82,7 +84,7 @@ class CrowdstrikeConnector:
         Start main execution loop procedure for connector
         """
         # Start getting metrics if metrics_enabled is true
-        if self.metrics_enabled:
+        if self.metrics_enabled and self.metrics is not None:
             self.metrics.start_server()
 
         # Start listening to the stream

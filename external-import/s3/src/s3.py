@@ -157,6 +157,34 @@ class S3Connector:
     def get_interval(self):
         return int(self.s3_interval)
 
+    def note_exists_by_abstract(self, abstract):
+        """
+        Check if a note with the given abstract already exists in the API.
+
+        :param abstract: The abstract to search for
+        :return: True if a note with this abstract exists, False otherwise
+        """
+        try:
+            filters = {
+                "mode": "and",
+                "filters": [
+                    {
+                        "key": "attribute_abstract",
+                        "values": [abstract],
+                        "operator": "eq",
+                    }
+                ],
+                "filterGroups": [],
+            }
+            notes = self.helper.api.note.list(filters=filters, first=1)
+            return len(notes) > 0
+        except Exception as e:
+            self.helper.log_warning(
+                f"Failed to check for existing note with abstract '{abstract}': {e}"
+            )
+            # On error, default to using simple key (consolidate behavior)
+            return True
+
     @staticmethod
     def rewrite_stix_ids(objects):
         # First pass: Build ID mapping for objects that need new IDs
@@ -377,8 +405,16 @@ class S3Connector:
             # Title Note
             if obj.get("x_title", None) and obj.get("x_acti_uuid", None):
                 # generate a unique note identifier that don't change in the time even of the obj_name change or x_title change
-                note_key = obj.get("x_acti_uuid") + " - Title"
-                note_abstract = obj.get("name") + " - Title"
+                # For non-CVE entries, include the name in the key to ensure uniqueness (unless a note with same abstract already exists)
+                obj_name = obj.get("name", "")
+                note_abstract = obj_name + " - Title"
+                if obj_name.startswith("CVE-"):
+                    note_key = obj.get("x_acti_uuid") + " - Title"
+                elif self.note_exists_by_abstract(note_abstract):
+                    # Note already exists with this abstract, use simple key to consolidate
+                    note_key = obj.get("x_acti_uuid") + " - Title"
+                else:
+                    note_key = obj.get("x_acti_uuid") + " - " + obj_name + " - Title"
                 note = stix2.Note(
                     id=Note.generate_id(obj["created"], note_key),
                     created=obj["created"],
@@ -398,8 +434,16 @@ class S3Connector:
             # Analysis Note
             if obj.get("x_analysis", None) and obj.get("x_acti_uuid", None):
                 # generate a unique note identifier that don't change in the time even of the obj_name change or x_analysis change
-                note_key = obj.get("x_acti_uuid") + " - Analysis"
-                note_abstract = obj.get("name") + " - Analysis"
+                # For non-CVE entries, include the name in the key to ensure uniqueness (unless a note with same abstract already exists)
+                obj_name = obj.get("name", "")
+                note_abstract = obj_name + " - Analysis"
+                if obj_name.startswith("CVE-"):
+                    note_key = obj.get("x_acti_uuid") + " - Analysis"
+                elif self.note_exists_by_abstract(note_abstract):
+                    # Note already exists with this abstract, use simple key to consolidate
+                    note_key = obj.get("x_acti_uuid") + " - Analysis"
+                else:
+                    note_key = obj.get("x_acti_uuid") + " - " + obj_name + " - Analysis"
                 note = stix2.Note(
                     id=Note.generate_id(obj["created"], note_key),
                     created=obj["created"],
@@ -430,8 +474,16 @@ class S3Connector:
                     timestamp = (history.get("timestamp") or "").strip()
                     note_content += f"| {timestamp} | {comment} |\n"
 
-                note_key = obj.get("x_acti_uuid") + " - History"
-                abstract = obj.get("name") + " - History"
+                # For non-CVE entries, include the name in the key to ensure uniqueness (unless a note with same abstract already exists)
+                obj_name = obj.get("name", "")
+                abstract = obj_name + " - History"
+                if obj_name.startswith("CVE-"):
+                    note_key = obj.get("x_acti_uuid") + " - History"
+                elif self.note_exists_by_abstract(abstract):
+                    # Note already exists with this abstract, use simple key to consolidate
+                    note_key = obj.get("x_acti_uuid") + " - History"
+                else:
+                    note_key = obj.get("x_acti_uuid") + " - " + obj_name + " - History"
                 note = stix2.Note(
                     id=Note.generate_id(obj["created"], note_key),
                     created=obj["created"],
