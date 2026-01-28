@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/anyrun-task_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "AnyrunTask",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Whether the connector should run automatically when an entity is created or updated.",
+      "type": "boolean"
+    },
+    "ANYRUN_TOKEN": {
+      "default": "**********",
+      "description": "ANY.RUN API token for authentication.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "ANYRUN_MAX_TLP": {
+      "default": "TLP:AMBER",
+      "description": "Maximum TLP level for the connector.",
+      "type": "string"
+    },
+    "ANYRUN_URL": {
+      "default": "https://api.any.run",
+      "description": "Base URL for the ANY.RUN API.",
+      "type": "string"
+    },
+    "ANYRUN_TIMER": {
+      "default": 60,
+      "description": "Sandbox execution time in seconds.",
+      "type": "integer"
+    },
+    "ANYRUN_OS": {
+      "default": "windows",
+      "description": "Operating system for sandbox environment.",
+      "type": "string"
+    },
+    "ANYRUN_BITNESS": {
+      "default": "64",
+      "description": "Operating system bitness: `32` or `64`.",
+      "type": "string"
+    },
+    "ANYRUN_VERSION": {
+      "default": "10",
+      "description": "Windows version: `7`, `8.1`, `10`, or `11`.",
+      "type": "string"
+    },
+    "ANYRUN_LOCALE": {
+      "default": "en-US",
+      "description": "Operating system language locale.",
+      "type": "string"
+    },
+    "ANYRUN_BROWSER": {
+      "default": "Google Chrome",
+      "description": "Browser for URL analysis: `Google Chrome`, `Mozilla Firefox`, `Opera`, `Internet Explorer`, `Microsoft Edge`.",
+      "type": "string"
+    },
+    "ANYRUN_PRIVACY": {
+      "default": "bylink",
+      "description": "Task privacy: `public`, `bylink`, `owner`, `team`.",
+      "type": "string"
+    },
+    "ANYRUN_AUTOMATED_INTERACTIVITY": {
+      "default": false,
+      "description": "Enable ML-based automated interactivity during analysis.",
+      "type": "boolean"
+    },
+    "ANYRUN_IOC": {
+      "default": true,
+      "description": "Import IOCs (domains, URLs, IPs) extracted during analysis.",
+      "type": "boolean"
+    },
+    "ANYRUN_MITRE": {
+      "default": false,
+      "description": "Create relationships to MITRE ATT&CK techniques.",
+      "type": "boolean"
+    },
+    "ANYRUN_PROCESSES": {
+      "default": false,
+      "description": "Import malicious process observables.",
+      "type": "boolean"
+    },
+    "ANYRUN_TASK_TIMER": {
+      "default": "60",
+      "deprecated": true,
+      "description": "Sandbox execution time in seconds.",
+      "type": "string"
+    },
+    "ANYRUN_OS_BITNESS": {
+      "default": "64",
+      "deprecated": true,
+      "description": "Operating system bitness: `32` or `64`.",
+      "type": "string"
+    },
+    "ANYRUN_OS_VERSION": {
+      "default": "10",
+      "deprecated": true,
+      "description": "Windows version: `7`, `8.1`, `10`, or `11`.",
+      "type": "string"
+    },
+    "ANYRUN_OS_LOCALE": {
+      "default": "en-US",
+      "deprecated": true,
+      "description": "Operating system language locale.",
+      "type": "string"
+    },
+    "ANYRUN_OS_BROWSER": {
+      "default": "Google Chrome",
+      "deprecated": true,
+      "description": "Browser for URL analysis: `Google Chrome`, `Mozilla Firefox`, `Opera`, `Internet Explorer`, `Microsoft Edge`.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}
