@@ -11,9 +11,9 @@ the [dedicated documentation](https://docs.opencti.io/latest/deployment/connecto
 ## Connectors list and statuses
 
 This repository is used to host connectors that are supported by the core development team of OpenCTI. Nevertheless, the
-community is also developping a lot of connectors, third-parties modules directly linked to OpenCTI. You can find the
+community is also developing a lot of connectors, third-parties modules directly linked to OpenCTI. You can find the
 list of all available connectors and plugins in
-the [OpenCTI ecosystem dedicated space](https://filigran.notion.site/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76).
+the [OpenCTI Integrations Library](https://hub.filigran.io/cybersecurity-solutions/open-cti-integrations).
 
 ## Contributing
 
@@ -24,7 +24,7 @@ The README file will guide you through the process: [Connector templates](./temp
 
 To contribute, please create a **Pull Request** on this repository along with an associated **GitHub issue** describing the purpose of your contribution (what problem it fixes, what improvement it brings, or what new integration it provides). 
 
-Once reviewed, we will integrate your connector into the CI and add it to the [OpenCTI ecosystem](https://filigran.notion.site/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76).
+Once reviewed, we will integrate your connector into the CI and add it to the [OpenCTI Integrations Library](https://hub.filigran.io/cybersecurity-solutions/open-cti-integrations).
 
 
 Any connector **should be validated** through pylint. Example of commands:
