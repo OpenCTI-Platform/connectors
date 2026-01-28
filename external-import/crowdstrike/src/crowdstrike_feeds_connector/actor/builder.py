@@ -340,4 +340,6 @@ class ActorBundleBuilder:
         )
         bundle_objects.extend(intrusion_sets_use_attack_patterns)
 
+        # MVP4
+
         return Bundle(objects=bundle_objects, allow_custom=True)
