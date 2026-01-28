@@ -12,8 +12,13 @@ from doppel.stix_helpers import (
     is_takedown_state,
 )
 from doppel.utils import parse_iso_datetime
-from pycti import Identity as PyCTIIdentity
-from pycti import MarkingDefinition
+from pycti import (
+    Identity as PyCTIIdentity,
+    Indicator as PyctiIndicator,
+    Note as PyctiNote,
+    StixCoreRelationship as PyctiStixCoreRelationship,
+    MarkingDefinition as PyctiMarkingDefinition
+)
 from stix2 import (
     TLP_AMBER,
     TLP_GREEN,
@@ -24,10 +29,10 @@ from stix2 import (
     Identity,
     Indicator,
     IPv4Address,
+    MarkingDefinition as Stix2MarkingDefinition,
+    Note,
+    Relationship as StixCoreRelationship,
 )
-from stix2 import MarkingDefinition as Stix2MarkingDefinition
-from stix2 import Note
-from stix2 import Relationship as StixCoreRelationship
 
 
 class ConverterToStix:
@@ -66,7 +71,7 @@ class ConverterToStix:
             "green": TLP_GREEN,
             "amber": TLP_AMBER,
             "amber+strict": Stix2MarkingDefinition(
-                id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+                id=PyctiMarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
                 definition_type="statement",
                 definition={"statement": "custom"},
                 custom_properties={
@@ -104,8 +109,9 @@ class ConverterToStix:
         # If not found and we have domain/IP, search by pattern
         if (not indicators or len(indicators) == 0) and (domain_name or ip_address):
             search_value = domain_name or ip_address
-            self.helper.log_info(
-                f"[DoppelConverter] No indicators found by workflow_id, trying pattern search alert_id: {alert_id}, search_value: {search_value}"
+            self.helper.connector_logger.info(
+                "[DoppelConverter] No indicators found by workflow_id, trying pattern search",
+                {"alert_id": alert_id, "search_value": search_value},
             )
 
             # Search by indicator name (which is the domain/IP)
@@ -124,7 +130,6 @@ class ConverterToStix:
             if indicators:
                 filtered_indicators = []
                 for ind in indicators:
-                    # Check external references for matching alert_id
                     ext_refs = ind.get("externalReferences", []) or []
                     for ext_ref in ext_refs:
                         if ext_ref.get("external_id") == alert_id:
@@ -132,8 +137,9 @@ class ConverterToStix:
                             break
                 indicators = filtered_indicators
 
-        self.helper.log_info(
-            f"[DoppelConverter] Found {len(indicators) if indicators else 0} indicators for alert_id :  {alert_id}"
+        self.helper.connector_logger.info(
+            "[DoppelConverter] Found indicators for alert_id",
+            {"alert_id": alert_id, "count": len(indicators) if indicators else 0},
         )
 
         return indicators or []
@@ -143,24 +149,19 @@ class ConverterToStix:
     ):
         """
         Process takedown workflow: Create Indicator (based-on Observable)
-        :param alert: Doppel alert
-        :param domain_observable_id: Domain observable ID
-        :param ip_observable_id: IP observable ID (optional)
-        :param stix_objects: List to append new STIX objects
         """
         alert_id = alert.get("id")
         queue_state = alert.get("queue_state")
 
-        self.helper.log_info(
-            f"[DoppelConverter] Processing takedown workflow, alert_id: {alert_id}, queue_state: {queue_state}"
+        self.helper.connector_logger.info(
+            "[DoppelConverter] Processing takedown workflow",
+            {"alert_id": alert_id, "queue_state": queue_state},
         )
 
         # Extract domain/IP
         entity_content = alert.get("entity_content", {})
         root_domain = entity_content.get("root_domain", {})
-        domain_name = root_domain.get("domain", "") or alert.get(
-            "entity"
-        )  # Fallback to entity field for non-domain alerts
+        domain_name = root_domain.get("domain")
         ip_address = root_domain.get("ip_address", "")
 
         # Parse timestamps once for indicator/note reuse
@@ -199,8 +200,9 @@ class ConverterToStix:
             indicator_id = indicator.get("standard_id") or indicator.get("id")
 
             if indicator.get("revoked"):
-                self.helper.log_info(
-                    f"[DoppelConverter] Un-revoking indicator after re-takedown alert_id: {alert_id}, indicator_id: {indicator_id}"
+                self.helper.connector_logger.info(
+                    "[DoppelConverter] Un-revoking indicator after re-takedown",
+                    {"alert_id": alert_id, "indicator_id": indicator_id},
                 )
 
                 # Update to revoked=false
@@ -247,12 +249,18 @@ class ConverterToStix:
             )
             stix_objects.append(based_on_rel)
 
-            self.helper.log_info(
-                f"[DoppelConverter] Created based-on relationship for new indicator alert_id: {alert_id}, indicator_id: {indicator.id}, observable_id: {primary_observable_id}"
+            self.helper.connector_logger.info(
+                "[DoppelConverter] Created based-on relationship for new indicator",
+                {
+                    "alert_id": alert_id,
+                    "indicator_id": indicator.id,
+                    "observable_id": primary_observable_id,
+                },
             )
         else:
-            self.helper.log_warning(
-                f"[DoppelConverter] No observable ID available for relationship alert_id: {alert_id}, domain_id: {domain_observable_id}, ip_id: {ip_observable_id}"
+            self.helper.connector_logger.warning(
+                "[DoppelConverter] No observable ID available for relationship",
+                {"alert_id": alert_id},
             )
 
         # Add note referencing both indicator and observable when possible
@@ -263,8 +271,9 @@ class ConverterToStix:
         note = self._create_note(note_content, note_body, note_refs, note_timestamp)
         stix_objects.append(note)
 
-        self.helper.log_info(
-            f"[DoppelConverter] Created indicator for takedown alert_id: {alert_id}, pattern: {pattern}"
+        self.helper.connector_logger.info(
+            "[DoppelConverter] Created indicator for takedown alert",
+            {"alert_id": alert_id, "pattern": pattern},
         )
 
     def _process_reversion(
@@ -272,24 +281,19 @@ class ConverterToStix:
     ):
         """
         Process reversion workflow: Revoke Indicator
-        :param alert: Doppel alert
-        :param domain_observable_id: Domain observable ID
-        :param ip_observable_id: IP observable ID (optional)
-        :param stix_objects: List to append new STIX objects
         """
         alert_id = alert.get("id")
         queue_state = alert.get("queue_state")
 
-        self.helper.log_info(
-            f"[DoppelConverter] Processing reversion workflow alert_id: {alert_id}, queue_state: {queue_state}"
+        self.helper.connector_logger.info(
+            "[DoppelConverter] Processing reversion workflow",
+            {"alert_id": alert_id, "queue_state": queue_state},
         )
 
         # Extract domain/IP for search
         entity_content = alert.get("entity_content", {})
         root_domain = entity_content.get("root_domain", {})
-        domain_name = root_domain.get("domain", "") or alert.get(
-            "entity"
-        )  # Fallback to entity field for non-domain alerts
+        domain_name = root_domain.get("domain")
         ip_address = root_domain.get("ip_address", "")
 
         # Find existing indicators for this alert
@@ -303,8 +307,9 @@ class ConverterToStix:
         ]
 
         if not active_indicators:
-            self.helper.log_info(
-                f"[DoppelConverter] No active indicators found to revoke alert_id: {alert_id}"
+            self.helper.connector_logger.info(
+                "[DoppelConverter] No active indicators found to revoke",
+                {"alert_id": alert_id},
             )
             return
 
@@ -318,8 +323,9 @@ class ConverterToStix:
         revoked_indicator_refs = []
         for existing_indicator in active_indicators:
             indicator_id = existing_indicator.get("id")
-            self.helper.log_info(
-                f"[DoppelConverter] Revoking indicator alert_id: {alert_id}, indicator_id: {indicator_id}"
+            self.helper.connector_logger.info(
+                "[DoppelConverter] Revoking indicator",
+                {"alert_id": alert_id, "indicator_id": indicator_id},
             )
             indicator_standard_id = (
                 existing_indicator.get("standard_id") or indicator_id
@@ -339,13 +345,18 @@ class ConverterToStix:
                     id=indicator_id, label_id=label["id"]
                 )
 
-                self.helper.log_info(
-                    f"[DoppelConverter] Successfully revoked indicator via API alert_id: {alert_id}, indicator_id: {indicator_id}"
+                self.helper.connector_logger.info(
+                    "[DoppelConverter] Successfully revoked indicator via API",
+                    {"alert_id": alert_id, "indicator_id": indicator_id},
                 )
             except Exception as e:
-                self.helper.log_error(
-                    f"[DoppelConverter] Error revoking indicator via API: {str(e)}",
-                    f"alert_id: {alert_id}, indicator_id: {indicator_id}",
+                self.helper.connector_logger.error(
+                    "[DoppelConverter] Error revoking indicator via API",
+                    {
+                        "alert_id": alert_id,
+                        "indicator_id": indicator_id,
+                        "error": str(e),
+                    },
                 )
 
         # Add reversion note to observable
@@ -356,7 +367,10 @@ class ConverterToStix:
 
         if note_refs:
             reversion_note = Note(
-                id=Note.generate_id(note_refs),
+                id=PyctiNote.generate_id(
+                    content=note_refs,
+                    created=modified,
+                ),
                 abstract="Moved from taken down back to unresolved",
                 content=f"Alert {alert_id} has been reverted from takedown state to {queue_state}",
                 spec_version=STIX_VERSION,
@@ -369,24 +383,17 @@ class ConverterToStix:
             )
             stix_objects.append(reversion_note)
 
-        self.helper.log_info(
-            f"[DoppelConverter] Revoked {len(active_indicators)} indicator(s) - alert_id: {alert_id}"
+        self.helper.connector_logger.info(
+            "[DoppelConverter] Revoked indicators",
+            {"alert_id": alert_id, "count": len(active_indicators)},
         )
 
     def _create_domain_observable(self, domain_name, alert) -> DomainName:
         """
         Create DomainName observable
-        :param domain_name: Domain name string
-        :param alert: Doppel alert
-        :return: DomainName Stix2 object
         """
-        # Build labels
         labels_flat = build_labels(alert)
-
-        # Build external references
         external_references = build_external_references(alert)
-
-        # Build custom properties
         custom_properties = build_custom_properties(alert, self.author.id)
 
         domain_observable = DomainName(
@@ -403,17 +410,9 @@ class ConverterToStix:
     def _create_ip_observable(self, ip_address, alert) -> IPv4Address:
         """
         Create IPv4Address observable
-        :param ip_address: IP address string
-        :param alert: Doppel alert
-        :return: IPv4Address Stix2 object
         """
-        # Build labels
         labels_flat = build_labels(alert)
-
-        # Build external references
         external_references = build_external_references(alert)
-
-        # Build custom properties
         custom_properties = build_custom_properties(alert, self.author.id)
 
         ip_observable = IPv4Address(
@@ -430,9 +429,6 @@ class ConverterToStix:
     def _create_grouping_case(self, alert, object_refs) -> Grouping:
         """
         Create Grouping case object
-        :param alert: Doppel alert
-        :param object_refs: List of object refs to include in case
-        :return: Grouping Stix2 object
         """
         alert_id = alert.get("id")
         score = alert.get("score")
@@ -464,16 +460,12 @@ class ConverterToStix:
     ) -> StixCoreRelationship:
         """
         Create StixCoreRelationship object
-        :param source_id: Source object ID
-        :param target_id: Target object ID
-        :param relationship_type: Type of relationship
-        :return: StixCoreRelationship object
         """
         relationship = StixCoreRelationship(
-            id=StixCoreRelationship.generate_id(
-                source_id=source_id,
-                target_id=target_id,
+            id=PyctiStixCoreRelationship.generate_id(
                 relationship_type=relationship_type,
+                source_ref=source_id,
+                target_ref=target_id,
             ),
             relationship_type=relationship_type,
             source_ref=source_id,
@@ -486,8 +478,14 @@ class ConverterToStix:
         return relationship
 
     def _create_note(self, note_content, note_body, note_refs, note_timestamp) -> Note:
+        """
+        Create Note object
+        """
         return Note(
-            id=Note.generate_id(note_body),
+            id=PyctiNote.generate_id(
+                content=note_body,
+                created=note_timestamp,
+            ),
             abstract=note_content,
             content=note_body,
             spec_version=STIX_VERSION,
@@ -502,19 +500,15 @@ class ConverterToStix:
     def _create_indicator(
         self, alert, pattern, name, created_at, modified
     ) -> Indicator:
-
-        # Build labels
+        """
+        Create Indicator
+        """
         labels_flat = build_labels(alert)
-
-        # Build external references
         external_references = build_external_references(alert)
-
-        # Build custom properties
         custom_properties = build_custom_properties(alert, self.author.id)
 
-        # Create Indicator
         indicator = Indicator(
-            id=Indicator.generate_id(pattern),
+            id=PyctiIndicator.generate_id(pattern),
             pattern=pattern,
             pattern_type="stix",
             spec_version=STIX_VERSION,
@@ -544,20 +538,22 @@ class ConverterToStix:
         domain_name,
         ip_address,
     ):
-
-        # Handle State Transition when queue_state changes
+        """
+        Handle state transitions based on queue_state
+        """
         is_takedown_now = is_takedown_state(current_queue_state)
         was_takedown = (
             is_takedown_state(previous_queue_state) if previous_queue_state else False
         )
         is_reverted = is_reverted_state(current_queue_state)
-        # Transition: TO_TAKEDOWN (needs_review → taken_down)
+
+        # Transition: TO_TAKEDOWN
         if is_takedown_now and not was_takedown:
             self._process_takedown(
                 alert, domain_observable_id, ip_observable_id, stix_objects
             )
 
-        # Transition: REVERSION (taken_down → unresolved)
+        # Transition: REVERSION
         elif was_takedown and not is_takedown_now:
             self._process_reversion(
                 alert, domain_observable_id, ip_observable_id, stix_objects
@@ -565,7 +561,6 @@ class ConverterToStix:
 
         # Handle case where previous_state is null but we have an active indicator in reverted state
         elif previous_queue_state is None and is_reverted and not is_takedown_now:
-            # Check if there's an active indicator for this alert (domain_name and ip_address already extracted above)
             existing_indicators = self._find_indicators_by_alert_id(
                 alert_id, domain_name=domain_name, ip_address=ip_address
             )
@@ -582,25 +577,6 @@ class ConverterToStix:
         """
         Convert list of alerts to stix2 Observable objects (domain-name and ipv4-addr)
         Uses helper.get_state() / helper.set_state() for persistent state tracking
-
-        WORKFLOW:
-        1. Get previous state from helper.get_state()
-        2. For each alert:
-           - Create Observables for domain and IP
-           - Detect state transitions and process accordingly:
-             * TO_TAKEDOWN: Create Indicator (based-on Observable)
-             * REVERSION: Revoke Indicator (revoked=true, add label)
-           - Create/update Observables, Indicators, Relationships, Notes
-        3. Save updated state with helper.set_state()
-
-        STATE TRANSITIONS:
-        - None → doppel_review: Create Observable
-        - doppel_review → actioned/taken_down: Create Indicator (based-on Observable)
-        - actioned/taken_down → unresolved: Revoke Indicator (revoked=true, add label)
-        - unresolved → actioned/taken_down: Un-revoke Indicator (revoked=false)
-
-        :param alerts: List of Doppel alert dictionaries
-        :return: stix2 bundle json
         """
         stix_objects = [self.author, self.tlp_marking]
 
@@ -610,16 +586,14 @@ class ConverterToStix:
         for alert in alerts:
             try:
                 alert_id = alert.get("id", "unknown")
-                current_queue_state = alert.get("queue_state", "")
+                current_queue_state = alert.get("queue_state")
                 previous_queue_state = state.get(alert_id, {}).get("queue_state")
 
                 # Extract required fields
                 entity_content = alert.get("entity_content", {})
                 root_domain = entity_content.get("root_domain", {})
-                domain_name = root_domain.get("domain", "") or alert.get(
-                    "entity"
-                )  # Fallback to entity field for non-domain alerts
-                ip_address = root_domain.get("ip_address", "")
+                domain_name = root_domain.get("domain") or alert.get("entity") # Fallback to entity field for non-domain alerts
+                ip_address = root_domain.get("ip_address")
 
                 domain_observable_id = None
                 ip_observable_id = None
@@ -671,7 +645,7 @@ class ConverterToStix:
                     case = self._create_grouping_case(alert, object_refs=case_refs)
                     stix_objects.append(case)
 
-                    # Create related-to relationships from case to primary observables
+                    # Create related-to relationship from case to primary observable
                     related_to = self._create_relationship(
                         source_id=case.id,
                         target_id=domain_observable_id or ip_observable_id,
@@ -685,21 +659,11 @@ class ConverterToStix:
                     "last_processed": datetime.utcnow().isoformat(),
                 }
 
-            except (KeyError, AttributeError, ValueError, TypeError) as e:
-                # Expected data errors - skip and continue
-                self.helper.log_warning(
-                    f"[DoppelConverter] Invalid alert data for {alert_id}. Skipping.",
-                )
-                self.helper.log_debug(
-                    f"Alert data validation error details - alert_id: {alert_id}, error: {str(e)}, error_type: {type(e).__name__}"
-                )
-                continue
-
             except Exception as e:
                 # Unexpected errors - log and raise
-                self.helper.log_error(
-                    f"[DoppelConverter] Failed to process alert: {str(e)}",
-                    {"alert": alert, "alert_id": alert_id},
+                self.helper.connector_logger.error(
+                    "[DoppelConverter] Failed to process alert",
+                    {"alert_id": alert_id, "error": str(e)},
                 )
                 raise
 
