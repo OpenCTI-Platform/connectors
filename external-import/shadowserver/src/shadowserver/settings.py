@@ -1,6 +1,6 @@
-from datetime import timedelta
-from typing import Any, Literal
 import warnings
+from datetime import timedelta
+from typing import Literal
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -8,7 +8,7 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, HttpUrl, SecretStr, model_validator
+from pydantic import Field, SecretStr, model_validator
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
