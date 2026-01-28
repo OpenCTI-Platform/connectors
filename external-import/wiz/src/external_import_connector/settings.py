@@ -21,7 +21,7 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     )
     name: str = Field(
         description="The name of the connector.",
-        default="Wiz",
+        default="Wiz Cloud Threat Landscape",
     )
     scope: ListFromString = Field(
         description="The scope of the connector.",
@@ -38,9 +38,9 @@ class WizConfig(BaseConfigModel):
     Define parameters and/or defaults for the configuration specific to the `WizConnector`.
     """
 
-    threat_actor_as_intrusion_set: str = Field(
+    threat_actor_as_intrusion_set: bool = Field(
         description="Convert Threat Actor objects to Intrusion Set objects.",
-        default="False",
+        default=False,
     )
     tlp_level: str = Field(
         description="TLP marking: `white`, `green`, `amber`, `amber+strict`, `red`.",

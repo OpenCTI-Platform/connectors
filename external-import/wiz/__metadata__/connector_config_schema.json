@@ -15,7 +15,7 @@
       "type": "string"
     },
     "CONNECTOR_NAME": {
-      "default": "Wiz",
+      "default": "Wiz Cloud Threat Landscape",
       "description": "The name of the connector.",
       "type": "string"
     },
@@ -50,25 +50,13 @@
       "format": "duration",
       "type": "string"
     },
-    "WIZ_T_THREAT_ACTOR_AS_INTRUSION_SET": {
-      "default": "False",
+    "WIZ_THREAT_ACTOR_AS_INTRUSION_SET": {
+      "default": false,
       "description": "Convert Threat Actor objects to Intrusion Set objects.",
-      "type": "string"
+      "type": "boolean"
     },
-    "WIZ_T_TLP_LEVEL": {
+    "WIZ_TLP_LEVEL": {
       "default": "clear",
-      "description": "TLP marking: `white`, `green`, `amber`, `amber+strict`, `red`.",
-      "type": "string"
-    },
-    "WIZ_T_HREAT_ACTOR_AS_INTRUSION_SET": {
-      "default": "False",
-      "deprecated": true,
-      "description": "Convert Threat Actor objects to Intrusion Set objects.",
-      "type": "string"
-    },
-    "WIZ_T_LP_LEVEL": {
-      "default": "clear",
-      "deprecated": true,
       "description": "TLP marking: `white`, `green`, `amber`, `amber+strict`, `red`.",
       "type": "string"
     }
