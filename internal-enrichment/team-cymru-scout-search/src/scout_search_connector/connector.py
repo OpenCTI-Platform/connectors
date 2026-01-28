@@ -255,16 +255,15 @@ class ScoutSearchConnectorConnector:
             if pattern_type != self.config.pattern_type:
                 self.helper.connector_logger.warning(
                     "[ScoutSearchConnector] Unsupported observable type",
-                    {"Configured pattern_type": pattern_type,
-                    "Supported pattern_type": self.config.pattern_type
+                    {
+                        "Configured pattern_type": pattern_type,
+                        "Supported pattern_type": self.config.pattern_type,
                     },
                 )
                 return "Unsupported observable type"
 
             # Call external API to get intelligence
-            intelligence_data = self.client.get_entity(
-                observable_type, pattern
-            )
+            intelligence_data = self.client.get_entity(observable_type, pattern)
 
             if not intelligence_data:
                 self.helper.connector_logger.info(
@@ -303,11 +302,7 @@ class ScoutSearchConnectorConnector:
             self.helper.connector_logger.error(
                 "[ScoutSearchConnector] Error processing message",
                 {
-                    "pattern": (
-                        pattern
-                        if "pattern" in locals()
-                        else "unknown"
-                    ),
+                    "pattern": (pattern if "pattern" in locals() else "unknown"),
                     "error": str(e),
                 },
             )

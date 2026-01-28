@@ -1,6 +1,7 @@
 # File: setup_vocab.py
 import os
 import sys
+
 from pycti import OpenCTIConnectorHelper
 
 

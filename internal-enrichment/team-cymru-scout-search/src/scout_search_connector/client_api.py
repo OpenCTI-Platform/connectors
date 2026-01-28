@@ -51,7 +51,8 @@ class ScoutSearchConnectorClient:
 
             if response.status_code == 204 or not response.content:
                 self.helper.connector_logger.info(
-                    "[ScoutSearchConnector] Empty response received", {"endpoint": endpoint}
+                    "[ScoutSearchConnector] Empty response received",
+                    {"endpoint": endpoint},
                 )
                 return {}
 
