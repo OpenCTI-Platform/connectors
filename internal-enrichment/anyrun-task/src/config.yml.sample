@@ -2,26 +2,25 @@ opencti:
   url: 'http://localhost'
   token: 'ChangeMe'
 
-connector:
+# connector:
   # id: '30c40257-9514-4b54-bcc9-15445fe21e5e'
   # name: 'ANY.RUN task'
   # scope: 'Artifact,Url'
-  auto: false # Enable/disable auto-enrichment of observables
-  confidence_level: 75 # From 0 (Unknown) to 100 (Fully trusted)
+  # auto: false # Enable/disable auto-enrichment of observables
   # log_level: 'error'
 
 anyrun:
   token: 'ChangeMe'
-  max_tlp: 'TLP:AMBER'
-  url: 'https://api.any.run'
-  timer: 60
-  os: 'windows'
-  bitness: '64'
-  version: '10'
-  locale: 'en-US'
-  browser: 'Google Chrome'
-  privacy: 'bylink'
-  automated_interactivity: False
-  ioc: True
-  mitre: False
-  processes: False
+  # max_tlp: 'TLP:AMBER'
+  # url: 'https://api.any.run'
+  # task_timer: 60
+  # os: 'windows'
+  # os_bitness: '64'  # Operating system bitness: `32` or `64`.
+  # os_version: '10'  # Windows version: `7`, `8.1`, `10`, or `11`.
+  # os_locale: 'en-US'
+  # os_browser: 'Google Chrome'  # Browser for URL analysis: `Google Chrome`, `Mozilla Firefox`, `Opera`, `Internet Explorer`, `Microsoft Edge`
+  # privacy: 'bylink'  # Task privacy: `public`, `bylink`, `owner`, `team`
+  # automated_interactivity: False
+  # ioc: True  # Import IOCs (domains, URLs, IPs) extracted during analysis
+  # mitre: False  # Create relationships to MITRE ATT&CK techniques.
+  # processes: False  # Import malicious process observables
