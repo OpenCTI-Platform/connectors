@@ -92,10 +92,16 @@ def fixture_mocked_helper(mocker: MockerFixture) -> OpenCTIConnectorHelper:
     mocked_helper = mocker.patch("pycti.OpenCTIConnectorHelper")
 
     mocked_helper.api = Mock()
+    mocked_helper.api.work = Mock()
+    mocked_helper.api.work.initiate_work = Mock(return_value="work_id")
+    mocked_helper.api.work.to_processed = Mock()
     mocked_helper.connector_logger = Mock()
     mocked_helper.connect_id = Mock()
     mocked_helper.connect_name = "Connect Name"
     mocked_helper.get_state = lambda: None
+    mocked_helper.set_state = Mock()
+    mocked_helper.stix2_create_bundle = Mock(return_value={})
+    mocked_helper.send_stix2_bundle = Mock(return_value=["bundle1"])
 
     return mocked_helper
 
