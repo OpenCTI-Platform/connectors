@@ -592,7 +592,7 @@ class ConverterToStix:
                 # Extract required fields
                 entity_content = alert.get("entity_content", {})
                 root_domain = entity_content.get("root_domain", {})
-                domain_name = root_domain.get("domain")
+                domain_name = root_domain.get("domain") or alert.get("entity") # Fallback to entity field for non-domain alerts
                 ip_address = root_domain.get("ip_address")
 
                 domain_observable_id = None
