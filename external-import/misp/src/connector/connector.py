@@ -397,8 +397,6 @@ class Misp:
                 {"prefix": LOG_PREFIX, **filter_params},
             )
 
-            date_attr_used = self.config_misp.datetime_attribute == "date"
-            last_event_datetime = None
             try:
                 for event in self.client_api.search_events(**filter_params):
                     event_log_data = {
@@ -435,13 +433,6 @@ class Misp:
                         continue
 
                     self._log_entities_summary(bundle_objects)
-
-                    event_datetime = self._get_event_datetime(event)
-                    if (
-                        last_event_datetime is None
-                        or event_datetime > last_event_datetime
-                    ):
-                        last_event_datetime = event_datetime
 
                     self._process_bundle_in_batch(
                         event=event,
