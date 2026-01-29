@@ -141,7 +141,6 @@ class Misp:
                     "Batch processor: Flushed remaining items",
                     {"prefix": LOG_PREFIX},
                 )
-            self.batch_processor.update_final_state()
         except Exception as e:
             self.logger.error(
                 "Failed to flush batch processor",
@@ -343,12 +342,13 @@ class Misp:
 
         # Flush any remaining items and Update the final state
         self._flush_batch_processor()
+        self.work_manager.update_state(state_update={"remaining_objects_count": 0})
 
     def process_event(self) -> str | None:
         """Setup and run the orchestrator to process MISP events."""
 
         try:
-            initial_state = self.helper.get_state()
+            initial_state = self.helper.get_state() or {}
             self.logger.info(
                 "Retrieved state",
                 {"prefix": LOG_PREFIX, "initial_state": initial_state},
@@ -360,9 +360,7 @@ class Misp:
             self.helper.metric.inc("run_count")
             self.helper.metric.state("running")
 
-            if initial_state is not None and (
-                last_event := initial_state.get(self.batch_processor.state_key)
-            ):
+            if last_event := initial_state.get("last_event_date"):
                 last_event_date = datetime.fromisoformat(last_event)
                 self.logger.info(
                     "Current state of the connector:",
@@ -373,8 +371,6 @@ class Misp:
                 )
             else:
                 last_event_date = self.config_misp.import_from_date or now
-                self.batch_processor.set_latest_date(last_event_date.isoformat())
-                self.batch_processor.update_final_state()
                 self.logger.info("Connector has never run")
 
             filter_params = {
@@ -440,16 +436,6 @@ class Misp:
                         or event_datetime > last_event_datetime
                     ):
                         last_event_datetime = event_datetime
-                        self.batch_processor.set_latest_date(event_datetime.isoformat())
-
-                    if not remaining_objects_count:
-                        remaining_objects_count = len(bundle_objects)
-                        self.work_manager.update_state(
-                            state_update={
-                                "current_event_id": event.Event.id,
-                                "remaining_objects_count": remaining_objects_count,
-                            }
-                        )
 
                     self._process_bundle_in_batch(
                         event_id=event.Event.id,
