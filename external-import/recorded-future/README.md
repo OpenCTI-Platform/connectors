@@ -443,14 +443,14 @@ You can choose alert categories to pull
 
 ### Data Sources
 
-| Source          | Description                                        |
-|-----------------|---------------------------------------------------|
-| Analyst Notes   | Curated research from Insikt Group                |
-| Risk Lists      | Scored IOCs (IPs, domains, URLs, hashes)          |
-| Threat Maps     | Threat actor relationships and TTPs               |
-| Signatures      | YARA and Snort rules                              |
-| Alerts          | Real-time security alerts                         |
-| Playbook Alerts | Automated playbook-generated alerts               |
+| Source          | Description                                                                                  |
+|-----------------|----------------------------------------------------------------------------------------------|
+| Analyst Notes   | Curated research from Insikt Group                                                           |
+| Risk Lists      | Scored IOCs (IPs, domains, URLs, hashes) and vulnerabilities (if subscription to the module) |
+| Threat Maps     | Threat actor relationships and TTPs                                                          |
+| Signatures      | YARA and Snort rules                                                                         |
+| Alerts          | Real-time security alerts                                                                    |
+| Playbook Alerts | Automated playbook-generated alerts                                                          |
 
 ## Debugging
 
