@@ -298,11 +298,10 @@ class Misp:
 
     def _process_bundle_in_batch(
         self,
-        event_id: str,
+        event: "EventRestSearchListItem",
         bundle_objects: "list[stix2.v21._STIXBase21]",
         author: "stix2.Identity",
         markings: "list[stix2.MarkingDefinition]",
-        remaining_objects_count: int,
     ) -> None:
         """Process a bundle of STIX objects in a batch.
 
@@ -311,9 +310,12 @@ class Misp:
             bundle_objects: list of STIX objects to process
             author: Author of the event
             markings: Markings of the event
-            remaining_objects_count: Number of remaining objects to process
         """
         bundle_size = len(bundle_objects)
+        current_state = self.work_manager.get_state()
+        remaining_objects_count = (
+            current_state.get("remaining_objects_count") or bundle_size
+        )
         object_index = bundle_size - remaining_objects_count
         batch_chunk_size = self.config_misp.batch_count
         for i in range(
@@ -324,21 +326,25 @@ class Misp:
             now = datetime.now(tz=timezone.utc)
             self.batch_processor.work_name_template = (
                 f"MISP run @ {now.isoformat(timespec='seconds')}"
-                f" - Event # {event_id}"
+                f" - Event # {event.Event.id}"
                 f" - Batch # {max(1, i // batch_chunk_size)}"
-                f" / {max(1, len(bundle_objects) // batch_chunk_size)}"
+                f" / {max(1, bundle_size // batch_chunk_size)}"
             )
 
             bundle_objects_chunk = bundle_objects[i : i + batch_chunk_size]
             self._check_and_add_entities_to_batch(
                 bundle_objects_chunk, author, markings
             )
-            remaining_objects_count = max(
+
+            new_state = (
+                {"current_event_id": event.Event.id}
+                if self.config.misp.datetime_attribute == "date"
+                else {"last_event_date": self._get_event_datetime(event).isoformat()}
+            )
+            new_state["remaining_objects_count"] = max(
                 0, remaining_objects_count - len(bundle_objects_chunk)
             )
-            self.work_manager.update_state(
-                state_update={"remaining_objects_count": remaining_objects_count}
-            )
+            self.work_manager.update_state(state_update=new_state)
 
         # Flush any remaining items and Update the final state
         self._flush_batch_processor()
@@ -438,11 +444,10 @@ class Misp:
                         last_event_datetime = event_datetime
 
                     self._process_bundle_in_batch(
-                        event_id=event.Event.id,
+                        event=event,
                         bundle_objects=bundle_objects,
                         author=author,
                         markings=markings,
-                        remaining_objects_count=remaining_objects_count,
                     )
 
             finally:
