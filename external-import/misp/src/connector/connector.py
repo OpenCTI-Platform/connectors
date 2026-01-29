@@ -229,7 +229,7 @@ class Misp:
             if not current_event_id:
                 return True
 
-            if event.Event.id < current_event_id or (
+            if int(event.Event.id) < int(current_event_id) or (
                 event.Event.id == current_event_id and remaining_objects_count == 0
             ):
                 self.logger.info(
