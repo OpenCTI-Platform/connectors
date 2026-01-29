@@ -330,7 +330,7 @@ class EventConverter:
                     case stix2.Tool():
                         event_tools.append(event_stix_object)
                     case stix2.Location():
-                        if event_stix_object["country"]:
+                        if event_stix_object.get("country"):
                             event_countries.append(event_stix_object)
                     case stix2.Identity():
                         if event_stix_object["identity_class"] == "class":
