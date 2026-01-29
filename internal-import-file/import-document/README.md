@@ -73,7 +73,7 @@ Below are the parameters you'll need to set for running the connector properly:
 | Connector Scope          | `scope`                  | `CONNECTOR_SCOPE`                  | application/pdf,text/plain,text/html,text/markdown  | Yes       | Comma-separated list of supported MIME types.                                            |
 | Connector Auto           | `auto`                   | `CONNECTOR_AUTO`                   | false                                               | No        | Enable/disable automatic import of files matching the scope.                             |
 | Connector Only Contextual| `only_contextual`        | `CONNECTOR_ONLY_CONTEXTUAL`        | false                                               | No        | If `true`, only extract data when an entity context is provided.                         |
-| Validate Before Import   | `validate_before_import` | `CONNECTOR_VALIDATE_BEFORE_IMPORT` | true                                                | No        | If enabled, bundles are sent for validation before import.                               |
+| Validate Before Import   | `validate_before_import` | `CONNECTOR_VALIDATE_BEFORE_IMPORT` | false                                               | No        | If enabled, bundles are sent for validation before import.                               |
 | Log Level                | `log_level`              | `CONNECTOR_LOG_LEVEL`              | info                                                | No        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
 
 ### Connector extra parameters environment variables
@@ -150,18 +150,18 @@ flowchart TD
     B -->|Import| D[Process File Import]
     C -->|file| E[Process File Analysis]
     C -->|fields| F[Process Fields Analysis]
-    
+
     D --> G[Download File]
     G --> H[Parse Document]
     H --> I[Extract Entities & Observables]
     I --> J[Create STIX Bundle]
     J --> K[Send to OpenCTI]
-    
+
     E --> L[Download File]
     L --> M[Parse Document]
     M --> N[Extract Elements]
     N --> O[Push Analysis Results]
-    
+
     F --> P[Resolve Fields]
     P --> Q[Parse Text]
     Q --> R[Extract Elements]
