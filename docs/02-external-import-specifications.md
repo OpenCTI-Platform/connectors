@@ -107,14 +107,14 @@ class MyConnector:
         )
 ```
 
-### Required Methods
+### Recommended Methods and Purpose
 
-| Method | Purpose |
-|--------|---------|
-| `__init__` | Initialize connector, client, and converter |
-| `_collect_intelligence()` | Fetch and convert external data to STIX |
-| `process_message()` | Main processing logic, work management |
-| `run()` | Start scheduler and begin execution |
+| Method                    | Purpose                                     |
+| ------------------------- | ------------------------------------------- |
+| `__init__`                | Initialize connector, client, and converter |
+| `_collect_intelligence()` | Fetch and convert external data to STIX     |
+| `process_message()`       | Main processing logic, work management      |
+| `run()`                   | Start scheduler and begin execution         |
 
 ---
 
@@ -158,6 +158,15 @@ connector:
 ```
 
 If the queue exceeds this threshold, the next run is postponed until the queue is processed.
+
+When the RabbitMQ queue capacity exceeds the defined threshold (for example, if queue_message_size is at 9.90 MB and queue_threshold is configured to 8 MB), the connector automatically switches to ‘Buffering’ mode.
+
+In ‘Buffering’ mode, the connector’s execution is paused until the queue capacity falls below the specified threshold. The user interface displays visual indicators to signal this state change, including a warning message and a color change in the ‘Server Capacity’ section.
+
+Buffering mode displayed on OpenCTI UI
+![Buffering mode](./media/ui_buffering.png)
+
+More details on our Filigran blog: [Auto backpressure Contrtol Article](https://filigran.io/auto-backpressue-control-octi-connectors/#:~:text=Display%20of%20Details%20for%20Connectors%20in%20%E2%80%98Buffering%E2%80%99%20Mode)
 
 ### First Run
 
@@ -253,6 +262,8 @@ except Exception as e:
     raise
 ```
 
+Here a reminder for work mannagement on [Common Implementation](./01-common-implementation.md#work-management)
+
 ---
 
 ## State Management
@@ -325,7 +336,7 @@ def process_message(self) -> None:
 
 ## Data Collection
 
-### Collection Method
+### Collection Example Method
 
 ```python
 def _collect_intelligence(self) -> list:
@@ -383,7 +394,7 @@ def _collect_intelligence(self) -> list:
     return stix_objects
 ```
 
-### Pagination Handling
+### Pagination Handling Example
 
 ```python
 def _collect_intelligence(self) -> list:
@@ -457,21 +468,41 @@ def process_message(self) -> None:
 1. **Always include author** - Required for proper attribution
 2. **Include appropriate markings** - TLP, PAP, statement markings
 3. **Create relationships** - Link related objects
-4. **Validate before sending** - Use `cleanup_inconsistent_bundle=True`
-5. **Batch appropriately** - Don't send too many objects at once (< 1000 recommended)
+4. **Batch appropriately** - Don't send too many objects at once (< 1000 recommended)
+
+Reminder about cleanup_inconsistent_bundle: [Caution Clean Up Inconsistent Bundle](./01-common-implementation.md#creating-and-sending-bundles)
 
 ### Large Dataset Handling
 
+When handling large datasets (e.g., 200k+ entities), batch processing is essential to avoid memory issues and provide progress visibility.
+
+**Use case:** Importing a large MISP instance with hundreds of thousands of indicators.
+
+Example of implementation
+
 ```python
 def process_message(self) -> None:
+    """Process large datasets in batches with individual work tracking."""
     stix_objects = self._collect_intelligence()
 
-    # Split into batches of 500 objects
     batch_size = 500
-    for i in range(0, len(stix_objects), batch_size):
+    total_batches = (len(stix_objects) + batch_size - 1) // batch_size
+
+    self.helper.connector_logger.info(
+        "Processing large dataset",
+        {"total_objects": len(stix_objects), "batch_size": batch_size, "total_batches": total_batches}
+    )
+
+    for batch_num, i in enumerate(range(0, len(stix_objects), batch_size), start=1):
         batch = stix_objects[i:i + batch_size]
 
-        # Always include author and marking in each batch
+        # Each batch gets its own work for progress tracking
+        work_id = self.helper.api.work.initiate_work(
+            self.helper.connect_id,
+            f"Import - Batch {batch_num}/{total_batches}"
+        )
+
+        # Include author and marking in each batch
         batch_with_meta = batch + [
             self.converter_to_stix.author,
             self.converter_to_stix.tlp_marking
@@ -484,88 +515,78 @@ def process_message(self) -> None:
             cleanup_inconsistent_bundle=True,
         )
 
+        # Mark batch as complete
+        self.helper.api.work.to_processed(
+            work_id,
+            f"Batch {batch_num}/{total_batches} - {len(batch)} objects"
+        )
+
+        # Update state after each batch to avoid data loss on failure
+        self.helper.set_state({
+            "last_batch": batch_num,
+            "last_run": datetime.now(timezone.utc).isoformat()
+        })
+
         self.helper.connector_logger.info(
-            "Batch sent",
-            {"batch": i // batch_size + 1, "objects": len(batch)}
+            "Batch processed",
+            {"batch": batch_num, "total": total_batches, "objects": len(batch)}
         )
 ```
+
+**Key points:**
+- **One work per batch** - Allows progress tracking in OpenCTI UI
+- **Include metadata in each batch** - Author and markings must be in every bundle when using `cleanup_inconsistent_bundle=True`
+- **Update state after each batch** - If the connector fails mid-import, the next run can resume from the last successful batch instead of restarting from scratch
+- **Log progress** - Essential for monitoring long-running imports
 
 ---
 
 ## Rate Limiting
 
-### API Rate Limit Handling
+Use the `limiter` library for rate limiting and `tenacity` for retry logic:
 
 ```python
+import requests
+from limiter import Limiter
+from tenacity import retry, stop_after_attempt, wait_exponential_jitter
+
+
 class MyClient:
-    def __init__(self, helper, base_url, api_key):
+    def __init__(self, helper, base_url: str, api_key: str):
         self.helper = helper
         self.base_url = base_url
         self.api_key = api_key
-        self.rate_limit_remaining = None
-        self.rate_limit_reset = None
 
-    def get_data(self, endpoint):
-        """Fetch data with rate limit handling."""
-        # Check if we need to wait
-        if self.rate_limit_remaining == 0:
-            wait_time = self.rate_limit_reset - time.time()
-            if wait_time > 0:
-                self.helper.connector_logger.warning(
-                    "Rate limit reached, waiting",
-                    {"wait_seconds": int(wait_time)}
-                )
-                time.sleep(wait_time)
-
-        # Make request
-        response = requests.get(
-            f"{self.base_url}/{endpoint}",
-            headers={"Authorization": f"Bearer {self.api_key}"}
+        # Rate limiter: 10 requests per second, bucket capacity of 20
+        self.rate_limiter = Limiter(
+            rate=10,
+            capacity=20,
+            bucket="my_connector",
         )
 
-        # Update rate limit info from headers
-        self.rate_limit_remaining = int(
-            response.headers.get("X-RateLimit-Remaining", 100)
-        )
-        self.rate_limit_reset = int(
-            response.headers.get("X-RateLimit-Reset", time.time() + 3600)
-        )
-
-        response.raise_for_status()
-        return response.json()
-```
-
-### Request Throttling
-
-```python
-import time
-
-class MyClient:
-    def __init__(self, helper, base_url, api_key, requests_per_minute=60):
-        self.helper = helper
-        self.base_url = base_url
-        self.api_key = api_key
-        self.min_interval = 60 / requests_per_minute
-        self.last_request_time = 0
-
-    def _throttle(self):
-        """Ensure minimum interval between requests."""
-        elapsed = time.time() - self.last_request_time
-        if elapsed < self.min_interval:
-            sleep_time = self.min_interval - elapsed
-            time.sleep(sleep_time)
-        self.last_request_time = time.time()
-
-    def get_data(self, endpoint):
-        """Fetch data with throttling."""
-        self._throttle()
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential_jitter(initial=1, max=60, jitter=1),
+    )
+    def _request(self, endpoint: str):
+        """Make request with retry logic."""
         response = requests.get(
             f"{self.base_url}/{endpoint}",
             headers={"Authorization": f"Bearer {self.api_key}"}
         )
         response.raise_for_status()
         return response.json()
+
+    def get_data(self, endpoint: str):
+        """Fetch data with rate limiting and retry."""
+        with self.rate_limiter:
+            return self._request(endpoint)
 ```
+
+- **`limiter`** - Controls request rate to avoid hitting API limits
+- **`tenacity`** - Retries failed requests with exponential backoff
+
+See also: [Retry Logic in Common Implementation](./01-common-implementation.md#retry-logic)
 
 ---
 
@@ -669,7 +690,7 @@ def _collect_intelligence(self) -> list:
 
 ## Best Practices
 
-### 1. Error Recovery
+### 1. Error Recovery Example
 
 ```python
 def process_message(self) -> None:
@@ -702,7 +723,7 @@ def process_message(self) -> None:
         raise
 ```
 
-### 2. Graceful Degradation
+### 2. Graceful Degradation Example
 
 ```python
 def _collect_intelligence(self) -> list:
@@ -733,26 +754,20 @@ def _collect_intelligence(self) -> list:
     return stix_objects
 ```
 
-### 3. Data Validation
+Use case: A connector fetches from 3 different API endpoints. If one endpoint is down,
+you still want to import data from the other 2 rather than failing the entire run.   
 
-```python
-def _convert_item(self, item):
-    """Convert item with validation."""
-    # Validate required fields
-    required_fields = ["id", "type", "value"]
-    for field in required_fields:
-        if field not in item:
-            raise ValueError(f"Missing required field: {field}")
+When to use it:
+- Multiple independent data sources
+- Optional enrichment steps
+- Non-critical metadata fetching
 
-    # Validate data format
-    if not self._is_valid_ip(item["value"]):
-        raise ValueError(f"Invalid IP address: {item['value']}")
+When NOT to use it:
+- Core authentication fails
+- Critical data source is unavailable
+- Data integrity depends on all sources
 
-    # Convert to STIX
-    return self.converter_to_stix.create_observable(item)
-```
-
-### 4. Deduplication
+### 3. Deduplication Example
 
 ```python
 def _collect_intelligence(self) -> list:
@@ -778,7 +793,7 @@ def _collect_intelligence(self) -> list:
     return stix_objects
 ```
 
-### 5. Logging
+### 4. Logging Example
 
 ```python
 def process_message(self) -> None:
@@ -810,27 +825,62 @@ def process_message(self) -> None:
 
 ## Complete Example
 
+### API Client (src/my_client/api_client.py)
+
 ```python
-from datetime import datetime, timedelta, timezone
+import requests
+from limiter import Limiter
+from tenacity import retry, stop_after_attempt, wait_exponential_jitter
+
+
+class MyClient:
+    """API client with rate limiting and retry logic."""
+
+    def __init__(self, base_url: str, api_key: str):
+        self.base_url = base_url
+        self.api_key = api_key
+        self.rate_limiter = Limiter(rate=10, capacity=20, bucket="my_client")
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential_jitter(initial=1, max=60, jitter=1),
+    )
+    def _request(self, endpoint: str, params: dict = None):
+        response = requests.get(
+            f"{self.base_url}/{endpoint}",
+            headers={"Authorization": f"Bearer {self.api_key}"},
+            params=params,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def get_threat_data(self, since: str) -> list:
+        with self.rate_limiter:
+            return self._request("threats", params={"since": since})
+```
+
+### Connector (src/connector/connector.py)
+
+```python
+import sys
+from datetime import datetime, timezone
 
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
-from pycti import OpenCTIConnectorHelper
 from my_client import MyClient
+from pycti import OpenCTIConnectorHelper
 
 
 class MyThreatFeedConnector:
-    """
-    External Import connector for My Threat Feed.
-    """
+    """External Import connector for My Threat Feed."""
 
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         self.config = config
         self.helper = helper
+        self.work_id = None
 
         self.client = MyClient(
-            self.helper,
-            base_url=self.config.my_connector.api_base_url,
+            base_url=str(self.config.my_connector.api_base_url),
             api_key=self.config.my_connector.api_key,
         )
 
@@ -840,34 +890,23 @@ class MyThreatFeedConnector:
             tlp_level=self.config.my_connector.tlp_level,
         )
 
-    def _get_start_date(self, current_state):
-        """Determine start date for import."""
-        if current_state and "last_timestamp" in current_state:
-            return datetime.fromtimestamp(
-                current_state["last_timestamp"],
-                tz=timezone.utc
-            )
-        else:
-            # First run
-            return datetime.strptime(
-                self.config.my_connector.import_from_date,
-                "%Y-%m-%d"
-            ).replace(tzinfo=timezone.utc)
+    def _initiate_work(self, name: str) -> str:
+        self.work_id = self.helper.api.work.initiate_work(self.helper.connect_id, name)
+        return self.work_id
 
-    def _collect_intelligence(self) -> list:
-        """Collect intelligence from My Threat Feed."""
-        current_state = self.helper.get_state()
-        start_date = self._get_start_date(current_state)
+    def _complete_work(self, message: str) -> None:
+        if self.work_id:
+            self.helper.api.work.to_processed(self.work_id, message)
+            self.work_id = None
 
+    def _collect_intelligence(self, since: str) -> list:
+        """Collect intelligence from external source."""
         self.helper.connector_logger.info(
-            "Collecting intelligence",
-            {"start_date": start_date.isoformat()}
+            "[CONNECTOR] Collecting intelligence", {"since": since}
         )
 
-        # Fetch data
-        data = self.client.get_threat_data(since=start_date)
+        data = self.client.get_threat_data(since=since)
 
-        # Convert to STIX
         stix_objects = []
         for item in data:
             try:
@@ -875,77 +914,107 @@ class MyThreatFeedConnector:
                 stix_objects.extend(converted)
             except Exception as e:
                 self.helper.connector_logger.warning(
-                    "Failed to convert item",
-                    {"item_id": item.get("id"), "error": str(e)}
+                    "[CONNECTOR] Failed to convert item",
+                    {"item_id": item.get("id"), "error": str(e)},
                 )
                 continue
 
-        # Add author and marking
-        if len(stix_objects) > 0:
-            stix_objects.append(self.converter_to_stix.author)
-            stix_objects.append(self.converter_to_stix.tlp_marking)
-
         return stix_objects
+
+    def _send_bundle(self, stix_objects: list) -> None:
+        """Send STIX bundle to OpenCTI."""
+        # Add author and marking to bundle
+        stix_objects.append(self.converter_to_stix.author)
+        stix_objects.append(self.converter_to_stix.tlp_marking)
+
+        bundle = self.helper.stix2_create_bundle(stix_objects)
+        self.helper.send_stix2_bundle(
+            bundle,
+            work_id=self.work_id,
+            cleanup_inconsistent_bundle=True,
+        )
+
+        self.helper.connector_logger.info(
+            "[CONNECTOR] Bundle sent", {"objects_count": len(stix_objects)}
+        )
 
     def process_message(self) -> None:
         """Main processing method."""
-        self.helper.connector_logger.info("Starting import run")
-
-        # Initialize work
-        friendly_name = f"My Threat Feed import - {datetime.now().isoformat()}"
-        work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id,
-            friendly_name
-        )
-
         try:
+            current_start_time = datetime.now(timezone.utc).isoformat()
+            current_state = self.helper.get_state()
+
+            # Retrieve previous run information
+            last_run_start = current_state.get("last_run_start") if current_state else None
+            last_run_with_data = current_state.get("last_run_with_data") if current_state else None
+
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Starting connector...",
+                {
+                    "connector_name": self.config.connector.name,
+                    "last_run_start": last_run_start or "Never run",
+                    "last_run_with_data": last_run_with_data or "Never ingested data",
+                },
+            )
+
+            # Determine start date for fetching
+            since = last_run_with_data or self.config.my_connector.import_from_date
+
             # Collect intelligence
-            stix_objects = self._collect_intelligence()
+            stix_objects = self._collect_intelligence(since)
 
-            # Send bundle if we have data
-            if len(stix_objects) > 0:
-                bundle = self.helper.stix2_create_bundle(stix_objects)
-                bundles_sent = self.helper.send_stix2_bundle(
-                    bundle,
-                    work_id=work_id,
-                    cleanup_inconsistent_bundle=True,
-                )
-
-                message = f"Successfully imported {len(stix_objects)} objects"
-                self.helper.connector_logger.info(message)
+            if stix_objects:
+                # Initiate work and send data
+                self._initiate_work(f"My Threat Feed - {current_start_time}")
+                self._send_bundle(stix_objects)
+                self._complete_work(f"Imported {len(stix_objects)} objects")
+                last_run_with_data = datetime.now(timezone.utc).isoformat()
             else:
-                message = "No new data to import"
-                self.helper.connector_logger.info(message)
-
-            # Mark work as completed
-            self.helper.api.work.to_processed(work_id, message)
+                self.helper.connector_logger.info("[CONNECTOR] No new data to import")
 
             # Update state
-            now = datetime.now(timezone.utc)
-            self.helper.set_state({
-                "last_run": now.strftime("%Y-%m-%d %H:%M:%S"),
-                "last_timestamp": int(now.timestamp()),
-            })
+            new_state = {"last_run_start": current_start_time}
+            if last_run_with_data:
+                new_state["last_run_with_data"] = last_run_with_data
 
-        except Exception as e:
-            self.helper.connector_logger.error(
-                "Import failed",
-                {"error": str(e)}
-            )
-            raise
+            self.helper.set_state(new_state)
+
+        except (KeyboardInterrupt, SystemExit):
+            self.helper.connector_logger.info("[CONNECTOR] Connector stopped...")
+            sys.exit(0)
+        except Exception as err:
+            self.helper.connector_logger.error(str(err))
 
     def run(self) -> None:
-        """Start the connector."""
-        self.helper.connector_logger.info(
-            "Starting My Threat Feed connector",
-            {"duration_period": str(self.config.connector.duration_period)}
-        )
-
+        """Start the connector with scheduled execution."""
         self.helper.schedule_process(
             message_callback=self.process_message,
             duration_period=self.config.connector.duration_period.total_seconds(),
         )
 ```
+
+### Entry Point (src/main.py)
+
+```python
+import traceback
+
+from connector import ConnectorSettings, MyThreatFeedConnector
+from pycti import OpenCTIConnectorHelper
+
+if __name__ == "__main__":
+    try:
+        settings = ConnectorSettings()
+        helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+
+        connector = MyThreatFeedConnector(config=settings, helper=helper)
+        connector.run()
+    except Exception:
+        traceback.print_exc()
+        exit(1)
+```
+
+> [!TIP]
+> A ready-to-use template with the base implementation is available at [templates/external-import](../templates/external-import). See the [CONTRIBUTING guidelines](../CONTRIBUTING.md) for step-by-step instructions on how to copy and set up the template.
 
 ---
 
