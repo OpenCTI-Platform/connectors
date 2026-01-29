@@ -321,8 +321,8 @@ class Misp:
         self._flush_batch_processor()
         self.work_manager.update_state(state_update={"remaining_objects_count": 0})
 
-    def process_event(self) -> str | None:
-        """Setup and run the orchestrator to process MISP events."""
+    def process_events(self) -> str | None:
+        """Fetch, convert and send MISP events."""
 
         try:
             initial_state = self.helper.get_state() or {}
@@ -437,7 +437,7 @@ class Misp:
         error_message = None
 
         try:
-            error_result = self.process_event()
+            error_result = self.process_events()
             if error_result:
                 error_message = error_result
                 error_flag = True
