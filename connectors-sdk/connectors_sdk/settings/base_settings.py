@@ -318,6 +318,12 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
             deprecated = field.deprecated
             new_namespace = json_schema_extra.get("new_namespace")
             new_variable_name = json_schema_extra.get("new_variable_name")
+            removal_date_raw = json_schema_extra.get("removal_date")
+            removal_date = (
+                str(removal_date_raw)
+                if removal_date_raw and isinstance(removal_date_raw, str)
+                else None
+            )
             annotation = field.annotation
             is_namespace = isinstance(annotation, type) and issubclass(
                 annotation, BaseConfigModel
@@ -338,6 +344,7 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
                     data,
                     old_namespace=field_name,
                     new_namespace=new_namespace,
+                    removal_date=removal_date,
                 )
 
             if is_namespace:
@@ -349,6 +356,13 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
                         "new_variable_name"
                     )
                     sub_change_value = sub_json_schema_extra.get("change_value")
+                    sub_removal_date_raw = sub_json_schema_extra.get("removal_date")
+                    sub_removal_date = (
+                        str(sub_removal_date_raw)
+                        if sub_removal_date_raw
+                        and isinstance(sub_removal_date_raw, str)
+                        else None
+                    )
 
                     if sub_deprecated and sub_new_variable_name:
                         migrate_deprecated_variable(
@@ -358,6 +372,7 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
                             current_namespace=field_name,
                             new_namespace=sub_new_namespace,
                             change_value=sub_change_value,
+                            removal_date=sub_removal_date,
                         )
 
         return handler(data)

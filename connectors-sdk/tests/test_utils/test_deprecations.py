@@ -305,3 +305,56 @@ class TestLegacyField:
         field = LegacyField(deprecated=True)
 
         assert field.default is None
+
+    def test_legacy_field_with_removal_date(self):
+        """Test LegacyField with removal_date."""
+        field = LegacyField(
+            deprecated="This field is deprecated",
+            new_variable_name="new_field",
+            removal_date="2026-12-31",
+        )
+
+        assert field.json_schema_extra["removal_date"] == "2026-12-31"  # type: ignore
+        assert field.json_schema_extra["new_variable_name"] == "new_field"  # type: ignore
+
+    def test_migrate_namespace_with_removal_date(self):
+        """Test migrate_deprecated_namespace includes removal_date in warning."""
+        data = {
+            "old_settings": {"key1": "value1", "key2": "value2"},
+            "new_settings": {},
+        }
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            migrate_deprecated_namespace(
+                data, "old_settings", "new_settings", removal_date="2026-12-31"
+            )
+
+            # Should have warnings with removal date
+            assert len(w) == 2
+            warning_messages = [str(warning.message) for warning in w]
+            assert any("2026-12-31" in msg for msg in warning_messages)
+            assert any("key1" in msg for msg in warning_messages)
+
+    def test_migrate_variable_with_removal_date(self):
+        """Test migrate_deprecated_variable includes removal_date in warning."""
+        data = {
+            "settings": {"old_var": "value", "other": "data"},
+        }
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            migrate_deprecated_variable(
+                data,
+                "old_var",
+                "new_var",
+                "settings",
+                removal_date="2026-06-30",
+            )
+
+            # Should have warning with removal date
+            assert len(w) == 1
+            warning_msg = str(w[0].message)
+            assert "2026-06-30" in warning_msg
+            assert "old_var" in warning_msg
+            assert "new_var" in warning_msg

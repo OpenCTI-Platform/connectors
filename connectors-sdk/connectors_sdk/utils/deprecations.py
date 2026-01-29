@@ -8,7 +8,10 @@ from pydantic.fields import FieldInfo
 
 
 def migrate_deprecated_namespace(
-    data: dict[str, Any], old_namespace: str, new_namespace: str
+    data: dict[str, Any],
+    old_namespace: str,
+    new_namespace: str,
+    removal_date: str | None = None,
 ) -> None:
     """Migrate settings from a deprecated namespace to a new one.
 
@@ -16,6 +19,7 @@ def migrate_deprecated_namespace(
         data (dict): The configuration data.
         old_namespace (str): The old namespace.
         new_namespace (str): The new namespace.
+        removal_date (str | None): Optional date when the deprecated setting will be removed (format: YYYY-MM-DD).
     """
     if not data:
         return
@@ -46,14 +50,17 @@ def migrate_deprecated_namespace(
             # ex: 'settings_good_api_key', mapped in 'settings' as 'good_api_key', can be skipped.
             continue
 
+        removal_msg = (
+            f" This setting will be removed on {removal_date}." if removal_date else ""
+        )
         if key in new_config:
             warnings.warn(
-                f"Deprecated setting '{old_namespace}.{key}' found. Using only '{new_namespace}.{key}'",
+                f"Deprecated setting '{old_namespace}.{key}' found. Using only '{new_namespace}.{key}'.{removal_msg}",
                 stacklevel=2,
             )
         else:
             warnings.warn(
-                f"Deprecated setting '{old_namespace}.{key}' found. Migrating to '{new_namespace}.{key}'",
+                f"Deprecated setting '{old_namespace}.{key}' found. Migrating to '{new_namespace}.{key}'.{removal_msg}",
                 stacklevel=2,
             )
             new_config[key] = value
@@ -73,6 +80,7 @@ def migrate_deprecated_variable(
     current_namespace: str,
     new_namespace: str | None = None,
     change_value: Callable[[Any], Any] | None = None,
+    removal_date: str | None = None,
 ) -> None:
     """Migrate a deprecated variable to a new one, potentially in a new namespace.
 
@@ -83,6 +91,7 @@ def migrate_deprecated_variable(
         current_namespace (str): The current namespace of the variable.
         new_namespace (str | None): The new namespace of the variable. If None, use current_namespace.
         change_value (Callable | None): A function to change the value before setting it to the new variable.
+        removal_date (str | None): Optional date when the deprecated setting will be removed (format: YYYY-MM-DD).
     """
     if not data:
         return
@@ -94,14 +103,17 @@ def migrate_deprecated_variable(
 
     if old_name in old_config:
         value = old_config.pop(old_name)
+        removal_msg = (
+            f" This setting will be removed on {removal_date}." if removal_date else ""
+        )
         if new_name in new_config:
             warnings.warn(
-                f"Deprecated setting '{current_namespace}.{old_name}' found. Using only '{destination_namespace}.{new_name}'",
+                f"Deprecated setting '{current_namespace}.{old_name}' found. Using only '{destination_namespace}.{new_name}'.{removal_msg}",
                 stacklevel=2,
             )
         else:
             warnings.warn(
-                f"Deprecated setting '{current_namespace}.{old_name}' found. Migrating to '{destination_namespace}.{new_name}'",
+                f"Deprecated setting '{current_namespace}.{old_name}' found. Migrating to '{destination_namespace}.{new_name}'.{removal_msg}",
                 stacklevel=2,
             )
             new_config[new_name] = change_value(value) if change_value else value
@@ -118,6 +130,7 @@ class LegacyField:
         new_namespace (str | None): The new namespace for the variable.
         new_variable_name (str | None): The new variable name.
         change_value (Callable | None): A function to change the value when migrating.
+        removal_date (str | None): Date when the deprecated setting will be removed (format: YYYY-MM-DD).
 
     Returns:
         FieldInfo: A Pydantic FieldInfo object with deprecation metadata.
@@ -130,6 +143,7 @@ class LegacyField:
         new_namespace: str | None = None,
         new_variable_name: str | None = None,
         change_value: Callable[[Any], Any] | None = None,
+        removal_date: str | None = None,
     ) -> FieldInfo:
         """Create a Pydantic Field with deprecation metadata."""
         return Field(
@@ -139,5 +153,6 @@ class LegacyField:
                 "new_namespace": new_namespace,
                 "new_variable_name": new_variable_name,
                 "change_value": change_value,  # type: ignore[dict-item]
+                "removal_date": removal_date,
             },
         )  # type: ignore[return-value]

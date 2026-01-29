@@ -476,3 +476,89 @@ class TestConnectorConfigJsonSchemaGenerator:
 
         generator = TestGenerator()
         assert generator.connector_name == "my-connector"
+
+    def test_flatten_with_removal_date_on_deprecated_namespace(self):
+        """Test that removal_date appears in description for deprecated namespace."""
+        schema = {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$id": "test",
+            "type": "object",
+            "properties": {
+                "old_namespace": {
+                    "type": "object",
+                    "deprecated": True,
+                    "new_namespace": "new_namespace",
+                    "removal_date": "2026-12-31",
+                    "properties": {
+                        "field1": {"type": "string"},
+                        "field2": {"type": "integer"},
+                    },
+                    "required": ["field1"],
+                },
+            },
+        }
+
+        result = ConnectorConfigJsonSchemaGenerator.flatten_config_loader_schema(schema)
+
+        # Check that removal_date is in the description
+        assert "OLD_NAMESPACE_FIELD1" in result["properties"]
+        description1 = result["properties"]["OLD_NAMESPACE_FIELD1"]["description"]
+        assert "2026-12-31" in description1
+        assert "removal scheduled for 2026-12-31" in description1
+        assert "NEW_NAMESPACE_FIELD1" in description1
+
+    def test_flatten_with_removal_date_on_field(self):
+        """Test that removal_date appears in description for deprecated field."""
+        schema = {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$id": "test",
+            "type": "object",
+            "properties": {
+                "namespace": {
+                    "type": "object",
+                    "properties": {
+                        "old_field": {
+                            "type": "string",
+                            "new_variable_name": "new_field",
+                            "removal_date": "2026-06-30",
+                        },
+                        "new_field": {"type": "string"},
+                    },
+                },
+            },
+        }
+
+        result = ConnectorConfigJsonSchemaGenerator.flatten_config_loader_schema(schema)
+
+        # Check that removal_date is in the description
+        assert "NAMESPACE_OLD_FIELD" in result["properties"]
+        description = result["properties"]["NAMESPACE_OLD_FIELD"]["description"]
+        assert "2026-06-30" in description
+        assert "removal scheduled for 2026-06-30" in description
+        assert "NAMESPACE_NEW_FIELD" in description
+
+    def test_flatten_without_removal_date(self):
+        """Test that description works correctly without removal_date."""
+        schema = {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$id": "test",
+            "type": "object",
+            "properties": {
+                "old_namespace": {
+                    "type": "object",
+                    "deprecated": True,
+                    "new_namespace": "new_namespace",
+                    "properties": {
+                        "field1": {"type": "string"},
+                    },
+                },
+            },
+        }
+
+        result = ConnectorConfigJsonSchemaGenerator.flatten_config_loader_schema(schema)
+
+        # Check that description exists but without removal_date
+        assert "OLD_NAMESPACE_FIELD1" in result["properties"]
+        description = result["properties"]["OLD_NAMESPACE_FIELD1"]["description"]
+        assert "NEW_NAMESPACE_FIELD1" in description
+        assert "removal scheduled" not in description

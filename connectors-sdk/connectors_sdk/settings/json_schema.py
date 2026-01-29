@@ -99,6 +99,12 @@ class ConnectorConfigJsonSchemaGenerator(SanitizingJsonSchema):
                 if deprecated_namespace:
                     # Add deprecation info at property level
                     flat_json_schema["properties"][property_name]["deprecated"] = True
+                    removal_date = config_loader_namespace_schema.get("removal_date")
+                    removal_msg = (
+                        f" (removal scheduled for {removal_date})"
+                        if removal_date
+                        else ""
+                    )
                     if new_namespace:
                         if new_variable_name := config_var_schema.get(
                             "new_variable_name"
@@ -107,11 +113,11 @@ class ConnectorConfigJsonSchemaGenerator(SanitizingJsonSchema):
                                 new_namespace = config_var_schema.get("new_namespace")
                             flat_json_schema["properties"][property_name][
                                 "description"
-                            ] = f"Use {new_namespace.upper()}_{new_variable_name.upper()} instead."
+                            ] = f"Use {new_namespace.upper()}_{new_variable_name.upper()} instead.{removal_msg}"
                         else:
                             flat_json_schema["properties"][property_name][
                                 "description"
-                            ] = f"Use {new_namespace.upper()}_{config_var_name.upper()} instead."
+                            ] = f"Use {new_namespace.upper()}_{config_var_name.upper()} instead.{removal_msg}"
 
                 else:
                     if new_variable_name := config_var_schema.get("new_variable_name"):
@@ -119,12 +125,19 @@ class ConnectorConfigJsonSchemaGenerator(SanitizingJsonSchema):
                             config_var_schema.get("new_namespace")
                             or config_loader_namespace_name
                         )
+                        removal_date = config_var_schema.get("removal_date")
+                        removal_msg = (
+                            f" (removal scheduled for {removal_date})"
+                            if removal_date
+                            else ""
+                        )
                         flat_json_schema["properties"][property_name][
                             "description"
-                        ] = f"Use {new_namespace.upper()}_{new_variable_name.upper()} instead."
+                        ] = f"Use {new_namespace.upper()}_{new_variable_name.upper()} instead.{removal_msg}"
 
                 config_var_schema.pop("new_variable_name", None)
                 config_var_schema.pop("new_namespace", None)
+                config_var_schema.pop("removal_date", None)
         return flat_json_schema
 
     @staticmethod
