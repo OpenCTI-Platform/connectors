@@ -52,6 +52,17 @@ class MitreAtlasConfig(BaseConfigModel):
         default="https://raw.githubusercontent.com/mitre-atlas/atlas-navigator-data/main/dist/stix-atlas.json",
     )
 
+
+class ConnectorSettings(BaseConnectorSettings):
+    """
+    Override `BaseConnectorSettings` to include `ExternalImportConnectorConfig` and `MitreAtlasConfig`.
+    """
+
+    connector: ExternalImportConnectorConfig = Field(
+        default_factory=ExternalImportConnectorConfig
+    )
+    mitre_atlas: MitreAtlasConfig = Field(default_factory=MitreAtlasConfig)
+
     @model_validator(mode="before")
     @classmethod
     def migrate_deprecated_interval(cls, data: dict) -> dict:
@@ -74,14 +85,3 @@ class MitreAtlasConfig(BaseConfigModel):
                 connector_data["duration_period"] = timedelta(days=int(interval))
 
         return data
-
-
-class ConnectorSettings(BaseConnectorSettings):
-    """
-    Override `BaseConnectorSettings` to include `ExternalImportConnectorConfig` and `MitreAtlasConfig`.
-    """
-
-    connector: ExternalImportConnectorConfig = Field(
-        default_factory=ExternalImportConnectorConfig
-    )
-    mitre_atlas: MitreAtlasConfig = Field(default_factory=MitreAtlasConfig)
