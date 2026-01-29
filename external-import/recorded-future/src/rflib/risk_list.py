@@ -5,7 +5,6 @@ import threading
 from datetime import datetime, timezone
 
 from .constants import RISK_LIST_TYPE_MAPPER, RISK_RULES_MAPPER
-from .rf_to_stix2 import Vulnerability
 
 
 class RiskList(threading.Thread):
@@ -55,7 +54,7 @@ class RiskList(threading.Thread):
             for key, risk_list_type in RISK_LIST_TYPE_MAPPER.items():
 
                 # Check access to the vulnerability module
-                if key == 'Vuln':
+                if key == "Vuln":
                     vuln_permission = self.rfapi.check_vul_entitlement()
                     if vuln_permission:
                         self.helper.connector_logger.info(
