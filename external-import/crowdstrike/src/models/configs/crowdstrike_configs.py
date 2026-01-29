@@ -51,7 +51,6 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
             "actor",
             "report",
             "indicator",
-            "vulnerability",
             "yara_master",
             "snort_suricata_master",
         ],
