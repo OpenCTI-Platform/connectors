@@ -15,6 +15,7 @@ applies to: All connector types (External Import, Internal Enrichment, Stream)
 - [Logging Best Practices](#logging-best-practices)
 - [State Management](#state-management)
 - [Error Handling](#error-handling)
+- [Traceback](#traceback)
 - [Working with the Helper](#working-with-the-helper)
 
 ---
@@ -151,7 +152,11 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 ```bash
 cd src
+# Using pip
 pip install -r requirements.txt
+
+# Using uv
+uv pip install -r requirements.txt
 ```
 
 3. **Create configuration file**:
@@ -168,7 +173,7 @@ opencti:
   token: 'your-opencti-token'
 
 connector:
-  id: 'unique-connector-id'  # Generate with: uuidgen
+  id: 'unique-connector-id'  # Generate uuidv4
   name: 'My Connector'
   scope: 'indicator'
   log_level: 'info'
@@ -187,7 +192,7 @@ python main.py
 
 ---
 
-## Directory Structure
+## Base Directory Structure
 
 All connectors follow this standardized structure:
 
@@ -224,7 +229,7 @@ my-connector/
 ### File Descriptions
 
 | File/Directory                       | Purpose                                                   |
-|--------------------------------------|-----------------------------------------------------------|
+| ------------------------------------ | --------------------------------------------------------- |
 | `__metadata__/`                      | Contains metadata for connector catalog and documentation |
 | `connector_manifest.json`            | Connector information, version, capabilities              |
 | `src/connector/connector.py`         | Main connector logic and processing                       |
@@ -297,9 +302,9 @@ class MyConnectorConfig(BaseConfigModel):
         description="Maximum TLP level to process.",
         default="amber",
     )
-    import_from_date: str = Field(
-        description="Import data from this date (YYYY-MM-DD).",
-        default="2024-01-01",
+    import_from_date: timedelta = Field(
+        description="ISO 8601 duration string specifying how far back to import threat actors (e.g., P1D for 1 day, P7D for 7 days)",
+        default=timedelta(days=1),
     )
 
 
@@ -335,7 +340,7 @@ my_connector:
   api_base_url: 'https://api.example.com'
   api_key: 'ChangeMe'
   max_tlp_level: 'amber'
-  import_from_date: '2024-01-01'
+  import_from_date: 'P1D'
 ```
 
 ### Environment Variables
@@ -353,7 +358,7 @@ CONNECTOR_DURATION_PERIOD=PT1H
 MY_CONNECTOR_API_BASE_URL=https://api.example.com
 MY_CONNECTOR_API_KEY=your-api-key
 MY_CONNECTOR_MAX_TLP_LEVEL=amber
-MY_CONNECTOR_IMPORT_FROM_DATE=2024-01-01
+MY_CONNECTOR_IMPORT_FROM_DATE=P1D
 ```
 
 **Naming Convention:**
@@ -367,25 +372,21 @@ MY_CONNECTOR_IMPORT_FROM_DATE=2024-01-01
 **File:** `src/main.py`
 
 ```python
-from connector import MyConnector
-from connector.settings import ConnectorSettings
+import traceback
+
+from connector import ConnectorSettings, TemplateConnector
 from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
     try:
-        # Load and validate configuration
         settings = ConnectorSettings()
+        helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
 
-        # Initialize the connector helper
-        helper = OpenCTIConnectorHelper(settings.model_dump())
-
-        # Initialize and run the connector
-        connector = MyConnector(config=settings, helper=helper)
+        connector = TemplateConnector(config=settings, helper=helper)
         connector.run()
-
-    except Exception as e:
-        print(f"Failed to start connector: {e}")
-        raise
+    except Exception:
+        traceback.print_exc()
+        exit(1)
 ```
 
 ---
@@ -452,6 +453,10 @@ Common models include:
 - `TLPMarking`
 - `StatementMarking`
 
+> [!NOTE]  
+> Note that not all OpenCTI models are available in the connectors-sdk and some may be missing. We recommend using the connectors-sdk models whenever possible for models that are available. 
+>We do our best to complete the connectors-sdk with missing models.
+
 ### Basic Usage Example
 
 ```python
@@ -497,9 +502,6 @@ vuln = Vulnerability(
     markings=[tlp_green],
 )
 
-# Create relationship
-relationship = ip | related_to | vuln
-
 # Convert to STIX objects
 stix_objects = [
     author.to_stix2_object(),
@@ -507,7 +509,6 @@ stix_objects = [
     ip.to_stix2_object(),
     indicator.to_stix2_object(),
     vuln.to_stix2_object(),
-    relationship.to_stix2_object(),
 ]
 ```
 
@@ -540,7 +541,7 @@ indicator = Indicator(
 stix_object = indicator.to_stix2_object()
 ```
 
-### Legacy Method (Deprecated)
+### Using stix2 Python library (Accepted Method)
 
 If you must use the legacy stix2 library:
 
@@ -567,14 +568,50 @@ deterministic.
 
 Use the relationship helper from connectors-sdk:
 
+Example
 ```python
-from connectors_sdk.models.octi import related_to, indicates
+from connectors_sdk.models import Relationship
+from typing import Optional
 
-# Observable related to vulnerability
-relationship1 = ip | related_to | vuln
+def create_tlp_marking(self, level: str) -> TLPMarking:
+    tlp_marking = TLPMarking(level=level)
+    return tlp_marking
 
-# Indicator indicates malware
-relationship2 = indicator | indicates | malware
+def create_author(self) -> OrganizationAuthor:
+    author = OrganizationAuthor(name="Connector Enrichment")
+    return author
+
+def create_relationship(
+        self,
+        relationship_type: str,
+        source_obj,
+        target_obj,
+        start_time: Optional[str] = None,
+        stop_time: Optional[str] = None,
+    ) -> Relationship:
+        """
+        Creates Relationship object
+        """
+        author = create_author()
+        tlp_amber = create_tlp_marking("amber")
+
+        return Relationship(
+            type=relationship_type,
+            source=source_obj,
+            target=target_obj,
+            author=author,
+            start_time=start_time,
+            stop_time=stop_time,
+            markings=[tlp_amber],
+        )
+
+relation = create_relationship(
+    source_obj=source_obj_id,
+    relationship_type="related-to",
+    target_obj=target_obj_id,
+    start_time=first_seen_datetime,
+    stop_time=last_seen_datetime,
+)
 ```
 
 ---
@@ -681,33 +718,49 @@ self.helper.set_state(new_state)
 ### Example: Incremental Import
 
 ```python
-def process_message(self):
-    current_state = self.helper.get_state()
+def process_message(self) -> None:
+    try:
+        current_start_time = datetime.now(timezone.utc).isoformat()
+        current_state = self.helper.get_state()
 
-    # Determine start date
-    if current_state and "last_run" in current_state:
-        start_date = current_state["last_run"]
+        # Retrieve previous run information
+        last_run_start = current_state.get("last_run_start") if current_state else None
+        last_run_with_data = current_state.get("last_run_with_data") if current_state else None
+
         self.helper.connector_logger.info(
-            "Resuming from last run",
-            {"start_date": start_date}
-        )
-    else:
-        start_date = self.config.my_connector.import_from_date
-        self.helper.connector_logger.info(
-            "First run, starting from",
-            {"start_date": start_date}
+            "[CONNECTOR] Starting connector...",
+            {
+                "connector_name": self.config.connector.name,
+                "last_run_start": last_run_start or "Never run",
+                "last_run_with_data": last_run_with_data or "Never ingested data",
+            },
         )
 
-    # Fetch data since start_date
-    data = self.client.get_data(since=start_date)
+        # Collect and process intelligence
+        collected_data = self._collect_intelligence()
 
-    # Process data...
+        if collected_data:
+            stix_objects = self._convert_to_stix(collected_data)
+            self._send_to_opencti(stix_objects)
+            last_run_with_data = datetime.now(timezone.utc).isoformat()
 
-    # Update state
-    self.helper.set_state({
-        "last_run": datetime.now(timezone.utc).isoformat()
-    })
+        # Update state
+        new_state = {"last_run_start": current_start_time}
+        if last_run_with_data:
+            new_state["last_run_with_data"] = last_run_with_data
+
+        self.helper.set_state(new_state)
+
+    except (KeyboardInterrupt, SystemExit):
+        self.helper.connector_logger.info("[CONNECTOR] Connector stopped...")
+        sys.exit(0)
+    except Exception as err:
+        self.helper.connector_logger.error(str(err))
 ```
+
+Example of state display on OpenCTI UI (Data -> Ingestion -> Connector Name)
+
+![State vizualisation](./media/ui_connector_state.png)
 
 ---
 
@@ -747,62 +800,55 @@ def process_message(self, data: dict) -> str:
         raise  # Re-raise unexpected errors
 ```
 
-### Graceful Degradation
+### Traceback
+
+Use custom exceptions for **clarity and control**; use `raise ... from ...` to **preserve the traceback** and maintain context.
+
+Example :
 
 ```python
-def enrich_entity(self, entity):
-    enrichments = []
+# NOT VALID ❌
+from external_import_connector import ConnectorTemplate
 
-    # Try multiple enrichment sources
+connector = ConnectorTemplate()
+connector.run()
+
+# VALID ✅
+import traceback
+
+from external_import_connector import ConnectorTemplate
+
+if __name__ == "__main__":   
     try:
-        enrichment1 = self.source1.enrich(entity)
-        enrichments.append(enrichment1)
-    except Exception as e:
-        self.helper.connector_logger.warning(
-            "Source 1 failed, continuing",
-            {"error": str(e)}
-        )
+        connector = ConnectorTemplate()
+        connector.run()
+    except Exception:
+        traceback.print_exc()
+        exit(1)
 
-    try:
-        enrichment2 = self.source2.enrich(entity)
-        enrichments.append(enrichment2)
-    except Exception as e:
-        self.helper.connector_logger.warning(
-            "Source 2 failed, continuing",
-            {"error": str(e)}
-        )
-
-    return enrichments
 ```
 
 ### Retry Logic
 
+Use the `tenacity` library for retry logic with exponential backoff:
+
 ```python
-import time
-from requests.exceptions import RequestException
+import requests
+from tenacity import retry, stop_after_attempt, wait_exponential_jitter
 
-
-def fetch_with_retry(self, url, max_retries=3):
-    for attempt in range(max_retries):
-        try:
-            response = requests.get(url)
-            response.raise_for_status()
-            return response.json()
-        except RequestException as e:
-            if attempt < max_retries - 1:
-                wait_time = 2 ** attempt  # Exponential backoff
-                self.helper.connector_logger.warning(
-                    f"Request failed, retrying in {wait_time}s",
-                    {"attempt": attempt + 1, "error": str(e)}
-                )
-                time.sleep(wait_time)
-            else:
-                self.helper.connector_logger.error(
-                    "Max retries exceeded",
-                    {"url": url, "error": str(e)}
-                )
-                raise
+@retry(
+    stop=stop_after_attempt(3),  # Max 3 attempts
+    wait=wait_exponential_jitter(initial=1, max=60, jitter=1),  # Exponential backoff with jitter
+)
+def fetch_with_retry(self, url: str):
+    response = requests.get(url)
+    response.raise_for_status()
+    return response.json()
 ```
+
+- **`stop_after_attempt(3)`** - Give up after 3 attempts
+- **`wait_exponential_jitter`** - Wait times increase exponentially (~1s, ~2s, ~4s...) with random jitter to avoid thundering herd
+- **`raise_for_status()`** - Raises exception on HTTP errors, triggering retry
 
 ---
 
@@ -815,7 +861,8 @@ The `OpenCTIConnectorHelper` provides essential methods for interacting with Ope
 ```python
 from pycti import OpenCTIConnectorHelper
 
-helper = OpenCTIConnectorHelper(config.model_dump())
+settings = ConnectorSettings()
+helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
 ```
 
 ### Common Helper Methods
@@ -833,8 +880,35 @@ bundles_sent = self.helper.send_stix2_bundle(
     cleanup_inconsistent_bundle=True,
 )
 ```
+> [!CAUTION]
+> If we use `cleanup_inconsistent_bundle`, it is important to include all STIX entities, including marking definitions AND author. In the case of markings that can be customized via configuration, it is essential to include all the basic options provided by STIX and add them to the final bundle.
 
-#### Work Management
+
+For `send_stix2_bundle`, each connector that used this method can have `cleanup_inconsistent_bundle` set to `True` to avoid `MISSING_REFERENCE_ERROR` and to be more consistent
+
+Commit change since ≥ 6.3.3: https://github.com/OpenCTI-Platform/client-python/commit/3f6fbb4cb26a7c26ba021f4d5b51c6891e33c21e
+
+
+Example
+
+```python
+      stix_objects.append(self.converter_to_stix.author)
+      stix_objects.append(self.tlp_marking)
+
+      stix_bundle = self.helper.stix2_create_bundle(stix_objects)
+      self.helper.send_stix2_bundle(
+          stix_bundle,
+          work_id=work_id,
+          cleanup_inconsistent_bundle=True,
+    )
+```
+
+#### Work Management ⚠️⚠️⚠️
+
+Always initiate a work before pushing data.
+For self-triggered connectors, OpenCTI has to be told about new jobs to process and to import. This is done by registering a so called work before sending the stix bundle and signalling the end of a work.
+
+Methods come from client-python
 
 ```python
 # Initialize work
@@ -849,6 +923,61 @@ self.helper.api.work.to_processed(
     "Successfully imported 42 indicators"
 )
 ```
+These functions are part of a work lifecycle for OpenCTI connectors:
+
+  1. initiate_work → Creates the work item
+  2. to_received → Marks work as received/acknowledged
+  3. add_expectations → Sets how many items are expected to be processed
+  4. report_expectation → Reports progress/errors for each item
+  5. to_processed → Marks the work as complete
+
+This provides observability into connector runs via the OpenCTI UI.
+
+
+**INITIALIZE A WORK**
+
+Purpose of `initiate_work`: Creates a new work item (job) in OpenCTI for a connector to track its processing
+
+_How it works_
+
+1. Only executes if self.api.bundle_send_to_queue is truthy (i.e., the API is configured to send bundles to a queue)
+2. Logs the initiation with the connector ID
+3. Executes a GraphQL workAdd mutation with:
+   - connectorId: identifies which connector is creating this work
+   - friendlyName: a human-readable name for this work item
+4. Returns the newly created work's id
+
+_Use case_
+
+Called at the start of a connector run to create a trackable work item that can then be updated with
+progress, expectations, and completion status.
+
+**COMPLETED WORK**
+
+Purpose of `to_processed`: Marks a work item as "processed" (completed), indicating the connector has finished its task.
+
+_How it works_
+
+1. Only executes if self.api.bundle_send_to_queue is truthy
+2. Logs the update with the work ID
+3. Executes a GraphQL workToProcessed mutation with:
+   - id: the work item to update
+   - message: a status message describing the outcome
+   - inError: boolean flag indicating if processing ended with an error (default: False)
+
+_Use case_ 
+
+Called when a connector finishes processing to signal completion. The in_error flag allows distinguishing
+successful completion from error states.
+
+Example of work vizualisation on OpenCTI UI
+
+_Completed status_
+![Work completed UI](./media/ui_work_completed.png)
+
+_In progress status_
+![Work in progress UI](./media/ui_work_in_progress.png)
+
 
 #### TLP Checking
 
@@ -866,7 +995,7 @@ if not is_valid:
     return
 ```
 
-#### Querying OpenCTI API
+#### Querying OpenCTI API (available but NOT recommended)
 
 ```python
 # Get entity by ID
@@ -881,17 +1010,18 @@ indicators = self.helper.api.indicator.list(
 )
 ```
 
-### Helper Properties
+### Common Helper Properties
 
-| Property                        | Description                       |
-|---------------------------------|-----------------------------------|
-| `helper.connect_id`             | Connector's unique ID             |
-| `helper.connect_name`           | Connector's name                  |
-| `helper.connect_scope`          | Connector's scope                 |
-| `helper.connect_live_stream_id` | Stream ID (for stream connectors) |
-| `helper.api`                    | OpenCTI API client                |
+ Common Properties (All Connector Types)
 
----
+  | Property               | Description                                    |
+  | ---------------------- | ---------------------------------------------- |
+  | `helper.connect_id`    | Connector's unique ID                          |
+  | `helper.connect_name`  | Connector's name                               |
+  | `helper.connect_type`  | Connector type                                 |
+  | `helper.connect_scope` | Connector's scope (mime types or entity types) |
+  | `helper.log_level`     | Logging level                                  |
+
 
 ## Next Steps
 
