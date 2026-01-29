@@ -66,35 +66,6 @@ class Misp:
             batch_size=self.config_misp.batch_count,
         )
 
-    def _log_entities_summary(
-        self,
-        all_entities: "list[stix2.v21._STIXBase21]",
-    ) -> None:
-        """Log summary of converted entities.
-
-        Args:
-            all_entities: list of all converted entities
-            current_idx: Current index in processing
-            total: Total number of entities
-
-        """
-        entity_types: dict[str, int] = {}
-        for entity in all_entities:
-            entity_type_attr = getattr(entity, "type", None)
-            if entity_type_attr:
-                entity_types[entity_type_attr] = (
-                    entity_types.get(entity_type_attr, 0) + 1
-                )
-        entities_summary = ", ".join([f"{k}: {v}" for k, v in entity_types.items()])
-        self.logger.debug(
-            "Converted to STIX entities",
-            {
-                "prefix": LOG_PREFIX,
-                "entities_count": len(all_entities),
-                "entities_summary": entities_summary,
-            },
-        )
-
     def _check_batch_size_and_flush(
         self,
         all_entities: "list[stix2.v21._STIXBase21]",
@@ -432,7 +403,13 @@ class Misp:
                         )
                         continue
 
-                    self._log_entities_summary(bundle_objects)
+                    self.logger.debug(
+                        "Converted to STIX entities",
+                        {
+                            "prefix": LOG_PREFIX,
+                            "entities_count": len(bundle_objects + markings + [author]),
+                        },
+                    )
 
                     self._process_bundle_in_batch(
                         event=event,

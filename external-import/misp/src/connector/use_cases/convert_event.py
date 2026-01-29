@@ -177,7 +177,9 @@ class EventConverter:
 
     def process(
         self, event: EventRestSearchListItem, include_relationships: bool = True
-    ) -> list[stix2.v21._STIXBase21]:
+    ) -> tuple[
+        stix2.Identity, list[stix2.MarkingDefinition], list[stix2.v21._STIXBase21]
+    ]:
         """
         Process an event and convert it to a list of STIX objects.
         :param event: EventRestSearchListItem object
