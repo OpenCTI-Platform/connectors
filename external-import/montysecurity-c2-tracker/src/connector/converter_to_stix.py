@@ -1,10 +1,7 @@
 import ipaddress
 from typing import Literal, Optional
 
-import stix2
-import validators
 from connectors_sdk.models import (
-    IPV4Address,
     OrganizationAuthor,
     Relationship,
     TLPMarking, Malware, Indicator
@@ -58,12 +55,22 @@ class ConverterToStix:
 
     def convert_ip(self, ip: str) -> Indicator:
 
-        ip_pattern = "[ipv4-addr:value = '" + ip + "']"
-        ip_type= "IPv4-Addr"
+        if self._is_ipv4(ip):
+            ip_pattern = f"[ipv4-addr:value = '{ ip }']"
+            ip_type = "IPv4-Addr"
+            ip_indicator = self.create_indicator(ip, ip_pattern, ip_type)
 
-        if self._is_ipv6(ip):
-            ip_pattern = "[ipv6-addr:value = '" + ip + "']"
+        elif self._is_ipv6(ip):
+            ip_pattern = f"[ipv6-addr:value = '{ ip }']"
             ip_type = "IPv6-Addr"
+            ip_indicator = self.create_indicator(ip, ip_pattern, ip_type)
+
+        else:
+            ip_indicator = None
+
+        return ip_indicator
+
+    def create_indicator(self, ip: str, ip_pattern: str, ip_type: str) -> Indicator:
 
         ip_indicator = Indicator(
             name=ip,
@@ -76,7 +83,6 @@ class ConverterToStix:
         )
 
         return ip_indicator
-
 
     @staticmethod
     def create_author() -> dict:
@@ -144,52 +150,3 @@ class ConverterToStix:
             return True
         except ipaddress.AddressValueError:
             return False
-
-    @staticmethod
-    def _is_domain(value: str) -> bool:
-        """
-        Valid domain name regex including internationalized domain name
-        :param value: Value in string
-        :return: A boolean
-        """
-        is_valid_domain = validators.domain(value)
-
-        if is_valid_domain:
-            return True
-        else:
-            return False
-
-    def create_obs(self, value: str) -> dict:
-        """
-        Create observable according to value given
-        :param value: Value in string
-        :return: Stix object for IPV4, IPV6 or Domain
-        """
-        if self._is_ipv6(value) is True:
-            stix_ipv6_address = stix2.IPv6Address(
-                value=value,
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author["id"],
-                },
-            )
-            return stix_ipv6_address
-        elif self._is_ipv4(value) is True:
-            stix_ipv4_address = IPV4Address(
-                value=value,
-                author=self.author["id"],
-                create_indicator=True,  # Used to also create the indicator
-            )
-            return stix_ipv4_address
-        elif self._is_domain(value) is True:
-            stix_domain_name = stix2.DomainName(
-                value=value,
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author["id"],
-                },
-            )
-            return stix_domain_name
-        else:
-            self.helper.connector_logger.error(
-                "This observable value is not a valid IPv4 or IPv6 address nor DomainName: ",
-                {"value": value},
-            )

@@ -1,4 +1,6 @@
 import re
+from typing import Any
+from urllib.parse import urljoin, quote
 
 import requests
 from connector.settings import MontysecurityC2TrackerConfig
@@ -15,8 +17,6 @@ class MontysecurityC2TrackerClient:
 
         Args:
             helper (OpenCTIConnectorHelper): The helper of the connector. Used for logs.
-            base_url (str): The external API base URL.
-            api_key (str): The API key to authenticate the connector to the external API.
         """
         self.helper = helper
         self.config = config
@@ -48,18 +48,18 @@ class MontysecurityC2TrackerClient:
             )
             return None
 
-    def get_malwares(self, params=None) -> dict:
+    def get_malwares(self, params=None) -> list[Any] | None:
         try:
             self.helper.connector_logger.info("Get Malware Entities")
             malware_list_url = (
                 self.config.malware_list_url.encoded_string()
-            )  # TODO: double check
+            )
             response = self._request_data(malware_list_url, params=params)
             self.helper.connector_logger.info(
                 "Status code from github.com: ", response.status_code
             )
             malware_list = list(
-                set(re.findall('"[\w|\s|\d|\.]+IPs\.txt"', response.text))
+                set(re.findall('[\w\s\d.]+IPs\.txt', response.text))
             )
 
             return malware_list
@@ -73,9 +73,9 @@ class MontysecurityC2TrackerClient:
 
             malware_ips_base_url = (
                 self.config.malware_ips_base_url.encoded_string()
-            )  # TODO double check
+            )
 
-            url = str(malware_ips_base_url + str(malware_name).replace(" ", "%20")) #TODO: double check the method
+            url = urljoin(str(malware_ips_base_url), quote(malware_name))
             response = self._request_data(url, params=params)
             ips = str(response.text).split("\n")
             ips.pop()

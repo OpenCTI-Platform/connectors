@@ -74,7 +74,7 @@ class MontysecurityC2TrackerConnector:
         # Get entities from external sources
         malware_list = self.client.get_malwares()
         entities = []
-        malware_list = [str(malware).strip('"') for malware in malware_list]
+        malware_list = [malware.strip('"') for malware in malware_list]
 
         self.helper.connector_logger.debug(malware_list)
 
@@ -86,6 +86,7 @@ class MontysecurityC2TrackerConnector:
 
             for ip in ips:
                 ip_indicator: Indicator = self.converter_to_stix.convert_ip(ip)
+                if not ip_indicator: continue
                 entities.append(ip_indicator)
 
                 relationship = self.converter_to_stix.create_relationship(
@@ -114,8 +115,8 @@ class MontysecurityC2TrackerConnector:
 
         try:
             # Get the current state
-            now = datetime.now()
-            current_timestamp = int(datetime.timestamp(now))
+            now = datetime.now(timezone.utc).timestamp()
+            current_timestamp = int(now)
             current_state = self.helper.get_state()
 
             if current_state is not None and "last_run" in current_state:
@@ -142,15 +143,17 @@ class MontysecurityC2TrackerConnector:
             # ===========================
             # === Add your code below ===
             # ===========================
-            stix_objects = self._collect_intelligence()
+            entities = self._collect_intelligence()
+            stix_objects = [entity.to_stix2_object() for entity in entities]
 
             work_id: str | None = None
 
-            if len(stix_objects):
+            if stix_objects:
                 # Initiate a new work
                 work_id = self.helper.api.work.initiate_work(
                     self.helper.connect_id, friendly_name
                 )
+
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
                 bundles_sent = self.helper.send_stix2_bundle(
                     stix_objects_bundle,
@@ -172,14 +175,13 @@ class MontysecurityC2TrackerConnector:
                 {"current_timestamp": current_timestamp},
             )
             current_state = self.helper.get_state()
-            current_state_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
             last_run_datetime = datetime.fromtimestamp(
                 current_timestamp, tz=timezone.utc
-            ).strftime("%Y-%m-%d %H:%M:%S")
+            ).strftime("%Y-%m-%d %H:%M:%SZ")
             if current_state:
-                current_state["last_run"] = current_state_datetime
+                current_state["last_run"] = last_run_datetime
             else:
-                current_state = {"last_run": current_state_datetime}
+                current_state = {"last_run": last_run_datetime}
             self.helper.set_state(current_state)
 
             message = (

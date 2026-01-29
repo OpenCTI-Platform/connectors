@@ -42,13 +42,13 @@ class MontysecurityC2TrackerConfig(BaseConfigModel):
     )
 
     malware_list_url: HttpUrl = Field(
-        description="The URL to the malware list page of the imported entities.",
-        default="https://github.com/montysecurity/C2-Tracker/tree/main/data",
+        description = "The URL to the malware list page of the imported entities.",
+        default = HttpUrl("https://github.com/montysecurity/C2-Tracker/tree/main/data"),
     )
 
     malware_ips_base_url: HttpUrl = Field(
-        description="The base URL used to fetch malware ips.",
-        default="https://raw.githubusercontent.com/montysecurity/C2-Tracker/main/data/"
+        description = "The base URL used to fetch malware ips.",
+        default = HttpUrl("https://raw.githubusercontent.com/montysecurity/C2-Tracker/main/data/"),
     )
 
 class ConnectorSettings(BaseConnectorSettings):
