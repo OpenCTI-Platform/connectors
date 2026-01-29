@@ -575,32 +575,24 @@ class S3Connector:
                 new_bundle_objects.append(json.loads(individual_credit.serialize()))
                 new_bundle_objects.append(json.loads(credit_relationship.serialize()))
 
-            # Relationships "has" - convert from vulnerability -> software/infrastructure (related-to)
-            # to software/infrastructure -> vulnerability (has)
+            # Relationships "has"
             if (
                 obj["type"] == "relationship"
                 and obj["relationship_type"] == "related-to"
                 and obj["source_ref"].startswith("vulnerability")
-                and (
-                    obj["target_ref"].startswith("software")
-                    or obj["target_ref"].startswith("infrastructure")
-                )
+                and obj["target_ref"].startswith("software")
             ):
                 obj["relationship_type"] = "has"
                 original_source_ref = obj["source_ref"]
                 obj["source_ref"] = obj["target_ref"]
                 obj["target_ref"] = original_source_ref
 
-            # Relationship "remediates" - convert from vulnerability -> software/infrastructure (remediated-by)
-            # to software/infrastructure -> vulnerability (remediates)
+            # Relationship "remediates"
             if (
                 obj["type"] == "relationship"
                 and obj["relationship_type"] == "remediated-by"
                 and obj["source_ref"].startswith("vulnerability")
-                and (
-                    obj["target_ref"].startswith("software")
-                    or obj["target_ref"].startswith("infrastructure")
-                )
+                and obj["target_ref"].startswith("software")
             ):
                 obj["relationship_type"] = "remediates"
                 original_source_ref = obj["source_ref"]
