@@ -28,21 +28,6 @@ class RiskList(threading.Thread):
 
     def run(self):
         try:
-            # Check access to the vulnerability module
-            vuln_permission = self.rfapi.check_vul_entitlement()
-            if vuln_permission:
-                self.helper.connector_logger.info(
-                    "[CONNECTOR] The subscription allows to download the vulnerability risk list"
-                )
-                RISK_LIST_TYPE_MAPPER["Vuln"] = {
-                    "class": Vulnerability,
-                    "path": "/public/opencti/opencti_default_vulnerability_v2.csv",
-                }
-            else:
-                self.helper.connector_logger.info(
-                    "[CONNECTOR] The subscription doesn't allow to download the vulnerability risk list"
-                )
-
             # Get the current state
             now = datetime.now()
             current_timestamp = int(datetime.timestamp(now))
@@ -60,7 +45,7 @@ class RiskList(threading.Thread):
                     {"last_run_datetime": last_risk_lists_run},
                 )
             else:
-                last_risk_run_dt = {}
+                last_risk_run_dt = None
 
                 self.helper.connector_logger.info(
                     "[CONNECTOR] Connector has never run for risk lists..."
@@ -68,6 +53,20 @@ class RiskList(threading.Thread):
 
             # Main process to pull risk lists
             for key, risk_list_type in RISK_LIST_TYPE_MAPPER.items():
+
+                # Check access to the vulnerability module
+                if key == 'Vuln':
+                    vuln_permission = self.rfapi.check_vul_entitlement()
+                    if vuln_permission:
+                        self.helper.connector_logger.info(
+                            "[CONNECTOR] The subscription allows to download the vulnerability risk list"
+                        )
+                    else:
+                        self.helper.connector_logger.info(
+                            "[CONNECTOR] The subscription doesn't allow to download the vulnerability risk list"
+                        )
+                        continue
+
                 self.helper.connector_logger.info(
                     f"[RISK LISTS] Pulling {key} risk lists"
                 )

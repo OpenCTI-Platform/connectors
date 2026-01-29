@@ -66,7 +66,7 @@ class RFStixEntity:
         """Returns a list of STIX objects"""
         if not self.stix_obj:
             self.create_stix_objects()
-        return [self.stix_obj]
+        return [self.author, self.stix_obj]
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
@@ -778,21 +778,21 @@ class Vulnerability(RFStixEntity):
         self,
         name,
         _type,
-        author=None,
         tlp=None,
-        display_name=None,
         first_seen=None,
         last_seen=None,
-        risk_score=None,
     ):
-        super().__init__(name, _type, author, tlp)
-        self.display_name = display_name
-        self.tlp = TLP_MAP.get(tlp, None)
+        super().__init__(
+            name=name,
+            _type=_type,
+            author=None,
+            tlp=tlp,
+            first_seen=first_seen,
+            last_seen=last_seen,
+        )
         self.description = None
-        self.first_seen = first_seen
-        self.last_seen = last_seen
         self.labels = []
-        self.risk_score = risk_score
+        self.risk_score = None
         self.objects = []
         self.related_entities = []
         self.stix_vulnerability = None
@@ -808,7 +808,7 @@ class Vulnerability(RFStixEntity):
         self.stix_vulnerability = self._create_vulnerability()
 
     def _create_vulnerability(self):
-        """Creates and returns STIX2 indicator object"""
+        """Creates and returns STIX2 vulnerability object"""
         return stix2.Vulnerability(
             id=pycti.Vulnerability.generate_id(self.name),
             name=self.name,
@@ -822,7 +822,6 @@ class Vulnerability(RFStixEntity):
                 "x_opencti_score": self.risk_score or None,
             },
         )
-        pass
 
     def add_description(self, description):
         self.description = description
@@ -833,7 +832,6 @@ class Vulnerability(RFStixEntity):
     def map_data(self, rf_vuln, tlp, risklist_related_entities):
         handled_related_entities_types = risklist_related_entities
         try:
-            self.display_name = rf_vuln["Name"]
             self.risk_score = int(rf_vuln["Risk"])
         except ValueError:
             self.risk_score = 0

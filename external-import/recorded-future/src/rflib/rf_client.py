@@ -293,22 +293,22 @@ class RFClient:
     def check_vul_entitlement(self):
         try:
             response = requests.head(VULNERABILITY_RISKLIST, headers=self.headers)
-            if response.status_code != 200:
-                self.helper.connector_logger.info(
-                    "[CONNECTOR] User does not have access to the Vulnerability module"
-                )
-                return False
-            else:
-                self.helper.connector_logger.info(
-                    "[CONNECTOR] User has access to the Vulnerability module"
-                )
-                return True
+            response.raise_for_status()
+            self.helper.connector_logger.info(
+                "[CHECK VULN ENTITLEMENT] User has access to the Vulnerability module"
+            )
+            return True
         except (
             requests.exceptions.HTTPError,
             requests.exceptions.RequestException,
         ) as e:
-            self.helper.connector_logger.error(
-                f"API access validation hit error={str(e)}. Assuming no access to the "
-                f"Vulnerability module"
+            self.helper.connector_logger.info(
+                "[CHECK VULN ENTITLEMENT] User does not have access to the Vulnerability module",
+                {"error": e},
             )
-            return False
+        except Exception as err:
+            self.helper.connector_logger.error(
+                "[CHECK VULN ENTITLEMENT] API access validation hit error. Assuming no access to the Vulnerability module",
+                {"error": err},
+            )
+        return False
