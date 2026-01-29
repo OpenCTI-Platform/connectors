@@ -221,6 +221,47 @@ class Misp:
             )
             return False
 
+        current_state = self.work_manager.get_state()
+        if self.config.misp.datetime_attribute == "date":
+            current_event_id = current_state.get("current_event_id")
+            remaining_objects_count = current_state.get("remaining_objects_count")
+
+            if not current_event_id:
+                return True
+
+            if event.Event.id < current_event_id or (
+                event.Event.id == current_event_id and remaining_objects_count == 0
+            ):
+                self.logger.info(
+                    "Event already processed by the connector, skipping event",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "event_id": event.Event.id,
+                    },
+                )
+                return False
+        else:
+            last_event_date = current_state.get("last_event_date")
+            remaining_objects_count = current_state.get("remaining_objects_count")
+
+            if not last_event_date:
+                return True
+
+            event_datetime = self._get_event_datetime(event)
+            last_event_datetime = datetime.fromisoformat(last_event_date)
+            if event_datetime < last_event_datetime or (
+                event_datetime == last_event_datetime and remaining_objects_count == 0
+            ):
+                self.logger.info(
+                    "Event already processed by the connector, skipping event",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "event_id": event.Event.id,
+                        "event_datetime": event_datetime.isoformat(),
+                    },
+                )
+                return False
+
         return True
 
     def _process_bundle_in_batch(
@@ -338,24 +379,6 @@ class Misp:
                         break
 
                     if not self._validate_event(event):
-                        continue
-
-                    current_state = self.work_manager.get_state()
-                    prev_event_id = current_state.get("current_event_id")
-                    remaining_objects_count = current_state.get(
-                        "remaining_objects_count"
-                    )
-
-                    if prev_event_id is not None and (
-                        event.Event.id < prev_event_id
-                        or (
-                            event.Event.id == prev_event_id
-                            and remaining_objects_count == 0
-                        )
-                    ):
-                        self.logger.info(
-                            "Event already processed, skipping", event_log_data
-                        )
                         continue
 
                     self.logger.info("MISP event found - Processing...", event_log_data)
