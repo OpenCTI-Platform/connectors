@@ -341,7 +341,7 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
                 )
 
             if is_namespace:
-                for sub_field_name, sub_field in annotation.model_fields.items(): # type: ignore[union-attr]
+                for sub_field_name, sub_field in annotation.model_fields.items():  # type: ignore[union-attr]
                     sub_json_schema_extra = sub_field.json_schema_extra or {}
                     sub_deprecated = sub_field.deprecated
                     sub_new_namespace = sub_json_schema_extra.get("new_namespace")
