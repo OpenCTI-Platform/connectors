@@ -625,6 +625,23 @@ class S3Connector:
         # Only create bundle if we have objects to process
         if len(new_bundle_objects) > 0:
             rewritten_bundle_objects = self.rewrite_stix_ids(new_bundle_objects)
+            if self.s3_attach_original_file:
+                # Create the STIX bundle
+                bundle_dict = self.helper.stix2_create_bundle(rewritten_bundle_objects)
+                # Serialize to JSON string and encode to bytes
+                bundle_json = json.dumps(bundle_dict).encode("utf-8")
+                # Now base64 encode the bytes
+                file_attachment = {
+                    "name": "opencti-bundle.json",
+                    "data": base64.b64encode(bundle_json).decode("utf-8"),
+                    "mime_type": "application/json",
+                    "no_trigger_import": True,
+                }
+                for obj in data["objects"]:
+                    if obj.get("type") == "vulnerability":
+                        if "x_opencti_files" not in obj:
+                            obj["x_opencti_files"] = []
+                        obj["x_opencti_files"].append(file_attachment)
             return self.helper.stix2_create_bundle(rewritten_bundle_objects)
 
         return None
