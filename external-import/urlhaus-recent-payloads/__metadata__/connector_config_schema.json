@@ -45,7 +45,7 @@
       "type": "string"
     },
     "CONNECTOR_DURATION_PERIOD": {
-      "default": "PT1H",
+      "default": "PT5M",
       "description": "The period of time to await between two runs of the connector.",
       "format": "duration",
       "type": "string"
@@ -56,26 +56,26 @@
       "type": "string"
     },
     "URLHAUS_RECENT_PAYLOADS_API_KEY": {
-      "default": "**********",
       "description": "The API key for the URLhaus API.",
       "format": "password",
       "type": "string",
       "writeOnly": true
     },
-    "URLHAUS_RECENT_PAYLOADS_COOLDOWN_SECONDS": {
-      "default": 300,
-      "description": "The time to wait in seconds between subsequent requests.",
-      "type": "integer"
-    },
     "URLHAUS_RECENT_PAYLOADS_INCLUDE_FILETYPES": {
-      "default": null,
+      "default": [],
       "description": "Only download files if file type matches. (Comma separated)",
-      "type": "string"
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "URLHAUS_RECENT_PAYLOADS_INCLUDE_SIGNATURES": {
-      "default": null,
+      "default": [],
       "description": "Only download files if match these Yara rules. (Comma separated)",
-      "type": "string"
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "URLHAUS_RECENT_PAYLOADS_SKIP_UNKNOWN_FILETYPES": {
       "default": true,
@@ -88,9 +88,14 @@
       "type": "boolean"
     },
     "URLHAUS_RECENT_PAYLOADS_LABELS": {
-      "default": "urlhaus",
+      "default": [
+        "urlhaus"
+      ],
       "description": "Labels to apply to uploaded Artifacts. (Comma separated)",
-      "type": "string"
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "URLHAUS_RECENT_PAYLOADS_LABELS_COLOR": {
       "default": "#54483b",
@@ -110,7 +115,8 @@
   },
   "required": [
     "OPENCTI_URL",
-    "OPENCTI_TOKEN"
+    "OPENCTI_TOKEN",
+    "URLHAUS_RECENT_PAYLOADS_API_KEY"
   ],
   "additionalProperties": true
 }
