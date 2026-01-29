@@ -1,8 +1,5 @@
 # External Import Connector Specifications
 
-**Document:** 02-external-import-specifications.md
-**Connector Type:** `EXTERNAL_IMPORT`
-
 ## Table of Contents
 
 - [Overview](#overview)
