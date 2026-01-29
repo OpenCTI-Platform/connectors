@@ -264,6 +264,39 @@ class Misp:
 
         return True
 
+    def _get_event_datetime(self, event: "EventRestSearchListItem") -> datetime:
+        """Get the datetime of the event based on the configured attribute.
+
+        Args:
+            event: The MISP event
+
+        Returns:
+            The datetime of the event
+
+        """
+        event_datetime_attribute = self.config_misp.datetime_attribute
+        event_datetime_value = getattr(event.Event, event_datetime_attribute)
+
+        if event_datetime_attribute in {
+            "timestamp",
+            "publish_timestamp",
+            "sighting_timestamp",
+        }:
+            event_datetime = datetime.fromtimestamp(
+                int(event_datetime_value), tz=timezone.utc
+            )
+        elif event_datetime_attribute == "date":
+            event_datetime = datetime.fromisoformat(event_datetime_value).replace(
+                tzinfo=timezone.utc
+            )
+        else:
+            raise ValueError(
+                "`MISP_DATETIME_ATTRIBUTE` must be either: 'date', "
+                "'timestamp', 'publish_timestamp' or 'sighting_timestamp'"
+            )
+
+        return event_datetime
+
     def _process_bundle_in_batch(
         self,
         event_id: str,
@@ -401,27 +434,7 @@ class Misp:
 
                     self._log_entities_summary(bundle_objects)
 
-                    event_datetime_value = getattr(
-                        event.Event, self.config_misp.datetime_attribute
-                    )
-                    if self.config_misp.datetime_attribute in {
-                        "timestamp",
-                        "publish_timestamp",
-                        "sighting_timestamp",
-                    }:
-                        event_datetime = datetime.fromtimestamp(
-                            int(event_datetime_value), tz=timezone.utc
-                        )
-                    elif date_attr_used:
-                        event_datetime = datetime.fromisoformat(
-                            event_datetime_value
-                        ).replace(tzinfo=timezone.utc)
-                    else:
-                        raise ValueError(
-                            "`MISP_DATETIME_ATTRIBUTE` must be either: 'date', "
-                            "'timestamp', 'publish_timestamp' or 'sighting_timestamp'"
-                        )
-
+                    event_datetime = self._get_event_datetime(event)
                     if (
                         last_event_datetime is None
                         or event_datetime > last_event_datetime
