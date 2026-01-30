@@ -11,7 +11,7 @@ from utils.work_manager import WorkManager
 if TYPE_CHECKING:
     import stix2
     from api_client.models import EventRestSearchListItem
-    from connector.settings import ConnectorSettings, MispConfig
+    from connector.settings import ConnectorSettings
     from pycti import OpenCTIConnectorHelper
 
 LOG_PREFIX = "[Connector]"
@@ -20,41 +20,39 @@ LOG_PREFIX = "[Connector]"
 class Misp:
     def __init__(self, config: "ConnectorSettings", helper: "OpenCTIConnectorHelper"):
         self.config = config
-        self.config_misp: MispConfig = config.misp
-
         self.helper = helper
         self.logger = helper.connector_logger
 
         self.client_api: MISPClient = MISPClient(
-            url=self.config_misp.url,
-            key=self.config_misp.key.get_secret_value(),
-            verify_ssl=self.config_misp.ssl_verify,
-            certificate=self.config_misp.client_cert,
+            url=self.config.misp.url,
+            key=self.config.misp.key.get_secret_value(),
+            verify_ssl=self.config.misp.ssl_verify,
+            certificate=self.config.misp.client_cert,
         )
 
         self.converter = EventConverter(
             logger=self.logger,
-            report_type=self.config_misp.report_type,
-            report_description_attribute_filters=self.config_misp.report_description_attribute_filters,
-            external_reference_base_url=self.config_misp.reference_url
-            or self.config_misp.url,
-            convert_event_to_report=self.config_misp.create_reports,
-            convert_attribute_to_associated_file=self.config_misp.import_with_attachments,
-            convert_attribute_to_indicator=self.config_misp.create_indicators,
-            convert_attribute_to_observable=self.config_misp.create_observables,
-            convert_object_to_observable=self.config_misp.create_object_observables,
-            convert_unsupported_object_to_text_observable=self.config_misp.import_unsupported_observables_as_text,
-            convert_unsupported_object_to_transparent_text_observable=self.config_misp.import_unsupported_observables_as_text_transparent,
-            convert_tag_to_author=self.config_misp.author_from_tags,
-            convert_tag_to_label=self.config_misp.create_tags_as_labels,
-            convert_tag_to_marking=self.config_misp.markings_from_tags,
-            propagate_report_labels=self.config_misp.propagate_labels,
-            original_tags_to_keep_as_labels=self.config_misp.keep_original_tags_as_label,
-            default_attribute_score=self.config_misp.import_to_ids_no_score,
-            guess_threats_from_tags=self.config_misp.guess_threats_from_tags,
+            report_type=self.config.misp.report_type,
+            report_description_attribute_filters=self.config.misp.report_description_attribute_filters,
+            external_reference_base_url=self.config.misp.reference_url
+            or self.config.misp.url,
+            convert_event_to_report=self.config.misp.create_reports,
+            convert_attribute_to_associated_file=self.config.misp.import_with_attachments,
+            convert_attribute_to_indicator=self.config.misp.create_indicators,
+            convert_attribute_to_observable=self.config.misp.create_observables,
+            convert_object_to_observable=self.config.misp.create_object_observables,
+            convert_unsupported_object_to_text_observable=self.config.misp.import_unsupported_observables_as_text,
+            convert_unsupported_object_to_transparent_text_observable=self.config.misp.import_unsupported_observables_as_text_transparent,
+            convert_tag_to_author=self.config.misp.author_from_tags,
+            convert_tag_to_label=self.config.misp.create_tags_as_labels,
+            convert_tag_to_marking=self.config.misp.markings_from_tags,
+            propagate_report_labels=self.config.misp.propagate_labels,
+            original_tags_to_keep_as_labels=self.config.misp.keep_original_tags_as_label,
+            default_attribute_score=self.config.misp.import_to_ids_no_score,
+            guess_threats_from_tags=self.config.misp.guess_threats_from_tags,
             threats_guesser=(
                 ThreatsGuesser(self.helper.api)
-                if self.config_misp.guess_threats_from_tags
+                if self.config.misp.guess_threats_from_tags
                 else None
             ),
         )
@@ -63,7 +61,7 @@ class Misp:
         self.batch_processor: "BatchProcessor" = BatchProcessor(
             work_manager=self.work_manager,
             logger=self.logger,
-            batch_size=self.config_misp.batch_count,
+            batch_size=self.config.misp.batch_count,
         )
 
     def _check_batch_size_and_flush(
@@ -78,7 +76,7 @@ class Misp:
         """
         if (
             self.batch_processor.get_current_batch_size() + len(all_entities)
-        ) >= self.config_misp.batch_count * 2:
+        ) >= self.config.misp.batch_count * 2:
             self.logger.debug(
                 "Need to Flush before adding next items to preserve consistency of the bundle",
                 {"prefix": LOG_PREFIX},
@@ -129,8 +127,8 @@ class Misp:
 
         """
         if (
-            self.config_misp.import_owner_orgs
-            and event.Event.Org.name not in self.config_misp.import_owner_orgs
+            self.config.misp.import_owner_orgs
+            and event.Event.Org.name not in self.config.misp.import_owner_orgs
         ):
             self.logger.info(
                 "Event owner Organization not in `MISP_IMPORT_OWNER_ORGS`, skipping event",
@@ -142,8 +140,8 @@ class Misp:
             return False
 
         if (
-            self.config_misp.import_owner_orgs_not
-            and event.Event.Org.name in self.config_misp.import_owner_orgs_not
+            self.config.misp.import_owner_orgs_not
+            and event.Event.Org.name in self.config.misp.import_owner_orgs_not
         ):
             self.logger.info(
                 "Event owner Organization in `MISP_IMPORT_OWNER_ORGS_NOT`, skipping event",
@@ -155,9 +153,9 @@ class Misp:
             return False
 
         if (
-            self.config_misp.import_distribution_levels
+            self.config.misp.import_distribution_levels
             and event.Event.distribution
-            not in self.config_misp.import_distribution_levels
+            not in self.config.misp.import_distribution_levels
         ):
             self.logger.info(
                 "Event distribution level not in `MISP_IMPORT_DISTRIBUTION_LEVELS`, skipping event",
@@ -169,8 +167,8 @@ class Misp:
             return False
 
         if (
-            self.config_misp.import_threat_levels
-            and event.Event.threat_level_id not in self.config_misp.import_threat_levels
+            self.config.misp.import_threat_levels
+            and event.Event.threat_level_id not in self.config.misp.import_threat_levels
         ):
             self.logger.info(
                 "Event threat level not in `MISP_IMPORT_THREAT_LEVELS`, skipping event",
@@ -181,7 +179,7 @@ class Misp:
             )
             return False
 
-        if self.config_misp.import_only_published and not event.Event.published:
+        if self.config.misp.import_only_published and not event.Event.published:
             self.logger.info(
                 "Event not published and `MISP_IMPORT_ONLY_PUBLISHED` enabled, skipping event",
                 {
@@ -244,7 +242,7 @@ class Misp:
             The datetime of the event
 
         """
-        event_datetime_attribute = self.config_misp.datetime_attribute
+        event_datetime_attribute = self.config.misp.datetime_attribute
         event_datetime_value = getattr(event.Event, event_datetime_attribute)
 
         if event_datetime_attribute in {
@@ -288,7 +286,7 @@ class Misp:
             current_state.get("remaining_objects_count") or bundle_size
         )
         object_index = bundle_size - remaining_objects_count
-        batch_chunk_size = self.config_misp.batch_count
+        batch_chunk_size = self.config.misp.batch_count
         for i in range(
             object_index,
             bundle_size,
@@ -347,20 +345,20 @@ class Misp:
                     },
                 )
             else:
-                last_event_date = self.config_misp.import_from_date or now
+                last_event_date = self.config.misp.import_from_date or now
                 self.logger.info("Connector has never run")
 
             filter_params = {
-                "date_field_filter": self.config_misp.date_filter_field,
+                "date_field_filter": self.config.misp.date_filter_field,
                 "date_value_filter": last_event_date,
-                "datetime_attribute": self.config_misp.datetime_attribute,
-                "keyword": self.config_misp.import_keyword,
-                "included_tags": self.config_misp.import_tags,
-                "excluded_tags": self.config_misp.import_tags_not,
-                "included_org_creators": self.config_misp.import_creator_orgs,
-                "excluded_org_creators": self.config_misp.import_creator_orgs_not,
-                "enforce_warning_list": self.config_misp.enforce_warning_list,
-                "with_attachments": self.config_misp.import_with_attachments,
+                "datetime_attribute": self.config.misp.datetime_attribute,
+                "keyword": self.config.misp.import_keyword,
+                "included_tags": self.config.misp.import_tags,
+                "excluded_tags": self.config.misp.import_tags_not,
+                "included_org_creators": self.config.misp.import_creator_orgs,
+                "excluded_org_creators": self.config.misp.import_creator_orgs_not,
+                "enforce_warning_list": self.config.misp.enforce_warning_list,
+                "with_attachments": self.config.misp.import_with_attachments,
             }
 
             self.logger.info(

@@ -167,8 +167,8 @@ def test_get_event_datetime_with_invalid_attribute(
 
     connector = fake_misp_connector(config_dict)
 
-    with patch.object(connector, "config_misp") as mock_invalid_misp_config:
-        mock_invalid_misp_config.datetime_attribute = "invalid"
+    with patch.object(connector, "config") as mock_invalid_config:
+        mock_invalid_config.misp.datetime_attribute = "invalid"
 
         event = EventRestSearchListItem.model_validate({"Event": {"invalid": "foo"}})
         try:
