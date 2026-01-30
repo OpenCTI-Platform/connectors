@@ -47,15 +47,29 @@ class CpeConfig(BaseConfigModel):
         description="API Key for the NIST NVD API.",
     )
 
+
+class ConnectorSettings(BaseConnectorSettings):
+    """
+    Override `BaseConnectorSettings` to include `ExternalImportConnectorConfig` and `CpeConfig`.
+    """
+
+    connector: ExternalImportConnectorConfig = Field(
+        default_factory=ExternalImportConnectorConfig
+    )
+    cpe: CpeConfig = Field(default_factory=CpeConfig)
+    # We keep NIST_API_KEY for backward compatibility
+    nist: dict = Field(default_factory=dict, exclude=True)
+
     @model_validator(mode="before")
     @classmethod
-    def migrate_deprecated_interval(cls, data: dict) -> dict:
+    def migrate_deprecated_config(cls, data: dict) -> dict:
         """
-        Env var `CPE_INTERVAL` is deprecated.
+        Env vars `CPE_INTERVAL` and NIST_API_KEY are deprecated.
         This is a workaround to keep the old config working while we migrate to `CONNECTOR_DURATION_PERIOD`.
         """
         connector_data: dict = data.get("connector", {})
         cpe_data: dict = data.get("cpe", {})
+        nist_data: dict = data.get("nist", {})
         if interval := cpe_data.pop("interval", None):
             if connector_data.get("duration_period") is not None:
                 warnings.warn(
@@ -69,15 +83,16 @@ class CpeConfig(BaseConfigModel):
                 )
                 connector_data["duration_period"] = timedelta(hours=int(interval))
 
+        if api_key := nist_data.pop("api_key", None):
+            if cpe_data.get("api_key") is not None:
+                warnings.warn(
+                    "Both 'NIST_API_KEY' and 'CPE_API_KEY' are set. "
+                    "'CPE_API_KEY' will take precedence."
+                )
+            else:
+                warnings.warn(
+                    "Env var 'NIST_API_KEY' is deprecated. Use 'CPE_API_KEY' instead."
+                )
+                cpe_data["api_key"] = SecretStr(api_key)
+
         return data
-
-
-class ConnectorSettings(BaseConnectorSettings):
-    """
-    Override `BaseConnectorSettings` to include `ExternalImportConnectorConfig` and `CpeConfig`.
-    """
-
-    connector: ExternalImportConnectorConfig = Field(
-        default_factory=ExternalImportConnectorConfig
-    )
-    cpe: CpeConfig = Field(default_factory=CpeConfig)
