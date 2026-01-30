@@ -599,6 +599,15 @@ class S3Connector:
                 obj["source_ref"] = obj["target_ref"]
                 obj["target_ref"] = original_source_ref
 
+            # Relationship "remediates" in wrong direction
+            if (
+                obj["type"] == "relationship"
+                and obj["relationship_type"] == "remediated-by"
+                and obj["source_ref"].startswith("software")
+                and obj["target_ref"].startswith("vulnerability")
+            ):
+                obj["relationship_type"] = "remediates"
+
             # Cleanup orphan relationships
             if (
                 obj["type"] == "relationship"
