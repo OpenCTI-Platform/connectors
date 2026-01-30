@@ -31,7 +31,6 @@ from crowdstrike_feeds_services.utils import (
     create_targets_relationships,
     create_uses_relationships,
     create_vulnerability,
-    create_vulnerability_external_references,
     timestamp_to_datetime,
 )
 from pycti import OpenCTIConnectorHelper
@@ -238,13 +237,10 @@ class IndicatorBundleBuilder:
         )
 
     def _create_vulnerability(self, name: str):
-        external_references = create_vulnerability_external_references(name)
-
         return create_vulnerability(
             name,
             created_by=self.author,
             confidence=self.confidence_level,
-            external_references=external_references,
             object_markings=self.object_markings,
         )
 
@@ -524,7 +520,7 @@ class IndicatorBundleBuilder:
         bundle_objects.extend(indicators_based_on_observables)
 
         # Indicator(s) indicate entities and add to bundle.
-        indicator_indicates = intrusion_sets + malwares
+        indicator_indicates = intrusion_sets + malwares + vulnerabilities
 
         indicator_indicates_entities = self._create_indicates_relationships(
             indicators, indicator_indicates
