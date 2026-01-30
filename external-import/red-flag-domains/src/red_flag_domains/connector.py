@@ -1,105 +1,77 @@
-import os
-import time
 from datetime import datetime, timedelta, timezone
 
 import requests
 import stix2
-import yaml
-from pycti import (
-    Identity,
-    Indicator,
-    OpenCTIConnectorHelper,
-    StixCoreRelationship,
-    get_config_variable,
-)
+from pycti import Identity, Indicator, OpenCTIConnectorHelper, StixCoreRelationship
+
+from .settings import ConnectorSettings
 
 
 class RedFlagDomainImportConnector:
-    def __init__(self):
-        config_file_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "config.yml"
-        )
-        if os.path.isfile(config_file_path):
-            with open(config_file_path, "r") as f:
-                config = yaml.safe_load(f)
-        else:
-            config = {}
-        try:
-            self.helper = OpenCTIConnectorHelper(config)
-        except Exception as e:
-            print(e)
-        name = get_config_variable(
-            "CONNECTOR_NAME", ["connector", "name"], config
-        ).capitalize()
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+        self.config = config
+        self.helper = helper
+        name = self.config.connector.name.capitalize()
         self.author = stix2.Identity(
             id=Identity.generate_id(name, "organization"),
-            name=name,
+            name="Red Flag Domains",
             identity_class="organization",
         )
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-        )
-
-        self.api_url = get_config_variable(
-            "REDFLAGDOMAINS_URL",
-            ["redflagdomains", "url"],
-            config,
-        )
+        self.api_url = self.config.red_flag_domains.url
 
     def run(self):
-        while True:
-            try:
-                current_state = self.helper.get_state()
-                now = datetime.now(tz=timezone.utc)
-                friendly_name = "Red Flag Domains run @ " + now.strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
-                work_id = self.helper.api.work.initiate_work(
-                    self.helper.connect_id, friendly_name
-                )
+        """
+        Run the main process encapsulated in a scheduler
+        It allows you to schedule the process to run at a certain intervals
+        This specific scheduler from the pycti connector helper will also check the queue size of a connector
+        If `CONNECTOR_QUEUE_THRESHOLD` is set, if the connector's queue size exceeds the queue threshold,
+        the connector's main process will not run until the queue is ingested and reduced sufficiently,
+        allowing it to restart during the next scheduler check. (default is 500MB)
+        It requires the `duration_period` connector variable in ISO-8601 standard format
+        Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
+        :return: None
+        """
+        self.helper.schedule_iso(
+            message_callback=self.process_data,
+            duration_period=self.config.connector.duration_period,
+        )
 
-                if current_state is not None and "last_run" in current_state:
-                    last_seen = datetime.fromtimestamp(current_state["last_run"])
-                    self.helper.log_info(f"Connector last ran at: {last_seen} (UTC)")
-                else:
-                    self.helper.log_info("Connector has never run")
-
-                domain_list = self.get_domains(self.api_url)
-                observables = self.create_observables(domain_list)
-                indicators = self.create_indicators(observables)
-                relationships = self.create_relationships(observables, indicators)
-                bundle = self.create_bundle(observables, indicators, relationships)
-                self.send_bundle(bundle, work_id)
-
-                message = (
-                    "Connector successfully run ("
-                    + str((len(indicators) + len(observables) + len(relationships)))
-                    + " events have been processed), storing last_run as "
-                    + str(now)
-                )
-                self.helper.log_info(message)
-                self.helper.set_state(
-                    {
-                        "last_run": now.timestamp(),
-                    }
-                )
-
-                time_now = datetime.now(timezone(timedelta(hours=2)))
-                time_until_2am = timedelta(
-                    days=1,
-                    hours=2 - time_now.hour,
-                    minutes=-time_now.minute,
-                    seconds=-time_now.second,
-                )
-                time.sleep(time_until_2am.total_seconds())
-            except (KeyboardInterrupt, SystemExit):
-                self.helper.log_info("Connector stop")
-                exit(0)
-
-            except Exception as exception:
-                self.helper.log_error(str(exception))
+    def process_data(self) -> None:
+        """
+        Process the data
+        """
+        try:
+            current_state = self.helper.get_state()
+            now = datetime.now(tz=timezone.utc)
+            friendly_name = "Red Flag Domains run @ " + now.strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, friendly_name
+            )
+            if current_state is not None and "last_run" in current_state:
+                last_seen = datetime.fromtimestamp(current_state["last_run"])
+                self.helper.log_info(f"Connector last ran at: {last_seen} (UTC)")
+            else:
+                self.helper.log_info("Connector has never run")
+            domain_list = self.get_domains(self.api_url)
+            observables = self.create_observables(domain_list)
+            indicators = self.create_indicators(observables)
+            relationships = self.create_relationships(observables, indicators)
+            bundle = self.create_bundle(observables, indicators, relationships)
+            self.send_bundle(bundle, work_id)
+            events_count = len(indicators) + len(observables) + len(relationships)
+            message = (
+                f"Connector successfully run ({events_count} events have"
+                f"been processed), storing last_run as {now}"
+            )
+            self.helper.log_info(message)
+            self.helper.set_state({"last_run": now.timestamp()})
+        except (KeyboardInterrupt, SystemExit):
+            self.helper.log_info("Connector stop")
+            exit(0)
+        except Exception as exception:
+            self.helper.log_error(str(exception))
 
     def get_domains(self, url):
         self.helper.log_info("Enumerating domains")
@@ -151,9 +123,7 @@ class RedFlagDomainImportConnector:
                 pattern=pattern,
                 labels=["phishing", "red-flag-domains"],
                 object_marking_refs=[stix2.TLP_WHITE],
-                custom_properties={
-                    "x_opencti_main_observable_type": "Domain-Name",
-                },
+                custom_properties={"x_opencti_main_observable_type": "Domain-Name"},
             )
             indicators.append(indicator)
         return indicators
@@ -189,18 +159,6 @@ class RedFlagDomainImportConnector:
     def send_bundle(self, bundle, work_id):
         self.helper.log_info("Sending STIX Bundle")
         try:
-            self.helper.send_stix2_bundle(
-                bundle, work_id=work_id, update=self.update_existing_data
-            )
+            self.helper.send_stix2_bundle(bundle, work_id=work_id)
         except Exception as e:
             self.helper.log_error(str(e))
-
-
-if __name__ == "__main__":
-    try:
-        RedFlagDomainImportConnector = RedFlagDomainImportConnector()
-        RedFlagDomainImportConnector.run()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        exit(0)
