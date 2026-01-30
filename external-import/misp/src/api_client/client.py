@@ -106,7 +106,11 @@ class MISPClient:
                     page=current_page,
                     # Undocumented parameter to sort the results by the given attribute
                     # https://www.circl.lu/doc/misp/automation/#:~:text=Example-,Search,-Events%20management
-                    order=f"Event.{datetime_attribute} ASC, Event.id ASC",
+                    order=(
+                        "Event.id ASC"
+                        if date_field_filter == "date_from"
+                        else f"Event.{datetime_attribute} ASC"
+                    ),
                     **{date_field_filter: date_value_filter},
                 )
                 if isinstance(results, dict) and results.get("errors"):
