@@ -2,14 +2,12 @@ opencti:
   url: 'http://localhost'
   token: 'ChangeMe'
 
-connector:
-  type: 'EXTERNAL_IMPORT'
-  id: 'ChangeMe'
-  name: 'Valhalla'
-  scope: 'valhalla'
-  update_existing_data: false
-  log_level: 'info'
+# connector:
+#   id: '6528cf33-6059-4927-bc08-db52f4cfbb5a'
+#   name: 'Valhalla'
+#   scope: 'valhalla'
+#   log_level: 'error'
+#   duration_period: 'P1D'
 
-valhalla:
-  api_key: ''
-  interval_sec: 86400
+# valhalla:
+#   api_key: ''  # Empty key fetches only public/demo rules.
