@@ -74,7 +74,7 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_SCOPE=software
       - CONNECTOR_LOG_LEVEL=info
       - CPE_BASE_URL=https://services.nvd.nist.gov/rest/json/cpes/2.0
-      - NIST_API_KEY=ChangeMe
+      - CPE_API_KEY=ChangeMe
       - CPE_INTERVAL=6h
     restart: always
 ```

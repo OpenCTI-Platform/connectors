@@ -131,3 +131,60 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err)
+
+
+def _make_fake_settings(settings_dict: dict[str, Any]) -> ConnectorSettings:
+    """Build ConnectorSettings with injected config dict for testing."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(settings_dict)
+
+    return FakeConnectorSettings()
+
+
+def test_nist_api_key_deprecated_migrates_to_cpe_api_key() -> None:
+    """
+    When only NIST_API_KEY (nist.api_key) is set, a deprecation warning is emitted
+    and the value is migrated to cpe.api_key.
+    """
+    settings_dict = {
+        "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+        "connector": {"id": "connector-id"},
+        "cpe": {"base_url": "https://services.nvd.nist.gov/rest/json/cpes/2.0"},
+        "nist": {"api_key": "legacy-nist-key"},
+    }
+    with pytest.warns(UserWarning, match="NIST_API_KEY.*deprecated.*CPE_API_KEY"):
+        settings = _make_fake_settings(settings_dict)
+    assert settings.cpe.api_key.get_secret_value() == "legacy-nist-key"
+
+
+def test_both_nist_and_cpe_api_key_warns_cpe_takes_precedence() -> None:
+    """
+    When both NIST_API_KEY and CPE_API_KEY are set, a warning is emitted
+    and cpe.api_key (CPE_API_KEY) is kept.
+    """
+    settings_dict = {
+        "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+        "connector": {"id": "connector-id"},
+        "cpe": {"api_key": "preferred-cpe-key"},
+        "nist": {"api_key": "legacy-nist-key"},
+    }
+    with pytest.warns(UserWarning, match="Both 'NIST_API_KEY' and 'CPE_API_KEY'"):
+        settings = _make_fake_settings(settings_dict)
+    assert settings.cpe.api_key.get_secret_value() == "preferred-cpe-key"
+
+
+def test_cpe_api_key_only_used_without_warning() -> None:
+    """
+    When only CPE_API_KEY (cpe.api_key) is set, settings load and the key is used;
+    no NIST deprecation path is involved.
+    """
+    settings_dict = {
+        "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+        "connector": {"id": "connector-id"},
+        "cpe": {"api_key": "cpe-key-only"},
+    }
+    settings = _make_fake_settings(settings_dict)
+    assert settings.cpe.api_key.get_secret_value() == "cpe-key-only"
