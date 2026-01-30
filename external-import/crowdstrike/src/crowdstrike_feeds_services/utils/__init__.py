@@ -22,9 +22,19 @@ from typing import (
 
 import stix2
 from lxml.html import fromstring
-from pycti import AttackPattern, Identity, Indicator, IntrusionSet, Location, Malware
+from pycti import (
+    AttackPattern,
+    Identity,
+    Indicator,
+    IntrusionSet,
+    Location,
+    Malware,
+)
 from pycti import Report as PyCTIReport
-from pycti import StixCoreRelationship, Vulnerability
+from pycti import (
+    StixCoreRelationship,
+    Vulnerability,
+)
 from pycti.utils.constants import LocationTypes
 from stix2.v21 import _DomainObject, _Observable, _RelationshipObject
 
@@ -293,21 +303,6 @@ def create_external_reference(
     )
 
 
-def create_vulnerability_external_references(
-    name: str,
-) -> List[stix2.ExternalReference]:
-    """Create an external references for vulnerability."""
-    external_references = []
-
-    if name.startswith("CVE-"):
-        external_reference = create_external_reference(
-            "NIST NVD", f"https://nvd.nist.gov/vuln/detail/{name}", name
-        )
-        external_references.append(external_reference)
-
-    return external_references
-
-
 def create_identity(
     name: str,
     created_by: Optional[stix2.Identity] = None,
@@ -331,7 +326,6 @@ def create_vulnerability(
     name: str,
     created_by: Optional[stix2.Identity] = None,
     confidence: Optional[int] = None,
-    external_references: Optional[List[stix2.ExternalReference]] = None,
     object_markings: Optional[List[stix2.MarkingDefinition]] = None,
 ) -> stix2.Vulnerability:
     """Create a vulnerability."""
@@ -340,7 +334,6 @@ def create_vulnerability(
         created_by_ref=created_by,
         name=name,
         confidence=confidence,
-        external_references=external_references,
         object_marking_refs=object_markings,
     )
 
