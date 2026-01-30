@@ -55,14 +55,14 @@ Below are the parameters you'll need to set for OpenCTI:
 
 Below are the parameters you'll need to set for running the connector properly:
 
-| Parameter                | config.yml `connector`  | Docker environment variable   | Default                 | Mandatory | Description                                                                                         |
-|--------------------------|-------------------------|-------------------------------|-------------------------|-----------|-----------------------------------------------------------------------------------------------------|
-| Connector ID             | `id`                    | `CONNECTOR_ID`                | /                       | Yes       | A unique `UUIDv4` identifier for this connector instance.                                           |
-| Connector Name           | `name`                  | `CONNECTOR_NAME`              | ImportTTPsFileNavigator | No        | Name of the connector.                                                                              |
-| Connector Scope          | `scope`                 | `CONNECTOR_SCOPE`             | application/json        | Yes       | The MIME type of files this connector handles. Must be `application/json`.                          |
-| Connector Auto           | `auto`                  | `CONNECTOR_AUTO`              | false                   | No        | Enable/disable automatic import of files matching the scope.                                        |
-| Validate Before Import   | `validate_before_import`| `CONNECTOR_VALIDATE_BEFORE_IMPORT` | true               | No        | If enabled, bundles are sent for validation before import.                                          |
-| Log Level                | `log_level`             | `CONNECTOR_LOG_LEVEL`         | error                   | No        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.              |
+| Parameter                | config.yml `connector`  | Docker environment variable        | Default                 | Mandatory | Description                                                                                         |
+|--------------------------|-------------------------|------------------------------------|-------------------------|-----------|-----------------------------------------------------------------------------------------------------|
+| Connector ID             | `id`                    | `CONNECTOR_ID`                     | /                       | Yes       | A unique `UUIDv4` identifier for this connector instance.                                           |
+| Connector Name           | `name`                  | `CONNECTOR_NAME`                   | ImportTTPsFileNavigator | No        | Name of the connector.                                                                              |
+| Connector Scope          | `scope`                 | `CONNECTOR_SCOPE`                  | application/json        | Yes       | The MIME type of files this connector handles. Must be `application/json`.                          |
+| Connector Auto           | `auto`                  | `CONNECTOR_AUTO`                   | false                   | No        | Enable/disable automatic import of files matching the scope.                                        |
+| Validate Before Import   | `validate_before_import`| `CONNECTOR_VALIDATE_BEFORE_IMPORT` | false                   | No        | If enabled, bundles are sent for validation before import.                                          |
+| Log Level                | `log_level`             | `CONNECTOR_LOG_LEVEL`              | error                   | No        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.              |
 
 ## Deployment
 
