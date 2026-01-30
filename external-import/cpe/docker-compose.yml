@@ -11,5 +11,5 @@ services:
       # - CONNECTOR_LOG_LEVEL=error
       # - CONNECTOR_DURATION_PERIOD=PT6H
       # - CPE_BASE_URL=https://services.nvd.nist.gov/rest/json/cpes/2.0
-      - NIST_API_KEY=ChangeMe # Required
+      - CPE_API_KEY=ChangeMe # Required
     restart: always
