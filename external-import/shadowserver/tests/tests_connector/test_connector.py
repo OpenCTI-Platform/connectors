@@ -7,8 +7,8 @@ import pycti
 import pytest
 import stix2
 from pydantic_settings import SettingsConfigDict
-from shadowserver.config import ConnectorSettings
 from shadowserver.connector import CustomConnector
+from shadowserver.settings import ConnectorSettings
 
 
 class _ConnectorSettings(ConnectorSettings):
@@ -19,8 +19,8 @@ class _ConnectorSettings(ConnectorSettings):
 def test_connector_initialization(mocked_helper) -> None:
     connector = CustomConnector(helper=mocked_helper, config=_ConnectorSettings())
 
-    assert connector.config.shadowserver.api_key == "CHANGEME"
-    assert connector.config.shadowserver.api_secret == "CHANGEME"
+    assert connector.config.shadowserver.api_key.get_secret_value() == "CHANGEME"
+    assert connector.config.shadowserver.api_secret.get_secret_value() == "CHANGEME"
     assert connector.config.shadowserver.marking == "TLP:CLEAR"
     assert connector.config.shadowserver.create_incident == True
     assert connector.config.shadowserver.incident_priority == "P1"
