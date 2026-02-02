@@ -1,18 +1,19 @@
 from typing import Any, Union
 
-from .common import Intel471Stream
+from .base import TitanStream
 
 
-class Intel471MalwareReportsStream(Intel471Stream):
-    label = "malware_reports"
+class Intel471SpotReportsStream(TitanStream):
+    label = "spot_reports"
     group_label = "reports"
-    api_payload_objects_key = "malware_reports"
+    api_payload_objects_key = "spot_reports"
     api_class_name = "ReportsApi"
-    api_method_name = "malware_reports_get"
+    api_method_name = "spot_reports_get"
 
     def _get_api_kwargs(self, cursor: Union[None, str]) -> dict:
         kwargs = {
-            "malware_report": "*",
+            "spot_report": "*",
+            "last_updated_from": self.initial_history,
             "sort": "earliest",
             "count": 100,
         }

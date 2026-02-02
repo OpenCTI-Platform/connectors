@@ -6,14 +6,14 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.schedulers.base import BaseScheduler
 from intel471.common import HelperRequest
 from intel471.settings import ConnectorSettings
-from intel471.streams.breach_alerts import Intel471BreachAlertsStream
-from intel471.streams.common import Intel471Stream
-from intel471.streams.cves import Intel471CVEsStream
-from intel471.streams.indicators import Intel471IndicatorsStream
-from intel471.streams.malware_reports import Intel471MalwareReportsStream
-from intel471.streams.reports import Intel471ReportsStream
-from intel471.streams.spot_reports import Intel471SpotReportsStream
-from intel471.streams.yara import Intel471YARAStream
+from intel471.streams.titan.breach_alerts import Intel471BreachAlertsStream
+from intel471.streams.core.base import Intel471Stream
+from intel471.streams.titan.cves import Intel471CVEsStream
+from intel471.streams.titan.indicators import Intel471IndicatorsStream
+from intel471.streams.titan.malware_reports import Intel471MalwareReportsStream
+from intel471.streams.titan.reports import Intel471ReportsStream
+from intel471.streams.titan.spot_reports import Intel471SpotReportsStream
+from intel471.streams.titan.yara import Intel471YARAStream
 from pycti import OpenCTIConnectorHelper
 
 

@@ -14,10 +14,10 @@ from titan_client.titan_stix.exceptions import EmptyBundle
 from urllib3 import make_headers
 from urllib3.util import parse_url
 
-from .. import HelperRequest
+from intel471.common import HelperRequest
 
 HERE = os.path.dirname(os.path.realpath(__file__))
-with open(os.path.join(HERE, "..", "..", "__version__")) as fh:
+with open(os.path.join(HERE, "..", "..", "..", "__version__")) as fh:
     version = fh.read().strip()
 
 
