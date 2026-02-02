@@ -9,6 +9,7 @@ from crowdstrike_feeds_services.utils import (
     datetime_to_timestamp,
     timestamp_to_datetime,
 )
+from crowdstrike_feeds_services.utils.labels import parse_crowdstrike_labels_from_raw
 from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport, ReportFetcher
 from pycti.connector.opencti_connector_helper import (  # noqa: E501
     OpenCTIConnectorHelper,
@@ -226,6 +227,28 @@ class IndicatorImporter(BaseImporter):
 
     def _create_indicator_bundle(self, indicator: dict) -> Optional[Bundle]:
         try:
+            parsed_labels = parse_crowdstrike_labels_from_raw(indicator.get("labels"))
+            indicator["label_names"] = parsed_labels.raw
+            indicator["attack_patterns"] = parsed_labels.attack_patterns
+            indicator["malware_families"] = parsed_labels.malware_families
+            # Do NOT merge these into `indicator["actors"]` (that field is reserved for resolved
+            # related actors from the API). Keep label-derived actors separate.
+            indicator["actor_names_from_labels"] = parsed_labels.actor_names
+            indicator["threat_types"] = parsed_labels.threat_types
+
+            self.helper.connector_logger.debug(
+                "Parsed indicator labels",
+                {
+                    "indicator_id": indicator.get("id"),
+                    "raw_label_count": len(indicator.get("labels", []) or []),
+                    "label_name_count": len(indicator.get("label_names", []) or []),
+                    "attack_pattern_count": len(indicator.get("attack_patterns", []) or []),
+                    "malware_family_count": len(indicator.get("malware_families", []) or []),
+                    "actor_name_count": len(indicator.get("actor_names_from_labels", []) or []),
+                    "threat_type_count": len(indicator.get("threat_types", []) or []),
+                },
+            )
+
             if "actor" in self.scopes:
                 # Process related actors
                 related_actors = indicator.get("actors", [])
