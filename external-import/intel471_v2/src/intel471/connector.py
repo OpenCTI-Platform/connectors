@@ -33,6 +33,7 @@ class Intel471Connector:
         api_key = self.config.intel471.api_key.get_secret_value()
         proxy_url = self.config.intel471.proxy
         ioc_score = self.config.intel471.ioc_score
+        backend = self.config.intel471.backend
         for stream_class in (
             Intel471IndicatorsStream,
             Intel471CVEsStream,
@@ -59,6 +60,7 @@ class Intel471Connector:
                         initial_history,
                         update_existing_data,
                         proxy_url,
+                        backend,
                         ioc_score,
                     ),
                     interval,

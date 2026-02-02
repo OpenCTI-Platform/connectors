@@ -58,11 +58,13 @@ class Intel471Stream(ABC):
         initial_history: int = None,
         update_existing_data: bool = False,
         proxy_url: Union[HttpUrl, None] = None,
+        backend: str = "titan",
         ioc_score: Union[int, None] = None,
     ) -> None:
         self.helper = helper
         self.in_queue = in_queue
         self.out_queue = out_queue
+        self.backend = backend
         self.api_config = titan_client.Configuration(
             username=api_username, password=api_key
         )
@@ -104,8 +106,10 @@ class Intel471Stream(ABC):
                 if offset is not None:
                     kwargs["offset"] = offset
                 self.helper.log_info(
-                    "{} calls Titan API with arguments: {}.".format(
-                        self.__class__.__name__, str(kwargs)
+                    "{} calls {} API with arguments: {}.".format(
+                        self.__class__.__name__,
+                        self.backend,
+                        str(kwargs),
                     )
                 )
                 api_response = getattr(api_instance, self.api_method_name)(**kwargs)
@@ -113,8 +117,10 @@ class Intel471Stream(ABC):
                     getattr(api_response, self.api_payload_objects_key) or []
                 )
                 self.helper.log_info(
-                    "{} got {} items from Titan API.".format(
-                        self.__class__.__name__, len(api_payload_objects)
+                    "{} got {} items from {} API.".format(
+                        self.__class__.__name__,
+                        len(api_payload_objects),
+                        self.backend,
                     )
                 )
                 if not api_payload_objects:

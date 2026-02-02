@@ -1,3 +1,5 @@
+from typing import Literal
+
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
@@ -91,6 +93,10 @@ class Intel471_V2Config(BaseConfigModel):
     ioc_score: int = Field(
         description="Indicator score. Defaults to `70`.",
         default=70,
+    )
+    backend: Literal["titan", "verity471"] = Field(
+        description="Backend to use for Intel471 API calls. Defaults to `titan`.",
+        default="titan",
     )
 
 
