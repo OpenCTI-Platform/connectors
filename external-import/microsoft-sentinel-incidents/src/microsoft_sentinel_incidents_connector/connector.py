@@ -2,7 +2,6 @@ import json
 import re
 import sys
 from collections import OrderedDict
-from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 import stix2
@@ -91,9 +90,8 @@ class MicrosoftSentinelIncidentsConnector:
             return last_timestamp
 
         else:
-            datetime_obj = datetime.fromisoformat(
-                self.config.microsoft_sentinel_incidents.import_start_date
-            )
+            datetime_obj = self.config.microsoft_sentinel_incidents.import_start_date
+
             last_timestamp = int(round(datetime_obj.timestamp()))
             return last_timestamp
 
