@@ -177,7 +177,9 @@ class EventConverter:
 
     def process(
         self, event: EventRestSearchListItem, include_relationships: bool = True
-    ) -> list[stix2.v21._STIXBase21]:
+    ) -> tuple[
+        stix2.Identity, list[stix2.MarkingDefinition], list[stix2.v21._STIXBase21]
+    ]:
         """
         Process an event and convert it to a list of STIX objects.
         :param event: EventRestSearchListItem object
@@ -328,7 +330,7 @@ class EventConverter:
                     case stix2.Tool():
                         event_tools.append(event_stix_object)
                     case stix2.Location():
-                        if event_stix_object["country"]:
+                        if event_stix_object.get("country"):
                             event_countries.append(event_stix_object)
                     case stix2.Identity():
                         if event_stix_object["identity_class"] == "class":
