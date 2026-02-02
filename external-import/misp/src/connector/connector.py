@@ -305,14 +305,14 @@ class Misp:
                 bundle_objects_chunk, author, markings
             )
 
-            new_state = (
-                {"current_event_id": event.Event.id}
-                if self.config.misp.datetime_attribute == "date"
-                else {"last_event_date": self._get_event_datetime(event).isoformat()}
-            )
-            new_state["remaining_objects_count"] = max(
+            new_state = {"last_event_date": self._get_event_datetime(event).isoformat()}
+            if self.config.misp.datetime_attribute == "date":
+                new_state["current_event_id"] = event.Event.id
+
+            remaining_objects_count = max(
                 0, remaining_objects_count - len(bundle_objects_chunk)
             )
+            new_state["remaining_objects_count"] = remaining_objects_count
             self.work_manager.update_state(state_update=new_state)
 
         # Flush any remaining items and Update the final state
