@@ -8,23 +8,29 @@ from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
 from urllib3.util.retry import Retry
 
 if TYPE_CHECKING:
-    from microsoft_sentinel_incidents_connector.settings import (
-        MicrosoftSentinelIncidentsConfig,
-    )
     from pycti import OpenCTIConnectorHelper
+    from pydantic import SecretStr
 
 
 class ConnectorClient:
     def __init__(
         self,
         helper: "OpenCTIConnectorHelper",
-        sentinel_cfg: "MicrosoftSentinelIncidentsConfig",
+        client_id: str,
+        client_secret: "SecretStr",
+        tenant_id: str,
+        workspace_id: str,
+        filter_labels: list[str],
     ):
         """
         Initialize the client with necessary configurations
         """
         self.helper = helper
-        self.sentinel_cfg = sentinel_cfg
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.tenant_id = tenant_id
+        self.workspace_id = workspace_id
+        self.filter_labels = filter_labels
 
         self.log_analytics_url = "https://api.loganalytics.azure.com/v1"
         self.session = requests.Session()
@@ -32,13 +38,11 @@ class ConnectorClient:
     def set_oauth_token(self):
         try:
             url = (
-                f"https://login.microsoftonline.com"
-                f"/{self.sentinel_cfg.tenant_id}"
-                "/oauth2/v2.0/token"
+                f"https://login.microsoftonline.com/{self.tenant_id}/oauth2/v2.0/token"
             )
             oauth_data = {
-                "client_id": self.sentinel_cfg.client_id,
-                "client_secret": self.sentinel_cfg.client_secret.get_secret_value(),
+                "client_id": self.client_id,
+                "client_secret": self.client_secret.get_secret_value(),
                 "grant_type": "client_credentials",
                 "scope": "https://api.loganalytics.io/.default",
             }
@@ -79,12 +83,12 @@ class ConnectorClient:
         :return: A list of all incidents as dictionaries containing mixed data types.
         """
         all_incidents = []
-        next_page_url = f"{self.log_analytics_url}/workspaces/{self.sentinel_cfg.workspace_id}/query"
+        next_page_url = f"{self.log_analytics_url}/workspaces/{self.workspace_id}/query"
         body = {
             "query": "SecurityIncident | sort by LastModifiedTime asc"
             f"| where LastModifiedTime > todatetime('{date_str}')"
         }
-        if labels := self.sentinel_cfg.filter_labels:
+        if labels := self.filter_labels:
             labels = ", ".join(f'"{label}"' for label in labels)
             body["query"] += (
                 "| mv-apply labelsFiltered=Labels on ("
@@ -178,11 +182,7 @@ class ConnectorClient:
         :return: A list of all alerts as dictionaries containing mixed data types.
         """
         all_alerts = []
-        next_page_url = (
-            f"{self.log_analytics_url}/workspaces"
-            f"/{self.sentinel_cfg.workspace_id}"
-            "/query"
-        )
+        next_page_url = f"{self.log_analytics_url}/workspaces/{self.workspace_id}/query"
         body = {
             "query": (
                 "SecurityAlert | summarize arg_max(TimeGenerated, *) by SystemAlertId"

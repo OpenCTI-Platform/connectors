@@ -66,7 +66,15 @@ class MicrosoftSentinelIncidentsConnector:
         """
         self.config = config
         self.helper = helper
-        self.client = ConnectorClient(self.helper, config.microsoft_sentinel_incidents)
+        ms_cfg = config.microsoft_sentinel_incidents
+        self.client = ConnectorClient(
+            self.helper,
+            ms_cfg.client_id,
+            ms_cfg.client_secret,
+            ms_cfg.tenant_id,
+            ms_cfg.workspace_id,
+            ms_cfg.filter_labels,
+        )
         self.tlp_marking = stix2.TLP_RED
         self.converter_to_stix = ConverterToStix(
             self.helper, self.config, self.tlp_marking
