@@ -311,17 +311,11 @@ class ReportImporter:
             ]
             # external_references = [x['standard_id'] for x in report.get('externalReferences', [])]
             # labels = [x['standard_id'] for x in report.get('objectLabel', [])]
-            author = context_entity.get("createdBy")
         else:
             object_markings = []
-            author = None
-        if author is not None:
-            author = author.get("standard_id", None)
         for match in parsed:
             if match[RESULT_FORMAT_TYPE] == OBSERVABLE_CLASS:
-                self._process_observable(
-                    match, object_markings, author, entities, observables
-                )
+                self._process_observable(match, object_markings, entities, observables)
             elif match[RESULT_FORMAT_TYPE] == ENTITY_CLASS:
                 stix_type = "-".join(
                     x[:1].upper() + x[1:]
@@ -357,7 +351,6 @@ class ReportImporter:
         self,
         match: Dict,
         object_markings=None,
-        author=None,
         entities=None,
         observables=None,
     ):
