@@ -125,12 +125,9 @@
       "type": "string"
     },
     "MISP_REPORT_DESCRIPTION_ATTRIBUTE_FILTERS": {
-      "additionalProperties": {
-        "type": "string"
-      },
-      "default": {},
+      "default": "",
       "description": "Filter to use to find the attribute that will be used for report description (example: 'type=comment,category=Internal reference')",
-      "type": "object"
+      "type": "string"
     },
     "MISP_CREATE_TAGS_AS_LABELS": {
       "default": true,
@@ -277,7 +274,7 @@
     },
     "MISP_BATCH_COUNT": {
       "default": 9999,
-      "description": "The max batch count for splitting bundles into batches",
+      "description": "The max number of items per batch when splitting STIX bundles.",
       "type": "integer"
     }
   },
