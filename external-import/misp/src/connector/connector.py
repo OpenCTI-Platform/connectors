@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
 from api_client.client import MISPClient, MISPClientError
@@ -217,9 +217,7 @@ class Misp:
 
             event_datetime = self._get_event_datetime(event)
             last_event_datetime = datetime.fromisoformat(last_event_date)
-            if event_datetime < last_event_datetime or (
-                event_datetime == last_event_datetime and remaining_objects_count == 0
-            ):
+            if event_datetime < last_event_datetime:
                 self.logger.info(
                     "Event already processed by the connector, skipping event",
                     {
@@ -366,6 +364,7 @@ class Misp:
                 {"prefix": LOG_PREFIX, **filter_params},
             )
 
+            event_processed = False
             try:
                 for event in self.client_api.search_events(**filter_params):
                     event_log_data = {
@@ -415,6 +414,36 @@ class Misp:
                         author=author,
                         markings=markings,
                     )
+                    event_processed = True
+
+                else:
+                    if (
+                        event_processed
+                        and self.config.misp.datetime_attribute != "date"
+                    ):
+                        # If the datetime attribute is not date, we need to update
+                        # the last event date to avoid processing the same event again
+                        current_state = self.work_manager.get_state()
+                        last_event_date = current_state.get("last_event_date")
+                        if last_event_date is None:
+                            return None
+
+                        last_event_datetime = datetime.fromisoformat(last_event_date)
+                        # Check if the last event date is not the same as the current time
+                        if last_event_datetime != now:
+                            # Add 1 second to the last event date to avoid processing the same event again
+                            last_event_datetime += timedelta(seconds=1)
+                            self.logger.debug(
+                                "Updating last event date (add 1 second) to avoid processing the same event again",
+                                {
+                                    "prefix": LOG_PREFIX,
+                                    "last_event_date": last_event_datetime.isoformat(),
+                                },
+                            )
+                            new_state = {
+                                "last_event_date": last_event_datetime.isoformat()
+                            }
+                            self.work_manager.update_state(state_update=new_state)
 
             finally:
                 self._flush_batch_processor()

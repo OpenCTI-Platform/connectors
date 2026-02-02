@@ -517,4 +517,22 @@ def test_connector_does_not_validate_event_already_processed_by_update_datetime(
                 }
             }
         )
+        # Timestamp is the same as the last event date, so the event should be validated
+        assert connector._validate_event(event) is True
+
+        event = EventRestSearchListItem.model_validate(
+            {
+                "Event": {
+                    "id": "42",
+                    "timestamp": str(
+                        int(
+                            datetime.fromisoformat(
+                                "2026-01-01T23:59:59+00:00"
+                            ).timestamp()
+                        )
+                    ),
+                }
+            }
+        )
+        # Timestamp is before the last event date, so the event should not be validated
         assert connector._validate_event(event) is False
