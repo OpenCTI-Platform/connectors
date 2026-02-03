@@ -20,6 +20,7 @@ from crowdstrike_feeds_services.utils import (
     OBSERVATION_FACTORY_USER_AGENT,
     ObservableProperties,
     ObservationFactory,
+    create_attack_pattern,
     create_based_on_relationships,
     create_indicates_relationships,
     create_indicator,
@@ -217,12 +218,12 @@ class IndicatorBundleBuilder:
     def _create_attack_pattern(self, name: str) -> AttackPattern:
         # We intentionally create a minimal AttackPattern object based on the label-derived name.
         # Mapping to canonical MITRE technique IDs (external_references) can be added later.
-        return AttackPattern(
+        return create_attack_pattern(
             name=name,
-            created_by_ref=self.author.id,
+            mitre_id="",
+            created_by=self.author.id,
             confidence=self.confidence_level,
-            object_marking_refs=[m.id for m in self.object_markings],
-            allow_custom=True,
+            object_markings=[m.id for m in self.object_markings],
         )
 
     def _create_uses_relationships(
