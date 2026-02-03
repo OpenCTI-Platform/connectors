@@ -2,19 +2,18 @@ import datetime
 import time
 from abc import ABC, abstractmethod
 from queue import Queue
-from typing import Any, Iterator, Union
+from typing import TYPE_CHECKING, Any, Iterator, Union
 
-import titan_client
 from pycti import OpenCTIConnectorHelper
 from pydantic import HttpUrl
 from stix2 import Bundle
-from titan_client.titan_stix import STIXMapperSettings
-from titan_client.titan_stix.exceptions import EmptyBundle
 from urllib3 import make_headers
 from urllib3.util import parse_url
 
 from intel471.common import HelperRequest
 from intel471.version import get_version
+if TYPE_CHECKING:
+    from intel471.backend import ClientWrapper
 
 version = get_version()
 
@@ -48,6 +47,7 @@ class Intel471Stream(ABC):
 
     def __init__(
         self,
+        client_wrapper: "ClientWrapper",
         helper: OpenCTIConnectorHelper,
         api_username: str,
         api_key: str,
@@ -56,14 +56,13 @@ class Intel471Stream(ABC):
         initial_history: int = None,
         update_existing_data: bool = False,
         proxy_url: Union[HttpUrl, None] = None,
-        backend: str = "titan",
         ioc_score: Union[int, None] = None,
     ) -> None:
+        self.client_wrapper = client_wrapper
         self.helper = helper
         self.in_queue = in_queue
         self.out_queue = out_queue
-        self.backend = backend
-        self.api_config = titan_client.Configuration(
+        self.api_config = self.client_wrapper.module.Configuration(
             username=api_username, password=api_key
         )
         if proxy_url:
@@ -93,11 +92,11 @@ class Intel471Stream(ABC):
     def get_bundles(self) -> Iterator[Bundle]:
         cursor = self._get_cursor()
         offsets = self._get_offsets()
-        with titan_client.ApiClient(self.api_config) as api_client:
+        with self.client_wrapper.module.ApiClient(self.api_config) as api_client:
             api_client.user_agent = (
                 f"{api_client.user_agent}; OpenCTI-Connector/{version}"
             )
-            api_instance = getattr(titan_client, self.api_class_name)(api_client)
+            api_instance = getattr(self.client_wrapper.module, self.api_class_name)(api_client)
         while True:
             kwargs = self._get_api_kwargs(cursor)
             for offset in offsets:
@@ -106,7 +105,7 @@ class Intel471Stream(ABC):
                 self.helper.log_info(
                     "{} calls {} API with arguments: {}.".format(
                         self.__class__.__name__,
-                        self.backend,
+                        self.client_wrapper.backend_name,
                         str(kwargs),
                     )
                 )
@@ -118,7 +117,7 @@ class Intel471Stream(ABC):
                     "{} got {} items from {} API.".format(
                         self.__class__.__name__,
                         len(api_payload_objects),
-                        self.backend,
+                        self.client_wrapper.backend_name,
                     )
                 )
                 if not api_payload_objects:
@@ -126,15 +125,15 @@ class Intel471Stream(ABC):
                 cursor = self._get_cursor_value(api_response)
                 try:
                     bundle = api_response.to_stix(
-                        STIXMapperSettings(
-                            titan_client,
+                        self.client_wrapper.stix_mapper_settings_class(
+                            self.client_wrapper.module,
                             api_client,
                             ioc_opencti_score=self.ioc_score,
-                            girs_names=True,
+                            # girs_names=True,  # TODO: remember
                             report_full_content=True,
                         )
                     )
-                except EmptyBundle:
+                except self.client_wrapper.empty_bundle_exception:
                     self.helper.log_info(
                         f"{self.__class__.__name__} got empty bundle from STIX converter."
                     )

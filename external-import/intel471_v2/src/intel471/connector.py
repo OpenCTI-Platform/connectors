@@ -6,15 +6,9 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.schedulers.base import BaseScheduler
 from intel471.common import HelperRequest
 from intel471.settings import ConnectorSettings
-from intel471.streams.titan.breach_alerts import Intel471BreachAlertsStream
 from intel471.streams.core.base import Intel471Stream
-from intel471.streams.titan.cves import Intel471CVEsStream
-from intel471.streams.titan.indicators import Intel471IndicatorsStream
-from intel471.streams.titan.malware_reports import Intel471MalwareReportsStream
-from intel471.streams.titan.reports import Intel471ReportsStream
-from intel471.streams.titan.spot_reports import Intel471SpotReportsStream
-from intel471.streams.titan.yara import Intel471YARAStream
 from pycti import OpenCTIConnectorHelper
+from .backend import get_client, get_streams
 
 
 class Intel471Connector:
@@ -34,15 +28,8 @@ class Intel471Connector:
         proxy_url = self.config.intel471.proxy
         ioc_score = self.config.intel471.ioc_score
         backend = self.config.intel471.backend
-        for stream_class in (
-            Intel471IndicatorsStream,
-            Intel471CVEsStream,
-            Intel471YARAStream,
-            Intel471ReportsStream,
-            Intel471BreachAlertsStream,
-            Intel471SpotReportsStream,
-            Intel471MalwareReportsStream,
-        ):
+        client_wrapper = get_client(backend)
+        for stream_class in get_streams(backend):
             if interval := getattr(
                 self.config.intel471, f"interval_{stream_class.group_label}"
             ):
@@ -52,6 +39,7 @@ class Intel471Connector:
                 )
                 self.add_job(
                     stream_class(
+                        client_wrapper,
                         self.helper,
                         api_username,
                         api_key,
@@ -60,7 +48,6 @@ class Intel471Connector:
                         initial_history,
                         update_existing_data,
                         proxy_url,
-                        backend,
                         ioc_score,
                     ),
                     interval,
@@ -101,8 +88,8 @@ class Intel471Connector:
         self.scheduler.add_job(
             stream_obj.run,
             name=stream_obj.__class__.__name__,
-            trigger="interval",
-            minutes=interval,
+            # trigger="interval",
+            # minutes=interval,
         )
 
     @staticmethod
