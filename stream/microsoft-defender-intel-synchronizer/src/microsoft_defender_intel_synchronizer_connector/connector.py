@@ -5,7 +5,7 @@ import re
 import signal
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Final
 
 from .api_handler import DefenderApiHandler
