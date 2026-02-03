@@ -145,13 +145,77 @@ def parse_crowdstrike_labels_from_raw(
             elif ltype in ("threat_type", "threat-type", "threat"):
                 threat_types.append(val)
 
+    # Second pass: parse common CrowdStrike string label conventions
+    # Examples:
+    # - "mitre attck/command and control/data obfuscation"
+    # - "malware/mofksys"
+    # - "actor/saltyspider"
+    # - "threat type/botnet"
+
+    for lbl in label_names:
+        if not lbl:
+            continue
+
+        low = lbl.lower().strip()
+
+        # MITRE ATT&CK labels (tactic / technique)
+        mitre_prefixes = (
+            "mitre attck/",
+            "mitre att&ck/",
+            "mitre attack/",
+        )
+
+        mitre_prefix = next((p for p in mitre_prefixes if low.startswith(p)), None)
+        if mitre_prefix:
+            remainder = lbl[len(mitre_prefix) :].strip("/").strip()
+            if remainder:
+                parts = [p.strip() for p in remainder.split("/") if p.strip()]
+
+                # CrowdStrike strings commonly look like: "<tactic>/<technique>".
+                # OpenCTI AttackPattern names should be the MITRE technique name (or the technique ID when present).
+                technique_part = parts[
+                    -1
+                ]  # last segment is the technique name in the common case
+
+                # If the technique part begins with an ID like "T1059" or "T1059.001", keep only that ID.
+                m = re.match(
+                    r"^(T\d{4}(?:\.\d{3})?)\b", technique_part, flags=re.IGNORECASE
+                )
+                if m:
+                    attack_patterns.append(m.group(1).upper())
+                else:
+                    attack_patterns.append(_normalize_label_value(technique_part))
+            continue
+
+        # Malware family labels
+        if low.startswith("malware/"):
+            val = lbl.split("/", 1)[1].strip()
+            if val:
+                malware_families.append(val)
+            continue
+
+        # Actor labels
+        if low.startswith("actor/"):
+            val = lbl.split("/", 1)[1].strip()
+            if val:
+                actor_names.append(val)
+            continue
+
+        # Threat type labels
+        if low.startswith("threat type/") or low.startswith("threat-type/"):
+            val = lbl.split("/", 1)[1].strip()
+            if val:
+                threat_types.append(val)
+            continue
+
     # De-dupe typed lists while preserving order
     def _dedupe(xs: List[str]) -> List[str]:
         seen = set()
         out: List[str] = []
         for x in xs:
-            if x not in seen:
-                seen.add(x)
+            key = x.lower()
+            if key not in seen:
+                seen.add(key)
                 out.append(x)
         return out
 
@@ -160,12 +224,33 @@ def parse_crowdstrike_labels_from_raw(
     actor_names = _dedupe(actor_names)
     threat_types = _dedupe(threat_types)
 
+    # Remove labels that have been promoted into objects/fields.
+    # (We keep labels like confidence/kill-chain labels that are not promoted.)
+    promoted_prefixes = (
+        "mitre attck/",
+        "mitre att&ck/",
+        "mitre attack/",
+        "malware/",
+        "actor/",
+        "threat type/",
+        "threat-type/",
+    )
+
+    filtered_raw: List[str] = []
+    for lbl in label_names:
+        if not lbl:
+            continue
+        low = lbl.lower().strip()
+        if any(low.startswith(p) for p in promoted_prefixes):
+            continue
+        filtered_raw.append(lbl)
+
     return ParsedLabels(
         attack_patterns=attack_patterns,
         malware_families=malware_families,
         actor_names=actor_names,
         threat_types=threat_types,
-        raw=label_names,
+        raw=filtered_raw,
     )
 
 

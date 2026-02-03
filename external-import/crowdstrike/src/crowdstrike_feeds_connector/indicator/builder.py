@@ -39,6 +39,7 @@ from crowdstrike_feeds_services.utils.labels import extract_label_names
 from pycti import OpenCTIConnectorHelper
 from stix2 import Bundle
 from stix2.v21 import (
+    AttackPattern,
     Identity,
 )
 from stix2.v21 import Indicator as STIXIndicator
@@ -198,6 +199,30 @@ class IndicatorBundleBuilder:
             is_family=True,
             confidence=self.confidence_level,
             object_markings=self.object_markings,
+        )
+
+    def _create_attack_patterns(self) -> List[AttackPattern]:
+        indicator_attack_patterns = self.indicator.get("attack_patterns", [])
+        if not indicator_attack_patterns:
+            return []
+
+        attack_patterns: List[AttackPattern] = []
+        for ap_name in indicator_attack_patterns:
+            if not ap_name:
+                continue
+            attack_patterns.append(self._create_attack_pattern(str(ap_name)))
+
+        return attack_patterns
+
+    def _create_attack_pattern(self, name: str) -> AttackPattern:
+        # We intentionally create a minimal AttackPattern object based on the label-derived name.
+        # Mapping to canonical MITRE technique IDs (external_references) can be added later.
+        return AttackPattern(
+            name=name,
+            created_by_ref=self.author.id,
+            confidence=self.confidence_level,
+            object_marking_refs=[m.id for m in self.object_markings],
+            allow_custom=True,
         )
 
     def _create_uses_relationships(
@@ -399,6 +424,7 @@ class IndicatorBundleBuilder:
                 object_markings=self.object_markings,
                 x_opencti_main_observable_type=indicator_pattern.main_observable_type,
                 x_opencti_score=score,
+                indicator_types=self.indicator.get("indicator_types", []),
             )
         except Exception as e:
             self.helper.connector_logger.warning(
@@ -479,6 +505,10 @@ class IndicatorBundleBuilder:
         malwares = self._create_malwares()
         bundle_objects.extend(malwares)
 
+        # Create attack patterns (parsed from labels) and add to bundle.
+        attack_patterns = self._create_attack_patterns()
+        bundle_objects.extend(attack_patterns)
+
         # Create target sectors and add to bundle.
         target_sectors = self._create_targeted_sectors()
         bundle_objects.extend(target_sectors)
@@ -518,7 +548,9 @@ class IndicatorBundleBuilder:
         bundle_objects.extend(indicators_based_on_observables)
 
         # Indicator(s) indicate entities and add to bundle.
-        indicator_indicates = intrusion_sets + malwares + vulnerabilities
+        indicator_indicates = (
+            intrusion_sets + malwares + vulnerabilities + attack_patterns
+        )
 
         indicator_indicates_entities = self._create_indicates_relationships(
             indicators, indicator_indicates
@@ -529,6 +561,7 @@ class IndicatorBundleBuilder:
         object_refs = create_object_refs(
             cast(List[_DomainObject], intrusion_sets),
             cast(List[_DomainObject], malwares),
+            cast(List[_DomainObject], attack_patterns),
             cast(List[_DomainObject], target_sectors),
             cast(List[_DomainObject], vulnerabilities),
             cast(List[_DomainObject], observables),

@@ -234,7 +234,37 @@ class IndicatorImporter(BaseImporter):
             # Do NOT merge these into `indicator["actors"]` (that field is reserved for resolved
             # related actors from the API). Keep label-derived actors separate.
             indicator["actor_names_from_labels"] = parsed_labels.actor_names
-            indicator["threat_types"] = parsed_labels.threat_types
+
+            # Indicator types: merge CrowdStrike API arrays (preferred) and label-derived threat types (fallback)
+            api_threat_types = indicator.get("threat_types", []) or []
+            api_domain_types = indicator.get("domain_types", []) or []
+            api_ip_address_types = indicator.get("ip_address_types", []) or []
+
+            # Fallback to label-derived threat types only when API field is empty/missing
+            effective_threat_types = api_threat_types or parsed_labels.threat_types
+
+            # Preserve order, de-dupe case-insensitively
+            merged_indicator_types: List[str] = []
+            seen: set[str] = set()
+            for v in (
+                list(effective_threat_types)
+                + list(api_domain_types)
+                + list(api_ip_address_types)
+            ):
+                if not v:
+                    continue
+                s = str(v).strip()
+                if not s:
+                    continue
+                key = s.lower()
+                if key in seen:
+                    continue
+                seen.add(key)
+                merged_indicator_types.append(s)
+
+            # Keep the effective threat types separately for debugging/visibility
+            indicator["threat_types"] = list(effective_threat_types)
+            indicator["indicator_types"] = merged_indicator_types
 
             self.helper.connector_logger.debug(
                 "Parsed indicator labels",
@@ -242,12 +272,28 @@ class IndicatorImporter(BaseImporter):
                     "indicator_id": indicator.get("id"),
                     "raw_label_count": len(indicator.get("labels", []) or []),
                     "label_name_count": len(indicator.get("label_names", []) or []),
-                    "attack_pattern_count": len(indicator.get("attack_patterns", []) or []),
-                    "malware_family_count": len(indicator.get("malware_families", []) or []),
-                    "actor_name_count": len(indicator.get("actor_names_from_labels", []) or []),
+                    "attack_pattern_count": len(
+                        indicator.get("attack_patterns", []) or []
+                    ),
+                    "malware_family_count": len(
+                        indicator.get("malware_families", []) or []
+                    ),
+                    "actor_name_count": len(
+                        indicator.get("actor_names_from_labels", []) or []
+                    ),
                     "threat_type_count": len(indicator.get("threat_types", []) or []),
+                    "indicator_type_count": len(
+                        indicator.get("indicator_types", []) or []
+                    ),
                 },
             )
+            # Map CrowdStrike malicious confidence (low/medium/high) -> STIX/OpenCTI confidence (0-100)
+            cs_mc = (indicator.get("malicious_confidence") or "").strip().lower()
+            cs_conf_map = {"high": 90, "medium": 50, "low": 10}
+            mapped_confidence = cs_conf_map.get(cs_mc)
+
+            if mapped_confidence is not None:
+                indicator["confidence"] = mapped_confidence
 
             if "actor" in self.scopes:
                 # Process related actors
