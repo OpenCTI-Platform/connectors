@@ -1,5 +1,4 @@
 import datetime
-import os
 import time
 from abc import ABC, abstractmethod
 from queue import Queue
@@ -15,10 +14,9 @@ from urllib3 import make_headers
 from urllib3.util import parse_url
 
 from intel471.common import HelperRequest
+from intel471.version import get_version
 
-HERE = os.path.dirname(os.path.realpath(__file__))
-with open(os.path.join(HERE, "..", "..", "..", "__version__")) as fh:
-    version = fh.read().strip()
+version = get_version()
 
 
 class Intel471Stream(ABC):
