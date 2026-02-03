@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/dummy-enrichment_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "DummyEnrichmentConnector",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "dummy"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Whether the connector should run automatically when an entity is created or updated.",
+      "type": "boolean"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "description": "The period (in seconds) between two runs of the connector.",
+      "type": "integer"
+    },
+    "TOTO_IMAGE": {
+      "description": "image",
+      "type": "string"
+    },
+    "TOTO_MOVIE": {
+      "description": "movie",
+      "type": "string"
+    },
+    "TOTO_MAMAMA": {
+      "default": null,
+      "deprecated": true,
+      "type": "integer",
+      "description": "Use TOTO_MOMOMO instead. (removal scheduled for 2026-06-01)"
+    },
+    "TOTO_MOMOMO": {
+      "description": "momomo",
+      "type": "string"
+    },
+    "TOTO_INTERVAL": {
+      "default": null,
+      "deprecated": true,
+      "type": "integer",
+      "description": "Use CONNECTOR_DURATION_PERIOD instead. (removal scheduled for 2026-03-01)"
+    },
+    "TATA_IMAGE": {
+      "description": "Use TOTO_IMAGE instead. (removal scheduled for 2026-04-01)",
+      "type": "string",
+      "deprecated": true
+    },
+    "TATA_MOVIE": {
+      "description": "Use TOTO_MOVIE instead. (removal scheduled for 2026-04-01)",
+      "type": "string",
+      "deprecated": true
+    },
+    "TATA_MAMAMA": {
+      "default": null,
+      "deprecated": true,
+      "type": "integer",
+      "description": "Use TOTO_MOMOMO instead. (removal scheduled for 2026-04-01)"
+    },
+    "TATA_MOMOMO": {
+      "description": "Use TOTO_MOMOMO instead. (removal scheduled for 2026-04-01)",
+      "type": "string",
+      "deprecated": true
+    },
+    "TATA_INTERVAL": {
+      "default": null,
+      "deprecated": true,
+      "type": "integer",
+      "description": "Use CONNECTOR_DURATION_PERIOD instead. (removal scheduled for 2026-04-01)"
+    },
+    "DUMMY_ENRICHMENT_API_BASE_URL": {
+      "description": "Use DUMMY_ENRICHMENT_NEW_API_BASE_URL instead. (removal scheduled for 2026-05-01)",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string",
+      "deprecated": true
+    },
+    "DUMMY_ENRICHMENT_API_KEY": {
+      "description": "Use DUMMY_ENRICHMENT_NEW_API_KEY instead. (removal scheduled for 2026-05-01)",
+      "type": "string",
+      "deprecated": true
+    },
+    "DUMMY_ENRICHMENT_MAX_TLP_LEVEL": {
+      "default": "amber+strict",
+      "description": "Use DUMMY_ENRICHMENT_NEW_MAX_TLP_LEVEL instead. (removal scheduled for 2026-05-01)",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "deprecated": true
+    },
+    "DUMMY_ENRICHMENT_TABLE": {
+      "description": "Use DUMMY_ENRICHMENT_NEW_TABLE instead. (removal scheduled for 2026-05-01)",
+      "type": "string",
+      "deprecated": true
+    },
+    "DUMMY_ENRICHMENT_NEW_API_BASE_URL": {
+      "description": "External API base URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "DUMMY_ENRICHMENT_NEW_API_KEY": {
+      "description": "API key for authentication.",
+      "type": "string"
+    },
+    "DUMMY_ENRICHMENT_NEW_MAX_TLP_LEVEL": {
+      "default": "amber+strict",
+      "description": "Max TLP level of the entities to enrich.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string"
+    },
+    "DUMMY_ENRICHMENT_NEW_TABLE": {
+      "description": "Table",
+      "type": "string"
+    },
+    "CHRISTMAS_OS": {
+      "description": "os",
+      "type": "string"
+    },
+    "CHRISTMAS_DAY": {
+      "description": "day",
+      "type": "string"
+    },
+    "CHRISTMAS_OLD_OS": {
+      "description": "Use CHRISTMAS_OS instead. (removal scheduled for 2026-12-25)",
+      "type": "string",
+      "deprecated": true
+    },
+    "CHRISTMAS_OLD_DAY": {
+      "description": "Use CHRISTMAS_DAY instead. (removal scheduled for 2026-12-25)",
+      "type": "string",
+      "deprecated": true
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_DURATION_PERIOD",
+    "TOTO_IMAGE",
+    "TOTO_MOVIE",
+    "TOTO_MOMOMO",
+    "DUMMY_ENRICHMENT_NEW_API_BASE_URL",
+    "DUMMY_ENRICHMENT_NEW_API_KEY",
+    "DUMMY_ENRICHMENT_NEW_TABLE",
+    "CHRISTMAS_OS",
+    "CHRISTMAS_DAY"
+  ],
+  "additionalProperties": true
+}
