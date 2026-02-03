@@ -24,8 +24,14 @@ def get_streams(backend):
         return (titan_streams.Intel471CVEsStream, )
     if backend == "verity471":
         return (
+            verity471_streams.Verity471IndicatorsStream,
             verity471_streams.Verity471CVEsStream, 
             verity471_streams.Verity471FintelStream, 
+            verity471_streams.Verity471BreachAlertsStream,
+            verity471_streams.Verity471GeopolReportsStream,
+            verity471_streams.Verity471InfoReportsStream,
+            verity471_streams.Verity471MalwareReportsStream,
+            verity471_streams.Verity471SpotReportsStream,
             )
     raise Exception("No such backend")  # TODO better handling, #TODO backend names as consts
 
