@@ -811,16 +811,12 @@ class MispFeed:
         attr_data = attribute.get("data")
         if attr_data is None:
             self.helper.log_error(
-                "No data for attribute: {0} ({1}:{2})".format(
-                    attr_uuid, attr_type, attr_category
-                )
+                f"No data for attribute: {attr_uuid} ({attr_type}:{attr_category})"
             )
             return None
 
         self.helper.log_info(
-            "Found PDF '{0}' for attribute: {1} ({2}:{3})".format(
-                attr_value, attr_uuid, attr_type, attr_category
-            )
+            f"Found PDF '{attr_value}' for attribute: {attr_uuid} ({attr_type}:{attr_category})"
         )
         return {
             "name": attr_value,
@@ -1580,13 +1576,8 @@ class MispFeed:
                 else:
                     unique_key = ""
                     if len(object["Attribute"]) > 0:
-                        unique_key = (
-                            " ("
-                            + object["Attribute"][0]["type"]
-                            + "="
-                            + object["Attribute"][0]["value"]
-                            + ")"
-                        )
+                        unique_key = f" ({object['Attribute'][0]['type']}={object['Attribute'][0]['value']})"
+
                     object_observable = CustomObservableText(
                         value=object["name"] + unique_key,
                         object_marking_refs=event_markings,
@@ -1732,10 +1723,10 @@ class MispFeed:
                                 ),
                                 relationship_type="related-to",
                                 created_by_ref=author["id"],
-                                description="Original Relationship: "
-                                + ref["relationship_type"]
-                                + "  \nComment: "
-                                + ref["comment"],
+                                description=(
+                                    f"Original Relationship: {ref['relationship_type']}"
+                                    f"  \nComment: {ref['comment']}"
+                                ),
                                 source_ref=src_result["entity"]["id"],
                                 target_ref=target_result["entity"]["id"],
                                 allow_custom=True,
@@ -1839,7 +1830,9 @@ class MispFeed:
     def process_data(self):
         try:
             now = datetime.now(pytz.UTC)
-            friendly_name = "MISP Feed run @ " + now.astimezone(pytz.UTC).isoformat()
+            friendly_name = (
+                f"MISP Feed run @ {now.astimezone(timezone.utc).isoformat()}"
+            )
             work_id = None
             current_state = self.helper.get_state()
             if self.config.misp_feed.source_type == "s3":
@@ -1872,11 +1865,8 @@ class MispFeed:
                         self.helper.log_error(str(e))
 
                 message = (
-                    "Connector successfully run ("
-                    + str(number_events)
-                    + " events have been processed), storing state (last_file="
-                    + str(file_name)
-                    + ")"
+                    f"Connector successfully run ({number_events} events "
+                    f"have been processed), storing state (last_file={file_name})"
                 )
             if self.config.misp_feed.source_type == "url":
                 if (
@@ -1920,7 +1910,7 @@ class MispFeed:
                 try:
                     manifest_data = json.loads(
                         self._retrieve_data(
-                            self.config.misp_feed.url + "/manifest.json"
+                            f"{self.config.misp_feed.url}/manifest.json"
                         )
                     )
                     items = []
@@ -1933,22 +1923,12 @@ class MispFeed:
                         if item["timestamp"] > last_event_timestamp:
                             last_event_timestamp = item["timestamp"]
                             self.helper.log_info(
-                                "Processing event "
-                                + item["info"]
-                                + " (date="
-                                + item["date"]
-                                + ", modified="
-                                + datetime.fromtimestamp(
-                                    last_event_timestamp, tz=pytz.UTC
-                                ).isoformat()
-                                + ")"
+                                f"Processing event {item['info']} (date={item['date']}, "
+                                f"modified={datetime.fromtimestamp(last_event_timestamp, tz=timezone.utc).isoformat()})"
                             )
                             event = json.loads(
                                 self._retrieve_data(
-                                    self.config.misp_feed.url
-                                    + "/"
-                                    + item["event_key"]
-                                    + ".json"
+                                    f"{self.config.misp_feed.url}/{item['event_key']}.json"
                                 )
                             )
                             bundle = self._process_event(event)
@@ -1960,14 +1940,9 @@ class MispFeed:
                             self._send_bundle(work_id, bundle)
                             number_events = number_events + 1
                             message = (
-                                "Event processed, storing state (last_run="
-                                + now.astimezone(pytz.utc).isoformat()
-                                + ", last_event="
-                                + datetime.fromtimestamp(
-                                    last_event_timestamp, tz=pytz.UTC
-                                ).isoformat()
-                                + ", last_event_timestamp="
-                                + str(last_event_timestamp)
+                                f"Event processed, storing state (last_run={now.astimezone(timezone.utc).isoformat()}, "
+                                f"last_event={datetime.fromtimestamp(last_event_timestamp, tz=timezone.utc).isoformat()}, "
+                                f"last_event_timestamp={last_event_timestamp})"
                             )
                             self.helper.set_state(
                                 {
@@ -1982,17 +1957,10 @@ class MispFeed:
                 except Exception as e:
                     self.helper.log_error(str(e))
                 message = (
-                    "Connector successfully run ("
-                    + str(number_events)
-                    + " events have been processed), storing state (last_run="
-                    + now.astimezone(pytz.utc).isoformat()
-                    + ", last_event="
-                    + datetime.fromtimestamp(
-                        last_event_timestamp, tz=pytz.UTC
-                    ).isoformat()
-                    + ", last_event_timestamp="
-                    + str(last_event_timestamp)
-                    + ")"
+                    f"Connector successfully run ({number_events} events have been processed), "
+                    f"storing state (last_run={now.astimezone(timezone.utc).isoformat()}, "
+                    f"last_event={datetime.fromtimestamp(last_event_timestamp, tz=timezone.utc).isoformat()}, "
+                    f"last_event_timestamp={last_event_timestamp})"
                 )
             self.helper.log_info(message)
             time.sleep(self.config.connector.duration_period.total_seconds())
