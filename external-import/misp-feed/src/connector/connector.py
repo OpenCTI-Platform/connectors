@@ -77,7 +77,6 @@ FILETYPES = ["file-name", "file-md5", "file-sha1", "file-sha256"]
 
 
 class MispFeed:
-
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         self.config = config
         self.helper = helper
@@ -1785,9 +1784,7 @@ class MispFeed:
         try:
             now = datetime.now(pytz.UTC)
             friendly_name = "MISP Feed run @ " + now.astimezone(pytz.UTC).isoformat()
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
-            )
+            work_id = None
             current_state = self.helper.get_state()
             if self.config.misp_feed.source_type == "s3":
                 if self.config.misp_feed.bucket_prefix is not None:
@@ -1805,6 +1802,11 @@ class MispFeed:
                         events = json.load(open(file_name, "r"))
                         number_events += len(events)
                         bundle = self._process_event(events)
+                        if work_id is None:
+                            work_id = self.helper.api.work.initiate_work(
+                                self.helper.connect_id, friendly_name
+                            )
+
                         self._send_bundle(work_id, bundle)
                         self.s3.Object(obj.key).delete()
                         os.remove(file_name)
@@ -1892,6 +1894,10 @@ class MispFeed:
                             )
                             bundle = self._process_event(event)
                             self.helper.log_info("Sending event STIX2 bundle...")
+                            if work_id is None:
+                                work_id = self.helper.api.work.initiate_work(
+                                    self.helper.connect_id, friendly_name
+                                )
                             self._send_bundle(work_id, bundle)
                             number_events = number_events + 1
                             message = (
@@ -1930,8 +1936,10 @@ class MispFeed:
                     + ")"
                 )
             self.helper.log_info(message)
-            self.helper.api.work.to_processed(work_id, message)
             time.sleep(self.config.connector.duration_period.total_seconds())
+            if work_id is not None:
+                self.helper.api.work.to_processed(work_id, message)
+
         except (KeyboardInterrupt, SystemExit):
             self.helper.log_info("Connector stop")
             sys.exit(0)
