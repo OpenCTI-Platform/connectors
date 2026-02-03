@@ -623,51 +623,13 @@ def _collect_vc_nvd2_from_backup(
         os.remove(filepath)
 
 
-def _collect_vc_nvd2_from_api(
-    entities: list[ApiNVD20CVEExtended],
-    target_scope: list[str],
-    helper,
-    converter_to_stix,
-    logger,
-    source_name: str,
-) -> None:
-    stix_objects = []
-
-    total = len(entities)
-
-    # Initiate new work
-    work_id = works.start_work(helper=helper, logger=logger, work_name=source_name)
-
-    logger.info("[VULNCHECK NVD-2] Parsing data into STIX objects")
-
-    for i, entity in enumerate(entities):
-        logger.info(f"[VULNCHECK NVD-2] Entity {i}/{total}: {entity.id}")
-
-        stix_objects.extend(
-            _extract_stix_from_vcnvd2(
-                converter_to_stix=converter_to_stix,
-                entity=entity,
-                logger=logger,
-                target_scope=target_scope,
-            )
-        )
-
-    works.finish_work(
-        helper=helper,
-        logger=logger,
-        stix_objects=stix_objects,
-        work_id=work_id,
-        work_name=source_name,
-    )
-
-
 def collect_vcnvd2(
     config,
     helper: OpenCTIConnectorHelper,
     client,
     converter_to_stix,
     logger,
-    connector_state: dict,
+    _: dict,
 ) -> None:
     source_name = "VulnCheck NVD-2"
     target_scope = [
