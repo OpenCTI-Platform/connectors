@@ -6,7 +6,6 @@ import vclib.util.works as works
 from pycti import OpenCTIConnectorHelper
 from vclib.util.config import (
     get_configured_sources,
-    get_intersection_of_string_lists,
     get_time_until_next_run,
 )
 from vclib.util.memory_usage import reset_max_mem
@@ -63,29 +62,39 @@ class ConnectorVulnCheck:
             )
 
     def _get_target_data_sources(self) -> list[DataSource]:
-        entitled_data_sources = self.client.get_entitled_sources()
-        self.helper.connector_logger.debug(
-            "[CONNECTOR] Entitled Data Sources",
-            {"data_sources": entitled_data_sources},
-        )
-        configured_data_sources = get_configured_sources(self.config)
+        configured_data_sources = get_configured_sources(str(self.config.data_sources))
+        target_data_sources: list[DataSource] = []
+        for name in configured_data_sources:
+            target_data_sources.append(DataSource.from_string(name))
+
         self.helper.connector_logger.debug(
             "[CONNECTOR] Configured Data Sources",
-            {"data_sources": configured_data_sources},
-        )
-        target_data_source_strings = get_intersection_of_string_lists(
-            entitled_data_sources, configured_data_sources
-        )
-        target_data_source_strings.sort()
-
-        target_data_sources: list[DataSource] = []
-
-        for name in target_data_source_strings:
-            target_data_sources.append(DataSource.from_string(name))
-        self.helper.connector_logger.debug(
-            "[CONNECTOR] Target Data Sources", {"data_sources": target_data_sources}
+            {"data_sources": target_data_sources},
         )
         return target_data_sources
+
+    def _get_validated_data_sources(
+        self, target_sources: list[DataSource]
+    ) -> list[DataSource]:
+        validated_sources: list[DataSource] = []
+        self.helper.connector_logger.debug(
+            "[CONNECTOR] Validating sources...",
+            {"data_sources": target_sources},
+        )
+        for source in target_sources:
+            if source.validate(str(self.config.api_base_url), str(self.config.api_key)):
+                self.helper.connector_logger.debug(
+                    f"[CONNECTOR] Valid source: {source.name}",
+                )
+                validated_sources.append(source)
+            else:
+                self.helper.connector_logger.warning(
+                    f"[CONNECTOR] Invalid source: {source.name}",
+                )
+        self.helper.connector_logger.debug(
+            "[CONNECTOR] Sources validated!",
+        )
+        return validated_sources
 
     def _initial_run(self):
         work_name = "First Run"
@@ -123,7 +132,9 @@ class ConnectorVulnCheck:
             connector_state = self.helper.get_state()
 
             # Get the target data sources for this run
-            target_data_sources = self._get_target_data_sources()
+            target_data_sources = self._get_validated_data_sources(
+                self._get_target_data_sources()
+            )
 
             if connector_state is not None and "last_run" in connector_state:
                 last_run = connector_state["last_run"]
