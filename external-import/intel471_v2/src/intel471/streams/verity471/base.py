@@ -8,6 +8,10 @@ class Verity471Stream(Intel471Stream):
     """
     size: ClassVar[int]
 
+    @property
+    def cursor_name(self) -> str:
+        return f"{self.label}_cursor_v471"
+
     def _get_cursor_value(self, api_response: Any) -> Union[None, str, int]:
         return api_response.cursor_next
 
@@ -15,7 +19,7 @@ class Verity471Stream(Intel471Stream):
         # initial history timestamp is saved in OpenCTI instance state
         # to avoid cursor/from mismatch if the timestamp is changed in the config
         # but the cursor is not reset.
-        initial_history_key = f"{self.label}_initdate"
+        initial_history_key = f"{self.label}_initdate_v471"
         stored_initial_history = self._get_state(initial_history_key)
         if not stored_initial_history:
             stored_initial_history = self.initial_history
