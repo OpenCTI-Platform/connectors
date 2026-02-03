@@ -47,8 +47,8 @@ def get_intersection_of_string_lists(a: list[str], b: list[str]) -> list[str]:
     return list(set(a) & set(b))
 
 
-def get_configured_sources(config) -> list[str]:
-    return config.data_sources.split(",")
+def get_configured_sources(data_sources: str) -> list[str]:
+    return data_sources.split(",")
 
 
 def _get_configured_scope(config) -> list[str]:

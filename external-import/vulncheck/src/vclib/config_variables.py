@@ -122,7 +122,7 @@ class ConfigConnector:
             ["connector_vulncheck", "data_sources"],
             self.load_yml,
             required=False,
-            default=DataSource.get_all_data_source_strings(),
+            default=f"{DataSource.VulnCheckKEV},{DataSource.NistNVD2}",
         )
 
     def to_dict(self) -> dict:
