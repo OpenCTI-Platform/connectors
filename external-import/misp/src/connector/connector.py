@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
 from api_client.client import MISPClient, MISPClientError
@@ -11,7 +11,7 @@ from utils.work_manager import WorkManager
 if TYPE_CHECKING:
     import stix2
     from api_client.models import EventRestSearchListItem
-    from connector.settings import ConnectorSettings, MispConfig
+    from connector.settings import ConnectorSettings
     from pycti import OpenCTIConnectorHelper
 
 LOG_PREFIX = "[Connector]"
@@ -20,41 +20,39 @@ LOG_PREFIX = "[Connector]"
 class Misp:
     def __init__(self, config: "ConnectorSettings", helper: "OpenCTIConnectorHelper"):
         self.config = config
-        self.config_misp: MispConfig = config.misp
-
         self.helper = helper
         self.logger = helper.connector_logger
 
         self.client_api: MISPClient = MISPClient(
-            url=self.config_misp.url,
-            key=self.config_misp.key.get_secret_value(),
-            verify_ssl=self.config_misp.ssl_verify,
-            certificate=self.config_misp.client_cert,
+            url=self.config.misp.url,
+            key=self.config.misp.key.get_secret_value(),
+            verify_ssl=self.config.misp.ssl_verify,
+            certificate=self.config.misp.client_cert,
         )
 
         self.converter = EventConverter(
             logger=self.logger,
-            report_type=self.config_misp.report_type,
-            report_description_attribute_filters=self.config_misp.report_description_attribute_filters,
-            external_reference_base_url=self.config_misp.reference_url
-            or self.config_misp.url,
-            convert_event_to_report=self.config_misp.create_reports,
-            convert_attribute_to_associated_file=self.config_misp.import_with_attachments,
-            convert_attribute_to_indicator=self.config_misp.create_indicators,
-            convert_attribute_to_observable=self.config_misp.create_observables,
-            convert_object_to_observable=self.config_misp.create_object_observables,
-            convert_unsupported_object_to_text_observable=self.config_misp.import_unsupported_observables_as_text,
-            convert_unsupported_object_to_transparent_text_observable=self.config_misp.import_unsupported_observables_as_text_transparent,
-            convert_tag_to_author=self.config_misp.author_from_tags,
-            convert_tag_to_label=self.config_misp.create_tags_as_labels,
-            convert_tag_to_marking=self.config_misp.markings_from_tags,
-            propagate_report_labels=self.config_misp.propagate_labels,
-            original_tags_to_keep_as_labels=self.config_misp.keep_original_tags_as_label,
-            default_attribute_score=self.config_misp.import_to_ids_no_score,
-            guess_threats_from_tags=self.config_misp.guess_threats_from_tags,
+            report_type=self.config.misp.report_type,
+            report_description_attribute_filters=self.config.misp.report_description_attribute_filters,
+            external_reference_base_url=self.config.misp.reference_url
+            or self.config.misp.url,
+            convert_event_to_report=self.config.misp.create_reports,
+            convert_attribute_to_associated_file=self.config.misp.import_with_attachments,
+            convert_attribute_to_indicator=self.config.misp.create_indicators,
+            convert_attribute_to_observable=self.config.misp.create_observables,
+            convert_object_to_observable=self.config.misp.create_object_observables,
+            convert_unsupported_object_to_text_observable=self.config.misp.import_unsupported_observables_as_text,
+            convert_unsupported_object_to_transparent_text_observable=self.config.misp.import_unsupported_observables_as_text_transparent,
+            convert_tag_to_author=self.config.misp.author_from_tags,
+            convert_tag_to_label=self.config.misp.create_tags_as_labels,
+            convert_tag_to_marking=self.config.misp.markings_from_tags,
+            propagate_report_labels=self.config.misp.propagate_labels,
+            original_tags_to_keep_as_labels=self.config.misp.keep_original_tags_as_label,
+            default_attribute_score=self.config.misp.import_to_ids_no_score,
+            guess_threats_from_tags=self.config.misp.guess_threats_from_tags,
             threats_guesser=(
                 ThreatsGuesser(self.helper.api)
-                if self.config_misp.guess_threats_from_tags
+                if self.config.misp.guess_threats_from_tags
                 else None
             ),
         )
@@ -63,36 +61,7 @@ class Misp:
         self.batch_processor: "BatchProcessor" = BatchProcessor(
             work_manager=self.work_manager,
             logger=self.logger,
-            batch_size=self.config_misp.batch_count,
-        )
-
-    def _log_entities_summary(
-        self,
-        all_entities: "list[stix2.v21._STIXBase21]",
-    ) -> None:
-        """Log summary of converted entities.
-
-        Args:
-            all_entities: list of all converted entities
-            current_idx: Current index in processing
-            total: Total number of entities
-
-        """
-        entity_types: dict[str, int] = {}
-        for entity in all_entities:
-            entity_type_attr = getattr(entity, "type", None)
-            if entity_type_attr:
-                entity_types[entity_type_attr] = (
-                    entity_types.get(entity_type_attr, 0) + 1
-                )
-        entities_summary = ", ".join([f"{k}: {v}" for k, v in entity_types.items()])
-        self.logger.debug(
-            "Converted to STIX entities",
-            {
-                "prefix": LOG_PREFIX,
-                "entities_count": len(all_entities),
-                "entities_summary": entities_summary,
-            },
+            batch_size=self.config.misp.batch_count,
         )
 
     def _check_batch_size_and_flush(
@@ -107,7 +76,7 @@ class Misp:
         """
         if (
             self.batch_processor.get_current_batch_size() + len(all_entities)
-        ) >= self.config_misp.batch_count * 2:
+        ) >= self.config.misp.batch_count * 2:
             self.logger.debug(
                 "Need to Flush before adding next items to preserve consistency of the bundle",
                 {"prefix": LOG_PREFIX},
@@ -141,7 +110,6 @@ class Misp:
                     "Batch processor: Flushed remaining items",
                     {"prefix": LOG_PREFIX},
                 )
-            self.batch_processor.update_final_state()
         except Exception as e:
             self.logger.error(
                 "Failed to flush batch processor",
@@ -159,8 +127,8 @@ class Misp:
 
         """
         if (
-            self.config_misp.import_owner_orgs
-            and event.Event.Org.name not in self.config_misp.import_owner_orgs
+            self.config.misp.import_owner_orgs
+            and event.Event.Org.name not in self.config.misp.import_owner_orgs
         ):
             self.logger.info(
                 "Event owner Organization not in `MISP_IMPORT_OWNER_ORGS`, skipping event",
@@ -172,8 +140,8 @@ class Misp:
             return False
 
         if (
-            self.config_misp.import_owner_orgs_not
-            and event.Event.Org.name in self.config_misp.import_owner_orgs_not
+            self.config.misp.import_owner_orgs_not
+            and event.Event.Org.name in self.config.misp.import_owner_orgs_not
         ):
             self.logger.info(
                 "Event owner Organization in `MISP_IMPORT_OWNER_ORGS_NOT`, skipping event",
@@ -185,9 +153,9 @@ class Misp:
             return False
 
         if (
-            self.config_misp.import_distribution_levels
+            self.config.misp.import_distribution_levels
             and event.Event.distribution
-            not in self.config_misp.import_distribution_levels
+            not in self.config.misp.import_distribution_levels
         ):
             self.logger.info(
                 "Event distribution level not in `MISP_IMPORT_DISTRIBUTION_LEVELS`, skipping event",
@@ -199,8 +167,8 @@ class Misp:
             return False
 
         if (
-            self.config_misp.import_threat_levels
-            and event.Event.threat_level_id not in self.config_misp.import_threat_levels
+            self.config.misp.import_threat_levels
+            and event.Event.threat_level_id not in self.config.misp.import_threat_levels
         ):
             self.logger.info(
                 "Event threat level not in `MISP_IMPORT_THREAT_LEVELS`, skipping event",
@@ -211,7 +179,7 @@ class Misp:
             )
             return False
 
-        if self.config_misp.import_only_published and not event.Event.published:
+        if self.config.misp.import_only_published and not event.Event.published:
             self.logger.info(
                 "Event not published and `MISP_IMPORT_ONLY_PUBLISHED` enabled, skipping event",
                 {
@@ -221,15 +189,86 @@ class Misp:
             )
             return False
 
+        current_state = self.work_manager.get_state()
+        if self.config.misp.datetime_attribute == "date":
+            current_event_id = current_state.get("current_event_id")
+            remaining_objects_count = current_state.get("remaining_objects_count")
+
+            if not current_event_id:
+                return True
+
+            if int(event.Event.id) < int(current_event_id) or (
+                event.Event.id == current_event_id and remaining_objects_count == 0
+            ):
+                self.logger.info(
+                    "Event already processed by the connector, skipping event",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "event_id": event.Event.id,
+                    },
+                )
+                return False
+        else:
+            last_event_date = current_state.get("last_event_date")
+            remaining_objects_count = current_state.get("remaining_objects_count")
+
+            if not last_event_date:
+                return True
+
+            event_datetime = self._get_event_datetime(event)
+            last_event_datetime = datetime.fromisoformat(last_event_date)
+            if event_datetime < last_event_datetime:
+                self.logger.info(
+                    "Event already processed by the connector, skipping event",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "event_id": event.Event.id,
+                        "event_datetime": event_datetime.isoformat(),
+                    },
+                )
+                return False
+
         return True
+
+    def _get_event_datetime(self, event: "EventRestSearchListItem") -> datetime:
+        """Get the datetime of the event based on the configured attribute.
+
+        Args:
+            event: The MISP event
+
+        Returns:
+            The datetime of the event
+
+        """
+        event_datetime_attribute = self.config.misp.datetime_attribute
+        event_datetime_value = getattr(event.Event, event_datetime_attribute)
+
+        if event_datetime_attribute in {
+            "timestamp",
+            "publish_timestamp",
+            "sighting_timestamp",
+        }:
+            event_datetime = datetime.fromtimestamp(
+                int(event_datetime_value), tz=timezone.utc
+            )
+        elif event_datetime_attribute == "date":
+            event_datetime = datetime.fromisoformat(event_datetime_value).replace(
+                tzinfo=timezone.utc
+            )
+        else:
+            raise ValueError(
+                "`MISP_DATETIME_ATTRIBUTE` must be either: 'date', "
+                "'timestamp', 'publish_timestamp' or 'sighting_timestamp'"
+            )
+
+        return event_datetime
 
     def _process_bundle_in_batch(
         self,
-        event_id: str,
+        event: "EventRestSearchListItem",
         bundle_objects: "list[stix2.v21._STIXBase21]",
         author: "stix2.Identity",
         markings: "list[stix2.MarkingDefinition]",
-        remaining_objects_count: int,
     ) -> None:
         """Process a bundle of STIX objects in a batch.
 
@@ -238,11 +277,14 @@ class Misp:
             bundle_objects: list of STIX objects to process
             author: Author of the event
             markings: Markings of the event
-            remaining_objects_count: Number of remaining objects to process
         """
         bundle_size = len(bundle_objects)
+        current_state = self.work_manager.get_state()
+        remaining_objects_count = (
+            current_state.get("remaining_objects_count") or bundle_size
+        )
         object_index = bundle_size - remaining_objects_count
-        batch_chunk_size = self.config_misp.batch_count
+        batch_chunk_size = self.config.misp.batch_count
         for i in range(
             object_index,
             bundle_size,
@@ -251,30 +293,35 @@ class Misp:
             now = datetime.now(tz=timezone.utc)
             self.batch_processor.work_name_template = (
                 f"MISP run @ {now.isoformat(timespec='seconds')}"
-                f" - Event # {event_id}"
+                f" - Event # {event.Event.id}"
                 f" - Batch # {max(1, i // batch_chunk_size)}"
-                f" / {max(1, len(bundle_objects) // batch_chunk_size)}"
+                f" / {max(1, bundle_size // batch_chunk_size)}"
             )
 
             bundle_objects_chunk = bundle_objects[i : i + batch_chunk_size]
             self._check_and_add_entities_to_batch(
                 bundle_objects_chunk, author, markings
             )
+
+            new_state = {"last_event_date": self._get_event_datetime(event).isoformat()}
+            if self.config.misp.datetime_attribute == "date":
+                new_state["current_event_id"] = event.Event.id
+
             remaining_objects_count = max(
                 0, remaining_objects_count - len(bundle_objects_chunk)
             )
-            self.work_manager.update_state(
-                state_update={"remaining_objects_count": remaining_objects_count}
-            )
+            new_state["remaining_objects_count"] = remaining_objects_count
+            self.work_manager.update_state(state_update=new_state)
 
         # Flush any remaining items and Update the final state
         self._flush_batch_processor()
+        self.work_manager.update_state(state_update={"remaining_objects_count": 0})
 
-    def process_event(self) -> str | None:
-        """Setup and run the orchestrator to process MISP events."""
+    def process_events(self) -> str | None:
+        """Fetch, convert and send MISP events."""
 
         try:
-            initial_state = self.helper.get_state()
+            initial_state = self.helper.get_state() or {}
             self.logger.info(
                 "Retrieved state",
                 {"prefix": LOG_PREFIX, "initial_state": initial_state},
@@ -286,9 +333,7 @@ class Misp:
             self.helper.metric.inc("run_count")
             self.helper.metric.state("running")
 
-            if initial_state is not None and (
-                last_event := initial_state.get(self.batch_processor.state_key)
-            ):
+            if last_event := initial_state.get("last_event_date"):
                 last_event_date = datetime.fromisoformat(last_event)
                 self.logger.info(
                     "Current state of the connector:",
@@ -298,22 +343,20 @@ class Misp:
                     },
                 )
             else:
-                last_event_date = self.config_misp.import_from_date or now
-                self.batch_processor.set_latest_date(last_event_date.isoformat())
-                self.batch_processor.update_final_state()
+                last_event_date = self.config.misp.import_from_date or now
                 self.logger.info("Connector has never run")
 
             filter_params = {
-                "date_field_filter": self.config_misp.date_filter_field,
+                "date_field_filter": self.config.misp.date_filter_field,
                 "date_value_filter": last_event_date,
-                "datetime_attribute": self.config_misp.datetime_attribute,
-                "keyword": self.config_misp.import_keyword,
-                "included_tags": self.config_misp.import_tags,
-                "excluded_tags": self.config_misp.import_tags_not,
-                "included_org_creators": self.config_misp.import_creator_orgs,
-                "excluded_org_creators": self.config_misp.import_creator_orgs_not,
-                "enforce_warning_list": self.config_misp.enforce_warning_list,
-                "with_attachments": self.config_misp.import_with_attachments,
+                "datetime_attribute": self.config.misp.datetime_attribute,
+                "keyword": self.config.misp.import_keyword,
+                "included_tags": self.config.misp.import_tags,
+                "excluded_tags": self.config.misp.import_tags_not,
+                "included_org_creators": self.config.misp.import_creator_orgs,
+                "excluded_org_creators": self.config.misp.import_creator_orgs_not,
+                "enforce_warning_list": self.config.misp.enforce_warning_list,
+                "with_attachments": self.config.misp.import_with_attachments,
             }
 
             self.logger.info(
@@ -321,8 +364,7 @@ class Misp:
                 {"prefix": LOG_PREFIX, **filter_params},
             )
 
-            date_attr_used = self.config_misp.datetime_attribute == "date"
-            last_event_datetime = None
+            event_processed = False
             try:
                 for event in self.client_api.search_events(**filter_params):
                     event_log_data = {
@@ -338,24 +380,6 @@ class Misp:
                         break
 
                     if not self._validate_event(event):
-                        continue
-
-                    current_state = self.work_manager.get_state()
-                    prev_event_id = current_state.get("current_event_id")
-                    remaining_objects_count = current_state.get(
-                        "remaining_objects_count"
-                    )
-
-                    if prev_event_id is not None and (
-                        event.Event.id < prev_event_id
-                        or (
-                            event.Event.id == prev_event_id
-                            and remaining_objects_count == 0
-                        )
-                    ):
-                        self.logger.info(
-                            "Event already processed, skipping", event_log_data
-                        )
                         continue
 
                     self.logger.info("MISP event found - Processing...", event_log_data)
@@ -376,52 +400,50 @@ class Misp:
                         )
                         continue
 
-                    self._log_entities_summary(bundle_objects)
-
-                    event_datetime_value = getattr(
-                        event.Event, self.config_misp.datetime_attribute
+                    self.logger.debug(
+                        "Converted to STIX entities",
+                        {
+                            "prefix": LOG_PREFIX,
+                            "entities_count": len(bundle_objects + markings + [author]),
+                        },
                     )
-                    if self.config_misp.datetime_attribute in {
-                        "timestamp",
-                        "publish_timestamp",
-                        "sighting_timestamp",
-                    }:
-                        event_datetime = datetime.fromtimestamp(
-                            int(event_datetime_value), tz=timezone.utc
-                        )
-                    elif date_attr_used:
-                        event_datetime = datetime.fromisoformat(
-                            event_datetime_value
-                        ).replace(tzinfo=timezone.utc)
-                    else:
-                        raise ValueError(
-                            "`MISP_DATETIME_ATTRIBUTE` must be either: 'date', "
-                            "'timestamp', 'publish_timestamp' or 'sighting_timestamp'"
-                        )
-
-                    if (
-                        last_event_datetime is None
-                        or event_datetime > last_event_datetime
-                    ):
-                        last_event_datetime = event_datetime
-                        self.batch_processor.set_latest_date(event_datetime.isoformat())
-
-                    if not remaining_objects_count:
-                        remaining_objects_count = len(bundle_objects)
-                        self.work_manager.update_state(
-                            state_update={
-                                "current_event_id": event.Event.id,
-                                "remaining_objects_count": remaining_objects_count,
-                            }
-                        )
 
                     self._process_bundle_in_batch(
-                        event_id=event.Event.id,
+                        event=event,
                         bundle_objects=bundle_objects,
                         author=author,
                         markings=markings,
-                        remaining_objects_count=remaining_objects_count,
                     )
+                    event_processed = True
+
+                else:
+                    if (
+                        event_processed
+                        and self.config.misp.datetime_attribute != "date"
+                    ):
+                        # If the datetime attribute is not date, we need to update
+                        # the last event date to avoid processing the same event again
+                        current_state = self.work_manager.get_state()
+                        last_event_date = current_state.get("last_event_date")
+                        if last_event_date is None:
+                            return None
+
+                        last_event_datetime = datetime.fromisoformat(last_event_date)
+                        # Check if the last event date is not the same as the current time
+                        if last_event_datetime != now:
+                            # Add 1 second to the last event date to avoid processing the same event again
+                            last_event_datetime += timedelta(seconds=1)
+                            self.logger.debug(
+                                "Updating last event date (add 1 second) to avoid processing the same event again",
+                                {
+                                    "prefix": LOG_PREFIX,
+                                    "last_event_date": last_event_datetime.isoformat(),
+                                },
+                            )
+                            new_state = {
+                                "last_event_date": last_event_datetime.isoformat()
+                            }
+                            self.work_manager.update_state(state_update=new_state)
 
             finally:
                 self._flush_batch_processor()
@@ -442,7 +464,7 @@ class Misp:
         error_message = None
 
         try:
-            error_result = self.process_event()
+            error_result = self.process_events()
             if error_result:
                 error_message = error_result
                 error_flag = True

@@ -1,10 +1,9 @@
 """Batch processor for any data type with configurable work management.
 
 This module provides a flexible processor that can work with any data type,
-handle configurable sizes, and provide consistent work management and state updates.
+handle configurable sizes and provide consistent work management.
 """
 
-from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 import stix2
@@ -49,7 +48,6 @@ class BatchProcessor:
 
         self.batch_size = batch_size
         self.work_name_template = "MISP - Batch #{batch_num}"
-        self.state_key = "last_event_date"
         self.entity_type = "stix_objects"
         self.display_name = "STIX objects"
         self.exception_class = MispWorkProcessingError
@@ -143,7 +141,11 @@ class BatchProcessor:
 
         """
         if not self._current_batch:
-            return self._handle_empty_batch()
+            self._logger.debug(
+                "No items in batch to process",
+                {"prefix": LOG_PREFIX, "display_name": self.display_name},
+            )
+            return None
 
         batch_items = self._current_batch.copy()
         self._current_batch.clear()
@@ -187,44 +189,6 @@ class BatchProcessor:
         self._logger.debug("No items to flush", {"prefix": LOG_PREFIX})
         return None
 
-    def update_final_state(self) -> None:
-        """Update the state with the final latest date after all processing is complete."""
-        if self._latest_date:
-            self._logger.debug(
-                "State update: Setting next_cursor_date",
-                {"prefix": LOG_PREFIX, "latest_date": self._latest_date},
-            )
-            try:
-                self._work_manager.update_state(
-                    state_key=self.state_key,
-                    date_str=self._latest_date,
-                )
-            except Exception as state_err:
-                self._logger.error(
-                    "Failed to update final state",
-                    {"prefix": LOG_PREFIX, "error": str(state_err)},
-                )
-        else:
-            current_time = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S+00:00")
-            self._logger.debug(
-                "State update: Setting to current time",
-                {
-                    "prefix": LOG_PREFIX,
-                    "state_key": self.state_key,
-                    "current_time": current_time,
-                },
-            )
-            try:
-                self._work_manager.update_state(
-                    state_key=self.state_key,
-                    date_str=current_time,
-                )
-            except Exception as state_err:
-                self._logger.error(
-                    "Failed to update final state with current time",
-                    {"prefix": LOG_PREFIX, "error": str(state_err)},
-                )
-
     def get_statistics(self) -> dict[str, Any]:
         """Get processing statistics.
 
@@ -263,50 +227,6 @@ class BatchProcessor:
     def clear_failed_items(self) -> None:
         """Clear the list of failed items."""
         self._failed_items.clear()
-
-    def set_latest_date(self, date_str: str) -> None:
-        """Set the latest date manually.
-
-        Args:
-            date_str: The date string in ISO format
-
-        """
-        if date_str and (not self._latest_date or date_str > self._latest_date):
-            self._latest_date = date_str
-
-    def _handle_empty_batch(self) -> str | None:
-        """Handle processing of empty batches based on configuration.
-
-        Returns:
-            None (empty batches don't create work)
-
-        Raises:
-            Configured exception class: If empty_batch_behavior is 'error'
-
-        """
-
-        current_time = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S+00:00")
-        self._logger.debug(
-            "Updating state with current time for empty batch",
-            {"prefix": LOG_PREFIX, "current_time": current_time},
-        )
-        try:
-            self._work_manager.update_state(
-                state_key=self.state_key,
-                date_str=current_time,
-            )
-            self._latest_date = current_time
-        except Exception as state_err:
-            self._logger.warning(
-                "Failed to update state for empty batch",
-                {"prefix": LOG_PREFIX, "error": str(state_err)},
-            )
-
-        self._logger.debug(
-            "No items in batch to process",
-            {"prefix": LOG_PREFIX, "display_name": self.display_name},
-        )
-        return None
 
     def _process_batch_with_retries(
         self,
@@ -374,8 +294,6 @@ class BatchProcessor:
 
         self._total_items_processed += len(batch_items)
         self._total_items_sent += len(batch_items)
-
-        self._update_batch_state()
 
         self.postprocess_batch(batch_items, work_id)
 
@@ -551,24 +469,6 @@ class BatchProcessor:
             {"prefix": LOG_PREFIX, "item_type": type(item).__name__},
         )
         return item
-
-    def _update_batch_state(self) -> None:
-        """Update state with the latest date after successful batch processing."""
-        if self._latest_date:
-            self._logger.debug(
-                "Updating state with latest date",
-                {"prefix": LOG_PREFIX, "latest_date": self._latest_date},
-            )
-            try:
-                self._work_manager.update_state(
-                    state_key=self.state_key,
-                    date_str=self._latest_date,
-                )
-            except Exception as state_err:
-                self._logger.warning(
-                    "Failed to update state after batch processing",
-                    {"prefix": LOG_PREFIX, "error": str(state_err)},
-                )
 
     def format_work_name(self, batch_num: int, **kwargs: Any) -> str:
         """Format the work name with batch number and optional parameters.

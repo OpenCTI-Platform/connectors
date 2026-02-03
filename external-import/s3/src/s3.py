@@ -12,6 +12,7 @@ import yaml
 from pycti import (
     CourseOfAction,
     Identity,
+    Indicator,
     Infrastructure,
     Malware,
     Note,
@@ -218,6 +219,11 @@ class S3Connector:
                 new_id = Malware.generate_id(obj["name"])
                 id_mapping[old_id] = new_id
 
+            elif obj_type == "indicator":
+                old_id = obj["id"]
+                new_id = Indicator.generate_id(obj["pattern"])
+                id_mapping[old_id] = new_id
+
         # Second pass: Update all objects with new IDs and references
         for obj in objects:
             obj_type = obj.get("type")
@@ -253,6 +259,7 @@ class S3Connector:
                 "course-of-action",
                 "vulnerability",
                 "malware",
+                "indicator",
             ):
                 # Update the object's ID from the mapping
                 old_id = obj["id"]
