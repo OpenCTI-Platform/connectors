@@ -104,7 +104,6 @@ class Intel471Stream(ABC):
                                 self.client_wrapper.module,
                                 api_client,
                                 ioc_opencti_score=self.ioc_score,
-                                # girs_names=True,  # TODO: remember
                                 report_full_content=True,
                             )
                         )
