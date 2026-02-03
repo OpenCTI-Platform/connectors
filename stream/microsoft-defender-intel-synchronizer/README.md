@@ -52,7 +52,23 @@ help.
 ![Sentinel_variables](doc/sentinel_info_variables.png)
 
 It's also important to define the necessary permissions in Microsoft Entra ID (formerly Azure AD) for the connector to work.
+It's also important to define the necessary permissions in Microsoft Entra ID (formerly Azure AD) for the connector to work.
 
+In the Entra portal, set:
+
+Home > Application registrations > OpenCTI (your app name) > API permissions
+
+The connector requires the following application permissions for Microsoft Defender XDR / Microsoft 365 Defender APIs:
+
+| Permission                 | Purpose                                                                                                         |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `Ti.ReadWrite.All`         | Create, update, and delete indicators.                                                                          |
+| `Indicators.ReadWrite.All` | (Equivalent to above; exact name depends on portal version.)                                                    |
+| `Score.Read.All`           | Required for RBAC-scoped synchronization — used to list device groups via `/api/exposureScore/ByMachineGroups`. |
+
+After adding these permissions, click Grant admin consent.
+
+You will then be able to view the data (indicators) in:
 In the Entra portal, set:
 
 Home > Application registrations > OpenCTI (your app name) > API permissions

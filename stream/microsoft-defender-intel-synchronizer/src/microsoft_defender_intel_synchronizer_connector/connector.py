@@ -1,6 +1,10 @@
 """Microsoft Defender Intel Synchronizer Connector main class."""
 
+"""Microsoft Defender Intel Synchronizer Connector main class."""
+
 import json
+import re
+import signal
 import re
 import signal
 import sys
@@ -10,6 +14,12 @@ from typing import Any, Final
 
 from .api_handler import DefenderApiHandler
 from .config_variables import ConfigConnector
+from .rbac_scope import (
+    RbacConfigError,
+    fetch_rbac_name_id_map,
+    resolve_rbac_scope_or_abort,
+)
+from .types import RBACScope, ScopeKey
 from .rbac_scope import (
     RbacConfigError,
     fetch_rbac_name_id_map,
@@ -110,7 +120,26 @@ class MicrosoftDefenderIntelSynchronizerConnector:
     def _convert_indicator_to_observables(
         self, node: dict[str, Any]
     ) -> list[dict[str, Any]] | None:
+        if not self.api.preflight():
+            self.helper.connector_logger.error(
+                "Preflight checks failed; connector will not run."
+            )
+            time.sleep(120)
+            sys.exit(1)
+        self._rbac_map: dict[str, int] = {}
+
+    def _convert_indicator_to_observables(
+        self, node: dict[str, Any]
+    ) -> list[dict[str, Any]] | None:
         """
+        Convert a GraphQL indicator node into Defender-ready observables.
+
+        - Extracts observable (type, value) pairs from STIX-like pattern strings.
+        - Normalizes and refangs values using indicator_value().
+        - Merges parent indicator metadata (score, confidence, valid_until, etc.)
+        into each observable so downstream logic has full context.
+
+        Returns a list of enriched observable dicts or None on error.
         Convert a GraphQL indicator node into Defender-ready observables.
 
         - Extracts observable (type, value) pairs from STIX-like pattern strings.
@@ -357,6 +386,9 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
         self.helper.connector_logger.info(
             "Fetching indicators for collection", {"collection": collection_name}
         )
+        self.helper.connector_logger.info(
+            "Fetching indicators for collection", {"collection": collection_name}
+        )
         indicators = []
         cursor = None
         total_fetched = 0
@@ -383,6 +415,9 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                 data = result["data"]["globalSearch"]
                 edges = data.get("edges") or []
                 if not edges:
+                    self.helper.connector_logger.debug(
+                        "No more edges returned for batch, stopping.",
+                        {"batch_num": batch_num, "collection_str": collection_name},
                     self.helper.connector_logger.debug(
                         "No more edges returned for batch, stopping.",
                         {"batch_num": batch_num, "collection_str": collection_name},
@@ -423,6 +458,8 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
         self.helper.connector_logger.info(
             "Fetched indicators for collection",
             {"fetched": len(indicators), "collection": collection_name},
+            "Fetched indicators for collection",
+            {"fetched": len(indicators), "collection": collection_name},
         )
         return indicators
 
@@ -434,7 +471,15 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
         compares them, and creates or deletes indicators in Microsoft Defender as needed.
         The function runs in an infinite loop, sleeping for the configured interval between runs.
         """
+        """
+        Main function to run the connector.
+        This function contains the main logic of the connector.
+        It fetches indicators from OpenCTI and Microsoft Defender,
+        compares them, and creates or deletes indicators in Microsoft Defender as needed.
+        The function runs in an infinite loop, sleeping for the configured interval between runs.
+        """
 
+        def handle_sigint(_signum, _frame):
         def handle_sigint(_signum, _frame):
             self.helper.connector_logger.info(
                 "Received interrupt signal, shutting down gracefully."
@@ -496,6 +541,11 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                             {"error": str(ve)},
                         )
                         raise
+                        self.helper.connector_logger.error(
+                            "ValueError during TAXII collection query",
+                            {"error": str(ve)},
+                        )
+                        raise
                     taxii_collection = result["data"].get("taxiiCollection")
                     if taxii_collection is not None and "filters" in taxii_collection:
                         filters = taxii_collection["filters"]
@@ -509,9 +559,14 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                                 first_node = opencti_indicators[0]
                                 state[collection]["last_timestamp"] = first_node.get(
                                     "modified"
+                                first_node = opencti_indicators[0]
+                                state[collection]["last_timestamp"] = first_node.get(
+                                    "modified"
                                 )
                             except Exception as e:
                                 self.helper.connector_logger.warning(
+                                    "[STATE] Could not extract timestamp from first node",
+                                    {"error": e},
                                     "[STATE] Could not extract timestamp from first node",
                                     {"error": e},
                                 )
@@ -519,8 +574,10 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                         opencti_indicators = [
                             {
                                 **opencti_indicator,
+                                **opencti_indicator,
                                 "_collection": collection,
                                 "_collection_rank": collection_rank[collection],
+                                # "_collection_limit": collection_limit,
                                 # "_collection_limit": collection_limit,
                             }
                             for opencti_indicator in opencti_indicators
@@ -532,6 +589,76 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                             {"id": collection},
                         )
 
+                self.helper.connector_logger.info(
+                    "Found indicators in TAXII collections",
+                    {"total_indicators": len(opencti_all_indicators)},
+                )
+
+                # RBAC scoping
+                rbac_scope: RBACScope | None = None
+                all_rbac_groups = self.config.used_rbac_groups()
+                if all_rbac_groups:
+                    name_to_id: dict[str, int] = {}
+                    try:
+                        # Use the live session from API handler for auth/headers
+                        name_to_id, _ = fetch_rbac_name_id_map(
+                            self.api.session.get,
+                            self.config.base_url,
+                            self.api.session.headers,
+                        )
+
+                        # Cache for per-collection mapping later in this run
+                        self._rbac_map = name_to_id
+
+                        # --- VALIDATE THE UNION (global + per-collection) ---
+                        # This ensures any per-collection RBAC names are known now,
+                        # preventing KeyError later when we map names -> ids.
+                        try:
+                            _ = resolve_rbac_scope_or_abort(all_rbac_groups, name_to_id)
+                        except RbacConfigError as e:
+                            unrecognized = None
+                            if len(e.args) > 1 and isinstance(e.args[1], dict):
+                                unrecognized = e.args[1].get("missing_groups")
+                            self.helper.connector_logger.error(
+                                "[RBAC] Unknown device groups in config; synchronization aborted.",
+                                {
+                                    "unrecognized_groups": unrecognized,
+                                    "available_count": len(name_to_id),
+                                    "available_groups": sorted(name_to_id.keys()),
+                                    "error": str(e),
+                                },
+                            )
+                            return
+
+                        # Resolve *global* scope for API writes (if configured)
+                        if self.config.rbac_group_names:
+                            rbac_scope = resolve_rbac_scope_or_abort(
+                                self.config.rbac_group_names, name_to_id
+                            )
+                            if not rbac_scope:
+                                raise RbacConfigError("RBAC scope is invalid.")
+                            self.helper.connector_logger.info(
+                                "[RBAC] Resolved RBAC groups for scoped writes",
+                                {"group_count": len(rbac_scope[0])},
+                            )
+                    except RbacConfigError as e:
+                        # Defensive catch - should be handled above, but keep for clarity
+                        unrecognized = None
+                        if len(e.args) > 1 and isinstance(e.args[1], dict):
+                            unrecognized = e.args[1].get("missing_groups")
+                        self.helper.connector_logger.error(
+                            "[RBAC] Unknown device groups in config; synchronization aborted.",
+                            {"unrecognized_groups": unrecognized, "error": str(e)},
+                        )
+                        return
+                    except Exception as e:
+                        self.helper.connector_logger.error(
+                            "[RBAC] Failed to load RBAC groups; aborting run.",
+                            {"error": str(e)},
+                        )
+                        return
+                # Share scope with API writer so both arrays are emitted on writes
+                self.api.set_rbac_scope(rbac_scope)
                 self.helper.connector_logger.info(
                     "Found indicators in TAXII collections",
                     {"total_indicators": len(opencti_all_indicators)},
@@ -630,7 +757,45 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                     ids = ind.get("rbacGroupIds") or []
                     try:
                         return tuple(sorted(int(x) for x in ids))
+                    "Found indicators in Microsoft Defender",
+                    {"count": len(defender_indicators)},
+                )
+
+                # Sort: 1) collection rank (first-configured = highest priority),
+                #       2) confidence (highest first),
+                #       3) modified (newest first)
+                opencti_all_indicators.sort(key=sort_key, reverse=True)
+
+                # Cut at 15 000
+                opencti_all_indicators = opencti_all_indicators[:15000]
+
+                # Build Defender in-memory indexes for de-dup decisions
+                # Key = (indicatorType, indicatorValue, normalized scope ids)
+                # Action/metadata deliberately ignored (we may change action)
+                # Tenant-wide is represented by empty RBAC arrays in API.
+                # ------------------------------------------------------------
+                def _normalize_scope_ids_from_def(
+                    ind: dict[str, Any],
+                ) -> tuple[int, ...]:
+                    ids = ind.get("rbacGroupIds") or []
+                    try:
+                        return tuple(sorted(int(x) for x in ids))
                     except Exception:
+                        return tuple()
+
+                def _key_from_def(ind: dict[str, Any]) -> ScopeKey:
+                    return (
+                        ind.get("indicatorType"),
+                        ind.get("indicatorValue"),
+                        _normalize_scope_ids_from_def(ind),
+                    )
+
+                def _key_from_candidate(
+                    indicator_type: str,
+                    indicator_value: str,
+                    rbac_scope_pair: RBACScope | None,
+                ) -> ScopeKey:
+                    scope_ids = [] if not rbac_scope_pair else rbac_scope_pair[1]
                         return tuple()
 
                 def _key_from_def(ind: dict[str, Any]) -> ScopeKey:
@@ -652,9 +817,28 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                             indicator_value,
                             tuple(sorted(int(x) for x in scope_ids)),
                         )
+                        return (
+                            indicator_type,
+                            indicator_value,
+                            tuple(sorted(int(x) for x in scope_ids)),
+                        )
                     except Exception:
                         return (indicator_type, indicator_value, tuple())
+                        return (indicator_type, indicator_value, tuple())
 
+                all_by_key: dict[ScopeKey, dict[str, Any]] = {}
+                owned_by_key: dict[ScopeKey, dict[str, Any]] = {}
+                owner_id = (self.config.client_id or "").lower()
+                for d in defender_indicators:
+                    k = _key_from_def(d)
+                    # prefer latest by lastUpdateTime if collision
+                    prev = all_by_key.get(k)
+                    if not prev or d.get("lastUpdateTime", "") > prev.get(
+                        "lastUpdateTime", ""
+                    ):
+                        all_by_key[k] = d
+                    if str(d.get("createdBy", "")).lower() == owner_id:
+                        owned_by_key[k] = d
                 all_by_key: dict[ScopeKey, dict[str, Any]] = {}
                 owned_by_key: dict[ScopeKey, dict[str, Any]] = {}
                 owner_id = (self.config.client_id or "").lower()
@@ -682,12 +866,51 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                 owned_id_set = set(defender_owned_external_ids.keys())
                 all_id_set = set(defender_external_ids.keys())
 
+                # Subset: only those we OWN (createdBy == client_id), for safe updates/deletes
+                defender_owned_external_ids = {
+                    eid: d
+                    for eid, d in defender_external_ids.items()
+                    if str(d.get("createdBy", "")).lower() == owner_id
+                }
+                owned_id_set = set(defender_owned_external_ids.keys())
+                all_id_set = set(defender_external_ids.keys())
+
                 opencti_ids = set()
 
                 for opencti_indicator in opencti_all_indicators:
                     opencti_id = opencti_indicator.get("id")
+                    opencti_id = opencti_indicator.get("id")
                     opencti_ids.add(opencti_id)
 
+                # Deletions (ownership-safe):
+                # - UPDATE_ONLY_OWNED=true (default): delete ONLY owned indicators missing from OpenCTI
+                # - UPDATE_ONLY_OWNED=false: delete all missing indicators (owned + non-owned)
+                if getattr(self.config, "update_only_owned", True):
+                    # Owned only
+                    for (
+                        ext_id,
+                        defender_indicator,
+                    ) in defender_owned_external_ids.items():
+                        if ext_id not in opencti_ids:
+                            defender_indicators_to_delete.append(defender_indicator)
+                    # Non-owned missing -> warn once
+                    missing_non_owned = [
+                        ext_id
+                        for ext_id in (all_id_set - opencti_ids)
+                        if ext_id in defender_external_ids
+                        and ext_id not in owned_id_set
+                    ]
+                    if missing_non_owned:
+                        self.helper.connector_logger.warning(
+                            "[Plan] Non-owned indicators are absent from OpenCTI; "
+                            "skipping delete (UPDATE_ONLY_OWNED=true).",
+                            {"missing_non_owned_ids": len(missing_non_owned)},
+                        )
+                else:
+                    # Allowed to delete non-owned as well
+                    for ext_id, defender_indicator in defender_external_ids.items():
+                        if ext_id not in opencti_ids:
+                            defender_indicators_to_delete.append(defender_indicator)
                 # Deletions (ownership-safe):
                 # - UPDATE_ONLY_OWNED=true (default): delete ONLY owned indicators missing from OpenCTI
                 # - UPDATE_ONLY_OWNED=false: delete all missing indicators (owned + non-owned)
@@ -721,7 +944,23 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                 # Find OpenCTI indicators to create using KEY-based de-dup:
                 #  - Key: (type, value, scopeIds) - action/metadata ignored
                 #  - Do NOT create scoped duplicates if tenant-wide exists (empty scope)
+                # Find OpenCTI indicators to create using KEY-based de-dup:
+                #  - Key: (type, value, scopeIds) - action/metadata ignored
+                #  - Do NOT create scoped duplicates if tenant-wide exists (empty scope)
                 defender_external_ids_set = set(defender_external_ids.keys())
+
+                # Helper to check ownership for a given key
+                def _owned_for_key(k: ScopeKey) -> bool:
+                    existing = all_by_key.get(k)
+                    return bool(
+                        existing
+                        and str(existing.get("createdBy", "")).lower() == owner_id
+                    )
+
+                allow_update_non_owned = not getattr(
+                    self.config, "update_only_owned", True
+                )
+
 
                 # Helper to check ownership for a given key
                 def _owned_for_key(k: ScopeKey) -> bool:
@@ -914,6 +1153,8 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                 self.helper.connector_logger.info(
                     "Deleting indicators",
                     {"count": len(defender_indicators_to_delete_ids)},
+                    "Deleting indicators",
+                    {"count": len(defender_indicators_to_delete_ids)},
                 )
                 if defender_indicators_to_delete_ids:
                     defender_indicators_to_delete_ids_chunked = chunker_list(
@@ -929,6 +1170,8 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                             self.helper.connector_logger.info(
                                 "Deleted indicators",
                                 {"count": len(defender_indicators_to_delete_ids_chunk)},
+                                "Deleted indicators",
+                                {"count": len(defender_indicators_to_delete_ids_chunk)},
                             )
                         except Exception as e:
                             self.helper.connector_logger.error(
@@ -941,6 +1184,9 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                 # Wait a few seconds to allow Defender to free up capacity
                 time.sleep(20)
 
+                # Wait a few seconds to allow Defender to free up capacity
+                time.sleep(20)
+
                 opencti_indicators_to_create = {
                     obj["id"]: obj
                     for obj in reversed(opencti_indicators_to_create)
@@ -950,6 +1196,8 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                     opencti_indicators_to_create.values()
                 )
                 self.helper.connector_logger.info(
+                    "[CREATE] Creating indicators...",
+                    {"count": len(opencti_indicators_to_create)},
                     "[CREATE] Creating indicators...",
                     {"count": len(opencti_indicators_to_create)},
                 )
@@ -965,6 +1213,18 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                                 opencti_indicators_to_create_chunk
                             )
                             self.helper.connector_logger.info(
+                                "[CREATE] Created indicators",
+                                {
+                                    "indicators_created": data.get(
+                                        "total_count",
+                                        len(opencti_indicators_to_create_chunk),
+                                    )
+                                    - data.get("failed_count", 0),
+                                    "indicators_total": data.get(
+                                        "total_count",
+                                        len(opencti_indicators_to_create_chunk),
+                                    ),
+                                },
                                 "[CREATE] Created indicators",
                                 {
                                     "indicators_created": data.get(
