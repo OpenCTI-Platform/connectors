@@ -23,23 +23,27 @@ def get_streams(backend):
     if backend == "titan":
         return (titan_streams.Intel471CVEsStream, )
     if backend == "verity471":
-        return (verity471_streams.Intel471CVEsStream, )
-    raise Exception("Bo such backend")  # TODO better handling, #TODO backend names as consts
+        return (
+            verity471_streams.Verity471CVEsStream, 
+            verity471_streams.Verity471FintelStream, 
+            )
+    raise Exception("No such backend")  # TODO better handling, #TODO backend names as consts
 
 
 def get_client(backend):
     if backend == "titan":
         return ClientWrapper(
-            backend, 
+            backend,
             titan_client,
             titan_stix.STIXMapperSettings,
             titan_stix.exceptions.EmptyBundle
             )
     if backend == "verity471":
         return ClientWrapper(
-            backend, 
+            backend,
             verity471,
             verity_stix.STIXMapperSettings,
             EmptyBundle
             )
+    raise Exception("No such backend")  # TODO better handling, #TODO backend names as consts
 
