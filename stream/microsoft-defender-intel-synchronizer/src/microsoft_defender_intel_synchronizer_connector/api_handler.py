@@ -17,12 +17,6 @@ from requests.exceptions import (
     RetryError,
     Timeout,
 )
-from requests.exceptions import ConnectionError as requestsConnectionError
-from requests.exceptions import (
-    HTTPError,
-    RetryError,
-    Timeout,
-)
 from urllib3.util.retry import Retry
 
 from .rbac_scope import (
@@ -31,31 +25,19 @@ from .rbac_scope import (
     resolve_rbac_scope_or_abort,
 )
 from .types import RBACScope
-from .rbac_scope import (
-    RbacConfigError,
-    fetch_rbac_name_id_map,
-    resolve_rbac_scope_or_abort,
-)
-from .types import RBACScope
 from .utils import (
-    CREATABLE_INDICATOR_TYPES,
     CREATABLE_INDICATOR_TYPES,
     IOC_TYPES,
     get_action,
     get_description,
     get_educate_url,
-    get_educate_url,
     get_expiration_datetime,
-    get_expire_days,
-    get_recommended_actions,
     get_expire_days,
     get_recommended_actions,
     get_severity,
     indicator_title,
     indicator_value,
 )
-
-DEFAULT_TIMEOUT: Final = (10, 180)  # connect, read
 
 DEFAULT_TIMEOUT: Final = (10, 180)  # connect, read
 
@@ -69,13 +51,8 @@ class DefenderApiHandlerError(Exception):
         status = (self.metadata or {}).get("details", {}).get("status")
         return f"{self.msg} (status={status})" if status else self.msg
 
-    def __str__(self) -> str:
-        status = (self.metadata or {}).get("details", {}).get("status")
-        return f"{self.msg} (status={status})" if status else self.msg
-
 
 class DefenderApiHandler:
-    def __init__(self, helper: OpenCTIConnectorHelper, config: Any):
     def __init__(self, helper: OpenCTIConnectorHelper, config: Any):
         """
         Init Defender Intel API handler.
@@ -84,10 +61,6 @@ class DefenderApiHandler:
         """
         self.helper = helper
         self.config = config
-
-        # RBAC scope for the current run (pair of arrays or None).
-        # Set from connector.run() when scoping is enabled.
-        self._rbac_scope: RBACScope | None = None
 
         # RBAC scope for the current run (pair of arrays or None).
         # Set from connector.run() when scoping is enabled.
@@ -120,29 +93,6 @@ class DefenderApiHandler:
         When None, tenant-wide is implied and no RBAC fields are sent.
         """
         self._rbac_scope = rbac_scope
-        # Set content type
-        self.session.headers.update(
-            {
-                "User-Agent": "OpenCTI-DefenderIntelSync/1.0",
-                "Accept": "application/json",
-            }
-        )
-
-        # Clean URLs
-        self.login_url = (
-            self.config.login_url or "https://login.microsoftonline.com/"
-        ).rstrip("/")
-        self.base_url = (self.config.base_url or "").rstrip("/")
-        self.resource_path = "/" + (self.config.resource_path or "").lstrip("/")
-
-    # Exposed so the orchestrator (connector.run) can set per-run scope once.
-    def set_rbac_scope(self, rbac_scope: RBACScope | None) -> None:
-        """
-        Set the RBAC scope for this sync run.
-        When not None, both rbacGroupNames and rbacGroupIds will be emitted on every write.
-        When None, tenant-wide is implied and no RBAC fields are sent.
-        """
-        self._rbac_scope = rbac_scope
 
     def _get_authorization_header(self):
         """
@@ -151,19 +101,12 @@ class DefenderApiHandler:
         response_json = {}
         try:
             url = f"{self.login_url}/{self.config.tenant_id}/oauth2/v2.0/token"
-            url = f"{self.login_url}/{self.config.tenant_id}/oauth2/v2.0/token"
             body = {
                 "client_id": self.config.client_id,
                 "client_secret": self.config.client_secret,
                 "grant_type": "client_credentials",
                 "scope": self.base_url + "/.default",
-                "scope": self.base_url + "/.default",
             }
-            response = self.session.post(url, data=body, timeout=DEFAULT_TIMEOUT)
-            try:
-                response_json = response.json()
-            except ValueError:
-                response_json = {}
             response = self.session.post(url, data=body, timeout=DEFAULT_TIMEOUT)
             try:
                 response_json = response.json()
@@ -176,20 +119,14 @@ class DefenderApiHandler:
             self.session.headers.update({"Authorization": "Bearer " + oauth_token})
             now = datetime.now(timezone.utc)
             self._expiration_token_date = now + timedelta(
-            now = datetime.now(timezone.utc)
-            self._expiration_token_date = now + timedelta(
                 seconds=int(oauth_expired * 0.9)
             )
         except (requests.exceptions.HTTPError, KeyError) as e:
             error_description = response_json.get("error_description", "Unknown error")
             error_message = f"Failed generating oauth token: {error_description}"
-            error_message = f"Failed generating oauth token: {error_description}"
             self.helper.connector_logger.error(
                 error_message, {"response": response_json}
             )
-            raise DefenderApiHandlerError(
-                error_message, {"response": response_json}
-            ) from e
             raise DefenderApiHandlerError(
                 error_message, {"response": response_json}
             ) from e
@@ -207,11 +144,6 @@ class DefenderApiHandler:
             backoff_factor=3,
             status_forcelist=(429, 502, 503, 504),
             allowed_methods={
-            total=8,
-            status=8,
-            backoff_factor=3,
-            status_forcelist=(429, 502, 503, 504),
-            allowed_methods={
                 "HEAD",
                 "GET",
                 "OPTIONS",
@@ -222,15 +154,11 @@ class DefenderApiHandler:
             },
             respect_retry_after_header=True,
             raise_on_status=False,
-            },
-            respect_retry_after_header=True,
-            raise_on_status=False,
         )
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.session.mount("https://", adapter)
         self.session.mount("http://", adapter)
 
-    def _send_request(self, method: str, url: str, **kwargs) -> Any:
     def _send_request(self, method: str, url: str, **kwargs) -> Any:
         """
         Send a request to Defender API.
@@ -274,19 +202,11 @@ class DefenderApiHandler:
                 kwargs["timeout"] = DEFAULT_TIMEOUT
 
             start = perf_counter()
-            if "timeout" not in kwargs:
-                kwargs["timeout"] = DEFAULT_TIMEOUT
-
-            start = perf_counter()
             response = self.session.request(method, url, **kwargs)
             response.raise_for_status()
 
             self.helper.connector_logger.debug(
                 "[API] HTTP Request to endpoint",
-                {
-                    "url_path": f"{method.upper()} {url}",
-                    "elapsed_s": round(perf_counter() - start, 3),
-                },
                 {
                     "url_path": f"{method.upper()} {url}",
                     "elapsed_s": round(perf_counter() - start, 3),
@@ -323,45 +243,11 @@ class DefenderApiHandler:
                     "status": err.response.status_code,
                     "body": snippet,
                 }
-
-            # If streaming, let caller consume the body
-            if kwargs.get("stream"):
-                return response
-
-            # No body
-            if not response.content:
-                return None
-
-            # Try JSON only when content-type says JSON
-            ctype = response.headers.get("Content-Type", "")
-            if "application/json" in ctype.lower():
-                try:
-                    return response.json()
-                except ValueError:
-                    return response.text
-
-            # Fallback: return text for non-JSON bodies
-            return response.text
-
-        except (RetryError, HTTPError, Timeout, requestsConnectionError) as err:
-            meta: dict[str, Any] = {"url_path": f"{method.upper()} {url}"}
-            if isinstance(err, HTTPError) and err.response is not None:
-                try:
-                    snippet = err.response.text[:500]
-                except (AttributeError, TypeError, UnicodeDecodeError):
-                    snippet = "<unavailable>"
-                meta["details"] = {
-                    "status": err.response.status_code,
-                    "body": snippet,
-                }
             raise DefenderApiHandlerError(
-                "[API] An error occurred during request",
-                meta,
                 "[API] An error occurred during request",
                 meta,
             ) from err
 
-    def _build_request_body(self, observable: dict[str, Any]) -> dict[str, Any] | None:
     def _build_request_body(self, observable: dict[str, Any]) -> dict[str, Any] | None:
         """
         Build Defender POST/PATCH request's body from an observable.
@@ -609,19 +495,7 @@ class DefenderApiHandler:
         """
         Get Threat Intelligence Indicators from Defender.
         :return: List of Threat Intelligence Indicators if request is successful, empty list otherwise
-        :return: List of Threat Intelligence Indicators if request is successful, empty list otherwise
         """
-        data = self._send_request("get", f"{self.base_url}{self.resource_path}")
-        if (
-            not isinstance(data, dict)
-            or "value" not in data
-            or not isinstance(data["value"], list)
-        ):
-            self.helper.connector_logger.error(
-                "[API] Unexpected response when listing indicators",
-                {"response_type": type(data).__name__},
-            )
-            return []
         data = self._send_request("get", f"{self.base_url}{self.resource_path}")
         if (
             not isinstance(data, dict)
@@ -643,16 +517,8 @@ class DefenderApiHandler:
             ):
                 break
             result.extend(data["value"])
-            if (
-                not isinstance(data, dict)
-                or "value" not in data
-                or not isinstance(data["value"], list)
-            ):
-                break
-            result.extend(data["value"])
         return result
 
-    def post_indicators(self, observables: list[dict]) -> dict[str, Any] | None:
     def post_indicators(self, observables: list[dict]) -> dict[str, Any] | None:
         """
         Create a Threat Intelligence Indicator on Defender from an OpenCTI observable.
@@ -669,13 +535,8 @@ class DefenderApiHandler:
         if not request_body.get("Indicators"):
             return {"value": [], "failed_count": 0, "total_count": 0}
 
-        # If there are no creatable indicators, return a synthetic "all good" response
-        if not request_body.get("Indicators"):
-            return {"value": [], "failed_count": 0, "total_count": 0}
-
         data = self._send_request(
             "post",
-            f"{self.base_url}{self.resource_path}/import",
             f"{self.base_url}{self.resource_path}/import",
             json=request_body,
         )
@@ -692,7 +553,6 @@ class DefenderApiHandler:
                 if item.get("isFailed"):
                     failed_count += 1
                     reason = item.get("failureReason", "Unknown reason")
-                    failed_reasons.append(str(reason))
                     failed_reasons.append(str(reason))
         if failed_count > 0:
             self.helper.connector_logger.warning(
@@ -711,30 +571,20 @@ class DefenderApiHandler:
                 "failed_count": failed_count,
                 "total_count": len(request_body["Indicators"]),
             }
-        if not isinstance(data, dict):
-            return {
-                "value": [],
-                "failed_count": failed_count,
-                "total_count": len(request_body["Indicators"]),
-            }
         data["failed_count"] = failed_count
         data["total_count"] = len(request_body["Indicators"])
 
         return data
 
     def delete_indicators(self, indicator_ids: list[str]) -> bool:
-    def delete_indicators(self, indicator_ids: list[str]) -> bool:
         """
         Delete a Threat Intelligence Indicator on Defender corresponding to an OpenCTI observable.
-        :param indicator_ids: Indicators IDs
         :param indicator_ids: Indicators IDs
         :return: True if request is successful, False otherwise
         """
         request_body = {"IndicatorIds": indicator_ids}
-        request_body = {"IndicatorIds": indicator_ids}
         self._send_request(
             "post",
-            f"{self.base_url}{self.resource_path}/BatchDelete",
             f"{self.base_url}{self.resource_path}/BatchDelete",
             json=request_body,
         )
@@ -748,7 +598,6 @@ class DefenderApiHandler:
         """
         self._send_request(
             "delete",
-            f"{self.base_url}{self.resource_path}/{indicator_id}",
             f"{self.base_url}{self.resource_path}/{indicator_id}",
         )
         return True

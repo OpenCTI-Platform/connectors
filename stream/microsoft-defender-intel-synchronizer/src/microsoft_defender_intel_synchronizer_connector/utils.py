@@ -4,9 +4,7 @@ import urllib.parse
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from typing import Any, Final, Optional
-from typing import Any, Final, Optional
 
-OBSERVABLE_TYPES: Final = [
 OBSERVABLE_TYPES: Final = [
     "ipv4-addr",
     "ipv6-addr",
@@ -17,7 +15,6 @@ OBSERVABLE_TYPES: Final = [
     "file",
 ]
 
-IOC_TYPES: Final = {
 IOC_TYPES: Final = {
     "ipv4-addr": "IpAddress",
     "ipv6-addr": "IpAddress",
@@ -30,7 +27,6 @@ IOC_TYPES: Final = {
     "x509-certificate": "CertificateThumbprint",
 }
 
-FILE_HASH_TYPES_MAPPER: Final = {
 FILE_HASH_TYPES_MAPPER: Final = {
     "md5": "md5",
     "sha-1": "sha1",
@@ -105,31 +101,8 @@ def _score_from_any(data: dict) -> int:
         return int(s) if s is not None else 0
     except Exception:
         return 0
-    Return a short description for the indicator.
-    Falls back to the indicator value when no explicit description is available.
-    """
-    desc = data.get("description")
-    if isinstance(desc, str) and desc.strip():
-        return desc.strip()[:99]  # Defender prefers <=100 chars
-
-    # Fallback: use indicator value if present
-    val = data.get("value")
-    if isinstance(val, str) and val.strip():
-        return val.strip()[:99]
-
-    # Final fallback
-    return "Auto-imported from OpenCTI feed"
 
 
-def _score_from_any(data: dict) -> int:
-    s = data.get("x_opencti_score")
-    try:
-        return int(s) if s is not None else 0
-    except Exception:
-        return 0
-
-
-def get_action(data: dict, default_action: str | None = None) -> str:
 def get_action(data: dict, default_action: str | None = None) -> str:
     """
     Determine the effective action for this observable.
@@ -137,21 +110,7 @@ def get_action(data: dict, default_action: str | None = None) -> str:
       1) Per-observable override (__policy_action) if present
       2) Connector-level default_action (if provided)
       3) Existing score-based mapping (unchanged)
-    Determine the effective action for this observable.
-    Precedence:
-      1) Per-observable override (__policy_action) if present
-      2) Connector-level default_action (if provided)
-      3) Existing score-based mapping (unchanged)
     """
-    if isinstance(data, dict):
-        v = data.get("__policy_action")
-        if v:
-            return str(v)
-
-    if default_action:
-        return str(default_action)
-
-    score = _score_from_any(data)
     if isinstance(data, dict):
         v = data.get("__policy_action")
         if v:
@@ -218,7 +177,6 @@ def get_severity(data: dict) -> str:
     :return: Severity or "unknown"
     """
     score = _score_from_any(data)
-    score = _score_from_any(data)
     if score >= 60:
         severity = "High"
     elif score >= 40:
@@ -242,20 +200,8 @@ def get_expiration_datetime(data: dict, expiration_time: int) -> str:
     """
     now = datetime.now(timezone.utc)
     default_exp = now + timedelta(days=expiration_time)
-    default_exp = now + timedelta(days=expiration_time)
 
     # Get valid_until if present
-    valid_until = data.get("valid_until")
-
-    if isinstance(valid_until, str) and valid_until:
-        vu = valid_until.replace("Z", "+00:00")
-        try:
-            vu_dt = datetime.fromisoformat(vu)
-            return min(default_exp, vu_dt).isoformat()
-        except Exception:
-            pass
-
-    return default_exp.isoformat()
     valid_until = data.get("valid_until")
 
     if isinstance(valid_until, str) and valid_until:
@@ -293,16 +239,9 @@ _TRAILING_PUNCT_RE: Final = re.compile(r"[.,;!?]+$")
 _PLACEHOLDER_DOTS_RE: Final = re.compile(r"\.\.\.+$")
 _WHITESPACE_RE: Final = re.compile(r"\s+$")
 _BRACKET_TRANS: Final = str.maketrans("", "", "[]")
-_URL_RE: Final = re.compile(r'https?://[^\s"\'<>()]+', re.IGNORECASE)
-_AT_RE: Final = re.compile(r"\[at\]|\(at\)", re.IGNORECASE)
-_TRAILING_PUNCT_RE: Final = re.compile(r"[.,;!?]+$")
-_PLACEHOLDER_DOTS_RE: Final = re.compile(r"\.\.\.+$")
-_WHITESPACE_RE: Final = re.compile(r"\s+$")
-_BRACKET_TRANS: Final = str.maketrans("", "", "[]")
 
 
 @lru_cache(maxsize=20000)
-def indicator_value(value: str, max_length: int = _MAX_LEN_FOR_KEY) -> str | None:
 def indicator_value(value: str, max_length: int = _MAX_LEN_FOR_KEY) -> str | None:
     """
     Clean, refang, normalize, and truncate an indicator value for Defender API submission.
@@ -337,14 +276,10 @@ def indicator_value(value: str, max_length: int = _MAX_LEN_FOR_KEY) -> str | Non
         try:
             # We treat this as a URL and sanitize accordingly
             extracted_url = match.group(0).rstrip(".,;!?…")
-            extracted_url = match.group(0).rstrip(".,;!?…")
 
             parsed = urllib.parse.urlparse(extracted_url)
             if not parsed.scheme or not parsed.netloc:
                 return None
-
-            # Normalize host to lowercase
-            netloc = parsed.netloc.lower()
 
             # Normalize host to lowercase
             netloc = parsed.netloc.lower()
@@ -359,19 +294,13 @@ def indicator_value(value: str, max_length: int = _MAX_LEN_FOR_KEY) -> str | Non
 
             safe_path = urllib.parse.quote(decoded_path, safe="/")
             safe_query = urllib.parse.quote_plus(decoded_query, safe="=&")
-            safe_query = urllib.parse.quote_plus(decoded_query, safe="=&")
 
             value = urllib.parse.urlunparse(
-                (parsed.scheme, netloc, safe_path, "", safe_query, "")
                 (parsed.scheme, netloc, safe_path, "", safe_query, "")
             )
 
         except Exception:
             return None
-    else:
-        # Not a URL and looks like a plain host
-        if " " not in value and "." in value and not any(c in value for c in "/:@"):
-            value = value.rstrip(".").lower()
     else:
         # Not a URL and looks like a plain host
         if " " not in value and "." in value and not any(c in value for c in "/:@"):
@@ -382,9 +311,6 @@ def indicator_value(value: str, max_length: int = _MAX_LEN_FOR_KEY) -> str | Non
 
     # Strip trailing punctuation Defender doesn't like
     value = _TRAILING_PUNCT_RE.sub("", value)
-
-    if not value:
-        return None
 
     if not value:
         return None
@@ -420,23 +346,6 @@ def indicator_title(value: str, max_length: int = 4000) -> str:
     if value is not None and isinstance(value, str) and len(value) > max_length:
         return value[:max_length]
     return value
-
-
-__all__ = [
-    "OBSERVABLE_TYPES",
-    "IOC_TYPES",
-    "FILE_HASH_TYPES_MAPPER",
-    "CREATABLE_INDICATOR_TYPES",
-    "indicator_value",
-    "indicator_title",
-    "get_action",
-    "get_educate_url",
-    "get_expire_days",
-    "get_recommended_actions",
-    "get_severity",
-    "get_expiration_datetime",
-    "get_hash_type",
-]
 
 
 __all__ = [
