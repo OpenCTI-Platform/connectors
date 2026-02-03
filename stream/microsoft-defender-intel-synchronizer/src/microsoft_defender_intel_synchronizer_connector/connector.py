@@ -5,7 +5,7 @@ import re
 import signal
 import sys
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any, Final
 
 from .api_handler import DefenderApiHandler
@@ -17,6 +17,7 @@ from .rbac_scope import (
 )
 from .types import RBACScope, ScopeKey
 from .utils import (
+    FILE_HASH_TYPES_MAPPER,
     indicator_value,
 )
 
@@ -120,43 +121,105 @@ class MicrosoftDefenderIntelSynchronizerConnector:
         Returns a list of enriched observable dicts or None on error.
         """
         try:
+            node = dict(node)
+            # Normalize timestamps so downstream logic (sorting/state) works uniformly
+            node.setdefault("created", node.get("created_at"))
+            node.setdefault("modified", node.get("updated_at"))
+
+            entity_type = (node.get("entity_type") or "").lower()
             observables: list[dict[str, Any]] = []
-            pattern = node.get("pattern") or ""
-            mot = (node.get("x_opencti_main_observable_type") or "").lower()
 
-            # File hashes
-            if m := re.search(
-                r"\[file:hashes\.'SHA-256'\s*=\s*'([A-Fa-f0-9]{64})'\]", pattern
-            ):
-                observables.append(
-                    {"type": "file", "hashes": {"sha256": m.group(1).lower()}}
-                )
-            if m := re.search(
-                r"\[file:hashes\.'SHA-1'\s*=\s*'([A-Fa-f0-9]{40})'\]", pattern
-            ):
-                observables.append(
-                    {"type": "file", "hashes": {"sha1": m.group(1).lower()}}
-                )
+            # Skip expired indicators early (observables do not have valid_until)
+            if entity_type == "indicator":
+                valid_until = node.get("valid_until")
+                if isinstance(valid_until, str):
+                    try:
+                        vu = datetime.fromisoformat(valid_until.replace("Z", "+00:00"))
+                        if vu <= datetime.now(timezone.utc):
+                            return []
+                    except Exception:
+                        pass
 
-            # Atomics
-            regexes: list[tuple[str, str]] = [
-                ("url", r"\[url:value\s*=\s*'([^']+)'\]"),
-                ("domain-name", r"\[domain-name:value\s*=\s*'([^']+)'\]"),
-                ("domain-name", r"\[hostname:value\s*=\s*'([^']+)'\]"),
-                ("ipv4-addr", r"\[ipv4-addr:value\s*=\s*'([^']+)'\]"),
-                ("ipv6-addr", r"\[ipv6-addr:value\s*=\s*'([^']+)'\]"),
-            ]
-            for typ, rx in regexes:
-                if m := re.search(rx, pattern):
-                    observables.append({"type": typ, "value": m.group(1)})
+                pattern = node.get("pattern") or ""
+                mot = (node.get("x_opencti_main_observable_type") or "").lower()
 
-            # Fallback when pattern missing but name + type are explicit
-            if not observables and (name := node.get("name")) and isinstance(name, str):
-                # Normalize Hostname to domain-name
-                if mot == "hostname":
-                    mot = "domain-name"
-                if mot in {"domain-name", "url", "ipv4-addr", "ipv6-addr"}:
-                    observables.append({"type": mot, "value": name})
+                # File hashes
+                if m := re.search(
+                    r"\[file:hashes\.'SHA-256'\s*=\s*'([A-Fa-f0-9]{64})'\]",
+                    pattern,
+                ):
+                    observables.append(
+                        {"type": "file", "hashes": {"sha256": m.group(1).lower()}}
+                    )
+                if m := re.search(
+                    r"\[file:hashes\.'SHA-1'\s*=\s*'([A-Fa-f0-9]{40})'\]",
+                    pattern,
+                ):
+                    observables.append(
+                        {"type": "file", "hashes": {"sha1": m.group(1).lower()}}
+                    )
+
+                # Atomics
+                regexes: list[tuple[str, str]] = [
+                    ("url", r"\[url:value\s*=\s*'([^']+)'\]"),
+                    ("domain-name", r"\[domain-name:value\s*=\s*'([^']+)'\]"),
+                    ("domain-name", r"\[hostname:value\s*=\s*'([^']+)'\]"),
+                    ("ipv4-addr", r"\[ipv4-addr:value\s*=\s*'([^']+)'\]"),
+                    ("ipv6-addr", r"\[ipv6-addr:value\s*=\s*'([^']+)'\]"),
+                ]
+                for typ, rx in regexes:
+                    if m := re.search(rx, pattern):
+                        observables.append({"type": typ, "value": m.group(1)})
+
+                # Fallback when pattern missing but name + type are explicit
+                if (
+                    not observables
+                    and (name := node.get("name"))
+                    and isinstance(name, str)
+                ):
+                    # Normalize Hostname to domain-name
+                    if mot == "hostname":
+                        mot = "domain-name"
+                    if mot in {"domain-name", "url", "ipv4-addr", "ipv6-addr"}:
+                        observables.append({"type": mot, "value": name})
+            else:
+                # Observable nodes (globalSearch) carry the atomic value directly
+                type_map = {
+                    "domain-name": "domain-name",
+                    "hostname": "hostname",
+                    "url": "url",
+                    "ipv4addr": "ipv4-addr",
+                    "ipv6addr": "ipv6-addr",
+                    "emailaddr": "email-addr",
+                    "hashedobservable": "file",
+                    "x509certificate": "x509-certificate",
+                }
+                obs_type = type_map.get(entity_type)
+                if not obs_type:
+                    return []
+
+                # Prefer explicit observable_value, fall back to name when available
+                value = node.get("observable_value") or node.get("name")
+
+                # File/hash handling
+                if obs_type in {"file", "x509-certificate"}:
+                    hashes: dict[str, str] = {}
+                    for h in node.get("hashes", []) or []:
+                        algo = str(h.get("algorithm", "")).lower()
+                        hash_val = h.get("hash")
+                        if not hash_val:
+                            continue
+                        mapped = FILE_HASH_TYPES_MAPPER.get(algo)
+                        if mapped:
+                            hashes[mapped] = str(hash_val).lower()
+                    if hashes:
+                        observables.append({"type": obs_type, "hashes": hashes})
+                elif value:
+                    observables.append({"type": obs_type, "value": value})
+
+                # Some observables expose description via x_opencti_description
+                if node.get("x_opencti_description") and not node.get("description"):
+                    node["description"] = node.get("x_opencti_description")
 
             # Normalize non-file values
             cleaned: list[dict[str, Any]] = []
@@ -188,81 +251,137 @@ class MicrosoftDefenderIntelSynchronizerConnector:
             )
             return None
 
+    # Fetch not only indicators but also objects that may be Alerted on or that may be Allow-listed.
+    # This allows for closer integration of the Intelligence pipeline with the EDR.
+    # Microsoft Defender for Endpoint understands the following items.
     INDICATOR_QUERY: Final = """
-    query Indicators($filters: FilterGroup, $first: Int, $after: ID, $orderBy: IndicatorsOrdering, $orderMode: OrderingMode) {
-    indicators(
-        filters: $filters
-        first: $first
-        after: $after
-        orderBy: $orderBy
-        orderMode: $orderMode
-    ) {
-        edges {
-            node {
-                    id
-                    standard_id
-                    created
-                    modified
-                    valid_until
-                    description
-                    entity_type
-                    x_opencti_main_observable_type
-                    name
-                    pattern
-                    confidence
-                    x_opencti_score
-                    revoked
-                    x_opencti_detection
-                }
-            }
-            pageInfo {
-            globalCount
-            endCursor
-            hasNextPage
-            }
+query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
+  globalSearch(filters: $filters, first: $count, after: $cursor) {
+    edges {
+      node {
+        id
+        entity_type
+        standard_id
+        ... on Indicator {
+          created: created_at
+          modified: updated_at
+          valid_until
+          description
+          entity_type
+          x_opencti_main_observable_type
+          name
+          pattern
+          confidence
+          x_opencti_score
+          revoked
+          x_opencti_detection
         }
+        ... on DomainName {
+          observable_value
+          created_at
+          updated_at
+          x_opencti_score
+          x_opencti_description
+        }
+        ... on Hostname {
+          observable_value
+          created_at
+          updated_at
+          x_opencti_score
+          x_opencti_description
+        }
+        ... on Url {
+          observable_value
+          created_at
+          updated_at
+          x_opencti_score
+          x_opencti_description          
+        }
+        ... on IPv4Addr {
+          observable_value
+          created_at
+          updated_at
+          x_opencti_score
+          x_opencti_description
+        }
+        ... on IPv6Addr {
+          observable_value
+          created_at
+          updated_at
+          x_opencti_score
+          x_opencti_description
+        }
+        ... on HashedObservable {
+          observable_value
+          created_at
+          updated_at
+          x_opencti_score
+          x_opencti_description
+          hashes {
+            algorithm
+            hash
+          }
+        }
+        ... on X509Certificate {
+          subject
+          issuer
+          serial_number
+          validity_not_before
+          validity_not_after
+          created_at
+          updated_at
+          x_opencti_score
+          x_opencti_description
+          hashes {
+            algorithm
+            hash
+          }
+        }
+      }
     }
+    pageInfo {
+      endCursor
+      hasNextPage
+    }
+  }
+}
     """
 
     def fetch_indicators_batched(
         self, filters, max_size=15000, batch_size=500, collection_name=None
     ):
         """
-        Fetch indicators in batches using cursor-based pagination, stopping at the end of the collection or max_size.
-        Logs each batch request for debugging, including the collection name if provided.
+        Fetch feed elements (indicators + observables) in batches using cursor-based pagination.
+        Stops at the end of the collection or when max_size is reached.
         """
         self.helper.connector_logger.info(
             "Fetching indicators for collection", {"collection": collection_name}
         )
         indicators = []
-        after = None
+        cursor = None
         total_fetched = 0
         batch_num = 1
         while total_fetched < max_size:
             variables = {
                 "filters": filters,
-                "first": min(batch_size, max_size - total_fetched),
-                "orderBy": "x_opencti_score",
-                "orderMode": "desc",
-                "secondaryOrderBy": "modified",
-                "secondaryOrderMode": "desc",
+                "count": min(batch_size, max_size - total_fetched),
             }
-            if after:
-                variables["after"] = after
+            if cursor:
+                variables["cursor"] = cursor
             self.helper.connector_logger.debug(
                 "Fetching batch",
                 {
                     "batch_num": batch_num,
                     "collection": collection_name,
-                    "after": after,
-                    "batch_size": variables["first"],
+                    "cursor": cursor,
+                    "batch_size": variables["count"],
                     "total_fetched": total_fetched,
                 },
             )
             try:
                 result = self.helper.api.query(self.INDICATOR_QUERY, variables)
-                data = result["data"]["indicators"]
-                edges = data["edges"]
+                data = result["data"]["globalSearch"]
+                edges = data.get("edges") or []
                 if not edges:
                     self.helper.connector_logger.debug(
                         "No more edges returned for batch, stopping.",
@@ -275,7 +394,7 @@ class MicrosoftDefenderIntelSynchronizerConnector:
                     if total_fetched >= max_size:
                         break
                 page_info = data.get("pageInfo", {})
-                after = page_info.get("endCursor")
+                cursor = page_info.get("endCursor")
                 has_next_page = page_info.get("hasNextPage", False)
                 self.helper.connector_logger.debug(
                     "Batch retrieved",
@@ -283,13 +402,13 @@ class MicrosoftDefenderIntelSynchronizerConnector:
                         "batch_num": batch_num,
                         "collection_str": collection_name,
                         "indicators count": len(edges),
-                        "after": after,
+                        "cursor": cursor,
                         "has_next_page": has_next_page,
                     },
                 )
                 batch_num += 1
                 # Stop if there are no more results
-                if not has_next_page or not after or len(edges) == 0:
+                if not has_next_page or not cursor or len(edges) == 0:
                     self.helper.connector_logger.debug(
                         "Batch has no more pages, stopping.",
                         {"batch_num": batch_num - 1, "collection": collection_name},
@@ -688,17 +807,18 @@ class MicrosoftDefenderIntelSynchronizerConnector:
                             "ipv4-addr",
                             "ipv6-addr",
                             "file",
+                            "x509-certificate",
                         ):
                             mapped_writable = True
                         if not mapped_writable:
                             continue
 
-                        # Decide the candidate key for de-dup
-                        # Determine Defender type/value roughly from observable (value cleaned in api handler)
-                        if obs_type == "file":
-                            # The actual hash selection happens in api handler; we can't know sha1/sha256 here,
-                            # so we compute keys lazily: we will rely on externalId fast-path AND key path below.
-                            pass
+                        # Decide the candidate key for de-dup.
+                        # For file observables, the actual hash-type selection and normalization
+                        # (e.g., sha1 vs sha256) are handled in the api_handler. At this layer we
+                        # treat all allowed observable types uniformly and rely on:
+                        #   1) the externalId fast-path below, and
+                        #   2) the generic (indicatorType, value, scope) key-based path.
 
                         # Use externalId fast-path first (unchanged behavior)
                         observable_id = observable_data.get("id")
@@ -721,6 +841,8 @@ class MicrosoftDefenderIntelSynchronizerConnector:
                             # To avoid over-filtering, skip key-based check for file and rely on externalId path.
                             opencti_indicators_to_create.append(observable_data)
                             continue
+                        elif obs_type == "x509-certificate":
+                            key_type = "CertificateThumbprint"
                         else:
                             continue
 

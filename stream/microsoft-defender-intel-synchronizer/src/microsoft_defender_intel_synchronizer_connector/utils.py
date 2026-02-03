@@ -43,6 +43,7 @@ CREATABLE_INDICATOR_TYPES: Final = {
     "IpAddress",
     "FileSha1",
     "FileSha256",
+    "CertificateThumbprint",
 }
 
 _MAX_LEN_FOR_KEY: Final[int] = 800
@@ -150,8 +151,9 @@ def get_expire_days(o: dict[str, Any], default_days: int) -> int:
         v = o.get("__policy_expire_time_days")
         if v is not None:
             return int(v)
-    except Exception:
-        pass
+    except (TypeError, ValueError, AttributeError):
+        # If the override is missing or invalid, fall back to the default.
+        return int(default_days)
     return int(default_days)
 
 

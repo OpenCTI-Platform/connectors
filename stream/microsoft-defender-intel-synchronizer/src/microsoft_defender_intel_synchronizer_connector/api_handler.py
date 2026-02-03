@@ -1,3 +1,9 @@
+"""
+Microsoft Defender for Endpoint Indicator Sync API
+
+Documentation: https://learn.microsoft.com/en-us/defender-endpoint/api/ti-indicator
+"""
+
 from datetime import datetime, timedelta, timezone
 from time import perf_counter
 from typing import Any, Final
@@ -181,9 +187,10 @@ class DefenderApiHandler:
             # Keep shape minimal but predictable so upstream logic doesn't break.
             return {
                 "dry_run": True,
-                "status": "skipped",
+                "status": "skipped (dry-run)",
                 "method": method.upper(),
                 "url": url,
+                "value": [],
             }
 
         try:
@@ -251,12 +258,20 @@ class DefenderApiHandler:
         # Normalize hash observables into (type, value)
         hashes = o.get("hashes")
         if isinstance(hashes, dict):
-            for algo in ("sha256", "sha1", "md5"):
-                v = hashes.get(algo)
-                if isinstance(v, str) and v:
-                    o["type"] = algo
-                    o["value"] = v
-                    break
+            if o.get("type") == "x509-certificate":
+                # Prefer SHA1 thumbprints for certificate indicatorType
+                for algo in ("sha1", "sha256", "md5"):
+                    v = hashes.get(algo)
+                    if isinstance(v, str) and v:
+                        o["value"] = v
+                        break
+            else:
+                for algo in ("sha256", "sha1", "md5"):
+                    v = hashes.get(algo)
+                    if isinstance(v, str) and v:
+                        o["type"] = algo
+                        o["value"] = v
+                        break
 
         # Basic presence/type checks
         t = o.get("type")
@@ -342,14 +357,19 @@ class DefenderApiHandler:
             now = datetime.now(timezone.utc)
             if self._expiration_token_date is None or now > self._expiration_token_date:
                 self._get_authorization_header()
+        except DefenderApiHandlerError as e:
+            self.helper.connector_logger.error(
+                "[Preflight] Token acquisition failed",
+                {"error": e.msg, "meta": e.metadata},
+            )
+            return False
         except (
-            DefenderApiHandlerError,
             requests.exceptions.RequestException,
             KeyError,
         ) as e:
             self.helper.connector_logger.error(
                 "[Preflight] Token acquisition failed",
-                {"error": e.msg, "meta": e.metadata},
+                {"error": str(e)},
             )
             return False
 
