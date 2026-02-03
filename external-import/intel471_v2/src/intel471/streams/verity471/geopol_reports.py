@@ -7,5 +7,4 @@ class Verity471GeopolReportsStream(Verity471Stream):
     api_payload_objects_key = "reports"
     api_class_name = "ReportsApi"
     api_method_name = "get_reports_geopol_stream"
-    initial_history_key = "geopol_reports_initdate"
     size = 100

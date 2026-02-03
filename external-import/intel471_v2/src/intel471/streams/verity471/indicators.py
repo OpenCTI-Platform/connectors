@@ -7,5 +7,4 @@ class Verity471IndicatorsStream(Verity471Stream):
     api_payload_objects_key = "indicators"
     api_class_name = "IndicatorsApi"
     api_method_name = "get_indicators_stream"
-    initial_history_key = "indicators_initdate"
     size = 100

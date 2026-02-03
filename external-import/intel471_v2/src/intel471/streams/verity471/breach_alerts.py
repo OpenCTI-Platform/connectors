@@ -7,5 +7,4 @@ class Verity471BreachAlertsStream(Verity471Stream):
     api_payload_objects_key = "reports"
     api_class_name = "ReportsApi"
     api_method_name = "get_reports_breach_alert_stream"
-    initial_history_key = "breach_alerts_initdate"
     size = 100

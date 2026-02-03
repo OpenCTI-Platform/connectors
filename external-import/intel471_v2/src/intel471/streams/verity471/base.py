@@ -6,7 +6,6 @@ class Verity471Stream(Intel471Stream):
     """
     All search endpoints in Verity471 are of 'stream' type.
     """
-    initial_history_key: ClassVar[str]
     size: ClassVar[int]
 
     def _get_cursor_value(self, api_response: Any) -> Union[None, str, int]:
@@ -16,7 +15,7 @@ class Verity471Stream(Intel471Stream):
         # initial history timestamp is saved in OpenCTI instance state
         # to avoid cursor/from mismatch if the timestamp is changed in the config
         # but the cursor is not reset.
-        initial_history_key = type(self).initial_history_key
+        initial_history_key = f"{self.label}_initdate"
         stored_initial_history = self._get_state(initial_history_key)
         if not stored_initial_history:
             stored_initial_history = self.initial_history
