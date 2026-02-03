@@ -8,7 +8,7 @@ from intel471.common import HelperRequest
 from intel471.settings import ConnectorSettings
 from intel471.streams.core.base import Intel471Stream
 from pycti import OpenCTIConnectorHelper
-from .backend import get_client, get_streams
+from .backend import ClientWrapper, get_client, get_streams
 
 
 class Intel471Connector:
@@ -18,7 +18,6 @@ class Intel471Connector:
     ) -> None:
         self.config = config
         self.helper = helper
-
         self.scheduler: BaseScheduler = self._init_scheduler()
         self.in_queue = Queue()
         self.out_queues: dict[str, Queue] = {}
@@ -27,9 +26,9 @@ class Intel471Connector:
         api_key = self.config.intel471.api_key.get_secret_value()
         proxy_url = self.config.intel471.proxy
         ioc_score = self.config.intel471.ioc_score
-        backend = self.config.intel471.backend
-        client_wrapper = get_client(backend)
-        for stream_class in get_streams(backend):
+        backend_name = self.config.intel471.backend
+        client_wrapper: ClientWrapper = get_client(backend_name, api_username, api_key, proxy_url)
+        for stream_class in get_streams(backend_name):
             if interval := getattr(
                 self.config.intel471, f"interval_{stream_class.group_label}"
             ):
@@ -41,13 +40,10 @@ class Intel471Connector:
                     stream_class(
                         client_wrapper,
                         self.helper,
-                        api_username,
-                        api_key,
                         self.out_queues[stream_class.label],
                         self.in_queue,
                         initial_history,
                         update_existing_data,
-                        proxy_url,
                         ioc_score,
                     ),
                     interval,
