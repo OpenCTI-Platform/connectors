@@ -64,9 +64,13 @@ class STIXObjectCreator:
             url_indicator = self.converter.create_url_indicator(
                 entity_result.scan_uri, timestamp
             )
-            domain_object = self.converter.create_domain_observable(
-                entity_result.hostname
-            )
+
+            domain_object = None
+            if entity_result.hostname:
+                domain_object = self.converter.create_domain_observable(
+                    entity_result.hostname
+                )
+
             c2_infrastructure = self.converter.create_c2_infrastructure(
                 entity_result.malware_name, "command-and-control", timestamp
             )
