@@ -221,6 +221,7 @@ class ConnectorHuntIo:
             {"connector_name": self.helper.connect_name},
         )
 
+        entities = None
         try:
             # Get the current state
             now = datetime.now(timezone.utc)
@@ -315,7 +316,7 @@ class ConnectorHuntIo:
         It requires the `duration_period` connector variable in ISO-8601 standard format.
         Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
         """
-        self.helper.schedule_process(
+        self.helper.schedule_iso(
             message_callback=self.process_message,
-            duration_period=self.config.connector.duration_period.total_seconds(),
+            duration_period=self.config.connector.duration_period,
         )
