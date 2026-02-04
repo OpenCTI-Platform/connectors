@@ -167,12 +167,20 @@ class BundleSender:
             f"Sending bundle: {total_objects} STIX objects {description}"
         )
 
+        # One work per bundle; only mark as processed on successful send
+        now_iso = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        friendly_name = f"Connector Hunt IO feed @ {now_iso}"
+        work_id = self.helper.api.work.initiate_work(
+            self.helper.connect_id, friendly_name
+        )
+
         for attempt in range(RetryConfig.MAX_RETRIES):
             try:
                 stix_bundle = stix2.Bundle(objects=stix_objects, allow_custom=True)
 
                 self.helper.send_stix2_bundle(
                     stix_bundle.serialize(),
+                    work_id=work_id,
                     update=True,
                     cleanup_inconsistent_bundle=True,
                 )
@@ -181,7 +189,8 @@ class BundleSender:
                     f"Successfully sent bundle: {total_objects} STIX objects {description}"
                     + (f" (attempt {attempt + 1})" if attempt > 0 else "")
                 )
-                return  # Success
+                self.helper.api.work.to_processed(work_id, "Bundle sent successfully")
+                return
 
             except Exception as e:
                 if (

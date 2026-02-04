@@ -249,15 +249,8 @@ class ConnectorHuntIo:
             entities = self.collect_intelligence()
 
             if entities:
-                # Friendly name will be displayed on OpenCTI platform
-                friendly_name = "Connector Hunt IO feed"
-
-                # Initiate a new work
-                work_id = self.helper.api.work.initiate_work(
-                    self.helper.connect_id, friendly_name
-                )
-
                 self.ingest_intelligence(entities)
+
             else:
                 self.helper.connector_logger.info(
                     f"{LoggingPrefixes.CONNECTOR} No new entities to process since last run"
@@ -304,12 +297,11 @@ class ConnectorHuntIo:
                 ).strftime(DateTimeFormats.STANDARD_FORMAT)
 
                 message = (
-                    f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                    + str(last_run_datetime)
+                    f"{self.helper.connect_name} connector successfully run, "
+                    f"storing last_run as {last_run_datetime}"
                 )
 
                 self.helper.connector_logger.info(message)
-                self.helper.api.work.to_processed(work_id, message)
 
     def run(self) -> None:
         """
