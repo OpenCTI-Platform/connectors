@@ -38,7 +38,7 @@ class StateManager:
     def is_processing(self) -> bool:
         """Check if connector is currently processing."""
         current_state = self.helper.get_state()
-        return current_state and current_state.get(StateKeys.PROCESSING, False)
+        return bool(current_state and current_state.get(StateKeys.PROCESSING, False))
 
     def update_run_state(
         self, latest_timestamp: Optional[str], entities_processed: int
