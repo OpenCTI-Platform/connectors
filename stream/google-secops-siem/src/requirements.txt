@@ -1,2 +1,2 @@
-pycti==6.9.7
-google-auth==2.45.0
+pycti==6.9.15
+google-auth==2.48.0

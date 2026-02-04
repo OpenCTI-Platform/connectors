@@ -10,7 +10,7 @@
   "verified": true,
   "last_verified_date": "2025-07-25",
   "playbook_supported": false,
-  "max_confidence_level": 55,
+  "max_confidence_level": 50,
   "support_version": ">= 6.7.5",
   "subscription_link": "https://www.ransomware.live",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/oob/connector_manager/external-import/ransomwarelive",
