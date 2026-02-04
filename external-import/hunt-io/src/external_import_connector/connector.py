@@ -38,7 +38,7 @@ class StateManager:
     def is_processing(self) -> bool:
         """Check if connector is currently processing."""
         current_state = self.helper.get_state()
-        return current_state and current_state.get(StateKeys.PROCESSING, False)
+        return bool(current_state and current_state.get(StateKeys.PROCESSING, False))
 
     def update_run_state(
         self, latest_timestamp: Optional[str], entities_processed: int
@@ -180,7 +180,7 @@ class ConnectorHuntIo:
 
         # Initialize components following dependency injection pattern
         self.client = ConnectorClient(self.helper, self.config)
-        self.converter_to_stix = ConverterToStix(self.helper)
+        self.converter_to_stix = ConverterToStix(self.helper, self.config)
         self.entity_processor = EntityProcessor(self.helper, self.converter_to_stix)
         self.batch_manager = BatchManager(self.helper)
         self.state_manager = StateManager(self.helper)
