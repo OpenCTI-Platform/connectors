@@ -17,7 +17,7 @@ Setting up TheHive Connector is straightforward. The following table provides de
 | `connector.log_level`           | `CONNECTOR_LOG_LEVEL`         | Yes       | Logging level. Choices: `info`, `error`, etc.                   |
 | `thehive.url`                   | `THEHIVE_URL`                 | Yes       | URL of your TheHive instance.                                   |
 | `thehive.api_key`               | `THEHIVE_API_KEY`             | Yes       | Your API Key for accessing TheHive.                             |
-| `thehive.check_ssl`             | `THEHIVE_CHECK_SSL`           | Yes       | Whether to validate the SSL certificate of TheHive instance.   |
+| `thehive.check_ssl`             | `THEHIVE_CHECK_SSL`           | Yes       | Whether to validate the SSL certificate of TheHive instance.    |
 | `thehive.organization_name`     | `THEHIVE_ORGANIZATION_NAME`   | Yes       | Name of your organization in TheHive.                           |
 | `thehive.import_from_date`      | `THEHIVE_IMPORT_FROM_DATE`    | No        | Date from which to start importing data.                        |
 | `thehive.import_only_tlp`       | `THEHIVE_IMPORT_ONLY_TLP`     | No        | Levels of the Traffic Light Protocol (TLP) to be imported. e.g., `0,1,2,3,4`      |
