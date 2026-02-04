@@ -223,6 +223,7 @@ class ConnectorHuntIo:
             {"connector_name": self.helper.connect_name},
         )
 
+        entities = None
         try:
             # Get the current state
             now = datetime.now(timezone.utc)
