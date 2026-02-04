@@ -2,7 +2,6 @@ import json
 import os
 import re
 import sys
-import time
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -1937,15 +1936,9 @@ class MispFeed:
     def run(self):
         try:
             self.helper.log_info("Fetching MISP Feed...")
-            get_run_and_terminate = getattr(self.helper, "get_run_and_terminate", None)
-            if callable(get_run_and_terminate) and self.helper.get_run_and_terminate():
-                self.process_data()
-                self.helper.force_ping()
-
-            else:
-                while True:
-                    self.process_data()
-                    time.sleep(self.config.connector.duration_period.total_seconds())
+            self.helper.schedule_iso(
+                self.process_data, self.config.connector.duration_period
+            )
 
         except Exception as e:
             self.helper.log_error(str(e))
