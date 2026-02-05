@@ -132,7 +132,7 @@ with the appropriate configurations for you environment.
 Install the required python dependencies (preferably in a virtual environment):
 
 ```shell
-pip3 install -r requirements.txt
+pip3 install .
 ```
 
 Then, start the connector from vulncheck/src:
