@@ -8,7 +8,7 @@
 
 Intel 471 delivers structured technical and non-technical data and intelligence on cyber threats.
 
-This connector ingests STIX 2.1 objects from Intel 471's Titan cybercrime intelligence platform.
+This connector ingests STIX 2.1 objects from Intel 471's Titan/Intel471 cybercrime intelligence platform.
 
 Version 2 of the connector differs from the [OpenCTI Intel 471 Connector](../intel471) in that it replaces IoC stream with Reports stream
 and it introduces several enhancements. For full list please refer to the [changelog](changelog.md). Intel 471 recommends using version 2 of the connector.
@@ -59,7 +59,7 @@ Then, start the docker container with the provided `docker-compose.yml` or integ
 ## Usage
 
 Navigate to **Data->Connectors->Intel471** and observe completed works and works in progress. They should start to appear after
-configured intervals, if new data was available in Titan.
+configured intervals, if new data was available in Titan/Verity471.
 
 To see the indicators created by Indicators stream, and YARA stream, navigate to **Observations->Indicators**.
 

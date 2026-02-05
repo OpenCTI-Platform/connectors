@@ -4,7 +4,7 @@ import pytest
 from connectors_sdk import BaseConfigModel, ConfigValidationError
 from intel471 import ConnectorSettings
 
-INITIAL_HISTORY_TIMESTAMP = 1696156471  # 2023-10-01
+INITIAL_HISTORY_TIMESTAMP = 1696156471000  # 2023-10-01
 
 
 @pytest.mark.parametrize(
