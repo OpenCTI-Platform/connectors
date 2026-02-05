@@ -84,8 +84,8 @@ class Intel471Connector:
         self.scheduler.add_job(
             stream_obj.run,
             name=stream_obj.__class__.__name__,
-            # trigger="interval",
-            # minutes=interval,
+            trigger="interval",
+            minutes=interval
         )
 
     @staticmethod
