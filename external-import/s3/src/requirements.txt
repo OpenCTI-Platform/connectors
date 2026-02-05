@@ -1,2 +1,2 @@
-pycti==6.9.15
+pycti==6.9.16
 boto3
