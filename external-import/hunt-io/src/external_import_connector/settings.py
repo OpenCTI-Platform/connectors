@@ -1,4 +1,5 @@
 import warnings
+from datetime import timedelta
 from typing import Literal
 
 from connectors_sdk import (
@@ -21,6 +22,9 @@ class ConnectorHuntIoConfig(BaseConfigModel):
 class ConnectorSettings(BaseExternalImportConnectorConfig):
     name: str = Field(description="Connector name", default="Hunt IO")
     scope: ListFromString = Field(description="Connector scope", default=["Hunt IO"])
+    duration_period: timedelta = Field(
+        description="Duration period", default=timedelta(hours=24)
+    )
 
 
 class ConfigLoader(BaseConnectorSettings):

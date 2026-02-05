@@ -38,7 +38,7 @@ class StateManager:
     def is_processing(self) -> bool:
         """Check if connector is currently processing."""
         current_state = self.helper.get_state()
-        return current_state and current_state.get(StateKeys.PROCESSING, False)
+        return bool(current_state and current_state.get(StateKeys.PROCESSING, False))
 
     def update_run_state(
         self, latest_timestamp: Optional[str], entities_processed: int
@@ -180,7 +180,7 @@ class ConnectorHuntIo:
 
         # Initialize components following dependency injection pattern
         self.client = ConnectorClient(self.helper, self.config)
-        self.converter_to_stix = ConverterToStix(self.helper)
+        self.converter_to_stix = ConverterToStix(self.helper, self.config)
         self.entity_processor = EntityProcessor(self.helper, self.converter_to_stix)
         self.batch_manager = BatchManager(self.helper)
         self.state_manager = StateManager(self.helper)
@@ -221,6 +221,7 @@ class ConnectorHuntIo:
             {"connector_name": self.helper.connect_name},
         )
 
+        entities = None
         try:
             # Get the current state
             now = datetime.now(timezone.utc)
@@ -247,15 +248,8 @@ class ConnectorHuntIo:
             entities = self.collect_intelligence()
 
             if entities:
-                # Friendly name will be displayed on OpenCTI platform
-                friendly_name = "Connector Hunt IO feed"
-
-                # Initiate a new work
-                work_id = self.helper.api.work.initiate_work(
-                    self.helper.connect_id, friendly_name
-                )
-
                 self.ingest_intelligence(entities)
+
             else:
                 self.helper.connector_logger.info(
                     f"{LoggingPrefixes.CONNECTOR} No new entities to process since last run"
@@ -302,12 +296,11 @@ class ConnectorHuntIo:
                 ).strftime(DateTimeFormats.STANDARD_FORMAT)
 
                 message = (
-                    f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                    + str(last_run_datetime)
+                    f"{self.helper.connect_name} connector successfully run, "
+                    f"storing last_run as {last_run_datetime}"
                 )
 
                 self.helper.connector_logger.info(message)
-                self.helper.api.work.to_processed(work_id, message)
 
     def run(self) -> None:
         """
@@ -323,7 +316,7 @@ class ConnectorHuntIo:
         It requires the `duration_period` connector variable in ISO-8601 standard format.
         Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
         """
-        self.helper.schedule_process(
+        self.helper.schedule_iso(
             message_callback=self.process_message,
-            duration_period=self.config.connector.duration_period.total_seconds(),
+            duration_period=self.config.connector.duration_period,
         )
