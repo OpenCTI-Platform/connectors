@@ -1,0 +1,29 @@
+name: Add to Project
+# This GitHub Actions workflow automatically adds newly opened issues and pull requests to a specific GitHub project.
+
+on:
+  issues:
+    types:
+      - opened
+      # Triggers the workflow when a new issue is opened in the repository.
+  pull_request:
+    types:
+      - opened
+      # Triggers the workflow when a new pull request is opened in the repository.
+
+jobs:
+  add-to-project:
+    name: Add issue to project
+    # Defines the job to add issues or pull requests to the specified GitHub project.
+
+    runs-on: ubuntu-latest
+    # Specifies the environment where the job will run. In this case, it uses the latest Ubuntu runner.
+
+    steps:
+      - uses: actions/add-to-project@v1.0.2
+        # Uses the `actions/add-to-project` GitHub Action to add items to a GitHub project.
+        # This action simplifies the process of adding issues or pull requests to a project board.
+
+        with:
+          project-url: https://github.com/orgs/FiligranHQ/projects/36
+          github-token: ${{ secrets.ADD_TO_PROJECT_PAT }}
