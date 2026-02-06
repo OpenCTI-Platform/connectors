@@ -59,28 +59,29 @@ class RestoreFilesConnector:
             "BACKUP_PATH", ["backup", "path"], config
         )
 
-    def find_element(self, dir_date, id):
+    def find_element(self, backup_files, dir_date, id):
         name = id + ".json"
-        path = self.backup_path + "/opencti_data"
-        for root, dirs, files in os.walk(path):
-            if name in files:
-                # If find dir is before, no need to process the element as missing
-                path = os.path.basename(root)
-                if date_convert(path) > dir_date:
-                    return fetch_stix_data(os.path.join(root, name))[0]
+        existing_path = backup_files.get(name)
+        if existing_path is None:
+            # self.helper.log_error("Missing file: " + name)
+            return None
+            # raise ValueError("Missing file: " + name)
+        if date_convert(existing_path) > dir_date:
+            path = self.backup_path + "/opencti_data/" + existing_path
+            return fetch_stix_data(os.path.join(path, name))[0]
         return None
 
-    def resolve_missing(self, dir_date, element_ids, data, acc=[]):
+    def resolve_missing(self, backup_files, dir_date, element_ids, data, acc=[]):
         refs = ref_extractors([data])
         for ref in refs:
             if ref not in element_ids:
                 not_in = next((x for x in acc if x["id"] == ref), None)
                 if not_in is None:
-                    missing_element = self.find_element(dir_date, ref)
+                    missing_element = self.find_element(backup_files, dir_date, ref)
                     if missing_element is not None:
                         acc.insert(0, missing_element)
                         self.resolve_missing(
-                            dir_date, element_ids, missing_element, acc
+                            backup_files, dir_date, element_ids, missing_element, acc
                         )
 
     def restore_files(self):
@@ -92,8 +93,24 @@ class RestoreFilesConnector:
         start_date = (
             date_convert(start_directory) if start_directory is not None else None
         )
+
         path = self.backup_path + "/opencti_data"
-        dirs = sorted(Path(path).iterdir(), key=lambda d: date_convert(d.name))
+        valid_entries = []
+        for entry in Path(path).iterdir():
+            try:
+                date_convert(entry.name)
+                valid_entries.append(entry)
+            except ValueError:
+                continue
+
+        dirs = sorted(valid_entries, key=lambda d: date_convert(d.name))
+
+        self.helper.log_info("Building files map cache (could take a while)")
+        backup_files = dict()
+        for entry in dirs:
+            for file in os.scandir(entry):
+                backup_files[file.name] = entry.name
+
         for entry in dirs:
             friendly_name = "Restore run directory @ " + entry.name
             self.helper.log_info(friendly_name)
@@ -117,16 +134,27 @@ class RestoreFilesConnector:
             acc = []
             ids = set(element_ids)
             refs = set(element_refs)
+            start_time = datetime.datetime.now()
             for ref in refs:
                 if ref not in ids:
                     # 03 - If missing, scan the other dir/files to find the elements
-                    missing_element = self.find_element(dir_date, ref)
+                    missing_element = self.find_element(backup_files, dir_date, ref)
                     if missing_element is not None:
                         acc.insert(0, missing_element)
                         # 04 - Restart the process to handle recursive resolution
-                        self.resolve_missing(dir_date, ids, missing_element, acc)
+                        self.resolve_missing(
+                            backup_files, dir_date, ids, missing_element, acc
+                        )
             # 05 - Add elements to the bundle
             objects_with_missing = acc + files_data
+            stop_time = datetime.datetime.now()
+            self.helper.log_info(
+                "Handle missing resolutions in "
+                + str((stop_time - start_time).total_seconds())
+                + " ("
+                + str(len(objects_with_missing))
+                + " objects)"
+            )
             if len(objects_with_missing) > 0:
                 # Create the work
                 work_id = self.helper.api.work.initiate_work(
