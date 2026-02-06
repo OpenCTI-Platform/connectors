@@ -2,21 +2,22 @@ import json
 import re
 import sys
 from collections import OrderedDict
-from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import stix2
 from pycti import CustomObjectCaseIncident, OpenCTIConnectorHelper
 
 from .client_api import ConnectorClient
-from .config_variables import ConfigConnector
 from .converter_to_stix import ConverterToStix
 from .utils import format_date
+
+if TYPE_CHECKING:
+    from microsoft_sentinel_incidents_connector.settings import ConnectorSettings
 
 
 def detect_ip_version(value):
     if re.match(
-        r"^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}(\/([1-9]|[1-2]\d|3[0-2]))?$",
+        "^((25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)\\.?\\b){4}(\\/([1-9]|[1-2]\\d|3[0-2]))?$",
         value,
     ):
         return "ipv4"
@@ -37,7 +38,7 @@ class MicrosoftSentinelIncidentsConnector:
     ---
 
     Attributes
-        - `config (ConfigConnector())`:
+        - `config (ConnectorSettings())`:
             Initialize the connector with necessary configuration environment variables
         - `helper (OpenCTIConnectorHelper(config))`:
             This is the helper to use.
@@ -58,15 +59,21 @@ class MicrosoftSentinelIncidentsConnector:
 
     """
 
-    def __init__(self):
+    def __init__(self, config: "ConnectorSettings", helper: "OpenCTIConnectorHelper"):
         """
         Initialize the Connector with necessary configurations
         """
-
-        # Load configuration file and connection helper
-        self.config = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
-        self.client = ConnectorClient(self.helper, self.config)
+        self.config = config
+        self.helper = helper
+        ms_cfg = config.microsoft_sentinel_incidents
+        self.client = ConnectorClient(
+            self.helper,
+            ms_cfg.client_id,
+            ms_cfg.client_secret,
+            ms_cfg.tenant_id,
+            ms_cfg.workspace_id,
+            ms_cfg.filter_labels,
+        )
         self.tlp_marking = stix2.TLP_RED
         self.converter_to_stix = ConverterToStix(
             self.helper, self.config, self.tlp_marking
@@ -82,8 +89,9 @@ class MicrosoftSentinelIncidentsConnector:
             last_timestamp = state["last_incident_timestamp"]
             return last_timestamp
 
-        if self.config.import_start_date:
-            datetime_obj = datetime.fromisoformat(self.config.import_start_date)
+        else:
+            datetime_obj = self.config.microsoft_sentinel_incidents.import_start_date
+
             last_timestamp = int(round(datetime_obj.timestamp()))
             return last_timestamp
 
@@ -108,24 +116,18 @@ class MicrosoftSentinelIncidentsConnector:
         :return: STIX 2.1 objects.
         """
         stix_objects = []
-
-        # Get alerts
         alerts = self.client.get_alerts(
             last_incident_timestamp, incident.get("AlertIds", "")
         )
-
         for alert in alerts:
-            # Create Stix Incident
             stix_incident = self.converter_to_stix.create_incident(alert)
             if stix_incident:
                 stix_objects.append(stix_incident)
-
             for technique in json.loads(
                 alert.get("Techniques", "[]")
                 if len(alert.get("Techniques", "[]")) > 0
                 else "[]"
             ):
-                # Create Stix AttackPattern
                 stix_attack_pattern = (
                     self.converter_to_stix.create_mitre_attack_pattern(technique)
                 )
@@ -139,13 +141,11 @@ class MicrosoftSentinelIncidentsConnector:
                         )
                     )
                     stix_objects.append(stix_relationship_attack_pattern)
-
             for technique in json.loads(
                 alert.get("SubTechniques", "[]")
                 if len(alert.get("SubTechniques", "[]")) > 0
                 else "[]"
             ):
-                # Create Stix AttackPattern
                 stix_attack_pattern = (
                     self.converter_to_stix.create_mitre_attack_pattern(technique)
                 )
@@ -159,14 +159,7 @@ class MicrosoftSentinelIncidentsConnector:
                         )
                     )
                     stix_objects.append(stix_relationship_attack_pattern)
-
-            priority_evidence_files = {
-                "process": 1,
-                "file": 2,
-                "filehash": 3,
-            }
-
-            # some alerts return a 'ParseError_LengthExceedsLimit' error in the Entities field
+            priority_evidence_files = {"process": 1, "file": 2, "filehash": 3}
             entities = json.loads(
                 alert.get("Entities", "[]")
                 if len(alert.get("Entities", "[]")) > 0
@@ -177,9 +170,7 @@ class MicrosoftSentinelIncidentsConnector:
             for entity in entities:
                 evidence_type = entity.get("Type", None)
                 match evidence_type:
-                    # Account
                     case "account":
-                        # Create Stix UserAccount
                         stix_account = (
                             self.converter_to_stix.create_evidence_user_account(entity)
                         )
@@ -193,11 +184,8 @@ class MicrosoftSentinelIncidentsConnector:
                                 )
                             )
                             stix_objects.append(stix_relationship_account)
-
-                    # IP Address
                     case "ip":
                         version = detect_ip_version(entity.get("Address"))
-                        # Create Stix IPv4Address
                         if version == "ipv4":
                             stix_ip = self.converter_to_stix.create_evidence_ipv4(
                                 entity
@@ -216,10 +204,7 @@ class MicrosoftSentinelIncidentsConnector:
                                 )
                             )
                             stix_objects.append(stix_relationship_ip)
-
-                    # URL
                     case "url":
-                        # Create Stix Url
                         stix_url = self.converter_to_stix.create_evidence_url(entity)
                         if stix_url:
                             stix_objects.append(stix_url)
@@ -231,10 +216,7 @@ class MicrosoftSentinelIncidentsConnector:
                                 )
                             )
                             stix_objects.append(stix_relationship_url)
-
-                    # Host
                     case "host":
-                        # Create Identity system
                         stix_identity_system = (
                             self.converter_to_stix.create_evidence_identity_system(
                                 entity
@@ -250,7 +232,6 @@ class MicrosoftSentinelIncidentsConnector:
                                 )
                             )
                             stix_objects.append(stix_relationship_identity_system)
-                        # Create Hostname
                         stix_custom_observable_hostname = self.converter_to_stix.create_evidence_custom_observable_hostname(
                             entity
                         )
@@ -275,8 +256,6 @@ class MicrosoftSentinelIncidentsConnector:
                                 stix_objects.append(
                                     stix_relationship_custom_observable_hostname_to_system
                                 )
-
-                    # process, file and filehash
                     case evidence_file if (
                         evidence_file in priority_evidence_files.keys()
                     ):
@@ -286,19 +265,15 @@ class MicrosoftSentinelIncidentsConnector:
                             file = entity.get("ImageFile")
                         else:
                             file = entity.get("Value")
-
-                        # Create Stix Directory
                         stix_directory = (
                             self.converter_to_stix.create_evidence_directory(file)
                             if isinstance(file, dict)
                             else None
                         )
-                        # Create Stix File
                         stix_file = self.converter_to_stix.create_evidence_file(
                             entity, stix_directory
                         )
                         if stix_file:
-                            # Add Stix File in stix_objects and relationship with incident
                             files_index[entity.get("$id")] = stix_file
                             stix_objects.append(stix_file)
                             stix_relationship_file = (
@@ -310,7 +285,6 @@ class MicrosoftSentinelIncidentsConnector:
                             )
                             stix_objects.append(stix_relationship_file)
                         if stix_directory:
-                            # Add Stix Directory in stix_objects and relationship with incident
                             stix_objects.append(stix_directory)
                             stix_relationship_directory = (
                                 self.converter_to_stix.create_relationship(
@@ -322,14 +296,10 @@ class MicrosoftSentinelIncidentsConnector:
                             stix_objects.append(stix_relationship_directory)
                         else:
                             self.helper.connector_logger.debug(
-                                "The creation of the stix file will be ignored as it already exists "
-                                "or no hashes are available.",
+                                "The creation of the stix file will be ignored as it already exists or no hashes are available.",
                                 {"evidence": evidence_file, "hashes": file},
                             )
-
-                    # malware
                     case "malware":
-                        # Matching malware to files by name
                         files = entity.get("Files")
                         stix_files_objects = []
                         if files is not None and len(files) > 0:
@@ -337,8 +307,6 @@ class MicrosoftSentinelIncidentsConnector:
                                 file_ref = file.get("$ref")
                                 if files_index.get(file_ref) is not None:
                                     stix_files_objects.append(files_index.get(file_ref))
-
-                        # Create stix Malware
                         stix_malware = self.converter_to_stix.create_evidence_malware(
                             entity, stix_files_objects
                         )
@@ -352,12 +320,10 @@ class MicrosoftSentinelIncidentsConnector:
                                 )
                             )
                             stix_objects.append(stix_relationship_malware)
-
         stix_case = self.converter_to_stix.create_custom_case_incident(
             incident, stix_objects
         )
         stix_objects.append(stix_case)
-
         return stix_objects
 
     def _merge_case_incidents(
@@ -365,15 +331,11 @@ class MicrosoftSentinelIncidentsConnector:
     ) -> list[object]:
         stix_objects_per_case_incident_id = OrderedDict()
         for case_incident_stix_objects in case_incidents_stix_objects:
-            # Last element is always the case incident
             case_incident = case_incident_stix_objects[-1]
-
             if (
                 case_incident["id"] in stix_objects_per_case_incident_id
                 and "object_refs" not in case_incident
             ):
-                # If the case incident already exists and has no object_refs,
-                # we merge the changed properties with the existing ones
                 stix_objects_per_case_incident_id[case_incident["id"]][-1] = (
                     CustomObjectCaseIncident(
                         **{
@@ -384,14 +346,10 @@ class MicrosoftSentinelIncidentsConnector:
                         }
                     )
                 )
-
             else:
-                # Add or Replace the case incident and all related objects
                 stix_objects_per_case_incident_id[case_incident["id"]] = (
                     case_incident_stix_objects
                 )
-
-        # Return flattened and ordered list of STIX objects
         return [
             stix_object
             for case_incident_stix_objects in stix_objects_per_case_incident_id.values()
@@ -407,7 +365,6 @@ class MicrosoftSentinelIncidentsConnector:
             "[CONNECTOR] Starting connector...",
             {"connector_name": self.helper.connect_name},
         )
-
         try:
             last_incident_timestamp = self._get_last_incident_date()
             if last_incident_timestamp:
@@ -419,53 +376,36 @@ class MicrosoftSentinelIncidentsConnector:
                 self.helper.connector_logger.info(
                     "[CONNECTOR] Connector has never run..."
                 )
-
             self.helper.connector_logger.info(
                 "[CONNECTOR] Running connector...",
                 {"connector_name": self.helper.connect_name},
             )
-
-            # A token is valid for 1 hour so we get a fresh one on every run
             self.client.set_oauth_token()
-
-            # Get incidents
             case_incidents_stix_objects = []
             incidents = self.client.get_incidents(last_incident_timestamp)
             for incident in incidents:
-                # Each element represent a list of the case incident related STIX objects.
-                # The last element of each sub lists is always the case incident itself.
                 case_incidents_stix_objects.append(
                     self._extract_intelligence(last_incident_timestamp, incident)
                 )
                 last_incident_timestamp = format_date(incident["LastModifiedTime"])
-
             if not incidents:
                 self.helper.connector_logger.info(
                     f"{self.helper.connect_name} connector successfully run, no new data to send."
                 )
                 self._set_last_incident_date(last_incident_timestamp)
                 return
-
-            # Initiate a new work
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, self.helper.connect_name
             )
-
-            # Add author and default TLP marking for consistent bundle
             stix_objects = [
                 self.converter_to_stix.author,
                 self.tlp_marking,
             ] + self._merge_case_incidents(case_incidents_stix_objects)
-
             stix_bundle = self.helper.stix2_create_bundle(stix_objects)
             self.helper.send_stix2_bundle(
-                stix_bundle,
-                work_id=work_id,
-                cleanup_inconsistent_bundle=True,
+                stix_bundle, work_id=work_id, cleanup_inconsistent_bundle=True
             )
-
             self._set_last_incident_date(last_incident_timestamp)
-
             message = (
                 f"{self.helper.connect_name} connector successfully run, storing last_incident_timestamp as "
                 + str(last_incident_timestamp)
@@ -487,7 +427,7 @@ class MicrosoftSentinelIncidentsConnector:
         It allows you to schedule the process to run at a certain intervals
         This specific scheduler from the pycti connector helper will also check the queue size of a connector
         If `CONNECTOR_QUEUE_THRESHOLD` is set, if the connector's queue size exceeds the queue threshold,
-        the connector's main process will not run until the queue is ingested and reduced sufficiently,
+        the connector's main process will not  run until the queue is ingested and reduced sufficiently,
         allowing it to restart during the next scheduler check. (default is 500MB)
         It requires the `duration_period` connector variable in ISO-8601 standard format
         Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
@@ -495,5 +435,5 @@ class MicrosoftSentinelIncidentsConnector:
         """
         self.helper.schedule_iso(
             message_callback=self.process_message,
-            duration_period=self.config.duration_period,
+            duration_period=self.config.connector.duration_period,  # type:ignore[invalid-argument-type]
         )
