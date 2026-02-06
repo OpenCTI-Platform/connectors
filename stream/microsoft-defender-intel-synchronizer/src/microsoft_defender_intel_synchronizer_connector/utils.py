@@ -237,7 +237,7 @@ _URL_RE: Final = re.compile(r'https?://[^\s"\'<>()]+', re.IGNORECASE)
 _AT_RE: Final = re.compile(r"\[at\]|\(at\)", re.IGNORECASE)
 _TRAILING_PUNCT_RE: Final = re.compile(r"[.,;!?]+$")
 _PLACEHOLDER_DOTS_RE: Final = re.compile(r"\.\.\.+$")
-_WHITESPACE_RE: Final = re.compile(r"\s+$")
+_WHITESPACE_RE: Final = re.compile(r"\s+")
 _BRACKET_TRANS: Final = str.maketrans("", "", "[]")
 
 

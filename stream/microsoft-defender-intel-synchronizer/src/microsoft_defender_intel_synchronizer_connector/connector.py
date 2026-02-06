@@ -50,12 +50,17 @@ def sort_key(item: dict) -> tuple:
       3) modified (newest first)
     This mirrors the logic used in run().
     """
+    rank = int(item.get("_collection_rank", sys.maxsize))
+    conf = int(safe_confidence(item))
+    mod = parse_modified(item)  # datetime
+
+    if mod.tzinfo is None:
+        mod = mod.replace(tzinfo=timezone.utc)
+
     return (
-        -int(
-            item.get("_collection_rank", sys.maxsize)
-        ),  # negate so smaller rank -> larger key
-        int(safe_confidence(item)),
-        parse_modified(item),
+        rank,  # smaller rank first
+        -conf,  # higher confidence first
+        -mod.timestamp(),  # newer first
     )
 
 
@@ -618,7 +623,7 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                 # Sort: 1) collection rank (first-configured = highest priority),
                 #       2) confidence (highest first),
                 #       3) modified (newest first)
-                opencti_all_indicators.sort(key=sort_key, reverse=True)
+                opencti_all_indicators.sort(key=sort_key)
 
                 # Cut at 15 000
                 opencti_all_indicators = opencti_all_indicators[:15000]

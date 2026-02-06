@@ -181,35 +181,53 @@ class ConfigConnector:
             "rbac_group_names",
         }
 
+        def _normalize_policy(v: Any) -> CollectionPolicy:
+            """
+            Normalize a per-collection override value into a CollectionPolicy.
+
+            Shorthand values (None/True/False/"") mean "use defaults" -> {}.
+            Non-dict values are treated as {}.
+
+            Optional improvements:
+              - rbac_group_names may be provided as a single string and will be wrapped into a list
+              - policy normalization is centralized in this helper to avoid duplication
+            """
+            if v is None or v is True or v is False or v == "":
+                return {}
+
+            if not isinstance(v, dict):
+                return {}
+
+            pol: CollectionPolicy = {}
+
+            for fk in KNOWN:
+                if fk in v and v[fk] is not None:
+                    pol[fk] = v[fk]
+
+            if "expire_time" in pol:
+                pol["expire_time"] = int(pol["expire_time"])
+
+            if "rbac_group_names" in pol and pol["rbac_group_names"] is not None:
+                r = pol["rbac_group_names"]
+                if isinstance(r, str):
+                    pol["rbac_group_names"] = [r]
+                else:
+                    try:
+                        pol["rbac_group_names"] = [str(x) for x in r]
+                    except TypeError:
+                        # Not iterable (unexpected), fall back to a single string value
+                        pol["rbac_group_names"] = [str(r)]
+
+            return pol
+
         # 1) Normalize Python objects (dict/list) passed directly from YAML loader
         if isinstance(raw, dict):
-            # raw is already the object map
-            data = raw
             order: list[str] = []
             overrides: dict[str, CollectionPolicy] = {}
-            for k, v in data.items():
-                order.append(str(k))
-                # shorthand values -> empty policy (use defaults)
-                if v is None or v is True or v is False or v == "":
-                    overrides[str(k)] = {}
-                    continue
-                if isinstance(v, dict):
-                    pol: CollectionPolicy = {}
-                    for fk in KNOWN:
-                        if fk in v and v[fk] is not None:
-                            pol[fk] = v[fk]
-                    if "expire_time" in pol:
-                        pol["expire_time"] = int(pol["expire_time"])
-                    if (
-                        "rbac_group_names" in pol
-                        and pol["rbac_group_names"] is not None
-                    ):
-                        pol["rbac_group_names"] = [
-                            str(x) for x in pol["rbac_group_names"]
-                        ]
-                    overrides[str(k)] = pol
-                else:
-                    overrides[str(k)] = {}
+            for k, v in raw.items():
+                key = str(k)
+                order.append(key)
+                overrides[key] = _normalize_policy(v)
             return order, overrides
 
         if isinstance(raw, list):
@@ -242,27 +260,9 @@ class ConfigConnector:
                 order: list[str] = []
                 overrides: dict[str, CollectionPolicy] = {}
                 for k, v in data.items():
-                    order.append(str(k))
-                    if v is None or v is True or v is False or v == "":
-                        overrides[str(k)] = {}
-                        continue
-                    if isinstance(v, dict):
-                        pol: CollectionPolicy = {}
-                        for fk in KNOWN:
-                            if fk in v and v[fk] is not None:
-                                pol[fk] = v[fk]
-                        if "expire_time" in pol:
-                            pol["expire_time"] = int(pol["expire_time"])
-                        if (
-                            "rbac_group_names" in pol
-                            and pol["rbac_group_names"] is not None
-                        ):
-                            pol["rbac_group_names"] = [
-                                str(x) for x in pol["rbac_group_names"]
-                            ]
-                        overrides[str(k)] = pol
-                    else:
-                        overrides[str(k)] = {}
+                    key = str(k)
+                    order.append(key)
+                    overrides[key] = _normalize_policy(v)
                 return order, overrides
 
             if isinstance(data, list):
