@@ -137,7 +137,8 @@ class MicrosoftDefenderIntelSynchronizerConnector:
                         vu = datetime.fromisoformat(valid_until.replace("Z", "+00:00"))
                         if vu <= datetime.now(timezone.utc):
                             return []
-                    except Exception:
+                    except (ValueError, TypeError):
+                        # these are expected and happen too often to log
                         pass
 
                 pattern = node.get("pattern") or ""
@@ -230,6 +231,9 @@ class MicrosoftDefenderIntelSynchronizerConnector:
                 if ob["type"] == "domain-name" and ob["value"].startswith("_"):
                     # Skip invalid domain starting with underscore
                     # (e.g., _sip._tls.example.com) which are not supported by Defender
+                    continue
+                if ob["type"] == "hostname" and ob["value"].startswith("_"):
+                    # Skip invalid hostname starting with underscore (as above)
                     continue
                 if v := indicator_value(ob["value"]):
                     ob["value"] = v
