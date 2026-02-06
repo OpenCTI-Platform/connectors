@@ -1863,12 +1863,14 @@ class MispFeed:
 
                 number_events = 0
                 try:
-                    manifest_data = json.loads(
-                        self._retrieve_data(
-                            f"{self.config.misp_feed.url}/manifest.json"
-                        )
-                        or ""
+                    raw_data = self._retrieve_data(
+                        f"{self.config.misp_feed.url}/manifest.json"
                     )
+                    if raw_data is None:
+                        self.helper.log_error("Failed to retrieve manifest.json")
+                        return
+                    manifest_data = json.loads(raw_data)
+
                     items = []
                     for key, value in manifest_data.items():
                         value["timestamp"] = int(value["timestamp"])
@@ -1882,12 +1884,17 @@ class MispFeed:
                                 f"Processing event {item['info']} (date={item['date']}, "
                                 f"modified={datetime.fromtimestamp(last_event_timestamp, tz=timezone.utc).isoformat()})"
                             )
-                            event = json.loads(
-                                self._retrieve_data(
-                                    f"{self.config.misp_feed.url}/{item['event_key']}.json"
-                                )
-                                or ""
+
+                            raw_data = self._retrieve_data(
+                                f"{self.config.misp_feed.url}/{item['event_key']}.json"
                             )
+                            if raw_data is None:
+                                self.helper.log_error(
+                                    f"Failed to retrieve {item['event_key']}.json"
+                                )
+                                continue
+
+                            event = json.loads(raw_data)
                             bundle = self._process_event(event)
                             self.helper.log_info("Sending event STIX2 bundle...")
                             if work_id is None:
@@ -1916,12 +1923,14 @@ class MispFeed:
                             self.helper.log_info(message)
                 except Exception as e:
                     self.helper.log_error(str(e))
+
                 message = (
                     f"Connector successfully run ({number_events} events have been processed), "
                     f"storing state (last_run={now.astimezone(timezone.utc).isoformat()}, "
                     f"last_event={datetime.fromtimestamp(last_event_timestamp, tz=timezone.utc).isoformat()}, "
                     f"last_event_timestamp={last_event_timestamp})"
                 )
+
             self.helper.log_info(message)
             if work_id is not None:
                 self.helper.api.work.to_processed(work_id, message)
