@@ -11,9 +11,8 @@ class RedFlagDomainImportConnector:
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         self.config = config
         self.helper = helper
-        name = self.config.connector.name.capitalize()
         self.author = stix2.Identity(
-            id=Identity.generate_id(name, "organization"),
+            id=Identity.generate_id("Red Flag Domains", "organization"),
             name="Red Flag Domains",
             identity_class="organization",
         )
