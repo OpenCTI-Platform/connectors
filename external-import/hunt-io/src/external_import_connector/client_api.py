@@ -5,18 +5,21 @@ from io import BytesIO
 from typing import List, Optional
 
 import requests
-from pycti import OpenCTIConnectorHelper
-from requests.adapters import HTTPAdapter
-from requests.exceptions import ConnectTimeout, HTTPError, ReadTimeout, RequestException
-from urllib3.util.retry import Retry
-
-from .constants import (
+from external_import_connector.constants import (
     APIConstants,
     LoggingPrefixes,
     ProcessingLimits,
 )
-from .exceptions import APIError, NonRetryableError, RetryableError
-from .models import C2
+from external_import_connector.exceptions import (
+    APIError,
+    NonRetryableError,
+    RetryableError,
+)
+from external_import_connector.models import C2
+from pycti import OpenCTIConnectorHelper
+from requests.adapters import HTTPAdapter
+from requests.exceptions import ConnectTimeout, HTTPError, ReadTimeout, RequestException
+from urllib3.util.retry import Retry
 
 
 class HTTPSessionManager:
@@ -188,7 +191,7 @@ class ConnectorClient:
         self.data_processor = DataProcessor(helper)
 
         # Create HTTP session with resilience features
-        self.session = self.session_manager.create_session(self.config.api_key)
+        self.session = self.session_manager.create_session(self.config.hunt_io.api_key)
 
     @property
     def latest_timestamp(self) -> Optional[str]:
@@ -313,7 +316,9 @@ class ConnectorClient:
             self.session.close()
 
             # Create new session with same configuration
-            self.session = self.session_manager.create_session(self.config.api_key)
+            self.session = self.session_manager.create_session(
+                self.config.hunt_io.api_key
+            )
 
             self.helper.connector_logger.info(
                 f"{LoggingPrefixes.HTTP_RESILIENCE} HTTP session refreshed successfully"
@@ -353,7 +358,7 @@ class ConnectorClient:
 
             # Make API request
             response = self._request_data(
-                self.config.api_base_url, params=request_params
+                self.config.hunt_io.api_base_url, params=request_params
             )
 
             # Process response data
