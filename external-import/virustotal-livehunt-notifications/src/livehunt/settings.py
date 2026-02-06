@@ -1,5 +1,6 @@
 import warnings
 from datetime import timedelta
+from typing import Literal
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -41,6 +42,17 @@ class VirusTotalLiveHuntNotificationsConfig(BaseConfigModel):
 
     api_key: SecretStr = Field(
         description="VirusTotal Premium API key.",
+    )
+    tlp_level: Literal[
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red",
+    ] = Field(
+        description="Default TLP level of the imported entities.",
+        default="clear",
     )
     create_alert: bool = Field(
         description="Create incident/alert for each notification.",
