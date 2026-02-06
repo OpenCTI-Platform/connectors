@@ -127,89 +127,104 @@ class RFConnector:
         self.alerts_playbook = None
 
     def all_processes(self):
-        # Start RF Alert Connector
-        if self.RF.rf_alert_enable:
-            self.alerts = RecordedFutureAlertConnector(
-                self.RF.helper,
-                self.RF.rf_alerts_api,
-                self.RF.opencti_default_severity,
-                self.RF.tlp,
-            )
-            self.alerts.run()
-        else:
-            self.RF.helper.connector_logger.info("[ALERTS] Alerts fetching disabled")
+        threads = []
 
-        # Start RF Alert playbook
-        if self.RF.rf_playbook_alert_enable:
-            self.alerts_playbook = RecordedFuturePlaybookAlertConnector(
-                self.RF.helper,
-                self.RF.rf_alerts_api,
-                self.RF.playbook_alert_categories,
-                self.RF.severity_threshold_domain_abuse,
-                self.RF.severity_threshold_identity_novel_exposures,
-                self.RF.severity_threshold_code_repo_leakage,
-                self.RF.severity_threshold_cyber_vulnerability,
-                self.RF.debug_var,
-                self.RF.tlp,
-            )
-            self.alerts_playbook.run()
-        else:
-            self.RF.helper.connector_logger.info(
-                "[PLAYBOOK ALERTS] Playbook alerts fetching disabled"
-            )
+        try:
+            # Start RF Alert Connector
+            if self.RF.rf_alert_enable:
+                self.alerts = RecordedFutureAlertConnector(
+                    self.RF.helper,
+                    self.RF.rf_alerts_api,
+                    self.RF.opencti_default_severity,
+                    self.RF.tlp,
+                )
+                self.alerts.start()
+                threads.append(self.alerts)
+            else:
+                self.RF.helper.connector_logger.info(
+                    "[ALERTS] Alerts fetching disabled"
+                )
 
-        # Pull RF risk lists
-        if self.RF.rf_pull_risk_list:
-            self.risk_list = RiskList(
-                self.RF.helper,
-                self.RF.rfapi,
-                self.RF.tlp,
-                self.RF.risk_list_threshold,
-                self.RF.risklist_related_entities,
-                self.RF.rf_riskrules_as_label,
-            )
-            self.risk_list.start()
-        else:
-            self.RF.helper.connector_logger.info(
-                "[RISK LISTS] Risk list fetching disabled"
-            )
+            # Start RF Alert playbook
+            if self.RF.rf_playbook_alert_enable:
+                self.alerts_playbook = RecordedFuturePlaybookAlertConnector(
+                    self.RF.helper,
+                    self.RF.rf_alerts_api,
+                    self.RF.playbook_alert_categories,
+                    self.RF.severity_threshold_domain_abuse,
+                    self.RF.severity_threshold_identity_novel_exposures,
+                    self.RF.severity_threshold_code_repo_leakage,
+                    self.RF.severity_threshold_cyber_vulnerability,
+                    self.RF.debug_var,
+                    self.RF.tlp,
+                )
+                self.alerts_playbook.start()
+                threads.append(self.alerts_playbook)
+            else:
+                self.RF.helper.connector_logger.info(
+                    "[PLAYBOOK ALERTS] Playbook alerts fetching disabled"
+                )
 
-        # Pull RF Threat actors and Malware from Threat map
-        if self.RF.rf_pull_threat_maps:
-            self.threat_maps = ThreatMap(
-                self.RF.helper,
-                self.RF.rfapi,
-                self.RF.tlp,
-                self.RF.risk_list_threshold,
-            )
-            self.threat_maps.start()
-        else:
-            self.RF.helper.connector_logger.info(
-                "[THREAT MAPS] Threat maps fetching disabled"
-            )
+            # Pull RF risk lists
+            if self.RF.rf_pull_risk_list:
+                self.risk_list = RiskList(
+                    self.RF.helper,
+                    self.RF.rfapi,
+                    self.RF.tlp,
+                    self.RF.risk_list_threshold,
+                    self.RF.risklist_related_entities,
+                    self.RF.rf_riskrules_as_label,
+                )
+                self.risk_list.start()
+                threads.append(self.risk_list)
+            else:
+                self.RF.helper.connector_logger.info(
+                    "[RISK LISTS] Risk list fetching disabled"
+                )
 
-        # Pull Analyst Notes if enabled
-        if self.RF.rf_pull_analyst_notes:
-            self.analyst_notes = AnalystNote(
-                self.RF.helper,
-                self.RF.rfapi,
-                self.RF.last_published_notes_interval,
-                self.RF.rf_initial_lookback,
-                self.RF.rf_pull_signatures,
-                self.RF.rf_insikt_only,
-                self.RF.rf_topics,
-                self.RF.tlp,
-                self.RF.rf_person_to_TA,
-                self.RF.rf_TA_to_intrusion_set,
-                self.RF.risk_as_score,
-                self.RF.risk_threshold,
-                self.RF.analyst_notes_guess_relationships,
-            )
-            self.analyst_notes.start()
-        else:
-            self.RF.helper.connector_logger.info(
-                "[ANALYST NOTES] Analyst notes fetching disabled"
-            )
+            # Pull RF Threat actors and Malware from Threat map
+            if self.RF.rf_pull_threat_maps:
+                self.threat_maps = ThreatMap(
+                    self.RF.helper,
+                    self.RF.rfapi,
+                    self.RF.tlp,
+                    self.RF.risk_list_threshold,
+                )
+                self.threat_maps.start()
+                threads.append(self.threat_maps)
+            else:
+                self.RF.helper.connector_logger.info(
+                    "[THREAT MAPS] Threat maps fetching disabled"
+                )
+
+            # Pull Analyst Notes if enabled
+            if self.RF.rf_pull_analyst_notes:
+                self.analyst_notes = AnalystNote(
+                    self.RF.helper,
+                    self.RF.rfapi,
+                    self.RF.last_published_notes_interval,
+                    self.RF.rf_initial_lookback,
+                    self.RF.rf_pull_signatures,
+                    self.RF.rf_insikt_only,
+                    self.RF.rf_topics,
+                    self.RF.tlp,
+                    self.RF.rf_person_to_TA,
+                    self.RF.rf_TA_to_intrusion_set,
+                    self.RF.risk_as_score,
+                    self.RF.risk_threshold,
+                    self.RF.analyst_notes_guess_relationships,
+                )
+                self.analyst_notes.start()
+                threads.append(self.analyst_notes)
+            else:
+                self.RF.helper.connector_logger.info(
+                    "[ANALYST NOTES] Analyst notes fetching disabled"
+                )
+
+        finally:
+            # Wait for all threads to complete
+            for thread in threads:
+                thread.join()
 
     def run_all_processes(self):
         if self.RF.duration_period:
