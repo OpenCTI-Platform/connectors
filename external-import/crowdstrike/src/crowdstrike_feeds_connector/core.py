@@ -23,6 +23,7 @@ from pycti import OpenCTIConnectorHelper
 from .actor.importer import ActorImporter
 from .importer import BaseImporter
 from .indicator.importer import IndicatorImporter, IndicatorImporterConfig
+from .malware.importer import MalwareImporter
 from .report.importer import ReportImporter
 from .rule.snort_suricata_master_importer import SnortMasterImporter
 from .rule.yara_master_importer import YaraMasterImporter
@@ -34,6 +35,7 @@ class CrowdStrike:
     _CONFIG_SCOPE_ACTOR = "actor"
     _CONFIG_SCOPE_REPORT = "report"
     _CONFIG_SCOPE_INDICATOR = "indicator"
+    _CONFIG_SCOPE_MALWARE = "malware"
     _CONFIG_SCOPE_YARA_MASTER = "yara_master"
     _CONFIG_SCOPE_SNORT_SURICATA_MASTER = "snort_suricata_master"
 
@@ -77,6 +79,8 @@ class CrowdStrike:
         create_indicators = self.config.create_indicators
 
         actor_start_timestamp = self.config.actor_start_timestamp
+
+        malware_start_timestamp = self.config.malware_start_timestamp
 
         report_start_timestamp = self.config.report_start_timestamp
 
@@ -175,7 +179,6 @@ class CrowdStrike:
         importers: list[BaseImporter] = []
 
         if self._CONFIG_SCOPE_ACTOR in scopes:
-
             actor_importer = ActorImporter(
                 self.helper,
                 author,
@@ -269,7 +272,16 @@ class CrowdStrike:
 
             importers.append(snort_master_importer)
 
-        # MVP 5
+        if self._CONFIG_SCOPE_MALWARE in scopes:
+            malware_importer = MalwareImporter(
+                self.helper,
+                author,
+                malware_start_timestamp,
+                tlp_marking,
+            )
+
+            importers.append(malware_importer)
+
         # MVP 6
 
         self.importers = importers
