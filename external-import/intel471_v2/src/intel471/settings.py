@@ -1,3 +1,5 @@
+from typing import Literal
+
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
@@ -6,6 +8,8 @@ from connectors_sdk import (
 )
 from pydantic import Field, HttpUrl, SecretStr
 from pydantic.json_schema import SkipJsonSchema
+
+from .backend import BackendNameLiteral
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -91,6 +95,10 @@ class Intel471_V2Config(BaseConfigModel):
     ioc_score: int = Field(
         description="Indicator score. Defaults to `70`.",
         default=70,
+    )
+    backend: BackendNameLiteral = Field(
+        description="Backend to use for Intel471 API calls. Defaults to `titan`.",
+        default="titan",
     )
 
 
