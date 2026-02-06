@@ -2,7 +2,7 @@ opencti:
   url: 'http://localhost'
   token: 'ChangeMe'
 
-connector:
+# connector:
   # id: '34936E68-9C5B-4AA9-A1DE-372D9134C534'
   # name: 'Microsoft Sentinel Incidents'
   # scope: 'sentinel'
