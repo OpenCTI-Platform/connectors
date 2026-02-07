@@ -197,6 +197,7 @@ class ActorImporter(BaseImporter):
 
         malware = self._get_and_create_malware(actor)
 
+        # MVP3
         bundle_builder = ActorBundleBuilder(
             actor,
             author,
