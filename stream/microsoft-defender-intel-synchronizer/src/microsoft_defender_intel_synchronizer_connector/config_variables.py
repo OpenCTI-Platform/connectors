@@ -1,9 +1,19 @@
 import json
 import os
 from pathlib import Path
+from typing import Any, List, TypedDict
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
+
+
+class CollectionPolicy(TypedDict, total=False):
+    action: str
+    educate_url: str
+    expire_time: int
+    max_indicators: int
+    rbac_group_names: List[str]
+    recommended_actions: str
 
 
 class ConfigConnector:
@@ -61,7 +71,16 @@ class ConfigConnector:
             "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_LOGIN_URL",
             ["microsoft_defender_intel_synchronizer", "login_url"],
             self.load,
-            default="https://login.microsoft.com",
+            default="https://login.microsoftonline.com",
+        )
+        # Max indicators the connector will attempt to manage in Defender.
+        # Must not exceed Defender's hard limit (15,000).
+        self.max_indicators = get_config_variable(
+            "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_MAX_INDICATORS",
+            ["microsoft_defender_intel_synchronizer", "max_indicators"],
+            self.load,
+            isNumber=True,
+            default=15000,
         )
         self.base_url = get_config_variable(
             "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_BASE_URL",
@@ -94,17 +113,29 @@ class ConfigConnector:
             self.load,
             default=False,
         )
-        self.taxii_collections = get_config_variable(
+        raw_collections = get_config_variable(
             "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_TAXII_COLLECTIONS",
             ["microsoft_defender_intel_synchronizer", "taxii_collections"],
             self.load,
-        ).split(",")
+        )
+        taxii_collections, taxii_overrides = self._parse_taxii_collections(
+            raw_collections
+        )
+        self.taxii_collections = taxii_collections
+        self.taxii_overrides = taxii_overrides
         self.interval = get_config_variable(
             "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_INTERVAL",
             ["microsoft_defender_intel_synchronizer", "interval"],
             self.load,
             isNumber=True,
             default=300,
+        )
+        # Update-only-owned toggle (default true)
+        self.update_only_owned = get_config_variable(
+            "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_UPDATE_ONLY_OWNED",
+            ["microsoft_defender_intel_synchronizer", "update_only_owned"],
+            self.load,
+            default=True,
         )
         self.recommended_actions = get_config_variable(
             "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_RECOMMENDED_ACTIONS",
@@ -123,14 +154,14 @@ class ConfigConnector:
                 self.rbac_group_names = json.loads(rbac_group_names_raw)
                 if not isinstance(self.rbac_group_names, list):
                     raise ValueError
-            except (json.JSONDecodeError, ValueError):
+            except (json.JSONDecodeError, ValueError) as exc:
                 self.helper.connector_logger.error(
-                    "Error: rbac_group_names is not a valid JSON array."
+                    "Error: MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_RBAC_GROUP_NAMES is not a valid JSON array."
                     " Connector will terminate."
                 )
                 raise RuntimeError(
-                    "Invalid configuration: rbac_group_names must be a JSON array."
-                )
+                    "Invalid configuration: MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_RBAC_GROUP_NAMES must be a JSON array."
+                ) from exc
         elif isinstance(rbac_group_names_raw, list):
             self.rbac_group_names = rbac_group_names_raw
         else:
@@ -141,3 +172,131 @@ class ConfigConnector:
             self.load,
             default="",
         )
+
+    @staticmethod
+    def _parse_taxii_collections(
+        raw: Any,
+    ) -> tuple[list[str], dict[str, CollectionPolicy]]:
+        """
+        Accepts:
+          - CSV string: "id1,id2"
+          - JSON string list: '["id1","id2"]'
+          - Python list: ["id1","id2"]
+          - JSON/Python map: {"id1": {...}, "id2": null, "id3": {...}}
+          - Shorthand null/true/false/"" are treated as "present but use defaults"
+        Returns: (ordered_list_of_collection_ids, overrides_map)
+        """
+        KNOWN = {
+            "action",
+            "educate_url",
+            "expire_time",
+            "max_indicators",
+            "rbac_group_names",
+            "recommended_actions",
+        }
+
+        def _normalize_policy(v: Any) -> CollectionPolicy:
+            """
+            Normalize a per-collection override value into a CollectionPolicy.
+
+            Shorthand values (None/True/False/"") mean "use defaults" -> {}.
+            Non-dict values are treated as {}.
+
+            Optional improvements:
+              - rbac_group_names may be provided as a single string and will be wrapped into a list
+              - policy normalization is centralized in this helper to avoid duplication
+            """
+            if v is None or v is True or v is False or v == "":
+                return {}
+
+            if not isinstance(v, dict):
+                return {}
+
+            pol: CollectionPolicy = {}
+
+            for fk in KNOWN:
+                if fk in v and v[fk] is not None:
+                    pol[fk] = v[fk]
+
+            if "expire_time" in pol:
+                pol["expire_time"] = int(pol["expire_time"])
+
+            if "max_indicators" in pol:
+                pol["max_indicators"] = int(pol["max_indicators"])
+
+            if "rbac_group_names" in pol and pol["rbac_group_names"] is not None:
+                r = pol["rbac_group_names"]
+                if isinstance(r, str):
+                    pol["rbac_group_names"] = [r]
+                else:
+                    try:
+                        pol["rbac_group_names"] = [str(x) for x in r]
+                    except TypeError:
+                        # Not iterable (unexpected), fall back to a single string value
+                        pol["rbac_group_names"] = [str(r)]
+
+            return pol
+
+        # 1) Normalize Python objects (dict/list) passed directly from YAML loader
+        if isinstance(raw, dict):
+            order: list[str] = []
+            overrides: dict[str, CollectionPolicy] = {}
+            for k, v in raw.items():
+                key = str(k)
+                order.append(key)
+                overrides[key] = _normalize_policy(v)
+            return order, overrides
+
+        if isinstance(raw, list):
+            # raw is already the list form
+            return [str(x) for x in raw], {}
+
+        # 2) Handle string inputs (CSV or JSON)
+        s = raw or ""
+        if not isinstance(s, str):
+            # Unexpected type - be defensive: try stringifying, but prefer CSV fallback
+            try:
+                s = json.dumps(s)
+            except Exception:
+                s = str(s)
+
+        s = s.strip()
+        if not s:
+            return [], {}
+
+        # If it starts with { or [ treat as JSON
+        if s[0] in "{[":
+            try:
+                data = json.loads(s)
+            except Exception:
+                # Malformed JSON; fall back to CSV parsing to be tolerant
+                ids = [x.strip() for x in s.split(",") if x.strip()]
+                return ids, {}
+
+            if isinstance(data, dict):
+                order: list[str] = []
+                overrides: dict[str, CollectionPolicy] = {}
+                for k, v in data.items():
+                    key = str(k)
+                    order.append(key)
+                    overrides[key] = _normalize_policy(v)
+                return order, overrides
+
+            if isinstance(data, list):
+                return [str(x) for x in data], {}
+
+        # CSV fallback
+        ids = [x.strip() for x in s.split(",") if x.strip()]
+        return ids, {}
+
+    def used_rbac_groups(self) -> list[str]:
+        """
+        Compute the full set of RBAC group names used, both global and per-collection
+        :return: Sorted list of unique RBAC group names
+        """
+        out = self.rbac_group_names.copy()
+        for pol in self.taxii_overrides.values():
+            for name in pol.get("rbac_group_names", []) or []:
+                if name not in out:
+                    out.append(name)
+        return sorted(out)
