@@ -47,3 +47,16 @@ def test_parse_python_dict_input():
     assert ids == ["a", "b"]
     assert overrides["a"]["action"] == "Audit"
     assert overrides["b"] == {}
+
+
+def test_parse_json_map_with_max_indicators():
+    raw = json.dumps(
+        {
+            "id1": {"action": "Block", "max_indicators": 123},
+            "id2": {"max_indicators": "50"},
+        }
+    )
+    ids, overrides = ConfigConnector._parse_taxii_collections(None, raw)
+    assert ids == ["id1", "id2"]
+    assert overrides["id1"]["max_indicators"] == 123
+    assert overrides["id2"]["max_indicators"] == 50

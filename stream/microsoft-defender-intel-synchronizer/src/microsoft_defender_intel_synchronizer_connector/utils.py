@@ -233,11 +233,18 @@ def get_hash_type(data: dict) -> str | None:
     return hash_type
 
 
+def is_defender_supported_domain(value: str) -> bool:
+    if not isinstance(value, str):
+        return False
+    value = value.strip().lower()
+    return bool(value) and not value.startswith("_")
+
+
 _URL_RE: Final = re.compile(r'https?://[^\s"\'<>()]+', re.IGNORECASE)
 _AT_RE: Final = re.compile(r"\[at\]|\(at\)", re.IGNORECASE)
 _TRAILING_PUNCT_RE: Final = re.compile(r"[.,;!?]+$")
 _PLACEHOLDER_DOTS_RE: Final = re.compile(r"\.\.\.+$")
-_WHITESPACE_RE: Final = re.compile(r"\s+")
+_TRAILING_WHITESPACE_RE: Final = re.compile(r"\s+$")
 _BRACKET_TRANS: Final = str.maketrans("", "", "[]")
 
 
@@ -307,7 +314,9 @@ def indicator_value(value: str, max_length: int = _MAX_LEN_FOR_KEY) -> str | Non
             value = value.rstrip(".").lower()
 
     # Collapse trailing whitespace
-    value = _WHITESPACE_RE.sub("", value)
+    # This happens in edge cases and is needed for Defender
+    # Copilot incorrectly flags this as an opportunity for improvement
+    value = _TRAILING_WHITESPACE_RE.sub("", value)
 
     # Strip trailing punctuation Defender doesn't like
     value = _TRAILING_PUNCT_RE.sub("", value)

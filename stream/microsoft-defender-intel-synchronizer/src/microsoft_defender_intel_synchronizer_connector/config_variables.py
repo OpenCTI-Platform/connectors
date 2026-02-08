@@ -9,10 +9,11 @@ from pycti import OpenCTIConnectorHelper, get_config_variable
 
 class CollectionPolicy(TypedDict, total=False):
     action: str
-    expire_time: int
-    recommended_actions: str
     educate_url: str
+    expire_time: int
+    max_indicators: int
     rbac_group_names: List[str]
+    recommended_actions: str
 
 
 class ConfigConnector:
@@ -71,6 +72,15 @@ class ConfigConnector:
             ["microsoft_defender_intel_synchronizer", "login_url"],
             self.load,
             default="https://login.microsoftonline.com",
+        )
+        # Max indicators the connector will attempt to manage in Defender.
+        # Must not exceed Defender's hard limit (15,000).
+        self.max_indicators = get_config_variable(
+            "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_MAX_INDICATORS",
+            ["microsoft_defender_intel_synchronizer", "max_indicators"],
+            self.load,
+            isNumber=True,
+            default=15000,
         )
         self.base_url = get_config_variable(
             "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_BASE_URL",
@@ -175,10 +185,11 @@ class ConfigConnector:
         """
         KNOWN = {
             "action",
-            "expire_time",
-            "recommended_actions",
             "educate_url",
+            "expire_time",
+            "max_indicators",
             "rbac_group_names",
+            "recommended_actions",
         }
 
         def _normalize_policy(v: Any) -> CollectionPolicy:
@@ -206,6 +217,9 @@ class ConfigConnector:
 
             if "expire_time" in pol:
                 pol["expire_time"] = int(pol["expire_time"])
+
+            if "max_indicators" in pol:
+                pol["max_indicators"] = int(pol["max_indicators"])
 
             if "rbac_group_names" in pol and pol["rbac_group_names"] is not None:
                 r = pol["rbac_group_names"]

@@ -140,7 +140,6 @@ class DefenderApiHandler:
         """
         retry_strategy = Retry(
             total=8,
-            status=8,
             backoff_factor=3,
             status_forcelist=(429, 502, 503, 504),
             allowed_methods={

@@ -19,6 +19,7 @@ from .types import RBACScope, ScopeKey
 from .utils import (
     FILE_HASH_TYPES_MAPPER,
     indicator_value,
+    is_defender_supported_domain,
 )
 
 
@@ -26,7 +27,7 @@ def safe_confidence(item):
     """Returns integer confidence value, defaulting to 0 on error."""
     try:
         return int(item.get("confidence", 0))
-    except Exception:
+    except (ValueError, TypeError):
         return 0
 
 
@@ -38,7 +39,7 @@ def parse_modified(item):
     try:
         # normalize trailing Z to +00:00 so fromisoformat works
         return datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except Exception:
+    except (ValueError, TypeError, AttributeError):
         return datetime.min.replace(tzinfo=timezone.utc)
 
 
@@ -51,7 +52,7 @@ def sort_key(item: dict) -> tuple:
     This mirrors the logic used in run().
     """
     rank = int(item.get("_collection_rank", sys.maxsize))
-    conf = int(safe_confidence(item))
+    conf = safe_confidence(item)
     mod = parse_modified(item)  # datetime
 
     if mod.tzinfo is None:
@@ -114,7 +115,7 @@ class MicrosoftDefenderIntelSynchronizerConnector:
 
     def _convert_indicator_to_observables(
         self, node: dict[str, Any]
-    ) -> list[dict[str, Any]] | None:
+    ) -> list[dict[str, Any]]:
         """
         Convert a GraphQL indicator node into Defender-ready observables.
 
@@ -166,6 +167,10 @@ class MicrosoftDefenderIntelSynchronizerConnector:
                     )
 
                 # Atomics
+                # Intentional design: Defender indicators are single-valued.
+                # STIX patterns may contain multiple atoms (AND/OR), but this connector will extract
+                # at most one value per supported observable type, using the first match found.
+                # We use re.search (not findall/finditer) deliberately to enforce that contract.
                 regexes: list[tuple[str, str]] = [
                     ("url", r"\[url:value\s*=\s*'([^']+)'\]"),
                     ("domain-name", r"\[domain-name:value\s*=\s*'([^']+)'\]"),
@@ -192,7 +197,7 @@ class MicrosoftDefenderIntelSynchronizerConnector:
                 # Observable nodes (globalSearch) carry the atomic value directly
                 type_map = {
                     "domain-name": "domain-name",
-                    "hostname": "hostname",
+                    "hostname": "domain-name",  # Normalize hostname to domain-name for Defender
                     "url": "url",
                     "ipv4addr": "ipv4-addr",
                     "ipv6addr": "ipv6-addr",
@@ -233,15 +238,17 @@ class MicrosoftDefenderIntelSynchronizerConnector:
                 if ob["type"] == "file":
                     cleaned.append(ob)
                     continue
-                if ob["type"] == "domain-name" and ob["value"].startswith("_"):
-                    # Skip invalid domain starting with underscore
-                    # (e.g., _sip._tls.example.com) which are not supported by Defender
-                    continue
-                if ob["type"] == "hostname" and ob["value"].startswith("_"):
-                    # Skip invalid hostname starting with underscore (as above)
-                    continue
+
                 if v := indicator_value(ob["value"]):
                     ob["value"] = v
+
+                    if ob["type"] == "domain-name" and not is_defender_supported_domain(
+                        ob["value"]
+                    ):
+                        # Skip invalid domain starting with underscore
+                        # (e.g., _sip._tls.example.com) which are not supported by Defender
+                        continue
+
                     cleaned.append(ob)
 
             # --- Merge parent node fields into each observable ---
@@ -253,12 +260,12 @@ class MicrosoftDefenderIntelSynchronizerConnector:
 
             return merged
 
-        except Exception as exc:
+        except (ValueError, TypeError, AttributeError, KeyError, re.error) as exc:
             self.helper.connector_logger.warning(
                 "[CREATE] Cannot convert indicator node",
                 {"opencti_id": node.get("id"), "error": str(exc)},
             )
-            return None
+            return []
 
     # Fetch not only indicators but also objects that may be Alerted on or that may be Allow-listed.
     # This allows for closer integration of the Intelligence pipeline with the EDR.
@@ -423,7 +430,7 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                         {"batch_num": batch_num - 1, "collection": collection_name},
                     )
                     break
-            except Exception as e:
+            except (KeyError, TypeError, ValueError) as e:
                 self.helper.connector_logger.error(
                     "GraphQL query failed",
                     {"error": str(e), "variables": variables},
@@ -476,6 +483,11 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                     col: i for i, col in enumerate(self.config.taxii_collections)
                 }
 
+                # Effective global cap: respect Defender hard limit and admin-configured limit
+                effective_global_limit = min(
+                    15000, int(self.config.max_indicators or 15000)
+                )
+
                 # Get OpenCTI indicators
                 for collection in self.config.taxii_collections:
                     if collection not in state:
@@ -510,16 +522,28 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                         filters = taxii_collection["filters"]
                         filters = json.loads(filters)
                         filters["filters"].append(validity_filter)
+
+                        pol = self.config.taxii_overrides.get(collection, {}) or {}
+                        collection_limit = pol.get("max_indicators")
+                        effective_collection_limit = effective_global_limit
+                        if collection_limit:
+                            effective_collection_limit = min(
+                                effective_global_limit, collection_limit
+                            )
+
                         opencti_indicators = self.fetch_indicators_batched(
-                            filters, collection_name=collection
+                            filters,
+                            max_size=effective_collection_limit,
+                            collection_name=collection,
                         )
+
                         if opencti_indicators:
                             try:
                                 first_node = opencti_indicators[0]
                                 state[collection]["last_timestamp"] = first_node.get(
                                     "modified"
                                 )
-                            except Exception as e:
+                            except (IndexError, TypeError, AttributeError) as e:
                                 self.helper.connector_logger.warning(
                                     "[STATE] Could not extract timestamp from first node",
                                     {"error": e},
@@ -530,7 +554,7 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                                 **opencti_indicator,
                                 "_collection": collection,
                                 "_collection_rank": collection_rank[collection],
-                                # "_collection_limit": collection_limit,
+                                "_collection_limit": effective_collection_limit,
                             }
                             for opencti_indicator in opencti_indicators
                         ]
@@ -565,22 +589,7 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                         # --- VALIDATE THE UNION (global + per-collection) ---
                         # This ensures any per-collection RBAC names are known now,
                         # preventing KeyError later when we map names -> ids.
-                        try:
-                            _ = resolve_rbac_scope_or_abort(all_rbac_groups, name_to_id)
-                        except RbacConfigError as e:
-                            unrecognized = None
-                            if len(e.args) > 1 and isinstance(e.args[1], dict):
-                                unrecognized = e.args[1].get("missing_groups")
-                            self.helper.connector_logger.error(
-                                "[RBAC] Unknown device groups in config; synchronization aborted.",
-                                {
-                                    "unrecognized_groups": unrecognized,
-                                    "available_count": len(name_to_id),
-                                    "available_groups": sorted(name_to_id.keys()),
-                                    "error": str(e),
-                                },
-                            )
-                            return
+                        _ = resolve_rbac_scope_or_abort(all_rbac_groups, name_to_id)
 
                         # Resolve *global* scope for API writes (if configured)
                         if self.config.rbac_group_names:
@@ -600,10 +609,15 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                             unrecognized = e.args[1].get("missing_groups")
                         self.helper.connector_logger.error(
                             "[RBAC] Unknown device groups in config; synchronization aborted.",
-                            {"unrecognized_groups": unrecognized, "error": str(e)},
+                            {
+                                "unrecognized_groups": unrecognized,
+                                "available_count": len(name_to_id),
+                                "available_groups": sorted(name_to_id.keys()),
+                                "error": str(e),
+                            },
                         )
                         return
-                    except Exception as e:
+                    except (KeyError, TypeError, ValueError, AttributeError) as e:
                         self.helper.connector_logger.error(
                             "[RBAC] Failed to load RBAC groups; aborting run.",
                             {"error": str(e)},
@@ -625,8 +639,8 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                 #       3) modified (newest first)
                 opencti_all_indicators.sort(key=sort_key)
 
-                # Cut at 15 000
-                opencti_all_indicators = opencti_all_indicators[:15000]
+                # Cut at effective global cap (never above Defender hard limit)
+                opencti_all_indicators = opencti_all_indicators[:effective_global_limit]
 
                 # Build Defender in-memory indexes for de-dup decisions
                 # Key = (indicatorType, indicatorValue, normalized scope ids)
@@ -639,13 +653,13 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                     ids = ind.get("rbacGroupIds") or []
                     try:
                         return tuple(sorted(int(x) for x in ids))
-                    except Exception:
+                    except (ValueError, TypeError):
                         return tuple()
 
                 def _key_from_def(ind: dict[str, Any]) -> ScopeKey:
                     return (
-                        ind.get("indicatorType"),
-                        ind.get("indicatorValue"),
+                        ind.get("indicatorType", ""),
+                        ind.get("indicatorValue", ""),
                         _normalize_scope_ids_from_def(ind),
                     )
 
@@ -661,7 +675,7 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                             indicator_value,
                             tuple(sorted(int(x) for x in scope_ids)),
                         )
-                    except Exception:
+                    except (ValueError, TypeError):
                         return (indicator_type, indicator_value, tuple())
 
                 all_by_key: dict[ScopeKey, dict[str, Any]] = {}
@@ -939,7 +953,7 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                                 "Deleted indicators",
                                 {"count": len(defender_indicators_to_delete_ids_chunk)},
                             )
-                        except Exception as e:
+                        except (KeyError, TypeError, ValueError) as e:
                             self.helper.connector_logger.error(
                                 "Cannot delete indicators",
                                 {
@@ -948,7 +962,11 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                                 },
                             )
                 # Wait a few seconds to allow Defender to free up capacity
-                time.sleep(20)
+                if (
+                    not self.config.passive_only
+                    or len(defender_indicators_to_delete_ids) > 0
+                ):
+                    time.sleep(20)
 
                 opencti_indicators_to_create = {
                     obj["id"]: obj
@@ -987,7 +1005,7 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                                     ),
                                 },
                             )
-                        except Exception as e:
+                        except (KeyError, TypeError, ValueError) as e:
                             self.helper.connector_logger.error(
                                 "Cannot create indicators",
                                 {
@@ -996,7 +1014,7 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                                 },
                             )
                 self.helper.set_state(state)
-            except Exception as e:
+            except (KeyError, TypeError, ValueError, AttributeError) as e:
                 self.helper.connector_logger.error(
                     "An error occurred during the run", {"error": str(e)}
                 )

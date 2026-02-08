@@ -15,7 +15,11 @@ The Microsoft Defender Intel Synchronizer connector synchronizes OpenCTI TAXII c
     - [Requirements](#requirements)
     - [Microsoft Entra ID (formerly Azure AD) Application Setup](#microsoft-entra-id-formerly-azure-ad-application-setup)
     - [Configuration variables](#configuration-variables)
+    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
     - [Important Note on Permissions](#important-note-on-permissions)
+  - [Deployment](#deployment)
+    - [Docker Deployment](#docker-deployment)
+    - [Manual Deployment](#manual-deployment)
   - [Usage](#usage)
   - [Behavior](#behavior)
     - [Data Flow](#data-flow)
@@ -88,25 +92,25 @@ Below are the parameters you'll need to set for running the connector properly:
 | Scope                       | `scope`                       | `CONNECTOR_SCOPE`                       | /       | Yes       | `sentinel`                             | Must be `sentinel`, not used in this connector.                                        |
 | Log Level                   | `log_level`                   | `CONNECTOR_LOG_LEVEL`                   | /       | Yes       | `error`                                | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`. |
 
-Below are the parameters you'll need to set for Microsoft Defender Intel Synchronizer:
+### Connector extra parameters environment variables
 
-| Parameter `microsoft_defender_intel_synchronizer` | config.yml          | Docker environment variable                                     | Default  | Mandatory | Example                                    | Description                                                                                                                                                                                                                                                                                                                                                       |
-|---------------------------------------------------|---------------------|-----------------------------------------------------------------|----------|-----------|--------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Tenant ID                                         | `tenant_id`         | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_TENANT_ID`               | /        | Yes       | /                                          | Your Microsoft Entra ID (formerly Azure AD) App Tenant ID, see the screenshot to help you find this information.                                                                                                                                                                                                                                                                                   |
-| Client ID                                         | `client_id`         | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_CLIENT_ID`               | /        | Yes       | /                                          | Your Microsoft Entra ID (formerly Azure AD) App Client ID, see the screenshot to help you find this information.                                                                                                                                                                                                                                                                                   |
-| Client Secret                                     | `client_secret`     | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_CLIENT_SECRET`           | /        | Yes       | /                                          | Your Microsoft Entra ID (formerly Azure AD) App Client secret, See the screenshot to help you find this information.                                                                                                                                                                                                                                                                               |
-| Login URL                                         | `login_url`         | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_LOGIN_URL`               | /        | No        | `https://login.microsoftonline.com`              | Login URL for Microsoft which is `https://login.microsoftonline.com`                                                                                                                                                                                                                                                                                                    |
-| API Base URL                                      | `base_url`          | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_BASE_URL`                | /        | No        | `https://api.securitycenter.microsoft.com` | The resource the API will use which is `https://api.securitycenter.microsoft.com`                                                                                                                                                                                                                                                                                 |
-| Resource URL Path                                 | `resource_path`     | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_RESOURCE_PATH`           | /        | No        | `/api/indicators`                          | The request URL that will be used which is `/api/indicators`                                                                                                                                                                                                                                                                                                      |
-| Expire Time                                       | `expire_time`       | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_EXPIRE_TIME`             | /        | Yes       | `30`                                       | Number of days for your indicator to expire in Defender. Suggestion of `30` as a default                                                                                                                                                                                                                                                                          |
-| Action                                            | `action`            | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_ACTION`                  | /        | No        | `Audit`                                    | The action to apply if the indicator is matched from within the targetProduct security tool. Possible values are: `Allowed`, `Audit`, `Block`, `BlockAndRemediate`, `Warn`.                                                                                                                                                                                                              |
-| Passive Only                                      | `passive_only`      | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_PASSIVE_ONLY`            | /        | No        | `true`                                     | Run without modifying Defender. When true the connector performs full planning and logging but skips POST/PUT/PATCH/DELETE calls. No changes are made in Defender. |
-| TAXII Collections | `taxii_collections` | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_TAXII_COLLECTIONS` | / | Yes | `ID1,ID2` or `{"COLL1":{"action":"Block","expire_time":30,"rbac_group_names":["Linux"]},"COLL2":{}}` | Comma-separated list of TAXII collection IDs or a JSON object map for per-collection overrides. |
-| Interval                                          | `interval`          | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_INTERVAL`                | /        | No        | `300`                                      | Interval for pulling TAXII collections and sync to Defender.                                                                                                                                                                                                                                                                                                      |
-| Recommended Actions                                 | `recommended_actions` | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_RECOMMENDED_ACTIONS` | /        | No        | `Block immediately`                           | Recommended actions for the TI indicator alert. |
-| RBAC Group Names                                   | `rbac_group_names`    | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_RBAC_GROUP_NAMES`    | `[]`     | No        | `["group1", "group2"]`                        | JSON array of RBAC group names. Example: `["My Team", "The Other Team - Linux Servers"]`. |
-| Educate URL                                        | `educate_url`         | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_EDUCATE_URL`         | /        | No        | `https://support.example.com`                  | Custom notification/support URL for Block/Warn actions. |
-| Update Only Owned Indicators                        | `update_only_owned`  | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_UPDATE_ONLY_OWNED`   | `true`   | No        | `true`                  | Controls whether the connector will manage only owned indicators. |
+| Parameter                    | config.yml                                                  | Docker environment variable                                 | Default                                    | Mandatory | Description                                                               |
+| ---------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------ | --------- | ------------------------------------------------------------------------- |
+| Tenant ID                    | `microsoft_defender_intel_synchronizer.tenant_id`           | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_TENANT_ID`           |                                            | Yes       | Microsoft Entra ID (formerly Azure AD) Tenant ID.                         |
+| Client ID                    | `microsoft_defender_intel_synchronizer.client_id`           | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_CLIENT_ID`           |                                            | Yes       | Microsoft Entra ID (formerly Azure AD) Application Client ID.             |
+| Client Secret                | `microsoft_defender_intel_synchronizer.client_secret`       | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_CLIENT_SECRET`       |                                            | Yes       | Microsoft Entra ID (formerly Azure AD) Application Client Secret.         |
+| Login URL                    | `microsoft_defender_intel_synchronizer.login_url`           | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_LOGIN_URL`           | `https://login.microsoftonline.com`        | No        | Microsoft login URL.                                                      |
+| API Base URL                 | `microsoft_defender_intel_synchronizer.base_url`            | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_BASE_URL`            | `https://api.securitycenter.microsoft.com` | No        | Microsoft Defender API base URL.                                          |
+| Resource Path                | `microsoft_defender_intel_synchronizer.resource_path`       | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_RESOURCE_PATH`       | `/api/indicators`                          | No        | API endpoint path for indicators.                                         |
+| Expire Time                  | `microsoft_defender_intel_synchronizer.expire_time`         | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_EXPIRE_TIME`         | 30                                         | Yes       | Days before indicators expire in Defender.                                |
+| Action                       | `microsoft_defender_intel_synchronizer.action`              | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_ACTION`              | `Audit`                                    | No        | Default action: `Allowed`, `Audit`, `Block`, `BlockAndRemediate`, `Warn`. |
+| Passive Only                 | `microsoft_defender_intel_synchronizer.passive_only`        | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_PASSIVE_ONLY`        | false                                      | No        | Silent/audit mode without user notification.                              |
+| TAXII Collections            | `microsoft_defender_intel_synchronizer.taxii_collections`   | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_TAXII_COLLECTIONS`   |                                            | Yes       | Comma-separated list of TAXII collection IDs.                             |
+| Interval                     | `microsoft_defender_intel_synchronizer.interval`            | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_INTERVAL`            | 300                                        | No        | Sync interval in seconds.                                                 |
+| Recommended Actions          | `microsoft_defender_intel_synchronizer.recommended_actions` | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_RECOMMENDED_ACTIONS` |                                            | No        | Recommended actions for TI indicator alerts.                              |
+| RBAC Group Names             | `microsoft_defender_intel_synchronizer.rbac_group_names`    | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_RBAC_GROUP_NAMES`    | []                                         | No        | JSON array of RBAC group names.                                           |
+| Educate URL                  | `microsoft_defender_intel_synchronizer.educate_url`         | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_EDUCATE_URL`         |                                            | No        | Custom notification URL for Block/Warn actions.                           |
+| Update Only Owned Indicators | `microsoft_defender_intel_synchronizer.update_only_owned`   | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_UPDATE_ONLY_OWNED`   | `true`                                     | No        | `true`                                                                    | Controls whether the connector will manage only owned indicators. |
 
 `taxii_collections` supports:
 
@@ -115,12 +119,12 @@ Below are the parameters you'll need to set for Microsoft Defender Intel Synchro
 
 ```json
   {
-    "COLL1": { "action": "Block", "expire_time": 30, "recommended_actions": "Block immediately", "educate_url": "https://support.example.com", "rbac_group_names": ["Linux","Servers"] },
+    "COLL1": { "action": "Block", "expire_time": 30, "recommended_actions": "Block immediately", "educate_url": "https://support.example.com", "rbac_group_names": ["Linux","Servers"], "max_indicators": 1000 },
     "COLL2": {}
   }
 ```
 
-Supported keys: `action`, `expire_time`, `recommended_actions`, `educate_url`, and `rbac_group_names`.
+Supported keys: `action`, `expire_time`, `recommended_actions`, `educate_url`, `rbac_group_names`, and `max_indicators`.
 Per-collection overrides always take precedence over global settings.
 
 ### Important Note on Permissions
@@ -132,6 +136,59 @@ ValueError: {'name': 'FORBIDDEN_ACCESS', 'error_message': 'You are not allowed t
 ```
 
 Please ensure the connector's user has this permission assigned, in addition to the usual required permissions.
+
+## Deployment
+
+### Docker Deployment
+
+Build the Docker image:
+
+```bash
+docker build -t opencti/connector-microsoft-defender-intel-synchronizer:latest .
+```
+
+Configure the connector in `docker-compose.yml`:
+
+```yaml
+  connector-microsoft-defender-intel-synchronizer:
+    image: opencti/connector-microsoft-defender-intel-synchronizer:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Microsoft Defender Intel Synchronizer
+      - CONNECTOR_SCOPE=sentinel
+      - CONNECTOR_LOG_LEVEL=info
+      - MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_TENANT_ID=ChangeMe
+      - MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_CLIENT_ID=ChangeMe
+      - MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_CLIENT_SECRET=ChangeMe
+      - MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_EXPIRE_TIME=30
+      - MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_TAXII_COLLECTIONS=collection1,collection2
+      - MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_INTERVAL=300
+    restart: always
+```
+
+Start the connector:
+
+```bash
+docker compose up -d
+```
+
+### Manual Deployment
+
+1. Create `config.yml` based on `config.yml.sample`.
+
+2. Install dependencies:
+
+```bash
+pip3 install -r requirements.txt
+```
+
+3. Start the connector from the `src` directory:
+
+```bash
+python3 main.py
+```
 
 ## Usage
 
