@@ -22,6 +22,8 @@ from .utils import (
     is_defender_supported_domain,
 )
 
+EPOCH_UTC: Final = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
 
 def safe_confidence(item):
     """Returns integer confidence value, defaulting to 0 on error."""
@@ -34,13 +36,20 @@ def safe_confidence(item):
 def parse_modified(item):
     """Parse an ISO modified timestamp to datetime (UTC)."""
     value = item.get("modified")
+
     if not value:
-        return datetime.min.replace(tzinfo=timezone.utc)
+        return EPOCH_UTC
+
     try:
         # normalize trailing Z to +00:00 so fromisoformat works
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except (ValueError, TypeError, AttributeError):
-        return datetime.min.replace(tzinfo=timezone.utc)
+        return EPOCH_UTC
+
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+
+    return dt if dt >= EPOCH_UTC else EPOCH_UTC
 
 
 def sort_key(item: dict) -> tuple:
@@ -54,9 +63,6 @@ def sort_key(item: dict) -> tuple:
     rank = int(item.get("_collection_rank", sys.maxsize))
     conf = safe_confidence(item)
     mod = parse_modified(item)  # datetime
-
-    if mod.tzinfo is None:
-        mod = mod.replace(tzinfo=timezone.utc)
 
     return (
         rank,  # smaller rank first
@@ -265,9 +271,11 @@ class MicrosoftDefenderIntelSynchronizerConnector:
             return merged
 
         except (ValueError, TypeError, AttributeError, KeyError, re.error) as exc:
+            node_id = getattr(node, "get", lambda *_: "unknown")("id", "unknown")
+            node_id = dict(node).get("id", "unknown")
             self.helper.connector_logger.warning(
                 "[CREATE] Cannot convert indicator node",
-                {"opencti_id": node.get("id"), "error": str(exc)},
+                {"opencti_id": node_id, "error": str(exc)},
             )
             return []
 
@@ -953,8 +961,12 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                             self.api.delete_indicators(
                                 defender_indicators_to_delete_ids_chunk
                             )
+                            if not self.config.passive_only:
+                                msg = "Deleted indicators"
+                            else:
+                                msg = "[DRY-RUN] Would delete"
                             self.helper.connector_logger.info(
-                                "Deleted indicators",
+                                msg,
                                 {"count": len(defender_indicators_to_delete_ids_chunk)},
                             )
                         except Exception as e:
@@ -992,8 +1004,12 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                             data = self.api.post_indicators(
                                 opencti_indicators_to_create_chunk
                             )
+                            if not self.config.passive_only:
+                                msg = "Created indicators"
+                            else:
+                                msg = "[DRY-RUN] Would create"
                             self.helper.connector_logger.info(
-                                "[CREATE] Created indicators",
+                                msg,
                                 {
                                     "indicators_created": data.get(
                                         "total_count",
