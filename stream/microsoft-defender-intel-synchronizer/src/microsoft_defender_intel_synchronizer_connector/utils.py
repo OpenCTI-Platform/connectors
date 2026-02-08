@@ -124,11 +124,11 @@ def get_action(data: dict, default_action: str | None = None) -> str:
     if score >= 60:
         action = "Block"
     elif 30 < score < 60:
-        action = "Alert"
-    elif 0 < score < 30:
         action = "Warn"
-    elif score == 0:
+    elif 0 < score < 30:
         action = "Audit"
+    elif score == 0:
+        action = "Allowed"
     return action
 
 

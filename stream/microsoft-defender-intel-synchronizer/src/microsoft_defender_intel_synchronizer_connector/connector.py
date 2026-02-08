@@ -181,6 +181,8 @@ class MicrosoftDefenderIntelSynchronizerConnector:
                 for typ, rx in regexes:
                     if m := re.search(rx, pattern):
                         observables.append({"type": typ, "value": m.group(1)})
+                        # Stop after the first match for supported types
+                        break
 
                 # Fallback when pattern missing but name + type are explicit
                 if (
@@ -235,7 +237,7 @@ class MicrosoftDefenderIntelSynchronizerConnector:
             # Normalize non-file values
             cleaned: list[dict[str, Any]] = []
             for ob in observables:
-                if ob["type"] == "file":
+                if ob["type"] in {"file", "x509-certificate"}:
                     cleaned.append(ob)
                     continue
 

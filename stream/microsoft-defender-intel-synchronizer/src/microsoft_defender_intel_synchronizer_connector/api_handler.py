@@ -121,15 +121,20 @@ class DefenderApiHandler:
             self._expiration_token_date = now + timedelta(
                 seconds=int(oauth_expired * 0.9)
             )
-        except (requests.exceptions.HTTPError, KeyError) as e:
+        except (requests.exceptions.RequestException, KeyError) as e:
             error_description = response_json.get("error_description", "Unknown error")
             error_message = f"Failed generating oauth token: {error_description}"
-            self.helper.connector_logger.error(
-                error_message, {"response": response_json}
-            )
-            raise DefenderApiHandlerError(
-                error_message, {"response": response_json}
-            ) from e
+            meta: dict[str, Any] = {"response": response_json}
+            if isinstance(e, requests.exceptions.HTTPError) and e.response is not None:
+                try:
+                    meta["details"] = {
+                        "status": e.response.status_code,
+                        "body": e.response.text[:500],
+                    }
+                except (AttributeError, TypeError, UnicodeDecodeError):
+                    pass
+            self.helper.connector_logger.error(error_message, meta)
+            raise DefenderApiHandlerError(error_message, meta) from e
 
     def retries_builder(self) -> None:
         """

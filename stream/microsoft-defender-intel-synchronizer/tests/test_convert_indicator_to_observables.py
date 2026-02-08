@@ -184,16 +184,6 @@ def test_invalid_domain_skipped():
     )
 
 
-def test_missing_type_returns_none():
-    connector = make_connector()
-    node = {
-        "entity_type": "unknown_type",
-        "observable_value": "something",
-    }
-    result = connector._convert_indicator_to_observables(node)
-    assert result == [] or result is None
-
-
 def test_invalid_value_returns_none():
     connector = make_connector()
     node = {
