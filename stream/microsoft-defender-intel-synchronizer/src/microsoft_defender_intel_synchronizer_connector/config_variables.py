@@ -118,9 +118,11 @@ class ConfigConnector:
             ["microsoft_defender_intel_synchronizer", "taxii_collections"],
             self.load,
         )
-        self.taxii_collections, self.taxii_overrides = self._parse_taxii_collections(
+        taxii_collections, taxii_overrides = self._parse_taxii_collections(
             raw_collections
         )
+        self.taxii_collections = taxii_collections
+        self.taxii_overrides = taxii_overrides
         self.interval = get_config_variable(
             "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_INTERVAL",
             ["microsoft_defender_intel_synchronizer", "interval"],
@@ -171,8 +173,9 @@ class ConfigConnector:
             default="",
         )
 
+    @staticmethod
     def _parse_taxii_collections(
-        self, raw: Any
+        raw: Any,
     ) -> tuple[list[str], dict[str, CollectionPolicy]]:
         """
         Accepts:

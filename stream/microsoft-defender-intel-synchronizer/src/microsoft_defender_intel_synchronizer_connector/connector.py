@@ -124,7 +124,7 @@ class MicrosoftDefenderIntelSynchronizerConnector:
         - Merges parent indicator metadata (score, confidence, valid_until, etc.)
         into each observable so downstream logic has full context.
 
-        Returns a list of enriched observable dicts or None on error.
+        Returns a list of enriched observable dicts; returns an empty list on error.
         """
         try:
             node = dict(node)
@@ -953,7 +953,7 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                                 "Deleted indicators",
                                 {"count": len(defender_indicators_to_delete_ids_chunk)},
                             )
-                        except (KeyError, TypeError, ValueError) as e:
+                        except Exception as e:
                             self.helper.connector_logger.error(
                                 "Cannot delete indicators",
                                 {
@@ -962,10 +962,7 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                                 },
                             )
                 # Wait a few seconds to allow Defender to free up capacity
-                if (
-                    not self.config.passive_only
-                    or len(defender_indicators_to_delete_ids) > 0
-                ):
+                if not self.config.passive_only and defender_indicators_to_delete_ids:
                     time.sleep(20)
 
                 opencti_indicators_to_create = {
@@ -1014,7 +1011,7 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                                 },
                             )
                 self.helper.set_state(state)
-            except (KeyError, TypeError, ValueError, AttributeError) as e:
+            except Exception as e:
                 self.helper.connector_logger.error(
                     "An error occurred during the run", {"error": str(e)}
                 )
