@@ -157,6 +157,10 @@ class MicrosoftDefenderIntelSynchronizerConnector:
                 mot = (node.get("x_opencti_main_observable_type") or "").lower()
 
                 # File hashes
+                # Enforce single-observable contract: prefer SHA-256, then SHA-1.
+                # If a file hash is found we will NOT extract other atomic observables
+                # from the same STIX pattern (prevents file-hash + domain duplicates).
+                found_atomic = False
                 if m := re.search(
                     r"\[file:hashes\.'SHA-256'\s*=\s*'([A-Fa-f0-9]{64})'\]",
                     pattern,
@@ -164,13 +168,15 @@ class MicrosoftDefenderIntelSynchronizerConnector:
                     observables.append(
                         {"type": "file", "hashes": {"sha256": m.group(1).lower()}}
                     )
-                if m := re.search(
+                    found_atomic = True
+                elif m := re.search(
                     r"\[file:hashes\.'SHA-1'\s*=\s*'([A-Fa-f0-9]{40})'\]",
                     pattern,
                 ):
                     observables.append(
                         {"type": "file", "hashes": {"sha1": m.group(1).lower()}}
                     )
+                    found_atomic = True
 
                 # Atomics
                 # Intentional design: this connector emits at most one observable per STIX pattern.
@@ -179,18 +185,19 @@ class MicrosoftDefenderIntelSynchronizerConnector:
                 # To enforce that contract, we extract only the first supported observable found
                 # in the pattern and ignore any additional matches.
                 # We use re.search (not findall/finditer) and break on first match deliberately.
-                regexes: list[tuple[str, str]] = [
-                    ("url", r"\[url:value\s*=\s*'([^']+)'\]"),
-                    ("domain-name", r"\[domain-name:value\s*=\s*'([^']+)'\]"),
-                    ("domain-name", r"\[hostname:value\s*=\s*'([^']+)'\]"),
-                    ("ipv4-addr", r"\[ipv4-addr:value\s*=\s*'([^']+)'\]"),
-                    ("ipv6-addr", r"\[ipv6-addr:value\s*=\s*'([^']+)'\]"),
-                ]
-                for typ, rx in regexes:
-                    if m := re.search(rx, pattern):
-                        observables.append({"type": typ, "value": m.group(1)})
-                        # Stop after the first match for supported types
-                        break
+                if not found_atomic:
+                    regexes: list[tuple[str, str]] = [
+                        ("url", r"\[url:value\s*=\s*'([^']+)'\]"),
+                        ("domain-name", r"\[domain-name:value\s*=\s*'([^']+)'\]"),
+                        ("domain-name", r"\[hostname:value\s*=\s*'([^']+)'\]"),
+                        ("ipv4-addr", r"\[ipv4-addr:value\s*=\s*'([^']+)'\]"),
+                        ("ipv6-addr", r"\[ipv6-addr:value\s*=\s*'([^']+)'\]"),
+                    ]
+                    for typ, rx in regexes:
+                        if m := re.search(rx, pattern):
+                            observables.append({"type": typ, "value": m.group(1)})
+                            # Stop after the first match for supported types
+                            break
 
                 # Fallback when pattern missing but name + type are explicit
                 if (
@@ -272,7 +279,6 @@ class MicrosoftDefenderIntelSynchronizerConnector:
 
         except (ValueError, TypeError, AttributeError, KeyError, re.error) as exc:
             node_id = getattr(node, "get", lambda *_: "unknown")("id", "unknown")
-            node_id = dict(node).get("id", "unknown")
             self.helper.connector_logger.warning(
                 "[CREATE] Cannot convert indicator node",
                 {"opencti_id": node_id, "error": str(exc)},

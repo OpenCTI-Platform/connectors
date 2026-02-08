@@ -232,7 +232,9 @@ class ConfigConnector:
                 pol["expire_time"] = int(pol["expire_time"])
 
             if "max_indicators" in pol:
-                pol["max_indicators"] = int(pol["max_indicators"])
+                value = int(pol["max_indicators"])
+                value = max(min(value, 15000), 1)
+                pol["max_indicators"] = value
 
             if "rbac_group_names" in pol and pol["rbac_group_names"] is not None:
                 r = pol["rbac_group_names"]

@@ -327,7 +327,7 @@ class DefenderApiHandler:
             "action": get_action(o, self.config.action),
             "title": indicator_title(cleaned_value),
             "description": get_description(o),
-            "externalId": o.get("id") or o.get("standard_id"),
+            "externalId": o.get("id"),
             "lastUpdateTime": o.get("modified") or o.get("created"),
             "expirationTime": get_expiration_datetime(
                 o, get_expire_days(o, int(self.config.expire_time))
