@@ -110,7 +110,8 @@ Below are the parameters you'll need to set for running the connector properly:
 | Recommended Actions          | `microsoft_defender_intel_synchronizer.recommended_actions` | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_RECOMMENDED_ACTIONS` |                                            | No        | Recommended actions for TI indicator alerts.                              |
 | RBAC Group Names             | `microsoft_defender_intel_synchronizer.rbac_group_names`    | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_RBAC_GROUP_NAMES`    | []                                         | No        | JSON array of RBAC group names.                                           |
 | Educate URL                  | `microsoft_defender_intel_synchronizer.educate_url`         | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_EDUCATE_URL`         |                                            | No        | Custom notification URL for Block/Warn actions.                           |
-| Update Only Owned Indicators | `microsoft_defender_intel_synchronizer.update_only_owned`   | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_UPDATE_ONLY_OWNED`   | `true`                                     | No        | `true`                                                                    | Controls whether the connector will manage only owned indicators. |
+| Update Only Owned Indicators | `microsoft_defender_intel_synchronizer.update_only_owned`   | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_UPDATE_ONLY_OWNED`   | `true`                                     | No        | Controls whether the connector will manage only owned indicators.         |
+| Max Indicators               | `microsoft_defender_intel_synchronizer.max_indicators`      | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_MAX_INDICATORS`      | 15000                                      | No        | Maximum number of indicators to sync (Defender limit is 15,000).          |
 
 `taxii_collections` supports:
 

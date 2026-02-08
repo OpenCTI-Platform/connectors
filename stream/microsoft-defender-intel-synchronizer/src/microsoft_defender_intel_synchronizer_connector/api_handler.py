@@ -6,7 +6,7 @@ Documentation: https://learn.microsoft.com/en-us/defender-endpoint/api/ti-indica
 
 from datetime import datetime, timedelta, timezone
 from time import perf_counter
-from typing import Any, Final
+from typing import Any, Final, Mapping
 
 import requests
 from pycti import OpenCTIConnectorHelper
@@ -43,13 +43,18 @@ DEFAULT_TIMEOUT: Final = (10, 180)  # connect, read
 
 
 class DefenderApiHandlerError(Exception):
-    def __init__(self, msg, metadata):
-        self.msg = msg
-        self.metadata = metadata
+    def __init__(self, message: str, metadata: Mapping[str, Any] | None = None):
+        super().__init__(message)
+        self.message = message
+        self.metadata: Mapping[str, Any] = metadata or {}
+
+    @property
+    def msg(self):
+        return self.message
 
     def __str__(self) -> str:
         status = (self.metadata or {}).get("details", {}).get("status")
-        return f"{self.msg} (status={status})" if status else self.msg
+        return f"{self.message} (status={status})" if status else self.message
 
 
 class DefenderApiHandler:
@@ -131,8 +136,12 @@ class DefenderApiHandler:
                         "status": e.response.status_code,
                         "body": e.response.text[:500],
                     }
-                except (AttributeError, TypeError, UnicodeDecodeError):
-                    pass
+                except (AttributeError, TypeError, UnicodeDecodeError) as parse_error:
+                    # Best-effort enrichment of error metadata; if we cannot read
+                    # the response details we still want to raise the original error.
+                    self.helper.connector_logger.debug(
+                        "Failed to parse error response details: %s", parse_error
+                    )
             self.helper.connector_logger.error(error_message, meta)
             raise DefenderApiHandlerError(error_message, meta) from e
 
@@ -281,7 +290,7 @@ class DefenderApiHandler:
         t = o.get("type")
         v = o.get("value")
         if not isinstance(t, str) or not isinstance(v, str) or not v:
-            self.helper.connector_logger.info(
+            self.helper.connector_logger.debug(
                 "[PAYLOAD] Skipping observable with missing/invalid type/value",
                 {"type": t, "value_sample": str(v)[:64]},
             )
@@ -290,14 +299,14 @@ class DefenderApiHandler:
         # Map to Defender type; enforce known mapping
         indicator_type = IOC_TYPES.get(t)
         if indicator_type is None:
-            self.helper.connector_logger.info(
+            self.helper.connector_logger.debug(
                 "[PAYLOAD] Skipping unsupported observable type", {"type": t}
             )
             return None
 
         # Enforce writability
         if indicator_type not in CREATABLE_INDICATOR_TYPES:
-            self.helper.connector_logger.info(
+            self.helper.connector_logger.debug(
                 "[PAYLOAD] Skipping non-creatable observable type", {"type": t}
             )
             return None
@@ -305,7 +314,7 @@ class DefenderApiHandler:
         # Clean/normalize indicator value
         cleaned_value = indicator_value(v)
         if cleaned_value is None:
-            self.helper.connector_logger.info(
+            self.helper.connector_logger.debug(
                 "[PAYLOAD] Skipping invalid value", {"value": v, "type": t}
             )
             return None

@@ -25,6 +25,7 @@ services:
       MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_UPDATE_ONLY_OWNED: true                # Manage only owned indicators
       MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_PASSIVE_ONLY: false                    # Emulate-only mode if true
       MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_RBAC_GROUP_NAMES: '["Default Group"]'  # Optional global RBAC group scope
+      MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_MAX_INDICATORS: 15000                  # Global cap; Defender supports up to 15,000 indicators
 
 
       # TAXII configuration (choose one style)

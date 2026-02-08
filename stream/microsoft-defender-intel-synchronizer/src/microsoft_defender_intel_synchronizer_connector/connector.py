@@ -167,10 +167,12 @@ class MicrosoftDefenderIntelSynchronizerConnector:
                     )
 
                 # Atomics
-                # Intentional design: Defender indicators are single-valued.
-                # STIX patterns may contain multiple atoms (AND/OR), but this connector will extract
-                # at most one value per supported observable type, using the first match found.
-                # We use re.search (not findall/finditer) deliberately to enforce that contract.
+                # Intentional design: this connector emits at most one observable per STIX pattern.
+                # STIX patterns may contain multiple atoms (AND/OR) and even multiple supported
+                # observable types, but Microsoft Defender indicators are single-valued.
+                # To enforce that contract, we extract only the first supported observable found
+                # in the pattern and ignore any additional matches.
+                # We use re.search (not findall/finditer) and break on first match deliberately.
                 regexes: list[tuple[str, str]] = [
                     ("url", r"\[url:value\s*=\s*'([^']+)'\]"),
                     ("domain-name", r"\[domain-name:value\s*=\s*'([^']+)'\]"),
@@ -891,14 +893,14 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                             # We also make ownership explicit for auditability and future update logic.
                             if _owned_for_key(cand_key):
                                 # Owned: currently we do not stage updates here; just document the decision.
-                                self.helper.connector_logger.info(
+                                self.helper.connector_logger.debug(
                                     "[Plan] Owned indicator exists; skipping create.",
                                     {"key": cand_key},
                                 )
                             else:
                                 if allow_update_non_owned:
                                     # You *may* later add an explicit update here; for now we just avoid duplicate create.
-                                    self.helper.connector_logger.info(
+                                    self.helper.connector_logger.debug(
                                         "[Plan] Non-owned indicator exists; skipping create "
                                         "(UPDATE_ONLY_OWNED=false) allows updates.",
                                         {"key": cand_key},
@@ -914,7 +916,7 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
 
                         # Tenant-wide already present for this (type,value): it covers all scopes -> no scoped duplicate
                         if tenantwide_key in all_by_key:
-                            self.helper.connector_logger.info(
+                            self.helper.connector_logger.warning(
                                 "[Plan] Tenant-wide indicator exists; skipping scoped duplicate.",
                                 {"type": key_type, "value": raw_value},
                             )

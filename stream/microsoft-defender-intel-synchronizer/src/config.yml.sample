@@ -25,6 +25,7 @@ microsoft_defender_intel_synchronizer:
   update_only_owned: true  # Manage only owned indicators
   passive_only: false      # Emulate-only mode if true
   rbac_group_names: ['Default Group'] # Optional global RBAC group scope
+  max_indicators: 15000    # Defender hard limit is 15000 custom indicators
 
   # TAXII configuration (choose one style)
 

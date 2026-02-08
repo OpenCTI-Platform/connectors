@@ -73,15 +73,25 @@ class ConfigConnector:
             self.load,
             default="https://login.microsoftonline.com",
         )
-        # Max indicators the connector will attempt to manage in Defender.
+        # Max indicators (int) the connector will attempt to manage in Defender.
         # Must not exceed Defender's hard limit (15,000).
-        self.max_indicators = get_config_variable(
+        original_max_indicators = get_config_variable(
             "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_MAX_INDICATORS",
             ["microsoft_defender_intel_synchronizer", "max_indicators"],
             self.load,
             isNumber=True,
             default=15000,
         )
+        # Enforce hard limits to prevent misconfiguration from causing API errors or performance issues.
+        self.max_indicators = max(min(original_max_indicators, 15000), 1)
+        if original_max_indicators != self.max_indicators:
+            self.helper.log_warning(
+                "Configured max_indicators is out of bounds; clamping to allowed range [1, 15000].",
+                {
+                    "max_indicators": original_max_indicators,
+                    "effective_max_indicators": self.max_indicators,
+                },
+            )
         self.base_url = get_config_variable(
             "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_BASE_URL",
             ["microsoft_defender_intel_synchronizer", "base_url"],

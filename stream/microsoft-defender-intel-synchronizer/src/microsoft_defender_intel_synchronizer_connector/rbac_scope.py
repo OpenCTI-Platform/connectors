@@ -2,11 +2,26 @@
 RBAC scope resolution utilities.
 """
 
+from typing import Any, Mapping
+
 from .types import RBACScope
 
 
 class RbacConfigError(RuntimeError):
-    pass
+    """
+    Exception for RBAC config errors, with optional structured metadata.
+    """
+
+    def __init__(self, message: str, metadata: Mapping[str, Any] | None = None):
+        super().__init__(message)
+        self.message = message
+        self.metadata: Mapping[str, Any] = metadata or {}
+
+    def __str__(self) -> str:
+        if self.metadata:
+            keys = ", ".join(sorted(map(str, self.metadata.keys())))
+            return f"{self.message} (metadata keys: {keys})"
+        return self.message
 
 
 def fetch_rbac_name_id_map(
