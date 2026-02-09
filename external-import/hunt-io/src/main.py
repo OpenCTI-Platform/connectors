@@ -1,8 +1,7 @@
 import sys
 import traceback
 
-from external_import_connector import ConnectorHuntIo
-from external_import_connector.settings import ConfigLoader
+from external_import_connector import ConfigLoader, ConnectorHuntIo
 from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
