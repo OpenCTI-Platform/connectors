@@ -2,7 +2,7 @@
 
 import sys
 import time
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Any, Mapping, Optional
 
 import stix2
@@ -125,12 +125,8 @@ class VirustotalLivehuntNotifications:
             last_run = self._get_state_value(
                 current_state,
                 self._STATE_LATEST_RUN_TIMESTAMP,
-                int(
-                    datetime.timestamp(
-                        datetime.fromtimestamp(timestamp)
-                        - timedelta(days=self._LAST_DAYS_TO_LOAD)
-                    )
-                ),
+                timestamp
+                - int(timedelta(days=self._LAST_DAYS_TO_LOAD).total_seconds()),
             )
 
             self.helper.metric.inc("run_count")
