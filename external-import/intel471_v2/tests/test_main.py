@@ -2,9 +2,8 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from pycti import OpenCTIConnectorHelper
-
 from intel471 import ConnectorSettings, Intel471Connector
+from pycti import OpenCTIConnectorHelper
 
 
 @pytest.fixture
