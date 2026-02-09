@@ -28,7 +28,9 @@ class Intel471Connector:
         proxy_url = self.config.intel471.proxy
         ioc_score = self.config.intel471.ioc_score
         backend_name = self.config.intel471.backend
-        client_wrapper: ClientWrapper = get_client(backend_name, api_username, api_key, proxy_url)
+        client_wrapper: ClientWrapper = get_client(
+            backend_name, api_username, api_key, proxy_url
+        )
         for stream_class in client_wrapper.streams:
             if interval := getattr(
                 self.config.intel471, f"interval_{stream_class.group_label}"
@@ -86,7 +88,7 @@ class Intel471Connector:
             stream_obj.run,
             name=stream_obj.__class__.__name__,
             trigger="interval",
-            minutes=interval
+            minutes=interval,
         )
 
     @staticmethod

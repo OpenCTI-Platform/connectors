@@ -15,5 +15,5 @@ __all__ = [
     "Verity471GeopolReportsStream",
     "Verity471InfoReportsStream",
     "Verity471MalwareReportsStream",
-    "Verity471SpotReportsStream"
+    "Verity471SpotReportsStream",
 ]

@@ -14,5 +14,5 @@ __all__ = [
     "Intel471MalwareReportsStream",
     "Intel471ReportsStream",
     "Intel471SpotReportsStream",
-    "Intel471YARAStream"
+    "Intel471YARAStream",
 ]

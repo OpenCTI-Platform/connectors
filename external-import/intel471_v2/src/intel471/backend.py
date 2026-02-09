@@ -1,4 +1,3 @@
-
 from dataclasses import dataclass
 from enum import StrEnum
 from types import ModuleType
@@ -22,6 +21,7 @@ class BackendName(StrEnum):
     TITAN = "titan"
     VERITY471 = "verity471"
 
+
 BackendNameLiteral = Literal["titan", "verity471"]
 
 
@@ -30,22 +30,24 @@ class ClientWrapper:
     backend_name: BackendNameLiteral
     module: ModuleType
     config: titan_client.Configuration | verity471.Configuration
-    stix_mapper_settings_class: type[titan_stix.STIXMapperSettings] | type[verity_stix.STIXMapperSettings]
+    stix_mapper_settings_class: (
+        type[titan_stix.STIXMapperSettings] | type[verity_stix.STIXMapperSettings]
+    )
     empty_bundle_exception: type[Exception]
     streams: tuple[type[Intel471Stream], ...]
 
 
-def get_client(backend_name: BackendNameLiteral, api_username: str, api_key: str, proxy_url: Union[str, None] = None) -> ClientWrapper:
-    config_kwargs = {
-        "username": api_username,
-        "password": api_key
-    }
+def get_client(
+    backend_name: BackendNameLiteral,
+    api_username: str,
+    api_key: str,
+    proxy_url: Union[str, None] = None,
+) -> ClientWrapper:
+    config_kwargs = {"username": api_username, "password": api_key}
     if proxy_url:
         config_kwargs["proxy"] = proxy_url
         if proxy_auth := parse_url(proxy_url).auth:
-            config_kwargs["proxy_headers"] = make_headers(
-                proxy_basic_auth=proxy_auth
-            )
+            config_kwargs["proxy_headers"] = make_headers(proxy_basic_auth=proxy_auth)
 
     if backend_name == BackendName.TITAN:
         return ClientWrapper(
@@ -61,8 +63,8 @@ def get_client(backend_name: BackendNameLiteral, api_username: str, api_key: str
                 titan_streams.Intel471ReportsStream,
                 titan_streams.Intel471BreachAlertsStream,
                 titan_streams.Intel471MalwareReportsStream,
-                titan_streams.Intel471SpotReportsStream
-            )
+                titan_streams.Intel471SpotReportsStream,
+            ),
         )
     if backend_name == BackendName.VERITY471:
         return ClientWrapper(
@@ -80,6 +82,6 @@ def get_client(backend_name: BackendNameLiteral, api_username: str, api_key: str
                 verity471_streams.Verity471InfoReportsStream,
                 verity471_streams.Verity471MalwareReportsStream,
                 verity471_streams.Verity471SpotReportsStream,
-            )
+            ),
         )
     raise UnknownBackendError(f"Unknown backend: {backend_name}")

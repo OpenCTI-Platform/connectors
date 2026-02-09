@@ -7,6 +7,7 @@ class Verity471Stream(Intel471Stream):
     """
     All search endpoints in Verity471 are of 'stream' type.
     """
+
     size: ClassVar[int]
 
     @property

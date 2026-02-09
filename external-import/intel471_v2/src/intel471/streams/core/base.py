@@ -75,11 +75,15 @@ class Intel471Stream(ABC):
     def get_bundles(self) -> Iterator[Bundle]:
         cursor = self._get_cursor()
         offsets = self._get_offsets()
-        with self.client_wrapper.module.ApiClient(self.client_wrapper.config) as api_client:
+        with self.client_wrapper.module.ApiClient(
+            self.client_wrapper.config
+        ) as api_client:
             api_client.user_agent = (
                 f"{api_client.user_agent}; OpenCTI-Connector/{version}"
             )
-            api_instance = getattr(self.client_wrapper.module, self.api_class_name)(api_client)
+            api_instance = getattr(self.client_wrapper.module, self.api_class_name)(
+                api_client
+            )
             while True:
                 kwargs = self._get_api_kwargs(cursor)
                 for offset in offsets:
@@ -87,14 +91,16 @@ class Intel471Stream(ABC):
                         kwargs["offset"] = offset
                     self.helper.log_info(
                         f"{self.__class__.__name__} calls {self.client_wrapper.backend_name} API "
-                        f"with arguments: {str(kwargs)}.")
+                        f"with arguments: {str(kwargs)}."
+                    )
                     api_response = getattr(api_instance, self.api_method_name)(**kwargs)
                     api_payload_objects = (
                         getattr(api_response, self.api_payload_objects_key) or []
                     )
                     self.helper.log_info(
                         f"{self.__class__.__name__} got {len(api_payload_objects)} items "
-                        f"from {self.client_wrapper.backend_name} API.")
+                        f"from {self.client_wrapper.backend_name} API."
+                    )
                     if not api_payload_objects:
                         break
                     cursor = self._get_cursor_value(api_response)
