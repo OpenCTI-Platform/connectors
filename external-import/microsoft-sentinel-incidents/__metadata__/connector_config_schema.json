@@ -77,6 +77,7 @@
     "MICROSOFT_SENTINEL_INCIDENTS_IMPORT_START_DATE": {
       "default": "2020-01-01T00:00:00Z",
       "description": "Import starting date (in YYYY-MM-DD format or YYYY-MM-DDTHH:MM:SSZ format) - used only if connector's state is not set.",
+      "format": "date-time",
       "type": "string"
     },
     "MICROSOFT_SENTINEL_INCIDENTS_FILTER_LABELS": {
