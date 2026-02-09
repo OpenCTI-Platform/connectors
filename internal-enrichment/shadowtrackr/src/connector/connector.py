@@ -54,7 +54,7 @@ class ShadowTrackrConnector:
         self.client = ShadowTrackrClient(
             self.helper,
             base_url=self.config.shadowtrackr.base_url,
-            api_key=self.config.shadowtrackr.api_key,
+            api_key=self.config.shadowtrackr.api_key.get_secret_value(),
         )
         self.converter_to_stix = ConverterToStix(
             self.helper,

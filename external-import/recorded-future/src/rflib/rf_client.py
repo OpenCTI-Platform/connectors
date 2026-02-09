@@ -24,6 +24,7 @@ CONNECT_IP_SEARCH = CONNECT_BASE + "/ip/search"
 CONNECT_DOMAIN_SEARCH = CONNECT_BASE + "/domain/search"
 CONNECT_URL_SEARCH = CONNECT_BASE + "/url/search"
 FUSION_FILE_BASE = CONNECT_BASE + "/fusion/files"
+VULNERABILITY_RISKLIST = CONNECT_BASE + "/vulnerability/risklist"
 THREAT_ACTOR_PATH = "/public/opencti/threat_actors.json"
 INSIKT_SOURCE = "VKz42X"
 THREAT_MAPS_PATH = API_BASE + "/threat/maps"
@@ -38,7 +39,7 @@ ANALYST_NOTES_LOOKUP_ENDPOINT = API_BASE + "/analyst-note/lookup"
 class RFClient:
     """class for talking to the RF API, specifically pulling analyst notes"""
 
-    def __init__(self, token, helper, header="PS_Custom_Script/0.0"):
+    def __init__(self, token, helper, header="OpenCTI"):
         """Inits function"""
         self.token = token
         self.headers = {"X-RFToken": token, "User-Agent": header}
@@ -288,3 +289,26 @@ class RFClient:
                 error_msg, {"error_response": str(error_response["message"])}
             )
             return None
+
+    def check_vul_entitlement(self):
+        try:
+            response = requests.head(VULNERABILITY_RISKLIST, headers=self.headers)
+            response.raise_for_status()
+            self.helper.connector_logger.info(
+                "[CHECK VULN ENTITLEMENT] User has access to the Vulnerability module"
+            )
+            return True
+        except (
+            requests.exceptions.HTTPError,
+            requests.exceptions.RequestException,
+        ) as e:
+            self.helper.connector_logger.info(
+                "[CHECK VULN ENTITLEMENT] User does not have access to the Vulnerability module",
+                {"error": e},
+            )
+        except Exception as err:
+            self.helper.connector_logger.error(
+                "[CHECK VULN ENTITLEMENT] API access validation hit error. Assuming no access to the Vulnerability module",
+                {"error": err},
+            )
+        return False

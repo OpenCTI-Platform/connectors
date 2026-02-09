@@ -1,6 +1,7 @@
+version: '3'
 services:
   redis:
-    image: redis:8.2.1
+    image: redis:8.4.0
     volumes:
       - redisdata4:/data
     networks:
@@ -50,7 +51,7 @@ services:
       - dev-opencti
 
   rabbitmq:
-    image: rabbitmq:4.1-management
+    image: rabbitmq:4.2-management
     environment:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
@@ -64,7 +65,7 @@ services:
       - dev-opencti
 
   opencti:
-    image: opencti/platform:6.9.0
+    image: opencti/platform:6.9.16
     environment:
       - NODE_OPTIONS=--max-old-space-size=8096
       - APP__PORT=8080
@@ -99,10 +100,10 @@ services:
       - rabbitmq
     networks:
       - dev-opencti
-    restart: unless-stopped
+    restart: always
 
   worker:
-    image: opencti/worker:6.9.0
+    image: opencti/worker:6.9.16
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
@@ -114,7 +115,7 @@ services:
       replicas: 1
     networks:
       - dev-opencti
-    restart: unless-stopped
+    restart: always
 
   webservice:
     build:
@@ -148,11 +149,11 @@ services:
       - webservice
     networks:
       - dev-opencti
-    restart: unless-stopped
+    restart: always
 
   # is it really needed ?
   connector-import-file-stix:
-    image: opencti/connector-import-file-stix:6.9.0
+    image: opencti/connector-import-file-stix:6.9.16
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
@@ -162,7 +163,7 @@ services:
       - CONNECTOR_SCOPE=application/json,application/xml
       - CONNECTOR_AUTO=false # Enable/disable auto-import of file
       - CONNECTOR_LOG_LEVEL=debug
-    restart: unless-stopped
+    restart: always
     networks:
       - dev-opencti
 

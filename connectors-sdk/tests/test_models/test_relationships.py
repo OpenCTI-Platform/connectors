@@ -15,6 +15,7 @@ from connectors_sdk.models.octi.relationships import (
 )
 from connectors_sdk.models.relationship import Relationship
 from pydantic import ValidationError
+from stix2.v21 import Relationship as Stix2Relationship
 
 # Add the newly implemented relationship in this list
 IMPLEMENTED_RELATIONSHIPS = [
@@ -114,6 +115,26 @@ def test_relationship_should_not_accept_incoherent_dates(
         assert all(
             w in str(error.value.errors()[0]) for w in ("'stop_time'", "'start_time'")
         )
+
+
+def test_relationship_to_stix2_object_returns_valid_stix_object_with_reference_object(
+    fake_valid_reference,
+):
+    """Test that Relationship to_stix2_object method returns a valid STIX2.1 Note with reference object."""
+    # Given: A valid Relationship instance
+    relationship = Relationship(
+        type="based-on",
+        source=fake_valid_reference,
+        target=fake_valid_reference,
+        description="This is a test relationship.",
+    )
+    # When: calling to_stix2_object method
+    stix2_obj = relationship.to_stix2_object()
+    # Then: A valid STIX2.1 Relationship is returned
+    # source_ref and target_ref should be a Reference model id
+    assert isinstance(stix2_obj, Stix2Relationship)
+    assert stix2_obj.source_ref == fake_valid_reference.id
+    assert stix2_obj.target_ref == fake_valid_reference.id
 
 
 ### PIPE SYNTAX

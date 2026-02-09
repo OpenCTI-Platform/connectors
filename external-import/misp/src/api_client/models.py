@@ -1,11 +1,24 @@
 from datetime import datetime
 from enum import StrEnum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class AnalysisLevelId(StrEnum):
+class IntCoercingStrEnum(StrEnum):
+    @classmethod
+    def _missing_(cls, value):
+        """Try to coerce int to str before failing.
+
+        :param value: Value passed to enum constructor.
+        :return: Enum member if coercion succeeds.
+        """
+        if isinstance(value, int):
+            return cls(str(value))
+        return super()._missing_(value)
+
+
+class AnalysisLevelId(IntCoercingStrEnum):
     level_0 = "0"
     level_1 = "1"
     level_2 = "2"
@@ -221,7 +234,7 @@ class AttributeCategory(StrEnum):
     Other = "Other"
 
 
-class DistributionLevelId(StrEnum):
+class DistributionLevelId(IntCoercingStrEnum):
     level_0 = "0"
     level_1 = "1"
     level_2 = "2"
@@ -246,7 +259,7 @@ class Formula(StrEnum):
     Polynomial = "Polynomial"
 
 
-class ThreatLevelId(StrEnum):
+class ThreatLevelId(IntCoercingStrEnum):
     level_1 = "1"
     level_2 = "2"
     level_3 = "3"
@@ -259,15 +272,16 @@ class MISPBaseModel(BaseModel):
         frozen=True,
         arbitrary_types_allowed=True,
         use_enum_values=True,
+        coerce_numbers_to_str=True,
     )
 
 
 class DecayingModelParameters(MISPBaseModel):
-    lifetime: Optional[float] = Field(default=None)
-    decay_speed: Optional[float] = Field(default=None)
-    threshold: Optional[float] = Field(default=None)
-    default_base_score: Optional[float] = Field(default=None)
-    base_score_config: Optional[Dict[str, Any]] = Field(
+    lifetime: float | None = Field(default=None)
+    decay_speed: float | None = Field(default=None)
+    threshold: float | None = Field(default=None)
+    default_base_score: float | None = Field(default=None)
+    base_score_config: dict[str, Any] | None = Field(
         default=None,
         example={
             "estimative-language:confidence-in-analytic-judgment": 0.25,
@@ -279,66 +293,64 @@ class DecayingModelParameters(MISPBaseModel):
 
 
 class ExtendedDecayingModel(MISPBaseModel):
-    id: Optional[str] = Field(default=None)
-    uuid: Optional[str] = Field(default=None)
-    name: Optional[str] = Field(default=None)
-    description: Optional[str] = Field(None)
-    parameters: Optional[DecayingModelParameters] = Field(default=None)
-    attribute_types: Optional[List[AttributeType]] = Field(default=None)
-    org_id: Optional[str] = Field(default=None)
-    enabled: Optional[bool] = Field(default=None)
-    all_orgs: Optional[bool] = Field(default=None)
-    ref: Optional[List[str]] = Field(default=None)
-    formula: Optional[Formula] = Field(default=None)
-    version: Optional[str] = Field(default=None)
-    default: Optional[bool] = Field(default=None)
-    isEditable: Optional[bool] = Field(default=None)
+    id: str | None = Field(default=None)
+    uuid: str | None = Field(default=None)
+    name: str | None = Field(default=None)
+    description: str | None = Field(None)
+    parameters: DecayingModelParameters | None = Field(default=None)
+    attribute_types: list[AttributeType] | None = Field(default=None)
+    org_id: str | None = Field(default=None)
+    enabled: bool | None = Field(default=None)
+    all_orgs: bool | None = Field(default=None)
+    ref: list[str] | None = Field(default=None)
+    formula: Formula | None = Field(default=None)
+    version: str | None = Field(default=None)
+    default: bool | None = Field(default=None)
+    isEditable: bool | None = Field(default=None)
 
 
 class DecayScore(MISPBaseModel):
-    score: Optional[float] = Field(default=None)
-    base_score: Optional[float] = Field(default=None)
-    decayed: Optional[bool] = Field(default=None)
-    DecayingModel: Optional[ExtendedDecayingModel] = Field(default=None)
+    score: float | None = Field(default=None)
+    base_score: float | None = Field(default=None)
+    decayed: bool | None = Field(default=None)
+    DecayingModel: ExtendedDecayingModel | None = Field(default=None)
 
 
 class ExtendedAttributeItem(MISPBaseModel):
-    id: Optional[str] = Field(default=None)
-    event_id: Optional[str] = Field(default=None)
-    object_id: Optional[str] = Field(default=None)
-    object_relation: Optional[str] = Field(default=None)
-    category: Optional[AttributeCategory] = Field(default=None)
-    type: Optional[AttributeType] = Field(default=None)
-    value: Optional[str] = Field(default=None)
-    to_ids: Optional[bool] = Field(default=True)
-    uuid: Optional[str] = Field(default=None)
-    timestamp: Optional[str] = Field(default="0")
-    distribution: Optional[DistributionLevelId] = Field(
-        default=None, coerce_numbers_to_str=True
-    )
-    sharing_group_id: Optional[str] = Field(default=None)
-    comment: Optional[str] = Field(default=None)
-    deleted: Optional[bool] = Field(default=False)
-    disable_correlation: Optional[bool] = Field(default=False)
-    first_seen: Optional[Union[str, datetime]] = Field(default=None)
-    last_seen: Optional[Union[str, datetime]] = Field(default=None)
-    Tag: Optional[List["TagItem"]] = Field(default=None)
-    Galaxy: Optional[List["GalaxyItem"]] = Field(default=None)
-    data: Optional[str] = Field(default=None)
-    event_uuid: Optional[str] = Field(default=None)
-    decay_score: Optional[List[DecayScore]] = Field(default=None)
+    id: str | None = Field(default=None)
+    event_id: str | None = Field(default=None)
+    object_id: str | None = Field(default=None)
+    object_relation: str | None = Field(default=None)
+    category: AttributeCategory | None = Field(default=None)
+    type: AttributeType | None = Field(default=None)
+    value: str | None = Field(default=None)
+    to_ids: bool | None = Field(default=True)
+    uuid: str | None = Field(default=None)
+    timestamp: str | None = Field(default="0")
+    distribution: DistributionLevelId | None = Field(default=None)
+    sharing_group_id: str | None = Field(default=None)
+    comment: str | None = Field(default=None)
+    deleted: bool | None = Field(default=False)
+    disable_correlation: bool | None = Field(default=False)
+    first_seen: str | datetime | None = Field(default=None)
+    last_seen: str | datetime | None = Field(default=None)
+    Tag: list["TagItem"] | None = Field(default=None)
+    Galaxy: list["GalaxyItem"] | None = Field(default=None)
+    data: str | None = Field(default=None)
+    event_uuid: str | None = Field(default=None)
+    decay_score: list[DecayScore] | None = Field(default=None)
 
 
 class GalaxyItem(MISPBaseModel):
-    id: Optional[str] = Field(default=None)
-    uuid: Optional[str] = Field(default=None)
-    name: Optional[str] = Field(default=None)
-    type: Optional[str] = Field(default=None)
-    description: Optional[str] = Field(default=None)
-    version: Optional[str] = Field(default=None)
-    icon: Optional[str] = Field(default=None)
-    namespace: Optional[str] = Field(default=None)
-    kill_chain_order: Optional[Dict[str, Any]] = Field(
+    id: str | None = Field(default=None)
+    uuid: str | None = Field(default=None)
+    name: str | None = Field(default=None)
+    type: str | None = Field(default=None)
+    description: str | None = Field(default=None)
+    version: str | None = Field(default=None)
+    icon: str | None = Field(default=None)
+    namespace: str | None = Field(default=None)
+    kill_chain_order: dict[str, Any] | None = Field(
         default=None,
         example={
             "fraud-tactics": [
@@ -351,154 +363,142 @@ class GalaxyItem(MISPBaseModel):
             ]
         },
     )
-    GalaxyCluster: Optional[List[Dict[str, Any]]] = Field(default=None)
+    GalaxyCluster: list[dict[str, Any]] | None = Field(default=None)
 
 
 class ObjectItemObjectReference(MISPBaseModel):
-    id: Optional[str] = Field(default=None)
-    uuid: Optional[str] = Field(default=None)
-    timestamp: Optional[str] = Field(default=None)
-    object_id: Optional[str] = Field(default=None)
-    referenced_id: Optional[str] = Field(default=None)
-    referenced_uuid: Optional[str] = Field(default=None)
-    reference_type: Optional[str] = Field(default=None)
-    relationship_type: Optional[str] = Field(default=None)
-    comment: Optional[str] = Field(default=None)
-    deleted: Optional[bool] = Field(default=None)
-    event_id: Optional[str] = Field(default=None)
-    source_uuid: Optional[str] = Field(default=None)
-    Attribute: Optional[ExtendedAttributeItem] = Field(default=None)
+    id: str | None = Field(default=None)
+    uuid: str | None = Field(default=None)
+    timestamp: str | None = Field(default=None)
+    object_id: str | None = Field(default=None)
+    referenced_id: str | None = Field(default=None)
+    referenced_uuid: str | None = Field(default=None)
+    reference_type: str | None = Field(default=None)
+    relationship_type: str | None = Field(default=None)
+    comment: str | None = Field(default=None)
+    deleted: bool | None = Field(default=None)
+    event_id: str | None = Field(default=None)
+    source_uuid: str | None = Field(default=None)
+    Attribute: ExtendedAttributeItem | None = Field(default=None)
 
 
 class ObjectItem(MISPBaseModel):
-    id: Optional[str] = Field(default=None)
-    name: Optional[str] = Field(default=None)
-    meta_category: Optional[str] = Field(default=None, alias="meta-category")
-    description: Optional[str] = Field(default=None)
-    template_uuid: Optional[str] = Field(default=None)
-    template_version: Optional[str] = Field(default=None)
-    event_id: Optional[str] = Field(default=None)
-    uuid: Optional[str] = Field(default=None)
-    timestamp: Optional[str] = Field(default="0")
-    distribution: Optional[DistributionLevelId] = Field(
-        default=None, coerce_numbers_to_str=True
-    )
-    sharing_group_id: Optional[str] = Field(default=None)
-    comment: Optional[str] = Field(default=None)
-    deleted: Optional[bool] = Field(default=None)
-    first_seen: Optional[Union[str, datetime]] = Field(default=None)
-    last_seen: Optional[Union[str, datetime]] = Field(default=None)
-    Attribute: Optional[List[ExtendedAttributeItem]] = Field(default=None)
-    ObjectReference: Optional[List[ObjectItemObjectReference]] = Field(default=None)
+    id: str | None = Field(default=None)
+    name: str | None = Field(default=None)
+    meta_category: str | None = Field(default=None, alias="meta-category")
+    description: str | None = Field(default=None)
+    template_uuid: str | None = Field(default=None)
+    template_version: str | None = Field(default=None)
+    event_id: str | None = Field(default=None)
+    uuid: str | None = Field(default=None)
+    timestamp: str | None = Field(default="0")
+    distribution: DistributionLevelId | None = Field(default=None)
+    sharing_group_id: str | None = Field(default=None)
+    comment: str | None = Field(default=None)
+    deleted: bool | None = Field(default=None)
+    first_seen: str | datetime | None = Field(default=None)
+    last_seen: str | datetime | None = Field(default=None)
+    Attribute: list[ExtendedAttributeItem] | None = Field(default=None)
+    ObjectReference: list[ObjectItemObjectReference] | None = Field(default=None)
 
 
 class TagItem(MISPBaseModel):
-    id: Optional[str] = Field(default=None)
-    name: Optional[str] = Field(default=None)
-    colour: Optional[str] = Field(default=None)
-    exportable: Optional[bool] = Field(default=True)
-    org_id: Optional[str] = Field(default=None)
-    user_id: Optional[str] = Field(default=None)
-    hide_tag: Optional[bool] = Field(default=False)
-    numerical_value: Optional[str] = Field(default=None)
-    is_galaxy: Optional[bool] = Field(default=True)
-    is_custom_galaxy: Optional[bool] = Field(default=True)
-    inherited: Optional[bool] = Field(default=True)
+    id: str | None = Field(default=None)
+    name: str | None = Field(default=None)
+    colour: str | None = Field(default=None)
+    exportable: bool | None = Field(default=True)
+    org_id: str | None = Field(default=None)
+    user_id: str | None = Field(default=None)
+    hide_tag: bool | None = Field(default=False)
+    numerical_value: str | None = Field(default=None)
+    is_galaxy: bool | None = Field(default=True)
+    is_custom_galaxy: bool | None = Field(default=True)
+    inherited: bool | None = Field(default=True)
 
 
 class EventFeed(MISPBaseModel):
-    id: Optional[str] = Field(default=None)
-    name: Optional[str] = Field(default=None)
-    provider: Optional[str] = Field(default=None)
-    url: Optional[str] = Field(default=None)
-    rules: Optional[str] = Field(default=None)
-    enabled: Optional[bool] = Field(default=None)
-    distribution: Optional[DistributionLevelId] = Field(
-        default=None, coerce_numbers_to_str=True
-    )
-    sharing_group_id: Optional[str] = Field(default=None)
-    tag_id: Optional[str] = Field(default=None)
-    default: Optional[bool] = Field(default=None)
-    source_format: Optional[FeedSourceFormat] = Field(default=None)
-    fixed_event: Optional[bool] = Field(default=None)
-    delta_merge: Optional[bool] = Field(default=None)
-    event_id: Optional[str] = Field(default=None)
-    publish: Optional[bool] = Field(default=False)
-    override_ids: Optional[bool] = Field(default=None)
-    settings: Optional[str] = Field(default=None)
-    input_source: Optional[FeedInputSource] = Field(default=None)
-    delete_local_file: Optional[bool] = Field(default=None)
-    lookup_visible: Optional[bool] = Field(default=None)
-    headers: Optional[str] = Field(default=None)
-    caching_enabled: Optional[bool] = Field(default=None)
-    force_to_ids: Optional[bool] = Field(default=None)
-    orgc_id: Optional[str] = Field(default=None)
-    cache_timestamp: Optional[str | bool] = Field(default=None)
+    id: str | None = Field(default=None)
+    name: str | None = Field(default=None)
+    provider: str | None = Field(default=None)
+    url: str | None = Field(default=None)
+    rules: str | None = Field(default=None)
+    enabled: bool | None = Field(default=None)
+    distribution: DistributionLevelId | None = Field(default=None)
+    sharing_group_id: str | None = Field(default=None)
+    tag_id: str | None = Field(default=None)
+    default: bool | None = Field(default=None)
+    source_format: FeedSourceFormat | None = Field(default=None)
+    fixed_event: bool | None = Field(default=None)
+    delta_merge: bool | None = Field(default=None)
+    event_id: str | None = Field(default=None)
+    publish: bool | None = Field(default=False)
+    override_ids: bool | None = Field(default=None)
+    settings: str | None = Field(default=None)
+    input_source: FeedInputSource | None = Field(default=None)
+    delete_local_file: bool | None = Field(default=None)
+    lookup_visible: bool | None = Field(default=None)
+    headers: str | None = Field(default=None)
+    caching_enabled: bool | None = Field(default=None)
+    force_to_ids: bool | None = Field(default=None)
+    orgc_id: str | None = Field(default=None)
+    cache_timestamp: str | bool | None = Field(default=None)
 
 
 class EventOrganisation(MISPBaseModel):
-    id: Optional[str] = Field(default=None)
-    name: Optional[str] = Field(default=None)
-    uuid: Optional[str] = Field(default=None)
+    id: str | None = Field(default=None)
+    name: str | None = Field(default=None)
+    uuid: str | None = Field(default=None)
 
 
 class EventReportItem(MISPBaseModel):
-    id: Optional[str] = Field(default=None)
-    uuid: Optional[str] = Field(default=None)
-    event_id: Optional[str] = Field(default=None)
-    name: Optional[str] = Field(default=None)
-    content: Optional[str] = Field(default=None)
-    distribution: Optional[DistributionLevelId] = Field(
-        default=None, coerce_numbers_to_str=True
-    )
-    sharing_group_id: Optional[str] = Field(default=None)
-    timestamp: Optional[str] = Field(default="0")
-    deleted: Optional[bool] = Field(default=False)
+    id: str | None = Field(default=None)
+    uuid: str | None = Field(default=None)
+    event_id: str | None = Field(default=None)
+    name: str | None = Field(default=None)
+    content: str | None = Field(default=None)
+    distribution: DistributionLevelId | None = Field(default=None)
+    sharing_group_id: str | None = Field(default=None)
+    timestamp: str | None = Field(default="0")
+    deleted: bool | None = Field(default=False)
 
 
 class ExtendedEvent(MISPBaseModel):
-    id: Optional[str] = Field(default=None)
-    org_id: Optional[str] = Field(default=None)
-    distribution: Optional[DistributionLevelId] = Field(
-        default=None, coerce_numbers_to_str=True
-    )
-    info: Optional[str] = Field(default=None)
-    orgc_id: Optional[str] = Field(default=None)
-    orgc_uuid: Optional[str] = Field(default=None)  # from SlimEvent
-    uuid: Optional[str] = Field(default=None)
-    date: Optional[str] = Field(default=None, example="1991-01-15")
-    published: Optional[bool] = Field(default=False)
-    analysis: Optional[AnalysisLevelId] = Field(
-        default=None, coerce_numbers_to_str=True
-    )
-    attribute_count: Optional[str] = Field(default=None)
-    timestamp: Optional[str] = Field(default="0")
-    sharing_group_id: Optional[str] = Field(default=None)
-    proposal_email_lock: Optional[bool] = Field(default=None)
-    locked: Optional[bool] = Field(default=None)
-    threat_level_id: Optional[ThreatLevelId] = Field(
-        default=None, coerce_numbers_to_str=True
-    )
-    publish_timestamp: Optional[str] = Field(default="0")
-    sighting_timestamp: Optional[str] = Field(default="0")
-    disable_correlation: Optional[bool] = Field(default=False)
-    extends_uuid: Optional[str] = Field(default=None)
-    event_creator_email: Optional[str] = Field(default=None)
-    Feed: Optional[EventFeed] = Field(default=None)
-    Org: Optional[EventOrganisation] = Field(default=None)
-    Orgc: Optional[EventOrganisation] = Field(default=None)
-    Attribute: Optional[List[ExtendedAttributeItem]] = Field(default=None)
-    ShadowAttribute: Optional[List[ExtendedAttributeItem]] = Field(default=None)
-    RelatedEvent: Optional[List["RelatedEventItem"]] = Field(default=None)
-    Galaxy: Optional[List[GalaxyItem]] = Field(default=None)
-    Object: Optional[List[ObjectItem]] = Field(default=None)
-    EventReport: Optional[List[EventReportItem]] = Field(default=None)
-    Tag: Optional[List[TagItem]] = Field(default=None)
+    id: str | None = Field(default=None)
+    org_id: str | None = Field(default=None)
+    distribution: DistributionLevelId | None = Field(default=None)
+    info: str | None = Field(default=None)
+    orgc_id: str | None = Field(default=None)
+    orgc_uuid: str | None = Field(default=None)  # from SlimEvent
+    uuid: str | None = Field(default=None)
+    date: str | None = Field(default=None, example="1991-01-15")
+    published: bool | None = Field(default=False)
+    analysis: AnalysisLevelId | None = Field(default=None)
+    attribute_count: str | None = Field(default=None)
+    timestamp: str | None = Field(default="0")
+    sharing_group_id: str | None = Field(default=None)
+    proposal_email_lock: bool | None = Field(default=None)
+    locked: bool | None = Field(default=None)
+    threat_level_id: ThreatLevelId | None = Field(default=None)
+    publish_timestamp: str | None = Field(default="0")
+    sighting_timestamp: str | None = Field(default="0")
+    disable_correlation: bool | None = Field(default=False)
+    extends_uuid: str | None = Field(default=None)
+    event_creator_email: str | None = Field(default=None)
+    Feed: EventFeed | None = Field(default=None)
+    Org: EventOrganisation | None = Field(default=None)
+    Orgc: EventOrganisation | None = Field(default=None)
+    Attribute: list[ExtendedAttributeItem] | None = Field(default=None)
+    ShadowAttribute: list[ExtendedAttributeItem] | None = Field(default=None)
+    RelatedEvent: list["RelatedEventItem"] | None = Field(default=None)
+    Galaxy: list[GalaxyItem] | None = Field(default=None)
+    Object: list[ObjectItem] | None = Field(default=None)
+    EventReport: list[EventReportItem] | None = Field(default=None)
+    Tag: list[TagItem] | None = Field(default=None)
 
 
 class RelatedEventItem(MISPBaseModel):
-    Event: Optional[ExtendedEvent] = Field(default=None)
+    Event: ExtendedEvent | None = Field(default=None)
 
 
 class EventRestSearchListItem(MISPBaseModel):
-    Event: Optional[ExtendedEvent] = Field(default=None)
+    Event: ExtendedEvent | None = Field(default=None)

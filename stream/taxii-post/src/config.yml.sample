@@ -1,11 +1,11 @@
 opencti:
-  url: 'http://localhost:8080'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
-  id: 'ChangeMe'
   type: 'STREAM'
-  live_stream_id: 'live' # ID of the live stream created in the OpenCTI UI
+  id: 'ChangeMe'
+  live_stream_id: 'changeme' # ID of the live stream created in the OpenCTI UI
   live_stream_listen_delete: true
   live_stream_no_dependencies: true
   name: 'TAXII POST'

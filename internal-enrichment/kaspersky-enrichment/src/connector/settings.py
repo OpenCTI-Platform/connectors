@@ -1,5 +1,6 @@
-from typing import Annotated
+from typing import Annotated, Literal
 
+from connector.constants import SECTIONS
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
@@ -13,6 +14,7 @@ from pydantic import (
     PlainSerializer,
     SecretStr,
     SerializationInfo,
+    ValidationInfo,
     field_validator,
 )
 
@@ -27,7 +29,7 @@ def parse_string_to_dict(value: str) -> dict:
     return value_dict
 
 
-def pycti_list_serializer(v: dict, info: SerializationInfo) -> str:
+def pycti_dict_serializer(v: dict, info: SerializationInfo) -> str | dict:
     """Serialize a dict as a comma-separated string when the Pydantic
     serialization context requests "pycti" mode; otherwise, return the list
     unchanged.
@@ -40,7 +42,7 @@ def pycti_list_serializer(v: dict, info: SerializationInfo) -> str:
 DictFromString = Annotated[
     str,
     AfterValidator(parse_string_to_dict),
-    PlainSerializer(pycti_list_serializer, when_used="json"),
+    PlainSerializer(pycti_dict_serializer, when_used="json"),
 ]
 
 
@@ -58,7 +60,7 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         description="Name of the connector.",
     )
     scope: ListFromString = Field(
-        default=["StixFile"],
+        default=["StixFile", "IPv4-Addr", "Domain-Name", "Hostname", "Url"],
         description="The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
     )
     auto: bool = Field(
@@ -82,6 +84,18 @@ class KasperskyConfig(BaseConfigModel):
         description="API key used to authenticate requests to the Kaspersky service.",
     )
 
+    max_tlp: Literal[
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED",
+    ] = Field(
+        description="Max TLP marking of the entity to enrich (inclusive).",
+        default="TLP:AMBER",
+    )
+
     zone_octi_score_mapping: DictFromString = Field(
         default="red:100,orange:80,yellow:60,gray:20,green:0",
         description="Zone to score mapping. Only the numerical value need to be changed if necessary. "
@@ -90,38 +104,50 @@ class KasperskyConfig(BaseConfigModel):
 
     file_sections: str = Field(
         default="LicenseInfo,Zone,FileGeneralInfo",
-        min_length=1,  # Prevent empty string
         description="Sections wanted to investigate for the requested hash. "
         "LicenseInfo, Zone and FileGeneralInfo are always set, can't be disabled. "
         "Only DetectionsInfo, FileDownloadedFromUrls, Industries and FileNames are currently supported",
     )
+    ipv4_sections: str = Field(
+        default="LicenseInfo,Zone,IpGeneralInfo",
+        description="Sections wanted to investigate for the requested IPV4. "
+        "LicenseInfo, Zone and IpGeneralInfo are always set, can't be disabled. "
+        "Only FilesDownloadedFromIp, HostedUrls, IpWhoIs, IpDnsResolutions and Industries are currently supported",
+    )
+    domain_sections: str = Field(
+        default="LicenseInfo,Zone,DomainGeneralInfo",
+        description="Sections wanted to investigate for the requested domain/hostname. "
+        "LicenseInfo, Zone and DomainGeneralInfo are always set, can't be disabled. "
+        "Only DomainDnsResolutions, FilesDownloaded, FilesAccessed and Industries are currently supported",
+    )
+    url_sections: str = Field(
+        default="LicenseInfo,Zone,UrlGeneralInfo",
+        description="Sections wanted to investigate for the requested URL. "
+        "LicenseInfo, Zone and UrlGeneralInfo are always set, can't be disabled. "
+        "Only FilesDownloaded, FilesAccessed and Industries are currently supported",
+    )
 
     @field_validator(
         "file_sections",
+        "ipv4_sections",
+        "domain_sections",
+        "url_sections",
         mode="before",
     )
     @classmethod
-    def _validate_value(cls, value: str) -> str:
-        """Validate the value of the file sections."""
+    def _validate_value(cls, value: str, info: ValidationInfo) -> str:
+        """Validate the value of sections."""
         sections = value.replace(" ", "").split(",")
+        field_constants = SECTIONS[info.field_name]
+
         for section in sections:
-            if section not in [
-                "LicenseInfo",
-                "Zone",
-                "FileGeneralInfo",
-                "DetectionsInfo",
-                "FileDownloadedFromUrls",
-                "Industries",
-                "FileNames",
-            ]:
+            if section not in field_constants["supported_sections"]:
                 raise ValueError("Invalid file sections")
-        for mandatory_section in [
-            "LicenseInfo",
-            "Zone",
-            "FileGeneralInfo",
-        ]:
+
+        for mandatory_section in field_constants["mandatories_sections"]:
             if mandatory_section not in value:
                 value += "," + mandatory_section
+
         return value
 
 

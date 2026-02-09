@@ -1,17 +1,16 @@
-version: "3"
+version: '3'
 services:
   connector-recorded-future:
     image: opencti/connector-recorded-future:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=CHANGME
-      - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=Recorded Future
       - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,vulnerability,domain,url,StixFile
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_DURATION_PERIOD=PT24H # In ISO8601 Format starting with "P" for Period ex: "PT24H" = Period time of 24H
-      - RECORDED_FUTURE_TOKEN=CHANGEME #required
+      - RECORDED_FUTURE_TOKEN=ChangeMe #required
       - RECORDED_FUTURE_INITIAL_LOOKBACK=240 #required
       - RECORDED_FUTURE_PULL_ANALYST_NOTES=True
       - RECORDED_FUTURE_LAST_PUBLISHED_NOTES=24 #required, in hours
@@ -33,8 +32,10 @@ services:
       - ALERT_DEFAULT_OPENCTI_SEVERITY=low # OPTIONAL - default: low
       - ALERT_PRIORITY_ALERTS_ONLY=False # OPTIONAL - default: False
       - PLAYBOOK_ALERT_ENABLE=False # REQUIRED
+      - PLAYBOOK_ALERT_CATEGORIES=domain_abuse,identity_novel_exposures,code_repo_leakage # REQUIRED
       - PLAYBOOK_ALERT_SEVERITY_THRESHOLD_DOMAIN_ABUSE=Informational # OPTIONAL - default: Informational
       - PLAYBOOK_ALERT_SEVERITY_THRESHOLD_IDENTITY_NOVEL_EXPOSURES=Informational # OPTIONAL - default: Informational
       - PLAYBOOK_ALERT_SEVERITY_THRESHOLD_CODE_REPO_LEAKAGE=Informational # OPTIONAL - default: Informational
+      - PLAYBOOK_ALERT_SEVERITY_THRESHOLD_CYBER_VULNERABILITIES=Informational # OPTIONAL - default: Informational
       - PLAYBOOK_ALERT_DEBUG=False # OPTIONAL - default: False
     restart: always

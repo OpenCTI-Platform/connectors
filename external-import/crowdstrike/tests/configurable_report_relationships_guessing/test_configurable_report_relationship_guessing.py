@@ -53,6 +53,7 @@ def crowdstrike_config_with_guessing_disabled() -> dict[str, str]:
         "CROWDSTRIKE_CLIENT_ID": f"{uuid4()}",
         "CROWDSTRIKE_CLIENT_SECRET": f"{uuid4()}",
         "CROWDSTRIKE_REPORT_GUESS_RELATIONS": "False",
+        "CONNECTOR_LOG_LEVEL": "info",
     }
 
 
@@ -69,6 +70,7 @@ def crowdstrike_config_with_guessing_enabled() -> dict[str, str]:
         "CROWDSTRIKE_CLIENT_ID": f"{uuid4()}",
         "CROWDSTRIKE_CLIENT_SECRET": f"{uuid4()}",
         "CROWDSTRIKE_REPORT_GUESS_RELATIONS": "True",
+        "CONNECTOR_LOG_LEVEL": "info",
     }
 
 
@@ -211,6 +213,8 @@ def _when_system_imports_report_from_crowdstrike_api(
         report_type="threat-report",
         confidence_level=80,
         related_indicators=related_indicators,
+        malwares_from_field=None,
+        scopes={"actor", "malware", "target"},
         report_guess_relations=config.crowdstrike.report_guess_relations,
     )
 

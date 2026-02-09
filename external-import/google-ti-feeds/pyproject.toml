@@ -18,16 +18,16 @@ classifiers = [
 requires-python = ">=3.11, <3.13"
 
 dependencies = [
-    "pycti==6.9.0",
+    "pycti==6.9.16",
     "aiohttp~=3.13.2",
-    "Markdown~=3.9.0",
+    "Markdown~=3.10.0",
     "markdownify~=1.2.0",
     "pydantic~=2.11.7",
     "pydantic_settings~=2.11.0",
     "python-dotenv~=1.1.1",
     "stix2~=3.0.1",
     "dotenv~= 0.9.9",
-    "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk",
+    "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.9.16#subdirectory=connectors-sdk",
 ]
 
 [project.optional-dependencies]
@@ -42,8 +42,8 @@ dev = [
     "black ~=25.1",          # Code formatter
     "isort ~=7.0.0",         # Import sorter
     "ruff ~=0.14.2",         # linter
-    "mypy ~=1.18.2",         # Type validator
-    "pip_audit ~=2.9.0",     # Security checker
+    "mypy ~=1.19.1",         # Type validator
+    "pip_audit ~=2.10.0",     # Security checker
     "pre-commit ~=4.3.0",    # Git hooks
     "flake8 ~=7.3.0",        # Linter
     "types-PyYAML ~=6.0.12", # stubs for untyped module

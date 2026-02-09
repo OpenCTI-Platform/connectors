@@ -4,7 +4,7 @@ import random
 import re
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Mapping, Optional
 
 import mwdblib
@@ -22,7 +22,7 @@ from pycti import (
 from stix2 import URL, Bundle, File, IPv4Address, Relationship
 from stix2.v21.vocab import HASHING_ALGORITHM_SHA_256
 
-__version__ = "6.9.0"
+__version__ = "6.9.16"
 BANNER = f"""
 
  ██████   ██████ █████   ███   █████ ██████████   ███████████
@@ -123,7 +123,7 @@ class MWDB:
         )
 
         # Verify setting of the starting date in the config
-        # ELSE retrieve le last month.
+        # ELSE retrieve the last month.
         self.start_date = get_config_variable(
             "MWDB_START_DATE", ["mwdb", "start_date"], config, None
         )
@@ -355,7 +355,7 @@ class MWDB:
         return attributes
 
     def process_extratag(self, attributes_extra, sample):
-        relatsions = []
+        relations = []
         for taglabel in attributes_extra:
             if self.tag_filter:
                 if re.match(self.tag_filter, taglabel.lower()):
@@ -379,7 +379,7 @@ class MWDB:
                     relationship_type="related-to",
                     created_by_ref=self.identity["standard_id"],
                 )
-                relatsions.append(relationship)
+                relations.append(relationship)
 
             # first search in unstructured tag malware
             fullsearch = self.helper.api.malware.read(
@@ -408,7 +408,7 @@ class MWDB:
                             relationship_type="related-to",
                             created_by_ref=self.identity["standard_id"],
                         )
-                        relatsions.append(relationship)
+                        relations.append(relationship)
 
             # second search for intrusion set like APT
             fullsearch = self.helper.api.intrusion_set.read(
@@ -438,9 +438,9 @@ class MWDB:
                             relationship_type="related-to",
                             created_by_ref=self.identity["standard_id"],
                         )
-                        relatsions.append(relationship)
+                        relations.append(relationship)
                         # create relation and continue related-to
-        return relatsions
+        return relations
 
     def process_virus(self, malware):
         bundle_objects = []
@@ -480,7 +480,7 @@ class MWDB:
             description = "A potential harming artifact"
 
         if str(self.create_indicators).capitalize() == "True":
-            pattern = "[file:hashes.sha256 = '" + malware.sha256 + "']"
+            pattern = "[file:hashes.'SHA-256' = '" + malware.sha256 + "']"
 
             if str(self.create_indicators).capitalize() == "True":
                 virus["indicator"] = stix2.Indicator(
@@ -540,15 +540,15 @@ class MWDB:
             ):
                 relationshipmal = Relationship(
                     id=StixCoreRelationship.generate_id(
-                        "related-to",
+                        "indicates",
                         virus["indicator"]["id"],
                         virus["malware_entity"]["id"],
                     ),
                     source_ref=virus["indicator"]["id"],
                     target_ref=virus["malware_entity"]["id"],
-                    description="An hash associatated with a malware "
+                    description="A hash associated with malware "
                     + str(virus["mal_tag"]["family"][0]).capitalize(),
-                    relationship_type="based-on",
+                    relationship_type="indicates",
                     created_by_ref=self.identity["standard_id"],
                     confidence=self.score,
                 )
@@ -584,21 +584,19 @@ class MWDB:
                     work_id=self.workid,
                 )
             except KeyError as e:
-                print(f"KeyError encountered: {e}. Skipping this virus entry.")
                 self.helper.log_error(
                     f"KeyError encountered: {e}. Skipping this virus entry."
                 )
             except Exception as e:
-                print(f"An unexpected error occurred: {e}. Skipping this virus entry.")
                 self.helper.log_error(
-                    f"KeyError encountered: {e}. Skipping this virus entry."
+                    f"Unexpected error: {e}. Skipping this virus entry."
                 )
 
     def start_up(self):
         while True:
             try:
                 timestamp = int(time.time())
-                now = datetime.utcfromtimestamp(timestamp)
+                now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
                 friendly_name = "MWDB DEV run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
                 self.workid = self.helper.api.work.initiate_work(
                     self.helper.connect_id, friendly_name
@@ -608,7 +606,7 @@ class MWDB:
                     last_run = current_state["last_run"]
                     self.helper.log_info(
                         "Connector last run: "
-                        + datetime.utcfromtimestamp(last_run).strftime(
+                        + datetime.fromtimestamp(last_run, tz=timezone.utc).strftime(
                             "%Y-%m-%d %H:%M:%S"
                         )
                     )
@@ -629,7 +627,9 @@ class MWDB:
                         current_date = last_run
 
                     querysearch = "upload_time:[{date} TO *]".format(
-                        date=datetime.fromtimestamp(current_date).strftime("%Y-%m-%d")
+                        date=datetime.fromtimestamp(
+                            current_date, tz=timezone.utc
+                        ).strftime("%Y-%m-%d")
                     )
                     try:
                         malware_files = self.mwdb.search_files(
@@ -637,7 +637,7 @@ class MWDB:
                         )
                         for malware_file in malware_files:
                             self.process_virus(malware_file)
-                        date = datetime.utcnow()
+                        date = datetime.now(timezone.utc)
                         utc_time = calendar.timegm(date.utctimetuple())
                         state = {"last_run": utc_time}
                         self.helper.set_state(state)
@@ -662,15 +662,15 @@ class MWDB:
         color = "%06x" % random.randint(0, 0xFFFFFF)
         self.helper.api.label.read_or_create_unchecked(value="C2 LIST", color=color)
         self.start_up()
-        exit(0)
 
 
 if __name__ == "__main__":
     try:
         print(BANNER)
-        MWDBConnector = MWDB()
-        MWDBConnector.run()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        exit(0)
+        mwdb_connector = MWDB()
+        mwdb_connector.run()
+    except Exception:
+        import traceback
+
+        traceback.print_exc()
+        sys.exit(1)
