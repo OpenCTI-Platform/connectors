@@ -1,4 +1,4 @@
-# OpenCTI External Ingestion Template Connector
+# Monty Security C2 Tracker
 
 <!--
 General description of the connector
@@ -11,7 +11,7 @@ General description of the connector
 
 Table of Contents
 
-- [OpenCTI External Ingestion Template Connector](#opencti-external-ingestion-connector-montysecurity-c2-tracker)
+- [Monty Security C2 Tracker](#monty-security-c2-tracker)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -28,6 +28,7 @@ Table of Contents
   - [Additional information](#additional-information)
 
 ## Introduction
+TODO
 
 ## Installation
 
@@ -68,10 +69,11 @@ Below are the parameters you'll need to set for running the connector properly:
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description |
-| ------------ | ------------ | --------------------------- | ------- | --------- | ----------- |
-| API base URL | api_base_url |                             |         | Yes       |             |
-| API key      | api_key      |                             |         | Yes       |             |
+| Parameter            | config.yml           | Docker environment variable | Default | Mandatory | Description                                                |
+|----------------------|----------------------| --------------------------- |---------| --------- |------------------------------------------------------------|
+| TLP Level            | tlp_level            |                             | clear   | Yes       | The TLP is clear by default for OSINT                      |
+| Malware list URL     | malware_list_url     |                             |https://github.com/montysecurity/C2-Tracker/tree/main/data      | Yes       | The up to date malware list on Github                      |
+| Malware IPs base URL | malware_ips_base_url |                             |https://raw.githubusercontent.com/montysecurity/C2-Tracker/main/data/         | Yes       | The based URL used to go through all the malware IPs files |
 
 ## Deployment
 
