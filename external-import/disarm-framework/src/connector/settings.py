@@ -25,8 +25,21 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
         default="DisarmFramework",
     )
     scope: ListFromString = Field(
-        description="The scope of the connector.",
-        default=[],
+        description="The scope of the connector. Only these object types will be imported on OpenCTI.",
+        default=[
+            "marking-definition",
+            "identity",
+            "attack-pattern",
+            "course-of-action",
+            "intrusion-set",
+            "campaign",
+            "malware",
+            "tool",
+            "report",
+            "narrative",
+            "event",
+            "channel",
+        ],
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
