@@ -21,6 +21,10 @@ class ConnectorHuntIoConfig(BaseConfigModel):
 class ConnectorSettings(BaseExternalImportConnectorConfig):
     name: str = Field(description="Connector name", default="Hunt IO")
     scope: ListFromString = Field(description="Connector scope", default=["Hunt IO"])
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        default="144c83b7-e267-4fc5-b77d-babd502dc56e",
+    )
 
 
 class ConfigLoader(BaseConnectorSettings):
