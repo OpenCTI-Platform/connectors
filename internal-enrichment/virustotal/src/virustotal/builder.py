@@ -357,7 +357,7 @@ class VirusTotalBuilder:
                 + str(self.attributes.get("last_analysis_stats", []).get("undetected", "N/A"))
                 + " |\n\n"
             )
-            content += "## Last Analysis Results\n\n"
+            content += "### Last Analysis Results Details\n\n"
             content += "| Engine name | Method | Category | Result |\n"
             content += "|-------------|---------|---------|--------|\n"
             for key in self.attributes["last_analysis_results"]:
