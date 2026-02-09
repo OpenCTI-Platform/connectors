@@ -6,7 +6,7 @@ from typing import Dict
 
 import stix2
 import yaml
-from greynoise import GreyNoise
+from greynoise.api import GreyNoise, APIConfig
 from pycti import (
     Identity,
     OpenCTIConnectorHelper,
@@ -42,7 +42,7 @@ class GreyNoiseVulnConnector:
         # Define variables
         self.tlp = None
         self.stix_objects = []
-        self.integration_name = "opencti-vuln-enricher-v1.0"
+        self.integration_name = "opencti-vuln-enricher-v2.0"
 
         self.check_api_key(force_recheck=True)
 
@@ -64,9 +64,8 @@ class GreyNoiseVulnConnector:
                 key_state = json.loads(empty_key_state)
 
             if key_state.get("last_checked") != today or force_recheck:
-                session = GreyNoise(
-                    api_key=self.greynoise_key, integration_name=self.integration_name
-                )
+                api_config = APIConfig(api_key=self.greynoise_key, integration_name=self.integration_name)
+                session = GreyNoise(api_config)
                 key_check = session.test_connection()
 
                 key_state = {
@@ -472,9 +471,8 @@ class GreyNoiseVulnConnector:
                 self.helper.connector_logger.info(
                     f"Get CVE context for: {opencti_entity_value}"
                 )
-                session = GreyNoise(
-                    api_key=self.greynoise_key, integration_name=self.integration_name
-                )
+                api_config = APIConfig(api_key=self.greynoise_key, integration_name=self.integration_name)
+                session = GreyNoise(api_config)
 
                 json_data = session.cve(opencti_entity_value)
 
