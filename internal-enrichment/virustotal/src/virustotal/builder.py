@@ -381,7 +381,7 @@ class VirusTotalBuilder:
                 )
                 + " |\n\n"
             )
-            content += "### Last Analysis Results Details\n\n"
+            content += "### Last Analysis Results\n\n"
             content += "| Engine name | Method | Category | Result |\n"
             content += "|-------------|---------|---------|--------|\n"
             for key in self.attributes["last_analysis_results"]:
