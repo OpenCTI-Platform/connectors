@@ -194,7 +194,9 @@ class ConnectorClient:
         self.data_processor = DataProcessor(helper)
 
         # Create HTTP session with resilience features
-        self.session = self.session_manager.create_session(self.config.hunt_io.api_key)
+        self.session = self.session_manager.create_session(
+            self.config.hunt_io.api_key.get_secret_value()
+        )
 
     @property
     def latest_timestamp(self) -> Optional[str]:
@@ -320,7 +322,7 @@ class ConnectorClient:
 
             # Create new session with same configuration
             self.session = self.session_manager.create_session(
-                self.config.hunt_io.api_key
+                self.config.hunt_io.api_key.get_secret_value()
             )
 
             self.helper.connector_logger.info(

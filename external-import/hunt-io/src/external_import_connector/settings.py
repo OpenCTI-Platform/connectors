@@ -7,12 +7,12 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, model_validator
+from pydantic import Field, SecretStr, model_validator
 
 
 class ConnectorHuntIoConfig(BaseConfigModel):
     api_base_url: str = Field(description="API base URL", default_factory=str)
-    api_key: str = Field(description="API key", default_factory=str)
+    api_key: SecretStr = Field(description="API key")
     tlp_level: Literal["white", "clear", "green", "amber", "amber+strict", "red"] = (
         Field(description="TLP level", default="amber")
     )
