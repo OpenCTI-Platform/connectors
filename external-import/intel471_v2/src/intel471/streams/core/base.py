@@ -3,11 +3,10 @@ from abc import ABC, abstractmethod
 from queue import Queue
 from typing import TYPE_CHECKING, Any, Iterator, Union
 
-from pycti import OpenCTIConnectorHelper
-from stix2 import Bundle
-
 from intel471.common import HelperRequest
 from intel471.version import get_version
+from pycti import OpenCTIConnectorHelper
+from stix2 import Bundle
 
 if TYPE_CHECKING:
     from intel471.backend import ClientWrapper
