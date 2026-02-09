@@ -1,6 +1,10 @@
 import traceback
 
-from microsoft_sentinel_incidents_connector import MicrosoftSentinelIncidentsConnector
+from microsoft_sentinel_incidents_connector import (
+    ConnectorSettings,
+    MicrosoftSentinelIncidentsConnector,
+)
+from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
     """
@@ -13,7 +17,10 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        connector = MicrosoftSentinelIncidentsConnector()
+        settings = ConnectorSettings()
+        helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+
+        connector = MicrosoftSentinelIncidentsConnector(config=settings, helper=helper)
         connector.run()
     except Exception:
         traceback.print_exc()
