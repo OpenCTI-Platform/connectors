@@ -16,7 +16,6 @@ from pycti import (
     OpenCTIStix2,
     StixCoreRelationship,
 )
-
 from virustotal.models.configs.virustotal_configs import IndicatorConfig
 
 

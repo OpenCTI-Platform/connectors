@@ -7,7 +7,6 @@ from pydantic import (
     SecretStr,
     model_validator,
 )
-
 from virustotal.models.configs.base_settings import ConfigBaseSettings
 
 TLPToLower = Annotated[

@@ -1,9 +1,9 @@
 import traceback
 
 from pycti import OpenCTIConnectorHelper
+from virustotal.models.configs.config_loader import ConfigLoader
 
 from virustotal import VirusTotalConnector
-from virustotal.models.configs.config_loader import ConfigLoader
 
 if __name__ == "__main__":
     """
