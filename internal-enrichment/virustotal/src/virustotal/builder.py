@@ -341,7 +341,7 @@ class VirusTotalBuilder:
 
         Notes are directly append in the bundle.
         """
-        if self.attributes["last_analysis_stats"]["malicious"] != 0:
+        if "last_analysis_stats" in self.attributes and self.attributes["last_analysis_stats"]:
             content = "| Total Analyses | Malicious | Suspicious | Harmless | Undetected |\n"
             content += "|----------------|-----------|------------|----------|------------|\n"
             content += (
