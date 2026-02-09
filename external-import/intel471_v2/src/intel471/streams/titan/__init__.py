@@ -6,7 +6,6 @@ from .reports import Intel471ReportsStream
 from .spot_reports import Intel471SpotReportsStream
 from .yara import Intel471YARAStream
 
-
 __all__ = [
     "Intel471BreachAlertsStream",
     "Intel471CVEsStream",

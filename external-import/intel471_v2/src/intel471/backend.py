@@ -1,22 +1,21 @@
 
 from dataclasses import dataclass
-from types import ModuleType
-from typing import Union, Literal
 from enum import StrEnum
-from urllib3 import make_headers
-from urllib3.util import parse_url
+from types import ModuleType
+from typing import Literal, Union
 
 import titan_client
-from titan_client import titan_stix
 import verity471
+from titan_client import titan_stix
+from urllib3 import make_headers
+from urllib3.util import parse_url
 from verity471 import verity_stix
 from verity471.verity_stix.exceptions import EmptyBundle
 
-
-from .streams.core.base import Intel471Stream
+from .exceptions import UnknownBackendError
 from .streams import titan as titan_streams
 from .streams import verity471 as verity471_streams
-from .exceptions import UnknownBackendError
+from .streams.core.base import Intel471Stream
 
 
 class BackendName(StrEnum):

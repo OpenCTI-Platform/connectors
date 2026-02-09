@@ -7,7 +7,6 @@ from .info_reports import Verity471InfoReportsStream
 from .malware_reports import Verity471MalwareReportsStream
 from .spot_reports import Verity471SpotReportsStream
 
-
 __all__ = [
     "Verity471IndicatorsStream",
     "Verity471CVEsStream",

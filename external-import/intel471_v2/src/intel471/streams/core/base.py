@@ -8,6 +8,7 @@ from stix2 import Bundle
 
 from intel471.common import HelperRequest
 from intel471.version import get_version
+
 if TYPE_CHECKING:
     from intel471.backend import ClientWrapper
 

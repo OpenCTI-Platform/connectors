@@ -4,10 +4,12 @@ from queue import Queue
 from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.schedulers.base import BaseScheduler
+from pycti import OpenCTIConnectorHelper
+
 from intel471.common import HelperRequest
 from intel471.settings import ConnectorSettings
 from intel471.streams.core.base import Intel471Stream
-from pycti import OpenCTIConnectorHelper
+
 from .backend import ClientWrapper, get_client
 
 

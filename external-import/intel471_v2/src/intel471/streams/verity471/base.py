@@ -1,4 +1,5 @@
 from typing import Any, ClassVar, Union
+
 from ..core.base import Intel471Stream
 
 
