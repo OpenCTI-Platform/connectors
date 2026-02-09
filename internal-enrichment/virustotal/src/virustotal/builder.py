@@ -16,6 +16,7 @@ from pycti import (
     OpenCTIStix2,
     StixCoreRelationship,
 )
+
 from virustotal.models.configs.virustotal_configs import IndicatorConfig
 
 
@@ -341,20 +342,43 @@ class VirusTotalBuilder:
 
         Notes are directly append in the bundle.
         """
-        if "last_analysis_stats" in self.attributes and self.attributes["last_analysis_stats"]:
-            content = "| Total Analyses | Malicious | Suspicious | Harmless | Undetected |\n"
-            content += "|----------------|-----------|------------|----------|------------|\n"
+        if (
+            "last_analysis_stats" in self.attributes
+            and self.attributes["last_analysis_stats"]
+        ):
+            content = (
+                "| Total Analyses | Malicious | Suspicious | Harmless | Undetected |\n"
+            )
+            content += (
+                "|----------------|-----------|------------|----------|------------|\n"
+            )
             content += (
                 "| "
                 + str(len(self.attributes["last_analysis_results"].keys()))
                 + " |"
-                + str(self.attributes.get("last_analysis_stats", []).get("malicious", "N/A"))
+                + str(
+                    self.attributes.get("last_analysis_stats", []).get(
+                        "malicious", "N/A"
+                    )
+                )
                 + " | "
-                + str(self.attributes.get("last_analysis_stats", []).get("suspicious", "N/A"))
+                + str(
+                    self.attributes.get("last_analysis_stats", []).get(
+                        "suspicious", "N/A"
+                    )
+                )
                 + " | "
-                + str(self.attributes.get("last_analysis_stats", []).get("harmless", "N/A"))
+                + str(
+                    self.attributes.get("last_analysis_stats", []).get(
+                        "harmless", "N/A"
+                    )
+                )
                 + " | "
-                + str(self.attributes.get("last_analysis_stats", []).get("undetected", "N/A"))
+                + str(
+                    self.attributes.get("last_analysis_stats", []).get(
+                        "undetected", "N/A"
+                    )
+                )
                 + " |\n\n"
             )
             content += "### Last Analysis Results Details\n\n"

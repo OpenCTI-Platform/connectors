@@ -1,6 +1,7 @@
 import traceback
 
 from pycti import OpenCTIConnectorHelper
+
 from virustotal import VirusTotalConnector
 from virustotal.models.configs.config_loader import ConfigLoader
 

@@ -5,6 +5,7 @@ from typing import Dict
 
 import stix2
 from pycti import Identity, OpenCTIConnectorHelper
+
 from virustotal.builder import VirusTotalBuilder
 from virustotal.client import VirusTotalClient
 from virustotal.models.configs.config_loader import ConfigLoader

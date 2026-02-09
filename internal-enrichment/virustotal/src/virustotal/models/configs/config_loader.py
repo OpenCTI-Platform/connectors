@@ -10,6 +10,7 @@ from pydantic_settings import (
     PydanticBaseSettingsSource,
     YamlConfigSettingsSource,
 )
+
 from virustotal.models.configs.base_settings import ConfigBaseSettings
 from virustotal.models.configs.connector_configs import (
     ConfigLoaderConnectorExtra,
