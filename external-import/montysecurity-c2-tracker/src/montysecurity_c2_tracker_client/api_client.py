@@ -1,10 +1,11 @@
 import re
 from typing import Any
-from urllib.parse import urljoin, quote
+from urllib.parse import quote, urljoin
 
 import requests
 from connector.settings import MontysecurityC2TrackerConfig
 from pycti import OpenCTIConnectorHelper
+
 
 class MontysecurityC2TrackerClient:
     def __init__(
@@ -51,16 +52,12 @@ class MontysecurityC2TrackerClient:
     def get_malwares(self, params=None) -> list[Any] | None:
         try:
             self.helper.connector_logger.info("Get Malware Entities")
-            malware_list_url = (
-                self.config.malware_list_url.encoded_string()
-            )
+            malware_list_url = self.config.malware_list_url.encoded_string()
             response = self._request_data(malware_list_url, params=params)
             self.helper.connector_logger.info(
                 "Status code from github.com: ", response.status_code
             )
-            malware_list = list(
-                set(re.findall('[\w\s\d.]+IPs\.txt', response.text))
-            )
+            malware_list = list(set(re.findall("[\w\s\d.]+IPs\.txt", response.text)))
 
             return malware_list
 
@@ -71,9 +68,7 @@ class MontysecurityC2TrackerClient:
         try:
             self.helper.connector_logger.info("Get Malware IPs")
 
-            malware_ips_base_url = (
-                self.config.malware_ips_base_url.encoded_string()
-            )
+            malware_ips_base_url = self.config.malware_ips_base_url.encoded_string()
 
             url = urljoin(str(malware_ips_base_url), quote(malware_name))
             response = self._request_data(url, params=params)

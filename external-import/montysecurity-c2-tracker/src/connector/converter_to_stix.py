@@ -2,9 +2,11 @@ import ipaddress
 from typing import Literal, Optional
 
 from connectors_sdk.models import (
+    Indicator,
+    Malware,
     OrganizationAuthor,
     Relationship,
-    TLPMarking, Malware, Indicator
+    TLPMarking,
 )
 from pycti import (
     OpenCTIConnectorHelper,
@@ -42,7 +44,9 @@ class ConverterToStix:
     def convert_malware(self, malware: str) -> Malware:
 
         malware_name = malware.split(" IPs.txt")[0]
-        self.helper.connector_logger.info("Looking at malware. ", {"malware": malware_name})
+        self.helper.connector_logger.info(
+            "Looking at malware. ", {"malware": malware_name}
+        )
 
         malware_stix = Malware(
             name=malware_name,

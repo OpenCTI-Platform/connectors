@@ -1,13 +1,12 @@
 import sys
 from datetime import datetime, timezone
 
-from connectors_sdk.models import Indicator, Malware
-from connectors_sdk.models.enums import RelationshipType
-from pycti import OpenCTIConnectorHelper
-
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
+from connectors_sdk.models import Indicator, Malware
+from connectors_sdk.models.enums import RelationshipType
 from montysecurity_c2_tracker_client import MontysecurityC2TrackerClient
+from pycti import OpenCTIConnectorHelper
 
 
 class MontysecurityC2TrackerConnector:
@@ -86,7 +85,8 @@ class MontysecurityC2TrackerConnector:
 
             for ip in ips:
                 ip_indicator: Indicator = self.converter_to_stix.convert_ip(ip)
-                if not ip_indicator: continue
+                if not ip_indicator:
+                    continue
                 entities.append(ip_indicator)
 
                 relationship = self.converter_to_stix.create_relationship(
