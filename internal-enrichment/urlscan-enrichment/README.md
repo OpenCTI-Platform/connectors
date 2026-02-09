@@ -55,13 +55,13 @@ This connector enriches URLs and IP addresses by submitting them to URLScan for 
 
 ### Base Connector Configuration
 
-| Parameter | Docker envvar | Mandatory | Description                                                                                                                                                                                                          |
-|-----------|---------------|-----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `connector_id` | `CONNECTOR_ID` | No | A valid arbitrary `UUIDv4` unique for this connector                                                                                                                                                                 |
-| `connector_name` | `CONNECTOR_NAME` | No | The name of the connector instance                                                                                                                                                                                   |
-| `connector_scope` | `CONNECTOR_SCOPE` | No | Supported: `url` (submission), `domain-name` (submission), `hostname` (submission), `ipv4-addr` (search), `ipv6-addr` (search)|
-| `connector_auto` | `CONNECTOR_AUTO` | No | Enable/disable auto-enrichment                                                                                                                                                                                       |
-| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | No | Log level (`debug`, `info`, `warn`, `error`)                                                                                                                                                                         |
+| Parameter | Docker envvar | Mandatory | Description                                                                                                                         |
+|-----------|---------------|-----------|-------------------------------------------------------------------------------------------------------------------------------------|
+| `connector_id` | `CONNECTOR_ID` | No | A valid arbitrary `UUIDv4` unique for this connector                                                                                 |
+| `connector_name` | `CONNECTOR_NAME` | No | The name of the connector instance                                                                                               |
+| `connector_scope` | `CONNECTOR_SCOPE` | No | Supported: `url` (submission), `domain-name` (submission), `hostname` (submission), `ipv4-addr` (search), `ipv6-addr` (search) |
+| `connector_auto` | `CONNECTOR_AUTO` | No | Enable/disable auto-enrichment                                                                                                   |
+| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | No | Log level (`debug`, `info`, `warn`, `error`)                                                                           |
 
 ### URLScan Configuration
 
