@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike observable utilities module."""
+
 import ipaddress
 from typing import Any, List, Mapping, NamedTuple, Optional
 

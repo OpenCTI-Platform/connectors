@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike importer module."""
 
 from abc import ABC, abstractmethod
