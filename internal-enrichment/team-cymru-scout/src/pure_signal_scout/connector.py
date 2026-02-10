@@ -224,7 +224,9 @@ class PureSignalScoutConnector:
                 return "No Enrichment Data Found from API"
 
             serialized_bundle = self.helper.stix2_create_bundle(processed_data)
-            self.helper.send_stix2_bundle(bundle=serialized_bundle, update=True)
+            self.helper.send_stix2_bundle(
+                bundle=serialized_bundle, update=True, cleanup_inconsistent_bundle=True
+            )
             self.helper.connector_logger.info(
                 "[PureSignalScout] Data ingestion started",
                 {"observable_value": observable_value},
