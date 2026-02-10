@@ -1,49 +1,29 @@
-import os
 from typing import Dict
 
-import yaml
 from pure_signal_scout.client_api import PureSignalScoutClient
+from pure_signal_scout.settings import ConnectorSettings
 from pure_signal_scout.utils import is_valid_strict_domain
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper
 
 
-class PureSignalScoutConfig:
-    """Configuration holder for Pure Signal Scout connector."""
-
-    # pylint: disable=too-few-public-methods
+class PureSignalScoutConnectorConfig:
     def __init__(self, config):
-        self.api_base_url = get_config_variable(
-            "PURE_SIGNAL_SCOUT_API_URL", ["pure_signal_scout", "api_url"], config
-        )
-        self.api_key = get_config_variable(
-            "PURE_SIGNAL_SCOUT_API_TOKEN", ["pure_signal_scout", "api_token"], config
-        )
-        self.max_tlp = get_config_variable(
-            "PURE_SIGNAL_SCOUT_MAX_TLP",
-            ["pure_signal_scout", "max_tlp"],
-            config,
-            default="TLP:AMBER",
-        )
+        self.api_base_url = config.pure_signal_scout.api_url
+        self.api_key = config.pure_signal_scout.api_token.get_secret_value()
+        self.max_tlp = config.pure_signal_scout.max_tlp
+        self.search_interval = config.pure_signal_scout.search_interval
 
 
 class PureSignalScoutConnector:
-    def __init__(self):
-        # Initialize configuration
-        config_file_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "config.yml"
-        )
-        if os.path.isfile(config_file_path):
-            with open(config_file_path, encoding="utf-8") as f:
-                config = yaml.load(f, Loader=yaml.FullLoader)
-        else:
-            config = {}
-
-        self.helper = OpenCTIConnectorHelper(config)
-        self.config = PureSignalScoutConfig(config)
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+        self.helper = helper
+        self.config = config
         self.tlp = None
 
         # Initialize API client
-        self.client = PureSignalScoutClient(self.helper, self.config)
+        self.client = PureSignalScoutClient(
+            self.helper, PureSignalScoutConnectorConfig(self.config)
+        )
 
         self.helper.connector_logger.info(
             "[PureSignalScout] Connector initialized",
@@ -270,6 +250,9 @@ class PureSignalScoutConnector:
         """Start the connector"""
         self.helper.connector_logger.info(
             "[PureSignalScout] Starting connector",
-            {"api_url": self.config.api_base_url},
+            {
+                "api_url": self.config.pure_signal_scout.api_url,
+                "search_interval": self.config.pure_signal_scout.search_interval,
+            },
         )
         self.helper.listen(self.process_message)
