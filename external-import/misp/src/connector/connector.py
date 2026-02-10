@@ -28,6 +28,7 @@ class Misp:
             key=self.config.misp.key.get_secret_value(),
             verify_ssl=self.config.misp.ssl_verify,
             certificate=self.config.misp.client_cert,
+            timeout=self.config.misp.request_timeout,
         )
 
         self.converter = EventConverter(

@@ -494,6 +494,38 @@ def test_connector_validates_event_not_yet_processed_by_update_datetime(
         assert connector._validate_event(event) is True
 
 
+def test_connector_creates_misp_client_with_request_timeout_from_config(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    """
+    Test that MISPClient is instantiated with timeout from config.misp.request_timeout.
+    """
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["request_timeout"] = 90.0
+
+    with patch("connector.connector.MISPClient") as mock_misp_client_class:
+        fake_misp_connector(config_dict)
+        mock_misp_client_class.assert_called_once()
+        call_kwargs = mock_misp_client_class.call_args.kwargs
+        assert call_kwargs["timeout"] == 90.0
+
+
+def test_connector_creates_misp_client_with_request_timeout_none(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    """
+    Test that MISPClient is instantiated with timeout=None when request_timeout is None.
+    """
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["request_timeout"] = None
+
+    with patch("connector.connector.MISPClient") as mock_misp_client_class:
+        fake_misp_connector(config_dict)
+        mock_misp_client_class.assert_called_once()
+        call_kwargs = mock_misp_client_class.call_args.kwargs
+        assert call_kwargs["timeout"] is None
+
+
 def test_connector_does_not_validate_event_already_processed_by_update_datetime(
     mock_opencti_connector_helper, mock_py_misp
 ):

@@ -250,6 +250,10 @@ class MispConfig(BaseConfigModel):
         description="The max number of items per batch when splitting STIX bundles.",
         default=9999,
     )
+    request_timeout: float | None = Field(
+        description="The timeout for the requests to the MISP API in seconds. None means no timeout.",
+        default=None,
+    )
 
     @field_validator("reference_url", mode="before")
     @classmethod
