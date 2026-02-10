@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike actor importer module."""
 
 from datetime import datetime
@@ -197,6 +196,7 @@ class ActorImporter(BaseImporter):
 
         malware = self._get_and_create_malware(actor)
 
+        # MVP3
         bundle_builder = ActorBundleBuilder(
             actor,
             author,

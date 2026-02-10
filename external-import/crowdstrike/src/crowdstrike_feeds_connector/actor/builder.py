@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike actor builder module."""
 
 import logging
@@ -402,5 +401,7 @@ class ActorBundleBuilder:
                 develops_malware, intrusion_sets
             )
             bundle_objects.extend(malware_authored_by_intrusion_sets)
+
+        # MVP4
 
         return Bundle(objects=bundle_objects, allow_custom=True)

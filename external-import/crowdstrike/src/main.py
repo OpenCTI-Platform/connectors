@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike connector main module."""
+
 import time
 
 from crowdstrike_feeds_connector import CrowdStrike

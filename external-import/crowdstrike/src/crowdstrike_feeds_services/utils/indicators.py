@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike indicator utilities module."""
+
 import ipaddress
 from typing import List, NamedTuple
 
