@@ -1,11 +1,11 @@
 import sys
 
-from .connector import PureSignalScoutConnector
+from pure_signal_scout import connector
 
 if __name__ == "__main__":
     try:
         print("Starting Pure Signal Scout Connector...")
-        connector = PureSignalScoutConnector()
+        connector = connector.PureSignalScoutConnector()
         connector.helper.connector_logger.info(
             "[PureSignalScout] Connector initialized successfully"
         )
