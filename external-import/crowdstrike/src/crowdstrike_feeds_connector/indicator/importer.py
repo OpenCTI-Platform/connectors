@@ -9,6 +9,7 @@ from crowdstrike_feeds_services.utils import (
     datetime_to_timestamp,
     timestamp_to_datetime,
 )
+from crowdstrike_feeds_services.utils.attack_lookup import AttackTechniqueLookup
 from crowdstrike_feeds_services.utils.labels import parse_crowdstrike_labels_from_raw
 from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport, ReportFetcher
 from pycti.connector.opencti_connector_helper import (  # noqa: E501
@@ -42,6 +43,7 @@ class IndicatorImporterConfig(NamedTuple):
     indicator_unwanted_labels: Set[str]
     no_file_trigger_import: bool
     scopes: set[str]
+    attack_lookup: Optional[AttackTechniqueLookup]
 
 
 class IndicatorImporter(BaseImporter):
@@ -81,7 +83,8 @@ class IndicatorImporter(BaseImporter):
         self.next_page: Optional[str] = None
         self.no_file_trigger_import = config.no_file_trigger_import
         self.scopes = config.scopes
-
+        # Preloaded at connector startup; used to resolve MITRE technique IDs for ATT&CK labels.
+        self.attack_lookup = config.attack_lookup
         if not (self.create_observables or self.create_indicators):
             msg = "'create_observables' and 'create_indicators' false at the same time"
             raise ValueError(msg)
@@ -231,6 +234,18 @@ class IndicatorImporter(BaseImporter):
             indicator["label_names"] = parsed_labels.raw
             indicator["attack_patterns"] = parsed_labels.attack_patterns
             indicator["malware_families"] = parsed_labels.malware_families
+
+            # Resolve ATT&CK technique IDs for label-derived attack patterns so we can build canonical
+            # Attack Pattern objects that match the MITRE connector (source of truth).
+            resolved_attack_patterns: List[Dict[str, str]] = []
+            if self.attack_lookup:
+                for ap_name in parsed_labels.attack_patterns or []:
+                    mitre_id = self.attack_lookup.lookup_mitre_id(ap_name)
+                    if mitre_id:
+                        resolved_attack_patterns.append(
+                            {"name": ap_name, "mitre_id": mitre_id}
+                        )
+            indicator["attack_patterns_resolved"] = resolved_attack_patterns
             # Do NOT merge these into `indicator["actors"]` (that field is reserved for resolved
             # related actors from the API). Keep label-derived actors separate.
             indicator["actor_names_from_labels"] = parsed_labels.actor_names
@@ -274,6 +289,9 @@ class IndicatorImporter(BaseImporter):
                     "label_name_count": len(indicator.get("label_names", []) or []),
                     "attack_pattern_count": len(
                         indicator.get("attack_patterns", []) or []
+                    ),
+                    "attack_pattern_resolved_count": len(
+                        indicator.get("attack_patterns_resolved", []) or []
                     ),
                     "malware_family_count": len(
                         indicator.get("malware_families", []) or []

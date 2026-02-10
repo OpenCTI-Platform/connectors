@@ -203,24 +203,40 @@ class IndicatorBundleBuilder:
         )
 
     def _create_attack_patterns(self) -> List[AttackPattern]:
-        indicator_attack_patterns = self.indicator.get("attack_patterns", [])
-        if not indicator_attack_patterns:
-            return []
+        # Prefer resolved ATT&CK techniques (name + mitre_id) provided by the importer.
+        attack_patterns_resolved = self.indicator.get("attack_patterns_resolved") or []
+        attack_patterns_raw = self.indicator.get("attack_patterns") or []
 
-        attack_patterns: List[AttackPattern] = []
-        for ap_name in indicator_attack_patterns:
-            if not ap_name:
-                continue
-            attack_patterns.append(self._create_attack_pattern(str(ap_name)))
+        if attack_patterns_resolved:
+            attack_patterns: List[AttackPattern] = []
+            for item in attack_patterns_resolved:
+                if not isinstance(item, Mapping):
+                    continue
+                ap_name = str(item.get("name") or "").strip()
+                mitre_id = str(item.get("mitre_id") or "").strip()
+                if not ap_name or not mitre_id:
+                    continue
+                attack_patterns.append(self._create_attack_pattern(ap_name, mitre_id))
+            return attack_patterns
 
-        return attack_patterns
+        # If we have ATT&CK labels but no technique resolution available, do not create name-only
+        # AttackPattern objects (they would not match the MITRE connector IDs and would create duplicates).
+        if attack_patterns_raw:
+            self.helper.connector_logger.debug(
+                "ATT&CK technique resolution unavailable; skipping Attack Pattern creation to avoid duplicates.",
+                {
+                    "indicator_id": self.indicator.get("id"),
+                    "attack_pattern_count": len(attack_patterns_raw),
+                },
+            )
+        return []
 
-    def _create_attack_pattern(self, name: str) -> AttackPattern:
-        # We intentionally create a minimal AttackPattern object based on the label-derived name.
-        # Mapping to canonical MITRE technique IDs (external_references) can be added later.
+    def _create_attack_pattern(self, name: str, mitre_id: str) -> AttackPattern:
+        # Create a minimal AttackPattern using canonical MITRE technique ID so deterministic IDs match
+        # the MITRE ATT&CK connector (source of truth).
         return create_attack_pattern(
             name=name,
-            mitre_id="",
+            mitre_id=mitre_id,
             created_by=self.author.id,
             confidence=self.confidence_level,
             object_markings=[m.id for m in self.object_markings],

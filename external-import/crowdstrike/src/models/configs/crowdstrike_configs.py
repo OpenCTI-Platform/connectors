@@ -18,7 +18,7 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
 
     # Core CrowdStrike configuration
     base_url: HttpUrl = Field(
-        default="https://api.crowdstrike.com",
+        default=HttpUrl("https://api.crowdstrike.com"),
         description="CrowdStrike API base URL.",
     )
     client_id: SecretStr = Field(
@@ -58,6 +58,23 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
         description=(
             "Comma-separated list of scopes to enable. "
             "Available: actor, report, indicator, malware, vulnerability, yara_master, snort_suricata_master."
+        ),
+    )
+
+    # MITRE ATT&CK Enterprise lookup (technique name -> external_id like T1059)
+    attack_version: str = Field(
+        default="v17.1",
+        description=(
+            "MITRE ATT&CK Enterprise version to use for technique ID resolution (e.g., v17.1). "
+            "Should match the version imported by the MITRE ATT&CK external import connector."
+        ),
+    )
+    attack_enterprise_url: Optional[HttpUrl] = Field(
+        default=None,
+        description=(
+            "Optional override URL for the MITRE ATT&CK Enterprise STIX dataset. "
+            "If set, this URL is used instead of constructing one from attack_version. "
+            "Useful for air-gapped environments or internal mirrors."
         ),
     )
 

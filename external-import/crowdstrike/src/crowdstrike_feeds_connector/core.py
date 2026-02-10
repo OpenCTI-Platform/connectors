@@ -17,6 +17,7 @@ from crowdstrike_feeds_services.utils import (
 )
 from crowdstrike_feeds_services.utils.config_variables import ConfigCrowdstrike
 from crowdstrike_feeds_services.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
+from crowdstrike_feeds_services.utils.attack_lookup import AttackTechniqueLookup
 from pycti import OpenCTIConnectorHelper
 
 from .actor.importer import ActorImporter
@@ -175,6 +176,32 @@ class CrowdStrike:
         # Create OpenCTI connector helper.
         self.helper = OpenCTIConnectorHelper(self.config.load)
 
+        # Load MITRE ATT&CK Enterprise dataset once at startup (used for ATT&CK technique ID resolution)
+        self.attack_lookup = None
+        try:
+            attack_version = self.config.attack_version or "v17.1"
+            # Note: attack_enterprise_url may be a Pydantic HttpUrl; cast to str for urllib usage.
+            attack_url_override = (
+                str(self.config.attack_enterprise_url)
+                if self.config.attack_enterprise_url
+                else None
+            )
+            resolved_url, lookup = AttackTechniqueLookup.load_enterprise(
+                attack_version=attack_version,
+                url_override=attack_url_override,
+            )
+            self.attack_lookup = lookup
+            self.helper.log_info(
+                "Loaded ATT&CK Enterprise dataset (%s) from %s with %d techniques"
+                % (attack_version, resolved_url, lookup.technique_count)
+            )
+        except Exception as e:  # noqa: B902
+            # Degraded mode: label parser will skip ATT&CK technique resolution if lookup is unavailable.
+            self.helper.log_warning(
+                "Unable to load ATT&CK Enterprise dataset for technique resolution; "
+                "Attack Pattern creation from labels may be skipped. Error: %s" % str(e)
+            )
+
         # Create CrowdStrike client and importers.
         self.connect_cs = BaseCrowdstrikeClient(self.helper)
 
@@ -245,6 +272,7 @@ class CrowdStrike:
                 indicator_unwanted_labels=set(indicator_unwanted_labels),
                 no_file_trigger_import=no_file_trigger_import,
                 scopes=scopes,
+                attack_lookup=self.attack_lookup,
             )
 
             indicator_importer = IndicatorImporter(indicator_importer_config)
