@@ -1,6 +1,7 @@
 import traceback
 
-from pure_signal_scout import connector, settings
+from pure_signal_scout.connector import PureSignalScoutConnector
+from pure_signal_scout.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
@@ -14,12 +15,12 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        settings = settings.ConnectorSettings()
+        settings = ConnectorSettings()
         helper = OpenCTIConnectorHelper(
             config=settings.to_helper_config(), playbook_compatible=True
         )
 
-        connector = connector.PureSignalScoutConnector(config=settings, helper=helper)
+        connector = PureSignalScoutConnector(config=settings, helper=helper)
         connector.start()
     except Exception:
         traceback.print_exc()
