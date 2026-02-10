@@ -64,7 +64,6 @@ This connector queries the Scout API endpoints in real-time and transforms the r
 | `connector_name` | `CONNECTOR_NAME` | Yes | The name of the connector instance |
 | `connector_scope` | `CONNECTOR_SCOPE` | Yes | Supported: `IPv4-Addr,IPv6-Addr,Domain-Name` |
 | `connector_auto` | `CONNECTOR_AUTO` | Yes | Enable/disable auto-enrichment (default: false) |
-| `connector_confidence_level` | `CONNECTOR_CONFIDENCE_LEVEL` | Yes | Default confidence level (0-100) |
 | `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
 
 ### Scout API Configuration
@@ -97,7 +96,6 @@ services:
       - CONNECTOR_NAME=Scout Enrichment Connector
       - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr,Domain-Name
       - CONNECTOR_AUTO=false
-      - CONNECTOR_CONFIDENCE_LEVEL=100
       - CONNECTOR_LOG_LEVEL=error
       - PURE_SIGNAL_SCOUT_API_URL=https://taxii.cymru.com/api/scout
       - PURE_SIGNAL_SCOUT_API_TOKEN=ChangeMe
