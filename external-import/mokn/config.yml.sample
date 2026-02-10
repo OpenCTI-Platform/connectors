@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe' # Valid UUIDv4
+  type: 'EXTERNAL_IMPORT'
+  name: 'MokN'
+  scope: 'mokn'
+  duration_period: 'PT1H'
+  log_level: 'info'
+
+mokn:
+  console_url: 'ChangeMe'
+  api_key: 'ChangeMe'
+  tlp_level: 'amber' # available values are: clear, white, green, amber, amber+strict, red - Default: 'amber'
+  first_run_days_back: 30 # number of days to retrieve on first execution - Default: 30
