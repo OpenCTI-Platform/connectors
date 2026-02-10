@@ -2,10 +2,9 @@ import os
 from typing import Dict
 
 import yaml
+from pure_signal_scout.client_api import PureSignalScoutClient
+from pure_signal_scout.utils import is_valid_strict_domain
 from pycti import OpenCTIConnectorHelper, get_config_variable
-
-from .client_api import PureSignalScoutClient
-from .utils import is_valid_strict_domain
 
 
 class PureSignalScoutConfig:
