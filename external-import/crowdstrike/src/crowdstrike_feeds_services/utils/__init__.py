@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike connector utilities module."""
 
 import base64
@@ -252,6 +251,21 @@ def timestamp_to_datetime(timestamp: int) -> datetime:
     return datetime.fromtimestamp(timestamp, tz=timezone.utc)
 
 
+def flexible_timestamp_to_datetime(timestamp) -> datetime:
+    """Convert timestamp (string or int) to datetime (UTC).
+
+    Args:
+        timestamp: Either a Unix timestamp (int) or ISO format datetime string
+
+    Returns:
+        datetime object in UTC timezone
+    """
+    if isinstance(timestamp, str):
+        return datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+    else:
+        return datetime.fromtimestamp(timestamp, tz=timezone.utc)
+
+
 def datetime_utc_now() -> datetime:
     """Get current UTC datetime."""
     return datetime.now(timezone.utc)
@@ -325,16 +339,24 @@ def create_identity(
 def create_vulnerability(
     name: str,
     created_by: Optional[stix2.Identity] = None,
+    description: Optional[str] = None,
+    created: Optional[datetime] = None,
+    modified: Optional[datetime] = None,
     confidence: Optional[int] = None,
     object_markings: Optional[List[stix2.MarkingDefinition]] = None,
+    custom_properties: Optional[Dict[str, Any]] = {},
 ) -> stix2.Vulnerability:
     """Create a vulnerability."""
     return stix2.Vulnerability(
         id=Vulnerability.generate_id(name),
         created_by_ref=created_by,
         name=name,
+        description=description,
+        created=created,
+        modified=modified,
         confidence=confidence,
         object_marking_refs=object_markings,
+        custom_properties=custom_properties,
     )
 
 

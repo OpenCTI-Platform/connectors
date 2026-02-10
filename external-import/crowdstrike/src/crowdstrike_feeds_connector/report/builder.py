@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike report builder module."""
 
 import logging

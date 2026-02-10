@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike related actor normalization helper."""
 
 from typing import Any, Dict, List, Optional, cast

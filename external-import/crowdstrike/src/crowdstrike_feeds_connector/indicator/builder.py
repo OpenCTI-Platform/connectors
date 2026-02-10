@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike indicator builder module."""
 
 from collections.abc import Mapping

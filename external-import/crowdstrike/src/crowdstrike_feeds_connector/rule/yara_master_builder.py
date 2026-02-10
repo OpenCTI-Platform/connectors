@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike YARA master builder module."""
 
 from collections.abc import Mapping, Sequence

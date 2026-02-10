@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike connector core module."""
 
 import os
@@ -26,6 +25,7 @@ from .indicator.importer import IndicatorImporter, IndicatorImporterConfig
 from .report.importer import ReportImporter
 from .rule.snort_suricata_master_importer import SnortMasterImporter
 from .rule.yara_master_importer import YaraMasterImporter
+from .vulnerability.importer import VulnerabilityImporter
 
 
 class CrowdStrike:
@@ -34,6 +34,7 @@ class CrowdStrike:
     _CONFIG_SCOPE_ACTOR = "actor"
     _CONFIG_SCOPE_REPORT = "report"
     _CONFIG_SCOPE_INDICATOR = "indicator"
+    _CONFIG_SCOPE_VULNERABILITY = "vulnerability"
     _CONFIG_SCOPE_YARA_MASTER = "yara_master"
     _CONFIG_SCOPE_SNORT_SURICATA_MASTER = "snort_suricata_master"
 
@@ -110,6 +111,8 @@ class CrowdStrike:
 
         indicator_start_timestamp = self.config.indicator_start_timestamp
 
+        vulnerability_start_timestamp = self.config.vulnerability_start_timestamp
+
         indicator_exclude_types_str = self.config.indicator_exclude_types
         indicator_exclude_types = []
         if indicator_exclude_types_str is not None:
@@ -175,7 +178,6 @@ class CrowdStrike:
         importers: list[BaseImporter] = []
 
         if self._CONFIG_SCOPE_ACTOR in scopes:
-
             actor_importer = ActorImporter(
                 self.helper,
                 author,
@@ -269,8 +271,15 @@ class CrowdStrike:
 
             importers.append(snort_master_importer)
 
-        # MVP 5
-        # MVP 6
+        if self._CONFIG_SCOPE_VULNERABILITY in scopes:
+            vulnerability_importer = VulnerabilityImporter(
+                self.helper,
+                author,
+                vulnerability_start_timestamp,
+                tlp_marking,
+            )
+
+            importers.append(vulnerability_importer)
 
         self.importers = importers
 

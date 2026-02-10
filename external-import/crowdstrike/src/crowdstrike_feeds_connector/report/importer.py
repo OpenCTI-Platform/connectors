@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike report importer module."""
 
 from collections.abc import Mapping as ABCMapping

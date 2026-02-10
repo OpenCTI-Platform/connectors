@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike indicator importer module."""
 
 from datetime import datetime
