@@ -1,4 +1,3 @@
-import json
 import os
 import traceback
 from datetime import datetime
@@ -6,14 +5,9 @@ from typing import Dict
 
 import stix2
 import yaml
-from greynoise.api import GreyNoise, APIConfig
-from pycti import (
-    Identity,
-    OpenCTIConnectorHelper,
-    StixCoreRelationship,
-    Vulnerability,
-    get_config_variable,
-)
+from greynoise.api import APIConfig, GreyNoise
+from pycti import (Identity, OpenCTIConnectorHelper, StixCoreRelationship,
+                   Vulnerability, get_config_variable)
 
 
 class GreyNoiseVulnConnector:
