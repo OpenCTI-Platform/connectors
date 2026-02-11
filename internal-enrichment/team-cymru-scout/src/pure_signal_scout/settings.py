@@ -41,9 +41,6 @@ class TeamCymruScoutConfig(BaseConfigModel):
         description="Max TLP level for enrichment (default: TLP:AMBER)",
         default="TLP:AMBER",
     )
-    search_interval: int = Field(
-        description="Search interval in days (default: 1)", default=1
-    )
 
 
 class ConnectorSettings(BaseConnectorSettings):
