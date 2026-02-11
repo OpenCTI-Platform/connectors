@@ -363,7 +363,7 @@ class ConnectorClient:
 
             # Make API request
             response = self._request_data(
-                self.config.hunt_io.api_base_url, params=request_params
+                str(self.config.hunt_io.api_base_url), params=request_params
             )
 
             # Process response data
