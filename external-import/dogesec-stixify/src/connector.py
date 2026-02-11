@@ -5,12 +5,12 @@ STIXIFY Connector
 import json
 import os
 import sys
-import time
-from datetime import UTC, datetime, timedelta
+import traceback
+from contextlib import contextmanager
+from datetime import UTC, datetime
 from urllib.parse import urljoin
 
 import requests
-import schedule
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
@@ -56,36 +56,37 @@ class StixifyConnector:
 
     def list_dossiers(self):
         try:
-            return self.retrieve2("v1/dossiers/")
+            return self.retrieve("v1/dossiers/", list_key="results")
         except Exception:
             self.helper.log_error("failed to fetch dossiers")
         return []
 
-    def get_reports_after_last(self, dossier):
+    def get_and_process_reports_after_last(self, dossier, work_id):
         dossier_id = dossier["id"]
         self.helper.log_info(
             "processing dossier(id={id}, title='{name}')".format_map(dossier)
         )
         dossier_state = self._get_state()["dossiers"].get(
-            dossier_id, dict(latest_report="")
+            dossier_id, dict(last_run_at="")
         )
         filters = dict()
-        if q := dossier_state.get("latest_report"):
-            filters.update(created_at_after=q)
-        dossier_reports = self.retrieve2(
+        self.current_run_time = datetime.now(UTC).isoformat()
+        if q := dossier_state.get("last_run_at"):
+            filters.update(added_after=q)
+        dossier_reports = self.retrieve(
             f"v1/dossiers/{dossier_id}/reports/",
+            list_key="objects",
             params=filters,
         )
         for report in dossier_reports:
-            self.process_report(dossier_id, report)
+            self.process_report(report, work_id)
 
-    def process_report(self, dossier_id, report: dict):
-        self.helper.log_info(str(report))
+    def process_report(self, report: dict, work_id):
         report_id = report["id"]
-        report_title = report["stixify_file_metadata"]["name"]
+        report = report.get("stixify_report_metadata", report)
+        report_title = report["name"]
         report_name = f"Report(title={report_title}, id={report_id})"
         self.helper.log_info("Processing " + report_name)
-        report_created = report["created_at"]
         try:
             objects = self.retrieve(
                 f"v1/reports/{report_id}/objects/", list_key="objects"
@@ -98,12 +99,7 @@ class StixifyConnector:
             self.helper.log_info(
                 f"{report_name} sending bundle with {len(objects)} items"
             )
-            self.helper.send_stix2_bundle(json.dumps(bundle), work_id=self.work_id)
-            # Add some milliseconds to the time so it gets skipped next run
-            report_created = (
-                datetime.fromisoformat(report_created) + timedelta(milliseconds=990)
-            ).isoformat()
-            self.set_dossier_state(dossier_id, last_updated=report_created)
+            self.helper.send_stix2_bundle(json.dumps(bundle), work_id=work_id)
         except Exception:
             self.helper.log_error("could not process report " + report_name)
 
@@ -120,59 +116,54 @@ class StixifyConnector:
             objects.extend(data[list_key])
         return objects
 
-    def retrieve2(self, path, params=None):
-        path = urljoin(self.base_url, path)
-        retval = []
-        while path:
-            resp = self.session.get(path, params=params)
-            resp_data = resp.json()
-            path = resp_data.get("next")
-            retval.extend(resp_data["results"])
-        return retval
-
     def _run_once(self):
         self.helper.log_info("running as scheduled")
         for dossier in self.list_dossiers():
-            dossier_id = dossier["id"]
-            dossier_name = dossier["name"]
-            dossier_repr = f"Dossier(id={dossier_id}, name={repr(dossier_name)})"
-            if dossier_id not in (self.dossier_ids or [dossier_id]):
-                self.helper.log_info(
-                    f"skipping {dossier_repr} not in config.stixify.dossier_ids"
-                )
-                continue
-            self.helper.log_info(f"processing {dossier_repr}")
-            self.get_reports_after_last(dossier)
+            with self._run_in_work(
+                f"Dossier: {dossier['name']} ({dossier['id']})"
+            ) as work_id:
+                dossier_id = dossier["id"]
+                dossier_name = dossier["name"]
+                dossier_repr = f"Dossier(id={dossier_id}, name={repr(dossier_name)})"
+                if dossier_id not in (self.dossier_ids or [dossier_id]):
+                    self.helper.log_info(
+                        f"skipping {dossier_repr} not in config.stixify.dossier_ids"
+                    )
+                    continue
+                self.helper.log_info(f"processing {dossier_repr}")
+                self.get_and_process_reports_after_last(dossier, work_id)
+                self.set_dossier_state(dossier_id, last_updated=self.current_run_time)
         self.set_dossier_state(None, None)
 
-    def run_once(self):
+    @contextmanager
+    def _run_in_work(self, work_name: str):
+        work_id = self.helper.api.work.initiate_work(self.helper.connect_id, work_name)
+        message = "[Stixify] Work done"
         in_error = False
         try:
-            self.work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, self.helper.connect_name
-            )
-            self._run_once()
-        except Exception:
-            self.helper.log_error("run failed")
+            yield work_id
+        except Exception as e:
+            self.helper.log_error(f"work failed: {e}")
+            message = "[Stixify] Work failed - " + traceback.format_exc()
             in_error = True
         finally:
             self.helper.api.work.to_processed(
-                work_id=self.work_id,
-                message="[CONNECTOR] Connector exited gracefully",
-                in_error=in_error,
+                work_id=work_id, message=message, in_error=in_error
             )
-            self.work_id = None
+
+    def run_once(self):
+        with self._run_in_work("Stixify Connector Run"):
+            self._run_once()
 
     def set_dossier_state(self, dossier_id, last_updated):
         state = self._get_state()
         if dossier_id:
             dossier_state: dict = state["dossiers"].setdefault(dossier_id, {})
             dossier_state.update(
-                latest_report=max(
-                    last_updated, dossier_state.get("latest_report", last_updated)
+                last_run_at=max(
+                    last_updated, dossier_state.get("last_run_at", last_updated)
                 )
             )
-        state["last_run"] = datetime.now(UTC).isoformat()
         self.helper.set_state(state)
 
     def _get_state(self) -> dict:
@@ -183,12 +174,15 @@ class StixifyConnector:
 
     def run(self):
         self.helper.log_info("Starting Stixify")
-        schedule.every(self.interval_hours).hours.do(self.run_once)
-        self.run_once()
-        while True:
-            schedule.run_pending()
-            time.sleep(1)
+        self.helper.schedule_process(
+            message_callback=self.run_once,
+            duration_period=self.interval_hours * 3600,
+        )
 
 
 if __name__ == "__main__":
-    StixifyConnector().run()
+    try:
+        StixifyConnector().run()
+    except BaseException:
+        traceback.print_exc()
+        exit(1)

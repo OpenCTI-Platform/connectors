@@ -11,6 +11,8 @@ connector:
   update_existing_data: false
   log_level: 'info'
   queue_protocol: 'api'
+  auto_create_service_account: true
+  auto_create_service_account_confidence_level: 75
 
 stixify:
   base_url: 'https://api.stixify.com/'
