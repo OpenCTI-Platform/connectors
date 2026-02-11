@@ -1,8 +1,8 @@
 {
   "title": "Checkfirst Import Connector",
   "slug": "checkfirst-import-connector",
-  "description": "Imports data from a local dataset and pushes STIX bundles to OpenCTI.",
-  "short_description": "Import local dataset into OpenCTI.",
+  "description": "Fetches Checkfirst articles from a remote API and pushes STIX bundles to OpenCTI.",
+  "short_description": "Import Checkfirst articles into OpenCTI.",
   "logo": null,
   "use_cases": [],
   "verified": false,

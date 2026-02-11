@@ -15,15 +15,12 @@ from typing import Any
 class SkipReason(str, Enum):
     """Categorized reasons for skipping data or recording errors."""
 
-    FILE_TOO_LARGE = "file_too_large"
-    FILE_READ_ERROR = "file_read_error"
-    HEADER_INVALID = "header_invalid"
-
     ROW_TOO_LARGE = "row_too_large"
     ROW_MISSING_REQUIRED_FIELDS = "row_missing_required_fields"
     ROW_INVALID_PUBLICATION_DATE = "row_invalid_publication_date"
     ROW_MAPPING_ERROR = "row_mapping_error"
 
+    API_ERROR = "api_error"
     BUNDLE_SEND_ERROR = "bundle_send_error"
 
 
@@ -31,8 +28,7 @@ class SkipReason(str, Enum):
 class RunReport:
     """Accumulates basic counters for a connector run."""
 
-    files_seen: int = 0
-    files_processed: int = 0
+    pages_fetched: int = 0
     rows_seen: int = 0
     rows_mapped: int = 0
     bundles_sent: int = 0
@@ -51,8 +47,7 @@ class RunReport:
     def to_summary(self) -> dict[str, Any]:
         """Convert the report to a JSON-serializable summary."""
         return {
-            "files_seen": self.files_seen,
-            "files_processed": self.files_processed,
+            "pages_fetched": self.pages_fetched,
             "rows_seen": self.rows_seen,
             "rows_mapped": self.rows_mapped,
             "bundles_sent": self.bundles_sent,

@@ -7,18 +7,18 @@ connector:
   name: Checkfirst Import Connector
   scope: media-content,channel,url
   log_level: info
-  duration_period: PT1H
+  duration_period: P7D
 
 checkfirst:
-  dataset_path: /data_set
-  batch_size: 1000
+  source_type: api
+  api_url: ChangeMe         # e.g. https://api.checkfirst.example.com
+  api_key: ChangeMe
+  api_endpoint: /v1/articles
+  since: "2025-01-01T00:00:00Z"
   run_mode: loop
   force_reprocess: false
   tlp_level: clear
-  # Optional guards
-  # max_file_bytes: 104857600
-  # max_row_bytes: 1048576
-  # max_rows_per_file: 100000
+
 
 mq:
   host: rabbitmq

@@ -4,17 +4,22 @@ services:
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
-      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_ID=checkfirst-pravda
       - CONNECTOR_NAME=Checkfirst Import Connector
       - CONNECTOR_SCOPE=media-content,channel,url
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_DURATION_PERIOD=PT1H
-      - CHECKFIRST_DATASET_PATH=/data_set
-      - CHECKFIRST_BATCH_SIZE=1000
-      - CHECKFIRST_RUN_MODE=loop
-      - CHECKFIRST_TLP_LEVEL=clear
-    volumes:
-      # Default: use the sample dataset shipped with this connector folder.
-      # For production, replace ./data_test with your real dataset folder.
-      - ./data_test:/data_set:ro
+      - MQ_HOST=rabbitmq
+      - MQ_PORT=5672
+      - MQ_USER=opencti_rabbitmq_user
+      - MQ_PASS=q3VRWA1UXYFpVVlBHcM12
+      - MQ_VHOST=/
+      - MQ_USE_SSL=false
+      - CHECKFIRST_SOURCE_TYPE=${CHECKFIRST_SOURCE_TYPE}
+      - CHECKFIRST_API_URL=${CHECKFIRST_API_URL}
+      - CHECKFIRST_API_KEY=${CHECKFIRST_API_KEY}
+      - CHECKFIRST_API_ENDPOINT=${CHECKFIRST_API_ENDPOINT}
+      - CHECKFIRST_SINCE=${CHECKFIRST_SINCE:-2025-01-01T00:00:00Z}
+      - CHECKFIRST_RUN_MODE=${CHECKFIRST_RUN_MODE}
+      - CHECKFIRST_TLP_LEVEL=${CHECKFIRST_TLP_LEVEL}
     restart: always
