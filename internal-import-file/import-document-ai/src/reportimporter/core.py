@@ -394,16 +394,13 @@ class ReportImporter:
         observables: list[dict] = []
         entities: list[dict] = []
 
-        # Collect markings and author from the context entity, if any
+        # Collect markings from the context entity, if any
         if context_entity is not None:
             object_markings = [
                 x["standard_id"] for x in context_entity.get("objectMarking", [])
             ]
-            created_by = context_entity.get("createdBy")
-            author = created_by.get("standard_id") if created_by else None
         else:
             object_markings = []
-            author = None
 
         # Iterate over entities/observables extracted by the ML model
         span_entities = parsed["metadata"]["span_based_entities"]
@@ -437,24 +434,10 @@ class ReportImporter:
                             only_entity=True,
                         )
                     else:
-                        stix_object = create_stix_object(
-                            category,
-                            txt,
-                            object_markings,
-                            custom_properties={
-                                "created_by_ref": author,
-                            },
-                        )
+                        stix_object = create_stix_object(category, txt, object_markings)
                 else:
                     # Other SDOs: create directly; OpenCTI will merge on deterministic IDs
-                    stix_object = create_stix_object(
-                        category,
-                        txt,
-                        object_markings,
-                        custom_properties={
-                            "created_by_ref": author,
-                        },
-                    )
+                    stix_object = create_stix_object(category, txt, object_markings)
 
                 if stix_object:
                     entities.append(stix_object)
@@ -474,7 +457,6 @@ class ReportImporter:
                     object_markings,
                     custom_properties={
                         "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
                     },
                 )
                 if stix_object:
