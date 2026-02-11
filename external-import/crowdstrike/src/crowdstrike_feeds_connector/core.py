@@ -15,9 +15,9 @@ from crowdstrike_feeds_services.utils import (
     get_tlp_string_marking_definition,
     timestamp_to_datetime,
 )
+from crowdstrike_feeds_services.utils.attack_lookup import AttackTechniqueLookup
 from crowdstrike_feeds_services.utils.config_variables import ConfigCrowdstrike
 from crowdstrike_feeds_services.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
-from crowdstrike_feeds_services.utils.attack_lookup import AttackTechniqueLookup
 from pycti import OpenCTIConnectorHelper
 
 from .actor.importer import ActorImporter
