@@ -46,7 +46,7 @@ This internal enrichment connector queries the GreyNoise API for CVE (Vulnerabil
 ### Requirements
 
 - OpenCTI Platform >= 6.0.0
-- GreyNoise API key with Vulnerability Prioritization License
+- GreyNoise API key.  Full details require a key with Vulnerability Prioritization License, but any key will provide basic information.
 - Network access to GreyNoise API
 
 ---
@@ -98,7 +98,7 @@ services:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_NAME=GreyNoise Vulnerability
+      - CONNECTOR_NAME=GreyNoise Vulnerability Enrichment
       - CONNECTOR_SCOPE=vulnerability
       - CONNECTOR_AUTO=true
       - CONNECTOR_LOG_LEVEL=error

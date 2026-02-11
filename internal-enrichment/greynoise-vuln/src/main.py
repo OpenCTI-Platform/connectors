@@ -368,14 +368,6 @@ class GreyNoiseVulnConnector:
         entity_splited = data["entity_id"].split("--")
         entity_type = entity_splited[0].lower()
 
-        if not self.check_api_key():
-            self.helper.log_error(
-                "GreyNoise API Key is NOT valid. Update to Enterprise API key to use this connector."
-            )
-            raise ValueError(
-                "GreyNoise API Key is NOT valid. Update to Enterprise API key to use this connector."
-            )
-
         if entity_type in scopes:
             # OpenCTI entity information retrieval
             stix_entity = data["stix_entity"]
