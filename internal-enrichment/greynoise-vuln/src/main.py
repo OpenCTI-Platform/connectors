@@ -43,7 +43,6 @@ class GreyNoiseVulnConnector:
         self.stix_objects = []
         self.integration_name = "opencti-vuln-enricher-v2.0"
 
-
     def _extract_and_check_markings(self, opencti_entity: dict) -> bool:
         """
         Extract TLP, and we check if the variable "max_tlp" is less than
@@ -389,7 +388,9 @@ class GreyNoiseVulnConnector:
                 self.helper.connector_logger.info(
                     f"Get CVE context for: {opencti_entity_value}"
                 )
-                api_config = APIConfig(api_key=self.greynoise_key, integration_name=self.integration_name)
+                api_config = APIConfig(
+                    api_key=self.greynoise_key, integration_name=self.integration_name
+                )
                 session = GreyNoise(api_config)
 
                 json_data = session.cve(opencti_entity_value)
