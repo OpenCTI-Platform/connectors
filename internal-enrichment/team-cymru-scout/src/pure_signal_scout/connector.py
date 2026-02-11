@@ -11,7 +11,6 @@ class PureSignalScoutConnectorConfig:
         self.api_base_url = config.pure_signal_scout.api_url
         self.api_key = config.pure_signal_scout.api_token.get_secret_value()
         self.max_tlp = config.pure_signal_scout.max_tlp
-        self.search_interval = config.pure_signal_scout.search_interval
 
 
 class PureSignalScoutConnector:
@@ -254,7 +253,6 @@ class PureSignalScoutConnector:
             "[PureSignalScout] Starting connector",
             {
                 "api_url": self.config.pure_signal_scout.api_url,
-                "search_interval": self.config.pure_signal_scout.search_interval,
             },
         )
         self.helper.listen(self.process_message)
