@@ -1,7 +1,7 @@
 # OpenCTI DISARM Framework Connector
 
-| Status | Date | Comment |
-|--------|------|---------|
+| Status            | Date | Comment |
+| ----------------- | ---- | ------- |
 | Filigran Verified | -    | -       |
 
 The DISARM Framework connector imports the DISARM (Disinformation Analysis and Risk Management) framework into OpenCTI, providing a structured approach for describing and countering disinformation campaigns.
@@ -40,31 +40,10 @@ The framework provides a common language for describing disinformation tactics a
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-| Parameter            | config.yml           | Docker environment variable      | Default          | Mandatory | Description                                                              |
-|----------------------|----------------------|----------------------------------|------------------|-----------|--------------------------------------------------------------------------|
-| Connector ID         | id                   | `CONNECTOR_ID`                   |                  | Yes       | A unique `UUIDv4` identifier for this connector instance.                |
-| Connector Name       | name                 | `CONNECTOR_NAME`                 | DISARM Framework | No        | Name of the connector.                                                   |
-| Connector Scope      | scope                | `CONNECTOR_SCOPE`                | attack-pattern   | No        | The scope or type of data the connector is importing.                    |
-| Log Level            | log_level            | `CONNECTOR_LOG_LEVEL`            | info             | No        | Determines the verbosity of logs: `debug`, `info`, `warn`, or `error`.   |
-| Update Existing Data | update_existing_data | `CONNECTOR_UPDATE_EXISTING_DATA` | true             | No        | Whether to update existing data in OpenCTI.                              |
-
-### Connector extra parameters environment variables
-
-| Parameter     | config.yml               | Docker environment variable   | Default                                                                                                    | Mandatory | Description                                                    |
-|---------------|--------------------------|-------------------------------|------------------------------------------------------------------------------------------------------------|-----------|----------------------------------------------------------------|
-| Framework URL | disarm_framework.url     | `DISARM_FRAMEWORK_URL`        | https://raw.githubusercontent.com/DISARMFoundation/DISARMframeworks/main/generated_files/DISARM_STIX/DISARM.json | Yes       | URL of the DISARM STIX bundle.                                 |
-| Interval      | disarm_framework.interval| `DISARM_FRAMEWORK_INTERVAL`   | 7                                                                                                          | Yes       | Polling interval in days.                                      |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 
@@ -79,19 +58,19 @@ docker build -t opencti/connector-disarm-framework:latest .
 Configure the connector in `docker-compose.yml`:
 
 ```yaml
-  connector-disarm-framework:
-    image: opencti/connector-disarm-framework:latest
-    environment:
-      - OPENCTI_URL=http://localhost
-      - OPENCTI_TOKEN=ChangeMe
-      - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_NAME=DISARM Framework
-      - CONNECTOR_SCOPE=attack-pattern
-      - CONNECTOR_LOG_LEVEL=info
-      - CONNECTOR_UPDATE_EXISTING_DATA=true
-      - DISARM_FRAMEWORK_URL=https://raw.githubusercontent.com/DISARMFoundation/DISARMframeworks/main/generated_files/DISARM_STIX/DISARM.json
-      - DISARM_FRAMEWORK_INTERVAL=7
-    restart: always
+connector-disarm-framework:
+  image: opencti/connector-disarm-framework:latest
+  environment:
+    - OPENCTI_URL=http://localhost
+    - OPENCTI_TOKEN=ChangeMe
+    - CONNECTOR_ID=ChangeMe
+    - CONNECTOR_NAME=DISARM Framework
+    - CONNECTOR_SCOPE=attack-pattern
+    - CONNECTOR_LOG_LEVEL=info
+    - CONNECTOR_UPDATE_EXISTING_DATA=true
+    - DISARM_FRAMEWORK_URL=https://raw.githubusercontent.com/DISARMFoundation/DISARMframeworks/main/generated_files/DISARM_STIX/DISARM.json
+    - DISARM_FRAMEWORK_INTERVAL=7
+  restart: always
 ```
 
 Start the connector:
@@ -151,22 +130,22 @@ graph LR
 
 ### Entity Mapping
 
-| DISARM Data        | OpenCTI Entity      | Description                                          |
-|--------------------|---------------------|------------------------------------------------------|
-| Technique          | Attack Pattern      | Disinformation techniques mapped as STIX Attack Patterns |
-| Tactic             | Kill Chain Phase    | Tactics mapped as kill chain phases with `kill_chain_name: disarm` |
-| Framework Metadata | Identity            | DISARM Foundation as author                          |
+| DISARM Data        | OpenCTI Entity   | Description                                                        |
+| ------------------ | ---------------- | ------------------------------------------------------------------ |
+| Technique          | Attack Pattern   | Disinformation techniques mapped as STIX Attack Patterns           |
+| Tactic             | Kill Chain Phase | Tactics mapped as kill chain phases with `kill_chain_name: disarm` |
+| Framework Metadata | Identity         | DISARM Foundation as author                                        |
 
 ### DISARM Framework Structure
 
 The DISARM framework is organized into phases (similar to MITRE ATT&CK tactics):
 
-| Phase   | Description                             |
-|---------|-----------------------------------------|
-| Plan    | Planning operations and objectives      |
-| Prepare | Preparing resources and capabilities    |
-| Execute | Executing the disinformation campaign   |
-| Assess  | Assessing impact and effectiveness      |
+| Phase   | Description                           |
+| ------- | ------------------------------------- |
+| Plan    | Planning operations and objectives    |
+| Prepare | Preparing resources and capabilities  |
+| Execute | Executing the disinformation campaign |
+| Assess  | Assessing impact and effectiveness    |
 
 ### Processing Details
 
@@ -192,6 +171,7 @@ CONNECTOR_LOG_LEVEL=debug
 ```
 
 Common issues:
+
 - **Network errors**: Verify access to GitHub/DISARM URL
 - **Bundle format**: Ensure the STIX bundle is valid JSON
 - **Kill chain conflicts**: Check for naming conflicts with other frameworks
@@ -206,17 +186,17 @@ Common issues:
 
 ### Use Cases
 
-| Use Case               | Description                                       |
-|------------------------|---------------------------------------------------|
-| Disinformation Analysis| Map observed disinformation to known techniques   |
-| Campaign Attribution   | Link campaigns to specific tactics/techniques     |
-| Defense Planning       | Develop countermeasures based on framework        |
-| Reporting              | Standardized language for threat reports          |
+| Use Case                | Description                                     |
+| ----------------------- | ----------------------------------------------- |
+| Disinformation Analysis | Map observed disinformation to known techniques |
+| Campaign Attribution    | Link campaigns to specific tactics/techniques   |
+| Defense Planning        | Develop countermeasures based on framework      |
+| Reporting               | Standardized language for threat reports        |
 
 ### Related Frameworks
 
-| Framework          | Focus                                |
-|--------------------|--------------------------------------|
-| MITRE ATT&CK       | Cyber attack techniques              |
-| MITRE ATT&CK ICS   | Industrial control systems           |
-| DISARM             | Disinformation and influence operations |
+| Framework        | Focus                                   |
+| ---------------- | --------------------------------------- |
+| MITRE ATT&CK     | Cyber attack techniques                 |
+| MITRE ATT&CK ICS | Industrial control systems              |
+| DISARM           | Disinformation and influence operations |

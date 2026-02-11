@@ -16,7 +16,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     ]
 dependencies = [
-    "pycti==6.9.8",
+    "pycti==6.9.17",
     "validators~=0.35.0",
     "pydantic>=2.8.2,<3.0.0",
     "pytenable~=1.5.3", # for now we handle API from 5.13 to 6.4
@@ -37,7 +37,7 @@ dev = [
     "types-requests",  # stubs for requests lib
     "types-PyYAML",  # stubs for PyYAML lib
     "python-dotenv~=1.1.0",
-    "pip-audit~=2.9.0"
+    "pip-audit~=2.10.0"
 ]
 all = [
     "tenable_security_center[test,dev]"

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike utilities constants module."""
 
 from typing import TypeVar

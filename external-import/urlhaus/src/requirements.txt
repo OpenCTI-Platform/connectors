@@ -1,5 +1,7 @@
-pycti==6.9.8
+pycti==6.9.17
 urllib3==2.6.3
 pyyaml~=6.0.2
 requests~=2.32.3
 python_dateutil==2.9.0.post0
+pydantic >=2.8.2, <3
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.9.17#subdirectory=connectors-sdk
