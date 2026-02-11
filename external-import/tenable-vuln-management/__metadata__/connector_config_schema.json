@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/tenable-vuln-management_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "TenableVulnManagement",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "TIO_NUM_THREAD": {
+      "default": 1,
+      "description": "Number of threads to use for the connector.",
+      "type": "integer"
+    },
+    "TIO_API_BASE_URL": {
+      "default": "https://cloud.tenable.com",
+      "description": "Base URL for the Tenable API.",
+      "type": "string"
+    },
+    "TIO_API_ACCESS_KEY": {
+      "default": "**********",
+      "description": "Tenable API access key.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "TIO_API_SECRET_KEY": {
+      "default": "**********",
+      "description": "Tenable API secret key.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "TIO_API_TIMEOUT": {
+      "default": 30,
+      "description": "Timeout for API requests in seconds.",
+      "type": "integer"
+    },
+    "TIO_API_BACKOFF": {
+      "default": 1,
+      "description": "Time (in seconds) to wait before retrying after receiving a 429 response from the API.",
+      "type": "integer"
+    },
+    "TIO_API_RETRIES": {
+      "default": 5,
+      "description": "Number of retries in case of failure.",
+      "type": "integer"
+    },
+    "TIO_EXPORT_SINCE": {
+      "default": "1970-01-01T00:00:00+00",
+      "description": "Date from which to start pulling vulnerability data.",
+      "type": "string"
+    },
+    "TIO_MIN_SEVERITY": {
+      "default": "low",
+      "description": "The minimum severity level of vulnerabilities to import (`low`, `medium`, `high`, `critical`).",
+      "type": "string"
+    },
+    "TIO_MARKING_DEFINITION": {
+      "default": "TLP:CLEAR",
+      "description": "Default marking definition for imported data (e.g., `TLP:AMBER`, `TLP:GREEN`, `TLP:CLEAR`).",
+      "type": "string"
+    },
+    "TIO_NUM_THREADS": {
+      "default": null,
+      "deprecated": true,
+      "description": "Number of threads to use for the connector.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}
