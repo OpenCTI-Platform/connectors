@@ -24,19 +24,32 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
-        default=timedelta(hours=1),
+        default=timedelta(weeks=1),
     )
 
 
 class CheckfirstConfig(BaseConfigModel):
     """Connector-specific configuration."""
 
-    dataset_path: str = Field(
-        description="Path to the dataset root (file or directory)."
+    # API configuration
+    source_type: Literal["api"] = Field(
+        description="Data source type: 'api' for remote API.",
+        default="api",
     )
-    batch_size: int = Field(
-        description="Number of rows to include per sent STIX bundle.",
-        default=1000,
+    api_url: str = Field(
+        description="Base URL for the API endpoint (e.g., https://api.example.com).",
+    )
+    api_key: str = Field(
+        description="API key for authentication (sent in Api-Key header).",
+    )
+    api_endpoint: str = Field(
+        description="API endpoint path (e.g., /v1/articles).",
+        default="/v1/articles",
+    )
+
+    since: str = Field(
+        description="Only ingest articles published on or after this date (ISO 8601).",
+        default="2025-01-01T00:00:00Z",
     )
     run_mode: Literal["loop", "once"] = Field(
         description="Run mode: loop (scheduled) or once (one-shot).",
@@ -45,8 +58,8 @@ class CheckfirstConfig(BaseConfigModel):
 
     force_reprocess: bool = Field(
         description=(
-            "If true, ignore any saved connector state and start reading each file "
-            "from the beginning. Useful for debugging or re-importing the same dataset."
+            "If true, ignore any saved connector state and start from page 1. "
+            "Useful for debugging or re-importing all data."
         ),
         default=False,
     )
@@ -64,16 +77,8 @@ class CheckfirstConfig(BaseConfigModel):
     )
 
     # Resource guards (optional)
-    max_file_bytes: int | None = Field(
-        description="Skip any dataset file larger than this number of bytes.",
-        default=None,
-    )
     max_row_bytes: int | None = Field(
-        description="Skip any row larger than this approximate number of bytes.",
-        default=None,
-    )
-    max_rows_per_file: int | None = Field(
-        description="Stop reading a file after this number of rows.",
+        description="Skip any API row larger than this approximate number of bytes.",
         default=None,
     )
 

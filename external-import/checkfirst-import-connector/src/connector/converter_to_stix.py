@@ -23,10 +23,12 @@ except Exception:  # noqa: BLE001
     validators = None
 
 from pycti import (
+    Campaign,
     Channel,
     CustomObjectChannel,
     CustomObservableMediaContent,
     Identity,
+    IntrusionSet,
     MarkingDefinition,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
@@ -34,7 +36,7 @@ from pycti import (
 
 
 class ConverterToStix:
-    """Convert dataset rows into STIX 2.1 objects + bundles."""
+    """Convert API rows into STIX 2.1 objects + bundles."""
 
     def __init__(
         self,
@@ -58,6 +60,13 @@ class ConverterToStix:
             if isinstance(self.tlp_marking, dict)
             else getattr(self.tlp_marking, "id", None)
         )
+        self.intrusion_set = self._create_intrusion_set()
+        self.campaign = self._create_campaign()
+        self.campaign_attributed_to_ims = self.create_relationship(
+            source_id=self.campaign.id,
+            relationship_type="attributed-to",
+            target_id=self.intrusion_set.id,
+        )
 
     @staticmethod
     def create_author() -> stix2.Identity:
@@ -65,7 +74,7 @@ class ConverterToStix:
             id=Identity.generate_id(name="CheckFirst", identity_class="organization"),
             name="CheckFirst",
             identity_class="organization",
-            description="CheckFirst dataset import connector",
+            description="CheckFirst import connector",
             allow_custom=True,
         )
         return author
@@ -93,6 +102,48 @@ class ConverterToStix:
         }
         return mapping[level]
 
+    def _create_intrusion_set(self) -> stix2.IntrusionSet:
+        return stix2.IntrusionSet(
+            id=IntrusionSet.generate_id(name="Pravda Network"),
+            name="Pravda Network",
+            description=(
+                "Information Manipulation Set (IMS) conducting pro-Russian "
+                "influence operations through a network of 190+ websites"
+            ),
+            aliases=["Portal-Kombat", "Pravda Network IMS"],
+            goals=[
+                "Undermine Western unity",
+                "Promote Russian narratives",
+                "Influence public opinion",
+            ],
+            resource_level="government",
+            primary_motivation="ideology",
+            created_by_ref=self.author_id,
+            object_marking_refs=[self.tlp_marking_id] if self.tlp_marking_id else [],
+            allow_custom=True,
+        )
+
+    def _create_campaign(self) -> stix2.Campaign:
+        return stix2.Campaign(
+            id=Campaign.generate_id(
+                name="Pravda Network Campaigns",
+            ),
+            name="Pravda Network Campaigns",
+            description=(
+                "Coordinated FIMI campaign spreading pro-Russian narratives "
+                "across multiple countries and languages"
+            ),
+            aliases=["Portal-Kombat Campaign", "Pravda"],
+            first_seen="2023-09-01T00:00:00Z",
+            objective=(
+                "Manipulate public opinion, undermine trust in Western "
+                "institutions, justify Russian actions"
+            ),
+            created_by_ref=self.author_id,
+            object_marking_refs=[self.tlp_marking_id] if self.tlp_marking_id else [],
+            allow_custom=True,
+        )
+
     def create_channel(
         self, *, name: str, source_url: str | None = None
     ) -> CustomObjectChannel:
@@ -105,7 +156,7 @@ class ConverterToStix:
         channel = CustomObjectChannel(
             id=Channel.generate_id(name=name),
             name=name,
-            channel_types=["dataset"],
+            channel_types=["website"],
             created_by_ref=self.author_id,
             object_marking_refs=[self.tlp_marking_id] if self.tlp_marking_id else [],
             external_references=external_refs,
@@ -126,6 +177,7 @@ class ConverterToStix:
             description=description,
             url=url,
             publication_date=publication_date,
+            object_marking_refs=[self.tlp_marking_id] if self.tlp_marking_id else [],
             custom_properties={
                 "x_opencti_created_by_ref": self.author_id,
             },
@@ -135,6 +187,7 @@ class ConverterToStix:
     def create_url(self, *, value: str) -> stix2.URL:
         return stix2.URL(
             value=value,
+            object_marking_refs=[self.tlp_marking_id] if self.tlp_marking_id else [],
             custom_properties={
                 "x_opencti_created_by_ref": self.author_id,
             },
@@ -223,7 +276,13 @@ class ConverterToStix:
 
     def bundle_serialize(self, objects: Iterable[object]) -> str:
         """Create a STIX2 bundle JSON string for `helper.send_stix2_bundle()`."""
-        stix_objects = [self.tlp_marking, self.author]
+        stix_objects = [
+            self.tlp_marking,
+            self.author,
+            self.intrusion_set,
+            self.campaign,
+            self.campaign_attributed_to_ims,
+        ]
         stix_objects.extend(list(objects))
         bundle = stix2.Bundle(objects=stix_objects, allow_custom=True)
         return bundle.serialize()

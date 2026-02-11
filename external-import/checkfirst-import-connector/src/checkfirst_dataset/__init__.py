@@ -1,1 +1,1 @@
-"""Checkfirst dataset OpenCTI connector package."""
+"""Checkfirst OpenCTI connector package."""
