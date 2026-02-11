@@ -18,8 +18,7 @@ from tenable_vuln_management import ConnectorSettings
                     "log_level": "error",
                     "duration_period": "PT5M",
                 },
-                "tio": {
-                    "num_thread": 1,
+                "tenable_vuln_management": {
                     "api_base_url": "https://cloud.tenable.com",
                     "api_access_key": "SecretStr",
                     "api_secret_key": "SecretStr",
@@ -29,7 +28,7 @@ from tenable_vuln_management import ConnectorSettings
                     "export_since": "1970-01-01T00:00:00+00",
                     "min_severity": "low",
                     "marking_definition": "TLP:CLEAR",
-                    "num_threads": None,
+                    "num_threads": 1,
                 },
             },
             id="full_valid_settings_dict",
@@ -38,8 +37,7 @@ from tenable_vuln_management import ConnectorSettings
             {
                 "opencti": {"url": "http://localhost:8080", "token": "test-token"},
                 "connector": {},
-                "tio": {
-                    "num_thread": 1,
+                "tenable_vuln_management": {
                     "api_base_url": "https://cloud.tenable.com",
                     "api_access_key": "SecretStr",
                     "api_secret_key": "SecretStr",
@@ -71,13 +69,13 @@ def test_settings_should_accept_valid_input(settings_dict):
     settings = FakeConnectorSettings()
     assert isinstance(settings.opencti, BaseConfigModel) is True
     assert isinstance(settings.connector, BaseConfigModel) is True
-    assert isinstance(settings.tio, BaseConfigModel) is True
+    assert isinstance(settings.tenable_vuln_management, BaseConfigModel) is True
 
 
 @pytest.mark.parametrize(
     "settings_dict, field_name",
     [
-        pytest.param({}, "settings", id="empty_settings_dict"),
+        pytest.param({}, "url", id="empty_settings_dict"),
         pytest.param(
             {
                 "opencti": {"url": "http://localhost:8080"},
@@ -88,8 +86,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "log_level": "error",
                     "duration_period": "PT5M",
                 },
-                "tio": {
-                    "num_thread": 1,
+                "tenable_vuln_management": {
                     "api_base_url": "https://cloud.tenable.com",
                     "api_access_key": "SecretStr",
                     "api_secret_key": "SecretStr",
@@ -99,7 +96,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "export_since": "1970-01-01T00:00:00+00",
                     "min_severity": "low",
                     "marking_definition": "TLP:CLEAR",
-                    "num_threads": None,
+                    "num_threads": 1,
                 },
             },
             "opencti.token",
@@ -115,8 +112,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "log_level": "error",
                     "duration_period": "PT5M",
                 },
-                "tio": {
-                    "num_thread": 1,
+                "tenable_vuln_management": {
                     "api_base_url": "https://cloud.tenable.com",
                     "api_access_key": "SecretStr",
                     "api_secret_key": "SecretStr",
@@ -126,7 +122,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "export_since": "1970-01-01T00:00:00+00",
                     "min_severity": "low",
                     "marking_definition": "TLP:CLEAR",
-                    "num_threads": None,
+                    "num_threads": 1,
                 },
             },
             "connector.id",
@@ -155,4 +151,10 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
 
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
-    assert str("Error validating configuration") in str(err)
+    assert "Error validating configuration" in str(err.value)
+
+    cause = err.value.__cause__
+    assert cause is not None
+    assert any(
+        ".".join(str(p) for p in e.get("loc", ())) == field_name for e in cause.errors()
+    )

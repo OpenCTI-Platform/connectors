@@ -20,7 +20,7 @@ connector:
   send_to_directory_retention: 7
 
 tenable_vuln_management:
-  num_thread: 2
+  num_threads: 2
   api_base_url: 'ChangeMe'
   api_access_key: 'ChangeMe'
   api_secret_key: 'ChangeMe'
