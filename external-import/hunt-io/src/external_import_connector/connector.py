@@ -180,7 +180,9 @@ class ConnectorHuntIo:
 
         # Initialize components following dependency injection pattern
         self.client = ConnectorClient(self.helper, self.config)
-        self.converter_to_stix = ConverterToStix(self.helper)
+        self.converter_to_stix = ConverterToStix(
+            self.helper, self.config.hunt_io.tlp_level
+        )
         self.entity_processor = EntityProcessor(self.helper, self.converter_to_stix)
         self.batch_manager = BatchManager(self.helper)
         self.state_manager = StateManager(self.helper)
