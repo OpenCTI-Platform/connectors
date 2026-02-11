@@ -33,11 +33,9 @@ class ConverterToStix:
     - generate_id() for each entity from OpenCTI pycti library except observables to create
     """
 
-    def __init__(self, helper):
+    def __init__(self, helper, tlp_level: str):
         self.helper = helper
-        self.tlp_marking = self.create_tlp_marking(
-            self.helper.config["hunt_io"]["tlp_level"]
-        )
+        self.tlp_marking = self.create_tlp_marking(TLPLevel(tlp_level))
         self.author = self.create_author()
 
     def create_author(self) -> stix2.Identity:
