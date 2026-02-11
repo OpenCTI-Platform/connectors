@@ -7,11 +7,13 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, SecretStr, model_validator
+from pydantic import Field, HttpUrl, SecretStr, model_validator
 
 
 class ConnectorHuntIoConfig(BaseConfigModel):
-    api_base_url: str = Field(description="API base URL", default_factory=str)
+    api_base_url: HttpUrl = Field(
+        description="API base URL", default=HttpUrl("https://api.hunt.io/v1/feeds/c2")
+    )
     api_key: SecretStr = Field(description="API key")
     tlp_level: Literal["white", "clear", "green", "amber", "amber+strict", "red"] = (
         Field(description="TLP level", default="amber")
