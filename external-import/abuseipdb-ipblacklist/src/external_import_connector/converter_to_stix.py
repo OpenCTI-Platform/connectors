@@ -1,7 +1,15 @@
 import ipaddress
+from typing import TYPE_CHECKING
 
 import stix2
-from pycti import Identity, MarkingDefinition, StixCoreRelationship
+from pycti import (
+    Identity,
+    MarkingDefinition,
+    OpenCTIConnectorHelper,
+)
+
+if TYPE_CHECKING:
+    from external_import_connector import ConnectorSettings
 
 
 class ConverterToStix:
@@ -12,12 +20,14 @@ class ConverterToStix:
     - generate_id() for each entity from OpenCTI pycti library except observables to create
     """
 
-    def __init__(self, helper, config):
+    def __init__(self, helper: "OpenCTIConnectorHelper", config: "ConnectorSettings"):
         self.helper = helper
         self.config = config
         self.author = self._create_author()
         self.external_reference = self._create_external_reference()
-        self.tlp_marking = self._create_tlp_marking(self.config.tlp_level.lower())
+        self.tlp_marking = self._create_tlp_marking(
+            self.config.abuseipdb.tlp_level.lower()
+        )
 
     @staticmethod
     def _create_external_reference() -> list[stix2.ExternalReference]:
@@ -71,27 +81,6 @@ class ConverterToStix:
             return mapping["clear"]
         return mapping[level]
 
-    def create_relationship(
-        self, source_id: str, relationship_type: str, target_id: str
-    ) -> stix2.Relationship:
-        """
-        Creates Relationship object
-        :param source_id: ID of source in string
-        :param relationship_type: Relationship type in string
-        :param target_id: ID of target in string
-        :return: Relationship STIX2 object
-        """
-        relationship = stix2.Relationship(
-            id=StixCoreRelationship.generate_id(
-                relationship_type, source_id, target_id
-            ),
-            relationship_type=relationship_type,
-            source_ref=source_id,
-            target_ref=target_id,
-            object_marking_refs=[self.tlp_marking],
-        )
-        return relationship
-
     @staticmethod
     def _is_ipv6(value: str) -> bool:
         """
@@ -140,7 +129,7 @@ class ConverterToStix:
                 f"- abuseConfidenceScore: {confidence_score} - lastReportedAt: {last_reported}"
             ),
             "x_opencti_score": int(confidence_score),
-            "x_opencti_create_indicator": self.config.create_indicator,
+            "x_opencti_create_indicator": self.config.abuseipdb.create_indicator,
         }
         if self._is_ipv6(value):
             return stix2.IPv6Address(

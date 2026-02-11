@@ -2,13 +2,11 @@ opencti:
   url: 'http://localhost'
   token: 'ChangeMe'
 
-connector:
-  type: 'EXTERNAL_IMPORT'
-  id: 'ChangeMe'
-  name: 'Wiz Cloud Threat Landscape'
-  scope: 'wiz'
-  log_level: 'info'
-  duration_period: 'PT5M' # Interval given for scheduler process in ISO-8601 format
+#connector:
+  #id: 'ChangeMe'
+  #name: 'Wiz Cloud Threat Landscape'
+  #log_level: 'error'
+  #duration_period: 'PT5M' # Interval given for scheduler process in ISO-8601 format
   #============================================#
   # Optional connector's definition parameters #
   #============================================#
@@ -20,5 +18,5 @@ connector:
   #send_to_directory_retention: 7
 
 wiz:
-  threat_actor_as_intrusion_set: 'False'
+  threat_actor_as_intrusion_set: False
   tlp_level: 'clear'

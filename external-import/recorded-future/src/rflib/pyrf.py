@@ -3,6 +3,8 @@ from datetime import datetime, timedelta, timezone
 import requests
 from pycti import OpenCTIConnectorHelper
 
+from .constants import SUPPORTED_PLAYBOOK_ALERT_CATEGORIES
+
 
 class RecordedFutureApiError(Exception):
     """Wrap exceptions emitted in RecordedFutureApiClient"""
@@ -334,7 +336,7 @@ class RecordedFutureApiClient:
 
         except requests.exceptions.RequestException as e:
             self.helper.connector_logger.error(
-                "Exception occured when trying to reach RecordedFuture's API : ",
+                "Exception occurred when trying to reach RecordedFuture's API : ",
                 {"error": str(e)},
             )
         except Exception as err:
@@ -349,31 +351,48 @@ class RecordedFutureApiClient:
                 )
 
             # If playbook_alert.category is not one of: domain_abuse, identity_novel_exposures, code_repo_leakage, log the error
-            playbook_alert_categories = [
-                "domain_abuse",
-                "identity_novel_exposures",
-                "code_repo_leakage",
-            ]
-            if playbook_alert_summary.category not in playbook_alert_categories:
+            if (
+                playbook_alert_summary.category
+                not in SUPPORTED_PLAYBOOK_ALERT_CATEGORIES
+            ):
                 self.helper.connector_logger.error(
-                    "You must provide an playbook alert whose category is among : domain_abuse, identity_novel_exposures, code_repo_leakage"
+                    f"You must provide an playbook alert whose category is among: {SUPPORTED_PLAYBOOK_ALERT_CATEGORIES}"
                 )
 
-            response = requests.post(
-                str(
-                    self.base_url
-                    + "playbook-alert/"
-                    + playbook_alert_summary.category
-                    + "/"
-                    + playbook_alert_summary.playbook_alert_id
-                ),
-                headers={
-                    "X-RFToken": self.x_rf_token,
-                    "Content-Type": "application/json",
-                    "accept": "application/json",
-                },
-                json={"panels": ["status", "action", "summary", "dns", "whois", "log"]},
-            )
+            # for vulnerability, the endpoint doesn't correspond to alert category
+            if playbook_alert_summary.category == "cyber_vulnerability":
+                response = requests.post(
+                    str(
+                        self.base_url
+                        + "playbook-alert/"
+                        + "vulnerability/"
+                        + playbook_alert_summary.playbook_alert_id
+                    ),
+                    headers={
+                        "X-RFToken": self.x_rf_token,
+                        "Content-Type": "application/json",
+                        "accept": "application/json",
+                    },
+                    json={"panels": ["status", "summary", "log"]},
+                )
+            else:
+                response = requests.post(
+                    str(
+                        self.base_url
+                        + "playbook-alert/"
+                        + playbook_alert_summary.category
+                        + "/"
+                        + playbook_alert_summary.playbook_alert_id
+                    ),
+                    headers={
+                        "X-RFToken": self.x_rf_token,
+                        "Content-Type": "application/json",
+                        "accept": "application/json",
+                    },
+                    json={
+                        "panels": ["status", "action", "summary", "dns", "whois", "log"]
+                    },
+                )
 
             # If there is an error during the request, the method raise the error
             response.raise_for_status()

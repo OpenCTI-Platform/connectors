@@ -10,7 +10,7 @@
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,
-  "max_confidence_level": 70,
+  "max_confidence_level": 50,
   "support_version": ">= 5.7.2",
   "subscription_link": "",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/yara",

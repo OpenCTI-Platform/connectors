@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/microsoft-defender-intel_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Microsoft Defender Intel",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "defender"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "STREAM",
+      "default": "STREAM",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_ID": {
+      "description": "The ID of the live stream to connect to.",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_LISTEN_DELETE": {
+      "default": true,
+      "description": "Whether to listen for delete events on the live stream.",
+      "type": "boolean"
+    },
+    "CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES": {
+      "default": true,
+      "description": "Whether to ignore dependencies when processing events from the live stream.",
+      "type": "boolean"
+    },
+    "MICROSOFT_DEFENDER_INTEL_TENANT_ID": {
+      "description": "Your Azure App Tenant ID, see connector's README to help you find this information.",
+      "type": "string"
+    },
+    "MICROSOFT_DEFENDER_INTEL_CLIENT_ID": {
+      "description": "Your Azure App Client ID, see connector's README to help you find this information.",
+      "type": "string"
+    },
+    "MICROSOFT_DEFENDER_INTEL_CLIENT_SECRET": {
+      "description": "Your Azure App Client secret, see connector's README to help you find this information.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "MICROSOFT_DEFENDER_INTEL_LOGIN_URL": {
+      "default": "https://login.microsoft.com/",
+      "description": "Login URL for Microsoft which is `https://login.microsoft.com`",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "MICROSOFT_DEFENDER_INTEL_BASE_URL": {
+      "default": "https://api.securitycenter.microsoft.com/",
+      "description": "The resource the API will use which is `https://api.securitycenter.microsoft.com`",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "MICROSOFT_DEFENDER_INTEL_RESOURCE_PATH": {
+      "default": "api/indicators",
+      "description": "The request URL that will be used which is `api/indicators`",
+      "type": "string"
+    },
+    "MICROSOFT_DEFENDER_INTEL_EXPIRE_TIME": {
+      "default": 30,
+      "description": "Number of days for your indicator to expire in Sentinel.",
+      "type": "integer"
+    },
+    "MICROSOFT_DEFENDER_INTEL_ACTION": {
+      "default": "Alert",
+      "description": "The action to apply if the indicator is matched from within the targetProduct security tool. `BlockAndRemediate` is not compatible with network indicators (see: https://learn.microsoft.com/en-us/defender-endpoint/indicator-manage)",
+      "enum": [
+        "Warn",
+        "Block",
+        "Audit",
+        "Alert",
+        "AlertAndBlock",
+        "BlockAndRemediate",
+        "Allowed"
+      ],
+      "type": "string"
+    },
+    "MICROSOFT_DEFENDER_INTEL_PASSIVE_ONLY": {
+      "default": false,
+      "description": "Determines if the indicator should trigger an event that is visible to an end-user. When set to `True` security tools will not notify the end user that a 'hit' has occurred. This is most often treated as audit or silent mode by security products where they will simply log that a match occurred but will not perform the action.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_LIVE_STREAM_ID",
+    "MICROSOFT_DEFENDER_INTEL_TENANT_ID",
+    "MICROSOFT_DEFENDER_INTEL_CLIENT_ID",
+    "MICROSOFT_DEFENDER_INTEL_CLIENT_SECRET"
+  ],
+  "additionalProperties": true
+}

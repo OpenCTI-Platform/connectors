@@ -3,16 +3,18 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe' # Valid UUIDv4
   name: 'AbuseIPDB IP Blacklist'
-  scope: 'abuseipdb' # MIME type or SCO
+  scope: 'abuseipdb-blacklist' # MIME type or SCO
   log_level: 'error'
 
 abuseipdb:
-  api_url: 'https://api.abuseipdb.com/api/v2/blacklist'
+  # api_url: 'https://api.abuseipdb.com/api/v2/blacklist'
   api_key: 'ChangeMe'
-  score: 100
-  limit: 10000
-  create_indicator: false
-  tlp_level: 'clear'
+  score: 'ChangeMe'
+  # limit: 500000
+  # create_indicator: false
+  # tlp_level: 'clear'
+  # ipversion: "mixed"
+  # except_country:
+  # only_country:

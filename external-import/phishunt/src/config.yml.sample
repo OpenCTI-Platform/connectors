@@ -3,7 +3,6 @@ opencti:
   token: ChangeMe(UUIDv4 token)
 
 connector:
-  type: 'EXTERNAL_IMPORT'
   id: ChangeMe(UUIDv4 token)
   name: 'Phishunt'
   scope: 'phishunt'
