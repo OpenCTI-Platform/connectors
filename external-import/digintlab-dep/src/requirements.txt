@@ -2,3 +2,4 @@ pycti>=6.8.13
 pyyaml>=6.0.3
 requests>=2.32.5
 stix2>=3.0.1
+pydantic>=2.12.5
