@@ -1,8 +1,9 @@
 # OpenCTI Team Cymru Scout Connector
 
-| Status | Date | Comment |
-|--------|------|---------|
-| Partner | -    | -       |
+| Status           | Date       | Comment |
+|------------------|------------|---------|
+| Partner          | -          | -       |
+| Filigran Verified| 2026-02-10 | -       |
 
 ## Table of Contents
 
