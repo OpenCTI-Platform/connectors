@@ -1,23 +1,19 @@
-# OpenCTI Connector: Checkfirst Dataset
+# OpenCTI Connector: Checkfirst Import
 
-Ingest Checkfirst dataset CSV files into OpenCTI as STIX 2.1 bundles.
+Ingest Checkfirst articles from the Checkfirst API into OpenCTI as STIX 2.1 bundles.
 
 This is an `EXTERNAL_IMPORT` connector that:
 
-- Reads one or more `.csv` / `.csv.gz` files from a dataset folder
-- Maps each row to OpenCTI-friendly STIX objects (`channel`, `media-content`, `url`) and relationships
+- Fetches articles from a paginated REST API (`Api-Key` header auth)
+- Maps each article to OpenCTI-friendly STIX objects (`channel`, `media-content`, `url`) and relationships
 - Sends bundles via `helper.send_stix2_bundle`
-- Persists progress using OpenCTI connector state so reruns only ingest newly appended rows
-
-## Development context
-
-This development is also an experiment to code with the help of Spec-kit from Github. Find more info here: https://github.com/github/spec-kit
+- Persists page-based progress using OpenCTI connector state so reruns resume where they left off
 
 ## Requirements
 
 - A running OpenCTI stack (OpenCTI platform + worker + RabbitMQ)
 - A dedicated OpenCTI token for the connector
-- A dataset folder containing Checkfirst CSV files
+- Access to the Checkfirst API (URL + API key)
 
 ## Configuration (environment variables)
 
@@ -33,68 +29,51 @@ OpenCTI standard variables:
 
 Connector-specific:
 
-- `CHECKFIRST_DATASET_PATH` (path inside the container, e.g. `/data_set`)
-- `CHECKFIRST_BATCH_SIZE` (default: `1000`)
+- `CHECKFIRST_API_URL` (base URL, e.g. `https://api.checkfirst.example.com`)
+- `CHECKFIRST_API_KEY` (sent as `Api-Key` header)
+- `CHECKFIRST_API_ENDPOINT` (default: `/v1/articles`)
+- `CHECKFIRST_SINCE` (ISO 8601 date; default: `2025-01-01T00:00:00Z` — only ingest articles published on or after this date)
 
 Optional run mode:
 
 - `CHECKFIRST_RUN_MODE` (default: `loop`; allowed: `loop|once`)
 
-Optional resource guards:
+Optional:
 
-- `CHECKFIRST_MAX_FILE_BYTES`
-- `CHECKFIRST_MAX_ROW_BYTES`
-- `CHECKFIRST_MAX_ROWS_PER_FILE`
+- `CHECKFIRST_TLP_LEVEL` (default: `clear`)
+- `CHECKFIRST_FORCE_REPROCESS` (default: `false` — set to `true` to restart from page 1)
+- `CHECKFIRST_MAX_ROW_BYTES` (skip rows exceeding this size)
 
 See `.env.sample` in this folder for a working template.
 
-## Run locally on Windows (without Docker)
-
-This connector uses `connectors_sdk` settings: it will automatically load `.env` (or `config.yml`) when it starts.
+## Run locally (without Docker)
 
 1) Create a Python 3.11+ virtualenv and install requirements:
 
-- `py -3.11 -m venv C:\venvs\checkfirst`
-- `C:\venvs\checkfirst\Scripts\python.exe -m pip install -r src\requirements.txt`
+- `python3.11 -m venv .venv`
+- `.venv/bin/pip install -r src/requirements.txt`
 
 2) Configure `.env`
 
 - Copy `.env.sample` to `.env`
 - Set `OPENCTI_URL`, `OPENCTI_TOKEN`
+- Set `CHECKFIRST_API_URL`, `CHECKFIRST_API_KEY`
 - Set RabbitMQ credentials (`MQ_HOST`, `MQ_USER`, `MQ_PASS`, etc.) to match your OpenCTI stack
 
 3) Run
 
 From this folder:
 
-- `C:\venvs\checkfirst\Scripts\python.exe -u src\main.py`
-
-If you already have system env vars (like `OPENCTI_TOKEN`) set and want `.env` to win, use python-dotenv override:
-
-- `dotenv -f .env -o run -- C:\venvs\checkfirst\Scripts\python.exe -u src\main.py`
+- `.venv/bin/python -u src/main.py`
 
 ## Run with Docker Compose
 
 1) Create your connector `.env`
 
 - Copy `.env.sample` to `.env`
-- Fill in at least `OPENCTI_URL`, `OPENCTI_TOKEN`, and `CONNECTOR_ID`
+- Fill in at least `OPENCTI_URL`, `OPENCTI_TOKEN`, `CHECKFIRST_API_URL`, `CHECKFIRST_API_KEY`
 
-2) Mount the dataset folder
-
-Edit `docker-compose.yml` (in this folder) so the connector sees your dataset at `CHECKFIRST_DATASET_PATH`.
-
-By default, the compose file mounts the sample dataset shipped in `./data_test`.
-For production, change the left side of the volume mount to your real dataset folder.
-
-Example:
-
-```yaml
-volumes:
-	- ./data_test:/data_set:ro
-```
-
-3) Start the connector
+2) Start the connector
 
 From this folder:
 
@@ -106,24 +85,15 @@ From this folder:
 ## Verify in OpenCTI
 
 - In **Data > Connectors**, confirm the connector is running
-- In **Data > Ingestion**, confirm a new “work” is created and completes successfully
+- In **Data > Ingestion**, confirm a new "work" is created and completes successfully
 - Search for ingested objects:
 	- `media-content` with `publication_date`
 	- `channel`
 	- `url`
 	- relationships (`publishes`, `related-to`)
 
-To validate incremental behavior:
-
-1) Run once
-2) Run once again (should ingest 0 new rows)
-3) Append a few rows to a CSV and run once again (should ingest only new rows)
-
-## Portable folder
-
-This folder is intentionally self-contained (Dockerfile, compose, src, sample dataset, and docs) so you can copy `checkfirst-import-connector/` into its own repository if you want.
-
 ## Notes
 
 - The mapping enforces deterministic STIX IDs for idempotency (reruns should not create duplicates).
+- The connector persists the last processed API page in connector state; on restart it resumes from the next page.
 - If you want a local, OpenCTI-free bundle export for debugging mappings, run the connector in one-shot mode (`CHECKFIRST_RUN_MODE=once`) and inspect logs / OpenCTI work results.

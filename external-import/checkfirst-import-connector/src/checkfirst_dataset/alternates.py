@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-"""Helpers for parsing the dataset "Alternates" column.
+"""Helpers for parsing the "Alternates" field.
 
-Dataset rows may include an "Alternates" field containing additional
+API rows may include an "Alternates" field containing additional
 URLs (often separated by ';' and sometimes embedded in surrounding text).
 We keep parsing permissive: extract http(s) URLs, trim common trailing
 punctuation, and preserve order while de-duplicating.
@@ -24,7 +24,7 @@ def parse_alternates(raw: str | None) -> list[str]:
         return []
 
     urls: list[str] = []
-    for token in text.split(";"):
+    for token in re.split(r"[;,]", text):
         token = token.strip()
         if not token:
             continue

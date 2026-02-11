@@ -11,7 +11,7 @@ class CheckfirstImportConnector:
     - `process_message()` does one ingestion pass
     - `run()` schedules runs via `OpenCTIConnectorHelper.schedule_process()`
 
-    The actual dataset parsing + STIX mapping is implemented under
+    The actual API ingestion + STIX mapping is implemented under
     `checkfirst_dataset/` and reused here.
     """
 
@@ -20,18 +20,20 @@ class CheckfirstImportConnector:
         self.helper = helper
 
     def process_message(self) -> None:
-        """One connector run: ingest files and push bundles to OpenCTI."""
+        """One connector run: fetch API data and push bundles to OpenCTI."""
         from checkfirst_dataset.main_logic import run_once
 
         run_once(self.helper, self.config)
 
     def run(self) -> None:
         """Start the connector in `once` or `loop` mode."""
-        if self.config.checkfirst.run_mode == "loop":
+        if self.config.checkfirst.run_mode == "once":
             self.process_message()
             return
 
-        self.helper.schedule_process(
+        # Loop mode: use schedule_iso for backpressure
+        total_secs = int(self.config.connector.duration_period.total_seconds())
+        self.helper.schedule_iso(
             message_callback=self.process_message,
-            duration_period=self.config.connector.duration_period.total_seconds(),
+            duration_period=f"PT{total_secs}S",
         )
