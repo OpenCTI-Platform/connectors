@@ -17,9 +17,9 @@ from __future__ import annotations
 
 import json
 import urllib.request
-from urllib.error import HTTPError
 from dataclasses import dataclass
 from typing import Dict, Iterable, Optional, Tuple
+from urllib.error import HTTPError
 
 
 def build_enterprise_attack_url(attack_version: str) -> str:
