@@ -41,8 +41,7 @@ class StubConnectorSettings(ConnectorSettings):
                     "log_level": "error",
                     "duration_period": "PT5M",
                 },
-                "tio": {
-                    "num_thread": 1,
+                "tenable_vuln_management": {
                     "api_base_url": "https://cloud.tenable.com",
                     "api_access_key": "SecretStr",
                     "api_secret_key": "SecretStr",
@@ -52,7 +51,7 @@ class StubConnectorSettings(ConnectorSettings):
                     "export_since": "1970-01-01T00:00:00+00",
                     "min_severity": "low",
                     "marking_definition": "TLP:CLEAR",
-                    "num_threads": None,
+                    "num_threads": 1,
                 },
             }
         )

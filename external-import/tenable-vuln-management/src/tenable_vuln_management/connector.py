@@ -60,10 +60,11 @@ class Connector:
         self.converter_to_stix = ConverterToStix(
             helper=self.helper,
             config=self.config,
-            default_marking=self.config.tio.marking_definition,
+            default_marking=self.config.tenable_vuln_management.marking_definition,
         )
         self.work_id: str | None = None
         self._metadata: list[dict[str, Any]] | None = None
+        self._export_since: str = self.config.tenable_vuln_management.export_since
 
     def _initiate_work(self) -> None:
         """Initiate a new work process in the OpenCTI platform.
@@ -87,11 +88,14 @@ class Connector:
             self.helper.connector_logger.info(
                 "[CONNECTOR] Connector last run", {"last_run_start_datetime": last_run}
             )
-            previous_since = str(self.config.tio.export_since)
-            self.config.tio.export_since = last_successful_run
+            previous_since = self._export_since
+            self._export_since = last_successful_run
             self.helper.connector_logger.warning(
                 "[CONNECTOR] Connector acquisition SINCE parameter overwritten",
-                {"previous": previous_since, "current": self.config.tio.export_since},
+                {
+                    "previous": previous_since,
+                    "current": self._export_since,
+                },
             )
         else:
             self.helper.connector_logger.info(
@@ -139,7 +143,9 @@ class Connector:
         success_flag = True
         try:
             self._metadata = (
-                self.client.get_finding_ids() if self._metadata is None else None
+                self.client.get_finding_ids(export_since=self._export_since)
+                if self._metadata is None
+                else None
             )
         except Exception as e:
             self.helper.connector_logger.error(
@@ -206,8 +212,12 @@ class Connector:
         Returns:
             results(list[bool]): True if job succeeded False otherwise.
         """
-        jobs = self.client.export_vulnerabilities().run_threaded(
-            func=self._process, kwargs=None, num_threads=self.config.tio.num_thread
+        jobs = self.client.export_vulnerabilities(
+            export_since=self._export_since
+        ).run_threaded(
+            func=self._process,
+            kwargs=None,
+            num_threads=self.config.tenable_vuln_management.num_threads,
         )
         return [job.result() for job in concurrent.futures.as_completed(jobs)]
 

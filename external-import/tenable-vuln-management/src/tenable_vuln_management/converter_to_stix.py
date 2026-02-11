@@ -456,7 +456,7 @@ class ConverterToStix:
                 external_references=[
                     {
                         "source_name": "Tenable Vulnerability Management",
-                        "url": f"{self.config.tio_api_base_url}/tio/app.html#/findings/host-vulnerabilities/details/"
+                        "url": f"{self.config.tenable_vuln_management.api_base_url}/tio/app.html#/findings/host-vulnerabilities/details/"
                         f"{vuln_finding.finding_id}/asset/{vuln_finding.asset.uuid}/asset-affected",
                         "description": "A detailed analysis of the vulnerability.",
                     }
