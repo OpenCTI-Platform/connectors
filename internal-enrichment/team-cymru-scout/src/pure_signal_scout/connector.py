@@ -1,5 +1,6 @@
 from typing import Dict
 
+from connectors_sdk.models import ExternalReference, OrganizationAuthor
 from pure_signal_scout.client_api import PureSignalScoutClient
 from pure_signal_scout.settings import ConnectorSettings
 from pure_signal_scout.utils import is_valid_strict_domain
@@ -24,12 +25,23 @@ class PureSignalScoutConnector:
             self.helper, PureSignalScoutConnectorConfig(self.config)
         )
 
+        external_reference = ExternalReference(
+            source_name="Team Cymru Scout",
+            url="https://www.team-cymru.com/pure-signal",
+            description="Team Cymru Scout Search API",
+        )
+        self.team_cymru_identity = OrganizationAuthor(
+            name="Team Cymru",
+            external_references=[external_reference],
+        ).to_stix2_object()
+
         self.helper.connector_logger.info(
             "[PureSignalScout] Connector initialized",
             {
                 "connector_id": self.helper.connect_id,
                 "connector_name": self.helper.connect_name,
                 "connector_scope": self.helper.connect_scope,
+                "author_id": self.team_cymru_identity["id"],
             },
         )
 
@@ -151,6 +163,7 @@ class PureSignalScoutConnector:
                     if not process_relationship(obj):
                         continue
 
+                obj["created_by_ref"] = self.team_cymru_identity["id"]
                 filtered_objects.append(obj)
 
             self.helper.connector_logger.info(
