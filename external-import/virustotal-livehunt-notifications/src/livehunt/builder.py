@@ -297,7 +297,7 @@ class LivehuntBuilder:
         ## Add the additional name
         x_opencti_additional_names = []
         for name in vtobj.names:
-            if name != vtobj.meaningful_name:
+            if not hasattr(vtobj, "meaningful_name") or name != vtobj.meaningful_name:
                 x_opencti_additional_names.append(name)
 
         ## Build a description using the last analysis data from av
