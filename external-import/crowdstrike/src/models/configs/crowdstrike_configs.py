@@ -57,7 +57,7 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
         ],
         description=(
             "Comma-separated list of scopes to enable. "
-            "Available: actor, report, indicator, malware, yara_master, snort_suricata_master."
+            "Available: actor, report, indicator, malware, vulnerability, yara_master, snort_suricata_master."
         ),
     )
 
