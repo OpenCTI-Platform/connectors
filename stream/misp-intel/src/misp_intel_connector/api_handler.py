@@ -82,6 +82,35 @@ class MispApiHandler:
             self.helper.connector_logger.error(f"MISP connection test failed: {str(e)}")
             return False
 
+    def _publish_event(self, event: Dict) -> None:
+        """
+        Publish a MISP event using PyMISP's native publish method.
+
+        :param event: Event data dictionary (must contain 'id' or 'uuid')
+        """
+        event_id = event.get("id") or event.get("uuid")
+        try:
+            self.misp.publish(
+                event_id, alert=self.config.misp.publish_alert
+            )
+            self.helper.connector_logger.info(
+                "Successfully published MISP event",
+                {
+                    "event_id": event.get("id"),
+                    "event_uuid": event.get("uuid"),
+                    "alert": self.config.misp.publish_alert,
+                },
+            )
+        except Exception as e:
+            self.helper.connector_logger.error(
+                f"Failed to publish MISP event: {str(e)}",
+                {
+                    "event_id": event.get("id"),
+                    "event_uuid": event.get("uuid"),
+                    "trace": traceback.format_exc(),
+                },
+            )
+
     def create_event(self, event_data: Dict) -> Optional[Dict]:
         """
         Create a new MISP event
@@ -175,6 +204,11 @@ class MispApiHandler:
                         "event_info": event.get("info"),
                     },
                 )
+
+                # Publish the event if configured
+                if self.config.misp.publish_on_create:
+                    self._publish_event(event)
+
                 return event
             else:
                 self.helper.connector_logger.error(
@@ -298,6 +332,11 @@ class MispApiHandler:
                         "event_info": event.get("info"),
                     },
                 )
+
+                # Publish the event if configured
+                if self.config.misp.publish_on_update:
+                    self._publish_event(event)
+
                 return event
             else:
                 self.helper.connector_logger.error(
