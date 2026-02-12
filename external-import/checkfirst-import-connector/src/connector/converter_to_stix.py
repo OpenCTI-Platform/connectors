@@ -85,7 +85,16 @@ class ConverterToStix:
     ) -> stix2.MarkingDefinition | dict:
         mapping = {
             "white": stix2.TLP_WHITE,
-            "clear": stix2.TLP_WHITE,
+            "clear": stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("TLP", "TLP:CLEAR"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                allow_custom=True,
+                custom_properties={
+                    "x_opencti_definition_type": "TLP",
+                    "x_opencti_definition": "TLP:CLEAR",
+                },
+            ),
             "green": stix2.TLP_GREEN,
             "amber": stix2.TLP_AMBER,
             "amber+strict": stix2.MarkingDefinition(
