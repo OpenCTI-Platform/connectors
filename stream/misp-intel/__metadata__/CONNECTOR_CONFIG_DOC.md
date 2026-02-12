@@ -25,6 +25,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | MISP_THREAT_LEVEL | `integer` |  | `1 <= x <= 4` | `2` | Threat level for MISP events: 1: High, 2: Medium, 3: Low, 4: Undefined |
 | MISP_PUBLISH_ON_CREATE | `boolean` |  | boolean | `false` | Automatically publish events when created. |
 | MISP_PUBLISH_ON_UPDATE | `boolean` |  | boolean | `false` | Automatically publish events when updated. |
+| MISP_PUBLISH_ALERT | `boolean` |  | boolean | `false` | Send email alert notifications when publishing events. |
 | MISP_TAG_OPENCTI | `boolean` |  | boolean | `true` | Add OpenCTI-specific tags to MISP events. |
 | MISP_TAG_PREFIX | `string` |  | string | `"opencti:"` | Prefix for OpenCTI tags in MISP. |
 | MISP_HARD_DELETE | `boolean` |  | boolean | `true` | Perform hard deletion of MISP events (permanent deletion without blocklisting). If False, deleted events are added to the blocklist to prevent re-importation. If True, events are permanently deleted and can be re-imported later. |
