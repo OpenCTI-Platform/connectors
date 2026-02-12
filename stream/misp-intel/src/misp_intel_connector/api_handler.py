@@ -90,9 +90,7 @@ class MispApiHandler:
         """
         event_id = event.get("id") or event.get("uuid")
         try:
-            self.misp.publish(
-                event_id, alert=self.config.misp.publish_alert
-            )
+            self.misp.publish(event_id, alert=self.config.misp.publish_alert)
             self.helper.connector_logger.info(
                 "Successfully published MISP event",
                 {
