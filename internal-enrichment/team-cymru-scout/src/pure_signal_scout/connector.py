@@ -46,7 +46,9 @@ class PureSignalScoutConnector:
                 if marking_definition.get("definition_type") == "TLP":
                     self.tlp = marking_definition.get("definition")
 
-        valid_max_tlp = self.helper.check_max_tlp(self.tlp, self.config.max_tlp)
+        valid_max_tlp = self.helper.check_max_tlp(
+            self.tlp, self.config.pure_signal_scout.max_tlp
+        )
 
         if not valid_max_tlp:
             raise ValueError(
