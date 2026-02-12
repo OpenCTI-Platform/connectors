@@ -21,9 +21,14 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         description="The name of the connector.",
         default="TeamCymruScoutSearch",
     )
+
     scope: ListFromString = Field(
-        description="The scope of the connector.",
-        default=["Text"],
+        description="The scope of the connector",
+        default=[
+            "IPv4-Addr",
+            "IPv6-Addr",
+            "Domain-Name",
+        ],
     )
 
 
