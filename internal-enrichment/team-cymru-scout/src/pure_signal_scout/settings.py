@@ -19,7 +19,7 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     )
     name: str = Field(
         description="The name of the connector.",
-        default="TeamCymruScoutSearch",
+        default="TeamCymruScout",
     )
 
     scope: ListFromString = Field(
@@ -34,7 +34,7 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
 
 class TeamCymruScoutConfig(BaseConfigModel):
     """
-    Define parameters and/or defaults for the configuration specific to the `TeamCymruScoutSearchConnector`.
+    Define parameters and/or defaults for the configuration specific to the `TeamCymruScoutConnector`.
     """
 
     api_url: str = Field(
@@ -50,7 +50,7 @@ class TeamCymruScoutConfig(BaseConfigModel):
 
 class ConnectorSettings(BaseConnectorSettings):
     """
-    Override `BaseConnectorSettings` to include `InternalEnrichmentConnectorConfig` and `TeamCymruScoutSearchConfig`.
+    Override `BaseConnectorSettings` to include `InternalEnrichmentConnectorConfig` and `TeamCymruScoutConfig`.
     """
 
     connector: InternalEnrichmentConnectorConfig = Field(
