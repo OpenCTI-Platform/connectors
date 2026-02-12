@@ -19,6 +19,7 @@ class MISPClient:
         self,
         url: HttpUrl,
         key: str,
+        timeout: float | None,
         verify_ssl: bool = False,
         certificate: str | None = None,
         retry: int = 3,
@@ -44,6 +45,7 @@ class MISPClient:
             debug=False,
             tool="OpenCTI MISP connector",
             https_adapter=http_adapter,
+            timeout=timeout,
         )
 
     def _sanitize_user_id_in_tags(self, obj):
