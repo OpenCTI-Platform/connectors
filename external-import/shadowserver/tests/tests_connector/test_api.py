@@ -101,10 +101,10 @@ class TestShadowserverAPI:
         fixture_data = self.load_fixture("report_type_blocklist.json")
         csv_content = from_list_to_csv(fixture_data).encode("utf-8")
 
-        # Mock the session.get to return CSV content
+        # Mock the session.get to return CSV content (streaming)
         mock_response = MagicMock()
-        mock_response.content = csv_content
         mock_response.raise_for_status = MagicMock()
+        mock_response.iter_content = lambda chunk_size: (csv_content,)
         mock_get = mocker.patch.object(shadow_server_api.session, "get")
         mock_get.return_value = mock_response
 
