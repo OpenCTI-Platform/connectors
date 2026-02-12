@@ -15,15 +15,17 @@
       "type": "string"
     },
     "CONNECTOR_NAME": {
-      "default": "TeamCymruScoutSearch",
+      "default": "TeamCymruScout",
       "description": "The name of the connector.",
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
       "default": [
-        "Text"
+        "IPv4-Addr",
+        "IPv6-Addr",
+        "Domain-Name"
       ],
-      "description": "The scope of the connector.",
+      "description": "The scope of the connector",
       "items": {
         "type": "string"
       },
@@ -66,11 +68,6 @@
       "default": "TLP:AMBER",
       "description": "Max TLP level for enrichment (default: TLP:AMBER)",
       "type": "string"
-    },
-    "PURE_SIGNAL_SCOUT_SEARCH_INTERVAL": {
-      "default": 1,
-      "description": "Search interval in days (default: 1)",
-      "type": "integer"
     }
   },
   "required": [
