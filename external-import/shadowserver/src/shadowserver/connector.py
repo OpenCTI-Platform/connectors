@@ -55,6 +55,7 @@ class CustomConnector(ExternalImportConnector):
         self.helper.connector_logger.info(
             f"Available report types: {subscription_list}."
         )
+        subscription_list = ["test"]
         if not subscription_list:
             self.helper.connector_logger.error(
                 "No report types found, please enable them following Shadowservers documentation. https://www.shadowserver.org/what-we-do/network-reporting/get-reports/"
