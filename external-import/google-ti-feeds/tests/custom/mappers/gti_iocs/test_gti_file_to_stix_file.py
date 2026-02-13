@@ -596,7 +596,8 @@ def test_get_score_with_mandiant_score(
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
                     mandiant_confidence_score=85
-                )
+                ),
+                threat_score=None,
             )
         )
     )

@@ -209,6 +209,7 @@ class GTIDomainToSTIXDomain(BaseMapper):
             self.domain.attributes
             and self.domain.attributes.gti_assessment
             and self.domain.attributes.gti_assessment.threat_score
+            and self.domain.attributes.gti_assessment.threat_score.value is not None
         ):
             return self.domain.attributes.gti_assessment.threat_score.value
 
