@@ -17,7 +17,7 @@ crowdstrike:
   tlp: 'amber+strict'
   create_observables: true
   create_indicators: true
-  scopes: 'actor,report,indicator,yara_master,snort_suricata_master' # One or all of the following: actor,report,indicator,vulnerability,yara_master,snort_suricata_master
+  scopes: 'actor,report,indicator,malware,yara_master,snort_suricata_master' # One or all of the following: actor,report,indicator,vulnerability,yara_master,snort_suricata_master
   actor_start_timestamp:  # Unix timestamp. Leave empty for default (30 days ago). BEWARE! 0 means ALL actors!
   malware_start_timestamp:  # Unix timestamp. Leave empty for default (30 days ago). 0 means ALL malware!
   report_start_timestamp:   # Unix timestamp. Leave empty for default (30 days ago). BEWARE! 0 means ALL reports!
