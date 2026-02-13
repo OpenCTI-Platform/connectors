@@ -1,24 +1,15 @@
-FROM python:3.11-alpine
-
-# Install dependencies
-RUN apk --no-cache add git build-base libmagic libffi-dev
-
-# Set working directory
-WORKDIR /opt/opencti-connector-pure-signal-scout
-
-# Copy requirements and install dependencies
-COPY requirements.txt .
-RUN pip3 install --no-cache-dir -r requirements.txt
+FROM python:3.12-alpine
 
 # Copy the connector
-COPY src ./src
+COPY src /opt/opencti-connector-team-cymru-scout
+WORKDIR /opt/opencti-connector-team-cymru-scout
 
-# Copy version file
-COPY VERSION .
+# Install Python modules
+# hadolint ignore=DL3003
+RUN apk --no-cache add git build-base libmagic libffi-dev
 
-# Create entrypoint
-COPY entrypoint.sh .
-RUN chmod +x entrypoint.sh
+RUN cd /opt/opencti-connector-team-cymru-scout && \
+    pip3 install --no-cache-dir -r requirements.txt && \
+    apk del git build-base
 
-# Expose and entrypoint
-ENTRYPOINT ["./entrypoint.sh"]
+CMD ["python", "main.py"]
