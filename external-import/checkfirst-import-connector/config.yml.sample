@@ -1,0 +1,29 @@
+opencti:
+  url: http://opencti:8080
+  token: CHANGEME
+
+connector:
+  id: CHANGEME
+  name: Checkfirst Import Connector
+  scope: media-content,channel,url
+  log_level: info
+  duration_period: P7D
+
+checkfirst:
+  source_type: api
+  api_url: ChangeMe         # e.g. https://api.checkfirst.example.com
+  api_key: ChangeMe
+  api_endpoint: /v1/articles
+  since: "2025-01-01T00:00:00Z"
+  run_mode: loop
+  force_reprocess: false
+  tlp_level: clear
+
+
+mq:
+  host: rabbitmq
+  port: 5672
+  user: opencti
+  pass: ChangeMe
+  vhost: /
+  use_ssl: false
