@@ -1,74 +1,38 @@
 import json
-import os
 import time
+from typing import TYPE_CHECKING
 
 import requests
-import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
+
+if TYPE_CHECKING:
+    from pycti import OpenCTIConnectorHelper
+
+    from .settings import ConnectorSettings
 
 
 class AnyRunTask:
-    def __init__(self):
-        # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config)
-
-        self.token = get_config_variable("ANYRUN_TOKEN", ["anyrun", "token"], config)
-        self.anyrun_url = get_config_variable(
-            "ANYRUN_API_URL",
-            ["anyrun", "url"],
-            config,
-            default="https://api.any.run",
-        )
+    def __init__(self, config: "ConnectorSettings", helper: "OpenCTIConnectorHelper"):
+        self.config = config
+        self.helper = helper
+        self.token = self.config.anyrun.token.get_secret_value()
+        self.anyrun_url = self.config.anyrun.url
         self.organization = self.helper.api.identity.create(
             type="Organization",
             name="ANY.RUN",
             description="Interactive Online Malware Sandbox",
             contact_information="https://any.run/",
         )
-        self.task_timer = int(
-            get_config_variable(
-                "ANYRUN_TASK_TIMER", ["anyrun", "timer"], config, default=60
-            )
-        )
-        self.task_os = get_config_variable(
-            "ANYRUN_OS", ["anyrun", "os"], config, default="windows"
-        )
-        self.task_os_bitness = get_config_variable(
-            "ANYRUN_OS_BITNESS", ["anyrun", "bitness"], config, default="64"
-        )
-        self.task_os_version = get_config_variable(
-            "ANYRUN_OS_VERSION", ["anyrun", "version"], config, default="10"
-        )
-        self.task_os_locale = get_config_variable(
-            "ANYRUN_OS_LOCALE", ["anyrun", "locale"], config, default="en-US"
-        )
-        self.task_os_browser = get_config_variable(
-            "ANYRUN_OS_BROWSER", ["anyrun", "browser"], config, default="Google Chrome"
-        )
-        self.task_privacy = get_config_variable(
-            "ANYRUN_PRIVACY", ["anyrun", "privacy"], config, default="bylink"
-        )
-        self.automated_interactivity = get_config_variable(
-            "ANYRUN_AUTOMATED_INTERACTIVITY",
-            ["anyrun", "automated_interactivity"],
-            config,
-            default=False,
-        )
-        self.enable_ioc = get_config_variable(
-            "ANYRUN_IOC", ["anyrun", "ioc"], config, default=True
-        )
-        self.enable_mitre = get_config_variable(
-            "ANYRUN_MITRE", ["anyrun", "mitre"], config, default=False
-        )
-        self.enable_processes = get_config_variable(
-            "ANYRUN_PROCESSES", ["anyrun", "processes"], config, default=False
-        )
+        self.task_timer = self.config.anyrun.task_timer
+        self.task_os = self.config.anyrun.os
+        self.task_os_bitness = self.config.anyrun.os_bitness
+        self.task_os_version = self.config.anyrun.os_version
+        self.task_os_locale = self.config.anyrun.os_locale
+        self.task_os_browser = self.config.anyrun.os_browser
+        self.task_privacy = self.config.anyrun.privacy
+        self.automated_interactivity = self.config.anyrun.automated_interactivity
+        self.enable_ioc = self.config.anyrun.ioc
+        self.enable_mitre = self.config.anyrun.mitre
+        self.enable_processes = self.config.anyrun.processes
         self.iocs_types_mapping = {
             "domain": "Domain-Name",
             "url": "Url",
@@ -90,9 +54,6 @@ class AnyRunTask:
             response = requests.get(
                 url, headers={"Authorization": "API-Key {}".format(self.token)}
             )
-        # if response.status_code != 200:
-        #     raise ValueError("Any.RUN api code {}. text: {}".format(response.status_code,
-        #                                                             response.text))
         return response
 
     def run_task(self, type, data, file=None):
@@ -116,27 +77,24 @@ class AnyRunTask:
             "opt_automated_interactivity": self.automated_interactivity,
             "opt_privacy_type": self.task_privacy,
         }
-
         response = self.call_anyrun_api("POST", "v1/analysis", rdata, file)
-        # self.helper.log_error(str(response.text))
         json_data = json.loads(response.text)
         return json_data
 
     def wait_for_task(self, task_id, timer=300):
         num = 0
-        self.helper.log_info(
-            "ANY.RUN Waiting {} seconds for task {}".format(timer, task_id)
-        )
+        self.helper.log_info(f"ANY.RUN Waiting {timer} seconds for task {task_id}")
         while True:
             time.sleep(1)
             num += 1
-            response = self.call_anyrun_api("GET", "v1/analysis/{}".format(task_id))
+            response = self.call_anyrun_api("GET", f"v1/analysis/{task_id}")
             try:
                 result = json.loads(response.text)
                 if result["data"]["status"] == "done":
-                    self.helper.log_info("ANY.RUN task {} completed".format(task_id))
+                    self.helper.log_info(f"ANY.RUN task {task_id} completed")
                     return result
-            except:
+            except Exception as e:
+                self.helper.log_error(f"Error waiting for task {task_id}: {e}")
                 continue
             finally:
                 if num == timer:
@@ -151,59 +109,48 @@ class AnyRunTask:
             raise ValueError(
                 "Observable not found (or the connector does not has access to this observable, check the group of the connector user)"
             )
-
         self.helper.log_debug(str(opencti_entity))
-
         if opencti_entity["entity_type"] == "Artifact":
-            artifact_url = f'{self.helper.opencti_url}/storage/get/{opencti_entity["importFiles"][0]["id"]}'
+            artifact_url = f"{self.helper.opencti_url}/storage/get/{opencti_entity['importFiles'][0]['id']}"
             try:
                 artifact = self.helper.api.fetch_opencti_file(artifact_url, binary=True)
             except Exception as err:
                 raise ValueError("Error fetching artifact from OpenCTI") from err
-
             task = self.run_task("file", data={}, file=artifact)
-
         elif opencti_entity["entity_type"] == "Url":
             task = self.run_task("url", {"value": opencti_entity["value"]})
         else:
             raise ValueError(
                 'Wrong scope! supported only "Artifact" and "Url" observables types'
             )
-
         if task.get("error", False):
             error_message = task.get("message", "Unknown error")
             raise ValueError(error_message)
         else:
             self.helper.log_info(
-                "ANY.RUN task started url: https://app.any.run/tasks/{}".format(
-                    task["data"]["taskid"]
-                )
+                f"ANY.RUN task started url: https://app.any.run/tasks/{task['data']['taskid']}"
             )
             # Create external reference to ANY.RUN task
             external_reference_task = self.helper.api.external_reference.create(
-                source_name="ANY.RUN task {}".format(task["data"]["taskid"]),
-                url="https://app.any.run/tasks/{}".format(task["data"]["taskid"]),
+                source_name=f"ANY.RUN task {task['data']['taskid']}",
+                url=f"https://app.any.run/tasks/{task['data']['taskid']}",
             )
             self.helper.api.stix_cyber_observable.add_external_reference(
                 id=opencti_entity["id"],
                 external_reference_id=external_reference_task["id"],
             )
-
             result = self.wait_for_task(
                 task["data"]["taskid"], timer=self.task_timer + 20
             )
-            # self.helper.log_info(result)
 
             # Add labels from ANY.RUN task result
             for tag in result["data"]["analysis"]["tags"]:
-                label = self.helper.api.label.create(
-                    value=tag["tag"],
-                    # color="#ffa500",
-                )
+                label = self.helper.api.label.create(value=tag["tag"])
                 self.helper.api.stix_cyber_observable.add_label(
                     id=opencti_entity["id"], label_id=label["id"]
                 )
-            # Add score
+
+            # Update observable score
             anyrun_score = result["data"]["analysis"]["scores"]["verdict"]["score"]
             opencti_score = opencti_entity.get("x_opencti_score", anyrun_score)
             if opencti_score is None:
@@ -211,7 +158,7 @@ class AnyRunTask:
             if anyrun_score < opencti_score:
                 note = self.helper.api.note.create(
                     authors=[self.organization["id"]],
-                    content="ANY.RUN score: {}".format(str(anyrun_score)),
+                    content=f"ANY.RUN score: {anyrun_score}",
                 )
                 self.helper.api.note.add_stix_object_or_stix_relationship(
                     id=note["id"], stixObjectOrStixRelationshipId=opencti_entity["id"]
@@ -222,7 +169,7 @@ class AnyRunTask:
                     input={"key": "x_opencti_score", "value": str(anyrun_score)},
                 )
 
-            # Add mitre relationship
+            # Add MITRE ATT&CK relationships
             if self.enable_mitre:
                 for pattern_anyrun in result["data"]["mitre"]:
                     patterns_opencti = self.helper.api.attack_pattern.list(
@@ -239,10 +186,10 @@ class AnyRunTask:
                                 description="Attack pattern",
                             )
 
-            # add malicious iocs
+            # Add malicious IOCs
             if self.enable_ioc:
                 response = self.call_anyrun_api(
-                    "GET", "report/{}/ioc/json".format(task["data"]["taskid"])
+                    "GET", f"report/{task['data']['taskid']}/ioc/json"
                 )
                 iocs = json.loads(response.text)
                 for ioc in iocs:
@@ -284,28 +231,21 @@ class AnyRunTask:
                             ],
                             x_opencti_score=opencti_score,
                             update=True,
-                            x_mitre_platforms=[
-                                get_config_variable(
-                                    "ANYRUN_OS", ["anyrun", "os"], {}, default="windows"
-                                )
-                            ],
+                            x_mitre_platforms=[self.config.anyrun.os],
                             createdBy=self.organization["id"],
                         )
-
                         if new_observable["id"] != opencti_entity["id"]:
                             self.helper.api.indicator.add_stix_cyber_observable(
                                 id=indicator["id"],
-                                # indicator=indicator,
                                 stix_cyber_observable_id=opencti_entity["id"],
                             )
                         else:
                             self.helper.api.indicator.add_stix_cyber_observable(
                                 id=indicator["id"],
-                                # indicator=indicator,
                                 stix_cyber_observable_id=new_observable["id"],
                             )
 
-            # add malicious processes
+            # Add malicious processes
             if self.enable_processes:
                 procs_links = []
                 for proc in result["data"]["processes"]:
@@ -313,7 +253,6 @@ class AnyRunTask:
                         proc["scores"]["verdict"]["score"] > 0
                         and proc["important"] is True
                     ):
-                        # self.helper.log_error(str(proc))
                         process = self.helper.api.stix_cyber_observable.create(
                             observableData={
                                 "type": "Process",
@@ -331,8 +270,7 @@ class AnyRunTask:
                         )
                         if proc.get("threatName") is not None:
                             label = self.helper.api.label.create(
-                                value=proc["threatName"],
-                                # color="#ffa500",
+                                value=proc["threatName"]
                             )
                             self.helper.api.stix_cyber_observable.add_label(
                                 id=process["id"], label_id=label["id"]
@@ -345,7 +283,6 @@ class AnyRunTask:
                             relationship_type="related-to",
                             description="Relation between the Main object and Process objects",
                         )
-
                         procs_links.append(
                             {
                                 "pid": proc["pid"],
@@ -353,7 +290,6 @@ class AnyRunTask:
                                 "observable_id": process["id"],
                             }
                         )
-
                 for proc_main in procs_links:
                     for proc_child in procs_links:
                         if proc_child["ppid"] == proc_main["pid"]:
@@ -366,11 +302,5 @@ class AnyRunTask:
                                 description="Relation between child and parent process",
                             )
 
-    # Start the main loop
-    def start(self):
+    def run(self):
         self.helper.listen(self._process_message)
-
-
-if __name__ == "__main__":
-    anyruntask = AnyRunTask()
-    anyruntask.start()
