@@ -1,0 +1,22 @@
+{
+  "title": "CyberThreatExchange by dogesec",
+  "slug": "dogesec-cyberthreatexchange",
+  "description": "The OpenCTI CyberThreatExchange Connector is a structured way for producers to submit their intel and for users to explore it.",
+  "short_description": "The OpenCTI CyberThreatExchange Connector synchronizes intelligence from CyberThreatExchange into OpenCTI.",
+  "logo": "external-import/dogesec-cyberthreatexchange/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel",
+    "Open Source Threat Intel"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.0",
+  "subscription_link": "https://www.cyberthreatexchange.com/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/dogesec-cyberthreatexchange",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-dogesec-cyberthreatexchange",
+  "container_type": "EXTERNAL_IMPORT"
+}
