@@ -1,0 +1,7 @@
+pycti>=6.3.0
+stix2>=3.0.1
+python-dateutil>=2.9.0.post0
+pyyaml>=6.0.1
+
+# OpenCTI connectors SDK (typed settings, deterministic models helpers)
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
