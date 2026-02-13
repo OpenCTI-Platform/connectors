@@ -17,7 +17,7 @@ class CustomConnector(ExternalImportConnector):
     ) -> None:
         """Initialization of the connector"""
         super().__init__(helper, config)
-        self.first_run = True
+        first_run = True
         self.lookback = None
         if last_run := self.state.get("last_run"):
             last_run = (
@@ -29,8 +29,9 @@ class CustomConnector(ExternalImportConnector):
             self.first_run = False
         else:
             self.lookback = INITIAL_LOOKBACK
+
         self.helper.connector_logger.info(
-            f"Connector initialized. Lookback: {self.lookback} days. First run: {self.first_run}"
+            f"Connector initialized. Lookback: {self.lookback} days. First run: {first_run}"
         )
 
     def _collect_intelligence(self) -> []:
@@ -66,6 +67,7 @@ class CustomConnector(ExternalImportConnector):
                 raise ValueError(
                     "No report types found, please enable them following Shadowservers documentation. https://www.shadowserver.org/what-we-do/network-reporting/get-reports/"
                 )
+
         if subscription_list and isinstance(subscription_list, list):
             for subscription in subscription_list:
                 for days_lookback in range(self.lookback, -1, -1):
