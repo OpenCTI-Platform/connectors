@@ -4,6 +4,11 @@
 |--------|------|---------|
 | Filigran Verified | -    | -       |
 
+The OpenCTI CrowdStrike connector can be used to import knowledge from the CrowdStrike
+Falcon platform. The connector leverages the Intel APIs to get information about
+CrowdStrike's intelligence, including data about actors, indicators, reports, malware,
+and YARA rules.
+
 The CrowdStrike connector imports threat intelligence from CrowdStrike Falcon Intelligence into OpenCTI, including actors, reports, indicators, and detection rules.
 
 ## Table of Contents
@@ -67,7 +72,6 @@ There are a number of configuration options, which are set either in `docker-com
 
 ### Connector extra parameters environment variables
 
-<<<<<<< HEAD
 | Parameter                   | config.yml                              | Docker environment variable                  | Default                                              | Mandatory | Description                                                                      |
 |-----------------------------|-----------------------------------------|----------------------------------------------|------------------------------------------------------|-----------|----------------------------------------------------------------------------------|
 | Base URL                    | crowdstrike.base_url                    | `CROWDSTRIKE_BASE_URL`                       | https://api.crowdstrike.com                          | No        | CrowdStrike API base URL.                                                        |
@@ -78,7 +82,8 @@ There are a number of configuration options, which are set either in `docker-com
 | Create Indicators           | crowdstrike.create_indicators           | `CROWDSTRIKE_CREATE_INDICATORS`              | true                                                 | No        | Create indicators.                                                               |
 | Scopes                      | crowdstrike.scopes                      | `CROWDSTRIKE_SCOPES`                         | actor,report,indicator,yara_master                   | No        | Comma-separated list of data types to import.                                    |
 | Actor Start Timestamp       | crowdstrike.actor_start_timestamp       | `CROWDSTRIKE_ACTOR_START_TIMESTAMP`          | (30 days ago)                                        | No        | Unix timestamp. Empty = 30 days ago. 0 = ALL actors.                             |
-| Vulnerability Start Timestamp | `vulnerability_start_timestamp` | `CROWDSTRIKE_VULNERABILITY_START_TIMESTAMP` | 30 days ago                   | No        | `0`                                                                  | The Vulnerabilities updated after this timestamp will be imported. Timestamp in UNIX Epoch time, UTC. Default is 30 days ago. |
+| Vulnerability Start Timestamp | crowdstrike.vulnerability_start_timestamp | `CROWDSTRIKE_VULNERABILITY_START_TIMESTAMP` | 30 days ago                   | No        | `0`                                                                  | The Vulnerabilities updated after this timestamp will be imported. Timestamp in UNIX Epoch time, UTC. Default is 30 days ago. |
+| Malware Start Timestamp     | crowdstrike.malware_start_timestamp     | `CROWDSTRIKE_MALWARE_START_TIMESTAMP`        | (30 days ago)                                        | No        | Unix timestamp. Empty = 30 days ago. 0 = ALL malware.                             |
 | Report Start Timestamp      | crowdstrike.report_start_timestamp      | `CROWDSTRIKE_REPORT_START_TIMESTAMP`         | (30 days ago)                                        | No        | Unix timestamp. Empty = 30 days ago. 0 = ALL reports.                            |
 | Report Status               | crowdstrike.report_status               | `CROWDSTRIKE_REPORT_STATUS`                  | New                                                  | No        | Status for imported reports.                                                     |
 | Report Include Types        | crowdstrike.report_include_types        | `CROWDSTRIKE_REPORT_INCLUDE_TYPES`           | notice,tipper,intelligence report,periodic report    | No        | Comma-separated report types to include.                                         |
@@ -98,9 +103,9 @@ There are a number of configuration options, which are set either in `docker-com
 | Unwanted Labels             | crowdstrike.indicator_unwanted_labels   | `CROWDSTRIKE_INDICATOR_UNWANTED_LABELS`      |                                                      | No        | Filter out indicators with these labels.                                         |
 | No File Trigger Import      | crowdstrike.no_file_trigger_import      | `CROWDSTRIKE_NO_FILE_TRIGGER_IMPORT`         | true                                                 | No        | Import indicator updates without file triggers.                                  |
 
-## Deployment
+**Note**: It is not recommended to use the default value `0` for configuration parameters `report_start_timestamp`, `indicator_start_timestamp`, and `malware_start_timestamp` because of the large data volumes.
 
-**Note**: It is not recommended to use the default value `0` for configuration parameters `report_start_timestamp`, `indicator_start_timestamp`, and `vulnerability_start_timestamp` because of the large data volumes.
+## Deployment
 
 ### Docker Deployment
 

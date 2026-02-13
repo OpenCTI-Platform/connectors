@@ -16,7 +16,7 @@ services:
       - CROWDSTRIKE_TLP=amber+strict
       - CROWDSTRIKE_CREATE_OBSERVABLES=true
       - CROWDSTRIKE_CREATE_INDICATORS=true
-      - CROWDSTRIKE_SCOPES=actor,report,indicator,yara_master
+      - CROWDSTRIKE_SCOPES=actor,report,indicator,malware,yara_master,snort_suricata_master
       - CROWDSTRIKE_ACTOR_START_TIMESTAMP= # Unix timestamp. Leave empty for default (30 days ago). BEWARE! 0 means ALL actors!
       - CROWDSTRIKE_REPORT_START_TIMESTAMP= # Unix timestamp. Leave empty for default (30 days ago). BEWARE! 0 means ALL reports!
       - CROWDSTRIKE_REPORT_STATUS=New
