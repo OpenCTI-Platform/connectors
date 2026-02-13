@@ -91,6 +91,10 @@ class ShadowserverConfig(BaseConfigModel):
         description="Default incident priority.",
         default="P4",
     )
+    report_types: ListFromString | None = Field(
+        description="List of report types to retrieve. If not provided, ",
+        default=None,
+    )
 
 
 class ConnectorSettings(BaseConnectorSettings):
