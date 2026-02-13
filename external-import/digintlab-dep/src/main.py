@@ -1,15 +1,91 @@
 import json
 import os
 import time
-from datetime import UTC, datetime, timedelta
+from datetime import UTC
+from datetime import date as dt_date
+from datetime import datetime, timedelta
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote
+from urllib.parse import unquote, urlsplit
+from uuid import NAMESPACE_URL, uuid5
 
 import pycti  # type: ignore[import-untyped]
 import requests
 import yaml
+from pydantic import ConfigDict, Field, field_validator
+from pydantic.dataclasses import dataclass
 from stix2 import v21 as stix2  # type: ignore[import-untyped]
+
+
+class AnnouncementType(StrEnum):
+    AI = "AI"
+    CUSTOMERS = "CUSTOMERS"
+    DEFENSE = "DEFENSE"
+    EMPLOYEES = "EMPLOYEES"
+    FINANCIAL = "FINANCIAL"
+    INTERNAL = "INTERNAL"
+    IP = "IP"
+    MEDICAL = "MEDICAL"
+    PARTNERS = "PARTNERS"
+    PII = "PII"
+    SENSITIVES = "SENSITIVES"
+
+
+@dataclass(config=ConfigDict(extra="allow", frozen=True))
+class LeakRecord:
+    date: dt_date
+    hashid: str
+
+    victim: str | None = None
+    sector: str | None = None
+
+    revenue: str | None = None
+
+    site: str | None = None
+    ann_link: str | None = Field(default=None, alias="annLink")
+    ann_title: str | None = Field(default=None, alias="annTitle")
+    victim_domain: str | None = Field(default=None, alias="victimDomain")
+    ann_description: str | None = Field(default=None, alias="annDescription")
+
+    announcement_types: list[AnnouncementType] = Field(
+        default_factory=list,
+        alias="annDataTypes",
+    )
+
+    @field_validator("ann_link")
+    @classmethod
+    def annlink_repair_common_scrape_bug(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        if v.startswith("https//"):
+            return "https://" + v[len("https//") :]
+        if v.startswith("http//"):
+            return "http://" + v[len("http//") :]
+        return v
+
+    @field_validator("site", "victim_domain")
+    @classmethod
+    def strip_optional_text(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        stripped = v.strip()
+        return stripped or None
+
+    @staticmethod
+    def _normalize_domain(value: str | None) -> str | None:
+        if not value:
+            return None
+        parsed = urlsplit(value if "://" in value else f"https://{value}")
+        domain = parsed.hostname or ""
+        normalized = domain.strip().lower()
+        return normalized or None
+
+    @property
+    def indicator_domain(self) -> str | None:
+        return self._normalize_domain(self.victim_domain) or self._normalize_domain(
+            self.site
+        )
 
 
 class DepConnector:
@@ -39,6 +115,13 @@ class DepConnector:
             ["dep", "lookback_days"],
             config,
             default=7,
+            isNumber=True,
+        )
+        self.overlap_hours = pycti.get_config_variable(
+            "DEP_OVERLAP_HOURS",
+            ["dep", "overlap_hours"],
+            config,
+            default=72,
             isNumber=True,
         )
         self.confidence = pycti.get_config_variable(
@@ -97,6 +180,12 @@ class DepConnector:
             config,
             default=True,
         )
+        self.skip_empty_victim = pycti.get_config_variable(
+            "DEP_SKIP_EMPTY_VICTIM",
+            ["dep", "skip_empty_victim"],
+            config,
+            default=True,
+        )
 
     @staticmethod
     def _load_config() -> dict[str, Any]:
@@ -136,7 +225,7 @@ class DepConnector:
             raise ValueError(error) from e
         return token
 
-    def _fetch_data(self, start: datetime, end: datetime) -> list[dict[str, Any]]:
+    def _fetch_data(self, start: datetime, end: datetime) -> list[LeakRecord]:
         token = self._authenticate()
         params = {
             "ts": start.strftime("%Y-%m-%d"),
@@ -166,41 +255,56 @@ class DepConnector:
             raise ValueError(message) from exception
 
         if isinstance(data, list):
-            return data
+            parsed_items: list[LeakRecord] = []
+            for index, raw_item in enumerate(data):
+                if not isinstance(raw_item, dict):
+                    self.helper.log_warning(
+                        "Skipping DEP item at index "
+                        f"{index}: expected object, got {type(raw_item).__name__}"
+                    )
+                    continue
+                try:
+                    parsed_items.append(LeakRecord(**raw_item))
+                except Exception as error:  # pylint: disable=broad-except
+                    self.helper.log_warning(
+                        "Skipping invalid DEP item for victim "
+                        f"{raw_item.get('victim')}: {error}"
+                    )
+            return parsed_items
         self.helper.log_warning("DEP API returned unexpected payload type")
         return []
 
-    def _create_victim_identity(self, item: dict[str, Any]) -> stix2.Identity | None:
-        victim_name = item.get("victim")
+    def _create_victim_identity(self, item: LeakRecord) -> stix2.Identity | None:
+        victim_name = item.victim
         if not victim_name:
             return None
 
         external_references: list[dict[str, Any]] = []
-        if item.get("annLink"):
+        if item.ann_link:
             external_references.append(
                 {
                     "source_name": "dep",
-                    "url": item["annLink"],
-                    "description": item.get("annTitle"),
+                    "url": item.ann_link,
+                    "description": item.ann_title,
                 }
             )
-        if item.get("site") and item.get("site") != item.get("annLink"):
+        if item.site and item.site != item.ann_link:
             external_references.append(
                 {
                     "source_name": "victim-site",
                     "url": (
-                        f"https://{item['site']}"
-                        if not item["site"].startswith("http")
-                        else item["site"]
+                        f"https://{item.site}"
+                        if not item.site.startswith("http")
+                        else item.site
                     ),
                 }
             )
 
         description_parts = []
-        if item.get("sector"):
-            description_parts.append(f"Industry sector: {item['sector']}")
-        if item.get("revenue"):
-            description_parts.append(f"Reported revenue: {item['revenue']}")
+        if item.sector:
+            description_parts.append(f"Industry sector: {item.sector}")
+        if item.revenue:
+            description_parts.append(f"Reported revenue: {item.revenue}")
         description = "\n".join(description_parts) or None
 
         return stix2.Identity(
@@ -214,37 +318,34 @@ class DepConnector:
             external_references=external_references or None,
         )
 
-    def _create_incident(self, item: dict[str, Any]) -> stix2.Incident | None:
-        victim_name = item.get("victim") or item.get("victimDomain")
+    def _create_incident(self, item: LeakRecord) -> stix2.Incident:
+        victim_name = item.victim or item.victim_domain
         if not victim_name:
             victim_name = "Unknown Victim"
         incident_name = f"DEP announcement - {victim_name}"
-        description = item.get("annDescription") or item.get("description")
+        description = item.ann_description
         if description:
             description = unquote(description)
-        announcement_date = item.get("date")
-        first_seen: datetime | None = None
-        if announcement_date:
-            first_seen = datetime.strptime(
-                announcement_date.strip(), "%Y-%m-%d"
-            ).replace(tzinfo=UTC)
+        first_seen = datetime.combine(item.date, datetime.min.time(), tzinfo=UTC)
         external_reference = {"source_name": "dep"}
-        if item.get("annLink"):
-            external_reference["url"] = item["annLink"]
-        elif item.get("site"):
-            site = item["site"]
+        if item.ann_link:
+            external_reference["url"] = item.ann_link
+        elif item.site:
+            site = item.site
             external_reference["url"] = (
                 site if site.startswith("http") else f"https://{site}"
             )
-        if item.get("annTitle"):
-            external_reference["description"] = item["annTitle"]
+        if item.ann_title:
+            external_reference["description"] = item.ann_title
+        # incident_id must be deterministic to allow updates
+        incident_id = f"incident--{uuid5(NAMESPACE_URL, f'dep-announcement:{item.hashid.strip().lower()}')}"
         return stix2.Incident(
-            id=pycti.Incident.generate_id(incident_name, first_seen),
+            id=incident_id,
             name=incident_name,
             description=description,
             created=first_seen,
             confidence=self.confidence,
-            labels=[self.label_value],
+            labels=self._build_incident_labels(item),
             created_by_ref=self.author_identity,
             external_references=[external_reference],
             custom_properties={
@@ -253,21 +354,25 @@ class DepConnector:
             },
         )
 
-    def _create_site_indicator(self, item: dict[str, Any]) -> stix2.Indicator | None:
+    def _build_incident_labels(self, item: LeakRecord) -> list[str]:
+        labels = {self.label_value}
+        labels.update(
+            f"dep:announcement-type:{announcement_type.value.lower()}"
+            for announcement_type in item.announcement_types
+        )
+        return sorted(labels)
+
+    def _create_site_indicator(self, item: LeakRecord) -> stix2.Indicator | None:
         if not self.enable_site_indicator:
             return None
-        domain = item.get("victimDomain") or item.get("site")
-        if not domain:
-            return None
-        domain = domain.lower().strip()
-        domain = domain.replace("https://", "").replace("http://", "")
+        domain = item.indicator_domain
         if not domain:
             return None
 
         pattern = f"[domain-name:value = '{domain}']"
         return stix2.Indicator(
             id=pycti.Indicator.generate_id(pattern),
-            name=f"Domain associated with {item.get('victim', 'unknown victim')}",
+            name=f"Domain associated with {item.victim or 'unknown victim'}",
             description="Victim domain",
             pattern_type="stix",
             pattern=pattern,
@@ -277,13 +382,10 @@ class DepConnector:
             created_by_ref=self.author_identity,
         )
 
-    def _create_hash_indicator(self, item: dict[str, Any]) -> stix2.Indicator | None:
+    def _create_hash_indicator(self, item: LeakRecord) -> stix2.Indicator | None:
         if not self.enable_hash_indicator:
             return None
-        hash_value = item.get("hashid")
-        if not hash_value:
-            return None
-        hash_value = hash_value.lower().strip()
+        hash_value = item.hashid.strip().lower()
         if not hash_value:
             return None
         hash_type = self._detect_hash_type(hash_value)
@@ -293,7 +395,7 @@ class DepConnector:
         pattern = f"[file:hashes.'{hash_type}' = '{hash_value}']"
         return stix2.Indicator(
             id=pycti.Indicator.generate_id(pattern),
-            name=f"Announcement hash for {item.get('victim', 'unknown victim')}",
+            name=f"Announcement hash for {item.victim or 'unknown victim'}",
             description="Hash identifier for tracking",
             pattern_type="stix",
             pattern=pattern,
@@ -333,7 +435,18 @@ class DepConnector:
         bundle = stix2.Bundle(objects=list(deduped.values()), allow_custom=True)
         self.helper.send_stix2_bundle(bundle.serialize(), update=True)
 
-    def _process_item(self, item: dict[str, Any]) -> None:
+    def _should_skip_item(self, victim: str | None) -> bool:
+        if not self.skip_empty_victim:
+            return False
+        normalized = (victim or "").strip().lower()
+        return normalized in {"", "n/a", "none"}
+
+    def _process_item(self, item: LeakRecord) -> None:
+        if self._should_skip_item(item.victim):
+            self.helper.log_info(
+                "Skipping DEP item with empty or placeholder victim value"
+            )
+            return
         victim = self._create_victim_identity(item)
         incident = self._create_incident(item)
 
@@ -348,32 +461,40 @@ class DepConnector:
         objects: list[stix2._STIXBase21] = [self.author_identity]
         if victim:
             objects.append(victim)
-        if incident:
-            objects.append(incident)
-        if incident and victim:
+        objects.append(incident)
+        if victim:
             objects.append(self._build_relationship("targets", incident.id, victim.id))
-        if incident:
-            for indicator in indicators:
-                objects.append(indicator)
-                objects.append(
-                    self._build_relationship("indicates", indicator.id, incident.id)
-                )
+        for indicator in indicators:
+            objects.append(indicator)
+            objects.append(
+                self._build_relationship("indicates", indicator.id, incident.id)
+            )
         self._send_objects(objects)
 
     def _run_cycle(self) -> None:
         now = datetime.now(UTC)
         start = now - timedelta(days=self.lookback_days)
-        try:
-            last_run = self.helper.get_state().get("last_run")
-            if last_run:
-                parsed = datetime.fromisoformat(last_run)
-                start = parsed
-        except Exception:  # noqa: S110
-            pass
+        state = self.helper.get_state() or {}
+        last_run = state.get("last_run")
+        if isinstance(last_run, str):
+            try:
+                start = datetime.fromisoformat(last_run) - timedelta(
+                    hours=self.overlap_hours
+                )
+            except ValueError:
+                self.helper.log_warning(
+                    f"Ignoring invalid last_run state value: {last_run}"
+                )
+        elif last_run is not None:
+            self.helper.log_warning(
+                "Ignoring non-string last_run state value returned by OpenCTI helper"
+            )
         end = now
 
         self.helper.log_info(
-            f"Fetching DEP data from {start.isoformat()} to {end.isoformat()}"
+            "Fetching DEP data from "
+            f"{start.isoformat()} to {end.isoformat()} "
+            f"(overlap: {self.overlap_hours}h)"
         )
 
         try:
@@ -389,7 +510,7 @@ class DepConnector:
                 self._process_item(item)
             except Exception as error:  # pylint: disable=broad-except
                 self.helper.log_error(
-                    f"Failed to process DEP item for victim {item.get('victim')}: {error}"
+                    f"Failed to process DEP item for victim {item.victim}: {error}"
                 )
 
         self.helper.log_info("Persisting connector state")
