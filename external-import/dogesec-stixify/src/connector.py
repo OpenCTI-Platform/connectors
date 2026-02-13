@@ -119,17 +119,17 @@ class StixifyConnector:
     def _run_once(self):
         self.helper.log_info("running as scheduled")
         for dossier in self.list_dossiers():
+            dossier_id = dossier["id"]
+            dossier_name = dossier["name"]
+            dossier_repr = f"Dossier(id={dossier_id}, name={repr(dossier_name)})"
+            if dossier_id not in (self.dossier_ids or [dossier_id]):
+                self.helper.log_info(
+                    f"skipping {dossier_repr} not in config.stixify.dossier_ids"
+                )
+                continue
             with self._run_in_work(
                 f"Dossier: {dossier['name']} ({dossier['id']})"
             ) as work_id:
-                dossier_id = dossier["id"]
-                dossier_name = dossier["name"]
-                dossier_repr = f"Dossier(id={dossier_id}, name={repr(dossier_name)})"
-                if dossier_id not in (self.dossier_ids or [dossier_id]):
-                    self.helper.log_info(
-                        f"skipping {dossier_repr} not in config.stixify.dossier_ids"
-                    )
-                    continue
                 self.helper.log_info(f"processing {dossier_repr}")
                 self.get_and_process_reports_after_last(dossier, work_id)
                 self.set_dossier_state(dossier_id, last_updated=self.current_run_time)
