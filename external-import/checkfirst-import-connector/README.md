@@ -97,3 +97,4 @@ From this folder:
 - The mapping enforces deterministic STIX IDs for idempotency (reruns should not create duplicates).
 - The connector persists the last processed API page in connector state; on restart it resumes from the next page.
 - If you want a local, OpenCTI-free bundle export for debugging mappings, run the connector in one-shot mode (`CHECKFIRST_RUN_MODE=once`) and inspect logs / OpenCTI work results.
+- Enjoy.
