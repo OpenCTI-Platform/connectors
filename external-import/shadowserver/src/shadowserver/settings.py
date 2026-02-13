@@ -92,7 +92,11 @@ class ShadowserverConfig(BaseConfigModel):
         default="P4",
     )
     report_types: ListFromString | None = Field(
-        description="List of report types to retrieve. If not provided, ",
+        description=(
+            "List of report types to retrieve. If not provided, the list of available "
+            "report types will be retrieved from the Shadowserver API and all will be "
+            "used."
+        ),
         default=None,
     )
 

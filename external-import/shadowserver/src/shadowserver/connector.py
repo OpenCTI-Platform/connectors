@@ -51,18 +51,21 @@ class CustomConnector(ExternalImportConnector):
             api_secret=self.config.shadowserver.api_secret.get_secret_value(),
             marking_refs=self.config.shadowserver.marking,
         )
-        subscription_list = shadowserver_api.get_subscriptions()
-        self.helper.connector_logger.info(
-            f"Available report types: {subscription_list}."
-        )
-        subscription_list = ["test"]
-        if not subscription_list:
-            self.helper.connector_logger.error(
-                "No report types found, please enable them following Shadowservers documentation. https://www.shadowserver.org/what-we-do/network-reporting/get-reports/"
+        if self.config.shadowserver.report_types:
+            subscription_list = self.config.shadowserver.report_types
+        else:
+            subscription_list = shadowserver_api.get_subscriptions()
+            self.helper.connector_logger.info(
+                f"Available report types: {subscription_list}."
             )
-            raise ValueError(
-                "No report types found, please enable them following Shadowservers documentation. https://www.shadowserver.org/what-we-do/network-reporting/get-reports/"
-            )
+            subscription_list = ["test"]
+            if not subscription_list:
+                self.helper.connector_logger.error(
+                    "No report types found, please enable them following Shadowservers documentation. https://www.shadowserver.org/what-we-do/network-reporting/get-reports/"
+                )
+                raise ValueError(
+                    "No report types found, please enable them following Shadowservers documentation. https://www.shadowserver.org/what-we-do/network-reporting/get-reports/"
+                )
         if subscription_list and isinstance(subscription_list, list):
             for subscription in subscription_list:
                 for days_lookback in range(self.lookback, -1, -1):
