@@ -241,7 +241,7 @@ class S3Connector:
                     received_dt = datetime.datetime.fromisoformat(
                         vuln_modified.replace("Z", "+00:00")
                     )
-                    if platform_dt >= received_dt:
+                    if platform_dt > received_dt:
                         self.helper.log_info(
                             f"Vulnerability '{vuln_name}' is outdated "
                             f"(platform: {platform_modified}, received: {vuln_modified}), "
