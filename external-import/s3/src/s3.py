@@ -206,6 +206,14 @@ class S3Connector:
         if "objects" not in data or not data["objects"]:
             return data
 
+        # Count vulnerabilities in the bundle for context
+        all_vulns = [o for o in data["objects"] if o.get("type") == "vulnerability"]
+        total_objects = len(data["objects"])
+        self.helper.log_info(
+            f"[PRE-PROCESS] Starting outdated vulnerability check: "
+            f"{len(all_vulns)} vulnerability(ies) in bundle ({total_objects} total objects)"
+        )
+
         outdated_vuln_ids = set()
 
         for obj in data["objects"]:
@@ -216,13 +224,21 @@ class S3Connector:
             vuln_modified = obj.get("modified")
 
             if not vuln_name or not vuln_modified:
+                self.helper.log_info(
+                    f"[PRE-PROCESS] Vulnerability '{vuln_name}' has no 'modified' field, "
+                    f"skipping outdated check, will be ingested"
+                )
                 continue
 
             # Generate the deterministic STIX ID for this vulnerability
             vuln_standard_id = Vulnerability.generate_id(vuln_name)
+            self.helper.log_info(
+                f"[PRE-PROCESS] Checking '{vuln_name}': "
+                f"bundle_id={obj['id']}, standard_id={vuln_standard_id}, "
+                f"received_modified={vuln_modified}"
+            )
 
             try:
-                # Query OpenCTI for the existing vulnerability
                 existing_vuln = self.helper.api.vulnerability.read(
                     id=vuln_standard_id,
                     customAttributes="""
@@ -231,42 +247,53 @@ class S3Connector:
                     """,
                 )
 
-                if existing_vuln and existing_vuln.get("x_opencti_modified_at"):
-                    platform_modified = existing_vuln["x_opencti_modified_at"]
+                if existing_vuln is None:
+                    self.helper.log_info(
+                        f"[PRE-PROCESS] '{vuln_name}': does not exist in platform "
+                        f"(read returned None) -> KEPT, will be ingested"
+                    )
+                    continue
 
-                    # Parse to datetime for safe comparison (handles Z, +00:00, milliseconds, etc.)
-                    platform_dt = datetime.datetime.fromisoformat(
-                        platform_modified.replace("Z", "+00:00")
+                platform_modified = existing_vuln.get("x_opencti_modified_at")
+
+                if not platform_modified:
+                    self.helper.log_info(
+                        f"[PRE-PROCESS] '{vuln_name}': exists in platform but has no "
+                        f"x_opencti_modified_at (returned keys: {list(existing_vuln.keys())}) "
+                        f"-> KEPT, will be ingested"
                     )
-                    received_dt = datetime.datetime.fromisoformat(
-                        vuln_modified.replace("Z", "+00:00")
-                    )
-                    if platform_dt > received_dt:
-                        self.helper.log_info(
-                            f"Vulnerability '{vuln_name}' is outdated "
-                            f"(platform: {platform_modified}, received: {vuln_modified}), "
-                            f"filtering out"
-                        )
-                        outdated_vuln_ids.add(obj["id"])
-                    else:
-                        self.helper.connector_logger.debug(
-                            f"Vulnerability '{vuln_name}' is up-to-date or newer "
-                            f"(platform: {platform_modified}, received: {vuln_modified})"
-                        )
-                else:
-                    self.helper.connector_logger.debug(
-                        f"Vulnerability '{vuln_name}' not found in platform or has no "
-                        f"x_opencti_modified_at, will be ingested"
-                    )
+                    continue
+
+                # Parse to datetime for safe comparison (handles Z, +00:00, milliseconds, etc.)
+                platform_dt = datetime.datetime.fromisoformat(
+                    platform_modified.replace("Z", "+00:00")
+                )
+                received_dt = datetime.datetime.fromisoformat(
+                    vuln_modified.replace("Z", "+00:00")
+                )
+                is_outdated = platform_dt > received_dt
+
+                self.helper.log_info(
+                    f"[PRE-PROCESS] '{vuln_name}': "
+                    f"platform_x_opencti_modified_at='{platform_modified}' (parsed={platform_dt}), "
+                    f"received_modified='{vuln_modified}' (parsed={received_dt}), "
+                    f"is_outdated={is_outdated} "
+                    f"-> {'FILTERED OUT' if is_outdated else 'KEPT'}"
+                )
+
+                if is_outdated:
+                    outdated_vuln_ids.add(obj["id"])
+
             except Exception as e:
                 self.helper.log_warning(
-                    f"Failed to check vulnerability '{vuln_name}' against platform: {e}, "
-                    f"will proceed with ingestion"
+                    f"[PRE-PROCESS] '{vuln_name}': failed to check against platform: "
+                    f"{type(e).__name__}: {e} -> KEPT, will proceed with ingestion"
                 )
 
         if not outdated_vuln_ids:
-            self.helper.connector_logger.debug(
-                "No outdated vulnerabilities found in bundle"
+            self.helper.log_info(
+                f"[PRE-PROCESS] Complete: no outdated vulnerabilities found, "
+                f"all {len(all_vulns)} vulnerability(ies) will be ingested"
             )
             return data
 
@@ -275,28 +302,36 @@ class S3Connector:
         removed_rels = 0
 
         for obj in data["objects"]:
-            # Skip outdated vulnerabilities
-            if obj["id"] in outdated_vuln_ids:
+            obj_id = obj.get("id", "unknown")
+            obj_type = obj.get("type", "unknown")
+
+            if obj_id in outdated_vuln_ids:
+                self.helper.log_info(
+                    f"[PRE-PROCESS] Removing vulnerability: '{obj.get('name')}' (id={obj_id})"
+                )
                 continue
 
-            # Skip relationships pointing to/from outdated vulnerabilities
-            if obj.get("type") == "relationship":
+            if obj_type == "relationship":
                 source_ref = obj.get("source_ref", "")
                 target_ref = obj.get("target_ref", "")
+                rel_type = obj.get("relationship_type", "unknown")
                 if source_ref in outdated_vuln_ids or target_ref in outdated_vuln_ids:
-                    self.helper.connector_logger.debug(
-                        f"Filtering out relationship '{obj.get('relationship_type', 'unknown')}' "
-                        f"({source_ref} -> {target_ref}) linked to outdated vulnerability"
+                    self.helper.log_info(
+                        f"[PRE-PROCESS] Removing relationship: type='{rel_type}', "
+                        f"source={source_ref}, target={target_ref}, id={obj_id}"
                     )
                     removed_rels += 1
                     continue
 
             filtered_objects.append(obj)
 
+        kept_vulns = len(all_vulns) - len(outdated_vuln_ids)
         self.helper.log_info(
-            f"Pre-processing complete: filtered out {len(outdated_vuln_ids)} outdated "
-            f"vulnerability(ies) and {removed_rels} related "
-            f"relationship(s)"
+            f"[PRE-PROCESS] Complete: "
+            f"{len(outdated_vuln_ids)} vulnerability(ies) filtered out, "
+            f"{kept_vulns} vulnerability(ies) kept, "
+            f"{removed_rels} relationship(s) removed, "
+            f"{len(filtered_objects)}/{total_objects} objects remaining in bundle"
         )
 
         data["objects"] = filtered_objects
