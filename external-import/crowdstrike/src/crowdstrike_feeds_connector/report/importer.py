@@ -267,7 +267,36 @@ class ReportImporter(BaseImporter):
             response = self.indicators_api_cs.get_combined_indicator_entities(
                 limit=_limit, sort=_sort, fql_filter=_fql_filter, deep_pagination=True
             )
-            related_indicators.extend(response["resources"])
+
+            # Check if response has resources or if it's an error response
+            if "resources" in response:
+                related_indicators.extend(response["resources"])
+            elif "errors" in response:
+                # API returned an error (e.g., 403 permission denied)
+                error_code = response.get("errors", [{}])[0].get("code")
+                if error_code == 403:
+                    self._warning(
+                        "Skipping IOC fetching for report {0} - no indicator scope permission",
+                        report_name,
+                    )
+                    return (
+                        related_indicators_with_related_entities  # Return what we have
+                    )
+                else:
+                    # Other errors should be logged
+                    self._warning(
+                        "Error fetching related IOCs for report {0}: {1}",
+                        report_name,
+                        str(response),
+                    )
+                    return related_indicators_with_related_entities
+            else:
+                # Unexpected response format
+                self._warning(
+                    "Unexpected response format when fetching indicators for report {0}",
+                    report_name,
+                )
+                return related_indicators_with_related_entities
 
             if related_indicators is not None:
                 for indicator in related_indicators:
