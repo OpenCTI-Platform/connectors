@@ -15,4 +15,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` | `"INTERNAL_ENRICHMENT"` |  |
 | CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Whether the connector should run automatically when an entity is created or updated. |
 | PURE_SIGNAL_SCOUT_API_URL | `string` |  | string | `"https://taxii.cymru.com/api/scout"` | Base URL of the Scout API |
-| PURE_SIGNAL_SCOUT_MAX_TLP | `string` |  | string | `"TLP:AMBER"` | Max TLP level for enrichment (default: TLP:AMBER) |
+| PURE_SIGNAL_SCOUT_MAX_TLP | `string` |  | `TLP:WHITE` `TLP:CLEAR` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` | `"TLP:AMBER"` | Max TLP level for enrichment (default: TLP:AMBER) |

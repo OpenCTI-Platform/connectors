@@ -67,6 +67,14 @@
     "PURE_SIGNAL_SCOUT_MAX_TLP": {
       "default": "TLP:AMBER",
       "description": "Max TLP level for enrichment (default: TLP:AMBER)",
+      "enum": [
+        "TLP:WHITE",
+        "TLP:CLEAR",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
       "type": "string"
     }
   },

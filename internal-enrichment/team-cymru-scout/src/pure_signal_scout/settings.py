@@ -1,3 +1,5 @@
+from typing import Literal
+
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
@@ -42,7 +44,14 @@ class TeamCymruScoutConfig(BaseConfigModel):
         default="https://taxii.cymru.com/api/scout",
     )
     api_token: SecretStr = Field(description="Bearer token for the Scout API")
-    max_tlp: str = Field(
+    max_tlp: Literal[
+        "TLP:WHITE",
+        "TLP:CLEAR",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED",
+    ] = Field(
         description="Max TLP level for enrichment (default: TLP:AMBER)",
         default="TLP:AMBER",
     )
