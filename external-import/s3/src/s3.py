@@ -234,8 +234,14 @@ class S3Connector:
                 if existing_vuln and existing_vuln.get("x_opencti_modified_at"):
                     platform_modified = existing_vuln["x_opencti_modified_at"]
 
-                    # All dates are UTC ISO 8601 strings, direct comparison works
-                    if platform_modified > vuln_modified:
+                    # Parse to datetime for safe comparison (handles Z, +00:00, milliseconds, etc.)
+                    platform_dt = datetime.datetime.fromisoformat(
+                        platform_modified.replace("Z", "+00:00")
+                    )
+                    received_dt = datetime.datetime.fromisoformat(
+                        vuln_modified.replace("Z", "+00:00")
+                    )
+                    if platform_dt >= received_dt:
                         self.helper.log_info(
                             f"Vulnerability '{vuln_name}' is outdated "
                             f"(platform: {platform_modified}, received: {vuln_modified}), "
