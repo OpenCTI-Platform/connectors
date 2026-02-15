@@ -166,6 +166,9 @@ class PureSignalScoutConnector:
                 obj["created_by_ref"] = self.team_cymru_identity["id"]
                 filtered_objects.append(obj)
 
+            if filtered_objects:
+                filtered_objects.append(self.team_cymru_identity)
+
             self.helper.connector_logger.info(
                 f"[PureSignalScout] Filtered STIX objects: {len(objects)} → {len(filtered_objects)}"
             )

@@ -134,6 +134,8 @@ def test_process_stix_data_filters_and_rewrites():
 
     author_id = connector.team_cymru_identity["id"]
     for obj in filtered:
+        if obj.get("id") == author_id:
+            continue
         assert obj["created_by_ref"] == author_id
 
 
