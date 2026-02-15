@@ -186,6 +186,116 @@ class S3Connector:
             # On error, default to using simple key (consolidate behavior)
             return True
 
+    def filter_outdated_vulnerabilities(self, data):
+        """
+        Pre-process the bundle to filter out vulnerabilities that are outdated
+        compared to what already exists in the OpenCTI platform.
+
+        For each vulnerability in the bundle, query the platform for its
+        x_opencti_modified_at value. If the platform's value is more recent
+        than the bundle vulnerability's 'modified' field, the vulnerability
+        is considered outdated and is removed along with all relationships
+        pointing to or from it.
+
+        Args:
+            data: Parsed JSON dict of the STIX bundle
+
+        Returns:
+            dict: The filtered bundle data
+        """
+        if "objects" not in data or not data["objects"]:
+            return data
+
+        outdated_vuln_ids = set()
+
+        for obj in data["objects"]:
+            if obj.get("type") != "vulnerability":
+                continue
+
+            vuln_name = obj.get("name")
+            vuln_modified = obj.get("modified")
+
+            if not vuln_name or not vuln_modified:
+                continue
+
+            # Generate the deterministic STIX ID for this vulnerability
+            vuln_standard_id = Vulnerability.generate_id(vuln_name)
+
+            try:
+                # Query OpenCTI for the existing vulnerability
+                existing_vuln = self.helper.api.vulnerability.read(
+                    id=vuln_standard_id,
+                    customAttributes="""
+                        id
+                        x_opencti_modified_at
+                    """,
+                )
+
+                if existing_vuln and existing_vuln.get("x_opencti_modified_at"):
+                    platform_modified = existing_vuln["x_opencti_modified_at"]
+
+                    # All dates are UTC ISO 8601 strings, direct comparison works
+                    if platform_modified > vuln_modified:
+                        self.helper.log_info(
+                            f"Vulnerability '{vuln_name}' is outdated "
+                            f"(platform: {platform_modified}, received: {vuln_modified}), "
+                            f"filtering out"
+                        )
+                        outdated_vuln_ids.add(obj["id"])
+                    else:
+                        self.helper.connector_logger.debug(
+                            f"Vulnerability '{vuln_name}' is up-to-date or newer "
+                            f"(platform: {platform_modified}, received: {vuln_modified})"
+                        )
+                else:
+                    self.helper.connector_logger.debug(
+                        f"Vulnerability '{vuln_name}' not found in platform or has no "
+                        f"x_opencti_modified_at, will be ingested"
+                    )
+            except Exception as e:
+                self.helper.log_warning(
+                    f"Failed to check vulnerability '{vuln_name}' against platform: {e}, "
+                    f"will proceed with ingestion"
+                )
+
+        if not outdated_vuln_ids:
+            self.helper.connector_logger.debug(
+                "No outdated vulnerabilities found in bundle"
+            )
+            return data
+
+        # Filter out outdated vulnerabilities and their relationships
+        filtered_objects = []
+        removed_rels = 0
+
+        for obj in data["objects"]:
+            # Skip outdated vulnerabilities
+            if obj["id"] in outdated_vuln_ids:
+                continue
+
+            # Skip relationships pointing to/from outdated vulnerabilities
+            if obj.get("type") == "relationship":
+                source_ref = obj.get("source_ref", "")
+                target_ref = obj.get("target_ref", "")
+                if source_ref in outdated_vuln_ids or target_ref in outdated_vuln_ids:
+                    self.helper.connector_logger.debug(
+                        f"Filtering out relationship '{obj.get('relationship_type', 'unknown')}' "
+                        f"({source_ref} -> {target_ref}) linked to outdated vulnerability"
+                    )
+                    removed_rels += 1
+                    continue
+
+            filtered_objects.append(obj)
+
+        self.helper.log_info(
+            f"Pre-processing complete: filtered out {len(outdated_vuln_ids)} outdated "
+            f"vulnerability(ies) and {removed_rels} related "
+            f"relationship(s)"
+        )
+
+        data["objects"] = filtered_objects
+        return data
+
     @staticmethod
     def rewrite_stix_ids(objects):
         # First pass: Build ID mapping for objects that need new IDs
@@ -294,6 +404,14 @@ class S3Connector:
 
         if "objects" not in data or not data["objects"]:
             self.helper.log_warning("Bundle has no objects to process")
+            return None
+
+        # Pre-process: filter out vulnerabilities that are outdated compared to the platform
+        data = self.filter_outdated_vulnerabilities(data)
+        if not data.get("objects"):
+            self.helper.log_info(
+                "All objects were filtered out during pre-processing, nothing to ingest"
+            )
             return None
 
         # Prepare file attachment if enabled
