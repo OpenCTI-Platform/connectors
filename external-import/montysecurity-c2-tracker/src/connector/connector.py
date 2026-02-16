@@ -71,7 +71,7 @@ class MontysecurityC2TrackerConnector:
         :return: List of STIX objects
         """
         # Get entities from external sources
-        malware_list = self.client.get_malwares()
+        malware_list = self.client.get_malware_list()
         entities = []
         malware_list = [malware.strip('"') for malware in malware_list]
 
@@ -215,7 +215,7 @@ class MontysecurityC2TrackerConnector:
         Example:
             - If `CONNECTOR_DURATION_PERIOD=PT5M`, then the connector is running every 5 minutes.
         """
-        self.helper.schedule_iso(
+        self.helper.schedule_process(
             message_callback=self.process_message,
-            duration_period=self.config.connector.duration_period,
+            duration_period=self.config.connector.duration_period.total_seconds(),
         )

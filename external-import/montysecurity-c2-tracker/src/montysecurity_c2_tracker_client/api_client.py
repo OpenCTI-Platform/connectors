@@ -5,6 +5,7 @@ from urllib.parse import quote, urljoin
 import requests
 from connector.settings import MontysecurityC2TrackerConfig
 from pycti import OpenCTIConnectorHelper
+from requests.exceptions import RequestException
 
 
 class MontysecurityC2TrackerClient:
@@ -49,7 +50,7 @@ class MontysecurityC2TrackerClient:
             )
             return None
 
-    def get_malwares(self, params=None) -> list[Any] | None:
+    def get_malware_list(self, params=None) -> list[Any] | None:
         try:
             self.helper.connector_logger.info("Get Malware Entities")
             malware_list_url = self.config.malware_list_url.encoded_string()
@@ -61,8 +62,11 @@ class MontysecurityC2TrackerClient:
 
             return malware_list
 
-        except Exception as err:
-            self.helper.connector_logger.error(err)
+        except RequestException as err:
+            self.helper.connector_logger.error(
+                f"Failed malware list: {err}", exc_info=True  # Includes full traceback
+            )
+            return []
 
     def get_ips(self, malware_name: str, params=None) -> list:
         try:
@@ -72,10 +76,13 @@ class MontysecurityC2TrackerClient:
 
             url = urljoin(str(malware_ips_base_url), quote(malware_name))
             response = self._request_data(url, params=params)
-            ips = str(response.text).split("\n")
-            ips.pop()
+            ips = [
+                ip for ip in response.text.strip().split("\n") if ip
+            ]  # Cleanup the list
 
             return ips
-            # TODO: ask if better exception filtering is needed
-        except Exception as err:
-            self.helper.connector_logger.error(err)
+        except RequestException as err:
+            self.helper.connector_logger.error(
+                f"Failed malware list: {err}", exc_info=True  # Includes full traceback
+            )
+            return []
