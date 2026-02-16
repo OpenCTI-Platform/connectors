@@ -82,9 +82,21 @@ def iter_api_rows(
             # Extract fields directly from API response
             # API returns lowercase/snake_case field names
             url = str(item.get("url", "")).strip() if item.get("url") else ""
-            source_title = str(item.get("source_title", "")).strip() if item.get("source_title") else ""
-            source_url = str(item.get("source_url", "")).strip() if item.get("source_url") else ""
-            publication_date = str(item.get("published_date", "")).strip() if item.get("published_date") else ""
+            source_title = (
+                str(item.get("source_title", "")).strip()
+                if item.get("source_title")
+                else ""
+            )
+            source_url = (
+                str(item.get("source_url", "")).strip()
+                if item.get("source_url")
+                else ""
+            )
+            publication_date = (
+                str(item.get("published_date", "")).strip()
+                if item.get("published_date")
+                else ""
+            )
 
             # Validate required fields
             if not url or not source_title or not source_url or not publication_date:
@@ -93,14 +105,28 @@ def iter_api_rows(
                 continue
 
             # Extract optional fields
-            canonical = str(item.get("canonical_url", "")).strip() if item.get("canonical_url") else None
+            canonical = (
+                str(item.get("canonical_url", "")).strip()
+                if item.get("canonical_url")
+                else None
+            )
             og_title = str(item.get("title", "")).strip() if item.get("title") else None
-            og_description = str(item.get("og_description", "")).strip() if item.get("og_description") else None
+            og_description = (
+                str(item.get("og_description", "")).strip()
+                if item.get("og_description")
+                else None
+            )
 
             # Handle alternates_urls array - convert to comma-separated string
             alternates = None
-            if item.get("alternates_urls") and isinstance(item["alternates_urls"], list):
-                alt_urls = [alt.get("url", "") for alt in item["alternates_urls"] if alt.get("url")]
+            if item.get("alternates_urls") and isinstance(
+                item["alternates_urls"], list
+            ):
+                alt_urls = [
+                    alt.get("url", "")
+                    for alt in item["alternates_urls"]
+                    if alt.get("url")
+                ]
                 if alt_urls:
                     alternates = ",".join(alt_urls)
 
