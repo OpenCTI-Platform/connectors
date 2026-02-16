@@ -35,7 +35,7 @@ class TestShadowserverAPI:
             FileNotFoundError: If the fixture file does not exist.
             ValueError: If the fixture file is empty.
         """
-        filepath = os.path.join(os.path.dirname(__file__), FIXTURES_DIR, filename)
+        filepath = os.path.join(os.path.dirname(__file__), "..", FIXTURES_DIR, filename)
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"Fixture {filename} not found.")
 
@@ -134,7 +134,7 @@ class TestShadowserverAPI:
         self.api_helper.connector_logger.info = MagicMock()
         self.api_helper.connector_logger.error = MagicMock()
 
-        filepath = os.path.join(os.path.dirname(__file__), FIXTURES_DIR)
+        filepath = os.path.join(os.path.dirname(__file__), "..", FIXTURES_DIR)
         report_files = [f for f in os.listdir(filepath) if f.startswith("report_type")]
         for report_file in report_files:
             report_type = report_file.replace("report_type_", "").replace(".json", "")
