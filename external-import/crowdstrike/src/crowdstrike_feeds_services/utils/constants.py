@@ -43,3 +43,13 @@ X_OPENCTI_CREATED_BY_REF = "x_opencti_created_by_ref"
 X_OPENCTI_MAIN_OBSERVABLE_TYPE = "x_opencti_main_observable_type"
 
 DEFAULT_X_OPENCTI_SCORE = 50
+
+CS_KILL_CHAIN_TO_LOCKHEED_MARTIN_CYBER_KILL_CHAIN = {
+    "Reconnaissance": "reconnaissance",
+    "Weaponization": "weaponization",
+    "Delivery": "delivery",
+    "Exploitation": "exploitation",
+    "Installation": "installation",
+    "C2": "command-and-control",
+    "ActionOnObjectives": "action-on-objectives",
+}
