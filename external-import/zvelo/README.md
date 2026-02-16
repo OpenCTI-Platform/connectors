@@ -1,8 +1,15 @@
 # OpenCTI Zvelo CTI Connector
 
-Table of Contents
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
-- [OpenCTI Zvelo CTI connector](#opencti-zvelo-connector)
+The Zvelo connector imports indicators of compromise (IOCs) from Zvelo Cyber Threat Intelligence feeds into OpenCTI.
+
+## Table of Contents
+
+- [OpenCTI Zvelo CTI Connector](#opencti-zvelo-cti-connector)
+  - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -20,33 +27,25 @@ Table of Contents
 
 ## Introduction
 
-The Zvelo connector ingests indicators of compromise (IOCs) from Zvelo Cyber Threat Intelligence Feeds.
-The connector supports the ingestion of the two following data collections:
-- [Zvelo PhishBlocklist](https://zvelo.com/zvelocti-cyber-threat-intelligence/phishblocklist/): Phishing threat intelligence data feed
-- [Zvelo Malicious Detailed Detection](https://zvelo.com/zvelocti-cyber-threat-intelligence/malicious-detailed-detection-feed/): Malicious threat intelligence data feed
+[Zvelo](https://zvelo.com/) provides cyber threat intelligence feeds for detecting phishing, malware, and other malicious content. This connector supports ingestion from two data collections:
+
+- **[PhishBlocklist](https://zvelo.com/zvelocti-cyber-threat-intelligence/phishblocklist/)**: Phishing threat intelligence data feed
+- **[Malicious Detailed Detection](https://zvelo.com/zvelocti-cyber-threat-intelligence/malicious-detailed-detection-feed/)**: Malicious threat intelligence data feed
 
 API documentation: https://docs.zvelo.io/
-
-The connector ingests the following entities:
-- Indicators: Malicious Indicators are ingested as Indicators
-- Observables: Some related information linked to the malicious IOC are ingested as observables and linked to the Indicator. Example: IP addresses associated with the malicious indicator (ip_info)
-- Malware: When defined, malware families associated to the Indicator are ingested as Malware and associated to the Indicator
-
 
 ## Installation
 
 ### Requirements
 
 - OpenCTI Platform >= 6.4.0
+- Zvelo CTI subscription with API credentials
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
-in `config.yml` (for manual deployment).
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
 
 ### OpenCTI environment variables
-
-Below are the parameters you'll need to set for OpenCTI:
 
 | Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
 |---------------|------------|-----------------------------|-----------|------------------------------------------------------|
@@ -55,103 +54,183 @@ Below are the parameters you'll need to set for OpenCTI:
 
 ### Base connector environment variables
 
-Below are the parameters you'll need to set for running the connector properly:
+| Parameter       | config.yml | Docker environment variable | Default                                          | Mandatory | Description                                                              |
+|-----------------|------------|-----------------------------|--------------------------------------------------|-----------|--------------------------------------------------------------------------|
+| Connector ID    | id         | `CONNECTOR_ID`              |                                                  | Yes       | A unique `UUIDv4` identifier for this connector instance.                |
+| Connector Name  | name       | `CONNECTOR_NAME`            | Zvelo                                            | No        | Name of the connector.                                                   |
+| Connector Scope | scope      | `CONNECTOR_SCOPE`           | ipv4-addr,ipv6-addr,domain,url,indicator,malware | No        | The scope or type of data the connector is importing.                    |
+| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | info                                             | No        | Determines the verbosity of logs: `debug`, `info`, `warn`, or `error`.   |
 
-| Parameter       | config.yml | Docker environment variable | Default                                          | Mandatory | Description                                                                              |
-|-----------------|------------|-----------------------------|--------------------------------------------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID    | id         | `CONNECTOR_ID`              | /                                                | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT                                  | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
-| Connector Name  | name       | `CONNECTOR_NAME`            |                                                  | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           | ipv4-addr,ipv6-addr,domain,url,indicator,malware | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | info                                             | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+### Connector extra parameters environment variables
 
-### Zvelo Connector extra parameters environment variables
-
-Below are the parameters you'll need to set for the Zvelo connector.
-
-| Parameter     | config.yml    | Docker environment variable | Default                | Mandatory | Description                                                                                                                                       |
-|---------------|---------------|-----------------------------|------------------------|-----------|---------------------------------------------------------------------------------------------------------------------------------------------------|
-| Client ID     | client_id     | ZVELO_CLIENT_ID             |                        | Yes       | Zvelo client Id                                                                                                                                   |
-| Client Secret | client_secret | ZVELO_CLIENT_SECRET         |                        | Yes       | Zvelo client Secret                                                                                                                               |
-| Collections   | collections   | ZVELO_COLLECTIONS           | phish,malicious,threat | Yes       | Zvelo data collections to fetch. Possibles values are: "phish,malicious,threat". Refer to the ZVELOCTI API documentation:  https://docs.zvelo.io/ |
+| Parameter     | config.yml    | Docker environment variable | Default                | Mandatory | Description                                                    |
+|---------------|---------------|-----------------------------|------------------------|-----------|----------------------------------------------------------------|
+| Client ID     | client_id     | `ZVELO_CLIENT_ID`           |                        | Yes       | Zvelo client ID.                                               |
+| Client Secret | client_secret | `ZVELO_CLIENT_SECRET`       |                        | Yes       | Zvelo client secret.                                           |
+| Collections   | collections   | `ZVELO_COLLECTIONS`         | phish,malicious,threat | Yes       | Data collections to fetch: `phish`, `malicious`, `threat`.     |
 
 ## Deployment
 
 ### Docker Deployment
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==6.4.0`. If you don't, it will take the latest version, but
-sometimes the OpenCTI SDK fails to initialize.
+Build the Docker image:
 
-Build a Docker Image using the provided `Dockerfile`.
-
-Example:
-
-```shell
-# Replace the IMAGE NAME with the appropriate value
-docker build . -t [IMAGE NAME]:latest
+```bash
+docker build -t opencti/connector-zvelo:latest .
 ```
 
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
-environment. Then, start the docker container with the provided docker-compose.yml
+Configure the connector in `docker-compose.yml`:
 
-```shell
+```yaml
+  connector-zvelo:
+    image: opencti/connector-zvelo:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Zvelo
+      - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,domain,url,indicator,malware
+      - CONNECTOR_LOG_LEVEL=info
+      - ZVELO_CLIENT_ID=ChangeMe
+      - ZVELO_CLIENT_SECRET=ChangeMe
+      - ZVELO_COLLECTIONS=phish,malicious,threat
+    restart: always
+```
+
+Start the connector:
+
+```bash
 docker compose up -d
-# -d for detached
 ```
 
 ### Manual Deployment
 
-Create a file `config.yml` based on the provided `config.yml.sample`.
+1. Create `config.yml` based on `config.yml.sample`.
 
-Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
+2. Install dependencies:
 
-Install the required python dependencies (preferably in a virtual environment):
-
-```shell
+```bash
 pip3 install -r requirements.txt
 ```
 
-Then, start the connector from recorded-future/src:
+3. Start the connector:
 
-```shell
+```bash
 python3 main.py
 ```
 
 ## Usage
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
+The connector runs automatically at the configured interval. To force an immediate run:
 
-However, if you would like to force an immediate download of a new batch of entities, navigate to:
+**Data Management → Ingestion → Connectors**
 
-`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform.
-
-Find the connector, and click on the refresh button to reset the connector's state and force a new
-download of data by re-running the connector.
+Find the connector and click the refresh button to reset the state and trigger a new data fetch.
 
 ## Behavior
 
-<!--
-Describe how the connector functions:
-* What data is ingested, updated, or modified
-* Important considerations for users when utilizing this connector
-* Additional relevant details
--->
+The connector fetches threat intelligence from Zvelo API and imports it into OpenCTI as indicators, observables, and malware entities.
 
+### Data Flow
+
+```mermaid
+graph LR
+    subgraph Zvelo API
+        direction TB
+        PhishFeed[PhishBlocklist Feed]
+        MaliciousFeed[Malicious Detection Feed]
+        ThreatFeed[Threat Feed]
+    end
+
+    subgraph OpenCTI
+        direction LR
+        Indicator[Indicator]
+        URL[URL Observable]
+        Domain[Domain-Name Observable]
+        IPv4[IPv4-Addr Observable]
+        IPv6[IPv6-Addr Observable]
+        Malware[Malware]
+    end
+
+    PhishFeed --> Indicator
+    MaliciousFeed --> Indicator
+    ThreatFeed --> Indicator
+    
+    Indicator -- based-on --> URL
+    Indicator -- based-on --> Domain
+    Indicator -- based-on --> IPv4
+    Indicator -- based-on --> IPv6
+    Indicator -- indicates --> Malware
+    
+    URL -- related-to --> IPv4
+    URL -- related-to --> IPv6
+    Domain -- related-to --> IPv4
+    Domain -- related-to --> IPv6
+```
+
+### Entity Mapping
+
+| Zvelo Data           | OpenCTI Entity      | Description                                      |
+|----------------------|---------------------|--------------------------------------------------|
+| URL IOC              | URL                 | Malicious URL observable                         |
+| Domain IOC           | Domain-Name         | Malicious domain observable                      |
+| IP IOC               | IPv4-Addr/IPv6-Addr | Malicious IP observable                          |
+| IOC Pattern          | Indicator           | STIX indicator with pattern                      |
+| Malware Family       | Malware             | Associated malware family                        |
+| Related IP (ip_info) | IPv4-Addr/IPv6-Addr | IP addresses associated with the IOC             |
+
+### Collection Processing
+
+#### PhishBlocklist Collection
+
+| Field             | OpenCTI Property        | Description                          |
+|-------------------|-------------------------|--------------------------------------|
+| url               | URL value               | Phishing URL                         |
+| confidence_level  | x_opencti_score         | Confidence score                     |
+| discovered_date   | valid_from, created     | Discovery timestamp                  |
+| brand             | description             | Targeted brand (if available)        |
+| ip_info           | IPv4/IPv6 observables   | Associated IP addresses              |
+
+#### Malicious Detection Collection
+
+| Field             | OpenCTI Property        | Description                          |
+|-------------------|-------------------------|--------------------------------------|
+| url               | URL value               | Malicious URL                        |
+| confidence_level  | x_opencti_score         | Confidence score                     |
+| discovered_date   | valid_from, created     | Discovery timestamp                  |
+| ip_info           | IPv4/IPv6 observables   | Associated IP addresses              |
+
+#### Threat Collection
+
+| Field             | OpenCTI Property        | Description                          |
+|-------------------|-------------------------|--------------------------------------|
+| ioc               | Observable value        | IOC value (URL, domain, or IP)       |
+| ioc_type          | Observable type         | Type: `url`, `domain`, or `ip`       |
+| threat_type       | labels                  | Type of threat                       |
+| malware_family    | Malware name            | Associated malware family            |
+| confidence_level  | x_opencti_score         | Confidence score                     |
+| discovered_date   | valid_from, created     | Discovery timestamp                  |
+| ip_info           | IPv4/IPv6 observables   | Associated IP addresses              |
+
+### Relationships Created
+
+| Source        | Relationship | Target          | Description                           |
+|---------------|--------------|-----------------|---------------------------------------|
+| Indicator     | based-on     | Observable      | Indicator based on observable         |
+| Indicator     | indicates    | Malware         | Indicator indicates malware family    |
+| Observable    | related-to   | IPv4-Addr/IPv6  | Main observable related to IP         |
 
 ## Debugging
 
-The connector can be debugged by setting the appropriate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.e., `self.helper.connector_logger.error("An error message")`.
+Enable verbose logging:
 
-<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
+```env
+CONNECTOR_LOG_LEVEL=debug
+```
 
 ## Additional information
 
-<!--
-Any additional information about this connector
-* What information is ingested/updated/changed
-* What should the user take into account when using this connector
-* ...
--->
+- **API Documentation**: https://docs.zvelo.io/
+- **TLP Marking**: All data imported with TLP:AMBER
+- **Author Identity**: Created as "Zvelo" organization
+- **Reference**: [Zvelo CTI](https://zvelo.com/zvelocti-cyber-threat-intelligence/)

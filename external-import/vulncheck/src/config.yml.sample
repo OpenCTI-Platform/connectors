@@ -1,10 +1,11 @@
 opencti:
-  url: "http://localhost:PORT"
+  url: 'http://localhost'
   token: "ChangeMe"
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   id: "ChangeMe"
- # scope: "vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference,software"
+ # scope: "vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference,software,attack-pattern,course-of-action,x-mitre-data-source"
 
 connector_vulncheck:
   api_key: "ChangeMe"

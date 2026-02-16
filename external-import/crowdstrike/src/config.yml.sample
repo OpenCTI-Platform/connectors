@@ -1,10 +1,10 @@
 opencti:
-  url: 'http://localhost:8080'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
-  id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
   name: 'CrowdStrike'
   scope: 'crowdstrike'
   log_level: 'info'
@@ -17,9 +17,10 @@ crowdstrike:
   tlp: 'amber+strict'
   create_observables: true
   create_indicators: true
-  scopes: 'actor,report,indicator,yara_master,snort_suricata_master' # One or all of the following: actor,report,indicator,yara_master,snort_suricata_master
+  scopes: 'actor,report,indicator,yara_master,snort_suricata_master' # One or all of the following: actor,report,indicator,vulnerability,yara_master,snort_suricata_master
   actor_start_timestamp:  # Unix timestamp. Leave empty for default (30 days ago). BEWARE! 0 means ALL actors!
   report_start_timestamp:   # Unix timestamp. Leave empty for default (30 days ago). BEWARE! 0 means ALL reports!
+  vulnerability_start_timestamp:                                    # Unix timestamp. Leave empty for default (30 days ago). 0 means ALL vulnerabilities!
   report_status: 'New'
   report_include_types: 'notice,tipper,intelligence report,periodic report'
   report_type: 'threat-report'

@@ -182,7 +182,7 @@ class ConnectorIBMXTI:
 
         try:
             # Get the current state
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             current_timestamp = int(datetime.timestamp(now))
             current_state = cast(ConnectorIBMXTIState, self.__helper.get_state())
 
@@ -221,9 +221,9 @@ class ConnectorIBMXTI:
             )
             current_state = self.__helper.get_state()
             current_state_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
-            last_run_datetime = datetime.utcfromtimestamp(current_timestamp).strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )
+            last_run_datetime = datetime.fromtimestamp(
+                current_timestamp, tz=timezone.utc
+            ).strftime("%Y-%m-%d %H:%M:%S")
             if current_state:
                 current_state["last_run"] = current_state_datetime
             else:

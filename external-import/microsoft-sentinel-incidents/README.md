@@ -1,7 +1,10 @@
 # OpenCTI Microsoft Sentinel Incidents Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
-Table of Contents
+## Table of Contents
 
 - [OpenCTI Microsoft Sentinel Incidents Connector](#opencti-microsoft-sentinel-incidents-connector)
     - [Introduction](#introduction)
@@ -55,44 +58,10 @@ Another interesting link:
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
-in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-Below are the parameters you'll need to set for OpenCTI:
-
-| Parameter     | config.yml `opencti` | Docker environment variable | Mandatory | Description                                          |
-|---------------|----------------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | `url`                | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | `token`              | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-Below are the parameters you'll need to set for running the connector properly:
-
-| Parameter       | config.yml `connector` | Docker environment variable | Default         | Mandatory | Description                                                                              |
-|-----------------|------------------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID    | `id`                   | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type  | `type`                 | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
-| Connector Name  | `name`                 | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | `scope`                | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | `log_level`            | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
-
-### Connector extra parameters environment variables
-
-Below are the parameters you'll need to set for the connector:
-
-| Parameter              | config.yml `microsoft_sentinel_incidents` | Docker environment variable                      | Default                | Mandatory | Description                                                                                                            |
-|------------------------|-------------------------------------------|--------------------------------------------------|------------------------|-----------|------------------------------------------------------------------------------------------------------------------------|
-| Tenant ID              | `tenant_id`                               | `MICROSOFT_SENTINEL_INCIDENTS_TENANT_ID`         |                        | Yes       | Your Azure App Tenant ID, see the screenshot to help you find this information.                                        |
-| Client ID              | `client_id`                               | `MICROSOFT_SENTINEL_INCIDENTS_CLIENT_ID`         |                        | Yes       | Your Azure App Client ID, see the screenshot to help you find this information.                                        |
-| Client Secret          | `client_secret`                           | `MICROSOFT_SENTINEL_INCIDENTS_CLIENT_SECRET`     |                        | Yes       | Your Azure App Client secret, See the screenshot to help you find this information.                                    |
-| Subscription ID        | `subscription_id`                         | `MICROSOFT_SENTINEL_INCIDENTS_SUBSCRIPTION_ID`   |                        | Yes       | Your Microsoft Sentinel subscription ID.                                                                               |
-| Resource Group         | `resource_group`                          | `MICROSOFT_SENTINEL_INCIDENTS_RESOURCE_GROUP`    |                        | Yes       | Your Microsoft Sentinel resource group.                                                                                |
-| Workspace ID           | `workspace_id`                            | `MICROSOFT_SENTINEL_INCIDENTS_WORKSPACE_ID`      |                        | Yes       | Your Microsoft Sentinel workspace ID.                                                                                  |
-| Import start date      | `import_start_date`                       | `MICROSOFT_SENTINEL_INCIDENTS_IMPORT_START_DATE` | `2020-01-01T00:00:00Z` | No        | Import starting date (in YYYY-MM-DD format or YYYY-MM-DDTHH:MM:SSZ format) - used only if connector's state is not set. |
-| Incident filter labels | `filter_labels`                           | `MICROSOFT_SENTINEL_INCIDENTS_FILTER_LABELS`     |                        | No        | Only incidents containing these specified labels will be retrieved and ingested (comma separated values).            |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 
@@ -155,4 +124,3 @@ download of data by re-running the connector.
 The connector can be debugged by setting the appropriate log level.
 Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`,
 i.e., `self.helper.connector_logger.error("An error message")`.
-

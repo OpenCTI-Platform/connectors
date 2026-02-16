@@ -1,0 +1,21 @@
+{
+  "title": "Orange Cyberdefense",
+  "slug": "orange-cyberdefense-v3",
+  "description": "This connector allows you to ingest Orange Cyberdefense Datalake indicators to OpenCTI.\nDatalake is a subscription based CTI platform powered by Orange Cyberdefense.",
+  "short_description": "This connector allows you to ingest Orange Cyberdefense Datalake indicators to OpenCTI.",
+  "logo": "external-import/orange-cyberdefense-v3/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=5.5.4",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/orange-cyberdefense-v3",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-orange-cyberdefense-v3",
+  "container_type": "EXTERNAL_IMPORT"
+}

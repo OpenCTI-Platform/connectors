@@ -132,7 +132,7 @@ THREAT_TYPE = {
     8030102: "Tor middle",
     8030103: "Tor exit",
     "-1": "Other",
-    # 补充修改的反诈
+    # Supplementary fraud types
     804: "Fraud",
     80401: "Impersonation fraud",
     80402: "Gambling fraud",

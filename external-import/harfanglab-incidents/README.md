@@ -1,6 +1,12 @@
 # OpenCTI Harfanglab Incidents External Import Connector
 
-Table of Contents
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
+The Harfanglab Incidents connector imports security alerts and threats from Harfanglab EDR into OpenCTI as incidents, case incidents, indicators, and observables.
+
+## Table of Contents
 
 - [OpenCTI External Ingestion Harfanglab Incidents Connector](#opencti-external-ingestion-harfanglab-incidents)
     - [Introduction](#introduction)
@@ -141,13 +147,12 @@ Below are the parameters you'll need to set for the connector:
 | HarfangLab Default Score                     | `default_score`                           | `HARFANGLAB_INCIDENTS_DEFAULT_SCORE`        | /            | No        | Default score allows you to add a default score for an indicator and its observable (a number between 1 and 100).                  |
 | HarfangLab Import Start Date                 | `import_start_date`                       | `HARFANGLAB_INCIDENTS_IMPORT_START_DATE`    | 1970-01-01   | No        | Date to start import from (in ISO-8601 format) if connector's state doesn't contain last imported incident/case incident datetime. |
 
-
 ## Deployment
 
 ### Docker Deployment
 
 Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==6.9.3`. If you don't, it will take the latest version, but
+version of OpenCTI you're running. Example, `pycti==6.9.17`. If you don't, it will take the latest version, but
 sometimes the OpenCTI SDK fails to initialize.
 
 Build a Docker Image using the provided `Dockerfile`.
@@ -203,4 +208,3 @@ download of data by re-running the connector.
 The connector can be debugged by setting the appropiate log level.
 Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
 e., `self.helper.connector_logger.error("An error message")`.
-

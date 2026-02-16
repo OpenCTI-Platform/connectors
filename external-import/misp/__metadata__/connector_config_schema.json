@@ -1,0 +1,293 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/misp_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "MISP",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "misp"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT5M",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "MISP_URL": {
+      "description": "MISP instance URL",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "MISP_KEY": {
+      "description": "MISP instance API key.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "MISP_SSL_VERIFY": {
+      "default": false,
+      "description": "Whether to check if the SSL certificate is valid when using `HTTPS` protocol or not.",
+      "type": "boolean"
+    },
+    "MISP_CLIENT_CERT": {
+      "default": null,
+      "description": "Filepath to the client certificate to use for MISP API calls. Required if `ssl_verify` is enabled.",
+      "type": "string"
+    },
+    "MISP_REFERENCE_URL": {
+      "default": null,
+      "description": "MISP base URL used for External References",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "MISP_CREATE_REPORTS": {
+      "default": true,
+      "description": "Whether to create reports for each imported MISP event or not.",
+      "type": "boolean"
+    },
+    "MISP_CREATE_INDICATORS": {
+      "default": true,
+      "description": "Whether to create an indicator for each imported MISP attribute or not.",
+      "type": "boolean"
+    },
+    "MISP_CREATE_OBSERVABLES": {
+      "default": true,
+      "description": "Whether to create an observable for each imported MISP attribute or not.",
+      "type": "boolean"
+    },
+    "MISP_CREATE_OBJECT_OBSERVABLES": {
+      "default": false,
+      "description": "Whether to create a text observable for each MISP Event's object or not.",
+      "type": "boolean"
+    },
+    "MISP_DATETIME_ATTRIBUTE": {
+      "default": "timestamp",
+      "description": "The attribute to use as MISP events date.",
+      "enum": [
+        "date",
+        "timestamp",
+        "publish_timestamp",
+        "sighting_timestamp"
+      ],
+      "type": "string"
+    },
+    "MISP_DATE_FILTER_FIELD": {
+      "default": "timestamp",
+      "description": "The attribute to use as filter to query new MISP events by date.",
+      "enum": [
+        "date_from",
+        "timestamp",
+        "publish_timestamp"
+      ],
+      "type": "string"
+    },
+    "MISP_REPORT_DESCRIPTION_ATTRIBUTE_FILTERS": {
+      "default": "",
+      "description": "Filter to use to find the attribute that will be used for report description (example: 'type=comment,category=Internal reference')",
+      "type": "string"
+    },
+    "MISP_CREATE_TAGS_AS_LABELS": {
+      "default": true,
+      "description": "Whether to create labels from MISP tags or not.",
+      "type": "boolean"
+    },
+    "MISP_GUESS_THREATS_FROM_TAGS": {
+      "default": false,
+      "description": "Whether to **guess** and create Threats from MISP tags or not.",
+      "type": "boolean"
+    },
+    "MISP_AUTHOR_FROM_TAGS": {
+      "default": false,
+      "description": "Whether to create Authors from MISP tags or not.",
+      "type": "boolean"
+    },
+    "MISP_MARKINGS_FROM_TAGS": {
+      "default": false,
+      "description": "Whether to create Markings from MISP tags or not.",
+      "type": "boolean"
+    },
+    "MISP_KEEP_ORIGINAL_TAGS_AS_LABEL": {
+      "default": [],
+      "description": "List of original MISP tags to keep as labels.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "MISP_ENFORCE_WARNING_LIST": {
+      "default": false,
+      "description": "Whether to enforce the warning list for MISP events or not.",
+      "type": "boolean"
+    },
+    "MISP_REPORT_TYPE": {
+      "default": "misp-event",
+      "description": "The type of report to create on OpenCTI from MISP events.",
+      "type": "string"
+    },
+    "MISP_IMPORT_FROM_DATE": {
+      "default": null,
+      "description": "A date (ISO-8601) from which to start importing MISP events (based on events creation date).",
+      "format": "date-time",
+      "type": "string"
+    },
+    "MISP_IMPORT_TAGS": {
+      "default": [],
+      "description": "List of tags to filter MISP events to import, **including** only events with these tags.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "MISP_IMPORT_TAGS_NOT": {
+      "default": [],
+      "description": "List of tags to filter MISP events to import, **excluding** events with these tags.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "MISP_IMPORT_CREATOR_ORGS": {
+      "default": [],
+      "description": "List of organization identifiers to filter MISP events to import, **including** only events created by these organizations.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "MISP_IMPORT_CREATOR_ORGS_NOT": {
+      "default": [],
+      "description": "List of organization identifiers to filter MISP events to import, **excluding** events created by these organizations.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "MISP_IMPORT_OWNER_ORGS": {
+      "default": [],
+      "description": "List of organization identifiers to filter MISP events to import, **including** only events owned by these organizations.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "MISP_IMPORT_OWNER_ORGS_NOT": {
+      "default": [],
+      "description": "List of organization identifiers to filter MISP events to import, **excluding** events owned by these organizations.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "MISP_IMPORT_KEYWORD": {
+      "default": null,
+      "description": "Keyword to use as filter to import MISP events.",
+      "type": "string"
+    },
+    "MISP_IMPORT_DISTRIBUTION_LEVELS": {
+      "default": [],
+      "description": "List of distribution levels to filter MISP events to import, **including** only events with these distribution levels.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "MISP_IMPORT_THREAT_LEVELS": {
+      "default": [],
+      "description": "List of threat levels to filter MISP events to import, **including** only events with these threat levels.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "MISP_IMPORT_ONLY_PUBLISHED": {
+      "default": false,
+      "description": "Whether to only import published MISP events or not.",
+      "type": "boolean"
+    },
+    "MISP_IMPORT_WITH_ATTACHMENTS": {
+      "default": false,
+      "description": "Whether to import attachment attribute content as a file (works only with PDF).",
+      "type": "boolean"
+    },
+    "MISP_IMPORT_TO_IDS_NO_SCORE": {
+      "default": null,
+      "description": "A score value for the indicator/observable if the attribute `to_ids` value is no.",
+      "type": "integer"
+    },
+    "MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT": {
+      "default": false,
+      "description": "Whether to import unsupported observable as x_opencti_text or not.",
+      "type": "boolean"
+    },
+    "MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT": {
+      "default": true,
+      "description": "Whether to import unsupported observable as x_opencti_text or not (just with the value).",
+      "type": "boolean"
+    },
+    "MISP_PROPAGATE_LABELS": {
+      "default": false,
+      "description": "Whether to apply labels from MISP events to OpenCTI observables on top of MISP Attribute labels or not.",
+      "type": "boolean"
+    },
+    "MISP_BATCH_COUNT": {
+      "default": 9999,
+      "description": "The max number of items per batch when splitting STIX bundles.",
+      "type": "integer"
+    },
+    "MISP_REQUEST_TIMEOUT": {
+      "default": null,
+      "description": "The timeout for the requests to the MISP API in seconds. None means no timeout.",
+      "type": "number"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "MISP_URL",
+    "MISP_KEY"
+  ],
+  "additionalProperties": true
+}

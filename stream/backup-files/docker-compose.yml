@@ -1,4 +1,4 @@
-version: "3"
+version: '3'
 services:
   connector-backup-files:
     image: opencti/connector-backup-files:latest
@@ -6,7 +6,7 @@ services:
       - OPENCTI_URL=http://localhost # Local OpenCTI URL
       - OPENCTI_TOKEN=ChangeMe # Local OpenCTI token
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_LIVE_STREAM_ID=live # ID of the live stream created in the OpenCTI UI
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       - CONNECTOR_NAME=BackupFiles
       - CONNECTOR_SCOPE=backup

@@ -73,7 +73,7 @@ class NTIConnector:
         """
         end of work, record work info
         """
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         current_timestamp = int(datetime.timestamp(now))
         # Store the current timestamp as a last run of the connector
         self.helper.connector_logger.debug(
@@ -117,7 +117,7 @@ class NTIConnector:
         url_count = 0
         url_stix_objects = []
         self.helper.connector_logger.info(
-            f"[CONNECTOR] {len(url_basics)} url object were found"
+            f"[CONNECTOR] {len(url_basics)} url objects were found"
         )
         # if find data
         if url_basics:
@@ -137,7 +137,7 @@ class NTIConnector:
     def create_sample_basic(self, sample_basics: list) -> int:
         sample_stix_objects = []
         self.helper.connector_logger.info(
-            f"[CONNECTOR] {len(sample_basics)} sample object were found"
+            f"[CONNECTOR] {len(sample_basics)} sample objects were found"
         )
         sample_count = 0
         # if find data
@@ -157,7 +157,7 @@ class NTIConnector:
     def create_domain_basic(self, domain_basics: list) -> int:
         domain_stix_objects = []
         self.helper.connector_logger.info(
-            f"[CONNECTOR] {len(domain_basics)} domain object were found"
+            f"[CONNECTOR] {len(domain_basics)} domain objects were found"
         )
         domain_count = 0
         # if find data
@@ -209,7 +209,7 @@ class NTIConnector:
     def create_ip_basic(self, ip_basics: list) -> int:
         ip_stix_objects = []
         self.helper.connector_logger.info(
-            f"[CONNECTOR] {len(ip_basics)} ip object were found"
+            f"[CONNECTOR] {len(ip_basics)} ip objects were found"
         )
         ip_count = 0
         # if find data
@@ -236,7 +236,7 @@ class NTIConnector:
                     description="This relationship illustrates an ipv4 address is located at this location.",
                 )
                 relationship_list.append(relationship)
-            ases = self.converter_to_stix.create_AutonomousSystem(
+            ases = self.converter_to_stix.create_autonomous_system(
                 ip_basic.get("ases", [])
             )
             ip_stix_objects.extend(ases)
@@ -258,14 +258,14 @@ class NTIConnector:
         ioc_stix_objects = []
         # fetch indicator data from json file
         self.helper.connector_logger.info(
-            f"[CONNECTOR] {len(indicators)} IOC object were found"
+            f"[CONNECTOR] {len(indicators)} IOC objects were found"
         )
-        IOC_count = 0
+        ioc_count = 0
         # if find data
         if indicators:
             self.start_work("IOC")
         else:
-            return IOC_count
+            return ioc_count
         # merge duplicate indicators
         indicators = self.merge_indicators(indicators)
         # Convert into STIX2 object and add it on a list
@@ -276,7 +276,7 @@ class NTIConnector:
             if not indicator_object:
                 continue
             ioc_stix_objects.append(indicator_object)
-            IOC_count += 1
+            ioc_count += 1
             observable = self.converter_to_stix.create_obs(indicator)
             ioc_stix_objects.append(observable)
             relationship = self.converter_to_stix.create_relationship(
@@ -291,7 +291,7 @@ class NTIConnector:
         # deal with MISSING_REFERENCE_ERROR
         self.send_stix2_bundle(relationship_list)
         self.end_work()
-        return IOC_count
+        return ioc_count
 
     def merge_indicators(self, indicators: list) -> list:
         """

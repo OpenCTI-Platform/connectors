@@ -1,7 +1,7 @@
 {
   "title": "URLScan Enrichment",
   "slug": "urlscan-enrichment",
-  "description": "FIRST's Exploit Prediction Scoring System (EPSS) is an open model designed to predict the likelihood of a vulnerability being exploited in the wild. By providing a score for each vulnerability, EPSS helps organizations prioritize vulnerability management efforts based on the potential risk and impact. \n\nThe integration of FIRST EPSS with OpenCTI enables the automatic enrichment of vulnerabilities with EPSS information provided by FIRST (the global Forum of Incident Response and Security Teams). The integration enriches vulnerabilities with EPSS score and percentile.",
+  "description": "URLScan is an online service that allows you to scan URLs to analyze and detect potential security threats. It provides a platform where users can submit links to be scanned to obtain information about the page's content, loaded external resources, potential threats, and other relevant security details.\n\nThe integration of URLScan with OpenCTI enables the automatic enrichment and analysis of IP addresses and URLs.",
   "short_description": "URLScan is an online service that allows you to scan URLs to analyze and detect potential security threats. It provides a platform where users can submit links to be scanned to obtain information about the page's content, loaded external resources, potential threats, and other relevant security details.\n\nThe integration of URLScan with OpenCTI enables the automatic enrichment and analysis of IP addresses and URLs.",
   "logo": "internal-enrichment/urlscan-enrichment/__metadata__/logo.png",
   "use_cases": [
@@ -14,7 +14,7 @@
   "support_version": ">= 6.0.7",
   "subscription_link": "https://urlscan.io",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/oob/connector_manager/internal-enrichment/urlscan-enrichment",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-urlscan-enrichment",
   "container_type": "INTERNAL_ENRICHMENT"

@@ -325,15 +325,15 @@ class PulseImporter:
         return malwares
 
     def _fetch_malware_standard_id_by_name(self, name: str) -> Optional[str]:
-        filtersList = [
+        filters_list = [
             self._create_filter("name", name),
             self._create_filter("aliases", name),
         ]
-        for _filter in filtersList:
+        for _filter in filters_list:
             malwares = self.helper.api.malware.list(filters=_filter)
             if malwares:
                 if len(malwares) > 1:
-                    self._info("More then one malware for '{0}'", name)
+                    self._info("More than one malware for '{0}'", name)
                 malware = malwares[0]
                 return malware["standard_id"]
         return None

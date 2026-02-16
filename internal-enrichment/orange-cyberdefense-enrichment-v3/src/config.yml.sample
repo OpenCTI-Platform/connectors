@@ -1,0 +1,31 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'INTERNAL_ENRICHMENT'
+  id: 'ChangeMe'
+  auto: false
+  name: 'Orange Cyberdefense CTI Enrichment'
+  scope: 'IPv4-Addr,IPv6-Addr,Domain-Name,URL,Email-Addr,Autonomous-System,X509-Certificate,Cryptocurrency-Wallet,StixFile,Phone-Number'
+  log_level: 'info'
+
+
+ocd_enrich:
+  datalake_env: 'prod'
+  datalake_token: 'ChangeMe'
+  ignore_unscored_indicators: true
+  ignore_whitelisted_indicators: true
+  fallback_score: 0
+  add_tags_as_labels: true
+  add_scores_as_labels: true
+  add_score: true
+  add_tlp: true
+  add_extref: true
+  add_summary: true
+  add_related: true
+  add_sightings: true
+  add_createdby: true
+  curate_labels: true
+  max_tlp: 'TLP:GREEN'
+  threat_actor_as_intrusion_set: true
