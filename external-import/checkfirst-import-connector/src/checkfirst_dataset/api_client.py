@@ -1,10 +1,10 @@
-from __future__ import annotations
-
 """API client for fetching Checkfirst data from remote endpoints.
 
 This module handles paginated API requests to fetch Checkfirst data
 from a remote API server.
 """
+
+from __future__ import annotations
 
 import json
 import time
