@@ -81,7 +81,9 @@ def fetch_paginated_data(
                         pagination = data.get("pagination", {})
                         has_more = pagination.get("has_next", False)
                     else:
-                        raise APIError(f"Unrecognized API response format: {list(data.keys())}")
+                        raise APIError(
+                            f"Unrecognized API response format: {list(data.keys())}"
+                        )
 
                     if not items:
                         has_more = False
@@ -94,7 +96,9 @@ def fetch_paginated_data(
                     break  # Success — exit retry loop
 
             except urllib.error.HTTPError as exc:
-                error_body = exc.read().decode("utf-8", errors="replace") if exc.fp else ""
+                error_body = (
+                    exc.read().decode("utf-8", errors="replace") if exc.fp else ""
+                )
                 last_exc = APIError(
                     f"HTTP error {exc.code} when fetching page {current_page}: {exc.reason}. "
                     f"Response: {error_body}"
@@ -106,12 +110,16 @@ def fetch_paginated_data(
                 )
                 last_exc.__cause__ = exc
             except json.JSONDecodeError as exc:
-                last_exc = APIError(f"Invalid JSON response from API on page {current_page}")
+                last_exc = APIError(
+                    f"Invalid JSON response from API on page {current_page}"
+                )
                 last_exc.__cause__ = exc
             except APIError:
                 raise
             except Exception as exc:
-                last_exc = APIError(f"Unexpected error fetching page {current_page}: {exc}")
+                last_exc = APIError(
+                    f"Unexpected error fetching page {current_page}: {exc}"
+                )
                 last_exc.__cause__ = exc
 
             # If we get here, the attempt failed — retry or give up

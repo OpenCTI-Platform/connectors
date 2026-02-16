@@ -6,10 +6,8 @@ from checkfirst_dataset.alternates import parse_alternates
 from checkfirst_dataset.api_reader import iter_api_rows
 from checkfirst_dataset.dates import DateParseError, parse_publication_date
 from checkfirst_dataset.reporting import RunReport, SkipReason
-from checkfirst_dataset.state import (
-    load_state_from_helper,
-    save_state_to_helper,
-)
+from checkfirst_dataset.state import (load_state_from_helper,
+                                      save_state_to_helper)
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 
@@ -56,9 +54,7 @@ def run_once(helper, settings: ConnectorSettings) -> None:
             pass
 
     if settings.checkfirst.force_reprocess:
-        helper.log_info(
-            "Force reprocess enabled: starting from page 1."
-        )
+        helper.log_info("Force reprocess enabled: starting from page 1.")
         state = {"last_page": 0}
     else:
         state = load_state_from_helper(helper)
@@ -94,7 +90,9 @@ def run_once(helper, settings: ConnectorSettings) -> None:
     current_page = start_page
 
     try:
-        helper.log_info(f"Fetching data from {settings.checkfirst.api_url}{settings.checkfirst.api_endpoint}")
+        helper.log_info(
+            f"Fetching data from {settings.checkfirst.api_url}{settings.checkfirst.api_endpoint}"
+        )
 
         for row in iter_api_rows(
             config=settings.checkfirst,
@@ -113,9 +111,7 @@ def run_once(helper, settings: ConnectorSettings) -> None:
                 bundle_objects = []
 
             try:
-                published_dt_parsed = parse_publication_date(
-                    row.publication_date
-                )
+                published_dt_parsed = parse_publication_date(row.publication_date)
                 if published_dt_parsed.tzinfo is None:
                     published_dt_parsed = published_dt_parsed.replace(
                         tzinfo=timezone.utc
@@ -183,9 +179,7 @@ def run_once(helper, settings: ConnectorSettings) -> None:
                 continue
             except Exception as exc:  # noqa: BLE001
                 report.skip(SkipReason.ROW_MAPPING_ERROR)
-                helper.log_error(
-                    f"Skip row {row.row_number} (mapping error): {exc}"
-                )
+                helper.log_error(f"Skip row {row.row_number} (mapping error): {exc}")
                 continue
 
             report.rows_mapped += 1
@@ -198,14 +192,14 @@ def run_once(helper, settings: ConnectorSettings) -> None:
             if rows_in_bundle >= BUNDLE_SIZE:
                 try:
                     bundle_json = converter.bundle_serialize(bundle_objects)
-                    helper.log_info("Checkfirst Import Connector sending bundle to queue")
+                    helper.log_info(
+                        "Checkfirst Import Connector sending bundle to queue"
+                    )
                     _send_bundle(bundle_json)
                     report.bundles_sent += 1
                 except Exception as exc:  # noqa: BLE001
                     report.error(SkipReason.BUNDLE_SEND_ERROR)
-                    helper.log_error(
-                        f"Bundle send failed: {exc}"
-                    )
+                    helper.log_error(f"Bundle send failed: {exc}")
                     raise
 
                 state["last_page"] = current_page

@@ -22,17 +22,10 @@ try:
 except Exception:  # noqa: BLE001
     validators = None
 
-from pycti import (
-    Campaign,
-    Channel,
-    CustomObjectChannel,
-    CustomObservableMediaContent,
-    Identity,
-    IntrusionSet,
-    MarkingDefinition,
-    OpenCTIConnectorHelper,
-    StixCoreRelationship,
-)
+from pycti import (Campaign, Channel, CustomObjectChannel,
+                   CustomObservableMediaContent, Identity, IntrusionSet,
+                   MarkingDefinition, OpenCTIConnectorHelper,
+                   StixCoreRelationship)
 
 
 class ConverterToStix:
