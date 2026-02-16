@@ -1,8 +1,8 @@
 {
-  "title": "CyberThreatExchange by dogesec",
+  "title": "Cyber Threat Exchange by dogesec",
   "slug": "dogesec-cyberthreatexchange",
-  "description": "The OpenCTI CyberThreatExchange Connector is a structured way for producers to submit their intel and for users to explore it.",
-  "short_description": "The OpenCTI CyberThreatExchange Connector synchronizes intelligence from CyberThreatExchange into OpenCTI.",
+  "description": "The Cyber Threat Exchange is a platform designed to provide tailored cyber threat intelligence through a marketplace model, allowing organizations to access insights produced by specialist researchers and analysts. Rather than aggregating broad, undifferentiated feeds, it emphasizes structured intelligence and targeted subscriptions that help security teams monitor relevant risks, campaigns, and threat actors across areas such as ransomware, geopolitical developments, and industry-specific threats.\n\nBy enabling users to subscribe to curated intelligence sources, the platform aims to improve the signal-to-noise ratio in threat monitoring and support faster decision-making for cybersecurity, risk, and intelligence teams. Its approach centers on delivering actionable, research-driven intelligence that can be integrated into organizational workflows, helping teams stay informed on evolving cyber risks and better prioritize detection, response, and mitigation efforts.",
+  "short_description": "The Cyber Threat Exchange is an online marketplace for cyber threat intelligence that connects organizations with specialist researchers and curated intelligence feeds.",
   "logo": "external-import/dogesec-cyberthreatexchange/__metadata__/logo.png",
   "use_cases": [
     "Commercial Threat Intel",

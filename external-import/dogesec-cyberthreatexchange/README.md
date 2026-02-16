@@ -1,4 +1,4 @@
-# OpenCTI CyberThreatExchange Connector
+# OpenCTI Cyber Threat Exchange Connector
 
 | Status | Date | Comment |
 |--------|------|---------|
@@ -27,19 +27,11 @@
 
 ## Introduction
 
-[CyberThreatExchange](https://www.cyberthreatexchange.com/) is a web application that transforms reports and documents into structured, actionable threat intelligence.
+[Cyber Threat Exchange](https://www.cyberthreatexchange.com/) is a market place for threat intelligence.
 
-The OpenCTI CyberThreatExchange Connector synchronizes intelligence from CyberThreatExchange Feeds into OpenCTI, enabling automated ingestion of structured STIX data extracted from reports.
+The OpenCTI Cyber Threat Exchange Connector synchronizes intelligence from Feeds you are subsribed to Cyber Threat Exchange into OpenCTI.
 
-> **Note**: This connector only works with CyberThreatExchange Web ([https://www.cyberthreatexchange.com](https://www.cyberthreatexchange.com)). It does not support self-hosted CyberThreatExchange installations at this time.
-
-### Screenshots
-
-![CyberThreatExchange STIX extractions](media/cyberthreatexchange-graph.png)
-
-![CyberThreatExchange reports](media/cyberthreatexchange-reports.png)
-
-![CyberThreatExchange feeds](media/cyberthreatexchange-feeds.png)
+> **Note**: This connector only works with Cyber Threat Exchange Web ([https://www.cyberthreatexchange.com](https://www.cyberthreatexchange.com)). It does not support self-hosted Cyber Threat Exchange installations at this time.
 
 ---
 
@@ -48,19 +40,14 @@ The OpenCTI CyberThreatExchange Connector synchronizes intelligence from CyberTh
 ### Requirements
 
 - OpenCTI >= 6.5.10
-- CyberThreatExchange team subscribed to a plan with API access enabled
-- CyberThreatExchange API Key
+- Cyber Threat Exchange team subscribed to a plan with API access enabled
+- Cyber Threat Exchange API Key
 
 ### Generating an API Key
 
-[![Creating a CyberThreatExchange API Key to Use with the CyberThreatExchange OpenCTI Connector](https://img.youtube.com/vi/rpSMyLzInJw/0.jpg)](https://www.youtube.com/watch?v=rpSMyLzInJw)
-
-[This video demonstrates the steps outlined below](https://www.youtube.com/watch?v=rpSMyLzInJw).
-
-1. Log in to your CyberThreatExchange account
+1. Log in to your Cyber Threat Exchange account
 2. Navigate to "Account Settings"
 3. Locate the API section and select "Create Token"
-4. Select the team you want to use and generate the key
 4. Select the team you want to use and generate the key
   * If you don't see a team listed, you do not belong to a team on a plan with API access. Please upgrade the teams account to continue.
 5. Copy the key for configuration
@@ -90,10 +77,10 @@ The OpenCTI CyberThreatExchange Connector synchronizes intelligence from CyberTh
 
 | Parameter | Docker envvar | config.yml | Required | Default | Description |
 |-----------|---------------|------------|----------|---------|-------------|
-| Base URL | `CYBERTHREATEXCHANGE_BASE_URL` | `cyberthreatexchange.base_url` | Yes | `https://api.cyberthreatexchange.com/` | CyberThreatExchange API URL |
+| Base URL | `CYBERTHREATEXCHANGE_BASE_URL` | `cyberthreatexchange.base_url` | Yes | `https://api.cyberthreatexchange.com/` | Cyber Threat Exchange API URL |
 | API Key | `CYBERTHREATEXCHANGE_API_KEY` | `cyberthreatexchange.api_key` | Yes | - | API key for authentication |
-| Feed IDs | `CYBERTHREATEXCHANGE_FEED_IDS` | `cyberthreatexchange.feed_ids` | Yes | - | Comma-separated Feed IDs. The Reports (and objects extracted from them) in these Feeds will be imported to OpenCTI. You do not need to own the Feed to import, but the Feed must be visible to you. You can check this by logging into CyberThreatExchange using the team the API key belongs to and validating you can see the Feed. Pass the Feed IDs like so `f0895eb3-7d90-4b45-8664-a7e157ba880f,b63c638e-43e6-43d4-bfac-5b71c264b132` |
-| Interval Hours | `CYBERTHREATEXCHANGE_INTERVAL_HOURS` | `cyberthreatexchange.interval_hours` | Yes | `1` | Polling interval in hours. The connector with poll CyberThreatExchange for new Reports in the Feed(s) at this schedule. The minimum value allowed and recommended value is `1` |
+| Feed IDs | `CYBERTHREATEXCHANGE_FEED_IDS` | `cyberthreatexchange.feed_ids` | Yes | - | Comma-separated Feed IDs. Pass the Feed IDs like so `f0895eb3-7d90-4b45-8664-a7e157ba880f,b63c638e-43e6-43d4-bfac-5b71c264b132` |
+| Interval Hours | `CYBERTHREATEXCHANGE_INTERVAL_HOURS` | `cyberthreatexchange.interval_hours` | Yes | `1` | Polling interval in hours. The connector with poll Cyber Threat Exchange for new Reports in the Feed(s) at this schedule. The minimum value allowed and recommended value is `1` |
 
 ---
 
@@ -137,15 +124,15 @@ services:
 
 ```mermaid
 graph LR
-    %% Box 1: CyberThreatExchange Web
-    subgraph CyberThreatExchange_Web["CyberThreatExchange Web"]
+    %% Box 1: Cyber Threat Exchange Web
+    subgraph CyberThreatExchange_Web["Cyber Threat Exchange Web"]
         Reports[Intel Reports]
         NLP[NLP Extractions]
         Reports --> NLP
     end
 
-    %% Box 2: CyberThreatExchange API
-    subgraph CyberThreatExchange_API["CyberThreatExchange API"]
+    %% Box 2: Cyber Threat Exchange API
+    subgraph CyberThreatExchange_API["Cyber Threat Exchange API"]
         API[API]
         Bundle[STIX Bundle]
         API --> Bundle
@@ -201,10 +188,10 @@ graph LR
 
 ### Entity Mapping
 
-| CyberThreatExchange Data | OpenCTI Entity | Notes |
+| Cyber Threat Exchange Data | OpenCTI Entity | Notes |
 |----------------|----------------|-------|
 | Uploaded Report | Report | Original report as a STIX report |
-| Extracted Relationships | Relationships | CyberThreatExchange uses NLP to define descriptive relationships between extracted objects |
+| Extracted Relationships | Relationships | Cyber Threat Exchange uses NLP to define descriptive relationships between extracted objects |
 | Extracted Attack Patterns | Attack Pattern | Extracted Attack Patterns, includes MITRE ATT&CK Techniques |
 | Extracted Campaigns | Campaign | Extracted Campaigns, includes MITRE ATT&CK Campaigns |
 | Extracted Course of Actions | Course of Action | Extracted Course of Actions, includes MITRE ATT&CK Mitigations |
@@ -223,7 +210,7 @@ graph LR
 
 ### Custom STIX Objects and OpenCTI Compatibility
 
-CyberThreatExchange includes several custom STIX object types that are not currently supported by OpenCTI. These custom objects are:
+Cyber Threat Exchange includes several custom STIX object types that are not currently supported by OpenCTI. These custom objects are:
 
 * `attack-action` (SDO)
 * `attack-flow` (SDO)
