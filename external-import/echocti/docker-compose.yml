@@ -1,0 +1,25 @@
+version: '3'
+services:
+  connector-echocti:
+    image: opencti/connector-echocti:latest
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Echo CTI
+      - CONNECTOR_SCOPE=echocti
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=PT1H # In ISO8601 Format starting with "P" for Period ex: "PT1H" = Period time of 1 hour
+      - ECHOCTI_API_URL=https://api.echocti.com/ioc2/feeds
+      - ECHOCTI_CLIENT_ID=ChangeMe
+      - ECHOCTI_CLIENT_SECRET=ChangeMe
+      - ECHOCTI_VERIFY_SSL=true
+      - ECHOCTI_TYPE=all                    # IOC type: ip, url, hash, ip-range, all
+      - ECHOCTI_STATE=active                # IOC state: active, removed, false-positive, white-listed, all
+      - ECHOCTI_TIME_SINCE_CREATED=         # Time filter: 1h, 1d, 7d, 30d, 1y
+      - ECHOCTI_TIME_SINCE_UPDATED=         # Time filter: 1h, 1d, 7d, 30d, 1y
+      - ECHOCTI_MAX_COUNT=0                 # Maximum IOC count (0 = all)
+      - ECHOCTI_VENDOR=                     # Vendor filter (optional)
+      - ECHOCTI_TAG=                        # Tag filter (optional)
+      - ECHOCTI_DEFAULT_CONFIDENCE=50       # Default confidence score (0-100)
+    restart: always

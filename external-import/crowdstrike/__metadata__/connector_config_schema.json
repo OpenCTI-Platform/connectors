@@ -102,7 +102,7 @@
         "yara_master",
         "snort_suricata_master"
       ],
-      "description": "Comma-separated list of scopes to enable. Available: actor, report, indicator, yara_master, snort_suricata_master.",
+      "description": "Comma-separated list of scopes to enable. Available: actor, report, indicator, vulnerability, yara_master, snort_suricata_master.",
       "items": {
         "type": "string"
       },
@@ -247,6 +247,10 @@
       "default": true,
       "description": "Whether to trigger import without file dependencies.",
       "type": "boolean"
+    },
+    "CROWDSTRIKE_VULNERABILITY_START_TIMESTAMP": {
+      "description": "Unix timestamp from which to start importing vulnerabilities. Default is 30 days ago. BEWARE: 0 means ALL vulnerabilities!",
+      "type": "integer"
     },
     "CROWDSTRIKE_INTERVAL_SEC": {
       "default": 1800,

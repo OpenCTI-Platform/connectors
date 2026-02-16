@@ -6,7 +6,7 @@ connector:
 #  type: 'INTERNAL_ENRICHMENT'
 #  id: 'ChangeMe'
 #  name: 'Kaspersky Enrichment'
-#  scope: 'StixFile,IPv4-Addr,Domain-Name,Hostname'  # Support for additional observable types (URLs) will be added in future releases.
+#  scope: 'StixFile,IPv4-Addr,Domain-Name,Hostname,Url'
 #  log_level: 'error'
 #  auto: true # Enable/disable auto-enrichment of observables
 
@@ -18,3 +18,4 @@ kaspersky:
 #  file_sections: 'LicenseInfo,Zone,FileGeneralInfo'
 #  ipv4_sections: 'LicenseInfo,Zone,IpGeneralInfo'
 #  domain_sections: 'LicenseInfo,Zone,DomainGeneralInfo'
+#  url_sections: 'LicenseInfo,Zone,UrlGeneralInfo'

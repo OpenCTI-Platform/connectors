@@ -163,9 +163,36 @@ graph LR
 | Description          | Vulnerability.description | CVE description                                |
 | Published Date       | Vulnerability.created   | Date CVE was published                           |
 | Last Modified        | Vulnerability.modified  | Last modification date                           |
-| CVSS v3.1 Score      | Vulnerability.x_opencti_cvss_base_score | CVSS base score              |
-| CVSS v3.1 Severity   | Vulnerability.x_opencti_cvss_base_severity | CRITICAL/HIGH/MEDIUM/LOW |
-| CVSS v3.1 Vector     | Vulnerability.x_opencti_cvss_attack_vector | Attack vector            |
+| CVSS v2 baseScore    | Vulnerability.x_opencti_cvss_v2_base_score | CVSS v2 Base Score            |
+| CVSS v2 accessVector | Vulnerability.x_opencti_cvss_v2_access_vector | CVSS v2 Access Vector      |
+| CVSS v2 accessComplexity| Vulnerability.x_opencti_cvss_v2_access_complexity | CVSS v2 Access Complexity |
+| CVSS v2 authentication | Vulnerability.x_opencti_cvss_v2_authentication | CVSS v2 Authentication  |
+| CVSS v2 confidentialityImpact | Vulnerability.x_opencti_cvss_v2_confidentiality_impact | CVSS v2 Confidentiality Impact |
+| CVSS v2 integrityImpact | Vulnerability.x_opencti_cvss_v2_integrity_impact | CVSS v2 Integrity Impact |
+| CVSS v2 availabilityImpact | Vulnerability.x_opencti_cvss_v2_availability_impact | CVSS v2 Availability Impact |
+| CVSS v3.1 baseScore  | Vulnerability.x_opencti_cvss_base_score | CVSS v3.1 base score             |
+| CVSS v3.1 baseSeverity | Vulnerability.x_opencti_cvss_base_severity | CVSS v3.1 Base Severity: CRITICAL/HIGH/MEDIUM/LOW |
+| CVSS v3.1 attackVector | Vulnerability.x_opencti_cvss_attack_vector | CVSS v3.1 Attack Vector     |
+| CVSS v3.1 attackComplexity | Vulnerability.x_opencti_cvss_attack_complexity | CVSS v3.1 Attack Complexity |
+| CVSS v3.1 privilegesRequired | Vulnerability.x_opencti_cvss_privileges_required | CVSS v3.1 Privileges Required |
+| CVSS v3.1 userInteraction | Vulnerability.x_opencti_cvss_user_interaction | CVSS v3.1 User Interaction |
+| CVSS v3.1 scope | Vulnerability.x_opencti_cvss_scope | CVSS v3.1 Scope                            |
+| CVSS v3.1 confidentialityImpact | Vulnerability.x_opencti_confidentiality_impact | CVSS v3.1 Confidentiality Impact |
+| CVSS v3.1 integrityImpact | Vulnerability.x_opencti_integrity_impact | CVSS v3.1 Integrity Impact |
+| CVSS v3.1 availabilityImpact | Vulnerability.x_opencti_availability_impact | CVSS v3.1 Availability Impact |
+| CVSS v4.0 baseScore | Vulnerability.x_opencti_cvss_v4_base_score | CVSS v4.0 Base Score           |
+| CVSS v4.0 baseSeverity | Vulnerability.x_opencti_cvss_v4_base_severity | CVSS v4.0 Base Severity  |
+| CVSS v4.0 attackVector | Vulnerability.x_opencti_cvss_v4_attack_vector | CVSS v4.0 Attack Vector (AV) |
+| CVSS v4.0 attackComplexity | Vulnerability.x_opencti_cvss_v4_attack_complexity | CVSS v4.0 Attack Complexity (AC)|
+| CVSS v4.0 attackRequirements | Vulnerability.x_opencti_cvss_v4_attack_requirements | CVSS v4.0 Attack Requirements (AT) |
+| CVSS v4.0 privilegesRequired | Vulnerability.x_opencti_cvss_v4_privileges_required | CVSS v4.0 Privileges Required (PR)|
+| CVSS v4.0 userInteraction | Vulnerability.x_opencti_cvss_v4_user_interaction | CVSS v4.0 User Interaction (UI) |
+| CVSS v4.0 vulnConfidentialityImpact | Vulnerability.x_opencti_cvss_v4_confidentiality_impact_v | CVSS v4.0 Confidentiality (VC) |
+| CVSS v4.0 subConfidentialityImpact | Vulnerability.x_opencti_cvss_v4_confidentiality_impact_s | CVSS v4.0 Confidentiality (SC) |
+| CVSS v4.0 vulnIntegrityImpact | Vulnerability.x_opencti_cvss_v4_integrity_impact_v | CVSS v4.0 Integrity  (VI)|
+| CVSS v4.0 subIntegrityImpact | Vulnerability.x_opencti_cvss_v4_integrity_impact_s | CVSS v4.0 Integrity  (SI)|
+| CVSS v4.0 vulnAvailabilityImpact | Vulnerability.x_opencti_cvss_v4_availability_impact_v | CVSS v4.0 Availability (VA) |
+| CVSS v4.0 subAvailabilityImpact | Vulnerability.x_opencti_cvss_v4_availability_impact_s | CVSS v4.0 Availability (SA) |
 | CWE IDs              | Labels                  | Weakness classifications                         |
 | References           | External References     | Links to advisories and patches                  |
 
@@ -183,7 +210,7 @@ graph LR
 
 ### Processing Details
 
-- **CVSS v3.1**: Connector uses CVSS v3.1 scores (available from 2019+)
+- **CVSS Support**: Connector supports CVSS v2, v3.1, and v4.0
 - **Rate Limiting**: NVD API has rate limits; connector handles pagination
 - **Date Range**: Maximum 120-day range per API query
 - **API Key Required**: Unauthenticated requests are heavily rate-limited

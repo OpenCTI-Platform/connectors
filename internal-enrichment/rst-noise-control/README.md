@@ -50,6 +50,7 @@ Key features:
 ---
 
 ## Configuration
+Configuring the connector is straightforward. The minimal setup requires entering the RST Cloud API key and specifying the OpenCTI connection settings. 
 
 ### OpenCTI Configuration
 
@@ -148,7 +149,7 @@ flowchart LR
     A[Observable/Indicator] --> B[RST Noise Control]
     B --> C{RST Cloud API}
     C --> D{Action?}
-    D -->|Keep| E[No Change]
+    D -->|Not Found| E[No Change]
     D -->|Change| F[Reduce Score by M]
     D -->|Drop| G[Reduce Score by N]
     G --> H[Unset Detection Flag]
@@ -161,7 +162,7 @@ flowchart LR
 
 | Action | Description | Default Score Change |
 |--------|-------------|---------------------|
-| Keep | Value appears legitimate | No change |
+| Not Found | Value is not marked as noisy | No change |
 | Change | Value may be noisy | Reduce score by 10 |
 | Drop | Value is likely benign | Reduce score by 50 |
 

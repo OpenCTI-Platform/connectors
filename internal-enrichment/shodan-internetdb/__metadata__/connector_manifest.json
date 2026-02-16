@@ -10,7 +10,7 @@
   "verified": true,
   "last_verified_date": "2025-04-25",
   "playbook_supported": true,
-  "max_confidence_level": 50,
+  "max_confidence_level": 75,
   "support_version": ">=6.6.8",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/shodan-internetdb",
