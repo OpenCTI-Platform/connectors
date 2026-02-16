@@ -6,12 +6,11 @@ This module handles paginated API requests to fetch Checkfirst data
 from a remote API server.
 """
 
+import json
 import time
 import urllib.parse
-from typing import Any, Iterator
-
 import urllib.request
-import json
+from typing import Any, Iterator
 
 MAX_RETRIES = 3
 RETRY_BACKOFF_SECONDS = 5
