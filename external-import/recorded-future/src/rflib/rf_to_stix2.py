@@ -778,6 +778,7 @@ class Vulnerability(RFStixEntity):
         self,
         name,
         _type,
+        author=None,
         tlp=None,
         first_seen=None,
         last_seen=None,
@@ -785,7 +786,7 @@ class Vulnerability(RFStixEntity):
         super().__init__(
             name=name,
             _type=_type,
-            author=None,
+            author=author,
             tlp=tlp,
             first_seen=first_seen,
             last_seen=last_seen,
