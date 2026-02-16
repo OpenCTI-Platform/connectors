@@ -341,19 +341,46 @@ class VirusTotalBuilder:
 
         Notes are directly append in the bundle.
         """
-        if self.attributes["last_analysis_stats"]["malicious"] != 0:
-            content = "| Total Analyses | Malicious | Harmless |\n"
-            content += "|----------------|-----------|----------|\n"
+        if (
+            "last_analysis_stats" in self.attributes
+            and self.attributes["last_analysis_stats"]
+        ):
+            content = (
+                "| Total Analyses | Malicious | Suspicious | Harmless | Undetected |\n"
+            )
+            content += (
+                "|----------------|-----------|------------|----------|------------|\n"
+            )
             content += (
                 "| "
                 + str(len(self.attributes["last_analysis_results"].keys()))
                 + " |"
-                + str(self.attributes["last_analysis_stats"]["malicious"])
+                + str(
+                    self.attributes.get("last_analysis_stats", []).get(
+                        "malicious", "N/A"
+                    )
+                )
                 + " | "
-                + str(self.attributes["last_analysis_stats"]["harmless"])
+                + str(
+                    self.attributes.get("last_analysis_stats", []).get(
+                        "suspicious", "N/A"
+                    )
+                )
+                + " | "
+                + str(
+                    self.attributes.get("last_analysis_stats", []).get(
+                        "harmless", "N/A"
+                    )
+                )
+                + " | "
+                + str(
+                    self.attributes.get("last_analysis_stats", []).get(
+                        "undetected", "N/A"
+                    )
+                )
                 + " |\n\n"
             )
-            content += "## Last Analysis Results\n\n"
+            content += "### Last Analysis Results\n\n"
             content += "| Engine name | Method | Category | Result |\n"
             content += "|-------------|---------|---------|--------|\n"
             for key in self.attributes["last_analysis_results"]:

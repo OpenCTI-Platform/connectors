@@ -1,7 +1,7 @@
 import datetime
 import json
 import os
-import uuid
+import re
 from collections import OrderedDict
 from typing import Dict, List, Tuple
 from urllib.parse import urlparse
@@ -9,21 +9,22 @@ from urllib.parse import urlparse
 from pycti import (
     AttackPattern,
     Campaign,
+    Identity,
     Indicator,
     IntrusionSet,
     Malware,
     Tool,
     Vulnerability,
 )
-from stix2.canonicalization.Canonicalize import canonicalize
 
 __all__ = [
     "FeedType",
     "ThreatTypes",
-    "read_state",
-    "write_state",
     "feed_converter",
+    "MitreTtpDownloader",
 ]
+
+from rstcloud.MitreTtpDownloader import MitreTtpDownloader
 
 
 class FeedType:
@@ -47,18 +48,11 @@ class ThreatTypes:
     VULNERABILITY = "vulnerability"
 
 
-# to map sectors into the correct IDs in OpenCTI
-def opencti_generate_id(obj_type, data):
-    data = canonicalize(data, utf8=False)
-    new_id = str(uuid.uuid5(uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7"), data))
-    return f"{obj_type}--{new_id}"
-
-
 def custom_mapping_industry_sector(input_name):
     industries = {
         "aerospace": "Aerospace",
         "biotechnology": "Biomedical",
-        "bp_outsourcing": "Professinal Services",
+        "bp_outsourcing": "Professional Services",
         "chemical": "Chemical",
         "critical_infrastructure": "ICS",
         "e-commerce": "e-commerce",
@@ -67,6 +61,7 @@ def custom_mapping_industry_sector(input_name):
         "entertainment": "Entertainment",
         "financial": "Financial",
         "foodtech": "Food Production",
+        "game_industry": "Gaming",
         "government": "Government",
         "healthcare": "Healthcare",
         "iot": "Electronics",
@@ -88,12 +83,77 @@ def custom_mapping_industry_sector(input_name):
     return industries.get(input_name)
 
 
+# We have many thousands of unique threat names codes like:
+#    _group, _actor, _campaign, _tool, _technique, _vuln and all sorts of malware names
+# this is excluding aliases of the same threat name - so you can consume all intel from all sources using one taxonomy
+# Customers who want all aliases of the same threat name can subscribe to RST Threat Library.
+# It provides full threat profiles and aliases for codes in our taxonomy mapped to various taxonomies across the industry
+# meaning that you get intel from Recorded Future, Microsoft, CrowdStrike, Trend Micro, Check Point, Unit42, RST Cloud, etc. under one taxonomy
+
+
+# This function is used to map the threat names from our codename taxonomy to the public taxonomies from MITRE and Malpedia datasets (often used by OpenCTI users).
+# It is important to note that many threat names are not in the public taxonomy from MITRE (very scarce) and Malpedia (little depth).
+# this is a free feature for our customers who consume RST Threat Feed and have not yet subscribed to RST Threat Library.
+def custom_mapping_threat_name(input_name):
+    keep_suffix = ""
+    if input_name.endswith("_ransomware") or input_name.endswith("_raas"):
+        keep_suffix = "Ransomware"
+    elif input_name.endswith("_rat"):
+        keep_suffix = "RAT"
+
+    suffixes = [
+        "_group",
+        "_actor",
+        "_campaign",
+        "_tool",
+        "_technique",
+        "_vuln",
+        "_ransomware",
+        "_backdoor",
+        "_rat",
+        "_exploit",
+        "_miner",
+        "_maas",
+        "_raas",
+    ]
+    # remove suffixes from input_name
+    for suffix in suffixes:
+        if input_name.endswith(suffix):
+            input_name = input_name[: -len(suffix)]
+            break
+    # replace _ with space
+    input_name = input_name.replace("_", " ")
+    # if name looks like apt59, uac-0200, apt-q-15, or stac1248, uppercase the whole line
+    if re.match(r"^[a-z]+-?[a-z]+?-?[0-9]+$", input_name):
+        input_name = input_name.upper()
+    else:
+        # capitalize first letter of each word
+        input_name = input_name.title()
+    if keep_suffix:
+        if not input_name.lower().endswith(keep_suffix.lower()):
+            input_name = f"{input_name} {keep_suffix}"
+    for suffix, replacement in [
+        ("stealer", "Stealer"),
+        ("rat", "RAT"),
+        ("loader", "Loader"),
+        ("locker", "Locker"),
+    ]:
+        if input_name.endswith(suffix):
+            input_name = input_name[: -len(suffix)] + replacement
+            break
+    return input_name
+
+
 def feed_converter(
     filepath: str,
     feed_type: str,
     min_score=0,
     only_new=True,
     attributed_only=True,
+    keep_named_vulns=True,
+    create_mitre_ttps=False,
+    create_custom_ttps=True,
+    mitre_ttp_mapping=None,
 ):
     ret_iocs: Dict = dict()
     ret_threats: Dict = dict()
@@ -125,17 +185,17 @@ def feed_converter(
                 and ioc_raw.get("resolved").get("whois").get("havedata") == "true"
             ):
                 description = f'{description}\n\nWhois Registrar: {ioc_raw["resolved"]["whois"]["registrar"]}'
-                description = f'{description}\n--- Registrant: {ioc_raw["resolved"]["whois"]["registrant"]}'
+                description = f'{description}\n- Registrant: {ioc_raw["resolved"]["whois"]["registrant"]}'
                 if ioc_raw["resolved"]["whois"]["age"] > 0:
                     description = (
-                        f'{description}\n--- Age: {ioc_raw["resolved"]["whois"]["age"]}'
+                        f'{description}\n- Age: {ioc_raw["resolved"]["whois"]["age"]}'
                     )
                 if ioc_raw["resolved"]["whois"]["created"] != "1970-01-01 00:00:00":
-                    description = f'{description}\n--- Created: {ioc_raw["resolved"]["whois"]["created"]}'
+                    description = f'{description}\n- Created: {ioc_raw["resolved"]["whois"]["created"]}'
                 if ioc_raw["resolved"]["whois"]["updated"] != "1970-01-01 00:00:00":
-                    description = f'{description}\n--- Updated: {ioc_raw["resolved"]["whois"]["updated"]}'
+                    description = f'{description}\n- Updated: {ioc_raw["resolved"]["whois"]["updated"]}'
                 if ioc_raw["resolved"]["whois"]["expires"] != "1970-01-01 00:00:00":
-                    description = f'{description}\n--- Expires: {ioc_raw["resolved"]["whois"]["expires"]}'
+                    description = f'{description}\n- Expires: {ioc_raw["resolved"]["whois"]["expires"]}'
             if ioc_raw.get("resolved") and ioc_raw.get("resolved").get("ip"):
                 if (
                     len(ioc_raw["resolved"]["ip"]["a"])
@@ -144,9 +204,11 @@ def feed_converter(
                     > 0
                 ):
                     description = f"{description}\n\nRelated IPs:"
-                    description = f'{description}\n--- A Records: {ioc_raw["resolved"]["ip"]["a"]}'
-                    description = f'{description}\n--- Alias Records: {ioc_raw["resolved"]["ip"]["alias"]}'
-                    description = f'{description}\n--- CNAME Records: {ioc_raw["resolved"]["ip"]["cname"]}'
+                    description = (
+                        f'{description}\n- A Records: {ioc_raw["resolved"]["ip"]["a"]}'
+                    )
+                    description = f'{description}\n- Alias Records: {ioc_raw["resolved"]["ip"]["alias"]}'
+                    description = f'{description}\n- CNAME Records: {ioc_raw["resolved"]["ip"]["cname"]}'
             if ioc_raw.get("geo"):
                 description = f"{description}\n"
                 if ioc_raw.get("geo").get("city"):
@@ -277,7 +339,7 @@ def feed_converter(
             for i in industries:
                 sector_name = custom_mapping_industry_sector(i)
                 if sector_name:
-                    sector_key = opencti_generate_id("identity", sector_name)
+                    sector_key = Identity.generate_id(sector_name, "class")
                     if sector_key:
                         ret_threats[sector_key] = {
                             "name": sector_name,
@@ -295,52 +357,86 @@ def feed_converter(
                 ret_mapping.append(mapping)
 
             # find threat mappings
-            threats_keys = list()
+            threats_keys = set()
+            # first populate mitre_id based ttps
+            if ioc_raw.get("ttp") and create_mitre_ttps:
+                for ttp in ioc_raw.get("ttp"):
+                    ttp_name = mitre_ttp_mapping.get(ttp.upper())
+                    if ttp_name:
+                        ttp_key = AttackPattern.generate_id(
+                            name=ttp_name, x_mitre_id=ttp.upper()
+                        )
+                        ret_threats[ttp_key] = {
+                            "name": ttp_name,
+                            "type": "attack-pattern",
+                            "mitre_id": ttp.upper(),
+                        }
+                        threats_keys.add(ttp_key)
+
+                        if ret_threats[ttp_key].get("src") is None:
+                            ret_threats[ttp_key]["src"] = dict()
+                        for s in ioc["src"]:
+                            source_name = s["name"]
+                            source_url = s["url"]
+                            ret_threats[ttp_key]["src"][source_name] = source_url
+            # then pouplate all other threats objects including custom ttps
             for t in threats:
+                threat_tag = t.lower()
                 if t.endswith("_group") or t.endswith("_actor"):
-                    threat_name = t[:-6]
+                    threat_name = custom_mapping_threat_name(t)
                     threat_type = ThreatTypes.GROUP
                     threat_key = IntrusionSet.generate_id(threat_name)
                 elif t.endswith("_campaign"):
-                    threat_name = t[:-9]
+                    threat_name = custom_mapping_threat_name(t)
                     threat_type = ThreatTypes.CAMPAIGN
                     threat_key = Campaign.generate_id(threat_name)
                 elif t.endswith("_tool"):
-                    threat_name = t[:-5]
+                    threat_name = custom_mapping_threat_name(t)
                     threat_type = ThreatTypes.TOOL
                     threat_key = Tool.generate_id(threat_name)
-                elif t.endswith("_technique"):
-                    threat_name = t[:-10]
+                elif t.endswith("_technique") and create_custom_ttps:
+                    threat_name = custom_mapping_threat_name(t)
                     threat_type = ThreatTypes.TTP
                     threat_key = AttackPattern.generate_id(threat_name)
                 elif t.endswith("_ransomware"):
-                    threat_name = t[:-11]
+                    threat_name = custom_mapping_threat_name(t)
                     threat_type = ThreatTypes.RANSOMWARE
                     threat_key = Malware.generate_id(threat_name)
                 elif t.endswith("_backdoor"):
-                    threat_name = t[:-9]
+                    threat_name = custom_mapping_threat_name(t)
                     threat_type = ThreatTypes.BACKDOOR
                     threat_key = Malware.generate_id(threat_name)
                 elif t.endswith("_rat"):
-                    threat_name = t[:-4]
+                    threat_name = custom_mapping_threat_name(t)
                     threat_type = ThreatTypes.RAT
                     threat_key = Malware.generate_id(threat_name)
                 elif t.endswith("_exploit"):
-                    threat_name = t[:-8]
+                    threat_name = custom_mapping_threat_name(t)
                     threat_type = ThreatTypes.EXPLOIT
                     threat_key = Malware.generate_id(threat_name)
                 elif t.endswith("_miner"):
-                    threat_name = t[:-6]
+                    threat_name = custom_mapping_threat_name(t)
                     threat_type = ThreatTypes.CRYPTOMINER
                     threat_key = Malware.generate_id(threat_name)
+                elif t.endswith("_vuln") and keep_named_vulns:
+                    # this is for named vulnerabilities like citrix bleed or printnightmare
+                    # usually such names are given to impactful vulnerabilities
+                    # which some teams want to track in their platforms under human readable names as well
+                    threat_name = custom_mapping_threat_name(t)
+                    threat_type = ThreatTypes.VULNERABILITY
+                    threat_key = Vulnerability.generate_id(threat_name)
                 else:
-                    threat_name = t
+                    threat_name = custom_mapping_threat_name(t)
                     threat_type = ThreatTypes.MALWARE
                     threat_key = Malware.generate_id(threat_name)
 
-                threats_keys.append(threat_key)
+                threats_keys.add(threat_key)
 
-                ret_threats[threat_key] = {"name": threat_name, "type": threat_type}
+                ret_threats[threat_key] = {
+                    "name": threat_name,
+                    "type": threat_type,
+                    "aliases": [threat_tag],
+                }
                 if ret_threats[threat_key].get("src") is None:
                     ret_threats[threat_key]["src"] = dict()
                 for s in ioc["src"]:

@@ -3,7 +3,6 @@ import sys
 
 import pytest
 from pycti import OpenCTIApiClient, OpenCTIApiConnector
-from src.external_import_connector.config_variables import ConfigConnector
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -12,26 +11,6 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 def mock_env(monkeypatch):
     monkeypatch.setenv("ABUSEIPDB_SCORE", "90")
     monkeypatch.setenv("ABUSEIPDB_CREATE_INDICATOR", "true")
-
-
-@pytest.fixture(autouse=True)
-def mock_config(monkeypatch):
-    monkeypatch.setattr(
-        ConfigConnector,
-        "_load_config",
-        lambda self: {
-            "opencti": {
-                "url": "http://localhost:8080",
-                "token": "changeme",
-                "ssl_verify": False,
-            },
-            "connector": {
-                "id": "CHANGEME",
-                "name": "AbuseIPDB Connector",
-                "type": "EXTERNAL_IMPORT",
-            },
-        },
-    )
 
 
 @pytest.fixture(autouse=True)

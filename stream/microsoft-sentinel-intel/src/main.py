@@ -1,12 +1,10 @@
 import traceback
 
-from microsoft_sentinel_intel import Connector
+from microsoft_sentinel_intel import Connector, ConnectorSettings
 from microsoft_sentinel_intel.client import ConnectorClient
-from microsoft_sentinel_intel.config import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
-
-def main() -> None:
+if __name__ == "__main__":
     """
     Entry point of the script
 
@@ -16,17 +14,13 @@ def main() -> None:
     - exit(1): effective way to terminate a Python program when an error is encountered.
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
-    config = ConnectorSettings()
-    helper = OpenCTIConnectorHelper(config=config.model_dump_pycti())
-    client = ConnectorClient(helper=helper, config=config)
-
-    connector = Connector(helper=helper, config=config, client=client)
-    connector.run()
-
-
-if __name__ == "__main__":
     try:
-        main()
+        settings = ConnectorSettings()
+        helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+        client = ConnectorClient(helper=helper, config=settings)
+
+        connector = Connector(config=settings, helper=helper, client=client)
+        connector.run()
     except Exception:
         traceback.print_exc()
         exit(1)

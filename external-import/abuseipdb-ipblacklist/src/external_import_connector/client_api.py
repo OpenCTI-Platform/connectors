@@ -1,10 +1,15 @@
-import urllib
+import urllib.parse
+from typing import TYPE_CHECKING
 
 import requests
 
+if TYPE_CHECKING:
+    from external_import_connector import ConnectorSettings
+    from pycti import OpenCTIConnectorHelper
+
 
 class ConnectorClient:
-    def __init__(self, helper, config):
+    def __init__(self, helper: "OpenCTIConnectorHelper", config: "ConnectorSettings"):
         """
         Initialize the client with necessary configurations
         """
@@ -15,8 +20,7 @@ class ConnectorClient:
             "Content": "application/json",
         }
 
-        if hasattr(self.config, "api_key") and self.config.api_key:
-            headers["key"] = self.config.api_key
+        headers["key"] = self.config.abuseipdb.api_key.get_secret_value()
 
         self.session = requests.Session()
         self.session.headers.update(headers)
@@ -58,7 +62,7 @@ class ConnectorClient:
         """
         ips = []
         try:
-            response = self._request_data(self.config.api_url, params=params)
+            response = self._request_data(self.config.abuseipdb.api_url, params=params)
             if response is not None:
                 data_json = response.json()
                 for d in data_json["data"]:

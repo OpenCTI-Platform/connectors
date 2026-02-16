@@ -10,7 +10,25 @@ connector:
   log_level: 'info'
 
 diode_import:
+  # Directory consumption (enabled by default for backward compatibility)
+  get_from_directory: true
   get_from_directory_path: '/path'
   get_from_directory_retention: 7 # Days to keep files before cleanup (0 = disable)
-  delete_after_import: true # Delete files immediately after successful processing
+
+  # S3 consumption (set get_from_s3 to true to enable)
+  get_from_s3: false
+  get_from_s3_bucket: '' # If empty, uses OpenCTI bucket
+  get_from_s3_folder: 'connectors' # Folder/prefix in bucket (use "/" or "." for root)
+  get_from_s3_retention: 7 # Days to keep files before cleanup (0 = disable)
+
+  # S3 credentials override (if empty, uses OpenCTI S3 credentials from helper)
+  # s3_endpoint: 'localhost'
+  # s3_port: 9000
+  # s3_access_key: 'ChangeMe'
+  # s3_secret_key: 'ChangeMe'
+  # s3_use_ssl: true  # If not set, uses OpenCTI's S3 SSL setting
+  # s3_bucket_region: 'us-east-1'
+
+  # Common settings
+  delete_after_import: true # Delete files/objects immediately after successful processing
   applicant_mappings: "source_user_id1:target_user_id1,source_user_id2:target_user_id2"

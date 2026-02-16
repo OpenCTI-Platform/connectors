@@ -52,6 +52,33 @@ from crowdstrike_connector import ConnectorSettings
             },
             id="minimal_valid_settings_dict",
         ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {
+                    "id": "connector-id",
+                    "name": "Test Connector",
+                    "scope": "test, connector",
+                    "log_level": "error",
+                    "live_stream_id": "E6EA6EE6-14A2-4EF9-B709-7C7524DB2A4F",
+                    "live_stream_listen_delete": True,
+                    "live_stream_no_dependencies": True,
+                },
+                "crowdstrike": {
+                    "api_base_url": "https://api.crowdstrike.com",
+                    "client_id": "test-client-id",
+                    "client_secret": "test-client-secret",
+                    "permanent_delete": False,
+                    "falcon_for_mobile_active": False,
+                },
+                "metrics": {
+                    "enable": False,
+                    "port": "ChangeMe",
+                    "addr": "ChangeMe",
+                },
+            },
+            id="metrics_disabled_with_placeholder_addr_and_port_is_valid",
+        ),
     ],
 )
 def test_settings_should_accept_valid_input(settings_dict):
@@ -145,6 +172,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "id": "connector-id",
                     "scope": "test, connector",
                     "log_level": "error",
+                    "live_stream_id": "D5685291-70A3-47D2-AB3A-FEB0F7DA9257",
                 },
                 "crowdstrike": {
                     "api_base_url": "https://api.crowdstrike.com",
@@ -152,11 +180,36 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "client_secret": "test-client-secret",
                 },
                 "metrics": {
+                    "enable": True,
                     "addr": "invalid-ip",
+                    "port": 9113,
                 },
             },
             "metrics.addr",
-            id="invalid_metrics_addr",
+            id="invalid_metrics_addr_when_enabled",
+        ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "test, connector",
+                    "log_level": "error",
+                    "live_stream_id": "D5685291-70A3-47D2-AB3A-FEB0F7DA9257",
+                },
+                "crowdstrike": {
+                    "api_base_url": "https://api.crowdstrike.com",
+                    "client_id": "test-client-id",
+                    "client_secret": "test-client-secret",
+                },
+                "metrics": {
+                    "enable": True,
+                    "addr": "0.0.0.0",
+                    "port": "invalid-port",
+                },
+            },
+            "metrics.port",
+            id="invalid_metrics_port_when_enabled",
         ),
     ],
 )

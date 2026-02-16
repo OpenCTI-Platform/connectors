@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """OpenCTI Valhalla connector models."""
 
 from datetime import datetime
@@ -32,7 +31,7 @@ class YaraRule(BaseModel):
     tags: list
 
     @property
-    def cti_date(self) -> str:
+    def cti_date(self) -> datetime:
         # Valhalla date format: 2020-04-27 13:28:41
         return datetime.strptime(self.date, "%Y-%m-%d %H:%M:%S")
         # return d.strftime("%Y-%m-%dT%H:%M:%S+00:00")
@@ -40,13 +39,9 @@ class YaraRule(BaseModel):
     @property
     def cti_description(self) -> str:
         return (
-            self.description
-            + "\n\n"
-            + "Minimum Yara version: "
-            + self.minimum_yara
-            + "\n\n"
-            + "Required Yara modules: "
-            + ", ".join(self.required_modules)
+            f"{self.description}\n\n"
+            f"Minimum Yara version: {self.minimum_yara}\n\n"
+            f"Required Yara modules: {', '.join(self.required_modules)}"
         )
 
 
@@ -62,20 +57,20 @@ class ApiResponse(BaseModel):
     rules: List[YaraRule]
 
     @property
-    def cti_date(self) -> str:
+    def cti_date(self) -> datetime:
         # Valhalla date format: 2020-04-27 13:28:41
         return datetime.strptime(self.date, "%Y-%m-%d %H:%M:%S")
         # return d.strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
 
 class ExternalReference(BaseModel):
-    external_id: str = None
+    external_id: str | None = None
 
 
 class StixObjects(BaseModel):
     type: str
     id: str
-    external_references: List[ExternalReference] = None
+    external_references: List[ExternalReference] | None = None
 
 
 class StixEnterpriseAttack(BaseModel):

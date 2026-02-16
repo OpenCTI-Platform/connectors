@@ -4,6 +4,14 @@
 |--------|------|---------|
 | Community | -    | -       |
 
+# Depreciation of Abuse.ch SSL Blacklist connector
+
+> [!WARNING]  
+> **This connector is now obsolete and deprecated**  
+> The CSV file used by this connector (https://sslbl.abuse.ch/blacklist/sslipblacklist.csv ) has been deprecated and has not been updated since 2025‑01‑03.
+> This connector will no longer be maintained and will be deleted soon. Please do not use it anymore.
+
+
 The Abuse.ch SSL connector imports botnet C&C server IP addresses detected based on SSL certificate signatures from the SSLBL blacklist into OpenCTI.
 
 ## Table of Contents

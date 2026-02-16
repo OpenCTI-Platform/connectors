@@ -182,7 +182,6 @@ The connector is designed to be run in a Docker container. However, if you want 
 ```bash
 pip install -e .[dev,test]
 ```
-(for legacy purposes, you can also use `pip install -r requirements.txt` that is in editable mode.)
 
 5a/ Set the required variables:
 In your shell:

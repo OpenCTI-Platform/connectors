@@ -1,7 +1,7 @@
 # OpenCTI Valhalla Connector
 
-| Status | Date | Comment |
-|--------|------|---------|
+| Status    | Date | Comment |
+|-----------|------|---------|
 | Community | -    | -       |
 
 The Valhalla connector imports YARA detection rules from Nextron Systems' Valhalla YARA rule feed into OpenCTI.
@@ -14,9 +14,6 @@ The Valhalla connector imports YARA detection rules from Nextron Systems' Valhal
   - [Installation](#installation)
     - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -40,30 +37,10 @@ This connector imports YARA rules from Valhalla into OpenCTI as YARA pattern ind
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-| Parameter         | config.yml      | Docker environment variable   | Default         | Mandatory | Description                                                                 |
-|-------------------|-----------------|-------------------------------|-----------------|-----------|-----------------------------------------------------------------------------|
-| Connector ID      | id              | `CONNECTOR_ID`                |                 | Yes       | A unique `UUIDv4` identifier for this connector instance.                   |
-| Connector Name    | name            | `CONNECTOR_NAME`              | Valhalla        | No        | Name of the connector.                                                      |
-| Connector Scope   | scope           | `CONNECTOR_SCOPE`             | valhalla        | No        | The scope or type of data the connector is importing.                       |
-| Log Level         | log_level       | `CONNECTOR_LOG_LEVEL`         | error           | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
-
-### Connector extra parameters environment variables
-
-| Parameter     | config.yml         | Docker environment variable | Default | Mandatory | Description                                                                 |
-|---------------|--------------------|-----------------------------|---------|-----------|-----------------------------------------------------------------------------|
-| API Key       | valhalla.api_key   | `VALHALLA_API_KEY`          |         | No        | Valhalla API key. Empty key fetches only public/demo rules.                 |
-| Interval      | valhalla.interval_sec | `VALHALLA_INTERVAL_SEC`  | 86400   | No        | Interval in seconds between runs (default: 86400 = 1 day).                  |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 
@@ -101,18 +78,17 @@ docker compose up -d
 ### Manual Deployment
 
 1. Create `config.yml` based on `config.yml.sample`.
-
 2. Install dependencies:
 
-```bash
-pip3 install -r requirements.txt
-```
+    ```bash
+    pip3 install -r requirements.txt
+    ```
 
 3. Start the connector:
 
-```bash
-python3 main.py
-```
+    ```bash
+    python3 main.py
+    ```
 
 ## Usage
 
@@ -170,6 +146,7 @@ For each YARA rule from Valhalla:
 ### Rule Categories
 
 Valhalla provides rules for:
+
 - APT malware and tools
 - Commodity malware
 - Webshells

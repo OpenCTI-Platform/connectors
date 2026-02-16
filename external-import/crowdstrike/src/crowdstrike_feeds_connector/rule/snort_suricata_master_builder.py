@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike Snort master builder module."""
 
 from datetime import date, datetime, timezone
-from typing import List, Mapping
+from typing import Any, List, Mapping, cast
 
 from crowdstrike_feeds_services.utils import (
     create_indicator,
@@ -12,8 +11,8 @@ from crowdstrike_feeds_services.utils import (
 from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport
 from crowdstrike_feeds_services.utils.snort_parser import SnortRule
 from stix2 import Bundle, Identity, Indicator, MarkingDefinition
-from stix2 import Report as STIXReport  # type: ignore
-from stix2.v21 import _DomainObject  # type: ignore
+from stix2 import Report as STIXReport
+from stix2.v21 import _DomainObject
 
 
 class SnortRuleBundleBuilder:
@@ -53,7 +52,7 @@ class SnortRuleBundleBuilder:
     def build(self) -> Bundle:
         """Build Snort rule bundle."""
         # Create bundle with author.
-        bundle_objects = [self.author]
+        bundle_objects: List[Any] = [self.author]
 
         # Add object marking definitions to bundle.
         bundle_objects.extend(self.object_markings)
@@ -63,7 +62,7 @@ class SnortRuleBundleBuilder:
         bundle_objects.extend(indicators)
 
         # Create object references for the report.
-        object_refs = create_object_refs(indicators)
+        object_refs = create_object_refs(cast(List[_DomainObject], indicators))
 
         # Create reports and add to bundle.
         reports = self._create_reports(object_refs)
@@ -104,7 +103,7 @@ class SnortRuleBundleBuilder:
         self,
         report: dict,
         objects: List[_DomainObject],
-        files: List[Mapping[str, str]],
+        files: List[Mapping[str, str | bool]],
     ) -> STIXReport:
         return create_stix2_report_from_report(
             report,

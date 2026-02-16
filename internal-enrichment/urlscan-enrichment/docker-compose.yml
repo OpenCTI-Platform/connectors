@@ -6,7 +6,7 @@ services:
       - OPENCTI_TOKEN=ChangeMe
       #- CONNECTOR_ID=496df155-c2f0-43b3-ab46-4352e68989d8 # Optional (default: '496df155-c2f0-43b3-ab46-4352e68989d8')
       #- CONNECTOR_NAME=UrlScan # Optional (default: 'Urlscan Enrichment')
-      #- CONNECTOR_SCOPE=url,ipv4-addr,ipv6-addr # Optional (default: 'url,ipv4-addr,ipv6-addr')
+      #- CONNECTOR_SCOPE=url,ipv4-addr,ipv6-addr # Available => scope-submission: url or hostname or domain-name / scope-search: ipv4-addr,ipv6-addr
       #- CONNECTOR_AUTO=false # Optional (default: false)
       #- CONNECTOR_LOG_LEVEL=error # Optional (default: 'error')
       #- URLSCAN_ENRICHMENT_API_KEY= # Optional (default: empty)

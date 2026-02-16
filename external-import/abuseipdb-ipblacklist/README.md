@@ -40,39 +40,10 @@ This connector fetches the IP blacklist from AbuseIPDB API and imports the malic
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-| Parameter         | config.yml        | Docker environment variable   | Default         | Mandatory | Description                                                                      |
-|-------------------|-------------------|-------------------------------|-----------------|-----------|----------------------------------------------------------------------------------|
-| Connector ID      | id                | `CONNECTOR_ID`                |                 | Yes       | A unique `UUIDv4` identifier for this connector instance.                        |
-| Connector Name    | name              | `CONNECTOR_NAME`              |                 | Yes       | Name of the connector.                                                           |
-| Connector Scope   | scope             | `CONNECTOR_SCOPE`             | abuseipdb       | Yes       | The scope or type of data the connector is importing.                            |
-| Log Level         | log_level         | `CONNECTOR_LOG_LEVEL`         | error           | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.       |
-| Duration Period   | duration_period   | `CONNECTOR_DURATION_PERIOD`   | PT12H           | No        | Time interval between connector runs in ISO 8601 format.                         |
-| Queue Threshold   | queue_threshold   | `CONNECTOR_QUEUE_THRESHOLD`   | 500             | No        | RabbitMQ queue size limit (MB) before entering buffering mode.                   |
-
-### Connector extra parameters environment variables
-
-| Parameter          | config.yml         | Docker environment variable    | Default                                      | Mandatory | Description                                                    |
-|--------------------|--------------------|---------------------------------|----------------------------------------------|-----------|----------------------------------------------------------------|
-| API URL            | abuseipdb.api_url  | `ABUSEIPDB_URL`                 | https://api.abuseipdb.com/api/v2/blacklist   | No        | AbuseIPDB API endpoint URL.                                    |
-| API Key            | abuseipdb.api_key  | `ABUSEIPDB_API_KEY`             |                                              | Yes       | Your AbuseIPDB API key.                                        |
-| Confidence Score   | abuseipdb.score    | `ABUSEIPDB_SCORE`               |                                              | Yes       | Minimum confidence score threshold for IP addresses.           |
-| Result Limit       | abuseipdb.limit    | `ABUSEIPDB_LIMIT`               | 500000                                       | No        | Maximum number of IPs to fetch.                                |
-| IP Version         | abuseipdb.ipversion| `ABUSEIPDB_IPVERSION`           | mixed                                        | No        | IP version filter: `4`, `6`, or `mixed`.                       |
-| Except Countries   | abuseipdb.exceptcountry | `ABUSEIPDB_EXCEPT_COUNTRY` |                                              | No        | Comma-separated country codes to exclude (e.g., `RU,CN`).      |
-| Only Countries     | abuseipdb.onlycountry | `ABUSEIPDB_ONLY_COUNTRY`     |                                              | No        | Comma-separated country codes to include only.                 |
-| Create Indicator   | abuseipdb.create_indicator | `ABUSEIPDB_CREATE_INDICATOR` | false                                      | No        | Whether to create Indicators from observables.                 |
-| TLP Level          | abuseipdb.tlp_level | `ABUSEIPDB_TLP_LEVEL`          | clear                                        | No        | TLP marking for imported data (`clear`, `green`, `amber`, `amber+strict`, `red`). |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 
