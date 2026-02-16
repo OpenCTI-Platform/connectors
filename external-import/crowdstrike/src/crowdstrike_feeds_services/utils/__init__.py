@@ -368,6 +368,12 @@ def create_malware(
     kill_chain_phases: Optional[List[stix2.KillChainPhase]] = None,
     confidence: Optional[int] = None,
     object_markings: Optional[List[stix2.MarkingDefinition]] = None,
+    description: Optional[str] = None,
+    capabilities: Optional[List[str]] = None,
+    created: Optional[datetime] = None,
+    modified: Optional[datetime] = None,
+    external_references: Optional[List[stix2.ExternalReference]] = None,
+    malware_types: Optional[List[str]] = None,
 ) -> stix2.Malware:
     """Create a malware."""
     malware_id = Malware.generate_id(name)
@@ -381,6 +387,12 @@ def create_malware(
         kill_chain_phases=kill_chain_phases,
         confidence=confidence,
         object_marking_refs=object_markings,
+        description=description,
+        capabilities=capabilities,
+        created=created,
+        modified=modified,
+        external_references=external_references,
+        malware_types=malware_types,
     )
 
 

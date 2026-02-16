@@ -34,6 +34,7 @@ class ConfigCrowdstrike:
         self.scopes = ",".join(scopes_list) if scopes_list else None
 
         self.actor_start_timestamp = self.config.crowdstrike.actor_start_timestamp
+        self.malware_start_timestamp = self.config.crowdstrike.malware_start_timestamp
         self.report_start_timestamp = self.config.crowdstrike.report_start_timestamp
         self.report_status = self.config.crowdstrike.report_status
 
