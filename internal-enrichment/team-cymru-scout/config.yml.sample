@@ -8,7 +8,6 @@ connector:
   name: 'PureSignalScout'
   scope: 'IPv4-Addr,IPv6-Addr,Domain-Name'
   auto: true
-  confidence_level: 75
   log_level: 'info'
 
 pure_signal_scout:
