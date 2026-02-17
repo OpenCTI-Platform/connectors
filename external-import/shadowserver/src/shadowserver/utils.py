@@ -1,13 +1,13 @@
+import csv
 import hashlib
 import io
 import ipaddress
 from datetime import datetime
-from math import isnan
 from typing import Dict, List, Optional, Union
 
-import pandas as pd
 from shadowserver.constants import REQUEST_DATE_FORMAT, SEVERITY_MAP, TLP_MAP
 from stix2.base import _Observable as Observable
+from tabulate import tabulate
 
 
 # Function to calculate different hashes
@@ -124,9 +124,9 @@ def dicts_to_markdown(dicts_list: Union[List[Dict], Dict]) -> str:
     markdown_output = ""
     for data_dict in dicts_list:
         cleaned_dict = {k: v for k, v in data_dict.items() if v}
-        df = pd.DataFrame(cleaned_dict, index=[0]).T.reset_index()
-        df.columns = ["Key", "Value"]
-        markdown_output += df.to_markdown(index=False) + "\n\n"
+        rows = list(cleaned_dict.items())
+        table = tabulate(rows, headers=["Key", "Value"], tablefmt="pipe")
+        markdown_output += table + "\n\n"
 
     return markdown_output
 
@@ -205,8 +205,28 @@ def from_list_to_csv(data_list: List[Dict]) -> str:
         str: A CSV formatted string.
     """
     clean_list = clean_list_of_dicts(data_list)
-    df = pd.DataFrame(clean_list)
-    return df.to_csv(index=False)
+    if not clean_list:
+        return ""
+    # Collect all unique keys from all dicts, keeping their first-seen order
+    keys = list(dict.fromkeys(k for d in clean_list for k in d.keys()))
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=keys, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(clean_list)
+    return output.getvalue()
+
+
+def _csv_value_to_native(value: str) -> Optional[Union[str, int]]:
+    """
+    Convert a CSV cell string to None, int, or str.
+
+    Empty string becomes None. Integer-looking strings become int.
+    """
+    if value == "":
+        return None
+    if value.lstrip("-").isdigit():
+        return int(value)
+    return value
 
 
 def from_csv_to_list(csv_content: bytes) -> List[Dict]:
@@ -219,18 +239,12 @@ def from_csv_to_list(csv_content: bytes) -> List[Dict]:
     Returns:
         list of dict: A list of dictionaries parsed from the CSV.
     """
-    df = pd.read_csv(io.BytesIO(csv_content))
-    csv_list = df.to_dict("records")[:10]
-
-    def replace_nan_with_none(value):
-        if isinstance(value, float) and isnan(value):
-            return None
-        return value
-
-    csv_list = [
-        {k: replace_nan_with_none(v) for k, v in record.items()} for record in csv_list
+    text = csv_content.decode("utf-8")
+    reader = csv.DictReader(io.StringIO(text))
+    csv_list = list(reader)[:10]
+    return [
+        {k: _csv_value_to_native(v) for k, v in record.items()} for record in csv_list
     ]
-    return csv_list
 
 
 def get_stix_id_precedence(stix_id_list: List[str]) -> Optional[str]:
