@@ -39,7 +39,7 @@ This connector integrates the FIRST EPSS API with OpenCTI to:
 
 ### Requirements
 
-- OpenCTI Platform >= 6.9.18
+- OpenCTI Platform >= 6.9.19
 
 ## Configuration variables
 
