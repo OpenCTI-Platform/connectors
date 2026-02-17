@@ -1,4 +1,4 @@
-pycti==6.8.6
+pycti==6.9.19
 stix2==3.0.1
 urllib3==2.6.3
 pydantic>=2.10, <3
