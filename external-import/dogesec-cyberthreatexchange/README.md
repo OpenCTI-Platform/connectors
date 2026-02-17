@@ -124,7 +124,7 @@ services:
 graph LR
     %% Box 1: Cyber Threat Exchange Web
     subgraph CyberThreatExchange_Web["Cyber Threat Exchange Web"]
-        Intel Feeds [Intel Feeds]
+        IntelFeeds[Intel Feeds]
     end
 
     %% Box 2: Cyber Threat Exchange API
@@ -177,9 +177,8 @@ graph LR
     end
 
     %% Cross-section flow
-    Intel Feeds --> API
+    IntelFeeds --> API
     Bundle --> Connector
-
 ```
 
 ### Processing Details
