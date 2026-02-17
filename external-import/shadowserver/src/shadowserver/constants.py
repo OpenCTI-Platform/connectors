@@ -12,6 +12,7 @@ LIMIT = 1000
 
 # Max report download size (bytes) to avoid unbounded memory use and reduce
 # exposure to native-code issues (e.g. SSL/HTTP stack) on very large responses.
+CHUNK_SIZE = 65536
 MAX_REPORT_SIZE = 500 * 1024 * 1024  # 500 MiB
 
 TLP_MAP = {

@@ -11,6 +11,7 @@ from pycti import OpenCTIConnectorHelper
 from requests.exceptions import RequestException
 from shadowserver.constants import (
     BASE_URL,
+    CHUNK_SIZE,
     DOWNLOAD_URL,
     LIMIT,
     MAX_REPORT_SIZE,
@@ -144,7 +145,7 @@ class ShadowserverAPI:
             with self.session.get(url, timeout=TIMEOUT, stream=True) as response:
                 response.raise_for_status()
                 content = b""
-                for chunk in response.iter_content(chunk_size=65536):
+                for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
                     if len(content) + len(chunk) > MAX_REPORT_SIZE:
                         LOGGER.error(
                             f"Report {report_id} exceeds max size {MAX_REPORT_SIZE}"
