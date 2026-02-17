@@ -9,7 +9,6 @@ help with troubleshooting and operational visibility.
 from collections import Counter
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
 
 
 class SkipReason(str, Enum):
@@ -44,13 +43,16 @@ class RunReport:
         """Record that we encountered an error for a known reason."""
         self.errors[reason.value] += count
 
-    def to_summary(self) -> dict[str, Any]:
-        """Convert the report to a JSON-serializable summary."""
-        return {
-            "pages_fetched": self.pages_fetched,
-            "rows_seen": self.rows_seen,
-            "rows_mapped": self.rows_mapped,
-            "bundles_sent": self.bundles_sent,
-            "skipped": dict(self.skipped),
-            "errors": dict(self.errors),
-        }
+    def to_summary(self) -> str:
+        """Return a human-readable summary string for ``to_processed()``."""
+        parts = [
+            f"pages={self.pages_fetched}",
+            f"rows_seen={self.rows_seen}",
+            f"mapped={self.rows_mapped}",
+            f"bundles={self.bundles_sent}",
+        ]
+        if self.skipped:
+            parts.append(f"skipped={dict(self.skipped)}")
+        if self.errors:
+            parts.append(f"errors={dict(self.errors)}")
+        return f"Checkfirst run: {', '.join(parts)}"

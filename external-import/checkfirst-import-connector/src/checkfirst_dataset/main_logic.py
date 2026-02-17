@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import timezone
+from datetime import datetime, timezone
 
 from checkfirst_dataset.alternates import parse_alternates
 from checkfirst_dataset.api_reader import iter_api_rows
@@ -32,25 +32,10 @@ def run_once(helper, settings: ConnectorSettings) -> None:
         helper.log_error("API key is not configured. Please set CHECKFIRST_API_KEY.")
         return
 
-    work_id = None
-
-    def _ensure_work_id():
-        nonlocal work_id
-        if work_id is not None:
-            return
-        try:
-            api = getattr(helper, "api", None)
-            work = getattr(api, "work", None)
-            initiate = getattr(work, "initiate_work", None)
-            if callable(initiate):
-                try:
-                    work_id = initiate(
-                        settings.connector.id, "Checkfirst API ingestion"
-                    )
-                except TypeError:
-                    work_id = initiate(settings.connector.id)
-        except Exception:  # noqa: BLE001
-            pass
+    # Initiate work upfront (standard OpenCTI pattern)
+    now = datetime.now(tz=timezone.utc)
+    run_name = f"Checkfirst run @ {now.strftime('%Y-%m-%d %H:%M:%S')}"
+    work_id = helper.api.work.initiate_work(helper.connect_id, run_name)
 
     if settings.checkfirst.force_reprocess:
         helper.log_info("Force reprocess enabled: starting from page 1.")
@@ -62,25 +47,6 @@ def run_once(helper, settings: ConnectorSettings) -> None:
     start_page = state.get("last_page", 0) + 1
     if start_page > 1:
         helper.log_info(f"Resuming from page {start_page}")
-
-    def _log_debug(msg: str) -> None:
-        if hasattr(helper, "log_debug"):
-            helper.log_debug(msg)
-        else:
-            helper.log_info(msg)
-
-    def _send_bundle(bundle_json: str) -> None:
-        """Send a STIX bundle with best-effort template-aligned options."""
-        _ensure_work_id()
-
-        send_kwargs = {"cleanup_inconsistent_bundle": True}
-        if work_id is not None:
-            send_kwargs["work_id"] = work_id
-
-        try:
-            helper.send_stix2_bundle(bundle_json, **send_kwargs)
-        except TypeError:
-            helper.send_stix2_bundle(bundle_json)
 
     author = None
     bundle_objects: list[object] = []
@@ -172,7 +138,7 @@ def run_once(helper, settings: ConnectorSettings) -> None:
                     bundle_objects.extend([alt_url, rel])
             except DateParseError as exc:
                 report.skip(SkipReason.ROW_INVALID_PUBLICATION_DATE)
-                _log_debug(
+                helper.log_debug(
                     f"Skip row {row.row_number} (invalid Publication Date): {exc}"
                 )
                 continue
@@ -194,7 +160,7 @@ def run_once(helper, settings: ConnectorSettings) -> None:
                     helper.log_info(
                         "Checkfirst Import Connector sending bundle to queue"
                     )
-                    _send_bundle(bundle_json)
+                    helper.send_stix2_bundle(bundle_json, work_id=work_id)
                     report.bundles_sent += 1
                 except Exception as exc:  # noqa: BLE001
                     report.error(SkipReason.BUNDLE_SEND_ERROR)
@@ -222,7 +188,7 @@ def run_once(helper, settings: ConnectorSettings) -> None:
             try:
                 bundle_json = converter.bundle_serialize(bundle_objects)
                 helper.log_info("Checkfirst Import Connector sending bundle to queue")
-                _send_bundle(bundle_json)
+                helper.send_stix2_bundle(bundle_json, work_id=work_id)
                 report.bundles_sent += 1
             except Exception as exc:  # noqa: BLE001
                 report.error(SkipReason.BUNDLE_SEND_ERROR)
@@ -237,16 +203,4 @@ def run_once(helper, settings: ConnectorSettings) -> None:
         helper.log_error(f"Error fetching data from API: {exc}")
     finally:
         helper.log_info(f"Run summary: {report.to_summary()}")
-
-        if work_id is not None:
-            try:
-                api = getattr(helper, "api", None)
-                work = getattr(api, "work", None)
-                to_processed = getattr(work, "to_processed", None)
-                if callable(to_processed):
-                    try:
-                        to_processed(work_id, f"Completed run: {report.to_summary()}")
-                    except TypeError:
-                        to_processed(work_id)
-            except Exception:  # noqa: BLE001
-                pass
+        helper.api.work.to_processed(work_id, report.to_summary())

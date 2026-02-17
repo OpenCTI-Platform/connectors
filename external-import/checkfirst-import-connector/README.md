@@ -11,7 +11,7 @@ This is an `EXTERNAL_IMPORT` connector that:
 
 ## Requirements
 
-- A running OpenCTI stack (OpenCTI platform + worker + RabbitMQ)
+- A running OpenCTI stack (OpenCTI platform + worker)
 - A dedicated OpenCTI token for the connector
 - Access to the Checkfirst API (URL + API key)
 
@@ -34,10 +34,6 @@ Connector-specific:
 - `CHECKFIRST_API_ENDPOINT` (default: `/v1/articles`)
 - `CHECKFIRST_SINCE` (ISO 8601 date; default: `2025-01-01T00:00:00Z` — only ingest articles published on or after this date)
 
-Optional run mode:
-
-- `CHECKFIRST_RUN_MODE` (default: `loop`; allowed: `loop|once`)
-
 Optional:
 
 - `CHECKFIRST_TLP_LEVEL` (default: `clear`)
@@ -58,7 +54,6 @@ See `.env.sample` in this folder for a working template.
 - Copy `.env.sample` to `.env`
 - Set `OPENCTI_URL`, `OPENCTI_TOKEN`
 - Set `CHECKFIRST_API_URL`, `CHECKFIRST_API_KEY`
-- Set RabbitMQ credentials (`MQ_HOST`, `MQ_USER`, `MQ_PASS`, etc.) to match your OpenCTI stack
 
 3) Run
 
@@ -77,10 +72,7 @@ From this folder:
 
 From this folder:
 
-- Long-running (recommended):
-	- `docker compose up --build`
-- One-shot (smoke test):
-	- `docker compose run --rm -e CHECKFIRST_RUN_MODE=once connector-checkfirst-import-connector`
+- `docker compose up --build`
 
 ## Verify in OpenCTI
 
@@ -96,5 +88,5 @@ From this folder:
 
 - The mapping enforces deterministic STIX IDs for idempotency (reruns should not create duplicates).
 - The connector persists the last processed API page in connector state; on restart it resumes from the next page.
-- If you want a local, OpenCTI-free bundle export for debugging mappings, run the connector in one-shot mode (`CHECKFIRST_RUN_MODE=once`) and inspect logs / OpenCTI work results.
+- For one-shot runs (Run & Terminate), set `CONNECTOR_DURATION_PERIOD=PT0S` or use the platform toggle.
 - Enjoy.

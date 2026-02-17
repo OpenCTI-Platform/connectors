@@ -8,7 +8,7 @@ from connectors_sdk import (
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
 )
-from pydantic import Field
+from pydantic import Field, field_validator
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -32,13 +32,15 @@ class CheckfirstConfig(BaseConfigModel):
     """Connector-specific configuration."""
 
     # API configuration
-    source_type: Literal["api"] = Field(
-        description="Data source type: 'api' for remote API.",
-        default="api",
-    )
     api_url: str = Field(
         description="Base URL for the API endpoint (e.g., https://api.example.com).",
     )
+
+    @field_validator("api_url")
+    @classmethod
+    def _strip_trailing_slash(cls, v: str) -> str:
+        return v.rstrip("/")
+
     api_key: str = Field(
         description="API key for authentication (sent in Api-Key header).",
     )
@@ -51,11 +53,6 @@ class CheckfirstConfig(BaseConfigModel):
         description="Only ingest articles published on or after this date (ISO 8601).",
         default="2025-01-01T00:00:00Z",
     )
-    run_mode: Literal["loop", "once"] = Field(
-        description="Run mode: loop (scheduled) or once (one-shot).",
-        default="loop",
-    )
-
     force_reprocess: bool = Field(
         description=(
             "If true, ignore any saved connector state and start from page 1. "
@@ -83,21 +80,6 @@ class CheckfirstConfig(BaseConfigModel):
     )
 
 
-class MQConfig(BaseConfigModel):
-    """Message-queue configuration used by `pycti.OpenCTIConnectorHelper`."""
-
-    host: str = Field(description="MQ host.")
-    port: int = Field(description="MQ port.", default=5672)
-    user: str = Field(description="MQ username.")
-    password: str = Field(
-        description="MQ password.",
-        validation_alias="pass",
-        serialization_alias="pass",
-    )
-    vhost: str = Field(description="MQ vhost.", default="/")
-    use_ssl: bool = Field(description="Use SSL to connect to MQ.", default=False)
-
-
 class ConnectorSettings(BaseConnectorSettings):
     """Settings model loaded from env vars / config.yml."""
 
@@ -105,4 +87,3 @@ class ConnectorSettings(BaseConnectorSettings):
         default_factory=ExternalImportConnectorConfig
     )
     checkfirst: CheckfirstConfig = Field(default_factory=CheckfirstConfig)
-    mq: MQConfig = Field(default_factory=MQConfig)
