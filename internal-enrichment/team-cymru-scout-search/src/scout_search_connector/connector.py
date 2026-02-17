@@ -33,6 +33,12 @@ class ScoutSearchConnectorConfig:
             config,
             default=1,
         )
+        self.pattern_type = get_config_variable(
+            "PURE_SIGNAL_SCOUT_INDICATOR_PATTERN_TYPE",
+            ["pure_signal_scout", "pattern_type"],
+            config,
+            default="pure-signal-scout",
+        )
 
 
 class ScoutSearchConnectorConnector:
@@ -47,7 +53,7 @@ class ScoutSearchConnectorConnector:
         else:
             config = {}
 
-        self.helper = OpenCTIConnectorHelper(config)
+        self.helper = OpenCTIConnectorHelper(config, playbook_compatible=True)
         self.config = ScoutSearchConnectorConfig(config)
         self.tlp = None
 
@@ -192,7 +198,7 @@ class ScoutSearchConnectorConnector:
                     "identity",
                     "x509-certificate",
                 ]:
-                    # Create a relationship between the text and this object
+                    # Create a relationship between the Indicator and this object
                     relationship = {
                         "id": f"relationship--{str(uuid.uuid4())}",
                         "type": "relationship",
@@ -218,7 +224,7 @@ class ScoutSearchConnectorConnector:
     def process_message(self, data: Dict) -> str:
         """Process enrichment message from OpenCTI"""
         try:
-            opencti_entity = data["enrichment_entity"]
+            opencti_entity = data.get("enrichment_entity")
             self.extract_and_check_markings(opencti_entity)
             # Extract entity information
             self.helper.connector_logger.info(
@@ -226,41 +232,50 @@ class ScoutSearchConnectorConnector:
             )
             entity_id = opencti_entity["standard_id"]
             observable_type = opencti_entity["entity_type"]
-            observable_value = opencti_entity["value"]
+            pattern = opencti_entity["pattern"]
+            pattern_type = opencti_entity["pattern_type"]
 
             self.helper.connector_logger.info(
                 "[ScoutSearchConnector] Processing enrichment request",
                 {
                     "entity_id": entity_id,
                     "observable_type": observable_type,
-                    "observable_value": observable_value,
+                    "pattern": pattern,
+                    "pattern_type": pattern_type,
                 },
             )
 
             # Check if observable type is supported
-            if observable_type not in ["Text"]:
+            if observable_type not in ["Indicator"]:
                 self.helper.connector_logger.warning(
                     "[ScoutSearchConnector] Unsupported observable type",
                     {"observable_type": observable_type},
                 )
                 return "Unsupported observable type"
+            if pattern_type != self.config.pattern_type:
+                self.helper.connector_logger.warning(
+                    "[ScoutSearchConnector] Unsupported observable type",
+                    {
+                        "Configured pattern_type": pattern_type,
+                        "Supported pattern_type": self.config.pattern_type,
+                    },
+                )
+                return "Unsupported observable type"
 
             # Call external API to get intelligence
-            intelligence_data = self.client.get_entity(
-                observable_type, observable_value
-            )
+            intelligence_data = self.client.get_entity(observable_type, pattern)
 
             if not intelligence_data:
                 self.helper.connector_logger.info(
                     "[ScoutSearchConnector] No intelligence data found",
-                    {"observable_value": observable_value},
+                    {"pattern": pattern},
                 )
                 return "No intelligence data found"
 
             self.helper.connector_logger.info(
                 "[ScoutSearchConnector] Processing STIX bundle",
                 {
-                    "observable_value": observable_value,
+                    "pattern": pattern,
                     "bundle_objects": len(intelligence_data.get("objects", [])),
                 },
             )
@@ -270,7 +285,7 @@ class ScoutSearchConnectorConnector:
             if len(processed_data) == 0:
                 self.helper.connector_logger.info(
                     "[ScoutSearchConnector] No processed data found",
-                    {"observable_value": observable_value},
+                    {"pattern": pattern},
                 )
                 return "No Enrichment Data Found from API"
 
@@ -278,7 +293,7 @@ class ScoutSearchConnectorConnector:
             self.helper.send_stix2_bundle(bundle=serialized_bundle, update=True)
             self.helper.connector_logger.info(
                 "[ScoutSearchConnector] Data ingestion started",
-                {"observable_value": observable_value},
+                {"pattern": pattern},
             )
 
             return "Data fetched successfully and ingestion process has started"
@@ -287,11 +302,7 @@ class ScoutSearchConnectorConnector:
             self.helper.connector_logger.error(
                 "[ScoutSearchConnector] Error processing message",
                 {
-                    "observable_value": (
-                        observable_value
-                        if "observable_value" in locals()
-                        else "unknown"
-                    ),
+                    "pattern": (pattern if "pattern" in locals() else "unknown"),
                     "error": str(e),
                 },
             )
