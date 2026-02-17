@@ -102,9 +102,13 @@ class TestShadowserverAPI:
         csv_content = from_list_to_csv(fixture_data).encode("utf-8")
 
         # Mock the session.get to return CSV content (streaming)
+        # Must support context manager protocol
         mock_response = MagicMock()
         mock_response.raise_for_status = MagicMock()
-        mock_response.iter_content = lambda chunk_size: (csv_content,)
+        mock_response.headers.get.return_value = None  # No Content-Length header
+        mock_response.iter_content.return_value = [csv_content]
+        mock_response.__enter__.return_value = mock_response
+        mock_response.__exit__.return_value = None
         mock_get = mocker.patch.object(shadow_server_api.session, "get")
         mock_get.return_value = mock_response
 
