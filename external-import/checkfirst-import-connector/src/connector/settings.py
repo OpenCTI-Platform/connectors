@@ -3,8 +3,11 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import Literal
 
-from connectors_sdk import (BaseConfigModel, BaseConnectorSettings,
-                            BaseExternalImportConnectorConfig)
+from connectors_sdk import (
+    BaseConfigModel,
+    BaseConnectorSettings,
+    BaseExternalImportConnectorConfig,
+)
 from pydantic import Field
 
 

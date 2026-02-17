@@ -6,8 +6,7 @@ from checkfirst_dataset.alternates import parse_alternates
 from checkfirst_dataset.api_reader import iter_api_rows
 from checkfirst_dataset.dates import DateParseError, parse_publication_date
 from checkfirst_dataset.reporting import RunReport, SkipReason
-from checkfirst_dataset.state import (load_state_from_helper,
-                                      save_state_to_helper)
+from checkfirst_dataset.state import load_state_from_helper, save_state_to_helper
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 
