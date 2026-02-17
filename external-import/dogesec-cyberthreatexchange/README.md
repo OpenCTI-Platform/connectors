@@ -17,8 +17,6 @@
   - [Manual Deployment](#manual-deployment)
 - [Behavior](#behavior)
   - [Data Flow](#data-flow)
-  - [Entity Mapping](#entity-mapping)
-  - [Custom STIX Objects and OpenCTI Compatibility](#custom-stix-objects-and-opencti-compatibility)
   - [Processing Details](#processing-details)
 - [Debugging](#debugging)
 - [Additional Information](#additional-information)
@@ -126,9 +124,7 @@ services:
 graph LR
     %% Box 1: Cyber Threat Exchange Web
     subgraph CyberThreatExchange_Web["Cyber Threat Exchange Web"]
-        Reports[Intel Reports]
-        NLP[NLP Extractions]
-        Reports --> NLP
+        Intel Feeds [Intel Feeds]
     end
 
     %% Box 2: Cyber Threat Exchange API
@@ -181,50 +177,10 @@ graph LR
     end
 
     %% Cross-section flow
-    NLP --> API
+    Intel Feeds --> API
     Bundle --> Connector
 
 ```
-
-### Entity Mapping
-
-| Cyber Threat Exchange Data | OpenCTI Entity | Notes |
-|----------------|----------------|-------|
-| Uploaded Report | Report | Original report as a STIX report |
-| Extracted Relationships | Relationships | Cyber Threat Exchange uses NLP to define descriptive relationships between extracted objects |
-| Extracted Attack Patterns | Attack Pattern | Extracted Attack Patterns, includes MITRE ATT&CK Techniques |
-| Extracted Campaigns | Campaign | Extracted Campaigns, includes MITRE ATT&CK Campaigns |
-| Extracted Course of Actions | Course of Action | Extracted Course of Actions, includes MITRE ATT&CK Mitigations |
-| Extracted Identities | Identity | Extracted Identities. Also includes Identities created for the Feed (blog) |
-| Extracted Infrastructure | Infrastructure | Extracted Infrastructure |
-| Extracted Intrusion Sets | Intrusion Set | Extracted Intrusion Sets, includes MITRE ATT&CK Groups |
-| Extracted Locations | Location | Extracted Locations |
-| Extracted Malwares | Malware | Extracted Malware families, includes MITRE ATT&CK Software |
-| Extracted Actors | Threat Actor | Named threat actors |
-| Extracted Tools | Tool | Extracted Tools, includes MITRE ATT&CK Software |
-| Extracted Vulnerabilities | Vulnerability | Named vulnerabilities |
-| Extracted ATT&CK Tactics | x-mitre-tactic | ATT&CK Tactics |
-| Extracted ATT&CK Data Sources | x-mitre-data-source | ATT&CK Data Sources |
-| Extracted ATT&CK Data Components | x-mitre-date-component | ATT&CK Data Components |
-| Extracted IOCs | Indicator/Observable | For each IOC extraction, an Indicator will also be created. The following Observables (SCOs) are supported; autonomous-system, bank-account, cryptocurrency-wallet, directory, domain-name, email-addr, file, ipv4-addr, ipv6-addr, network-traffic, mac-addr, payment-card, phone-number, software, url, user-agent, windows-registry-key |
-
-### Custom STIX Objects and OpenCTI Compatibility
-
-Cyber Threat Exchange includes several custom STIX object types that are not currently supported by OpenCTI. These custom objects are:
-
-* `attack-action` (SDO)
-* `attack-flow` (SDO)
-* `exploit` (SDO)
-* `weaknesses` (SDO)
-* `x-mitre-asset` (SDO MITRE ATT&CK)
-* `x-mitre-analytic` (SDO MITRE ATT&CK)
-* `x-mitre-detection-strategy` (SDO MITRE ATT&CK)
-* `cryptocurrency-transaction` (SCO)
-* `data-source` (SCO)
-
-When a STIX Bundle associated with a Report contains any of these object types, OpenCTI will report import errors for those specific objects. This behavior is expected.
-
-All other supported STIX objects in the bundle will import successfully and remain usable in OpenCTI.
 
 ### Processing Details
 
@@ -232,11 +188,9 @@ All other supported STIX objects in the bundle will import successfully and rema
    - At least one Feed ID must be provided
    - Can import from multiple feeds (comma-separated)
    - Access to feeds visible to authenticated team
-
 2. **Historical Import**:
    - All historical intelligence from reports is ingested
    - New intelligence added to feeds is imported on schedule
-
 3. **Incremental Updates**:
    - Polls at configured interval (default: 12 hours)
    - Only fetches new/updated intelligence since last run
@@ -266,12 +220,3 @@ Navigate to `Data` → `Ingestion` → `Connectors` → `CyberThreatExchange` to
 - **OpenCTI Support**: For general connector installation help
 - **dogesec Community Forum**: [community.dogesec.com](https://community.dogesec.com/) (recommended)
 - **dogesec Support Portal**: [support.dogesec.com](https://support.dogesec.com/) (requires plan with email support)
-
-### Use Cases
-
-| Use Case | Description |
-|----------|-------------|
-| Report Processing | Extract intelligence from PDF threat reports |
-| Document Analysis | Analyze advisories, bulletins, research papers |
-| IOC Extraction | Automate indicator extraction from documents |
-| Intelligence Library | Build searchable intelligence from reports |
