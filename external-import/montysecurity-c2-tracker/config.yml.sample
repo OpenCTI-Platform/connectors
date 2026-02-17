@@ -4,7 +4,7 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  name: 'MontysecurityC2TrackerConnector' # optional # optional (default: 'MontysecurityC2TrackerConnector')
+  name: 'MontysecurityC2TrackerConnector' # optional (default: 'MontysecurityC2TrackerConnector')
   scope: 'montysecurity-c2-tracker'
   log_level: 'error' # optional (default: 'error')
   duration_period: 'P1W' # optional, interval in ISO-8601 format between two runs of the connector (default: 'P1W')
