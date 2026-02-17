@@ -144,15 +144,22 @@ class ShadowserverAPI:
         try:
             with self.session.get(url, timeout=TIMEOUT, stream=True) as response:
                 response.raise_for_status()
-                content = b""
+                size = response.headers.get("Content-Length")
+                if size and int(size) > MAX_REPORT_SIZE:
+                    LOGGER.error(
+                        f"Report {report_id} too large - {size} > {MAX_REPORT_SIZE} bytes"
+                    )
+                    return b""
+
+                chunks = []
                 for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
-                    if len(content) + len(chunk) > MAX_REPORT_SIZE:
+                    if len(chunks) * CHUNK_SIZE + len(chunk) > MAX_REPORT_SIZE:
                         LOGGER.error(
-                            f"Report {report_id} exceeds max size {MAX_REPORT_SIZE}"
+                            f"Report {report_id} too large - max size: {MAX_REPORT_SIZE} bytes"
                         )
                         return b""
-                    content += chunk
-                return content
+                    chunks.append(chunk)
+                return b"".join(chunks)
         except RequestException as e:
             LOGGER.error(f"Failed to download report {report_id}: {e}")
             return b""
