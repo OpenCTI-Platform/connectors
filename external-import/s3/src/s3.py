@@ -2,6 +2,7 @@ import base64
 import datetime
 import json
 import os
+import re
 import time
 
 import boto3
@@ -11,6 +12,7 @@ import yaml
 from pycti import (
     CourseOfAction,
     Identity,
+    Indicator,
     Infrastructure,
     Malware,
     Note,
@@ -18,6 +20,7 @@ from pycti import (
     StixCoreRelationship,
     Vulnerability,
     get_config_variable,
+    resolve_aliases_field,
 )
 
 mapped_keys = [
@@ -44,6 +47,23 @@ mapped_keys = [
     "x_credit",
 ]
 ignored_keys = ["x_acti_guid", "x_version", "x_vendor", "x_opencti_files"]
+
+# Pattern to match invisible/zero-width Unicode characters that can break URLs
+INVISIBLE_CHARS_PATTERN = re.compile(
+    r"[\u200b\u200c\u200d\u200e\u200f\ufeff\u00a0\u2060\u2061\u2062\u2063\u2064]"
+)
+
+
+def sanitize_url(url):
+    """
+    Remove invisible Unicode characters from URLs.
+    These include BOM, zero-width spaces, and other non-printable characters
+    that can be accidentally included in data but break URL processing.
+    """
+    if not url or not isinstance(url, str):
+        return url
+    # Remove invisible characters and strip whitespace
+    return INVISIBLE_CHARS_PATTERN.sub("", url).strip()
 
 
 class S3Connector:
@@ -138,6 +158,185 @@ class S3Connector:
     def get_interval(self):
         return int(self.s3_interval)
 
+    def note_exists_by_abstract(self, abstract):
+        """
+        Check if a note with the given abstract already exists in the API.
+
+        :param abstract: The abstract to search for
+        :return: True if a note with this abstract exists, False otherwise
+        """
+        try:
+            filters = {
+                "mode": "and",
+                "filters": [
+                    {
+                        "key": "attribute_abstract",
+                        "values": [abstract],
+                        "operator": "eq",
+                    }
+                ],
+                "filterGroups": [],
+            }
+            notes = self.helper.api.note.list(filters=filters, first=1)
+            return len(notes) > 0
+        except Exception as e:
+            self.helper.log_warning(
+                f"Failed to check for existing note with abstract '{abstract}': {e}"
+            )
+            # On error, default to using simple key (consolidate behavior)
+            return True
+
+    def filter_outdated_vulnerabilities(self, data):
+        """
+        Pre-process the bundle to filter out vulnerabilities that are outdated
+        compared to what already exists in the OpenCTI platform.
+
+        For each vulnerability in the bundle, query the platform for its
+        x_opencti_modified_at value. If the platform's value is more recent
+        than the bundle vulnerability's 'modified' field, the vulnerability
+        is considered outdated and is removed along with all relationships
+        pointing to or from it.
+
+        Args:
+            data: Parsed JSON dict of the STIX bundle
+
+        Returns:
+            dict: The filtered bundle data
+        """
+        if "objects" not in data or not data["objects"]:
+            return data
+
+        # Count vulnerabilities in the bundle for context
+        all_vulns = [o for o in data["objects"] if o.get("type") == "vulnerability"]
+        total_objects = len(data["objects"])
+        self.helper.log_info(
+            f"[PRE-PROCESS] Starting outdated vulnerability check: "
+            f"{len(all_vulns)} vulnerability(ies) in bundle ({total_objects} total objects)"
+        )
+
+        outdated_vuln_ids = set()
+
+        for obj in data["objects"]:
+            if obj.get("type") != "vulnerability":
+                continue
+
+            vuln_name = obj.get("name")
+            vuln_modified = obj.get("modified")
+
+            if not vuln_name or not vuln_modified:
+                self.helper.log_info(
+                    f"[PRE-PROCESS] Vulnerability '{vuln_name}' has no 'modified' field, "
+                    f"skipping outdated check, will be ingested"
+                )
+                continue
+
+            # Generate the deterministic STIX ID for this vulnerability
+            vuln_standard_id = Vulnerability.generate_id(vuln_name)
+            self.helper.log_info(
+                f"[PRE-PROCESS] Checking '{vuln_name}': "
+                f"bundle_id={obj['id']}, standard_id={vuln_standard_id}, "
+                f"received_modified={vuln_modified}"
+            )
+
+            try:
+                existing_vuln = self.helper.api.vulnerability.read(
+                    id=vuln_standard_id,
+                    customAttributes="""
+                        id
+                        x_opencti_modified_at
+                    """,
+                )
+
+                if existing_vuln is None:
+                    self.helper.log_info(
+                        f"[PRE-PROCESS] '{vuln_name}': does not exist in platform "
+                        f"(read returned None) -> KEPT, will be ingested"
+                    )
+                    continue
+
+                platform_modified = existing_vuln.get("x_opencti_modified_at")
+
+                if not platform_modified:
+                    self.helper.log_info(
+                        f"[PRE-PROCESS] '{vuln_name}': exists in platform but has no "
+                        f"x_opencti_modified_at (returned keys: {list(existing_vuln.keys())}) "
+                        f"-> KEPT, will be ingested"
+                    )
+                    continue
+
+                # Parse to datetime for safe comparison (handles Z, +00:00, milliseconds, etc.)
+                platform_dt = datetime.datetime.fromisoformat(
+                    platform_modified.replace("Z", "+00:00")
+                )
+                received_dt = datetime.datetime.fromisoformat(
+                    vuln_modified.replace("Z", "+00:00")
+                )
+                is_outdated = platform_dt > received_dt
+
+                self.helper.log_info(
+                    f"[PRE-PROCESS] '{vuln_name}': "
+                    f"platform_x_opencti_modified_at='{platform_modified}' (parsed={platform_dt}), "
+                    f"received_modified='{vuln_modified}' (parsed={received_dt}), "
+                    f"is_outdated={is_outdated} "
+                    f"-> {'FILTERED OUT' if is_outdated else 'KEPT'}"
+                )
+
+                if is_outdated:
+                    outdated_vuln_ids.add(obj["id"])
+
+            except Exception as e:
+                self.helper.log_warning(
+                    f"[PRE-PROCESS] '{vuln_name}': failed to check against platform: "
+                    f"{type(e).__name__}: {e} -> KEPT, will proceed with ingestion"
+                )
+
+        if not outdated_vuln_ids:
+            self.helper.log_info(
+                f"[PRE-PROCESS] Complete: no outdated vulnerabilities found, "
+                f"all {len(all_vulns)} vulnerability(ies) will be ingested"
+            )
+            return data
+
+        # Filter out outdated vulnerabilities and their relationships
+        filtered_objects = []
+        removed_rels = 0
+
+        for obj in data["objects"]:
+            obj_id = obj.get("id", "unknown")
+            obj_type = obj.get("type", "unknown")
+
+            if obj_id in outdated_vuln_ids:
+                self.helper.log_info(
+                    f"[PRE-PROCESS] Removing vulnerability: '{obj.get('name')}' (id={obj_id})"
+                )
+                continue
+
+            if obj_type == "relationship":
+                source_ref = obj.get("source_ref", "")
+                target_ref = obj.get("target_ref", "")
+                rel_type = obj.get("relationship_type", "unknown")
+                if source_ref in outdated_vuln_ids or target_ref in outdated_vuln_ids:
+                    self.helper.log_info(
+                        f"[PRE-PROCESS] Removing relationship: type='{rel_type}', "
+                        f"source={source_ref}, target={target_ref}, id={obj_id}"
+                    )
+                    removed_rels += 1
+                    continue
+
+            filtered_objects.append(obj)
+
+        kept_vulns = len(all_vulns) - len(outdated_vuln_ids)
+        self.helper.log_info(
+            f"[PRE-PROCESS] Complete: "
+            f"{len(outdated_vuln_ids)} vulnerability(ies) filtered out, "
+            f"{kept_vulns} vulnerability(ies) kept, "
+            f"{removed_rels} relationship(s) removed, "
+            f"{len(filtered_objects)}/{total_objects} objects remaining in bundle"
+        )
+
+        data["objects"] = filtered_objects
+        return data
+
     @staticmethod
     def rewrite_stix_ids(objects):
         # First pass: Build ID mapping for objects that need new IDs
@@ -169,6 +368,11 @@ class S3Connector:
             elif obj_type == "malware":
                 old_id = obj["id"]
                 new_id = Malware.generate_id(obj["name"])
+                id_mapping[old_id] = new_id
+
+            elif obj_type == "indicator":
+                old_id = obj["id"]
+                new_id = Indicator.generate_id(obj["pattern"])
                 id_mapping[old_id] = new_id
 
         # Second pass: Update all objects with new IDs and references
@@ -206,6 +410,7 @@ class S3Connector:
                 "course-of-action",
                 "vulnerability",
                 "malware",
+                "indicator",
             ):
                 # Update the object's ID from the mapping
                 old_id = obj["id"]
@@ -240,6 +445,14 @@ class S3Connector:
 
         if "objects" not in data or not data["objects"]:
             self.helper.log_warning("Bundle has no objects to process")
+            return None
+
+        # Pre-process: filter out vulnerabilities that are outdated compared to the platform
+        data = self.filter_outdated_vulnerabilities(data)
+        if not data.get("objects"):
+            self.helper.log_info(
+                "All objects were filtered out during pre-processing, nothing to ingest"
+            )
             return None
 
         # Prepare file attachment if enabled
@@ -284,6 +497,15 @@ class S3Connector:
             if "object_marking_refs" not in obj:
                 obj["object_marking_refs"] = [self.s3_marking["id"]]
 
+            # Sanitize URLs in external_references (remove invisible Unicode characters)
+            if "external_references" in obj:
+                sanitized_refs = []
+                for ext_ref in obj["external_references"]:
+                    if "url" in ext_ref:
+                        ext_ref["url"] = sanitize_url(ext_ref["url"])
+                    sanitized_refs.append(ext_ref)
+                obj["external_references"] = sanitized_refs
+
             if "x_severity" in obj:
                 # handle mapping of "x_severity" on Vulnerability object
                 if obj["type"] == "vulnerability":
@@ -307,9 +529,10 @@ class S3Connector:
                     elif obj["x_severity"] == "low":
                         obj["x_opencti_score"] = 30
 
-            # Aliases
+            # Aliases - use correct field based on entity type
             if "x_alias" in obj:
-                obj["x_opencti_aliases"] = (
+                aliases_field = resolve_aliases_field(obj["type"])
+                obj[aliases_field] = (
                     obj["x_alias"]
                     if isinstance(obj["x_alias"], list)
                     else [obj["x_alias"]]
@@ -348,8 +571,16 @@ class S3Connector:
             # Title Note
             if obj.get("x_title", None) and obj.get("x_acti_uuid", None):
                 # generate a unique note identifier that don't change in the time even of the obj_name change or x_title change
-                note_key = obj.get("x_acti_uuid") + " - Title"
-                note_abstract = obj.get("name") + " - Title"
+                # For non-CVE entries, include the name in the key to ensure uniqueness (unless a note with same abstract already exists)
+                obj_name = obj.get("name", "")
+                note_abstract = obj_name + " - Title"
+                if obj_name.startswith("CVE-"):
+                    note_key = obj.get("x_acti_uuid") + " - Title"
+                elif self.note_exists_by_abstract(note_abstract):
+                    # Note already exists with this abstract, use simple key to consolidate
+                    note_key = obj.get("x_acti_uuid") + " - Title"
+                else:
+                    note_key = obj.get("x_acti_uuid") + " - " + obj_name + " - Title"
                 note = stix2.Note(
                     id=Note.generate_id(obj["created"], note_key),
                     created=obj["created"],
@@ -369,8 +600,16 @@ class S3Connector:
             # Analysis Note
             if obj.get("x_analysis", None) and obj.get("x_acti_uuid", None):
                 # generate a unique note identifier that don't change in the time even of the obj_name change or x_analysis change
-                note_key = obj.get("x_acti_uuid") + " - Analysis"
-                note_abstract = obj.get("name") + " - Analysis"
+                # For non-CVE entries, include the name in the key to ensure uniqueness (unless a note with same abstract already exists)
+                obj_name = obj.get("name", "")
+                note_abstract = obj_name + " - Analysis"
+                if obj_name.startswith("CVE-"):
+                    note_key = obj.get("x_acti_uuid") + " - Analysis"
+                elif self.note_exists_by_abstract(note_abstract):
+                    # Note already exists with this abstract, use simple key to consolidate
+                    note_key = obj.get("x_acti_uuid") + " - Analysis"
+                else:
+                    note_key = obj.get("x_acti_uuid") + " - " + obj_name + " - Analysis"
                 note = stix2.Note(
                     id=Note.generate_id(obj["created"], note_key),
                     created=obj["created"],
@@ -397,10 +636,20 @@ class S3Connector:
                     reverse=True,
                 )
                 for history in sorted_history:
-                    note_content += f"| {history.get('timestamp', '')} | {history.get('comment', '')} |\n"
+                    comment = (history.get("comment") or "").strip()
+                    timestamp = (history.get("timestamp") or "").strip()
+                    note_content += f"| {timestamp} | {comment} |\n"
 
-                note_key = obj.get("x_acti_uuid") + " - History"
-                abstract = obj.get("name") + " - History"
+                # For non-CVE entries, include the name in the key to ensure uniqueness (unless a note with same abstract already exists)
+                obj_name = obj.get("name", "")
+                abstract = obj_name + " - History"
+                if obj_name.startswith("CVE-"):
+                    note_key = obj.get("x_acti_uuid") + " - History"
+                elif self.note_exists_by_abstract(abstract):
+                    # Note already exists with this abstract, use simple key to consolidate
+                    note_key = obj.get("x_acti_uuid") + " - History"
+                else:
+                    note_key = obj.get("x_acti_uuid") + " - " + obj_name + " - History"
                 note = stix2.Note(
                     id=Note.generate_id(obj["created"], note_key),
                     created=obj["created"],
@@ -516,6 +765,15 @@ class S3Connector:
                 obj["source_ref"] = obj["target_ref"]
                 obj["target_ref"] = original_source_ref
 
+            # Relationship "remediates" in wrong direction
+            if (
+                obj["type"] == "relationship"
+                and obj["relationship_type"] == "remediated-by"
+                and obj["source_ref"].startswith("software")
+                and obj["target_ref"].startswith("vulnerability")
+            ):
+                obj["relationship_type"] = "remediates"
+
             # Cleanup orphan relationships
             if (
                 obj["type"] == "relationship"
@@ -542,6 +800,23 @@ class S3Connector:
         # Only create bundle if we have objects to process
         if len(new_bundle_objects) > 0:
             rewritten_bundle_objects = self.rewrite_stix_ids(new_bundle_objects)
+            if self.s3_attach_original_file:
+                # Create the STIX bundle
+                bundle_dict = self.helper.stix2_create_bundle(rewritten_bundle_objects)
+                # Serialize to JSON string and encode to bytes
+                bundle_json = json.dumps(bundle_dict).encode("utf-8")
+                # Now base64 encode the bytes
+                file_attachment = {
+                    "name": "opencti-bundle.json",
+                    "data": base64.b64encode(bundle_json).decode("utf-8"),
+                    "mime_type": "application/json",
+                    "no_trigger_import": True,
+                }
+                for obj in data["objects"]:
+                    if obj.get("type") == "vulnerability":
+                        if "x_opencti_files" not in obj:
+                            obj["x_opencti_files"] = []
+                        obj["x_opencti_files"].append(file_attachment)
             return self.helper.stix2_create_bundle(rewritten_bundle_objects)
 
         return None

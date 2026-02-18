@@ -3,7 +3,6 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'
   name: 'DISARM Framework'
   scope: 'marking-definition,identity,attack-pattern,course-of-action,intrusion-set,campaign,malware,tool,report,narrative,event,channel'
@@ -12,4 +11,3 @@ connector:
 
 disarm_framework:
   url: 'https://raw.githubusercontent.com/DISARMFoundation/DISARMframeworks/main/generated_files/DISARM_STIX/DISARM.json'
-  interval: 7 # In days, must be strictly greater than 1

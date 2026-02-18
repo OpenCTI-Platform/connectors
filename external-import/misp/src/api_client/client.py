@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Generator, Optional
+from typing import Generator
 from warnings import warn
 
 from api_client.models import EventRestSearchListItem
@@ -19,8 +19,9 @@ class MISPClient:
         self,
         url: HttpUrl,
         key: str,
+        timeout: float | None,
         verify_ssl: bool = False,
-        certificate: Optional[str] = None,
+        certificate: str | None = None,
         retry: int = 3,
         backoff: timedelta = timedelta(seconds=1),
     ):
@@ -44,6 +45,7 @@ class MISPClient:
             debug=False,
             tool="OpenCTI MISP connector",
             https_adapter=http_adapter,
+            timeout=timeout,
         )
 
     def _sanitize_user_id_in_tags(self, obj):
@@ -65,6 +67,7 @@ class MISPClient:
         self,
         date_field_filter: str,
         date_value_filter: datetime,
+        datetime_attribute: str,
         keyword: str,
         included_tags: list,
         excluded_tags: list,
@@ -92,9 +95,6 @@ class MISPClient:
                     not_parameters=excluded_org_creators,
                 )
 
-                # MISP API doesn't provide a way to sort the results.
-                # Events are always returned sorted by Event.id ASC,
-                # which is **NOT** equivalent to sorted by Event.date (creation date) ASC
                 results = self._client.search(
                     controller="events",
                     return_format="json",
@@ -106,6 +106,13 @@ class MISPClient:
                     with_attachments=with_attachments,
                     limit=limit,
                     page=current_page,
+                    # Undocumented parameter to sort the results by the given attribute
+                    # https://www.circl.lu/doc/misp/automation/#:~:text=Example-,Search,-Events%20management
+                    order=(
+                        "Event.id ASC"
+                        if date_field_filter == "date_from"
+                        else f"Event.{datetime_attribute} ASC"
+                    ),
                     **{date_field_filter: date_value_filter},
                 )
                 if isinstance(results, dict) and results.get("errors"):

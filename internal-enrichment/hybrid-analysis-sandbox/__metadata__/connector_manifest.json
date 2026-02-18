@@ -12,7 +12,7 @@
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": true,
-  "max_confidence_level": 50,
+  "max_confidence_level": 60,
   "support_version": ">=5.6.1",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/hybrid-analysis-sandbox",

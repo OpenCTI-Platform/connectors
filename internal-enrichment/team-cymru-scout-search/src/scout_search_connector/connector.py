@@ -1,65 +1,48 @@
-import os
-import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict
 
-import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
-
-from .client_api import ScoutSearchConnectorClient
-from .utils import is_valid_strict_domain
+from connectors_sdk.models import ExternalReference, OrganizationAuthor
+from pycti import OpenCTIConnectorHelper, StixCoreRelationship
+from scout_search_connector.client_api import ScoutSearchConnectorClient
+from scout_search_connector.settings import ConnectorSettings
+from scout_search_connector.utils import is_valid_strict_domain
 
 
 class ScoutSearchConnectorConfig:
     """Configuration holder for Scout Search Connector connector."""
 
-    # pylint: disable=too-few-public-methods
     def __init__(self, config):
-        self.api_base_url = get_config_variable(
-            "PURE_SIGNAL_SCOUT_API_URL", ["pure_signal_scout", "api_url"], config
-        )
-        self.api_key = get_config_variable(
-            "PURE_SIGNAL_SCOUT_API_TOKEN", ["pure_signal_scout", "api_token"], config
-        )
-        self.max_tlp = get_config_variable(
-            "PURE_SIGNAL_SCOUT_MAX_TLP",
-            ["pure_signal_scout", "max_tlp"],
-            config,
-            default="TLP:AMBER",
-        )
-        self.search_interval = get_config_variable(
-            "PURE_SIGNAL_SCOUT_SEARCH_INTERVAL",
-            ["pure_signal_scout", "search_interval"],
-            config,
-            default=1,
-        )
+        self.api_base_url = config.pure_signal_scout.api_url
+        self.api_key = config.pure_signal_scout.api_token.get_secret_value()
+        self.max_tlp = config.pure_signal_scout.max_tlp
+        self.search_interval = config.pure_signal_scout.search_interval
 
 
 class ScoutSearchConnectorConnector:
-    def __init__(self):
-        # Initialize configuration
-        config_file_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "config.yml"
-        )
-        if os.path.isfile(config_file_path):
-            with open(config_file_path, encoding="utf-8") as f:
-                config = yaml.load(f, Loader=yaml.FullLoader)
-        else:
-            config = {}
 
-        self.helper = OpenCTIConnectorHelper(config)
-        self.config = ScoutSearchConnectorConfig(config)
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+        self.config = config
+        self.helper = helper
         self.tlp = None
-
-        # Initialize API client
-        self.client = ScoutSearchConnectorClient(self.helper, self.config)
-
+        self.client = ScoutSearchConnectorClient(
+            self.helper, ScoutSearchConnectorConfig(self.config)
+        )
+        external_reference = ExternalReference(
+            source_name="Team Cymru Scout",
+            url="https://www.team-cymru.com/pure-signal",
+            description="Team Cymru Scout Search API",
+        )
+        self.team_cymru_identity = OrganizationAuthor(
+            name="Team Cymru",
+            external_references=[external_reference],
+        ).to_stix2_object()
         self.helper.connector_logger.info(
             "[ScoutSearchConnector] Connector initialized",
             {
                 "connector_id": self.helper.connect_id,
                 "connector_name": self.helper.connect_name,
                 "connector_scope": self.helper.connect_scope,
+                "author_id": self.team_cymru_identity["id"],
             },
         )
 
@@ -75,24 +58,22 @@ class ScoutSearchConnectorConnector:
             for marking_definition in opencti_entity["objectMarking"]:
                 if marking_definition.get("definition_type") == "TLP":
                     self.tlp = marking_definition.get("definition")
-
-        valid_max_tlp = self.helper.check_max_tlp(self.tlp, self.config.max_tlp)
-
+        valid_max_tlp = self.helper.check_max_tlp(
+            self.tlp, self.config.pure_signal_scout.max_tlp
+        )
         if not valid_max_tlp:
             raise ValueError(
-                "[CONNECTOR] Do not send any data, TLP of the observable is greater than MAX TLP,"
-                "the connector does not have access to this observable, please check the group of the connector user"
+                "[ScoutSearchConnector] Do not send any data, TLP of the observable is greater than MAX TLP,the connector does not have access to this observable, please check the group of the connector user"
             )
 
     def process_stix_data(self, data: Dict, original_entity_id: str) -> list:
         """
         Process STIX data: Replace invalid relationships, skip unresolvable ones,
-        and retain supported ones.
+        and retain supported ones. Add markings and external references.
         """
         try:
             if not data or "objects" not in data:
                 return []
-
             objects = list(data.get("objects", []))
             filtered_objects = []
             removed_domain_objects_id = []
@@ -105,7 +86,6 @@ class ScoutSearchConnectorConnector:
                 ("ipv4-addr", "ipv4-addr", "communicates-with"): "related-to",
                 ("ipv6-addr", "ipv6-addr", "communicates-with"): "related-to",
             }
-
             # Relationships to skip entirely
             invalid_skip_relationships = {
                 ("network-traffic", "location", "located-at"),
@@ -118,69 +98,19 @@ class ScoutSearchConnectorConnector:
                 ("ipv6-addr", "identity", "owned-by"),
             }
 
-            def is_skippable_object(obj) -> bool:
-                obj_type = obj.get("type")
-                if obj_type == "network-traffic":
-                    return True
-                if obj_type == "domain-name" and not is_valid_strict_domain(
-                    obj.get("value", "")
-                ):
-                    removed_domain_objects_id.append(obj.get("id", ""))
-                    return True
-                return False
-
-            def process_relationship(obj) -> bool:
-                source_ref = obj.get("source_ref", "")
-                target_ref = obj.get("target_ref", "")
-                rel_type = obj.get("relationship_type", "")
-
-                source_type = source_ref.split("--")[0] if "--" in source_ref else ""
-                target_type = target_ref.split("--")[0] if "--" in target_ref else ""
-
-                # Skip if related to removed domain objects
-                if (
-                    source_ref in removed_domain_objects_id
-                    or target_ref in removed_domain_objects_id
-                ):
-                    return False
-
-                # Skip network-traffic relationships
-                if source_type == "network-traffic" or target_type == "network-traffic":
-                    return False
-
-                # Skip redundant domain-to-domain relationships
-                if (
-                    source_type == target_type == "domain-name"
-                    and source_ref == target_ref
-                ):
-                    return False
-
-                # Skip irrelevant relationship types
-                if rel_type == "issued-in":
-                    return False
-
-                # Replace relationship if a replacement exists
-                key = (source_type, target_type, rel_type)
-                if key in relationship_replacements:
-                    obj["relationship_type"] = relationship_replacements[key]
-
-                # Skip invalid/unresolvable relationships
-                if key in invalid_skip_relationships:
-                    return False
-
-                # Otherwise, retain
-                return True
-
             for obj in objects:
-                if is_skippable_object(obj):
+                if self._is_skippable_object(obj, removed_domain_objects_id):
                     continue
-
                 if obj.get("type") == "relationship":
-                    if not process_relationship(obj):
+                    if not self._process_relationship(
+                        obj,
+                        removed_domain_objects_id,
+                        relationship_replacements,
+                        invalid_skip_relationships,
+                    ):
                         continue
-
+                obj["created_by_ref"] = self.team_cymru_identity["id"]
                 filtered_objects.append(obj)
-
             self.helper.connector_logger.info(
                 f"[ScoutSearchConnector] Filtered STIX objects: {len(objects)} → {len(filtered_objects)}"
             )
@@ -193,34 +123,104 @@ class ScoutSearchConnectorConnector:
                     "x509-certificate",
                 ]:
                     # Create a relationship between the text and this object
+                    now = datetime.now(timezone.utc)
+                    relationship_id = StixCoreRelationship.generate_id(
+                        "related-to", original_entity_id, obj.get("id")
+                    )
                     relationship = {
-                        "id": f"relationship--{str(uuid.uuid4())}",
+                        "id": relationship_id,
                         "type": "relationship",
                         "relationship_type": "related-to",
                         "source_ref": original_entity_id,
                         "target_ref": obj.get("id"),
-                        "created": datetime.now().isoformat() + "Z",
-                        "modified": datetime.now().isoformat() + "Z",
+                        "created": now.isoformat().replace("+00:00", "Z"),
+                        "modified": now.isoformat().replace("+00:00", "Z"),
+                        "created_by_ref": self.team_cymru_identity["id"],
                     }
                     new_relationships.append(relationship)
 
             # Add all relationships at once after the loop
             filtered_objects.extend(new_relationships)
 
-            return filtered_objects or []
+            # Add author identity to the bundle
+            filtered_objects.append(self.team_cymru_identity)
 
+            return filtered_objects
         except Exception as e:
             self.helper.connector_logger.error(
                 "[ScoutSearchConnector] Error processing STIX data", {"error": str(e)}
             )
             return []
 
+    @staticmethod
+    def _is_skippable_object(obj: dict, removed_domain_objects_id: list) -> bool:
+        obj_type = obj.get("type")
+        if obj_type == "network-traffic":
+            return True
+        if obj_type == "domain-name" and (
+            not is_valid_strict_domain(obj.get("value", ""))
+        ):
+            removed_domain_objects_id.append(obj.get("id", ""))
+            return True
+        return False
+
+    @staticmethod
+    def _process_relationship(
+        obj: dict,
+        removed_domain_objects_id: list,
+        relationship_replacements: dict,
+        invalid_skip_relationships: set,
+    ) -> bool:
+        source_ref = obj.get("source_ref", "")
+        target_ref = obj.get("target_ref", "")
+        rel_type = obj.get("relationship_type", "")
+        source_type = source_ref.split("--")[0] if "--" in source_ref else ""
+        target_type = target_ref.split("--")[0] if "--" in target_ref else ""
+
+        # Skip if related to removed domain objects
+        if (
+            source_ref in removed_domain_objects_id
+            or target_ref in removed_domain_objects_id
+        ):
+            return False
+
+        # Skip network-traffic relationships
+        if source_type == "network-traffic" or target_type == "network-traffic":
+            return False
+
+        # Skip redundant domain-to-domain relationships
+        if source_type == target_type == "domain-name" and source_ref == target_ref:
+            return False
+
+        # Skip irrelevant relationship types
+        if rel_type == "issued-in":
+            return False
+
+        # Replace relationship if a replacement exists
+        key = (source_type, target_type, rel_type)
+        if key in relationship_replacements:
+            obj["relationship_type"] = relationship_replacements[key]
+
+        # Skip invalid/unresolvable relationships
+        if key in invalid_skip_relationships:
+            return False
+
+        # Otherwise, retain
+        return True
+
+    def send_bundle(self, stix_objects: list) -> str:
+        stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
+        bundles_sent = self.helper.send_stix2_bundle(
+            stix_objects_bundle, cleanup_inconsistent_bundle=True
+        )
+        info_msg = f"Sending {len(bundles_sent)} stix bundle(s) for worker import"
+        return info_msg
+
     def process_message(self, data: Dict) -> str:
         """Process enrichment message from OpenCTI"""
         try:
             opencti_entity = data["enrichment_entity"]
             self.extract_and_check_markings(opencti_entity)
-            # Extract entity information
             self.helper.connector_logger.info(
                 "[ScoutSearchConnector] Enrichment message received", data
             )
@@ -237,15 +237,17 @@ class ScoutSearchConnectorConnector:
                 },
             )
 
-            # Check if observable type is supported
+            # Check if observable type is in scope
             if observable_type not in ["Text"]:
                 self.helper.connector_logger.warning(
-                    "[ScoutSearchConnector] Unsupported observable type",
+                    "[ScoutSearchConnector] Observable type not in scope, returning original entity",
                     {"observable_type": observable_type},
                 )
-                return "Unsupported observable type"
+                if not data.get("event_type"):
+                    # If it is not in scope AND entity bundle passed through playbook, we should return the original bundle unchanged
+                    return self.send_bundle(data["stix_objects"])
+                return "Observable type not in connector scope"
 
-            # Call external API to get intelligence
             intelligence_data = self.client.get_entity(
                 observable_type, observable_value
             )
@@ -265,42 +267,37 @@ class ScoutSearchConnectorConnector:
                 },
             )
 
-            processed_data = self.process_stix_data(intelligence_data, entity_id)
+            processed_data = self.process_stix_data(
+                intelligence_data,
+                entity_id,
+            )
 
-            if len(processed_data) == 0:
+            if len(processed_data) < 2:  # Just the author identity
                 self.helper.connector_logger.info(
                     "[ScoutSearchConnector] No processed data found",
                     {"observable_value": observable_value},
                 )
                 return "No Enrichment Data Found from API"
 
-            serialized_bundle = self.helper.stix2_create_bundle(processed_data)
-            self.helper.send_stix2_bundle(bundle=serialized_bundle, update=True)
+            self.send_bundle(processed_data)
+
             self.helper.connector_logger.info(
                 "[ScoutSearchConnector] Data ingestion started",
                 {"observable_value": observable_value},
             )
-
             return "Data fetched successfully and ingestion process has started"
 
         except Exception as e:
             self.helper.connector_logger.error(
-                "[ScoutSearchConnector] Error processing message",
-                {
-                    "observable_value": (
-                        observable_value
-                        if "observable_value" in locals()
-                        else "unknown"
-                    ),
-                    "error": str(e),
-                },
+                "[ScoutSearchConnector] Unexpected Error occurred",
+                {"error_message": str(e)},
             )
-            return f"Error: {str(e)}"
+            return f"Error: {e}"
 
-    def start(self):
+    def run(self):
         """Start the connector"""
         self.helper.connector_logger.info(
             "[ScoutSearchConnector] Starting connector",
-            {"api_url": self.config.api_base_url},
+            {"api_url": self.config.pure_signal_scout.api_url},
         )
         self.helper.listen(self.process_message)

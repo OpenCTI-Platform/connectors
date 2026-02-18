@@ -50,31 +50,10 @@ This connector imports threat intelligence data publicly available from [Wiz Res
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-| Parameter       | config.yml      | Docker environment variable   | Default | Mandatory | Description                                                              |
-|-----------------|-----------------|-------------------------------|---------|-----------|--------------------------------------------------------------------------|
-| Connector ID    | id              | `CONNECTOR_ID`                |         | Yes       | A unique `UUIDv4` identifier for this connector instance.                |
-| Connector Name  | name            | `CONNECTOR_NAME`              | Wiz     | No        | Name of the connector.                                                   |
-| Connector Scope | scope           | `CONNECTOR_SCOPE`             |         | Yes       | The scope or type of data the connector is importing.                    |
-| Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`         | info    | No        | Determines the verbosity of logs: `debug`, `info`, `warn`, or `error`.   |
-| Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD`   |         | Yes       | Interval between runs in ISO 8601 format.                                |
-
-### Connector extra parameters environment variables
-
-| Parameter                     | config.yml                    | Docker environment variable         | Default | Mandatory | Description                                                    |
-|-------------------------------|-------------------------------|-------------------------------------|---------|-----------|----------------------------------------------------------------|
-| Threat Actor as Intrusion-Set | threat_actor_as_intrusion_set | `WIZ_THREAT_ACTOR_AS_INTRUSION_SET` | False   | No        | Convert Threat Actor objects to Intrusion Set objects.         |
-| TLP Level                     | tlp_level                     | `WIZ_TLP_LEVEL`                     | clear   | No        | TLP marking: `white`, `green`, `amber`, `amber+strict`, `red`. |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 

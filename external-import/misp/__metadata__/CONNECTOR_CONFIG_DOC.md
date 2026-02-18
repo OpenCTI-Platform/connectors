@@ -24,7 +24,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | MISP_CREATE_OBJECT_OBSERVABLES | `boolean` |  | boolean | `false` | Whether to create a text observable for each MISP Event's object or not. |
 | MISP_DATETIME_ATTRIBUTE | `string` |  | `date` `timestamp` `publish_timestamp` `sighting_timestamp` | `"timestamp"` | The attribute to use as MISP events date. |
 | MISP_DATE_FILTER_FIELD | `string` |  | `date_from` `timestamp` `publish_timestamp` | `"timestamp"` | The attribute to use as filter to query new MISP events by date. |
-| MISP_REPORT_DESCRIPTION_ATTRIBUTE_FILTERS | `object` |  | object | `{}` | Filter to use to find the attribute that will be used for report description (example: 'type=comment,category=Internal reference') |
+| MISP_REPORT_DESCRIPTION_ATTRIBUTE_FILTERS | `string` |  | string | `""` | Filter to use to find the attribute that will be used for report description (example: 'type=comment,category=Internal reference') |
 | MISP_CREATE_TAGS_AS_LABELS | `boolean` |  | boolean | `true` | Whether to create labels from MISP tags or not. |
 | MISP_GUESS_THREATS_FROM_TAGS | `boolean` |  | boolean | `false` | Whether to **guess** and create Threats from MISP tags or not. |
 | MISP_AUTHOR_FROM_TAGS | `boolean` |  | boolean | `false` | Whether to create Authors from MISP tags or not. |
@@ -48,3 +48,5 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT | `boolean` |  | boolean | `false` | Whether to import unsupported observable as x_opencti_text or not. |
 | MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT | `boolean` |  | boolean | `true` | Whether to import unsupported observable as x_opencti_text or not (just with the value). |
 | MISP_PROPAGATE_LABELS | `boolean` |  | boolean | `false` | Whether to apply labels from MISP events to OpenCTI observables on top of MISP Attribute labels or not. |
+| MISP_BATCH_COUNT | `integer` |  | integer | `9999` | The max number of items per batch when splitting STIX bundles. |
+| MISP_REQUEST_TIMEOUT | `number` |  | number | `null` | The timeout for the requests to the MISP API in seconds. None means no timeout. |

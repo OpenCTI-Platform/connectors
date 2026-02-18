@@ -28,6 +28,7 @@ misp:
   threat_level: 2  # 1: High, 2: Medium, 3: Low, 4: Undefined
   publish_on_create: false  # Automatically publish events when created
   publish_on_update: false  # Automatically publish events when updated
+  publish_alert: false  # Send email alert notifications when publishing events
   
   # Tagging configuration
   tag_opencti: true  # Add OpenCTI-specific tags to MISP events
