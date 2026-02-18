@@ -341,7 +341,7 @@ class IndicatorBundleBuilder:
             return [str(x) for x in label_names if x]
 
         # Fallback: tolerate legacy raw label objects (list[dict]) or list[str].
-        return extract_label_names(self.indicator.get("labels"))
+        return extract_label_names(self.indicator.get("labels") or [])
 
     def _create_observable(
         self, labels: List[str], score: int

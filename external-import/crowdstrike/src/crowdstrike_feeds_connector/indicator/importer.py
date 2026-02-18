@@ -10,7 +10,7 @@ from crowdstrike_feeds_services.utils import (
     timestamp_to_datetime,
 )
 from crowdstrike_feeds_services.utils.attack_lookup import AttackTechniqueLookup
-from crowdstrike_feeds_services.utils.labels import parse_crowdstrike_labels_from_raw
+from crowdstrike_feeds_services.utils.labels import parse_crowdstrike_labels
 from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport, ReportFetcher
 from pycti.connector.opencti_connector_helper import (  # noqa: E501
     OpenCTIConnectorHelper,
@@ -230,7 +230,7 @@ class IndicatorImporter(BaseImporter):
 
     def _create_indicator_bundle(self, indicator: dict) -> Optional[Bundle]:
         try:
-            parsed_labels = parse_crowdstrike_labels_from_raw(indicator.get("labels"))
+            parsed_labels = parse_crowdstrike_labels(indicator.get("labels") or [])
             indicator["label_names"] = parsed_labels.raw
             indicator["attack_patterns"] = parsed_labels.attack_patterns
             indicator["malware_families"] = parsed_labels.malware_families
