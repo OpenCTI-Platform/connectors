@@ -750,6 +750,24 @@ def create_indicates_relationships(
     )
 
 
+def create_variant_of_relationships(
+    created_by: stix2.Identity,
+    sources: List[_DomainObject],
+    targets: List[_DomainObject],
+    confidence: int,
+    object_markings: List[stix2.MarkingDefinition],
+) -> List[stix2.Relationship]:
+    """Create 'variant-of' relationships."""
+    return create_relationships(
+        "variant-of",
+        created_by,
+        sources,
+        targets,
+        confidence,
+        object_markings,
+    )
+
+
 def create_originates_from_relationships(
     created_by: stix2.Identity,
     sources: List[_DomainObject],
