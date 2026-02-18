@@ -28,9 +28,8 @@ def build_enterprise_attack_url(attack_version: str) -> str:
     This connector uses the `mitre-attack/attack-stix-data` repository and the versioned
     Enterprise bundle filenames (e.g. `enterprise-attack-17.1.json`).
 
-    Expected inputs:
-      - "v17.1" -> https://raw.githubusercontent.com/mitre-attack/attack-stix-data/refs/heads/master/enterprise-attack/enterprise-attack-17.1.json
-      - "17.1"  -> same
+    Expected input:
+      - "17.1" -> https://raw.githubusercontent.com/mitre-attack/attack-stix-data/refs/heads/master/enterprise-attack/enterprise-attack-17.1.json
 
     Notes:
       * We intentionally pin to a specific versioned dataset file to keep mappings deterministic.
@@ -38,10 +37,6 @@ def build_enterprise_attack_url(attack_version: str) -> str:
     v = (attack_version or "").strip()
     if not v:
         raise ValueError("attack_version must be a non-empty string")
-
-    # Accept versions like "v17.1" or "17.1".
-    if v.lower().startswith("v"):
-        v = v[1:]
 
     return (
         "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/refs/heads/master/"

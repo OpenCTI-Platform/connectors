@@ -179,7 +179,7 @@ class CrowdStrike:
         # Load MITRE ATT&CK Enterprise dataset once at startup (used for ATT&CK technique ID resolution)
         self.attack_lookup = None
         try:
-            attack_version = self.config.attack_version or "v17.1"
+            attack_version = self.config.attack_version
             # Note: attack_enterprise_url may be a Pydantic HttpUrl; cast to str for urllib usage.
             attack_url_override = (
                 str(self.config.attack_enterprise_url)

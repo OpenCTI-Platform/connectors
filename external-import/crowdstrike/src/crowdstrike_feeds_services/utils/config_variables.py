@@ -31,9 +31,7 @@ class ConfigCrowdstrike:
 
         # MITRE ATT&CK Enterprise dataset lookup (used for technique ID resolution)
         # Pin a specific ATT&CK version for deterministic mapping; allow URL override for airgapped/mirrors.
-        self.attack_version = getattr(
-            self.config.crowdstrike, "attack_version", "v17.1"
-        )
+        self.attack_version = self.config.crowdstrike.attack_version
         self.attack_enterprise_url = getattr(
             self.config.crowdstrike, "attack_enterprise_url", None
         )
