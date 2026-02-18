@@ -239,70 +239,61 @@ class IndicatorImporter(BaseImporter):
             # Attack Pattern objects that match the MITRE connector (source of truth).
             resolved_attack_patterns: List[Dict[str, str]] = []
             if self.attack_lookup:
-                for ap_name in parsed_labels.attack_patterns or []:
+                for ap_name in parsed_labels.attack_patterns:
                     mitre_id = self.attack_lookup.lookup_mitre_id(ap_name)
                     if mitre_id:
                         resolved_attack_patterns.append(
                             {"name": ap_name, "mitre_id": mitre_id}
                         )
             indicator["attack_patterns_resolved"] = resolved_attack_patterns
+
             # Do NOT merge these into `indicator["actors"]` (that field is reserved for resolved
             # related actors from the API). Keep label-derived actors separate.
             indicator["actor_names_from_labels"] = parsed_labels.actor_names
 
             # Indicator types: merge CrowdStrike API arrays (preferred) and label-derived threat types (fallback)
-            api_threat_types = indicator.get("threat_types", []) or []
-            api_domain_types = indicator.get("domain_types", []) or []
-            api_ip_address_types = indicator.get("ip_address_types", []) or []
-
-            # Fallback to label-derived threat types only when API field is empty/missing
-            effective_threat_types = api_threat_types or parsed_labels.threat_types
+            api_threat_types = (
+                indicator.get("threat_types") or parsed_labels.threat_types
+            )
+            api_domain_types = indicator.get("domain_types") or []
+            api_ip_address_types = indicator.get("ip_address_types") or []
 
             # Preserve order, de-dupe case-insensitively
             merged_indicator_types: List[str] = []
             seen: set[str] = set()
             for v in (
-                list(effective_threat_types)
+                list(api_threat_types)
                 + list(api_domain_types)
                 + list(api_ip_address_types)
             ):
-                if not v:
-                    continue
                 s = str(v).strip()
-                if not s:
+                if not s or s.lower() in seen:
                     continue
-                key = s.lower()
-                if key in seen:
-                    continue
-                seen.add(key)
+                seen.add(s.lower())
                 merged_indicator_types.append(s)
 
             # Keep the effective threat types separately for debugging/visibility
-            indicator["threat_types"] = list(effective_threat_types)
+            indicator["threat_types"] = list(api_threat_types)
             indicator["indicator_types"] = merged_indicator_types
 
             self.helper.connector_logger.debug(
                 "Parsed indicator labels",
                 {
                     "indicator_id": indicator.get("id"),
-                    "raw_label_count": len(indicator.get("labels", []) or []),
-                    "label_name_count": len(indicator.get("label_names", []) or []),
-                    "attack_pattern_count": len(
-                        indicator.get("attack_patterns", []) or []
-                    ),
+                    "raw_label_count": len(indicator.get("labels") or []),
+                    "label_name_count": len(indicator.get("label_names") or []),
+                    "attack_pattern_count": len(indicator.get("attack_patterns") or []),
                     "attack_pattern_resolved_count": len(
-                        indicator.get("attack_patterns_resolved", []) or []
+                        indicator.get("attack_patterns_resolved") or []
                     ),
                     "malware_family_count": len(
-                        indicator.get("malware_families", []) or []
+                        indicator.get("malware_families") or []
                     ),
                     "actor_name_count": len(
-                        indicator.get("actor_names_from_labels", []) or []
+                        indicator.get("actor_names_from_labels") or []
                     ),
-                    "threat_type_count": len(indicator.get("threat_types", []) or []),
-                    "indicator_type_count": len(
-                        indicator.get("indicator_types", []) or []
-                    ),
+                    "threat_type_count": len(indicator.get("threat_types") or []),
+                    "indicator_type_count": len(indicator.get("indicator_types") or []),
                 },
             )
             # Map CrowdStrike malicious confidence (low/medium/high) -> STIX/OpenCTI confidence (0-100)
@@ -315,7 +306,7 @@ class IndicatorImporter(BaseImporter):
 
             if "actor" in self.scopes:
                 # Process related actors
-                related_actors = indicator.get("actors", [])
+                related_actors = indicator.get("actors") or []
                 indicator["actors"] = (
                     self.related_actor_importer._process_related_actors(
                         indicator.get("id"), related_actors
@@ -325,7 +316,7 @@ class IndicatorImporter(BaseImporter):
                     "Resolved indicator actors",
                     {
                         "indicator_id": indicator.get("id"),
-                        "actor_count": len(indicator.get("actors", [])),
+                        "actor_count": len(indicator.get("actors") or []),
                         "actor_entry_type": (
                             type(indicator["actors"][0]).__name__
                             if indicator.get("actors")
