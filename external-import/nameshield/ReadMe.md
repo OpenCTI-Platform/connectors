@@ -122,3 +122,6 @@ systemctl daemon-reload
 systemctl enable opencti-con-nameshield.service
 systemctl start opencti-con-nameshield.service
 ```
+
+### Versioning
+- 26-02-18 Adding a PGP Signed Commit
