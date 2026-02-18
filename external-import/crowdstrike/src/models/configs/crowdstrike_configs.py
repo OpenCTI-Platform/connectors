@@ -31,13 +31,6 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
         default="amber+strict",
         description="Default Traffic Light Protocol (TLP) marking for imported data.",
     )
-
-    @field_validator("tlp", mode="before")
-    @classmethod
-    def validate_tlp_lowercase(cls, v: str) -> str:
-        """Convert TLP value to lowercase."""
-        return v.lower()
-
     create_observables: bool = Field(
         default=True,
         description="Whether to create observables in OpenCTI.",
@@ -63,9 +56,9 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
 
     # MITRE ATT&CK Enterprise lookup (technique name -> external_id like T1059)
     attack_version: str = Field(
-        default="v17.1",
+        default="17.1",
         description=(
-            "MITRE ATT&CK Enterprise version to use for technique ID resolution (e.g., v17.1). "
+            "MITRE ATT&CK Enterprise version to use for technique ID resolution (e.g., 17.1). "
             "Should match the version imported by the MITRE ATT&CK external import connector."
         ),
     )
@@ -188,6 +181,12 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
         description="Polling interval in seconds for fetching data (used when duration_period is not set).",
     )
 
+    @field_validator("tlp", mode="before")
+    @classmethod
+    def validate_tlp_lowercase(cls, v: str) -> str:
+        """Convert TLP value to lowercase."""
+        return v.lower()
+
     @field_validator("report_status")
     def lowercase_report_status(cls, value):
         return value.lower()
@@ -213,4 +212,14 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
             raise ValueError(
                 f"The provided timestamp value '{value}' is in the future."
             )
+        return value
+
+    @field_validator("attack_version")
+    @staticmethod
+    def format_attack_version(value) -> str:
+        if isinstance(value, str):
+            # Accept versions like "v17.1" or "17.1".
+            if value.lower().startswith("v"):
+                value = value[1:]
+
         return value
