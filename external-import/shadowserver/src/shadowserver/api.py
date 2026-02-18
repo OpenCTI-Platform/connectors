@@ -9,7 +9,15 @@ from urllib.parse import urljoin
 import requests
 from pycti import OpenCTIConnectorHelper
 from requests.exceptions import RequestException
-from shadowserver.constants import BASE_URL, DOWNLOAD_URL, LIMIT, TIMEOUT, TLP_MAP
+from shadowserver.constants import (
+    BASE_URL,
+    CHUNK_SIZE,
+    DOWNLOAD_URL,
+    LIMIT,
+    MAX_REPORT_SIZE,
+    TIMEOUT,
+    TLP_MAP,
+)
 from shadowserver.stix_transform import ShadowserverStixTransformation
 from shadowserver.utils import from_csv_to_list, validate_date_format
 
@@ -120,17 +128,38 @@ class ShadowserverAPI:
         """
         Download a report file from Shadowserver.
 
+        Uses streaming with a size limit to avoid unbounded memory use.
+        Note: Segmentation faults (e.g. from SSL/native code) cannot be
+        caught in Python; the process would terminate. For critical isolation,
+        run the connector in a separate process.
+
         Args:
             report_id (str): Report identifier returned by reports/list.
         Returns:
-            bytes: The content of the downloaded report file.
+            bytes: The content of the downloaded report file, or b"" on error
+                or if the report exceeds MAX_REPORT_SIZE.
         """
         url = urljoin(DOWNLOAD_URL, report_id)
 
         try:
-            response = self.session.get(url, timeout=TIMEOUT)
-            response.raise_for_status()
-            return response.content
+            with self.session.get(url, timeout=TIMEOUT, stream=True) as response:
+                response.raise_for_status()
+                size = response.headers.get("Content-Length")
+                if size and int(size) > MAX_REPORT_SIZE:
+                    LOGGER.error(
+                        f"Report {report_id} too large - {size} > {MAX_REPORT_SIZE} bytes"
+                    )
+                    return b""
+
+                chunks = []
+                for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
+                    if len(chunks) * CHUNK_SIZE + len(chunk) > MAX_REPORT_SIZE:
+                        LOGGER.error(
+                            f"Report {report_id} too large - max size: {MAX_REPORT_SIZE} bytes"
+                        )
+                        return b""
+                    chunks.append(chunk)
+                return b"".join(chunks)
         except RequestException as e:
             LOGGER.error(f"Failed to download report {report_id}: {e}")
             return b""
