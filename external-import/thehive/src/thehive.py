@@ -342,6 +342,8 @@ class TheHive:
                 first_seen=format_datetime(int_start_date, DEFAULT_UTC_DATETIME),
                 last_seen=format_datetime(int_start_date + 3600, DEFAULT_UTC_DATETIME),
                 where_sighted_refs=[self.identity.get("standard_id")],
+                # As SDO are not supported in official STIX, we use a fake ID in ref
+                # Worker will use custom_properties instead
                 sighting_of_ref="indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e",
                 custom_properties={"x_opencti_sighting_of_ref": stix_observable.id},
             )
@@ -426,7 +428,7 @@ class TheHive:
     def process_logic(self, type, last_date_key, bundle_func):
         """Process case or alert based on returned query. Update state once complete."""
         self.helper.log_info(
-            f"here the cureent state of the connector : {self.current_state}..."
+            f"here the current state of the connector : {self.current_state}..."
         )
         last_date = self.get_last_date(last_date_key, self.thehive_import_from_date)
         self.helper.log_info(f"Last Date: {last_date}(s)...")
@@ -636,7 +638,7 @@ class TheHive:
             created_at = comment.get("_createdAt")
             if created_at is None:
                 self.helper.log_warning(
-                    f"Commentaire {comment.get('_id')} without ‘_createdAt’. Use the case creation date."
+                    f"Comment {comment.get('_id')} without ‘_createdAt’. Use the case creation date."
                 )
                 created_at = case.get("_createdAt")
                 if created_at is None:
