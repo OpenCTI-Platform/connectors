@@ -14,6 +14,9 @@ import requests
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
+class StixifyException(Exception):
+    pass
+
 
 class StixifyConnector:
     def __init__(self):
@@ -27,7 +30,7 @@ class StixifyConnector:
         )
 
         self.helper = OpenCTIConnectorHelper(config)
-        self.base_url = self._get_param("base_url") + "/"
+        self.base_url = self._get_param("base_url").strip('/') + "/"
         self.api_key = self._get_param("api_key")
         dossier_ids = self._get_param("dossier_ids")
         self.dossier_ids = dossier_ids.split(",") if dossier_ids else []
@@ -59,7 +62,7 @@ class StixifyConnector:
             return self.retrieve("v1/dossiers/", list_key="results")
         except Exception:
             self.helper.log_error("failed to fetch dossiers")
-        return []
+            raise StixifyException("failed to fetch dossiers")
 
     def get_and_process_reports_after_last(self, dossier, work_id):
         dossier_id = dossier["id"]
@@ -107,8 +110,8 @@ class StixifyConnector:
         params = params or {}
         params.update(page=1, page_size=200)
         objects: list[dict] = []
-        total_results_count = -1
-        while total_results_count < len(objects):
+        total_results_count = 1
+        while total_results_count > len(objects):
             resp = self.session.get(urljoin(self.base_url, path), params=params)
             params.update(page=params["page"] + 1)
             data = resp.json()
