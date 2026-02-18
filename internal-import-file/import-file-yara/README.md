@@ -66,7 +66,7 @@ Below are the parameters you'll need to set for running the connector properly:
 | Connector Name           | `name`                   | `CONNECTOR_NAME`                   | ImportFileYARA  | No        | Name of the connector.                                                                     |
 | Connector Scope          | `scope`                  | `CONNECTOR_SCOPE`                  | text/yara+plain | Yes       | The MIME type of files this connector handles. Must be `text/yara+plain`.                  |
 | Connector Auto           | `auto`                   | `CONNECTOR_AUTO`                   | false           | No        | Enable/disable automatic import of files matching the scope.                               |
-| Validate Before Import   | `validate_before_import` | `CONNECTOR_VALIDATE_BEFORE_IMPORT` | true            | No        | If enabled, bundles are sent for validation before import.                                 |
+| Validate Before Import   | `validate_before_import` | `CONNECTOR_VALIDATE_BEFORE_IMPORT` | false           | No        | If enabled, bundles are sent for validation before import.                                 |
 | Confidence Level         | `confidence_level`       | `CONNECTOR_CONFIDENCE_LEVEL`       | 15              | No        | Default confidence level for created indicators (0-100).                                   |
 | Log Level                | `log_level`              | `CONNECTOR_LOG_LEVEL`              | info            | No        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.     |
 

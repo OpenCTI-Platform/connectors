@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike Snort master builder module."""
 
 from datetime import date, datetime, timezone

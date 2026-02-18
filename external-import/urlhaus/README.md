@@ -40,33 +40,10 @@ This connector fetches the recent URL additions from URLhaus and imports them as
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-| Parameter         | config.yml      | Docker environment variable   | Default         | Mandatory | Description                                                                 |
-|-------------------|-----------------|-------------------------------|-----------------|-----------|-----------------------------------------------------------------------------|
-| Connector ID      | id              | `CONNECTOR_ID`                |                 | Yes       | A unique `UUIDv4` identifier for this connector instance.                   |
-| Connector Name    | name            | `CONNECTOR_NAME`              | Abuse.ch URLhaus | No      | Name of the connector.                                                      |
-| Connector Scope   | scope           | `CONNECTOR_SCOPE`             | urlhaus         | No        | The scope or type of data the connector is importing.                       |
-| Log Level         | log_level       | `CONNECTOR_LOG_LEVEL`         | error           | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
-
-### Connector extra parameters environment variables
-
-| Parameter            | config.yml                   | Docker environment variable       | Default                                      | Mandatory | Description                                                                 |
-|----------------------|------------------------------|-----------------------------------|----------------------------------------------|-----------|-----------------------------------------------------------------------------|
-| Interval             | urlhaus.interval             | `URLHAUS_INTERVAL`                | 3                                            | Yes       | Polling interval in hours.                                                  |
-| CSV URL              | urlhaus.csv_url              | `URLHAUS_CSV_URL`                 | https://urlhaus.abuse.ch/downloads/csv_recent/ | No     | URLhaus CSV feed URL.                                                       |
-| Default Score        | urlhaus.default_x_opencti_score | `URLHAUS_DEFAULT_X_OPENCTI_SCORE` | 80                                         | No        | Default x_opencti_score for imported indicators.                            |
-| Import Offline       | urlhaus.import_offline       | `URLHAUS_IMPORT_OFFLINE`          | true                                         | No        | Import URLs marked as "offline" in addition to "online".                    |
-| Threats from Labels  | urlhaus.threats_from_labels  | `URLHAUS_THREATS_FROM_LABELS`     | true                                         | No        | Create relationships to existing threats based on URL tags.                 |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 

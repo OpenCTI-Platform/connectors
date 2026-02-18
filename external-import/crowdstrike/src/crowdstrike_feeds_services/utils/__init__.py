@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike connector utilities module."""
 
 import base64
@@ -22,9 +21,19 @@ from typing import (
 
 import stix2
 from lxml.html import fromstring
-from pycti import AttackPattern, Identity, Indicator, IntrusionSet, Location, Malware
+from pycti import (
+    AttackPattern,
+    Identity,
+    Indicator,
+    IntrusionSet,
+    Location,
+    Malware,
+)
 from pycti import Report as PyCTIReport
-from pycti import StixCoreRelationship, Vulnerability
+from pycti import (
+    StixCoreRelationship,
+    Vulnerability,
+)
 from pycti.utils.constants import LocationTypes
 from stix2.v21 import _DomainObject, _Observable, _RelationshipObject
 
@@ -242,6 +251,21 @@ def timestamp_to_datetime(timestamp: int) -> datetime:
     return datetime.fromtimestamp(timestamp, tz=timezone.utc)
 
 
+def flexible_timestamp_to_datetime(timestamp) -> datetime:
+    """Convert timestamp (string or int) to datetime (UTC).
+
+    Args:
+        timestamp: Either a Unix timestamp (int) or ISO format datetime string
+
+    Returns:
+        datetime object in UTC timezone
+    """
+    if isinstance(timestamp, str):
+        return datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+    else:
+        return datetime.fromtimestamp(timestamp, tz=timezone.utc)
+
+
 def datetime_utc_now() -> datetime:
     """Get current UTC datetime."""
     return datetime.now(timezone.utc)
@@ -293,21 +317,6 @@ def create_external_reference(
     )
 
 
-def create_vulnerability_external_references(
-    name: str,
-) -> List[stix2.ExternalReference]:
-    """Create an external references for vulnerability."""
-    external_references = []
-
-    if name.startswith("CVE-"):
-        external_reference = create_external_reference(
-            "NIST NVD", f"https://nvd.nist.gov/vuln/detail/{name}", name
-        )
-        external_references.append(external_reference)
-
-    return external_references
-
-
 def create_identity(
     name: str,
     created_by: Optional[stix2.Identity] = None,
@@ -330,18 +339,24 @@ def create_identity(
 def create_vulnerability(
     name: str,
     created_by: Optional[stix2.Identity] = None,
+    description: Optional[str] = None,
+    created: Optional[datetime] = None,
+    modified: Optional[datetime] = None,
     confidence: Optional[int] = None,
-    external_references: Optional[List[stix2.ExternalReference]] = None,
     object_markings: Optional[List[stix2.MarkingDefinition]] = None,
+    custom_properties: Optional[Dict[str, Any]] = {},
 ) -> stix2.Vulnerability:
     """Create a vulnerability."""
     return stix2.Vulnerability(
         id=Vulnerability.generate_id(name),
         created_by_ref=created_by,
         name=name,
+        description=description,
+        created=created,
+        modified=modified,
         confidence=confidence,
-        external_references=external_references,
         object_marking_refs=object_markings,
+        custom_properties=custom_properties,
     )
 
 
@@ -353,6 +368,12 @@ def create_malware(
     kill_chain_phases: Optional[List[stix2.KillChainPhase]] = None,
     confidence: Optional[int] = None,
     object_markings: Optional[List[stix2.MarkingDefinition]] = None,
+    description: Optional[str] = None,
+    capabilities: Optional[List[str]] = None,
+    created: Optional[datetime] = None,
+    modified: Optional[datetime] = None,
+    external_references: Optional[List[stix2.ExternalReference]] = None,
+    malware_types: Optional[List[str]] = None,
 ) -> stix2.Malware:
     """Create a malware."""
     malware_id = Malware.generate_id(name)
@@ -366,6 +387,12 @@ def create_malware(
         kill_chain_phases=kill_chain_phases,
         confidence=confidence,
         object_marking_refs=object_markings,
+        description=description,
+        capabilities=capabilities,
+        created=created,
+        modified=modified,
+        external_references=external_references,
+        malware_types=malware_types,
     )
 
 
@@ -723,6 +750,24 @@ def create_indicates_relationships(
     )
 
 
+def create_variant_of_relationships(
+    created_by: stix2.Identity,
+    sources: List[_DomainObject],
+    targets: List[_DomainObject],
+    confidence: int,
+    object_markings: List[stix2.MarkingDefinition],
+) -> List[stix2.Relationship]:
+    """Create 'variant-of' relationships."""
+    return create_relationships(
+        "variant-of",
+        created_by,
+        sources,
+        targets,
+        confidence,
+        object_markings,
+    )
+
+
 def create_originates_from_relationships(
     created_by: stix2.Identity,
     sources: List[_DomainObject],
@@ -738,6 +783,28 @@ def create_originates_from_relationships(
         targets,
         confidence,
         object_markings,
+    )
+
+
+def create_authored_by_relationships(
+    created_by: stix2.Identity,
+    sources: List[_DomainObject],
+    targets: List[_DomainObject],
+    confidence: int,
+    object_markings: List[stix2.MarkingDefinition],
+    start_time: Optional[datetime] = None,
+    stop_time: Optional[datetime] = None,
+) -> List[stix2.Relationship]:
+    """Create 'authored-by' relationships."""
+    return create_relationships(
+        "authored-by",
+        created_by,
+        sources,
+        targets,
+        confidence,
+        object_markings,
+        start_time=start_time,
+        stop_time=stop_time,
     )
 
 

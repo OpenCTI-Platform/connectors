@@ -94,9 +94,16 @@
       "type": "boolean"
     },
     "METRICS_PORT": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "string"
+        }
+      ],
       "default": 9113,
-      "description": "Port to use for metrics endpoint.",
-      "type": "integer"
+      "description": "Port to use for metrics endpoint."
     },
     "METRICS_ADDR": {
       "default": "0.0.0.0",

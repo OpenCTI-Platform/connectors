@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 """Livehunt builder module."""
+
 import datetime
 import io
 import logging
@@ -26,8 +26,8 @@ class LivehuntBuilder:
         client: vt.Client,
         helper: OpenCTIConnectorHelper,
         author: stix2.Identity,
-        author_name: str,
-        tag: str,
+        tlp_marking: stix2.MarkingDefinition,
+        tag: str | None,
         create_alert: bool,
         max_age_days: int,
         create_file: bool,
@@ -49,8 +49,9 @@ class LivehuntBuilder:
         self.client = client
         self.helper = helper
         self.author = author
-        self.author_name = author_name
-        self.bundle = []
+        self.tlp_marking = tlp_marking
+        self._default_bundle = [author, tlp_marking]
+        self.bundle = self._default_bundle.copy()
         self.tag = tag
         self.with_alert = create_alert
         self.max_age_days = max_age_days
@@ -89,7 +90,6 @@ class LivehuntBuilder:
         files_iterator = self.client.iterator(url, params=params)
 
         for vtobj in files_iterator:
-
             if self.delete_notification:
                 self.delete_livehunt_notification(vtobj.id)
 
@@ -132,7 +132,8 @@ class LivehuntBuilder:
                 continue
 
             if self.max_age_days is not None:
-                time_diff = datetime.datetime.now() - vtobj.first_submission_date
+                now_utc = datetime.datetime.now(datetime.timezone.utc)
+                time_diff = now_utc - vtobj.first_submission_date
                 if time_diff.days >= self.max_age_days:
                     self.helper.connector_logger.info(
                         f"First submission date {vtobj.first_submission_date} is too old (more than {self.max_age_days} days"
@@ -166,6 +167,10 @@ class LivehuntBuilder:
                 if work_id is None:
                     work_id = self.initiate_work(timestamp)
                 self.send_bundle(work_id)
+
+            self.helper.api.work.to_processed(
+                work_id, message="Connector's work finished gracefully"
+            )
 
     def artifact_exists_opencti(self, sha256: str) -> bool:
         """
@@ -218,12 +223,13 @@ class LivehuntBuilder:
             id=incident_id,
             incident_type="alert",
             name=name,
-            description=f'Date of the alert on VirusTotal: {datetime.datetime.fromtimestamp(vtobj._context_attributes["notification_date"])}',
+            description=f"Date of the alert on VirusTotal: {datetime.datetime.fromtimestamp(vtobj._context_attributes['notification_date'])}",
             source=self._SOURCE,
-            created_by_ref=self.author["standard_id"],
+            created_by_ref=self.author.id,
             labels=self.retrieve_labels(vtobj),
             external_references=[external_reference],
             allow_custom=True,
+            object_marking_refs=[self.tlp_marking],
         )
         self.helper.connector_logger.debug(f"Adding alert: {incident}")
         self.bundle.append(incident)
@@ -248,11 +254,11 @@ class LivehuntBuilder:
             The external reference object.
         """
         external_reference = stix2.ExternalReference(
-            source_name=self.author_name,
+            source_name=self.author.name,
             url=url,
             description=description,
             custom_properties={
-                "created_by_ref": self.author["standard_id"],
+                "created_by_ref": self.author.id,
             },
         )
         return external_reference
@@ -291,7 +297,7 @@ class LivehuntBuilder:
         ## Add the additional name
         x_opencti_additional_names = []
         for name in vtobj.names:
-            if name != vtobj.meaningful_name:
+            if not hasattr(vtobj, "meaningful_name") or name != vtobj.meaningful_name:
                 x_opencti_additional_names.append(name)
 
         ## Build a description using the last analysis data from av
@@ -313,7 +319,7 @@ class LivehuntBuilder:
 
         file = stix2.File(
             type="file",
-            name=f'{vtobj.meaningful_name if hasattr(vtobj, "meaningful_name") else "unknown"}',
+            name=f"{vtobj.meaningful_name if hasattr(vtobj, 'meaningful_name') else 'unknown'}",
             description=description,
             hashes={
                 "MD5": vtobj.md5,
@@ -324,11 +330,12 @@ class LivehuntBuilder:
             external_references=[external_reference],
             custom_properties={
                 "x_opencti_score": vt_score,
-                "created_by_ref": self.author["standard_id"],
+                "created_by_ref": self.author.id,
                 "x_opencti_additional_names": x_opencti_additional_names,
             },
             allow_custom=True,
             labels=labels,
+            object_marking_refs=[self.tlp_marking],
         )
         self.bundle.append(file)
         # Link to the incident if any.
@@ -340,10 +347,11 @@ class LivehuntBuilder:
                     file["id"],
                 ),
                 relationship_type="related-to",
-                created_by_ref=self.author["standard_id"],
+                created_by_ref=self.author.id,
                 source_ref=incident_id,
                 target_ref=file["id"],
                 allow_custom=True,
+                object_marking_refs=[self.tlp_marking],
             )
             self.bundle.append(relationship)
         return file["id"]
@@ -382,7 +390,7 @@ class LivehuntBuilder:
                 self.helper.connector_logger.debug(f"Adding rule name {rule_name}")
                 # Default valid_from with current date
                 valid_from = self.helper.api.stix2.format_date(
-                    datetime.datetime.utcnow()
+                    datetime.datetime.now(datetime.timezone.utc)
                 )
                 try:
                     valid_from = self.helper.api.stix2.format_date(
@@ -402,7 +410,7 @@ class LivehuntBuilder:
 
                 indicator = stix2.Indicator(
                     id=Indicator.generate_id(plyara.utils.rebuild_yara_rule(rule)),
-                    created_by_ref=self.author["standard_id"],
+                    created_by_ref=self.author.id,
                     name=rule["rule_name"],
                     description=next(
                         (i["date"] for i in rule.get("metadata", {}) if "date" in i),
@@ -414,6 +422,7 @@ class LivehuntBuilder:
                     custom_properties={
                         "x_opencti_main_observable_type": "StixFile",
                     },
+                    object_marking_refs=[self.tlp_marking],
                 )
                 self.helper.connector_logger.debug(
                     f"[VirusTotal Livehunt Notifications] yara indicator created: {indicator}"
@@ -428,10 +437,11 @@ class LivehuntBuilder:
                             indicator["id"],
                         ),
                         relationship_type="related-to",
-                        created_by_ref=self.author["standard_id"],
+                        created_by_ref=self.author.id,
                         source_ref=incident_id,
                         target_ref=indicator["id"],
                         allow_custom=True,
+                        object_marking_refs=[self.tlp_marking],
                     )
                     self.bundle.append(relationship)
 
@@ -443,10 +453,11 @@ class LivehuntBuilder:
                             indicator["id"],
                         ),
                         relationship_type="related-to",
-                        created_by_ref=self.author["standard_id"],
+                        created_by_ref=self.author.id,
                         source_ref=file_id,
                         target_ref=indicator["id"],
                         allow_custom=True,
+                        object_marking_refs=[self.tlp_marking],
                     )
                     self.bundle.append(relationship)
 
@@ -463,7 +474,7 @@ class LivehuntBuilder:
         return self.client.delete(url)
 
     def initiate_work(self, timestamp: int) -> str:
-        now = datetime.datetime.utcfromtimestamp(timestamp)
+        now = datetime.datetime.fromtimestamp(timestamp, datetime.timezone.utc)
         friendly_name = "Virustotal Livehunt Notifications run @ " + now.strftime(
             "%Y-%m-%d %H:%M:%S"
         )
@@ -492,7 +503,7 @@ class LivehuntBuilder:
         serialized_bundle = bundle.serialize()
         self.helper.send_stix2_bundle(serialized_bundle, work_id=work_id)
         # Reset the bundle for the next import.
-        self.bundle = []
+        self.bundle = self._default_bundle.copy()
 
     def upload_artifact_opencti(self, vtobj):
         """Upload a file to OpenCTI."""
@@ -514,7 +525,7 @@ class LivehuntBuilder:
             "data": file_contents,
             "mime_type": mime_type,
             "x_opencti_description": "Downloaded from Virustotal Livehunt Notifications.",
-            "createdBy": self.author["standard_id"],
+            "createdBy": self.author.id,
         }
         return self.helper.api.stix_cyber_observable.upload_artifact(**kwargs)
 

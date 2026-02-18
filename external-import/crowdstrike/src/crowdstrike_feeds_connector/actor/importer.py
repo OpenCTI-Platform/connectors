@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike actor importer module."""
 
 from datetime import datetime
@@ -10,6 +9,7 @@ from crowdstrike_feeds_connector.related_actors.importer import (
 from crowdstrike_feeds_services.client.actors import ActorsAPI
 from crowdstrike_feeds_services.utils import (
     create_attack_pattern,
+    create_malware,
     datetime_to_timestamp,
     paginate,
     timestamp_to_datetime,
@@ -194,6 +194,9 @@ class ActorImporter(BaseImporter):
 
         attack_patterns = self._get_and_create_attack_patterns(actor)
 
+        malware = self._get_and_create_malware(actor)
+
+        # MVP3
         bundle_builder = ActorBundleBuilder(
             actor,
             author,
@@ -201,8 +204,71 @@ class ActorImporter(BaseImporter):
             object_marking_refs,
             confidence_level,
             attack_patterns,
+            malware,
         )
         return bundle_builder.build()
+
+    def _get_and_create_malware(self, actor) -> List:
+        """Get malware from actor data and create Malware entities."""
+        try:
+            actor_id = actor["id"]
+            actor_name = actor["name"]
+
+            self._info(
+                "Processing malware for actor: {0} (ID: {1})",
+                actor_name,
+                actor_id,
+            )
+
+            all_family_names = set()
+
+            uses_threats = actor.get("uses_threats")
+            develops_threats = actor.get("develops_threats")
+
+            if uses_threats:
+                for threat in uses_threats:
+                    family_name = threat.get("family_name")
+                    if family_name:
+                        all_family_names.add(family_name)
+
+            if develops_threats:
+                for threat in develops_threats:
+                    family_name = threat.get("family_name")
+                    if family_name:
+                        all_family_names.add(family_name)
+
+            if not all_family_names:
+                self._info("No malware families found for actor: {0}", actor_name)
+                return []
+
+            malware_entities = [
+                create_malware(
+                    name=family_name,
+                    created_by=self.author,
+                    is_family=True,
+                    confidence=self._confidence_level(),
+                    object_markings=[self.tlp_marking],
+                )
+                for family_name in all_family_names
+            ]
+
+            self._info(
+                "Created {0} Malware entities for actor: {1}",
+                len(malware_entities),
+                actor_name,
+            )
+            return malware_entities
+
+        except Exception as err:
+            self.helper.connector_logger.error(
+                "[ERROR] Failed to retrieve and process malware for actor.",
+                {
+                    "error": err,
+                    "actor_id": actor.get("id"),
+                    "actor_name": actor.get("name"),
+                },
+            )
+            return []
 
     def _get_and_create_attack_patterns(self, actor) -> List:
         """Get MITRE ATT&CK TTPs and create AttackPattern entities."""

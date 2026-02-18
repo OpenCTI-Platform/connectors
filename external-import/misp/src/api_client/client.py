@@ -19,6 +19,7 @@ class MISPClient:
         self,
         url: HttpUrl,
         key: str,
+        timeout: float | None,
         verify_ssl: bool = False,
         certificate: str | None = None,
         retry: int = 3,
@@ -44,6 +45,7 @@ class MISPClient:
             debug=False,
             tool="OpenCTI MISP connector",
             https_adapter=http_adapter,
+            timeout=timeout,
         )
 
     def _sanitize_user_id_in_tags(self, obj):
@@ -106,7 +108,11 @@ class MISPClient:
                     page=current_page,
                     # Undocumented parameter to sort the results by the given attribute
                     # https://www.circl.lu/doc/misp/automation/#:~:text=Example-,Search,-Events%20management
-                    order=f"Event.{datetime_attribute} ASC, Event.id ASC",
+                    order=(
+                        "Event.id ASC"
+                        if date_field_filter == "date_from"
+                        else f"Event.{datetime_attribute} ASC"
+                    ),
                     **{date_field_filter: date_value_filter},
                 )
                 if isinstance(results, dict) and results.get("errors"):

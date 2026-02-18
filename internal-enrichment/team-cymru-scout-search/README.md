@@ -2,7 +2,7 @@
 
 | Status | Date | Comment |
 |--------|------|---------|
-| Partner | -    | -       |
+| Filigran Verified | 2026-02-05    | -       |
 
 ## Table of Contents
 
@@ -49,31 +49,10 @@ This connector queries the Scout API endpoints in real-time and transforms the r
 
 ## Configuration
 
-### OpenCTI Configuration
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `opencti_url` | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
-| `opencti_token` | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
-
-### Base Connector Configuration
-
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `connector_id` | `CONNECTOR_ID` | Yes | A valid arbitrary `UUIDv4` unique for this connector |
-| `connector_name` | `CONNECTOR_NAME` | Yes | The name of the connector instance |
-| `connector_scope` | `CONNECTOR_SCOPE` | Yes | Must be `Text` |
-| `connector_confidence_level` | `CONNECTOR_CONFIDENCE_LEVEL` | Yes | Default confidence level (0-100) |
-| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
-
-### Scout API Configuration
-
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `pure_signal_scout_api_url` | `PURE_SIGNAL_SCOUT_API_URL` | Yes | Base URL of the Scout API |
-| `pure_signal_scout_api_token` | `PURE_SIGNAL_SCOUT_API_TOKEN` | Yes | Bearer token for the Scout API |
-| `pure_signal_scout_max_tlp` | `PURE_SIGNAL_SCOUT_MAX_TLP` | Yes | Max TLP level for enrichment (default: TLP:AMBER) |
-| `pure_signal_scout_search_interval` | `PURE_SIGNAL_SCOUT_SEARCH_INTERVAL` | Yes | Search interval in days (default: 1) |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ---
 
@@ -96,7 +75,6 @@ services:
       - CONNECTOR_ID=scout-search-connector
       - CONNECTOR_NAME=Scout Search Connector
       - CONNECTOR_SCOPE=Text
-      - CONNECTOR_CONFIDENCE_LEVEL=100
       - CONNECTOR_LOG_LEVEL=error
       - PURE_SIGNAL_SCOUT_API_URL=https://taxii.cymru.com/api/scout
       - PURE_SIGNAL_SCOUT_API_TOKEN=ChangeMe

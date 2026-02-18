@@ -10,7 +10,7 @@ from connectors_sdk import (
     ListFromString,
 )
 from pydantic import (
-    BeforeValidator,
+    AfterValidator,
     Field,
     HttpUrl,
     PlainSerializer,
@@ -21,21 +21,21 @@ from pydantic import (
 )
 
 
-def comma_separated_dict_validator(value: str | dict[str, str]) -> dict[str, str]:
+def comma_separated_dict(value: str | dict[str, str]) -> dict[str, str]:
     """
     Convert comma-separated string into a dict.
 
     Example:
-        > values = comma_separated_dict_validator("key_1=value_1,key_2=value_2")
+        > values = comma_separated_dict("key_1=value_1,key_2=value_2")
         > print(values) # { "key_1": "value_1", "key_2"="value_2" }
     """
     if isinstance(value, str):
         parsed_dict = {}
         if len(value):
-            entries = [string.strip() for string in value.split(",")]
-            for entry in entries:
-                entry_key, entry_value = entry.split("=")
-                parsed_dict[entry_key] = entry_value
+            parsed_dict = {
+                x.split("=")[0].lower(): str(x.split("=")[1])
+                for x in value.replace(" ", "").split(",")
+            }
         return parsed_dict
     return value
 
@@ -62,8 +62,8 @@ def pycti_dict_serializer(value: list[str], info: SerializationInfo) -> str | li
 
 
 DictFromString = Annotated[
-    dict[str, str],
-    BeforeValidator(comma_separated_dict_validator),
+    str,
+    AfterValidator(comma_separated_dict),
     PlainSerializer(pycti_dict_serializer, when_used="json"),
 ]
 
@@ -150,7 +150,7 @@ class MispConfig(BaseConfigModel):
     )
     report_description_attribute_filters: DictFromString = Field(
         description="Filter to use to find the attribute that will be used for report description (example: 'type=comment,category=Internal reference')",
-        default={},
+        default="",
         alias="report_description_attribute_filter",  # backward compatibility with mispelled env var
     )
     create_tags_as_labels: bool = Field(
@@ -249,6 +249,10 @@ class MispConfig(BaseConfigModel):
     batch_count: int = Field(
         description="The max number of items per batch when splitting STIX bundles.",
         default=9999,
+    )
+    request_timeout: float | None = Field(
+        description="The timeout for the requests to the MISP API in seconds. None means no timeout.",
+        default=None,
     )
 
     @field_validator("reference_url", mode="before")
