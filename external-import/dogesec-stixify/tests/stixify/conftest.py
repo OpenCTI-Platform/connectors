@@ -32,12 +32,10 @@ def config_dict() -> dict[str, Any]:
 
 @pytest.fixture
 def mock_config(config_dict: dict[str, Any], monkeypatch: pytest.MonkeyPatch):
-    environ = deepcopy(os.environ)
     for key, value in config_dict.items():
         for sub_key, sub_value in value.items():
             if sub_value is not None:
                 monkeypatch.setenv(f"{key.upper()}_{sub_key.upper()}", str(sub_value))
-
     yield
 
 

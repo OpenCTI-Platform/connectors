@@ -14,6 +14,7 @@ import requests
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
+
 class StixifyException(Exception):
     pass
 
@@ -30,7 +31,7 @@ class StixifyConnector:
         )
 
         self.helper = OpenCTIConnectorHelper(config)
-        self.base_url = self._get_param("base_url").strip('/') + "/"
+        self.base_url = self._get_param("base_url").strip("/") + "/"
         self.api_key = self._get_param("api_key")
         dossier_ids = self._get_param("dossier_ids")
         self.dossier_ids = dossier_ids.split(",") if dossier_ids else []
