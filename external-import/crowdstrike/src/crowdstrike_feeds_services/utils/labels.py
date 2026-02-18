@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Any, Iterable, List, Mapping, Optional
+from typing import Iterable, List, Mapping
 
 _CAMEL_SPLIT_RE = re.compile(r"(?<=[a-z])(?=[A-Z])")
 
@@ -41,16 +41,13 @@ def _normalize_label_value(value: str) -> str:
     return value
 
 
-def extract_label_names(labels: Optional[Iterable[Any]]) -> List[str]:
+def extract_label_names(labels: Iterable[str | dict]) -> List[str]:
     """Extract label names from mixed raw inputs.
 
     Accepts:
     - list[str]
     - list[dict] where dict may have 'value', 'name', 'label', 'slug'
     """
-    if not labels:
-        return []
-
     names: List[str] = []
     for lab in labels:
         if lab is None:
@@ -95,9 +92,7 @@ class ParsedLabels:
     raw: List[str]
 
 
-def parse_crowdstrike_labels_from_raw(
-    raw_labels: Optional[Iterable[Any]],
-) -> ParsedLabels:
+def parse_crowdstrike_labels(raw_labels: Iterable[str | dict]) -> ParsedLabels:
     """Parse CrowdStrike labels from raw inputs (strings or dicts).
 
     This is a tolerant parser. If it can't confidently bucket a label, it will
@@ -252,8 +247,3 @@ def parse_crowdstrike_labels_from_raw(
         threat_types=threat_types,
         raw=filtered_raw,
     )
-
-
-def parse_crowdstrike_labels(labels: Optional[List[str]]) -> ParsedLabels:
-    """Parse CrowdStrike labels when you already have a list[str]."""
-    return parse_crowdstrike_labels_from_raw(labels)
