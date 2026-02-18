@@ -125,10 +125,6 @@ class ConverterToStix:
             markings=[self.tlp_marking],
         )
 
-    # ===========================#
-    # Other Examples
-    # ===========================#
-
     @staticmethod
     def _is_ipv6(value: str) -> bool:
         """

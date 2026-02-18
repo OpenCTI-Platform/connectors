@@ -27,7 +27,9 @@ Table of Contents
   - [Additional information](#additional-information)
 
 ## Introduction
-TODO
+The MontySecurity C2-Tracker connector imports a free, community-driven IOC feed into OpenCTI, creating Malware and 
+associated IP addresses. The feed leverages Shodan searches to identify active C2, botnet, and malware infrastructure 
+across the internet.
 
 ## Installation
 
