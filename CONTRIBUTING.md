@@ -16,6 +16,7 @@ status: Accepted
   - [Introduction](#introduction)
     - [What is a Connector?](#what-is-a-connector)
     - [Connector Types Covered](#connector-types-covered)
+    - [What is a verified connector?](#what-is-a-verified-connector)
   - [Prerequisites](#prerequisites)
     - [Technical Requirements](#technical-requirements)
     - [Knowledge Requirements](#knowledge-requirements)
@@ -78,7 +79,8 @@ This documentation covers three primary connector types:
 | **Stream**              | Listen to OpenCTI events and sync to external platforms  | SIEM integration, ticketing systems, real-time synchronization  |
 
 ### What is a verified connector?
-Verified connectors are connectors that have been reviewed and validated by the OpenCTI Engineering and Product teams. 
+
+Verified connectors are connectors that have been reviewed and validated by the Integrations Engineering and Product teams. 
 They meet all the requirements described in this document, are available for installation directly from the 
 OpenCTI catalog, and are fully operable by Filigran's teams, who can investigate and work on them when needed. 
 
