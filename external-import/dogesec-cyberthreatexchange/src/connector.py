@@ -31,7 +31,7 @@ class CyberThreatExchangeConnector:
         )
 
         self.helper = OpenCTIConnectorHelper(config)
-        self.base_url = self._get_param("base_url").strip('/') + "/"
+        self.base_url = self._get_param("base_url").strip("/") + "/"
         self.api_key = self._get_param("api_key")
         feed_ids = self._get_param("feed_ids")
         self.feed_ids = feed_ids.split(",") if feed_ids else []
@@ -76,8 +76,12 @@ class CyberThreatExchangeConnector:
         if q := feed_state.get("last_run_at"):
             filters.update(added_after=q)
 
-        for objects in self._retrieve(f"v1/feeds/{feed_id}/objects/", list_key="objects", params=filters):
-            self.helper.log_info(f"processing batch of {len(objects)} objects for feed {feed_id}")
+        for objects in self._retrieve(
+            f"v1/feeds/{feed_id}/objects/", list_key="objects", params=filters
+        ):
+            self.helper.log_info(
+                f"processing batch of {len(objects)} objects for feed {feed_id}"
+            )
             bundle = dict(
                 type="bundle",
                 id=f"bundle--{feed_id}",
@@ -99,7 +103,10 @@ class CyberThreatExchangeConnector:
             data = resp.json()
             yield data[list_key]
             objects_count += len(data[list_key])
-            if ("next" in data and not data["next"]) or ('total_results_count' in data and data['total_results_count'] <= objects_count):
+            if ("next" in data and not data["next"]) or (
+                "total_results_count" in data
+                and data["total_results_count"] <= objects_count
+            ):
                 more = False
             if "next" in data:
                 url = data["next"]
@@ -118,6 +125,8 @@ class CyberThreatExchangeConnector:
         for feed_data in self.list_subbed_feeds():
             feed = feed_data["feed"]
             feed_id = feed["id"]
+            feed_name = feed["name"]
+            feed_repr = f"Feed(id={feed_id}, name={repr(feed_name)})"
             if self.feed_ids and feed_id not in self.feed_ids:
                 self.helper.log_info(
                     f"skipping {feed_repr} not in config.cyberthreatexchange.feed_ids"
@@ -129,8 +138,6 @@ class CyberThreatExchangeConnector:
                         f"skipping {feed_repr} subscription not active"
                     )
                     raise CTXException("skipping feed with inactive subscription")
-                feed_name = feed["name"]
-                feed_repr = f"Feed(id={feed_id}, name={repr(feed_name)})"
                 self.helper.log_info(f"processing {feed_repr}")
                 self.get_and_process_objects(feed, work_id)
                 self.set_feed_state(feed_id, last_updated=self.current_run_time)
