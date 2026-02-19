@@ -2,13 +2,14 @@
 
 import sys
 import time
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Any, Mapping, Optional
 
+import stix2
 import vt
 from livehunt.builder import LivehuntBuilder
 from livehunt.settings import ConnectorSettings
-from pycti import OpenCTIConnectorHelper
+from pycti import Identity, MarkingDefinition, OpenCTIConnectorHelper
 
 
 class VirustotalLivehuntNotifications:
@@ -16,19 +17,49 @@ class VirustotalLivehuntNotifications:
     Process Virustotal Livehunt Notifications.
     """
 
-    _DEFAULT_AUTHOR = "Virustotal Livehunt Notifications"
     _STATE_LATEST_RUN_TIMESTAMP = "latest_run_timestamp"
     # Number of days to load if no state
     _LAST_DAYS_TO_LOAD = 3
+
+    TLP_LEVELS = mapping = {
+        "white": stix2.TLP_WHITE,
+        "clear": stix2.TLP_WHITE,
+        "green": stix2.TLP_GREEN,
+        "amber": stix2.TLP_AMBER,
+        "amber+strict": stix2.MarkingDefinition(
+            id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+            definition_type="statement",
+            definition={"statement": "custom"},
+            custom_properties={
+                "x_opencti_definition_type": "TLP",
+                "x_opencti_definition": "TLP:AMBER+STRICT",
+            },
+        ),
+        "red": stix2.TLP_RED,
+    }
 
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         self.config = config
         self.helper = helper
 
-        author = self.helper.api.identity.create(
-            name=self._DEFAULT_AUTHOR,
-            type="Organization",
+        tlp_marking = self.TLP_LEVELS[
+            self.config.virustotal_livehunt_notifications.tlp_level
+        ]
+
+        author = stix2.Identity(
+            id=Identity.generate_id(
+                name="Virustotal Livehunt Notifications", identity_class="organization"
+            ),
+            name="Virustotal Livehunt Notifications",
+            identity_class="organization",
             description="Download/upload files from Virustotal Livehunt Notifications.",
+            external_references=[
+                stix2.ExternalReference(
+                    source_name="Virustotal Livehunt Notifications",
+                    url="https://www.virustotal.com",
+                    description="Virustotal Livehunt Notifications.",
+                )
+            ],
         )
 
         client = vt.Client(
@@ -39,7 +70,7 @@ class VirustotalLivehuntNotifications:
             client,
             self.helper,
             author,
-            self._DEFAULT_AUTHOR,
+            tlp_marking,
             self.config.virustotal_livehunt_notifications.filter_with_tag,
             self.config.virustotal_livehunt_notifications.create_alert,
             self.config.virustotal_livehunt_notifications.max_age_days,
@@ -94,12 +125,8 @@ class VirustotalLivehuntNotifications:
             last_run = self._get_state_value(
                 current_state,
                 self._STATE_LATEST_RUN_TIMESTAMP,
-                int(
-                    datetime.timestamp(
-                        datetime.fromtimestamp(timestamp)
-                        - timedelta(days=self._LAST_DAYS_TO_LOAD)
-                    )
-                ),
+                timestamp
+                - int(timedelta(days=self._LAST_DAYS_TO_LOAD).total_seconds()),
             )
 
             self.helper.metric.inc("run_count")

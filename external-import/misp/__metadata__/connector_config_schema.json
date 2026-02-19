@@ -276,6 +276,11 @@
       "default": 9999,
       "description": "The max number of items per batch when splitting STIX bundles.",
       "type": "integer"
+    },
+    "MISP_REQUEST_TIMEOUT": {
+      "default": null,
+      "description": "The timeout for the requests to the MISP API in seconds. None means no timeout.",
+      "type": "number"
     }
   },
   "required": [

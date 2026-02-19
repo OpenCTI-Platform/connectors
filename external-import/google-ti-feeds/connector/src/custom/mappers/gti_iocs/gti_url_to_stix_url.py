@@ -215,6 +215,13 @@ class GTIUrlToSTIXUrl(BaseMapper):
         if (
             self.url.attributes
             and self.url.attributes.gti_assessment
+            and self.url.attributes.gti_assessment.threat_score
+        ):
+            return self.url.attributes.gti_assessment.threat_score.value
+
+        if (
+            self.url.attributes
+            and self.url.attributes.gti_assessment
             and self.url.attributes.gti_assessment.contributing_factors
             and hasattr(
                 self.url.attributes.gti_assessment.contributing_factors,
@@ -226,13 +233,6 @@ class GTIUrlToSTIXUrl(BaseMapper):
             return (
                 self.url.attributes.gti_assessment.contributing_factors.mandiant_confidence_score
             )
-
-        if (
-            self.url.attributes
-            and self.url.attributes.gti_assessment
-            and self.url.attributes.gti_assessment.threat_score
-        ):
-            return self.url.attributes.gti_assessment.threat_score.value
 
         return None
 
