@@ -1,21 +1,20 @@
-from datetime import UTC, datetime
 from unittest.mock import MagicMock, call
 
 import freezegun
 import pytest
-from pytest_mock import MockerFixture
-
 from connector import (
     CTIButlerConnector,
-    CTIButlerException,
     KnowledgeBaseIsEmpty,
     VersionAlreadyIngested,
     parse_knowledgebases,
 )
+from pytest_mock import MockerFixture
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")
-def test_connector_init(mocked_helper: MagicMock, mock_session: MagicMock, mock_config) -> None:
+def test_connector_init(
+    mocked_helper: MagicMock, mock_session: MagicMock, mock_config
+) -> None:
     """Test connector initialization"""
     connector = CTIButlerConnector()
 
@@ -25,8 +24,11 @@ def test_connector_init(mocked_helper: MagicMock, mock_session: MagicMock, mock_
     assert connector.interval_days == 1
     assert connector.session.headers == {"API-KEY": "test-api-key"}
 
+
 @pytest.fixture
-def connector(mocked_helper, mock_session: MagicMock, mock_config) -> CTIButlerConnector:
+def connector(
+    mocked_helper, mock_session: MagicMock, mock_config
+) -> CTIButlerConnector:
     """Fixture for CTIButlerConnector instance"""
     return CTIButlerConnector()
 
@@ -84,9 +86,7 @@ def test_get_state_existing(connector: CTIButlerConnector) -> None:
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")
-def test_get_knowledge_base_versions(
-    connector: CTIButlerConnector
-) -> None:
+def test_get_knowledge_base_versions(connector: CTIButlerConnector) -> None:
     """Test get_knowledge_base_versions method"""
     connector.helper.get_state.return_value = {"versions": {"cwe": ["1.0"]}}
 
@@ -243,14 +243,18 @@ def test_bundle_object_failure(
     connector.bundle_object("cwe", obj, "test-work-id")
 
     connector.helper.api.work.report_expectation.assert_called_once()
-    assert connector.helper.api.work.report_expectation.call_args[1]["work_id"] == "test-work-id"
-    assert "API Error" in connector.helper.api.work.report_expectation.call_args[1]["error"]["error"]
+    assert (
+        connector.helper.api.work.report_expectation.call_args[1]["work_id"]
+        == "test-work-id"
+    )
+    assert (
+        "API Error"
+        in connector.helper.api.work.report_expectation.call_args[1]["error"]["error"]
+    )
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")
-def test_run_once(
-    mocker: MockerFixture, connector: CTIButlerConnector
-) -> None:
+def test_run_once(mocker: MockerFixture, connector: CTIButlerConnector) -> None:
     """Test run_once method"""
     mocker.patch.object(
         connector,
@@ -266,9 +270,7 @@ def test_run_once(
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")
-def test_run_in_work_success(
-    connector: CTIButlerConnector
-) -> None:
+def test_run_in_work_success(connector: CTIButlerConnector) -> None:
     """Test _run_in_work context manager success"""
     with connector._run_in_work("Test Work") as work_id:
         assert work_id == "work-id"
@@ -279,9 +281,7 @@ def test_run_in_work_success(
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")
-def test_run_in_work_failure(
-    connector: CTIButlerConnector
-) -> None:
+def test_run_in_work_failure(connector: CTIButlerConnector) -> None:
     """Test _run_in_work context manager failure"""
     with connector._run_in_work("Test Work"):
         raise ValueError("Test error")

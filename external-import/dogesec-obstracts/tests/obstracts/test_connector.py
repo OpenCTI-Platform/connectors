@@ -4,9 +4,8 @@ from unittest.mock import MagicMock, call
 
 import freezegun
 import pytest
-from pytest_mock import MockerFixture
-
 from obstracts import ObstractsConnector, ObstractsException
+from pytest_mock import MockerFixture
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")
@@ -20,8 +19,11 @@ def test_connector_init(mocked_helper, mock_session: MagicMock, mock_config) -> 
     assert connector.days_to_backfill == 7
     assert connector.session.headers == {"API-KEY": "test-api-key"}
 
+
 @pytest.fixture
-def connector(mocked_helper, mock_session: MagicMock, mock_config) -> ObstractsConnector:
+def connector(
+    mocked_helper, mock_session: MagicMock, mock_config
+) -> ObstractsConnector:
     """Fixture for ObstractsConnector instance"""
     return ObstractsConnector()
 
@@ -55,9 +57,7 @@ def test_get_state_empty(connector: ObstractsConnector) -> None:
 def test_get_state_existing(connector: ObstractsConnector) -> None:
     """Test _get_state with existing state"""
     existing_state = {
-        "feeds": {
-            "feed-1": {"latest_post_update_time": "2026-02-17T15:24:00Z"}
-        },
+        "feeds": {"feed-1": {"latest_post_update_time": "2026-02-17T15:24:00Z"}},
         "last_run": "2026-02-17T15:24:00Z",
     }
     connector.helper.get_state.return_value = existing_state
@@ -75,9 +75,7 @@ def test_set_feed_state(connector: ObstractsConnector) -> None:
     connector.set_feed_state("feed-1", "2026-02-18T15:24:00Z")
 
     expected_state = {
-        "feeds": {
-            "feed-1": {"latest_post_update_time": "2026-02-18T15:24:00Z"}
-        },
+        "feeds": {"feed-1": {"latest_post_update_time": "2026-02-18T15:24:00Z"}},
         "last_run": "2026-02-18T15:24:00+00:00",
     }
     connector.helper.set_state.assert_called_once_with(expected_state)
@@ -85,9 +83,7 @@ def test_set_feed_state(connector: ObstractsConnector) -> None:
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")
-def test_set_feed_state_no_feed_id(
-    connector: ObstractsConnector
-) -> None:
+def test_set_feed_state_no_feed_id(connector: ObstractsConnector) -> None:
     """Test set_feed_state with no feed_id (final state save)"""
     existing_state = {
         "feeds": {"feed-1": {"latest_post_update_time": "2026-02-17T15:24:00Z"}},
@@ -103,7 +99,9 @@ def test_set_feed_state_no_feed_id(
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")
-def test_list_feeds_success( mock_session: MagicMock, connector: ObstractsConnector) -> None:
+def test_list_feeds_success(
+    mock_session: MagicMock, connector: ObstractsConnector
+) -> None:
     """Test list_feeds success"""
     mock_response = MagicMock()
     mock_response.json.return_value = {
@@ -124,7 +122,9 @@ def test_list_feeds_success( mock_session: MagicMock, connector: ObstractsConnec
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")
-def test_list_feeds_failure(mock_session: MagicMock, connector: ObstractsConnector) -> None:
+def test_list_feeds_failure(
+    mock_session: MagicMock, connector: ObstractsConnector
+) -> None:
     """Test list_feeds failure"""
     mock_session.get.side_effect = Exception("API Error")
 
@@ -226,9 +226,7 @@ def test_get_posts_after_last_with_state(
 ) -> None:
     """Test get_posts_after_last with existing state"""
     existing_state = {
-        "feeds": {
-            "feed-1": {"latest_post_update_time": "2026-02-17T15:24:00Z"}
-        }
+        "feeds": {"feed-1": {"latest_post_update_time": "2026-02-17T15:24:00Z"}}
     }
     connector.helper.get_state.return_value = existing_state
 
@@ -287,14 +285,12 @@ def test_get_posts_after_last_no_state(
     # Verify backfill date was used (7 days ago)
     expected_date = (datetime.now(UTC) - timedelta(days=7)).isoformat()
     assert "updated_after" in mock_session.get.call_args[1]["params"]
-    # Just verify it's a date string (exact match difficult due to timing)
     assert isinstance(mock_session.get.call_args[1]["params"]["updated_after"], str)
+    assert expected_date == mock_session.get.call_args[1]["params"]["updated_after"]
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")
-def test_run_once(
-    mocker: MockerFixture, connector: ObstractsConnector
-) -> None:
+def test_run_once(mocker: MockerFixture, connector: ObstractsConnector) -> None:
     """Test run_once method"""
 
     # Mock list_feeds
@@ -308,7 +304,7 @@ def test_run_once(
     get_posts_mock = mocker.patch.object(connector, "get_posts_after_last")
 
     # Mock set_feed_state
-    set_state_mock = mocker.patch.object(connector, "set_feed_state")
+    mocker.patch.object(connector, "set_feed_state")
 
     connector.run_once()
 
@@ -346,9 +342,7 @@ def test_run_once_filters_feeds(
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")
-def test_run_in_work_success(
-    connector: ObstractsConnector
-) -> None:
+def test_run_in_work_success(connector: ObstractsConnector) -> None:
     """Test _run_in_work context manager success"""
 
     with connector._run_in_work("Test Work") as work_id:
@@ -363,9 +357,7 @@ def test_run_in_work_success(
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")
-def test_run_in_work_failure(
-    connector: ObstractsConnector
-) -> None:
+def test_run_in_work_failure(connector: ObstractsConnector) -> None:
     """Test _run_in_work context manager failure"""
 
     with connector._run_in_work("Test Work"):
@@ -394,7 +386,7 @@ def test_get_param(connector: ObstractsConnector) -> None:
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")
 def test_retrieve_with_params(
-     mock_session: MagicMock, connector: ObstractsConnector
+    mock_session: MagicMock, connector: ObstractsConnector
 ) -> None:
     """Test retrieve with custom params"""
 

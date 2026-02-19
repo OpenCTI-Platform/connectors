@@ -3,13 +3,14 @@ from unittest.mock import MagicMock, call
 
 import freezegun
 import pytest
-from pytest_mock import MockerFixture
-
 from connector import VulmatchConnector, VulmatchException, parse_bool, parse_number
+from pytest_mock import MockerFixture
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")
-def test_connector_init(mocked_helper: MagicMock, mock_session: MagicMock, mock_config) -> None:
+def test_connector_init(
+    mocked_helper: MagicMock, mock_session: MagicMock, mock_config
+) -> None:
     """Test connector initialization"""
     connector = VulmatchConnector()
 
@@ -19,6 +20,7 @@ def test_connector_init(mocked_helper: MagicMock, mock_session: MagicMock, mock_
     assert connector.interval_days == 1
     assert connector.days_to_backfill == 7
     assert connector.session.headers == {"API-KEY": "test-api-key"}
+
 
 @pytest.fixture
 def connector(mocked_helper, mock_session: MagicMock, mock_config) -> VulmatchConnector:
@@ -69,7 +71,7 @@ def test_get_state_empty(connector: VulmatchConnector) -> None:
     # Should be 7 days ago
     expected_date = (datetime.now(UTC) - timedelta(days=7)).isoformat()
     # Just check it's a valid ISO format date
-    assert "T" in state["last_vulnerability_modified"]
+    assert expected_date == state["last_vulnerability_modified"]
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")
@@ -98,9 +100,7 @@ def test_update_state(connector: VulmatchConnector) -> None:
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")
-def test_list_cpes_in_sbom_not_sbom_only(
-    connector: VulmatchConnector
-) -> None:
+def test_list_cpes_in_sbom_not_sbom_only(connector: VulmatchConnector) -> None:
     """Test list_cpes_in_sbom when sbom_only is False"""
     connector.sbom_only = False
 
@@ -119,7 +119,10 @@ def test_list_cpes_in_sbom_success(
     mock_response = MagicMock()
     mock_response.json.return_value = {
         "total_results_count": 2,
-        "objects": [{"cpe": "cpe:2.3:a:vendor:product1"}, {"cpe": "cpe:2.3:a:vendor:product2"}],
+        "objects": [
+            {"cpe": "cpe:2.3:a:vendor:product1"},
+            {"cpe": "cpe:2.3:a:vendor:product2"},
+        ],
     }
     mock_session.get.return_value = mock_response
 
@@ -235,9 +238,7 @@ def test_process_vulnerability_failure(
     assert call_kwargs["in_error"] is True
 
 
-def test_transform_bundle_objects(
-    connector: VulmatchConnector
-) -> None:
+def test_transform_bundle_objects(connector: VulmatchConnector) -> None:
     """Test transform_bundle_objects method"""
     bundle_objects = [
         {
@@ -247,7 +248,9 @@ def test_transform_bundle_objects(
             "modified": "2026-02-18T15:24:00Z",
             "created": "2026-02-18T15:24:00Z",
             "object_marking_refs": ["marking--1"],
-            "external_references": [{"source_name": "cve", "external_id": "CVE-2024-0001"}],
+            "external_references": [
+                {"source_name": "cve", "external_id": "CVE-2024-0001"}
+            ],
         },
         {"type": "software", "id": "software--1", "name": "Product"},
         {"type": "grouping", "id": "grouping--1", "object_refs": ["software--1"]},
@@ -270,9 +273,7 @@ def test_transform_bundle_objects(
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")
-def test_run_once(
-    mocker: MockerFixture, connector: VulmatchConnector
-) -> None:
+def test_run_once(mocker: MockerFixture, connector: VulmatchConnector) -> None:
     """Test run_once method"""
     mocker.patch.object(connector, "list_cpes_in_sbom", return_value=[""])
     mocker.patch.object(
@@ -289,9 +290,7 @@ def test_run_once(
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")
-def test_run_in_work_success(
-    connector: VulmatchConnector
-) -> None:
+def test_run_in_work_success(connector: VulmatchConnector) -> None:
     """Test _run_in_work context manager success"""
     with connector._run_in_work("Test Work") as work_id:
         assert work_id == "work-id"
@@ -302,9 +301,7 @@ def test_run_in_work_success(
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")
-def test_run_in_work_failure(
-    connector: VulmatchConnector
-) -> None:
+def test_run_in_work_failure(connector: VulmatchConnector) -> None:
     """Test _run_in_work context manager failure"""
     with connector._run_in_work("Test Work"):
         raise ValueError("Test error")

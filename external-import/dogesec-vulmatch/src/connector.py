@@ -49,7 +49,7 @@ class VulmatchConnector:
         )
 
         self.helper = OpenCTIConnectorHelper(config)
-        self.base_url = self._get_param("base_url").strip('/') + "/"
+        self.base_url = self._get_param("base_url").strip("/") + "/"
         self.api_key = self._get_param("api_key")
         self.sbom_only = parse_bool(self._get_param("sbom_only"))
         self.cvss_v2_score_min = parse_number(

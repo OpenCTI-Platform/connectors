@@ -31,7 +31,7 @@ class ObstractsConnector:
         )
 
         self.helper = OpenCTIConnectorHelper(config)
-        self.base_url = self._get_param("base_url").strip('/') + "/"
+        self.base_url = self._get_param("base_url").strip("/") + "/"
         self.api_key = self._get_param("api_key")
         feed_ids = self._get_param("feed_ids")
         self.feed_ids = feed_ids.split(",") if feed_ids else []
