@@ -8,7 +8,7 @@ connector:
   name: 'VMRay Platform'
   scope: 'report, malware, indicator, attack-pattern, location'
   log_level: 'info'
-  duration_period: 'P1D' # Interval given for scheduler process in ISO-8601 format
+  duration_period: 'PT30M' # Interval given for scheduler process in ISO-8601 format
 
 vmray:
   server: 'https://cloud.vmray.com'
@@ -20,4 +20,5 @@ vmray:
   vti_color:  '#40f5ef'
   mitre_color:  '#a9f723'
   default_tlp: 'TLP:AMBER'
-  initial_fetch_date: '2025-09-09'
+  initial_fetch_date: '2025-11-13'
+
