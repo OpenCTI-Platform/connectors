@@ -5,10 +5,10 @@ opencti:
 connector:
   type: 'INTERNAL_ENRICHMENT'
   id: 'ChangeMe'
-  name: 'GreyNoise Vulnerability'
+  name: 'GreyNoise Vulnerability Enrichment'
   scope: 'vulnerability'
   auto: true # Enable/disable auto-enrichment of observables
-  log_level: 'info'
+  log_level: 'error'
 
 greynoise-vuln:
   key: 'ChangeMe'

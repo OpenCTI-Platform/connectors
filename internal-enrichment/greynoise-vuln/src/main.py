@@ -1,4 +1,3 @@
-import json
 import os
 import traceback
 from datetime import datetime
@@ -6,7 +5,7 @@ from typing import Dict
 
 import stix2
 import yaml
-from greynoise import GreyNoise
+from greynoise.api import APIConfig, GreyNoise
 from pycti import (
     Identity,
     OpenCTIConnectorHelper,
@@ -42,82 +41,7 @@ class GreyNoiseVulnConnector:
         # Define variables
         self.tlp = None
         self.stix_objects = []
-        self.integration_name = "opencti-vuln-enricher-v1.0"
-
-        self.check_api_key(force_recheck=True)
-
-    def check_api_key(self, force_recheck=False):
-        # Validate GreyNoise API Key
-        self.helper.log_debug("Validating GreyNoise API Key...")
-        try:
-            today = datetime.today().strftime("%Y-%m-%d")
-
-            if os.path.exists("KEY_INFO"):
-                with open("KEY_INFO") as text_file:
-                    key_info = text_file.read()
-                key_state = json.loads(key_info)
-            else:
-                empty_key_state = {"offering": "", "expiration": "", "last_checked": ""}
-                with open("KEY_INFO", "w") as text_file:
-                    empty_key_state = json.dumps(empty_key_state)
-                    print(f"{empty_key_state}", file=text_file)
-                key_state = json.loads(empty_key_state)
-
-            if key_state.get("last_checked") != today or force_recheck:
-                session = GreyNoise(
-                    api_key=self.greynoise_key, integration_name=self.integration_name
-                )
-                key_check = session.test_connection()
-
-                key_state = {
-                    "offering": key_check.get("offering"),
-                    "expiration": key_check.get("expiration"),
-                    "last_checked": today,
-                }
-
-                if "offering" in key_check:
-                    self.helper.log_info(
-                        "GreyNoise API Key Status: "
-                        + str(key_check.get("offering", ""))
-                        + "/"
-                        + str(key_check.get("expiration", ""))
-                    )
-                    if key_check.get("offering") == "community_trial":
-                        key_state["valid"] = True
-                        self.helper.log_info("GreyNoise API key is valid!")
-                    elif key_check.get("offering") == "community":
-                        key_state["valid"] = False
-                        self.helper.log_info(
-                            "GreyNoise API key NOT valid! Update to use connector!"
-                        )
-                    elif (
-                        key_check.get("offering") != "community"
-                        and key_check.get("expiration") > today
-                    ):
-                        key_state["valid"] = True
-                        self.helper.log_info("GreyNoise API key is valid!")
-                    elif (
-                        key_check.get("offering") != "community"
-                        and key_check.get("expiration") < today
-                    ):
-                        key_state["valid"] = False
-
-                with open("KEY_INFO", "w") as text_file:
-                    key_state = json.dumps(key_state)
-                    print(f"{key_state}", file=text_file)
-                key_state = json.loads(key_state)
-
-            return key_state.get("valid", False)
-
-        except Exception as e:
-            self.helper.log_error(
-                "[API] GreyNoise API key is not valid or not supported for this integration. API "
-                "Response: " + str(e)
-            )
-            raise Exception(
-                "[API] GreyNoise API key is not valid or not supported for this integration. API Response: "
-                + str(e)
-            )
+        self.integration_name = "opencti-vuln-enricher-v2.0"
 
     def _extract_and_check_markings(self, opencti_entity: dict) -> bool:
         """
@@ -442,14 +366,6 @@ class GreyNoiseVulnConnector:
         entity_splited = data["entity_id"].split("--")
         entity_type = entity_splited[0].lower()
 
-        if not self.check_api_key():
-            self.helper.log_error(
-                "GreyNoise API Key is NOT valid. Update to Enterprise API key to use this connector."
-            )
-            raise ValueError(
-                "GreyNoise API Key is NOT valid. Update to Enterprise API key to use this connector."
-            )
-
         if entity_type in scopes:
             # OpenCTI entity information retrieval
             stix_entity = data["stix_entity"]
@@ -472,9 +388,10 @@ class GreyNoiseVulnConnector:
                 self.helper.connector_logger.info(
                     f"Get CVE context for: {opencti_entity_value}"
                 )
-                session = GreyNoise(
+                api_config = APIConfig(
                     api_key=self.greynoise_key, integration_name=self.integration_name
                 )
+                session = GreyNoise(api_config)
 
                 json_data = session.cve(opencti_entity_value)
 
