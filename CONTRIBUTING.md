@@ -246,7 +246,7 @@ This guide is organized into multiple documents:
 
 **[External Import Connector Specifications](./docs/02-external-import-specifications.md)**
 - Connector architecture
-- Scheduling and interval handling
+- Auto backpressure, Scheduling and Execution
 - Work initialization and tracking
 - State management for incremental imports
 - Data deduplication strategies
