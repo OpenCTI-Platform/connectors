@@ -687,7 +687,12 @@ To create a STIX object in a connector, use the `stix2` library for the object s
 
 ## Import History and Dates
 
+When importing historical data, it's important to manage dates correctly to ensure accurate state management and incremental imports. We recommend to use ISO-8601 date format for all date fields in your connector configuration and state management. 
+This format is widely supported and can be easily parsed in Python.
 
+When configuring the `import_start_date` (or equivalent history parameter) of a connector, OpenCTI recommends using relative/duration-based dates (e.g., ISO 8601 durations like P30D, P1Y) rather than absolute dates (e.g., 2021-01-01).
+
+Relative dates make connector configurations robust, portable, and safe by design, while absolute dates create a that grows more problematic the longer the platform runs.
 
 
 ## Rate Limiting
