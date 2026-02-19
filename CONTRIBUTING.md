@@ -423,7 +423,7 @@ isort --profile black <path_to_connector>
   - Name: 250 characters maximum 
   - Short Description: 250 characters maximum 
   - Description: No size limit 
-  - Logo: Must be a square PNG file, minimum 96x96 pixels
+  - Logo: Must be a square PNG or JPEG file, minimum 96x96 pixels
   - The remaining fields are optional and will be completed by the Integrations team during the verification process.
 - **Inline code documentation** for complex logic
 - **Type hints** for all function signatures
