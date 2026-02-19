@@ -253,6 +253,7 @@ This guide is organized into multiple documents:
 - Import history and dates
 - Rate limiting and API quotas
 - Incremental import strategies
+- Connector Run and Terminate
 - Best practices for data mapping and transformation
 
 **[Internal Enrichment Connector Specifications](./docs/03-internal-enrichment-specifications.md)**
