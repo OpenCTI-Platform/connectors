@@ -7,6 +7,7 @@ import stix2
 import yaml
 from dateutil.parser import parse
 from greynoise.api import APIConfig, GreyNoise
+from greynoise.exceptions import RequestFailure
 from pycti import (
     Identity,
     Indicator,
@@ -682,6 +683,12 @@ class GreyNoiseConnector:
         if self.sighting_not_seen is True:
             self.indicator_score = 0
 
+        description = (
+            "Internet Scanning IP detected by GreyNoise with classification `"
+            + data["internet_scanner_intelligence"]["classification"]
+            + "`."
+        )
+
         # Generate Indicator
         stix_indicator = stix2.Indicator(
             id=Indicator.generate_id(data["ip"]),
@@ -690,6 +697,7 @@ class GreyNoiseConnector:
             pattern=f"[ipv4-addr:value = '{data['ip']}']",
             created_by_ref=self.greynoise_identity["id"],
             external_references=external_reference,
+            description=description,
             custom_properties={
                 "pattern_type": "stix",
                 "x_opencti_score": self.indicator_score,
@@ -708,7 +716,7 @@ class GreyNoiseConnector:
         return stix_indicator
 
     def _generate_stix_observable(
-        self, detection: bool, external_reference: list, labels: list = None
+        self, data: dict, detection: bool, external_reference: list, labels: list = None
     ):
         """
         This method creates and adds a bundle to "self.stix_objects" the IPv4 associated "Observable"
@@ -718,6 +726,12 @@ class GreyNoiseConnector:
         :param external_reference: This parameter contains the list external reference associated with the IPv4.
         :param labels: This parameter contains a list of all labels associated with the IPv4.
         """
+
+        description = (
+            "Internet Scanning IP detected by GreyNoise with classification `"
+            + data["internet_scanner_intelligence"]["classification"]
+            + "`."
+        )
 
         # Generate Observable
         stix_observable = stix2.IPv4Address(
@@ -729,6 +743,7 @@ class GreyNoiseConnector:
                 "x_opencti_score": self.indicator_score,
                 "x_opencti_labels": labels if detection is True else [],
                 "x_opencti_created_by_ref": self.greynoise_identity["id"],
+                "x_opencti_description": description,
             },
         )
         self.stix_objects.append(stix_observable)
@@ -828,7 +843,7 @@ class GreyNoiseConnector:
             self._generate_stix_tool_with_relationship(data)
             self._generate_stix_malware_with_relationship(malwares)
             self._generate_stix_threat_actor_with_relationship(data)
-            self._generate_stix_observable(True, external_reference, labels)
+            self._generate_stix_observable(data, True, external_reference, labels)
             if not self.no_sightings:
                 self._generate_stix_sighting(external_reference, stix_indicator, False)
 
@@ -900,10 +915,29 @@ class GreyNoiseConnector:
                     + " stix bundle(s) for worker import"
                 )
 
+            except RequestFailure as e:
+                error_msg = str(e)
+                # Check if this is a rate limit (429) error
+                if "429" in error_msg or "too many" in error_msg.lower():
+                    self.helper.connector_logger.warning(
+                        "[RATE LIMIT] GreyNoise API rate limit exceeded, will retry later",
+                        {"ip": opencti_entity_value, "error": error_msg},
+                    )
+                    # Return a message instead of raising - allows retry
+                    return (
+                        "[RATE LIMIT] API rate limit exceeded, message will be retried"
+                    )
+                else:
+                    # For other API request failures, raise as before
+                    raise ValueError(
+                        "[ERROR] GreyNoise API Request Failed:",
+                        {"Exception": error_msg},
+                    )
+
             except Exception as e:
                 # Handling other unexpected exceptions
                 raise ValueError(
-                    "[ERROR] Unexpected Error occurred :", {"Exception": str(e)}
+                    "[ERROR] Unexpected Error occurred:", {"Exception": str(e)}
                 )
         else:
             return self.helper.connector_logger.info(
