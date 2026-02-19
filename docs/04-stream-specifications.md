@@ -356,7 +356,7 @@ def _handle_delete(self, entity_data: dict) -> None:
 
 ### Data Transformation
 
-Transform OpenCTI entities to match external system format:
+Transform OpenCTI entities to match external system format example:
 
 ```python
 def _transform_entity(self, entity_data: dict) -> dict:
