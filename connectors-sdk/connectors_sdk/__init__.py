@@ -2,6 +2,24 @@
 
 __version__ = "0.1.0"
 
+from connectors_sdk.connectors.base_external_import import (
+    BaseExternalImportConnector,
+    BatchingExternalImportConnector,
+    MultiHandlerExternalImportConnector,
+    SimpleExternalImportConnector,
+    StreamingExternalImportConnector,
+)
+from connectors_sdk.connectors.managers import (
+    BatchingProcessingEngine,
+    ConverterFactory,
+    ErrorHandler,
+    MultiHandlerProcessingEngine,
+    ProcessingEngine,
+    SimpleProcessingEngine,
+    StateManager,
+    StreamingProcessingEngine,
+    WorkManager,
+)
 from connectors_sdk.settings.annotated_types import (
     DatetimeFromIsoString,
     ListFromString,
@@ -36,4 +54,22 @@ __all__ = [
     # Annotated types
     "DatetimeFromIsoString",
     "ListFromString",
+    # Connector Base Classes
+    "BaseExternalImportConnector",
+    "SimpleExternalImportConnector",
+    "StreamingExternalImportConnector",
+    "MultiHandlerExternalImportConnector",
+    "BatchingExternalImportConnector",
+    # Managers
+    "StateManager",
+    "WorkManager",
+    "ErrorHandler",
+    # Processing Engines
+    "ProcessingEngine",
+    "SimpleProcessingEngine",
+    "StreamingProcessingEngine",
+    "BatchingProcessingEngine",
+    "MultiHandlerProcessingEngine",
+    # Factory
+    "ConverterFactory",
 ]
