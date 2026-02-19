@@ -1,5 +1,4 @@
 import json
-from datetime import UTC, datetime
 from unittest.mock import MagicMock, call
 
 import freezegun
