@@ -13,6 +13,7 @@ applies to: All connector types (External Import, Internal Enrichment, Stream)
 - [Using the Connectors SDK](#using-the-connectors-sdk)
 - [STIX 2.1 Object Creation](#stix-21-object-creation)
 - [Logging Best Practices](#logging-best-practices)
+- [Connector Scopes](#connector-scopes)
 - [State Management](#state-management)
 - [Error Handling](#error-handling)
 - [Traceback](#traceback)
@@ -675,6 +676,17 @@ self.helper.connector_logger.info(
 ```
 
 ---
+
+## Connector Scopes
+
+The `scope` parameter in OpenCTI connectors defines **what the connector handles**. Its behavior depends on the connector type.
+
+**Scope never filters the bundle content.** It only controls **when/how the platform triggers the connector**.
+
+- For `EXTERNAL_IMPORT`: scope is purely descriptive metadata. The platform registers it but does not use it for filtering. Everything in the bundle is ingested.
+- For `INTERNAL_ENRICHMENT`: scope determines which entity types trigger the connector. Without `Indicator` in the scope, the connector won't be called when enriching an Indicator. But if the connector's response bundle contains Indicators, they **will** be ingested.
+- For `INTERNAL_IMPORT_FILE`: scope determines which file MIME types trigger the connector.
+
 
 ## State Management
 
