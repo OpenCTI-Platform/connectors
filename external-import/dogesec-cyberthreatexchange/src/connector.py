@@ -31,7 +31,7 @@ class CyberThreatExchangeConnector:
         )
 
         self.helper = OpenCTIConnectorHelper(config)
-        self.base_url = self._get_param("base_url") + "/"
+        self.base_url = self._get_param("base_url").strip('/') + "/"
         self.api_key = self._get_param("api_key")
         feed_ids = self._get_param("feed_ids")
         self.feed_ids = feed_ids.split(",") if feed_ids else []
@@ -99,15 +99,13 @@ class CyberThreatExchangeConnector:
             data = resp.json()
             yield data[list_key]
             objects_count += len(data[list_key])
-            if ("next" in data and not data["next"]) or data[
-                "total_results_count"
-            ] >= objects_count:
+            if ("next" in data and not data["next"]) or ('total_results_count' in data and data['total_results_count'] <= objects_count):
                 more = False
             if "next" in data:
                 url = data["next"]
             if "total_results_count" in data:
                 params.update(page=params["page"] + 1)
-        return
+        return []
 
     def retrieve(self, path, list_key, params: dict = None):
         all_objects = []
