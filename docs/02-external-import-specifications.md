@@ -538,6 +538,158 @@ def process_message(self) -> None:
 
 ---
 
+## Data Deduplication Strategies
+
+OpenCTI uses a layered approach: deterministic IDs catch obvious duplicates at creation time, confidence levels govern whether incoming data can overwrite existing entries, and manual merging covers edge cases where automatic deduplication isn't sufficient
+
+### Core concept
+
+One of the core concepts of the OpenCTI knowledge graph is the underlying mechanisms implemented to accurately de-duplicate and consolidate (aka. upserting) information about entities and relationships. When an object is created in the platform, whether manually by a user or automatically by the connectors/workers chain, the platform checks if something already exists based on some properties of the object. If the object already exists, it will return the existing object and, in some cases, update it as well.
+
+### Deterministic IDs (ID Contributing Properties)
+
+OpenCTI generates deterministic IDs based on listed properties (aka "ID Contributing Properties") to prevent duplicates. There is also a special link between name and aliases: the name and aliases of an entity define a set of unique values, so it's not possible to have the name equal to an alias and vice versa, and entities cannot have overlapping aliases or an alias already used in the name of another entity.
+
+Each entity type has its own contributing properties. For example:
+
+- **Threat Actor / Tool / Vulnerability** → `name OR alias`
+- **Report** → `name AND published date`
+- **Organization** → `(name OR x_opencti_alias) AND identity_class`
+- **Relationship** → `type + source + target + start/stop time (within a ±30-day window)`
+
+---
+
+### STIX Cyber Observables
+
+For STIX Cyber Observables, OpenCTI also generates deterministic IDs based on the STIX specification using the "ID Contributing Properties" defined for each type of observable. In cases where an entity already exists in the platform, incoming creations can trigger updates to the existing entity's attributes.
+
+---
+
+### Confidence Level-Based Deduplication
+
+The deduplication mechanism relies on the Confidence Level attribute of each STIX Object, as well as identification keys for each object. If an object is created with the same identification keys as an existing one, it will replace the existing object only if the Confidence Level of the new object is higher or equal to the existing one's. Connectors have a Confidence Level in their configuration file that can be used for deduplication purposes and if a connector imports an object already existing in the platform, it will only replace the existing one if its Confidence Level is higher or equal.
+
+This is the **upsert rule**: new data can enrich existing data, but only if it comes from a source of equal or higher confidence.
+
+---
+
+### Manual Merging
+
+Within the OpenCTI platform, the merge capability is present in the "Data > Entities" tab. To execute a merge, select the set of entities to be merged, then click on the Merge icon. It is not possible to merge entities of different types, nor is it possible to merge more than 4 entities at a time. Central to the merging process is the selection of a main entity and this primary entity becomes the anchor, retaining crucial attributes such as name and description. Other entities, while losing specific fields like descriptions, are aliased under the primary entity.
+
+Key points about merging:
+
+- Even if the merged entities were initially created by distinct sources, the platform ensures that data is not lost. Upon merging, the platform automatically generates relationships directly on the merged entity, ensuring that all connections, regardless of their origin, are anchored to the consolidated entity.
+- It's essential to know that a merge operation is **irreversible**.
+
+---
+
+### Limitations
+
+This deduplication mechanism, although powerful, still has limitations: it is not possible to associate a Confidence Level with an OCTI Live Stream or a TAXII/RSS Feed and you have no choice but to use the Confidence Level set by the source of the stream or feed. If the source has set a Confidence Level of 100 on an object, it will overwrite the existing one in your platform, even if you value it highly.
+
+---
+
+### Summary Table
+
+| Strategy | Trigger | Mechanism |
+|---|---|---|
+| **Automatic deduplication** | Object creation (manual or via connector) | Deterministic IDs from contributing properties |
+| **Alias-based deduplication** | Shared name/alias between entities | Unique alias set enforcement |
+| **Confidence-based upsert** | Incoming data from connectors/feeds | Higher or equal confidence overwrites existing |
+| **STIX Observable dedup** | Observable ingestion | STIX spec ID contributing properties |
+| **Manual merge** | User action | Up to 4 entities, irreversible, relationship preservation |
+
+### Why You Must Explicitly Generate IDs in Your Connector ?
+
+When building a connector or any external import that pushes STIX bundles into OpenCTI, you **must** always set a deterministic `id` on your STIX objects using pycti's `generate_id` class methods, rather than letting the `stix2` library auto-generate a random UUID.
+
+The reason is rooted in how OpenCTI's deduplication engine works: the platform identifies whether an incoming object already exists by comparing its **standard ID** (`standard_id`). This standard ID is itself a **deterministic UUID v5** derived from the object's "ID Contributing Properties" (e.g. `name` for a Malware, `name + published date` for a Report, etc.).
+
+> [!IMPORTANT]  
+> If you let `stix2` generate a random ID, OpenCTI will receive a **different ID every time** the same object is imported. Even though the deduplication engine will eventually recognize it as the same entity (by its name or key properties), it will register the random ID as an additional `stix_id` on the object. Each new import adds another entry to the `x_opencti_stix_ids` list, which grows unboundedly — causing memory bloat, performance degradation, and inconsistency in the platform's Redis streams.
+
+Using the `generate_id` method included for many object types in the pycti library prevents the `stix_ids` list from growing, since the `standard_id` will be the same every time the same object is pushed.
+
+#### How to Use `generate_id`
+
+The `generate_id` static method is available directly on each entity class exported by pycti. It takes the object's **ID Contributing Properties** as arguments — exactly the same fields that OpenCTI uses server-side for deduplication.
+
+The recommended pattern is to always combine `stix2` (to build the STIX object itself) with `pycti` (to generate the deterministic ID):
+
+```python
+import stix2
+from pycti import Malware, Report, Indicator
+
+# --- Malware (contributing property: name) ---
+malware = stix2.Malware(
+    id=Malware.generate_id("MyMalwareName"),
+    name="MyMalwareName",
+    description="A dangerous piece of malware.",
+    is_family=False,
+)
+
+# --- Indicator (contributing property: pattern) ---
+indicator = stix2.Indicator(
+    id=Indicator.generate_id("[domain-name:value = 'evil.com']"),
+    name="Malicious domain",
+    pattern="[domain-name:value = 'evil.com']",
+    pattern_type="stix",
+    valid_from="2024-01-01T00:00:00Z",
+)
+
+# --- Report (contributing properties: name + published date) ---
+report = stix2.Report(
+    id=Report.generate_id("My Threat Report", "2024-01-01T00:00:00Z"),
+    name="My Threat Report",
+    published="2024-01-01T00:00:00Z",
+    report_types=["threat-report"],
+    object_refs=[malware.id, indicator.id],
+)
+```
+
+> ⚠️ **The arguments passed to `generate_id` must exactly match the object's ID Contributing Properties**, as defined in OpenCTI's deduplication rules. Passing different values will generate a different ID, defeating the purpose.
+
+
+#### What Happens Without `generate_id`
+
+| Scenario | Without `generate_id` | With `generate_id` |
+|---|---|---|
+| First import | Object created, random UUID stored as `standard_id` | Object created, deterministic UUID stored as `standard_id` |
+| Second import (same object) | Platform deduplicates by name but appends the new random UUID to `x_opencti_stix_ids` | Platform deduplicates, no new `stix_id` added — IDs match |
+| Nth import | `x_opencti_stix_ids` list keeps growing | List stays stable |
+| Performance impact | Increasing memory usage, Redis stream bloat | None |
+
+
+#### Available `generate_id` Methods by Entity Type
+
+Most core SDO types in pycti expose `generate_id`. 
+
+Key examples:
+
+| Entity | Key contributing argument(s) |
+|---|---|
+| `Malware` | `name` |
+| `ThreatActorGroup` / `ThreatActorIndividual` | `name` |
+| `Indicator` | `pattern` |
+| `Report` | `name`, `published` (date) |
+| `Vulnerability` | `name` |
+| `AttackPattern` | `name` |
+| `IntrusionSet` | `name` |
+| `Identity` / `Organization` | `name`, `identity_class` |
+
+For **STIX Cyber Observables** (SCOs like `IPv4-Addr`, `DomainName`, etc.), OpenCTI follows the STIX 2.1 specification's own deterministic ID algorithm, so using the standard `stix2` library constructors with the correct `value` field is generally sufficient but wrapping with pycti's observable helpers is still recommended for consistency.
+
+### Summary
+
+To create a STIX object in a connector, use the `stix2` library for the object structure and always use pycti's `generate_id` to produce a predictable, deterministic ID, this is the official recommendation from the OpenCTI connector template. Skipping this step is a common source of data quality issues and platform performance degradation over time.
+
+
+## Import History and Dates
+
+
+
+
 ## Rate Limiting
 
 Use the `limiter` library for rate limiting and `tenacity` for retry logic:

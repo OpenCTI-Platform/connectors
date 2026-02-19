@@ -11,25 +11,42 @@ status: Accepted
 
 ## Table of Contents
 
-- [Introduction](#introduction)
-  - [What is a Connector?](#what-is-a-connector)
-  - [Connector Types Covered](#connector-types-covered)
-- [Prerequisites](#prerequisites)
-- [Getting Started](#getting-started)
-  - [Quick Start](#quick-start)
-  - [Initial Setup](#initial-setup)
-  - [Creating a New Connector](#creating-a-new-connector)
-  - [Understanding the Template Structure](#understanding-the-template-structure)
-- [Documentation Structure](#documentation-structure)
-- [Quick Overview](#quick-overview)
-  - [Common Implementation Guidelines](#common-implementation-guidelines)
-  - [Connector-Type Specific Guidelines](#connector-type-specific-guidelines)
-- [Code Quality Standards](#code-quality-standards)
-- [Getting Help](#getting-help)
-  - [Resources](#resources)
-  - [Community Support](#community-support)
-  - [Contributing](#contributing)
-- [Quick Reference](#quick-reference)
+- [OpenCTI Connector Development Guidelines](#opencti-connector-development-guidelines)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction](#introduction)
+    - [What is a Connector?](#what-is-a-connector)
+    - [Connector Types Covered](#connector-types-covered)
+  - [Prerequisites](#prerequisites)
+    - [Technical Requirements](#technical-requirements)
+    - [Knowledge Requirements](#knowledge-requirements)
+    - [Development Environment](#development-environment)
+  - [Getting Started](#getting-started)
+    - [Quick Start](#quick-start)
+    - [Initial Setup](#initial-setup)
+    - [Creating a New Connector](#creating-a-new-connector)
+      - [Choosing the Right Template](#choosing-the-right-template)
+    - [Understanding the Template Structure](#understanding-the-template-structure)
+  - [Documentation Structure](#documentation-structure)
+    - [Core Documentation](#core-documentation)
+    - [Connector-Type Specific Guidelines](#connector-type-specific-guidelines)
+  - [Quick Overview](#quick-overview)
+    - [Common Implementation Guidelines](#common-implementation-guidelines)
+      - [Configuration with Pydantic](#configuration-with-pydantic)
+      - [Using the Connectors SDK](#using-the-connectors-sdk)
+      - [Logging](#logging)
+      - [Sending Data to OpenCTI](#sending-data-to-opencti)
+    - [Connector-Type Specific Guidelines](#connector-type-specific-guidelines-1)
+    - [Code Quality Standards](#code-quality-standards)
+    - [Linting Requirements](#linting-requirements)
+    - [STIX 2.1 Compliance](#stix-21-compliance)
+    - [Testing Requirements](#testing-requirements)
+    - [Docker Standards](#docker-standards)
+    - [Documentation Standards](#documentation-standards)
+  - [Getting Help](#getting-help)
+    - [Resources](#resources)
+    - [Community Support](#community-support)
+    - [Contributing](#contributing)
+  - [Quick Reference](#quick-reference)
 
 ## Introduction
 
@@ -207,18 +224,23 @@ This guide is organized into multiple documents:
 - Configuration management with Pydantic
 - STIX 2.1 object creation
 - Logging best practices
+- Connector scopes and entity handling
 - State management
 - Error handling patterns
+- Working with the OpenCTI helper
 
 ### Connector-Type Specific Guidelines
 
 **[External Import Connector Specifications](./docs/02-external-import-specifications.md)**
+- Connector architecture
 - Scheduling and interval handling
 - Work initialization and tracking
 - State management for incremental imports
-- Rate limiting and API quotas
 - Data deduplication strategies
-- External API client implementation
+- Import history and dates
+- Rate limiting and API quotas
+- Incremental import strategies
+- Best practices for data mapping and transformation
 
 **[Internal Enrichment Connector Specifications](./docs/03-internal-enrichment-specifications.md)**
 - Event-driven architecture
