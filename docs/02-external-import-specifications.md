@@ -9,6 +9,8 @@
 - [State Management](#state-management)
 - [Data Collection](#data-collection)
 - [STIX Bundle Creation](#stix-bundle-creation)
+- [Data Deduplication Strategies](#data-deduplication-strategies)
+- [Import History and Dates](#import-history-and-dates)
 - [Rate Limiting](#rate-limiting)
 - [Incremental Import Strategies](#incremental-import-strategies)
 - [Best Practices](#best-practices)
