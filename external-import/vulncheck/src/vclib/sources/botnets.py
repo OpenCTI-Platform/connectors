@@ -20,6 +20,7 @@ def _create_infra(
     return converter_to_stix.create_infrastructure(
         name=entity.botnet_name,
         infrastructure_type=INFRASTRUCTURE_TYPE_BOTNET,
+        labels=[entity.botnet_name],
     )
 
 
@@ -34,6 +35,7 @@ def _create_vuln(cve: str, converter_to_stix, logger) -> stix2.Vulnerability:
 def _create_rel_related_to(
     infrastructure: stix2.Infrastructure,
     vulnerability: stix2.Vulnerability,
+    labels: list[str],
     converter_to_stix,
     logger,
 ) -> stix2.Relationship:
@@ -44,6 +46,7 @@ def _create_rel_related_to(
         source_id=infrastructure["id"],
         relationship_type="related-to",
         target_id=vulnerability["id"],
+        labels=labels,
     )
 
 
@@ -75,6 +78,11 @@ def _extract_stix_from_botnet(
                         _create_rel_related_to(
                             infrastructure=infrastructure,
                             vulnerability=vuln,
+                            labels=(
+                                [entity.botnet_name]
+                                if entity.botnet_name is not None
+                                else []
+                            ),
                             converter_to_stix=converter_to_stix,
                             logger=logger,
                         )

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-ARG PYTHON_VERSION=3.12.5
+ARG PYTHON_VERSION=3.12.7
 FROM python:${PYTHON_VERSION}-alpine as base
 
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
@@ -20,8 +20,8 @@ RUN apk update && apk upgrade && \
 
 # Leverage a bind mount to requirements.txt to avoid having to copy them into
 # into this layer.
-RUN --mount=type=bind,source=src/requirements.txt,target=requirements.txt \
-  python -m pip install --no-cache-dir -r requirements.txt
+RUN --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+  python -m pip install --no-cache-dir .
 
 # Remove dependencies for pip installing after completed
 RUN apk del git build-base

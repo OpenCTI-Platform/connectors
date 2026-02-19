@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from pycti import OpenCTIConnectorHelper
-from shadowserver.config import ConnectorSettings
+from shadowserver.settings import ConnectorSettings
 
 
 class ExternalImportConnector:

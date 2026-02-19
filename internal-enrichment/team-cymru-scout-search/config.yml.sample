@@ -7,7 +7,6 @@ connector:
   id: 'scout-search-connector'
   name: 'Scout Search Connector'
   scope: 'Text'
-  confidence_level: 100
   log_level: 'error'
 
 pure_signal_scout:

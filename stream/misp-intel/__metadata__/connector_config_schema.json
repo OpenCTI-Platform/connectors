@@ -125,6 +125,11 @@
       "description": "Automatically publish events when updated.",
       "type": "boolean"
     },
+    "MISP_PUBLISH_ALERT": {
+      "default": false,
+      "description": "Send email alert notifications when publishing events.",
+      "type": "boolean"
+    },
     "MISP_TAG_OPENCTI": {
       "default": true,
       "description": "Add OpenCTI-specific tags to MISP events.",
