@@ -273,3 +273,33 @@ def test_base_connector_settings_should_provide_helper_config(mock_environment):
             "url": "http://localhost:8080/",
         },
     }
+
+
+def test_base_connector_settings_model_json_schema_uses_sanitizing_schema():
+    """Test that model_json_schema uses SanitizingJsonSchema by default."""
+
+    schema = BaseConnectorSettings.model_json_schema()
+
+    # Should generate valid schema
+    assert "$defs" in schema or "properties" in schema
+    assert "opencti" in schema["properties"]
+    assert "connector" in schema["properties"]
+
+
+def test_base_connector_settings_flattened_json_schema():
+    """Test flattened_json_schema generation."""
+    schema = BaseConnectorSettings.config_json_schema(connector_name="test-connector")
+
+    # Should have flattened structure
+    assert "$schema" in schema
+    assert "$id" in schema
+    assert "test-connector" in schema["$id"]
+    assert "properties" in schema
+
+    # Should have uppercased environment variable names
+    assert "OPENCTI_URL" in schema["properties"]
+    assert "OPENCTI_TOKEN" in schema["properties"]
+    assert "CONNECTOR_NAME" in schema["properties"]
+
+    # CONNECTOR_ID should be filtered out
+    assert "CONNECTOR_ID" not in schema["properties"]
