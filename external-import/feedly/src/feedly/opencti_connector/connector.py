@@ -1,13 +1,18 @@
 import json
+import re
 from datetime import datetime
-from typing import Optional
+from typing import Optional, cast
 
 from feedly.api_client.enterprise.indicators_of_compromise import StixIoCDownloader
 from feedly.api_client.session import FeedlySession
 from markdown import markdown
 from pycti import Identity, OpenCTIConnectorHelper, OpenCTIStix2Utils
+from stix2 import NetworkTraffic
 
 FEEDLY_AI_UUID = "identity--477866fd-8784-46f9-ab40-5592ed4eddd7"
+
+# Pattern for IPv4 address followed by colon and port number
+_IPV4_WITH_PORT = re.compile(r"^(?P<addr>\b(?:\d{1,3}\.){3}\d{1,3}\b):(?P<port>\d+)$")
 
 
 class FeedlyConnector:
@@ -31,16 +36,43 @@ class FeedlyConnector:
             older_than=None,
             stream_id=stream_id,
         ).download_all()
+
+        bundle = cast("dict", bundle)
         _make_reports_content_instead_of_descriptions(bundle)
         _add_main_observable_type_to_indicators(bundle)
         _transform_threat_actors_to_intrusion_sets(bundle)
         _add_source_name_as_author_to_all_reports(bundle)
+        _fix_ip_addresses_with_ports(bundle)
+
         self.cti_helper.log_info(f"Found {_count_reports(bundle)} new reports")
         return bundle
 
 
 def _count_reports(bundle: dict) -> int:
     return sum(1 for o in bundle["objects"] if o["type"] == "report")
+
+
+def _fix_ip_addresses_with_ports(bundle: dict) -> None:
+    new_objects = []
+
+    for o in bundle["objects"]:
+        if o["type"] != "ipv4-addr":
+            continue
+
+        old_ip_value = o["value"]
+        if not (match := _IPV4_WITH_PORT.match(old_ip_value)):
+            continue
+
+        o["value"] = match["addr"]
+        nt = NetworkTraffic(
+            dst_ref=o["id"],
+            dst_port=int(match["port"]),
+            protocols=["tcp"],
+        )
+        new_objects.append(json.loads(nt.serialize()))
+
+    if new_objects:
+        bundle["objects"].extend(new_objects)
 
 
 def _make_reports_content_instead_of_descriptions(bundle: dict) -> None:
