@@ -53,7 +53,6 @@
       "type": "integer"
     },
     "FEEDLY_STREAM_IDS": {
-      "default": [],
       "description": "Comma separated list of Feedly stream IDs to monitor. Each stream ID represents a specific feed or collection to import from Feedly.",
       "items": {
         "type": "string"
@@ -76,6 +75,7 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
+    "FEEDLY_STREAM_IDS",
     "FEEDLY_API_KEY"
   ],
   "additionalProperties": true
