@@ -121,14 +121,14 @@ class MyEnrichmentConnector:
 
 ### Required Methods
 
-| Method | Purpose |
-|--------|---------|
-| `__init__` | Initialize connector, client, and converter |
-| `_collect_intelligence()` | Fetch enrichment data and create STIX objects |
-| `entity_in_scope()` | Validate entity type against connector scope |
-| `extract_and_check_markings()` | Validate TLP markings |
-| `process_message()` | Main processing logic for enrichment events |
-| `run()` | Start event listener |
+| Method                         | Purpose                                            |
+| ------------------------------ | -------------------------------------------------- |
+| `__init__`                     | Initialize connector, client, and converter        |
+| `_collect_intelligence()`      | Fetch enrichment data and create STIX objects      |
+| `entity_in_scope()`            | Validate entity type against connector scope       |
+| `extract_and_check_markings()` | Validate TLP markings                              |
+| `process_message()`            | Main processing logic for enrichment events        |
+| `run()`                        | Start event listener with `helper.listen()` method |
 
 ---
 
@@ -241,7 +241,6 @@ def process_message(self, data: dict) -> str:
         return f"Error: {str(e)}"
 ```
 
----
 
 ## Entity Scope Validation
 
@@ -520,7 +519,30 @@ For playbook automation compatibility, connectors **MUST**:
 
 1. **Always return a bundle** - Even if enrichment fails or entity is out of scope
 2. **Include the original entity** - The enriched entity must be in the bundle
-3. **Set `playbook_supported: true`** in metadata
+3. **Set `playbook_compatible=True`** when initializing the helper
+4. **Set `playbook_supported: true`** in metadata
+
+```python
+        helper = OpenCTIConnectorHelper(
+            config=settings.to_helper_config(),
+            playbook_compatible=True,  # ! `playbook_compatible=True` only if a bundle is sent
+        )
+```
+
+### Metadata Configuration
+
+**File:** `__metadata__/connector_manifest.json`
+
+```json
+{
+  "title": "My Enrichment Connector",
+  "slug": "my-enrichment",
+  "description": "Enrich observables with additional context",
+  "playbook_supported": true,
+  "container_type": "INTERNAL_ENRICHMENT",
+  ...
+}
+```
 
 ### Returning Original Bundle
 
@@ -558,20 +580,7 @@ def process_message(self, data: dict) -> str:
         return f"Error occurred, returned original bundle: {str(e)}"
 ```
 
-### Metadata Configuration
 
-**File:** `__metadata__/connector_manifest.json`
-
-```json
-{
-  "title": "My Enrichment Connector",
-  "slug": "my-enrichment",
-  "description": "Enrich observables with additional context",
-  "playbook_supported": true,
-  "container_type": "INTERNAL_ENRICHMENT",
-  ...
-}
-```
 
 ---
 
@@ -652,189 +661,81 @@ def _collect_intelligence(self, value: str, entity_id: str) -> list:
 
 ## Best Practices
 
-### 1. Handle Missing Data Gracefully
+Example with connector proofpoint-et-intelligence
+
+### TLP Check — Always First
+
+**Never query a paid external API before checking the TLP of the entity.** This is both a data handling best practice and a quota protection measure.
 
 ```python
-def _collect_intelligence(self, value: str, entity_id: str) -> list:
-    """Enrichment with graceful handling of missing data."""
-    try:
-        enrichment_data = self.client.enrich(value)
-
-        # Check if enrichment returned useful data
-        if not enrichment_data or not enrichment_data.get("items"):
-            self.helper.connector_logger.info(
-                "No enrichment data available",
-                {"value": value}
-            )
-            # Return original bundle
-            return self.stix_objects_list
-
-        # Process enrichment data
-        enriched_objects = self.stix_objects_list.copy()
-        # ... add enrichment objects
-
-        return enriched_objects
-
-    except Exception as e:
-        self.helper.connector_logger.error(
-            "Enrichment failed",
-            {"error": str(e)}
-        )
-        # Return original bundle on error
-        return self.stix_objects_list
+def _check_tlp(self, opencti_entity: dict) -> bool:
+    tlp = "TLP:CLEAR"
+    for marking in opencti_entity.get("objectMarking", []):
+        if marking["definition_type"] == "TLP":
+            tlp = marking["definition"]
+    return self.helper.check_max_tlp(tlp, self.config.connector.max_tlp)
 ```
 
-### 2. Rate Limiting for Enrichment Services
+Configure the maximum acceptable TLP in the connector config:
 
-```python
-class MyEnrichmentConnector:
-    def __init__(self, config, helper):
-        self.config = config
-        self.helper = helper
-        self.last_request_time = 0
-        self.min_request_interval = 1.0  # 1 second between requests
-
-    def _throttle_request(self):
-        """Ensure minimum interval between API requests."""
-        import time
-
-        elapsed = time.time() - self.last_request_time
-        if elapsed < self.min_request_interval:
-            sleep_time = self.min_request_interval - elapsed
-            time.sleep(sleep_time)
-
-        self.last_request_time = time.time()
-
-    def _collect_intelligence(self, value: str, entity_id: str) -> list:
-        # Throttle API requests
-        self._throttle_request()
-
-        # Make API call
-        enrichment_data = self.client.enrich(value)
-
-        # ... process data
+```yaml
+# config.yml
+connector:
+  max_tlp: "TLP:AMBER"
 ```
 
-### 3. Caching Enrichment Results
+If an entity is marked `TLP:RED` and your `max_tlp` is `TLP:AMBER`, the connector should skip it silently and return an informational message.
+
+### Rate Limiting — Respect the API
+
+The ET Intelligence API enforces per-key rate limits and returns HTTP `429` when exceeded. Handle this explicitly:
 
 ```python
-class MyEnrichmentConnector:
-    def __init__(self, config, helper):
-        self.config = config
-        self.helper = helper
-        self.cache = {}
-        self.cache_ttl = 3600  # 1 hour
-
-    def _get_cached_enrichment(self, value):
-        """Get enrichment from cache if available and not expired."""
-        import time
-
-        if value in self.cache:
-            cached_data, timestamp = self.cache[value]
-            if time.time() - timestamp < self.cache_ttl:
-                self.helper.connector_logger.debug(
-                    "Using cached enrichment",
-                    {"value": value}
-                )
-                return cached_data
-
-        return None
-
-    def _cache_enrichment(self, value, data):
-        """Cache enrichment data."""
-        import time
-        self.cache[value] = (data, time.time())
-
-    def _collect_intelligence(self, value: str, entity_id: str) -> list:
-        # Check cache first
-        cached = self._get_cached_enrichment(value)
-        if cached:
-            return self._create_bundle_from_cache(cached, entity_id)
-
-        # Fetch fresh data
-        enrichment_data = self.client.enrich(value)
-
-        # Cache result
-        self._cache_enrichment(value, enrichment_data)
-
-        # ... create bundle
+def _query_with_retry(self, url: str, max_retries: int = 3) -> dict | None:
+    for attempt in range(max_retries):
+        response = self.session.get(url, headers=self.headers, timeout=10)
+        if response.status_code == 200:
+            return response.json().get("response")
+        if response.status_code == 429:
+            wait = 2 ** attempt  # exponential backoff: 1s, 2s, 4s
+            self.helper.log_warning(f"Rate limit hit, waiting {wait}s before retry")
+            time.sleep(wait)
+            continue
+        if response.status_code == 404:
+            return None  # entity not found in ET Intel — not an error
+        response.raise_for_status()
+    return None
 ```
 
-### 4. Partial Enrichment
+A `404` response from ET Intelligence means the IP or domain has no record in their database, this is **not an error** and should not surface as a connector failure. Return `None` and exit gracefully.
 
-```python
-def _collect_intelligence(self, value: str, entity_id: str) -> list:
-    """Perform enrichment from multiple sources."""
-    enriched_objects = list(self.stix_objects_list)
+### `auto: false` for Quota-Based Sources
 
-    # Try multiple enrichment sources
-    sources = [
-        ("reputation", self.client.get_reputation),
-        ("geolocation", self.client.get_geolocation),
-        ("whois", self.client.get_whois),
-    ]
+Proofpoint ET Intelligence is a paid, quota-limited API. **Never set `auto: true` for such connectors in production.** Automatic enrichment on every new observable creation will rapidly exhaust API quotas, especially on large platforms with hundreds of thousands of observables.
 
-    for source_name, source_func in sources:
-        try:
-            data = source_func(value)
-            objects = self.converter_to_stix.convert(data, entity_id)
-            enriched_objects.extend(objects)
-
-            self.helper.connector_logger.debug(
-                f"{source_name} enrichment successful",
-                {"objects_added": len(objects)}
-            )
-
-        except Exception as e:
-            # Log error but continue with other sources
-            self.helper.connector_logger.warning(
-                f"{source_name} enrichment failed, continuing",
-                {"error": str(e)}
-            )
-
-    return enriched_objects
+```yaml
+connector:
+  auto: false   # ← mandatory for quota-based paid sources
 ```
 
-### 5. Logging Enrichment Details
+Enrichment should be triggered manually by analysts, or via Playbooks with controlled targeting.
+
+### Build a Proper STIX Bundle
+
+Always send enrichment results as a STIX 2.1 bundle via `send_stix2_bundle()`. Do not make direct API mutations on individual objects outside of the bundle flow — this bypasses confidence level checks and deduplication.
 
 ```python
-def process_message(self, data: dict) -> str:
-    opencti_entity = data["enrichment_entity"]
-    stix_entity = data["stix_entity"]
-
-    entity_id = stix_entity["id"]
-    entity_type = stix_entity["type"]
-    entity_value = stix_entity.get("value", stix_entity.get("name"))
-
-    self.helper.connector_logger.info(
-        "Processing enrichment request",
-        {
-            "entity_id": entity_id,
-            "entity_type": entity_type,
-            "entity_value": entity_value
-        }
+def _send_bundle(self, stix_objects: list) -> None:
+    if not stix_objects:
+        return
+    bundle = self.helper.stix2_create_bundle(stix_objects)
+    self.helper.send_stix2_bundle(
+        bundle,
+        update=self.config.connector.update_existing_data,
+        work_id=self.work_id,  # passed into _process_message by the Scheduler
     )
-
-    start_time = time.time()
-
-    # Perform enrichment
-    enriched_objects = self._collect_intelligence(entity_value, entity_id)
-
-    elapsed = time.time() - start_time
-
-    self.helper.connector_logger.info(
-        "Enrichment completed",
-        {
-            "entity_id": entity_id,
-            "objects_added": len(enriched_objects) - len(self.stix_objects_list),
-            "duration_seconds": round(elapsed, 2)
-        }
-    )
-
-    return self._send_bundle(enriched_objects)
 ```
 
----
 
 ## Complete Example
 
