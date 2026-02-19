@@ -27,7 +27,7 @@
 
 ### Code Formatting
 
-All code must be formatted with **Black** and **isort**:
+All code must be formatted with **Black** and **isort** running at root level of the connectors repository:
 
 ```bash
 # Format code
@@ -495,7 +495,6 @@ pytest -s
 
 ### Coverage Requirements
 
-- **Minimum 70% code coverage** recommended
 - Focus on critical paths and error handling
 - Test configuration validation thoroughly
 
@@ -512,13 +511,34 @@ FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 # Copy the connector
-COPY src /opt/opencti-connector-my-connector
+COPY src /opt/opencti-connector-cisa-known-exploited-vulnerabilities
+WORKDIR /opt/opencti-connector-cisa-known-exploited-vulnerabilities
 
-# Install dependencies
+# Install Python modules
+# hadolint ignore=DL3003
+RUN apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev && \
+    cd /opt/opencti-connector-cisa-known-exploited-vulnerabilities && \
+    pip3 install --no-cache-dir -r requirements.txt && \
+    apk del git build-base
+
+CMD ["python", "main.py"]
+```
+
+Example with entrypoint.sh
+
+```dockerfile
+FROM python:3.12-alpine
+ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
+
+# Copy the connector
+COPY src /opt/opencti-connector-template
+
+# Install Python modules
 # hadolint ignore=DL3003
 RUN apk update && apk upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev && \
-    cd /opt/opencti-connector-my-connector && \
+    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
+
+RUN cd /opt/opencti-connector-template && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
@@ -527,6 +547,7 @@ COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 ```
+
 
 ### Dockerfile Best Practices
 
@@ -542,21 +563,16 @@ ENTRYPOINT ["/entrypoint.sh"]
 **File:** `.dockerignore`
 
 ```
-.git
-.gitignore
-.venv
-venv
-__pycache__
-*.pyc
-*.pyo
-*.pyd
-.pytest_cache
-.coverage
-htmlcov
-tests
-*.md
-config.yml
-.env
+**/logs
+**/*.gql
+**/venv
+**/.venv
+**/__pycache__/
+**/*.egg-info/
+**/config.yml
+**/__pycache__
+**/__metadata__
+**/__docs__
 ```
 
 ### Docker Compose Configuration
@@ -570,7 +586,7 @@ services:
     build: .
     image: opencti/connector-my-connector:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=${OPENCTI_TOKEN}
       - CONNECTOR_ID=${CONNECTOR_ID}
       - CONNECTOR_NAME=My Connector
@@ -593,14 +609,14 @@ networks:
 
 Document all environment variables in README.md:
 
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `OPENCTI_URL` | OpenCTI platform URL | `http://localhost:8080` | Yes |
-| `OPENCTI_TOKEN` | OpenCTI API token | - | Yes |
-| `CONNECTOR_ID` | Unique connector ID | - | Yes |
-| `CONNECTOR_NAME` | Connector name | - | Yes |
-| `CONNECTOR_SCOPE` | Entity types to process | - | Yes |
-| `MY_CONNECTOR_API_KEY` | External API key | - | Yes |
+| Variable               | Description             | Default                 | Required |
+| ---------------------- | ----------------------- | ----------------------- | -------- |
+| `OPENCTI_URL`          | OpenCTI platform URL    | `http://localhost:8080` | Yes      |
+| `OPENCTI_TOKEN`        | OpenCTI API token       | -                       | Yes      |
+| `CONNECTOR_ID`         | Unique connector ID     | -                       | Yes      |
+| `CONNECTOR_NAME`       | Connector name          | -                       | Yes      |
+| `CONNECTOR_SCOPE`      | Entity types to process | -                       | Yes      |
+| `MY_CONNECTOR_API_KEY` | External API key        | -                       | Yes      |
 
 ---
 
@@ -674,8 +690,8 @@ python main.py
 ## Configuration Parameters
 
 | Parameter | Description | Default | Required |
-|-----------|-------------|---------|----------|
-| ... | ... | ... | ... |
+| --------- | ----------- | ------- | -------- |
+| ...       | ...         | ...     | ...      |
 
 ## Behavior
 
@@ -889,22 +905,22 @@ class MyConnector:
 
 ### Metadata Fields
 
-| Field | Description | Required |
-|-------|-------------|----------|
-| `title` | Official connector name | Yes |
-| `slug` | Directory name | Yes |
-| `description` | Detailed description | Yes |
-| `short_description` | Brief summary | Yes |
-| `logo` | Path to logo (or null) | Yes |
-| `use_cases` | List of use cases | Yes |
-| `verified` | Verification status (set by maintainers) | Yes |
-| `playbook_supported` | Playbook compatibility (enrichment only) | Yes |
-| `max_confidence_level` | Maximum confidence score (0-100) | Yes |
-| `support_version` | Minimum OpenCTI version | Yes |
-| `subscription_link` | Link to service subscription | Yes/null |
-| `source_code` | GitHub source URL | Yes |
-| `container_image` | Docker image name | Yes |
-| `container_type` | Connector type | Yes |
+| Field                  | Description                              | Required |
+| ---------------------- | ---------------------------------------- | -------- |
+| `title`                | Official connector name                  | Yes      |
+| `slug`                 | Directory name                           | No       |
+| `description`          | Detailed description                     | Yes      |
+| `short_description`    | Brief summary                            | Yes      |
+| `logo`                 | Path to logo (or null)                   | No       |
+| `use_cases`            | List of use cases                        | No       |
+| `verified`             | Verification status (set by maintainers) | No       |
+| `playbook_supported`   | Playbook compatibility (enrichment only) | No       |
+| `max_confidence_level` | Maximum confidence score (0-100)         | No       |
+| `support_version`      | Minimum OpenCTI version                  | No       |
+| `subscription_link`    | Link to service subscription             | No       |
+| `source_code`          | GitHub source URL                        | No       |
+| `container_image`      | Docker image name                        | Yes      |
+| `container_type`       | Connector type                           | Yes      |
 
 ### Logo Requirements
 
