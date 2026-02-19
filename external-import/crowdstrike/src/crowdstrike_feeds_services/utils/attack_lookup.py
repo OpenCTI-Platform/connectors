@@ -13,51 +13,24 @@ Design goals:
 - Degraded mode: if dataset can't be loaded, caller can decide to skip creating attack patterns
 """
 
-from __future__ import annotations
-
-import json
-import urllib.request
 from dataclasses import dataclass
-from typing import Dict, Iterable, Optional, Tuple
-from urllib.error import HTTPError
+
+import requests
+
+DEFAULT_ATTACK_URL = (
+    "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/refs/heads/master/"
+    "enterprise-attack/enterprise-attack.json"
+)
 
 
-def build_enterprise_attack_url(attack_version: str) -> str:
-    """Build the raw GitHub URL for the MITRE ATT&CK Enterprise STIX dataset for a given version.
-
-    This connector uses the `mitre-attack/attack-stix-data` repository and the versioned
-    Enterprise bundle filenames (e.g. `enterprise-attack-17.1.json`).
-
-    Expected input:
-      - "17.1" -> https://raw.githubusercontent.com/mitre-attack/attack-stix-data/refs/heads/master/enterprise-attack/enterprise-attack-17.1.json
-
-    Notes:
-      * We intentionally pin to a specific versioned dataset file to keep mappings deterministic.
-    """
-    v = (attack_version or "").strip()
-    if not v:
-        raise ValueError("attack_version must be a non-empty string")
-
-    return (
-        "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/refs/heads/master/"
-        f"enterprise-attack/enterprise-attack-{v}.json"
-    )
-
-
-def normalize_technique_name(name: str) -> str:
-    """Normalize a technique name for lookup.
-
-    CrowdStrike ATT&CK labels already use canonical MITRE technique names,
-    so normalization is intentionally minimal (trim + lowercase only).
-    """
-
-    if not name:
-        return ""
-    return str(name).strip().lower()
+class AttackTechniqueLookupError(Exception):
+    """Custom exception for ATT&CK lookup errors."""
 
 
 @dataclass(frozen=True)
 class AttackTechnique:
+    """Represents a MITRE ATT&CK technique with its name and external ID."""
+
     name: str
     mitre_id: str  # external_id, e.g. "T1059"
 
@@ -65,35 +38,66 @@ class AttackTechnique:
 class AttackTechniqueLookup:
     """In-memory lookup from normalized technique name -> MITRE technique external_id (T####)."""
 
-    def __init__(self, by_name: Dict[str, AttackTechnique], source: str):
-        self._by_name = by_name
-        self.source = source
+    def __init__(
+        self,
+        attack_version: str,
+        enterprise_attack_url: str | None = None,
+        timeout_seconds: int = 30,
+    ):
+        self.attack_version = attack_version
+        self.enterprise_attack_url = (
+            enterprise_attack_url or self._build_enterprise_attack_url()
+        )
+        self.timeout_seconds = timeout_seconds
 
-    @property
-    def technique_count(self) -> int:
-        return len(self._by_name)
+        # Load attack_techniques on initialization
+        # If it fails, the connector can choose to run in degraded mode without ATT&CK lookups.
+        self.attack_techniques = self._load_enterprise_attack_techniques()
 
-    def lookup_mitre_id(self, technique_name: str) -> Optional[str]:
+    def lookup_mitre_id(self, technique_name: str) -> str | None:
         """Return the MITRE technique ID (external_id) for a given technique name."""
 
-        key = normalize_technique_name(technique_name)
+        key = self._normalize_technique_name(technique_name)
         if not key:
             return None
-        t = self._by_name.get(key)
-        return t.mitre_id if t else None
 
-    def lookup(self, technique_name: str) -> Optional[AttackTechnique]:
-        key = normalize_technique_name(technique_name)
-        if not key:
-            return None
-        return self._by_name.get(key)
+        attack_technique = self.attack_techniques.get(key)
+        return attack_technique.mitre_id if attack_technique else None
 
-    @staticmethod
-    def _extract_techniques(objects: Iterable[dict]) -> Dict[str, AttackTechnique]:
-        """Extract techniques from STIX bundle objects."""
+    def _build_enterprise_attack_url(self) -> str:
+        """Build the raw GitHub URL for the MITRE ATT&CK Enterprise STIX dataset for a given version.
 
-        by_name: Dict[str, AttackTechnique] = {}
+        This connector uses the `mitre-attack/attack-stix-data` repository and the versioned
+        Enterprise bundle filenames (e.g. `enterprise-attack-17.1.json`).
 
+        Notes:
+        * We intentionally pin to a specific versioned dataset file to keep mappings deterministic.
+        """
+        return (
+            "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/refs/heads/master/"
+            f"enterprise-attack/enterprise-attack-{self.attack_version}.json"
+        )
+
+    def _load_from_url(self, url: str) -> dict[str, AttackTechnique]:
+        """Download the enterprise dataset and build the lookup.
+
+        Caller should handle exceptions and decide whether to run in degraded mode.
+        """
+        response = requests.get(
+            url,
+            headers={"User-Agent": "opencti-crowdstrike-connector"},
+            timeout=self.timeout_seconds,
+        )
+        response.raise_for_status()
+
+        return self._parse_attack_json(response.json())
+
+    def _parse_attack_json(self, data: dict) -> dict[str, AttackTechnique]:
+        """Parse techniques from STIX bundle."""
+
+        attack_techniques: dict[str, AttackTechnique] = {}
+
+        objects = data.get("objects") or []
         for obj in objects:
             if not isinstance(obj, dict):
                 continue
@@ -105,8 +109,8 @@ class AttackTechniqueLookup:
                 continue
 
             # Find the ATT&CK external ID (T####) from external_references.
+            mitre_id = None
             ext_refs = obj.get("external_references") or []
-            mitre_id: Optional[str] = None
             for ref in ext_refs:
                 if not isinstance(ref, dict):
                     continue
@@ -124,77 +128,45 @@ class AttackTechniqueLookup:
             if not mitre_id:
                 continue
 
-            key = normalize_technique_name(str(name))
-            if not key:
-                continue
+            # Prefer the first key encountered; duplicates should be rare.
+            key = self._normalize_technique_name(name)
+            if key and key not in attack_techniques:
+                attack_techniques[key] = AttackTechnique(name=name, mitre_id=mitre_id)
 
-            # Prefer the first one encountered; duplicates should be rare.
-            if key not in by_name:
-                by_name[key] = AttackTechnique(name=str(name), mitre_id=mitre_id)
+        return attack_techniques
 
-        return by_name
-
-    @classmethod
-    def from_stix_json(cls, stix: dict, source: str) -> "AttackTechniqueLookup":
-        objects = stix.get("objects") or []
-        by_name = cls._extract_techniques(objects)
-        return cls(by_name=by_name, source=source)
-
-    @classmethod
-    def load_from_url(
-        cls,
-        url: str,
-        timeout_seconds: int = 30,
-        user_agent: str = "opencti-crowdstrike-connector",
-    ) -> "AttackTechniqueLookup":
-        """Download the enterprise dataset and build the lookup.
-
-        Caller should handle exceptions and decide whether to run in degraded mode.
-        """
-
-        req = urllib.request.Request(
-            url,
-            headers={"User-Agent": user_agent},
-            method="GET",
-        )
-        with urllib.request.urlopen(req, timeout=timeout_seconds) as resp:
-            raw = resp.read()
-
-        stix = json.loads(raw.decode("utf-8"))
-        return cls.from_stix_json(stix, source=url)
-
-    @classmethod
-    def load_enterprise(
-        cls,
-        attack_version: str,
-        url_override: Optional[str] = None,
-        timeout_seconds: int = 30,
-    ) -> Tuple[str, "AttackTechniqueLookup"]:
+    def _load_enterprise_attack_techniques(self) -> dict[str, AttackTechnique]:
         """Load the enterprise technique lookup using a configured version.
 
         Returns (resolved_url, lookup).
         """
+        # If the user did not explicitly override the URL, attempt to load the versioned file first.
+        if self.enterprise_attack_url == self._build_enterprise_attack_url():
+            try:
+                return self._load_from_url(url=self.enterprise_attack_url)
+            except requests.RequestException as e:
+                if e.response and e.response.status_code == 404:
+                    # Versioned file not found; will attempt fallback to generic URL.
+                    pass
+                else:
+                    raise AttackTechniqueLookupError(
+                        f"Error while fetching ATT&CK data: {str(e)}"
+                    ) from e
 
-        MASTER_URL = (
-            "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/refs/heads/master/"
-            "enterprise-attack/enterprise-attack.json"
-        )
+            # Fallback to the generic enterprise bundle if the versioned file does not exist.
+            return self._load_from_url(url=DEFAULT_ATTACK_URL)
 
-        url = (url_override or "").strip() or build_enterprise_attack_url(
-            attack_version
-        )
         # If the user explicitly overrides the URL, do not attempt fallbacks.
-        if (url_override or "").strip():
-            lookup = cls.load_from_url(url=url, timeout_seconds=timeout_seconds)
-            return url, lookup
+        return self._load_from_url(url=self.enterprise_attack_url)
 
-        try:
-            lookup = cls.load_from_url(url=url, timeout_seconds=timeout_seconds)
-            return url, lookup
-        except HTTPError as e:
-            if e.code != 404:
-                raise
+    @staticmethod
+    def _normalize_technique_name(name: str) -> str:
+        """Normalize a technique name for lookup.
 
-        # Fallback to the generic enterprise bundle if the versioned file does not exist.
-        lookup = cls.load_from_url(url=MASTER_URL, timeout_seconds=timeout_seconds)
-        return MASTER_URL, lookup
+        CrowdStrike ATT&CK labels already use canonical MITRE technique names,
+        so normalization is intentionally minimal (trim + lowercase only).
+        """
+        if name:
+            return str(name).strip().lower()
+
+        return ""
