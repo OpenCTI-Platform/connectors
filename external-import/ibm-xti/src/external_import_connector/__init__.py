@@ -1,3 +1,3 @@
-from .connector import ConnectorIBMXTI
+from .connector import IBMXTIConnector
 
-__all__ = ["ConnectorIBMXTI"]
+__all__ = ["IBMXTIConnector"]
