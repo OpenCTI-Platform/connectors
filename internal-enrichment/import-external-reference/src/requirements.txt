@@ -1,6 +1,6 @@
-pycti==6.9.17
+pycti==6.9.21
 weasyprint==66.0
 html2text==2025.4.15
 pdfminer.six==20251107
-playwright==1.55.0
+playwright==1.58.0
 cachetools

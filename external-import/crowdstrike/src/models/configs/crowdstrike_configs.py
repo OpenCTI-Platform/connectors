@@ -51,12 +51,13 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
             "actor",
             "report",
             "indicator",
+            "malware",
             "yara_master",
             "snort_suricata_master",
         ],
         description=(
             "Comma-separated list of scopes to enable. "
-            "Available: actor, report, indicator, vulnerability, yara_master, snort_suricata_master."
+            "Available: actor, report, indicator, malware, vulnerability, yara_master, snort_suricata_master."
         ),
     )
 
@@ -64,6 +65,12 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
     actor_start_timestamp: int = Field(
         default_factory=_get_default_timestamp_30_days_ago,
         description="Unix timestamp from which to start importing actors. Default is 30 days ago. BEWARE: 0 means ALL actors!",
+    )
+
+    # Malware configuration
+    malware_start_timestamp: int = Field(
+        default_factory=_get_default_timestamp_30_days_ago,
+        description="Unix timestamp from which to start importing malware. Default is 30 days ago. BEWARE: 0 means ALL malware!",
     )
 
     # Report configuration
