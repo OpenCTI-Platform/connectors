@@ -15,7 +15,10 @@ from crowdstrike_feeds_services.utils import (
     get_tlp_string_marking_definition,
     timestamp_to_datetime,
 )
-from crowdstrike_feeds_services.utils.attack_lookup import AttackTechniqueLookup
+from crowdstrike_feeds_services.utils.attack_lookup import (
+    AttackTechniqueLookup,
+    AttackTechniqueLookupError,
+)
 from crowdstrike_feeds_services.utils.config_variables import ConfigCrowdstrike
 from crowdstrike_feeds_services.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
 from pycti import OpenCTIConnectorHelper
@@ -180,26 +183,25 @@ class CrowdStrike:
         self.attack_lookup = None
         try:
             attack_version = self.config.attack_version
-            # Note: attack_enterprise_url may be a Pydantic HttpUrl; cast to str for urllib usage.
             attack_url_override = (
                 str(self.config.attack_enterprise_url)
                 if self.config.attack_enterprise_url
                 else None
             )
-            resolved_url, lookup = AttackTechniqueLookup.load_enterprise(
+            self.attack_lookup = AttackTechniqueLookup(
                 attack_version=attack_version,
-                url_override=attack_url_override,
+                enterprise_attack_url=attack_url_override,
             )
-            self.attack_lookup = lookup
+
             self.helper.log_info(
-                "Loaded ATT&CK Enterprise dataset (%s) from %s with %d techniques"
-                % (attack_version, resolved_url, lookup.technique_count)
+                f"Loaded ATT&CK Enterprise dataset ({attack_version}) from {self.attack_lookup.enterprise_attack_url} "
+                f"with {len(self.attack_lookup.attack_techniques)} techniques"
             )
-        except Exception as e:  # noqa: B902
+        except AttackTechniqueLookupError as e:
             # Degraded mode: label parser will skip ATT&CK technique resolution if lookup is unavailable.
             self.helper.log_warning(
                 "Unable to load ATT&CK Enterprise dataset for technique resolution; "
-                "Attack Pattern creation from labels may be skipped. Error: %s" % str(e)
+                f"Attack Pattern creation from labels may be skipped. Error: {str(e)}"
             )
 
         # Create CrowdStrike client and importers.
