@@ -594,13 +594,13 @@ This deduplication mechanism, although powerful, still has limitations: it is no
 
 ### Summary Table
 
-| Strategy | Trigger | Mechanism |
-|---|---|---|
-| **Automatic deduplication** | Object creation (manual or via connector) | Deterministic IDs from contributing properties |
-| **Alias-based deduplication** | Shared name/alias between entities | Unique alias set enforcement |
-| **Confidence-based upsert** | Incoming data from connectors/feeds | Higher or equal confidence overwrites existing |
-| **STIX Observable dedup** | Observable ingestion | STIX spec ID contributing properties |
-| **Manual merge** | User action | Up to 4 entities, irreversible, relationship preservation |
+| Strategy                      | Trigger                                   | Mechanism                                                 |
+| ----------------------------- | ----------------------------------------- | --------------------------------------------------------- |
+| **Automatic deduplication**   | Object creation (manual or via connector) | Deterministic IDs from contributing properties            |
+| **Alias-based deduplication** | Shared name/alias between entities        | Unique alias set enforcement                              |
+| **Confidence-based upsert**   | Incoming data from connectors/feeds       | Higher or equal confidence overwrites existing            |
+| **STIX Observable dedup**     | Observable ingestion                      | STIX spec ID contributing properties                      |
+| **Manual merge**              | User action                               | Up to 4 entities, irreversible, relationship preservation |
 
 ### Why You Must Explicitly Generate IDs in Your Connector ?
 
@@ -655,12 +655,12 @@ report = stix2.Report(
 
 #### What Happens Without `generate_id`
 
-| Scenario | Without `generate_id` | With `generate_id` |
-|---|---|---|
-| First import | Object created, random UUID stored as `standard_id` | Object created, deterministic UUID stored as `standard_id` |
-| Second import (same object) | Platform deduplicates by name but appends the new random UUID to `x_opencti_stix_ids` | Platform deduplicates, no new `stix_id` added — IDs match |
-| Nth import | `x_opencti_stix_ids` list keeps growing | List stays stable |
-| Performance impact | Increasing memory usage, Redis stream bloat | None |
+| Scenario                    | Without `generate_id`                                                                 | With `generate_id`                                         |
+| --------------------------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| First import                | Object created, random UUID stored as `standard_id`                                   | Object created, deterministic UUID stored as `standard_id` |
+| Second import (same object) | Platform deduplicates by name but appends the new random UUID to `x_opencti_stix_ids` | Platform deduplicates, no new `stix_id` added — IDs match  |
+| Nth import                  | `x_opencti_stix_ids` list keeps growing                                               | List stays stable                                          |
+| Performance impact          | Increasing memory usage, Redis stream bloat                                           | None                                                       |
 
 
 #### Available `generate_id` Methods by Entity Type
@@ -669,16 +669,16 @@ Most core SDO types in pycti expose `generate_id`.
 
 Key examples:
 
-| Entity | Key contributing argument(s) |
-|---|---|
-| `Malware` | `name` |
-| `ThreatActorGroup` / `ThreatActorIndividual` | `name` |
-| `Indicator` | `pattern` |
-| `Report` | `name`, `published` (date) |
-| `Vulnerability` | `name` |
-| `AttackPattern` | `name` |
-| `IntrusionSet` | `name` |
-| `Identity` / `Organization` | `name`, `identity_class` |
+| Entity                                       | Key contributing argument(s) |
+| -------------------------------------------- | ---------------------------- |
+| `Malware`                                    | `name`                       |
+| `ThreatActorGroup` / `ThreatActorIndividual` | `name`                       |
+| `Indicator`                                  | `pattern`                    |
+| `Report`                                     | `name`, `published` (date)   |
+| `Vulnerability`                              | `name`                       |
+| `AttackPattern`                              | `name`                       |
+| `IntrusionSet`                               | `name`                       |
+| `Identity` / `Organization`                  | `name`, `identity_class`     |
 
 For **STIX Cyber Observables** (SCOs like `IPv4-Addr`, `DomainName`, etc.), OpenCTI follows the STIX 2.1 specification's own deterministic ID algorithm, so using the standard `stix2` library constructors with the correct `value` field is generally sufficient but wrapping with pycti's observable helpers is still recommended for consistency.
 
@@ -842,7 +842,137 @@ def _collect_intelligence(self) -> list:
     return stix_objects
 ```
 
----
+
+## Connector Run and Terminate
+
+Run and Terminate is an execution mode for OpenCTI External Import connectors in which the connector process runs once, completes its work, and then exits, rather than staying alive in a loop and re-scheduling itself internally. 
+This mode is managed entirely by the Scheduler (introduced in OpenCTI 6.2.12) via `pycti`.
+
+Understanding this mode is essential for any contributor writing or reviewing External Import connectors.
+
+## Two Execution Modes Compared
+
+| Mode                | Behavior                                                     | Who manages the interval                         |
+| ------------------- | ------------------------------------------------------------ | ------------------------------------------------ |
+| **Scheduled**       | Connector runs, wait for next schedule, runs again on a loop | The Scheduler (via `schedule_process()`)         |
+| **Run & Terminate** | Connector runs once and exits                                | External system (cron, Kubernetes CronJob, etc.) |
+
+> [!NOTE]  
+> In both cases, **the connector code itself should no longer contain any `while True` loop or `time.sleep()` call**. Since OpenCTI 6.2.12, this logic has been removed from connectors and delegated entirely to the Scheduler.
+
+### How Run & Terminate Is Triggered
+
+A connector enters Run & Terminate mode in two ways:
+
+#### 1. Explicit flag via environment variable
+
+```yaml
+# docker-compose.yml
+- CONNECTOR_RUN_AND_TERMINATE=true
+```
+
+```yaml
+# config.yml
+connector:
+  run_and_terminate: true
+```
+
+#### 2. Implicit trigger via zero duration period
+
+If `CONNECTOR_DURATION_PERIOD` is set to a zero value, the Scheduler treats it as Run & Terminate automatically:
+
+```yaml
+- CONNECTOR_DURATION_PERIOD=0      # integer zero
+- CONNECTOR_DURATION_PERIOD=P0D    # ISO 8601 zero duration
+- CONNECTOR_DURATION_PERIOD=PT0S   # also zero
+```
+
+This is a convenience for operators who want to drive execution purely from an external scheduler without setting the explicit boolean flag.
+
+Since OpenCTI 6.2.12, all new External Import connectors **must** use `schedule_process()` instead of a manual loop. The Scheduler handles both the periodic and run-and-terminate cases transparently.
+
+### Recommended pattern (`schedule_process`)
+
+```python
+from connector import ConnectorSettings
+from pycti import OpenCTIConnectorHelper
+
+class MyConnector:
+    def __init__(self):
+        self.settings = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(config=self.settings.to_helper_config())
+
+    def _process(self, work_id: str) -> str:
+        """Core logic: fetch data, build and send STIX bundle."""
+        # ... your data fetching and bundle sending logic ...
+        return "Work complete"
+
+    def run(self):
+        # schedule_process handles both scheduled and run-and-terminate modes
+        self.helper.schedule_process(
+            message_callback=self._process,
+            duration_period=self.settings.connector.duration_period.total_seconds(),
+        )
+```
+
+> `duration_period` is passed as a number of **seconds** (via `.total_seconds()` on a `timedelta`). This means your config loader must parse the ISO 8601 duration string into a `timedelta` object before passing it here.
+
+> `message_callback` receives a `work_id` string. This is the identifier of the current work unit that you **must** pass to `send_stix2_bundle()` and `work.to_processed()`.
+
+### Legacy pattern (to avoid / migrate away from)
+
+```python
+# ❌ OLD PATTERN — do NOT use in new connectors
+def run(self):
+    while True:
+        self._process()
+        time.sleep(self.interval)
+```
+
+```python
+# ❌ OLD RUN & TERMINATE — do NOT implement manually
+def run(self):
+    if self.helper.connect_run_and_terminate:
+        self._process()
+        self.helper.force_ping()  # required before exit
+        sys.exit(0)
+    else:
+        while True:
+            self._process()
+            time.sleep(self.interval)
+```
+
+Both of the above are now fully replaced by `schedule_process()`.
+
+## Critical: State persistence before exit
+
+This is the most common source of bugs in Run & Terminate mode.
+
+When a connector exits after a single run, pycti must have flushed the connector state (e.g., `last_run` timestamp) to the OpenCTI platform **before** the process terminates. If the state is not saved, the next execution will re-import data from scratch.
+
+### How `schedule_process()` solves this automatically
+
+When using `schedule_process()`, the scheduler calls `force_ping()` internally before exiting in Run & Terminate mode. **You do not need to call it yourself.**
+
+
+Failure to do this means the connector state (including `last_run`) is never saved, and the connector will restart from its `import_start_date` or similar configuration on the next execution.
+
+### UI Display in Run & Terminate Mode
+
+When a connector is in Run & Terminate mode, the OpenCTI UI shows:
+
+- **Last run**: timestamp of the last completed execution
+- **Next run**: `External schedule` (since OpenCTI does not control scheduling)
+- **Server capacity**: updated every 40 seconds via `pingAlive`
+
+Organizations that choose this mode typically manage execution intervals using external scheduling, allowing them flexibility in managing the connector’s execution cycles.
+
+>[!TIP]
+> The run and terminate process was implemented to address issues with importing data via cron jobs. 
+>
+> Occasionally, these jobs get stuck in an infinite loop, which, when OpenCTI is deployed with connectors on AWS, can lead to significantly increased costs. 
+>
+> To mitigate this, the process run only once, preventing unnecessary expenses.
 
 ## Best Practices
 
