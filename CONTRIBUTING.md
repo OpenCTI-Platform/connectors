@@ -310,6 +310,7 @@ class MyConnectorConfig(BaseConfigModel):
 
 The connectors-sdk project is a toolkit designed to simplify the development of connectors for various integrations on the OpenCTI platform. It provides models, exceptions, and utilities to streamline the process of building robust connectors.
 
+> [!NOTE]
 > Note that not all OpenCTI models are available in the connectors-sdk and some may be missing. We recommend using the connectors-sdk models whenever possible for models that are available. 
 >We do our best to complete the connectors-sdk with missing models.
 
@@ -451,6 +452,9 @@ When your connector is ready:
 1. **Ensure all quality checks pass** (linting, tests, documentation)
 2. **Test in a production-like environment**
 3. **Create a Pull Request** on the [connectors repository](https://github.com/OpenCTI-Platform/connectors)
+   - Always start your PR title with _[Connector Name]_ followed by a meaningful description
+   - Describe the changes introduced by the PR
+   - Reference any issues that will be closed upon merging, using the _Close_ keyword followed by the GitHub issue link
 4. **Respond to review feedback** from maintainers
 5. **Update documentation** as needed
 
