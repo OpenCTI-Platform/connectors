@@ -29,6 +29,34 @@ class TestFixIpAddressesWithPorts:
         assert nt["protocols"] == ["tcp"]
         assert nt["id"].startswith("network-traffic--")
 
+    def test_tlp_marking_is_propagated_to_network_traffic(self):
+        tlp_white = "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+        ip_obj = {
+            "type": "ipv4-addr",
+            "id": IPV4_ID,
+            "value": "1.2.3.4:8080",
+            "object_marking_refs": [tlp_white],
+        }
+        bundle = _make_bundle([ip_obj])
+
+        FeedlyConnector._fix_ip_addresses_with_ports(bundle)
+
+        nt = next(o for o in bundle["objects"] if o["type"] == "network-traffic")
+        assert nt["object_marking_refs"] == [tlp_white]
+
+    def test_no_marking_on_ip_means_no_marking_on_network_traffic(self):
+        ip_obj = {
+            "type": "ipv4-addr",
+            "id": IPV4_ID,
+            "value": "1.2.3.4:8080",
+        }
+        bundle = _make_bundle([ip_obj])
+
+        FeedlyConnector._fix_ip_addresses_with_ports(bundle)
+
+        nt = next(o for o in bundle["objects"] if o["type"] == "network-traffic")
+        assert "object_marking_refs" not in nt
+
     def test_plain_ipv4_without_port_is_unchanged(self):
         ip_obj = {
             "type": "ipv4-addr",

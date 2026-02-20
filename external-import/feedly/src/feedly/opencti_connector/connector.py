@@ -87,10 +87,12 @@ class FeedlyConnector:
                 continue
 
             o["value"] = match["addr"]
+            tlp_marking = o.get("object_marking_refs", [])
             nt = NetworkTraffic(
                 dst_ref=o["id"],
                 dst_port=int(match["port"]),
                 protocols=["tcp"],
+                object_marking_refs=tlp_marking,
             )
             new_objects.append(json.loads(nt.serialize()))
 
