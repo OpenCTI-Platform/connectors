@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
 
-from connectors_sdk.core.pydantic import ListFromString
+from connectors_sdk import ListFromString
+from crowdstrike_feeds_services.utils import is_timestamp_in_future
 from models.configs.base_settings import ConfigBaseSettings
 from pydantic import Field, HttpUrl, PositiveInt, SecretStr, field_validator
 
@@ -50,19 +51,26 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
             "actor",
             "report",
             "indicator",
+            "malware",
             "yara_master",
             "snort_suricata_master",
         ],
         description=(
             "Comma-separated list of scopes to enable. "
-            "Available: actor, report, indicator, yara_master, snort_suricata_master."
+            "Available: actor, report, indicator, malware, vulnerability, yara_master, snort_suricata_master."
         ),
     )
 
     # Actor configuration
     actor_start_timestamp: int = Field(
-        default=0,
-        description="Unix timestamp from which to start importing actors. BEWARE: 0 means ALL actors!",
+        default_factory=_get_default_timestamp_30_days_ago,
+        description="Unix timestamp from which to start importing actors. Default is 30 days ago. BEWARE: 0 means ALL actors!",
+    )
+
+    # Malware configuration
+    malware_start_timestamp: int = Field(
+        default_factory=_get_default_timestamp_30_days_ago,
+        description="Unix timestamp from which to start importing malware. Default is 30 days ago. BEWARE: 0 means ALL malware!",
     )
 
     # Report configuration
@@ -94,6 +102,10 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
     report_guess_malware: bool = Field(
         default=False,
         description="Whether to use report tags to guess related malware.",
+    )
+    report_guess_relations: bool = Field(
+        default=False,
+        description="Whether to automatically guess and create relationships in reports.",
     )
 
     # Indicator configuration
@@ -147,6 +159,12 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
         description="Whether to trigger import without file dependencies.",
     )
 
+    # Vulnerability configuration
+    vulnerability_start_timestamp: int = Field(
+        default_factory=_get_default_timestamp_30_days_ago,
+        description="Unix timestamp from which to start importing vulnerabilities. Default is 30 days ago. BEWARE: 0 means ALL vulnerabilities!",
+    )
+
     # Interval configuration
     interval_sec: PositiveInt = Field(
         default=1800,
@@ -156,3 +174,26 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
     @field_validator("report_status")
     def lowercase_report_status(cls, value):
         return value.lower()
+
+    # Replace empty timestamps with default value
+    @field_validator(
+        "actor_start_timestamp",
+        "report_start_timestamp",
+        "indicator_start_timestamp",
+        mode="before",
+    )
+    @staticmethod
+    def _set_start_timestamp(value):
+        # If the value is None or empty string, use the default factory value.
+        # Else check that it's not in the future.
+        if value is None or (isinstance(value, str) and value.strip() == ""):
+            return _get_default_timestamp_30_days_ago()
+
+        if isinstance(value, str):
+            value = int(value)
+
+        if is_timestamp_in_future(value):
+            raise ValueError(
+                f"The provided timestamp value '{value}' is in the future."
+            )
+        return value

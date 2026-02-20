@@ -1,6 +1,6 @@
 from typing import Literal, Optional
 
-from connectors_sdk.core.pydantic import ListFromString
+from connectors_sdk import ListFromString
 from models.configs.base_settings import ConfigBaseSettings
 from pydantic import Field, PositiveInt, SecretStr, field_validator
 
@@ -17,7 +17,7 @@ class _ConfigLoaderRecordedFuture(ConfigBaseSettings):
         description="Initial lookback period in hours when first running the connector.",
     )
     tlp: Literal["clear", "white", "green", "amber", "amber+strict", "red"] = Field(
-        default="red",
+        default="amber+strict",
         description="Default Traffic Light Protocol (TLP) marking for imported data.",
     )
 
@@ -42,10 +42,10 @@ class _ConfigLoaderRecordedFuture(ConfigBaseSettings):
         description="Time window in hours for fetching recently published analyst notes.",
     )
     topic: Optional[ListFromString] = Field(
-        default=["VTrvnW", "g1KBGl", "ZjnoP0", "aDKkpk", "TXSFt5", "UrMRnT", "TXSFt3"],
+        default=["VTrvnW", "g1KBGI", "ZjnoP0", "aDKkpk", "TXSFt5", "UrMRnT", "TXSFt3"],
         description=(
             "Comma-separated list of topic IDs to filter analyst notes. "
-            "Examples: VTrvnW (Yara Rule), g1KBGl (Sigma Rule), ZjnoP0 (Snort Rule), "
+            "Examples: VTrvnW (Yara Rule), g1KBGI (Sigma Rule), ZjnoP0 (Snort Rule), "
             "aDKkpk (TTP Instance), TXSFt5 (Validated Intelligence Event), "
             "UrMRnT (Informational), TXSFt3 (Threat Lead)."
         ),
@@ -75,6 +75,10 @@ class _ConfigLoaderRecordedFuture(ConfigBaseSettings):
     risk_threshold: Optional[PositiveInt] = Field(
         default=60,
         description="Minimum risk score threshold (0-100) for importing entities.",
+    )
+    analyst_notes_guess_relationships: bool = Field(
+        default=False,
+        description="Enable or disable the automatic guessing of relationships between entities when processing analyst notes.",
     )
 
     # Risk List configuration
@@ -129,6 +133,13 @@ class _ConfigLoaderPlaybookAlert(ConfigBaseSettings):
         default=False,
         description="Whether to enable fetching Recorded Future playbook alerts.",
     )
+    categories: Optional[ListFromString] = Field(
+        default=["domain_abuse", "identity_novel_exposures", "code_repo_leakage"],
+        description=(
+            "Comma-separated list of Playbook Alert categories to import. Leave blank to fetch all categories available to your licence."
+            "Supported values: 'domain_abuse', 'identity_novel_exposures', 'code_repo_leakage'."
+        ),
+    )
     severity_threshold_domain_abuse: Literal["Informational", "Moderate", "High"] = (
         Field(
             default="Informational",
@@ -146,6 +157,12 @@ class _ConfigLoaderPlaybookAlert(ConfigBaseSettings):
     ] = Field(
         default="Informational",
         description="Minimum severity threshold for code repository leakage playbook alerts.",
+    )
+    severity_threshold_cyber_vulnerability: Literal[
+        "Informational", "Moderate", "High"
+    ] = Field(
+        default="Informational",
+        description="Minimum severity threshold for cyber vulnerabilities playbook alerts.",
     )
     debug: bool = Field(
         default=False,

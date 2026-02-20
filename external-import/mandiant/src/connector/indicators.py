@@ -1,4 +1,5 @@
 import stix2
+import stix2.exceptions
 from pycti import Indicator
 
 from . import utils
@@ -97,7 +98,15 @@ def process(connector, indicator):
         "Processing indicator", {"indicator_id": indicator_id}
     )
 
-    stix_indicator = create_indicator(connector, indicator)
+    try:
+        stix_indicator = create_indicator(connector, indicator)
+    except stix2.exceptions.InvalidValueError as e:
+        connector.helper.connector_logger.warning(
+            f"Skipping indicator due to invalid value: {e}",
+            {"indicator_id": indicator_id, "indicator_value": indicator.get("value")},
+        )
+        return None
+
     items = [stix_indicator]
 
     for attribution in indicator.get("attributed_associations", []):

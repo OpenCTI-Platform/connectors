@@ -4,8 +4,8 @@ from datetime import datetime, timezone
 from pycti import OpenCTIConnectorHelper
 
 from .client_api import ConnectorClient
-from .config_variables import ConfigConnector
 from .converter_to_stix import ConverterToStix
+from .settings import ConnectorSettings
 
 
 class ConnectorAbuseIPDB:
@@ -21,7 +21,7 @@ class ConnectorAbuseIPDB:
     ---
 
     Attributes
-        - `config (ConfigConnector())`:
+        - `config (ConnectorSettings())`:
             Initialize the connector with necessary configuration environment variables
 
         - `helper (OpenCTIConnectorHelper(config))`:
@@ -44,12 +44,12 @@ class ConnectorAbuseIPDB:
 
     """
 
-    def __init__(self):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """
         Initialize the Connector with necessary configurations
         """
-        self.config = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
+        self.config = config
+        self.helper = helper
         self.client = ConnectorClient(self.helper, self.config)
         self.converter_to_stix = ConverterToStix(self.helper, self.config)
 
@@ -59,26 +59,24 @@ class ConnectorAbuseIPDB:
         :return: List of STIX objects
         """
         stix_objects = []
-
         params = {
-            "confidenceMinimum": str(self.config.score),
-            "limit": str(self.config.limit),
+            "confidenceMinimum": str(self.config.abuseipdb.score),
+            "limit": str(self.config.abuseipdb.limit),
         }
-
-        if self.config.ipversion and self.config.ipversion != "mixed":
-            ipversion = int(self.config.ipversion)
+        if (
+            self.config.abuseipdb.ipversion
+            and self.config.abuseipdb.ipversion != "mixed"
+        ):
+            ipversion = int(self.config.abuseipdb.ipversion)
             if ipversion in [4, 6]:
-                params["ipVersion"] = self.config.ipversion
-
-        if self.config.except_country_list:
-            params["exceptCountries"] = self.config.except_country_list
-        if self.config.only_country_list:
-            params["onlyCountries"] = self.config.only_country_list
-
+                params["ipVersion"] = self.config.abuseipdb.ipversion
+        if self.config.abuseipdb.except_country:
+            params["exceptCountries"] = self.config.abuseipdb.except_country
+        if self.config.abuseipdb.only_country:
+            params["onlyCountries"] = self.config.abuseipdb.only_country
         entities = self.client.get_entities(params)
         if not entities:
             return stix_objects
-
         for elt in entities:
             obs = self.converter_to_stix.create_obs(
                 elt["value"],
@@ -88,9 +86,7 @@ class ConnectorAbuseIPDB:
             )
             if not obs:
                 continue
-
             stix_objects.append(obs)
-
         if len(stix_objects):
             stix_objects.append(self.converter_to_stix.author)
             stix_objects.append(self.converter_to_stix.tlp_marking)
@@ -105,37 +101,28 @@ class ConnectorAbuseIPDB:
             "[CONNECTOR] Starting connector...",
             {"connector_name": self.helper.connect_name},
         )
-
         try:
             now = datetime.now()
             current_timestamp = int(datetime.timestamp(now))
             current_state = self.helper.get_state()
-
             if current_state is not None and "last_run" in current_state:
                 last_run = current_state["last_run"]
-
                 self.helper.connector_logger.info(
-                    "[CONNECTOR] Connector last run",
-                    {"last_run_datetime": last_run},
+                    "[CONNECTOR] Connector last run", {"last_run_datetime": last_run}
                 )
             else:
                 self.helper.connector_logger.info(
                     "[CONNECTOR] Connector has never run..."
                 )
-
             friendly_name = "Connector AbuseIPDB"
-
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
             )
-
             self.helper.connector_logger.info(
                 "[CONNECTOR] Running connector...",
                 {"connector_name": self.helper.connect_name},
             )
-
             stix_objects = self._collect_intelligence()
-
             if stix_objects:
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
                 bundles_sent = self.helper.send_stix2_bundle(
@@ -143,12 +130,10 @@ class ConnectorAbuseIPDB:
                     work_id=work_id,
                     cleanup_inconsistent_bundle=True,
                 )
-
                 self.helper.connector_logger.info(
                     "Sending STIX objects to OpenCTI...",
-                    {"bundles_sent": {str(len(bundles_sent))}},
+                    {"bundles_sent": str(len(bundles_sent))},
                 )
-
             self.helper.connector_logger.debug(
                 "Getting current state and update it with last run of the connector",
                 {"current_timestamp": current_timestamp},
@@ -163,15 +148,12 @@ class ConnectorAbuseIPDB:
             else:
                 current_state = {"last_run": current_state_datetime}
             self.helper.set_state(current_state)
-
             message = (
                 f"{self.helper.connect_name} connector successfully run, storing last_run as "
                 + str(last_run_datetime)
             )
-
             self.helper.api.work.to_processed(work_id, message)
             self.helper.connector_logger.info(message)
-
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
                 "[CONNECTOR] Connector stopped...",
@@ -195,5 +177,5 @@ class ConnectorAbuseIPDB:
         """
         self.helper.schedule_iso(
             message_callback=self.process_message,
-            duration_period=self.config.duration_period,
+            duration_period=self.config.connector.duration_period,
         )

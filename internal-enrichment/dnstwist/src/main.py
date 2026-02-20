@@ -1,29 +1,27 @@
-from lib.DnsTwistConn import DnsTwistConnector
+import traceback
 
-
-class CustomConnector(DnsTwistConnector):
-    def __init__(self):
-        """Initialization of the connector
-
-        Note that additional attributes for the connector can be set after the super() call.
-
-        Standarised way to grab attributes from environment variables is as follows:
-
-        >>>         ...
-        >>>         super().__init__()
-        >>>         self.my_attribute = os.environ.get("MY_ATTRIBUTE", "INFO")
-
-        This will make use of the `os.environ.get` method to grab the environment variable and set a default value (in the example "INFO") if it is not set.
-        Additional tunning can be made to the connector by adding additional environment variables.
-
-        Raising ValueErrors or similar might be useful for tracking down issues with the connector initialization.
-        """
-        super().__init__()
-
-    def _process_message(self, data):
-        raise NotImplementedError("Method not implemented")
-
+from lib import ConnectorSettings, DnsTwistConnector
+from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
-    connector = CustomConnector()
-    connector.start()
+    """
+    Entry point of the script
+
+    - traceback.print_exc(): This function prints the traceback of the exception to the standard error (stderr).
+    The traceback includes information about the point in the program where the exception occurred,
+    which is very useful for debugging purposes.
+    - exit(1): effective way to terminate a Python program when an error is encountered.
+    It signals to the operating system and any calling processes that the program did not complete successfully.
+    """
+    try:
+        settings = ConnectorSettings()
+        helper = OpenCTIConnectorHelper(
+            config=settings.to_helper_config(),
+            playbook_compatible=False,
+        )
+
+        connector = DnsTwistConnector(config=settings, helper=helper)
+        connector.run()
+    except Exception:
+        traceback.print_exc()
+        exit(1)

@@ -1,8 +1,8 @@
 {
   "title": "Hybrid Analysis Sandbox",
   "slug": "hybrid-analysis-sandbox",
-  "description": "Information coming soon",
-  "short_description": "Information coming soon",
+  "description": "The OpenCTI Hybrid Analysis enrichment connector allows automatic enrichment of StixFile, Artifact, URL, Domain, and Hostname observables by submitting them for sandbox analysis. It enriches observables with associated MITRE ATT&CK techniques, extracts contacted domain names and IP addresses, identifies dropped files during detonation, and assigns maliciousness scores. The connector automatically creates relationships between observables and discovered indicators, enhancing threat intelligence with behavioral analysis results and attack patterns mapped to the MITRE framework.",
+  "short_description": "The OpenCTI Hybrid Analysis enrichment connector allows automatic enrichment of StixFile, Artifact, URL, Domain, and Hostname observables by submitting them for sandbox analysis. It enriches observables with associated MITRE ATT&CK techniques, extracts contacted domain names and IP addresses, identifies dropped files during detonation, and assigns maliciousness scores. The connector automatically creates relationships between observables and discovered indicators, enhancing threat intelligence with behavioral analysis results and attack patterns mapped to the MITRE framework.",
   "logo": "internal-enrichment/hybrid-analysis-sandbox/__metadata__/logo.png",
   "use_cases": [
     "Enrichment & Analysis",
@@ -12,7 +12,7 @@
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": true,
-  "max_confidence_level": 50,
+  "max_confidence_level": 60,
   "support_version": ">=5.6.1",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/hybrid-analysis-sandbox",

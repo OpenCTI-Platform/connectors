@@ -1,0 +1,16 @@
+version: '3'
+services:
+  connector-team-cymru-scout:
+    image: opencti/connector-team-cymru-scout:rolling
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN:-}
+      - CONNECTOR_ID=${CONNECTOR_ID:-scout-enrichment-connector}
+      - CONNECTOR_NAME=${CONNECTOR_NAME:-Scout Enrichment Connector}
+      - CONNECTOR_SCOPE=${CONNECTOR_SCOPE:-IPv4-Addr,IPv6-Addr,Domain-Name}
+      - CONNECTOR_AUTO=${CONNECTOR_AUTO:-false}
+      - CONNECTOR_LOG_LEVEL=${CONNECTOR_LOG_LEVEL:-error}
+      - PURE_SIGNAL_SCOUT_API_URL=${PURE_SIGNAL_SCOUT_API_URL:-https://taxii.cymru.com/api/scout}
+      - PURE_SIGNAL_SCOUT_API_TOKEN=${PURE_SIGNAL_SCOUT_API_TOKEN:-}
+      - PURE_SIGNAL_SCOUT_MAX_TLP=${PURE_SIGNAL_SCOUT_MAX_TLP:-TLP:AMBER}
+    restart: always

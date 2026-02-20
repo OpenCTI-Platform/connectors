@@ -1,10 +1,10 @@
 opencti:
-  url: 'http://localhost:4000'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
-  id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
   name: 'Recorded Future' # Required
   scope: 'ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1'
   log_level: 'info'
@@ -15,14 +15,15 @@ rf:
   initial_lookback: 240 # Required, in hours
   pull_analyst_notes: True
   last_published_notes: 24 # Required, in hours
-  tlp: red
-  topic: 'VTrvnW,g1KBGl,ZjnoP0,aDKkpk,TXSFt5,UrMRnT,TXSFt3' # optional / Corresponds to Yara Rule, Sigma Rule, Snort Rule, TTP Instance, Validated Intelligence Event, Informational, Threat Lead
+  tlp: amber+strict
+  topic: 'VTrvnW,g1KBGI,ZjnoP0,aDKkpk,TXSFt5,UrMRnT,TXSFt3' # optional / Corresponds to Yara Rule, Sigma Rule, Snort Rule, TTP Instance, Validated Intelligence Event, Informational, Threat Lead
   insikt_only: True # optional
   pull_signatures: False # Pull Yara/Snort/Sigma rules into OpenCTI. optional
   person_to_ta: False # optional
   ta_to_intrusion_set: False # optional
   risk_as_score: True # optional
   risk_threshold: 60 # optional
+  analyst_notes_guess_relationships=False # optional
   pull_risk_list: False
   riskrules_as_label: False # optional
   risk_list_threshold: 70 # optional
@@ -39,7 +40,9 @@ alert:
 
 playbook_alert:
   enable: False # required
+  categories: 'domain_abuse,identity_novel_exposures,code_repo_leakage'
   severity_threshold_domain_abuse: 'Informational' # optional
   severity_threshold_identity_novel_exposures: 'Informational' # optional
   severity_threshold_code_repo_leakage: 'Informational' # optional
+  severity_threshold_cyber_vulnerability: 'Informational' # optional
   debug: False # optional

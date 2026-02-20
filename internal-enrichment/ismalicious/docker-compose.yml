@@ -1,0 +1,19 @@
+services:
+  connector-ismalicious:
+    image: opencti/connector-ismalicious:latest
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=ChangeMe
+      #- CONNECTOR_ID=ismalicious-enrichment # Optional (default: 'ismalicious-enrichment')
+      #- CONNECTOR_NAME=isMalicious # Optional (default: 'isMalicious')
+      #- CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr,Domain-Name # Optional
+      #- CONNECTOR_AUTO=true # Optional (default: false)
+      #- CONNECTOR_LOG_LEVEL=info # Optional (default: info)
+      - ISMALICIOUS_API_KEY=ChangeMe
+      #- ISMALICIOUS_API_URL=https://ismalicious.com # Optional (default: 'https://ismalicious.com')
+      #- ISMALICIOUS_MAX_TLP=TLP:AMBER # Optional (default: 'TLP:AMBER')
+      #- ISMALICIOUS_ENRICH_IPV4=true # Optional (default: true)
+      #- ISMALICIOUS_ENRICH_IPV6=true # Optional (default: true)
+      #- ISMALICIOUS_ENRICH_DOMAIN=true # Optional (default: true)
+      #- ISMALICIOUS_MIN_SCORE=0 # Optional (default: 0)
+    restart: always

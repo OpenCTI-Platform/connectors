@@ -20,11 +20,23 @@ find_requirements_txt() {
     | cut -d' ' -f2-
 }
 
+find_pyproject_toml() {
+  # Method to find the highest pyproject.toml in connector's tree
+
+  # find: find all pyproject.toml recursively
+  # awk: count path length
+  # sort: sort by path length
+  # head: take the first file
+  # cut: get file path only
+  find "$1" -type f -name "pyproject.toml" \
+    | awk -F/ '{print NF, $0}' \
+    | sort -n \
+    | head -n1 \
+    | cut -d' ' -f2-
+}
+
 activate_venv() {
     # Method to activate isolate venv
-
-    # Install dependencies
-    requirements_file=$(find_requirements_txt "$1")
 
     # Create isolated virtual environment in connector path
     python -m venv "$1/$VENV_NAME"
@@ -36,18 +48,29 @@ activate_venv() {
       . "$1/$VENV_NAME/Scripts/activate"  # Windows
     fi
 
+    # Install dependencies from connector's directory
+    pushd "$1"
     echo '> Installing requirements in: ' "$1"
 
-    # -qq: Hides both informational and warning messages, showing only errors.
-    python -m pip install -qq -r "$requirements_file"
+    requirements_file=$(find_requirements_txt .)
+    if [ -n "$requirements_file" ]; then
+      # -qq: Hides both informational and warning messages, showing only errors.
+      python -m pip install -qq -r "$requirements_file"
+    else
+      # If no requirements.txt, try to install the connector as a package (assuming pyproject.toml exists)
+      python -m pip install .
+    fi
+
+    # Return to original working directory
+    popd
 
     # Check if venv is well created
     venv_exists=$(find "$1" -name ".temp_venv")
 
     if [ -d "$venv_exists" ]; then
-      echo "✅ Requirements installed for: " "$1"
+      echo "✅ Dependencies installed for: " "$1"
     else
-      echo "❌ Requirements not installed for: " "$1"
+      echo "❌ Dependencies not installed for: " "$1"
     fi
 }
 
@@ -58,9 +81,7 @@ deactivate_venv() {
     rm -rf "$1"
 }
 
-# Find all parents directory of connector with config loader
-# printf action with the %h format specifier, which prints the directory part (parent directory) of the file path
-# (macOS/Bash 3.2 fix: replace unsupported -printf with sed)
+# Find all parents directory of connector with __metadata__ directory
 connector_directories_path=$(find . -type d -name "$CONNECTOR_METADATA_DIRECTORY" | sed 's:/*'"$CONNECTOR_METADATA_DIRECTORY"'$::' | sort -u)
 
 # Loop in each connector directory with infos and regenerate JSON schema if changed
@@ -81,28 +102,41 @@ do
       echo "Connector is not supported: " "$connector_directory_path"
     else
       echo "Changes in: " "$connector_directory_path"
-      echo "> Looking for a config loader in " "$connector_directory_path"
+      echo "> Looking for a config model in " "$connector_directory_path"
+      
       requirements_file=$(find_requirements_txt "$connector_directory_path")
-      echo "Found requirements.txt: " "$requirements_file"
-      if [ -f "$requirements_file" ] && grep -q "pydantic-settings" "$requirements_file"; then
-        (
-          activate_venv "$connector_directory_path"
-          # Generate connector JSON schema in __metadata__
-          generator_path=$(find . -name "generate_connector_config_json_schema.py.sample")
-          cp "$generator_path" "$connector_directory_path/generate_connector_config_json_schema_tmp.py"
-          python "$connector_directory_path/generate_connector_config_json_schema_tmp.py"
-          rm "$connector_directory_path/generate_connector_config_json_schema_tmp.py"
+      pyproject_toml=$(find_pyproject_toml "$connector_directory_path")
 
-          # Generate configurations table in __metadata/CONNECTOR_CONFIG_DOC.md
-          python -m pip install -q --disable-pip-version-check jsonschema_markdown
-          generator_config_doc_path=$(find . -name "generate_connector_config_doc.py.sample")
-          cp "$generator_config_doc_path" "$connector_directory_path/generate_connector_config_doc_tmp.py"
-          python "$connector_directory_path/generate_connector_config_doc_tmp.py"
-          rm "$connector_directory_path/generate_connector_config_doc_tmp.py"
-
-          deactivate_venv "$connector_directory_path/$VENV_NAME"
-        )
+      # Check if requirements file contains pydantic-settings or connectors-sdk dependency
+      # If not found in requirements.txt and pyproject.toml exists, try to find connectors-sdk in pyproject.toml
+      if [[ -n "$requirements_file" ]] && grep -qE 'pydantic-settings|connectors-sdk' "$requirements_file"; then
+          echo "Found requirements.txt: $requirements_file"
+      elif [[ -n "$pyproject_toml" ]] && grep -q 'connectors-sdk' "$pyproject_toml"; then
+          echo "Found pyproject.toml: $pyproject_toml"
+      else
+          continue
       fi
+
+      (
+        echo -e "\033[32mFound pydantic-settings and/or connectors-sdk in dependencies. Proceeding with schema generation...\033[0m"
+
+        activate_venv "$connector_directory_path"
+
+        # Generate connector JSON schema in __metadata__
+        generator_path=$(find . -name "generate_connector_config_json_schema.py.sample")
+        cp "$generator_path" "$connector_directory_path/generate_connector_config_json_schema_tmp.py"
+        python "$connector_directory_path/generate_connector_config_json_schema_tmp.py"
+        rm "$connector_directory_path/generate_connector_config_json_schema_tmp.py"
+
+        # Generate configurations table in __metadata/CONNECTOR_CONFIG_DOC.md
+        python -m pip install -q --disable-pip-version-check jsonschema_markdown
+        generator_config_doc_path=$(find . -name "generate_connector_config_doc.py.sample")
+        cp "$generator_config_doc_path" "$connector_directory_path/generate_connector_config_doc_tmp.py"
+        python "$connector_directory_path/generate_connector_config_doc_tmp.py"
+        rm "$connector_directory_path/generate_connector_config_doc_tmp.py"
+
+        deactivate_venv "$connector_directory_path/$VENV_NAME"
+      )
     fi
   fi
 done

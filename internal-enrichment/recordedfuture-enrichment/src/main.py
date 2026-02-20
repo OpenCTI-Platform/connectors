@@ -12,7 +12,7 @@
 import traceback
 
 from pycti import OpenCTIConnectorHelper
-from rflib import ConnectorConfig, RFEnrichmentConnector
+from rflib import ConnectorSettings, RFEnrichmentConnector
 
 if __name__ == "__main__":
     """
@@ -25,14 +25,13 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        config = ConnectorConfig()
+        settings = ConnectorSettings()
         helper = OpenCTIConnectorHelper(
-            config=config.model_dump_pycti(),
-            playbook_compatible=True,
+            config=settings.to_helper_config(), playbook_compatible=True
         )
 
-        connector = RFEnrichmentConnector(config, helper)
-        connector.start()
+        connector = RFEnrichmentConnector(config=settings, helper=helper)
+        connector.run()
     except Exception:
         traceback.print_exc()
         exit(1)

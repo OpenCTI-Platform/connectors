@@ -1,3 +1,2 @@
-pycti==6.8.9
-stix-shifter==7.1.6
-pydantic>=2.8.2,<3.0.0
+pycti==6.9.21
+stix-shifter==8.0.2

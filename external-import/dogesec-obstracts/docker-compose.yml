@@ -1,11 +1,11 @@
 version: '3'
 services:
   connector-dogesec-obstracts:
-    image: opencti/connector-dogesec-obstracts:rolling
+    image: opencti/connector-dogesec-obstracts:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=CHANGME
-      - CONNECTOR_ID=CHANGEME
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=Obstracts
       - CONNECTOR_SCOPE=obstracts
       - CONNECTOR_CONFIDENCE_LEVEL=70

@@ -1,6 +1,6 @@
-pycti==6.8.9
+pycti==6.9.21
 lxml==5.4.0
-crowdstrike-falconpy==1.5.4
+crowdstrike-falconpy==1.6.0
 pydantic>=2.10,<3
 pydantic-settings>=2.0
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.8.9#subdirectory=connectors-sdk
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.9.21#subdirectory=connectors-sdk

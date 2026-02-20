@@ -1,6 +1,6 @@
-pycti==6.8.9
+pycti==6.9.21
 pyyaml~=6.0.2
+pydantic~= 2.11.3
 requests~=2.32.3
-validators==0.33.0
-tldextract==5.3.0
-pre-commit==4.3.0
+validators==0.35.0
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.9.21#subdirectory=connectors-sdk

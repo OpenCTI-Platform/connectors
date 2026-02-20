@@ -1,9 +1,9 @@
 version: '3'
 services:
   connector-hostio:
-    image: opencti/connector-hostio:rolling
+    image: opencti/connector-hostio:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=#Changeme
       # Connector's definition parameters:
       - CONNECTOR_NAME=hostio
@@ -18,7 +18,3 @@ services:
       - HOSTIO_MARKING_REFS=TLP:WHITE  # TLP Marking Reference e.g., TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:RED
       - HOSTIO_TLP_MAX=TLP:AMBER  # Maximum TLP level to process, e.g., TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:RED
     restart: always
-networks:
-  default:
-    external: true
-    name: docker_default

@@ -7,14 +7,14 @@
   "use_cases": [
     "Enrichment & Analysis"
   ],
-  "verified": false,
+  "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,
-  "max_confidence_level": 50,
+  "max_confidence_level": 75,
   "support_version": ">=5.6.1",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/tagger",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-tagger",
   "container_type": "INTERNAL_ENRICHMENT"

@@ -1,15 +1,17 @@
 import ipaddress
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pycti
 import stix2
 from api_client.models import ExtendedAttributeItem
-from connector.threats_guesser import ThreatsGuesser
 
 from .common import ConverterConfig, ConverterError
 from .convert_galaxy import GalaxyConverter
 from .convert_tag import TagConverter
+
+if TYPE_CHECKING:
+    from utils.threats_guesser import ThreatsGuesser
 
 """
     Mapping of STIX observable types to OCTI ones.
@@ -120,7 +122,9 @@ class AttributeConverterError(ConverterError):
 
 
 class AttributeConverter:
-    def __init__(self, config: ConverterConfig, threats_guesser: ThreatsGuesser = None):
+    def __init__(
+        self, config: ConverterConfig, threats_guesser: "ThreatsGuesser | None" = None
+    ):
         self.config = config
         self.threats_guesser = threats_guesser
 
@@ -333,7 +337,7 @@ class AttributeConverter:
                 )
             case "windows-scheduled-task":
                 observables.append(
-                    observable=pycti.CustomObservableText(
+                    pycti.CustomObservableText(
                         value=attribute.value,
                         object_marking_refs=markings,
                         custom_properties=custom_properties,
@@ -405,7 +409,7 @@ class AttributeConverter:
     def create_indicator(
         self,
         attribute: ExtendedAttributeItem,
-        observables: stix2.v21._Observable,
+        observables: list[stix2.v21._Observable],
         score: int,
         labels: list[str],
         author: stix2.Identity,
@@ -612,6 +616,7 @@ class AttributeConverter:
                         created_by_ref=author.id,
                         source_ref=indicator.id,
                         target_ref=observable.id,
+                        object_marking_refs=attribute_markings,
                         allow_custom=True,
                     )
                 )

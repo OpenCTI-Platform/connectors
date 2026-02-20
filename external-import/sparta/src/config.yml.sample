@@ -1,24 +1,19 @@
 opencti:
   # OpenCTI definition parameters - REQUIRED
-  url: 'http://localhost:PORT'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   # Connector definition parameters - REQUIRED
   id: 'ChangeMe'
 
   # Connector definition parameters - OPTIONAL
-  #name: 'ChangeMe' # Default: 'Aerospace SPARTA'
-  #scope: 'ChangeMe' # Default: '["attack-pattern", "course-of-action", "indicator", "identity"]'
-  #log_level: 'ChangeMe' # Default: 'info'
-  #duration_period: 'ChangeMe' # Default: 'PT5H' (ISO8601 format in String, start with P...)
-  #queue_threshold: ChangeMe # Default: 500 MBytes, Float accepted
-  #run_and_terminate: ChangeMe # Default: False, True run connector once
-  #send_to_queue: ChangeMe # Default: True
-  #send_to_directory: ChangeMe # Default: False
-  #send_to_directory_path: 'ChangeMe' # if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path
-  #send_to_directory_retention: ChangeMe # Default: 7, in days
+  #name: 'Aerospace SPARTA'
+  #scope: 'attack-pattern, course-of-action, indicator, identity'
+  #log_level: 'error'
+  #duration_period: 'PT5H' # (ISO8601 format in String, start with P...)
 
 sparta:
   # SPARTA definition parameters - OPTIONAL
-  #base_url: 'ChangeMe' # Default: "https://sparta.aerospace.org/download/STIX?f=latest"
+  #base_url: 'https://sparta.aerospace.org/download/STIX?f=latest'

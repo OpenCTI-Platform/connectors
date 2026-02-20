@@ -19,24 +19,26 @@ classifiers = [
 requires-python = ">=3.11, <3.13" 
 
 dependencies = [
-    "pycti==6.8.9",
+    "pycti==6.9.21",
     "aiohttp>=3.7.4,<4",
     "limiter==0.5.0",
     "yarl>=1.10.1,<2",
     "tenacity>=9,<10",
     "markdownify>=1.1.0,<2",
+    "pydantic>=2.8.2,<3",
+     "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.9.21#subdirectory=connectors-sdk",
 ]
 
 
 [project.optional-dependencies]
 test= [
     "pytest >=8.1.1, <9",
-    "pytest-asyncio >= 0.25.3, <1",
+    "pytest-asyncio >=1.2, <2",
     "freezegun >=1.2.0, <2"
 ]
 dev = [
     "black >=25.1, <26",  # Code formatter
-    "isort >=6, <7",  # Import sorter
+    "isort >=7, <8",  # Import sorter
     "ruff >=0.7.2, <1",  # linter
     "mypy >=1.13.0, <2",  # Type validator
     "pip_audit >=2, <3",  # Security checker
@@ -49,7 +51,7 @@ all = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
 
 
 [tool.pytest.ini_options]
@@ -106,7 +108,7 @@ target-version = "py312"
 # Never enforce `TRY003`() Avoid specifying long messages outside the exception class not useful
 # Never enforce `D104` (Missing docstring in public package) 
 # Never enforce `D407` (Missing dashed underline after section) 
-# Never enforce `D408` (Section underline should be in the line following the section’s name) 
+# Never enforce `D408` (Section underline should be in the line following the section's name) 
 # Never enforce `D409` (Section underline should match the length of its name)
 ignore = ["I001", "D203", "E501", "F821", "D205", "D213" , "D211", "G004", "TRY003", "D104", "D407", "D408", "D409"]
 select = ["E", "F", "W", "D", "G", "T", "B", "C", "N", "I", "S"]

@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/urlscan-enrichment_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Urlscan Enrichment",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "url",
+        "ipv4-addr",
+        "ipv6-addr"
+      ],
+      "description": "The scope of the connector. Availables: `url or hostname or domain-name` (scope-submission), `ipv4-addr` and `ipv6-addr` (scope-search)",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Whether the connector should run automatically when an entity is created or updated.",
+      "type": "boolean"
+    },
+    "URLSCAN_ENRICHMENT_API_KEY": {
+      "description": "URLScan API Key",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "URLSCAN_ENRICHMENT_IMPORT_SCREENSHOT": {
+      "default": true,
+      "description": "Allows or not the import of the screenshot of the scan submitted in URLScan to OpenCTI.",
+      "type": "boolean"
+    },
+    "URLSCAN_ENRICHMENT_VISIBILITY": {
+      "default": "public",
+      "description": "URLScan offers several levels of visibility for submitted scans: `public`, `unlisted`, `private`",
+      "enum": [
+        "public",
+        "unlisted",
+        "private"
+      ],
+      "type": "string"
+    },
+    "URLSCAN_ENRICHMENT_SEARCH_FILTERED_BY_DATE": {
+      "default": ">now-1y",
+      "description": "Allows you to filter by date available: `>now-1h`, `>now-1d`, `>now-1y`, `[2022 TO 2023]`, `[2022/01/01 TO 2023/12/01]`",
+      "type": "string"
+    },
+    "URLSCAN_ENRICHMENT_MAX_TLP": {
+      "default": "TLP:AMBER",
+      "description": "Do not send any data to URLScan if the TLP of the observable is greater than MAX_TLP",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
+    },
+    "URLSCAN_ENRICHMENT_CREATE_INDICATOR": {
+      "default": true,
+      "description": "Decide whether or not to create an indicator based on this observable",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "URLSCAN_ENRICHMENT_API_KEY"
+  ],
+  "additionalProperties": true
+}

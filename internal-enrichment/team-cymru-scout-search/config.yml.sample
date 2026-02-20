@@ -1,0 +1,16 @@
+opencti:
+  url: 'http://localhost'
+  token: 'Changeme'
+
+connector:
+  type: 'INTERNAL_ENRICHMENT'
+  id: 'scout-search-connector'
+  name: 'Scout Search Connector'
+  scope: 'Text'
+  log_level: 'error'
+
+pure_signal_scout:
+  api_url: 'https://taxii.cymru.com/api/scout'
+  api_token: 'Changeme'
+  max_tlp: 'TLP:AMBER'
+  search_interval: 1

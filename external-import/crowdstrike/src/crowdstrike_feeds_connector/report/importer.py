@@ -1,9 +1,10 @@
-# -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike report importer module."""
 
+from collections.abc import Mapping as ABCMapping
 from datetime import datetime
-from typing import Any, Dict, Generator, List, Mapping, Optional
+from typing import Any, Generator, List, Mapping, Optional, cast
 
+from crowdstrike_feeds_connector.related_actors.importer import RelatedActorImporter
 from crowdstrike_feeds_services.client.indicators import IndicatorsAPI
 from crowdstrike_feeds_services.client.reports import ReportsAPI
 from crowdstrike_feeds_services.utils import (
@@ -12,13 +13,17 @@ from crowdstrike_feeds_services.utils import (
     paginate,
     timestamp_to_datetime,
 )
-from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
+from pycti.connector.opencti_connector_helper import (  # noqa: E501
     OpenCTIConnectorHelper,
 )
-from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
+from stix2 import Bundle, Identity, MarkingDefinition
+from stix2.v21 import _DomainObject
 
 from ..importer import BaseImporter
-from ..indicator.importer import IndicatorBundleBuilder, IndicatorBundleBuilderConfig
+from ..indicator.builder import IndicatorBundleBuilder
+from ..indicator.importer import (
+    IndicatorBundleBuilderConfig,  # pyright: ignore[reportPrivateImportUsage]
+)
 from .builder import ReportBundleBuilder
 
 
@@ -28,8 +33,7 @@ class ReportImporter(BaseImporter):
     _NAME = "Report"
 
     _LATEST_REPORT_TIMESTAMP = "latest_report_timestamp"
-
-    _GUESS_NOT_A_MALWARE = "GUESS_NOT_A_MALWARE"
+    _GUESS_NOT_A_MALWARE = "__NOT_A_MALWARE__"
 
     def __init__(
         self,
@@ -42,8 +46,10 @@ class ReportImporter(BaseImporter):
         report_status: int,
         report_type: str,
         guess_malware: bool,
+        report_guess_relations: bool,
         indicator_config: dict,
         no_file_trigger_import: bool,
+        scopes: set[str],
     ) -> None:
         """Initialize CrowdStrike report importer."""
         super().__init__(helper, author, tlp_marking)
@@ -55,24 +61,26 @@ class ReportImporter(BaseImporter):
         self.report_status = report_status
         self.report_type = report_type
         self.guess_malware = guess_malware
+        self.report_guess_relations = report_guess_relations
         self.indicators_api_cs = IndicatorsAPI(helper)
         self.indicator_config = indicator_config
         self.no_file_trigger_import = no_file_trigger_import
+        self.scopes = scopes
+        self.malware_guess_cache: dict[str, str] = {}
 
-        self.malware_guess_cache: Dict[str, str] = {}
-
-    def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
-        """Run importer."""
+    def run(self, state: dict[str, Any]) -> dict[str, Any]:
         self._info(
-            "Running report importer (guess malware: {0}) with state: {1}...",  # noqa: E501
-            self.guess_malware,
+            "Running report importer with state: {0}...",  # noqa: E501
             state,
         )
 
-        self._clear_malware_guess_cache()
-
-        fetch_timestamp = state.get(
+        raw_fetch_ts = state.get(
             self._LATEST_REPORT_TIMESTAMP, self.default_latest_timestamp
+        )
+        fetch_timestamp = (
+            raw_fetch_ts
+            if isinstance(raw_fetch_ts, int)
+            else int(self.default_latest_timestamp)
         )
 
         new_state = state.copy()
@@ -103,9 +111,6 @@ class ReportImporter(BaseImporter):
         )
 
         return {self._LATEST_REPORT_TIMESTAMP: latest_report_timestamp}
-
-    def _clear_malware_guess_cache(self):
-        self.malware_guess_cache.clear()
 
     def _fetch_reports(self, start_timestamp: int) -> Generator[List, None, None]:
         limit = 30
@@ -143,7 +148,11 @@ class ReportImporter(BaseImporter):
             fields,
         )
         reports = self.reports_api_cs.get_combined_report_entities(
-            limit=limit, offset=offset, sort=sort, fql_filter=fql_filter, fields=fields
+            limit=limit,
+            offset=offset,
+            sort=sort or "",
+            fql_filter=fql_filter or "",
+            fields=fields or ["__full__"],
         )
 
         return reports
@@ -152,33 +161,68 @@ class ReportImporter(BaseImporter):
         report_count = len(reports)
         self._info("Processing {0} reports...", report_count)
 
-        latest_modified_datetime = None
+        # Cache actor entities once per batch to avoid noisy per-report/per-actor updates.
+        # RelatedActorImporter expects: Dict[str, Dict[str, Any]]
+        batch_actor_cache: dict[str, dict[str, Any]] = {}
+        for report in reports:
+            for actor in report.get("actors") or []:
+                actor_id = actor.get("id")
+                actor_name = actor.get("name")
+                if actor_id is None or not actor_name:
+                    continue
+                # Use string keys for consistency with the rest of the connector.
+                batch_actor_cache[str(actor_id)] = {"id": actor_id, "name": actor_name}
+
+        if batch_actor_cache:
+            RelatedActorImporter._resolved_actor_entity_cache.update(batch_actor_cache)
+
+        latest_modified_timestamp: Optional[int] = None
 
         for report in reports:
             self._process_report(report)
 
-            last_modified_date = report["last_modified_date"]
+            last_modified_date = report.get("last_modified_date")
             if last_modified_date is None:
                 self._error(
                     "Missing last modified date for report {0} ({1})",
-                    report["name"],
-                    report["id"],
+                    report.get("name"),
+                    report.get("id"),
                 )
                 continue
 
+            # CrowdStrike usually returns timestamps here, but tolerate datetime too.
+            if isinstance(last_modified_date, datetime):
+                last_modified_ts = datetime_to_timestamp(last_modified_date)
+            else:
+                last_modified_ts = int(last_modified_date)
+
             if (
-                latest_modified_datetime is None
-                or last_modified_date > latest_modified_datetime
+                latest_modified_timestamp is None
+                or last_modified_ts > latest_modified_timestamp
             ):
-                latest_modified_datetime = last_modified_date
+                latest_modified_timestamp = last_modified_ts
+
+        latest_modified_datetime = (
+            timestamp_to_datetime(latest_modified_timestamp)
+            if latest_modified_timestamp is not None
+            else None
+        )
 
         self._info(
             "Processing reports completed (imported: {0}, latest: {1})",
             report_count,
             latest_modified_datetime,
         )
+        self.helper.connector_logger.debug(
+            "Reports batch summary",
+            {
+                "count": report_count,
+                "latest_modified_timestamp": latest_modified_timestamp,
+                "cached_actor_ids": len(batch_actor_cache),
+            },
+        )
 
-        return timestamp_to_datetime(latest_modified_datetime)
+        return latest_modified_datetime
 
     def _process_report(self, report) -> None:
         self._info("Processing report {0} ({1})...", report["name"], report["id"])
@@ -197,15 +241,21 @@ class ReportImporter(BaseImporter):
 
         download = self.reports_api_cs.get_report_pdf(str(report_id))
 
-        if type(download) is dict:
+        # The CS API returns a dict when there is no PDF (or an error payload).
+        if isinstance(download, dict):
             self._info("No report PDF for id {0}", report_id)
             return None
-        else:
-            return create_file_from_download(
-                download, report_name, self.no_file_trigger_import
-            )
 
-    def _get_related_iocs(self, report_name):
+        created = create_file_from_download(
+            download, report_name, self.no_file_trigger_import
+        )
+
+        if not isinstance(created, ABCMapping):
+            return None
+
+        return cast(Mapping[str, str], created)
+
+    def _get_related_iocs(self, report_name: str) -> list[_DomainObject]:
         try:
             related_indicators = []
             related_indicators_with_related_entities = []
@@ -253,10 +303,24 @@ class ReportImporter(BaseImporter):
                         indicator_unwanted_labels=self.indicator_config[
                             "indicator_unwanted_labels"
                         ],
+                        scopes=self.scopes,
                     )
-                    bundle_builder = IndicatorBundleBuilder(
-                        self.helper, bundle_builder_config
-                    )
+                    try:
+                        bundle_builder = IndicatorBundleBuilder(
+                            self.helper, bundle_builder_config
+                        )
+                    except TypeError as err:
+                        self.helper.connector_logger.warning(
+                            "Skipping unsupported indicator type for report.",
+                            {
+                                "report_name": report_name,
+                                "indicator_id": indicator.get("id"),
+                                "indicator_type": indicator.get("type"),
+                                "indicator_value": indicator.get("indicator"),
+                                "error": str(err),
+                            },
+                        )
+                        continue
                     indicator_bundle_built = bundle_builder.build()
                     if indicator_bundle_built:
                         indicator_with_related_entities = indicator_bundle_built[
@@ -280,7 +344,7 @@ class ReportImporter(BaseImporter):
             self.helper.connector_logger.error(
                 "[ERROR] An unexpected error occurred when retrieving indicators for the report.",
                 {
-                    "error": err,
+                    "error": str(err),
                     "report_name": report_name,
                 },
             )
@@ -295,12 +359,7 @@ class ReportImporter(BaseImporter):
         report_status = self.report_status
         report_type = self.report_type
         confidence_level = self._confidence_level()
-        guessed_malwares: Mapping[str, str] = {}
         related_indicators_with_related_entities = []
-
-        tags = report["tags"]
-        if tags is not None:
-            guessed_malwares = self._guess_malwares_from_tags(tags)
 
         report_slug = report["slug"]
         if report_slug is not None:
@@ -308,6 +367,7 @@ class ReportImporter(BaseImporter):
             related_indicators_with_related_entities = self._get_related_iocs(
                 report_name
             )
+        malwares_from_field = report.get("malware", [])
 
         bundle_builder = ReportBundleBuilder(
             report,
@@ -317,13 +377,16 @@ class ReportImporter(BaseImporter):
             report_status,
             report_type,
             confidence_level,
-            guessed_malwares,
             report_file,
             related_indicators_with_related_entities,
+            self.report_guess_relations,
+            malwares_from_field=malwares_from_field,
+            scopes=self.scopes,
         )
         return bundle_builder.build()
 
-    def _guess_malwares_from_tags(self, tags: List) -> Mapping[str, str]:
+    # MVP2
+    def _guess_malwares_from_tags(self, tags: List) -> dict[str, str]:
         if not self.guess_malware:
             return {}
 

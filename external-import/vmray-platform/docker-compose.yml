@@ -1,0 +1,32 @@
+version: "3"
+
+services:
+  connector-vmray-platform:
+    image: opencti/connector-vmray-platform:latest
+    networks:
+      - opencti
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=ChangeMe(UUIDv4 token)
+      - CONNECTOR_ID=VMRay
+      - CONNECTOR_NAME=VMRay Platform
+      - CONNECTOR_SCOPE=VMRay 
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT30M
+      - VMRAY_SERVER=https://cloud.vmray.com
+      - VMRAY_API_KEY=ChangeMe
+      - VMRAY_INITIAL_FETCH_DATE=2025-11-13
+      - VMRAY_SAMPLE_VERDICT=malicious
+      - VMRAY_IOCS_VERDICT=malicious
+      - VMRAY_DEFAULT_TLP=TLP:AMBER      
+      - VMRAY_THREAT_NAMES_COLOR=#d60904
+      - VMRAY_CLASSIFICATIONS_COLOR=#fa560a
+      - VMRAY_VTI_COLOR=#40f5ef
+      - VMRAY_MITRE_COLOR=#a9f723
+    restart: always
+    
+networks:
+  opencti:
+    external: true
+    name: opencti_default
+    

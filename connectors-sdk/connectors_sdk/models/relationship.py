@@ -1,8 +1,8 @@
 """Relationship."""
 
-from typing import Literal
-
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
+from connectors_sdk.models.enums import RelationshipType
+from connectors_sdk.models.reference import Reference
 from pycti import StixCoreRelationship as PyctiStixCoreRelationship
 from pydantic import AwareDatetime, Field
 from stix2.v21 import Relationship as Stix2Relationship
@@ -11,19 +11,13 @@ from stix2.v21 import Relationship as Stix2Relationship
 class Relationship(BaseIdentifiedEntity):
     """Base class for OpenCTI relationships."""
 
-    type: Literal[
-        "related-to",
-        "based-on",
-        "derived-from",
-        "indicates",
-        "targets",
-        "located-at",
-        "has",
-    ] = Field(description="Type of the relationship.")
-    source: BaseIdentifiedEntity = Field(
+    type: RelationshipType = Field(
+        description="Type of the relationship.",
+    )
+    source: BaseIdentifiedEntity | Reference = Field(
         description="The source entity of the relationship.",
     )
-    target: BaseIdentifiedEntity = Field(
+    target: BaseIdentifiedEntity | Reference = Field(
         description="The target entity of the relationship.",
     )
     description: str | None = Field(

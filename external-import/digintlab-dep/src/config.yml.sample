@@ -1,0 +1,31 @@
+opencti:
+  url: 'http://localhost'
+  token: "ChangeMe"
+
+connector:
+  id: ChangeMe
+  type: EXTERNAL_IMPORT
+  name: DEP Connector
+  scope: incident,identity,indicator
+  log_level: info
+  interval: 3600 # In seconds
+
+# Connector specific configuration
+# All values can also be provided with environment variables prefixed with
+# DEP_ (for example DEP_USERNAME)
+# and the generic connector values with CONNECTOR_ and OPENCTI_ prefixes.
+dep:
+  username: your_dep_username
+  password: your_dep_password
+  api_key: your_dep_api_key
+  client_id: ""
+  confidence: 70
+  login_endpoint: https://cognito-idp.eu-west-1.amazonaws.com/
+  api_endpoint: https://api.eu-ep1.doubleextortion.com/v1/dbtr/privlist
+  dset: ext
+  lookback_days: 7
+  overlap_hours: 72
+  extended_results: true
+  enable_site_indicator: true
+  enable_hash_indicator: true
+  skip_empty_victim: true

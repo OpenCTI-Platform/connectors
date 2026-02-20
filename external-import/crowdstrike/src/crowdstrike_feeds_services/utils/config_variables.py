@@ -34,6 +34,7 @@ class ConfigCrowdstrike:
         self.scopes = ",".join(scopes_list) if scopes_list else None
 
         self.actor_start_timestamp = self.config.crowdstrike.actor_start_timestamp
+        self.malware_start_timestamp = self.config.crowdstrike.malware_start_timestamp
         self.report_start_timestamp = self.config.crowdstrike.report_start_timestamp
         self.report_status = self.config.crowdstrike.report_status
 
@@ -50,6 +51,7 @@ class ConfigCrowdstrike:
 
         self.report_type = self.config.crowdstrike.report_type
         self.report_guess_malware = self.config.crowdstrike.report_guess_malware
+        self.report_guess_relations = self.config.crowdstrike.report_guess_relations
         self.indicator_start_timestamp = (
             self.config.crowdstrike.indicator_start_timestamp
         )
@@ -98,3 +100,6 @@ class ConfigCrowdstrike:
 
         self.interval_sec = self.config.crowdstrike.interval_sec
         self.no_file_trigger_import = self.config.crowdstrike.no_file_trigger_import
+        self.vulnerability_start_timestamp = (
+            self.config.crowdstrike.vulnerability_start_timestamp
+        )

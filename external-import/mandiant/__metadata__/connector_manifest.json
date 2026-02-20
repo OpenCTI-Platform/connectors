@@ -1,8 +1,8 @@
 {
   "title": "Mandiant",
   "slug": "mandiant",
-  "description": "The Mandiant connector imports comprehensive cyber threat intelligence from Mandiant Advantage API V4 into OpenCTI. It provides access to Mandiant's threat actor profiles, malware families, campaigns, vulnerability reports, indicators of compromise (IOCs), and threat analysis reports. The connector supports incremental imports with configurable intervals for different entity types, custom TLP markings, and relationship inference for enhanced threat context.",
-  "short_description": "Import threat actors, malware, campaigns, vulnerabilities, and indicators from Mandiant Advantage.",
+  "description": "The Mandiant connector imports comprehensive cyber threat intelligence from Mandiant (now part of Google Cloud) Advantage API V4 into OpenCTI. It provides access to Mandiant's threat actor profiles, malware families, campaigns, vulnerability reports, indicators of compromise (IOCs), and threat analysis reports. The connector supports incremental imports with configurable intervals for different entity types, custom TLP markings, and relationship inference for enhanced threat context.",
+  "short_description": "Import threat actors, malware, campaigns, vulnerabilities, and indicators from Mandiant Advantage (now part of Google Cloud).",
   "logo": "external-import/mandiant/__metadata__/logo.png",
   "use_cases": [
     "Commercial Threat Intel"
@@ -10,7 +10,7 @@
   "verified": true,
   "last_verified_date": "2025-01-01",
   "playbook_supported": false,
-  "max_confidence_level": 60,
+  "max_confidence_level": 55,
   "support_version": ">= 6.5.0",
   "subscription_link": "https://www.mandiant.com/advantage",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/mandiant",

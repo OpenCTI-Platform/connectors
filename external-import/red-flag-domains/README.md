@@ -1,21 +1,19 @@
 # OpenCTI Red Flag Domains Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
+
 ## Installation
 
 This connector facilitates the import of domain names from the Red Flag Domains platform into OpenCTI. Red Flag Domains provides lists of very recently registered, probably malicious domain names in French TLDs. More details can be found [here](https://red.flag.domains/).
 
 ## Configuration
 
-| Parameter                        | Docker envvar                    | Description                                                                                        |
-|----------------------------------|----------------------------------|----------------------------------------------------------------------------------------------------|
-| `opencti_url`                    | `OPENCTI_URL`                    | The URL of the OpenCTI platform.                                                                   |
-| `opencti_token`                  | `OPENCTI_TOKEN`                  | The default admin token configured in the OpenCTI platform parameters file.                        |
-| `connector_id`                   | `CONNECTOR_ID`                   | A valid arbitrary `UUIDv4` that must be unique for this connector.                                 |
-| `connector_name`                 | `CONNECTOR_NAME`                 | The name of the connector, can be just "Red Flag Domains"                                          |
-| `connector_scope`                | `CONNECTOR_SCOPE`                | Must be `red-flag-domains`.                                                                        |
-| `connector_update_existing_data` | `CONNECTOR_UPDATE_EXISTING_DATA` | If an entity already exists, update its attributes with information provided by this connector.    |
-| `connector_log_level`            | `CONNECTOR_LOG_LEVEL`            | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).      |
-| `redflagdomains_url`             | `REDFLAGDOMAINS_URL`             | The Red Flag Domains URL.                                                                          |
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
+
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Docker Compose Example
 
@@ -30,7 +28,6 @@ connector-redflag-domains:
     - CONNECTOR_ID=CONNECTOR_ID
     - "CONNECTOR_NAME=Red Flag Domains"
     - CONNECTOR_SCOPE=red-flag-domains
-    - CONNECTOR_UPDATE_EXISTING_DATA=False
     - CONNECTOR_LOG_LEVEL=info
     - REDFLAGDOMAINS_URL=https://dl.red.flag.domains/daily/
   restart: always

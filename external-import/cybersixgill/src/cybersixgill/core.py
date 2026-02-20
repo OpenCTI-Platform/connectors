@@ -1,8 +1,8 @@
 """OpenCTI Cybersixgill Darkfeed connector core module."""
 
-import os
 import sys
 import time
+from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional
 
 import stix2
@@ -108,9 +108,9 @@ class Cybersixgill:
 
     @staticmethod
     def _read_configuration() -> Dict[str, str]:
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "\..\config.yml"
+        config_file_path = Path(__file__).resolve().parent.parent / "config.yml"
 
-        if not os.path.isfile(config_file_path):
+        if not config_file_path.is_file():
             return {}
         return yaml.load(open(config_file_path), Loader=yaml.FullLoader)
 

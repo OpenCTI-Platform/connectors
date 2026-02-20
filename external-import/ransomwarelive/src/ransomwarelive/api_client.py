@@ -28,6 +28,23 @@ class RansomwareAPIClient:
 
             if response.content:
                 return response.json()
+
+        except requests.exceptions.HTTPError as err:
+            status = err.response.status_code
+            text = err.response.text or ""
+
+            if status == 500 and "No victims found" in text:
+                return []
+
+            raise RansomwareAPIError(
+                f"Error while fetching Ransomware API: HTTP {status}",
+                {
+                    "url": f"GET {url}",
+                    "status_code": status,
+                    "response_body": text,
+                },
+            ) from err
+
         except requests.RequestException as err:
             raise RansomwareAPIError(
                 f"Error while fetching Ransomware API: {err}",

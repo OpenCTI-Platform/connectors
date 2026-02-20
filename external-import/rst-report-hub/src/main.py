@@ -134,6 +134,10 @@ class ReportHub:
             stix_observ = stix2.v21.File(
                 hashes=self.extract_file_hashes(stix_indicator["pattern"]), **shared
             )
+        elif ioc_type == "Email-Addr":
+            stix_observ = stix2.v21.EmailAddress(
+                value=stix_indicator["pattern"].split("'")[1], **shared
+            )
         else:
             stix_observ = None
         if stix_observ:
@@ -152,6 +156,8 @@ class ReportHub:
 
     def _combine_report_and_send(self, stix_bundle, x_opencti_file, report_id):
         # Parse the STIX bundle
+        message = f"Processing STIX bundle from RST Report Hub for {report_id}"
+        self.helper.log_info(message)
         parsed_bundle = json.loads(stix_bundle)
         stix_bundle_main = []
         message = f"Importing {report_id}"
@@ -160,24 +166,19 @@ class ReportHub:
         rel_to_ids = []
         removed_ids = []
         for entry in parsed_bundle.get("objects", []):
-            # create an observable for every indicator
-            # if a user selects that option
-            if (
-                entry.get("type", "") == "indicator"
-                and self._downloader_config["create_observables"]
-            ):
-                observ_obj, based_on = self.create_observable(entry)
-                if observ_obj and based_on:
-                    stix_bundle_main.append(observ_obj)
-                    observ_ids.append(observ_obj.id)
-                    stix_bundle_main.append(based_on)
-                    observ_rel_ids.append(based_on.id)
-            # set x_opencti_detection flag to true for indicators if selected in the config
-            elif (
-                entry.get("type", "") == "indicator"
-                and self._downloader_config["set_detection_flag"]
-            ):
-                entry["x_opencti_detection"] = True
+            if entry.get("type", "") == "indicator":
+                # create an observable for every indicator
+                # if a user selects that option
+                if self._downloader_config["create_observables"]:
+                    observ_obj, based_on = self.create_observable(entry)
+                    if observ_obj and based_on:
+                        stix_bundle_main.append(observ_obj)
+                        observ_ids.append(observ_obj.id)
+                        stix_bundle_main.append(based_on)
+                        observ_rel_ids.append(based_on.id)
+                # set x_opencti_detection flag to true for indicators if selected in the config
+                if self._downloader_config["set_detection_flag"]:
+                    entry["x_opencti_detection"] = True
             # remove related-to relationships from the bundle
             # if a user selects that option
             elif (
@@ -307,6 +308,7 @@ class ReportHub:
         # to compare dates
         import_date_parsed = parse(import_date)
         headers = {
+            "User-Agent": "opencti_rst_report_hub",
             "Content-Type": "application/json",
             "x-api-key": self._downloader_config["api_key"],
         }
@@ -320,6 +322,7 @@ class ReportHub:
         today = parse(datetime.now().strftime("%Y%m%d"))
         nextday = (import_date_parsed + timedelta(days=1)).strftime("%Y%m%d")
 
+        response = None
         for attempt in range(retry_attempts):
             try:
                 response = requests.get(
@@ -373,7 +376,9 @@ class ReportHub:
                         )
 
             except requests.exceptions.RequestException:
-                if response.status_code == 404:
+                # response may be None if the exception occurred before assignment
+                status_code = getattr(response, "status_code", None)
+                if status_code == 404:
                     # no reports for a given day found,
                     # iterate day by day until today
                     if import_date_parsed < today:

@@ -24,6 +24,14 @@ TLP_MAP = {
     "white": stix2.TLP_WHITE,
     "green": stix2.TLP_GREEN,
     "amber": stix2.TLP_AMBER,
+    "amber+strict": stix2.MarkingDefinition(
+        id=pycti.MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+        definition_type="statement",
+        definition={"statement": "custom"},
+        allow_custom=True,
+        x_opencti_definition_type="TLP",
+        x_opencti_definition="TLP:AMBER+STRICT",
+    ),
     "red": stix2.TLP_RED,
 }
 
@@ -37,19 +45,28 @@ class ConversionError(Exception):
 class RFStixEntity:
     """Parent class"""
 
-    def __init__(self, name, _type, author=None, tlp="red", first_seen=None):
+    def __init__(
+        self,
+        name,
+        _type,
+        author=None,
+        tlp="amber+strict",
+        first_seen=None,
+        last_seen=None,
+    ):
         self.name = name
         self.type = _type
         self.author = author or self._create_author()
         self.tlp = TLP_MAP.get(tlp, None)
         self.stix_obj = None
         self.first_seen = first_seen
+        self.last_seen = last_seen
 
     def to_stix_objects(self):
         """Returns a list of STIX objects"""
         if not self.stix_obj:
             self.create_stix_objects()
-        return [self.stix_obj]
+        return [self.author, self.stix_obj]
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
@@ -75,7 +92,7 @@ class RFStixEntity:
 class Indicator(RFStixEntity):
     """Base class for Indicators of Compromise (IP, Hash, URL, Domain)"""
 
-    def __init__(self, name, _type, author, tlp, first_seen=None):
+    def __init__(self, name, _type, author, tlp, first_seen=None, last_seen=None):
         super().__init__(name, _type, author, tlp)
         self.stix_indicator = None
         self.stix_observable = None
@@ -86,6 +103,7 @@ class Indicator(RFStixEntity):
         self.tlp = TLP_MAP.get(tlp, None)
         self.description = None
         self.first_seen = first_seen
+        self.last_seen = last_seen
         self.labels = []
 
     def to_stix_objects(self):
@@ -112,7 +130,7 @@ class Indicator(RFStixEntity):
             description=self.description,
             labels=self.labels,
             pattern_type="stix",
-            valid_from=self.first_seen,
+            valid_from=self.last_seen,
             pattern=self._create_pattern(),
             created_by_ref=self.author.id,
             object_marking_refs=self.tlp,
@@ -185,28 +203,34 @@ class Indicator(RFStixEntity):
             self.risk_score = int(rf_indicator["Risk"])
         except ValueError:
             self.risk_score = 0
-        related_entities_hits = json.loads(rf_indicator["Links"])["hits"]
-        if (
-            related_entities_hits and len(related_entities_hits[0]["sections"]) > 0
-        ):  # Sometimes, hits is not empty but sections is
-            rf_related_entities = []
-            rf_related_entities_sections = related_entities_hits[0]["sections"]
 
-            for section in rf_related_entities_sections:
-                # Handle indicators and TTP & Tools
-                if "Indicators" or "TTP" in section["section_id"]["name"]:
-                    rf_related_entities += section["lists"]
+        # Get related entities
+        related_entities_links = json.loads(rf_indicator["Links"])
 
-                for element in rf_related_entities:
-                    if element["type"]["name"] in handled_related_entities_types:
-                        for rf_related_element in element["entities"]:
-                            type_ = rf_related_element["type"]
-                            name_ = rf_related_element["name"]
-                            related_element = ENTITY_TYPE_MAPPER[type_](
-                                name_, type_, self.author, tlp
-                            )
-                            stix_objs = related_element.to_stix_objects()
-                            self.related_entities.extend(stix_objs)
+        # If there are related entities
+        if related_entities_links and len(related_entities_links) > 0:
+            related_entities_hits = related_entities_links["hits"]
+            if (
+                related_entities_hits and len(related_entities_hits[0]["sections"]) > 0
+            ):  # Sometimes, hits is not empty but sections is
+                rf_related_entities = []
+                rf_related_entities_sections = related_entities_hits[0]["sections"]
+
+                for section in rf_related_entities_sections:
+                    # Handle indicators and TTP & Tools
+                    if "Indicators" or "TTP" in section["section_id"]["name"]:
+                        rf_related_entities += section["lists"]
+
+                    for element in rf_related_entities:
+                        if element["type"]["name"] in handled_related_entities_types:
+                            for rf_related_element in element["entities"]:
+                                type_ = element["type"]["name"]
+                                name_ = rf_related_element["name"]
+                                related_element = ENTITY_TYPE_MAPPER[type_](
+                                    name_, type_, self.author, tlp
+                                )
+                                stix_objs = related_element.to_stix_objects()
+                                self.related_entities.extend(stix_objs)
 
     def build_bundle(self, stix_name):
         """
@@ -227,8 +251,10 @@ class Indicator(RFStixEntity):
 
 
 class IPAddress(Indicator):
-    def __init__(self, name, _type, author=None, tlp=None, first_seen=None):
-        super().__init__(name, _type, author, tlp, first_seen)
+    def __init__(
+        self, name, _type, author=None, tlp=None, first_seen=None, last_seen=None
+    ):
+        super().__init__(name, _type, author, tlp, first_seen, last_seen)
 
     """Converts IP address to IP indicator and observable"""
 
@@ -284,8 +310,10 @@ class IPAddress(Indicator):
 class Domain(Indicator):
     """Converts Domain to Domain indicator and observable"""
 
-    def __init__(self, name, _type, author=None, tlp=None, first_seen=None):
-        super().__init__(name, _type, author, tlp, first_seen)
+    def __init__(
+        self, name, _type, author=None, tlp=None, first_seen=None, last_seen=None
+    ):
+        super().__init__(name, _type, author, tlp, first_seen, last_seen)
 
     def _create_pattern(self):
         return f"[domain-name:value = '{self.name}']"
@@ -301,8 +329,10 @@ class Domain(Indicator):
 class URL(Indicator):
     """Converts URL to URL indicator and observable"""
 
-    def __init__(self, name, _type, author=None, tlp=None, first_seen=None):
-        super().__init__(name, _type, author, tlp, first_seen)
+    def __init__(
+        self, name, _type, author=None, tlp=None, first_seen=None, last_seen=None
+    ):
+        super().__init__(name, _type, author, tlp, first_seen, last_seen)
 
     def _create_pattern(self):
         ioc = self.name.replace("\\", "\\\\")
@@ -320,8 +350,10 @@ class URL(Indicator):
 class FileHash(Indicator):
     """Converts Hash to File indicator and observable"""
 
-    def __init__(self, name, _type, author=None, tlp=None, first_seen=None):
-        super().__init__(name, _type, author, tlp, first_seen)
+    def __init__(
+        self, name, _type, author=None, tlp=None, first_seen=None, last_seen=None
+    ):
+        super().__init__(name, _type, author, tlp, first_seen, last_seen)
         self.algorithm = self._determine_algorithm()
 
     def _determine_algorithm(self):
@@ -742,14 +774,131 @@ class Malware(RFStixEntity):
 class Vulnerability(RFStixEntity):
     """Converts a CyberVulnerability to a Vulnerability SDO"""
 
-    # TODO: add vuln descriptions
+    def __init__(
+        self,
+        name,
+        _type,
+        tlp=None,
+        first_seen=None,
+        last_seen=None,
+    ):
+        super().__init__(
+            name=name,
+            _type=_type,
+            author=None,
+            tlp=tlp,
+            first_seen=first_seen,
+            last_seen=last_seen,
+        )
+        self.description = None
+        self.labels = []
+        self.risk_score = None
+        self.objects = []
+        self.related_entities = []
+        self.stix_vulnerability = None
+
+    def to_stix_objects(self):
+        """Returns a list of STIX objects"""
+        if not self.stix_vulnerability:
+            self.create_stix_objects()
+        return [self.stix_vulnerability]
+
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        self.stix_obj = stix2.Vulnerability(
+        self.stix_vulnerability = self._create_vulnerability()
+
+    def _create_vulnerability(self):
+        """Creates and returns STIX2 vulnerability object"""
+        return stix2.Vulnerability(
             id=pycti.Vulnerability.generate_id(self.name),
             name=self.name,
             created_by_ref=self.author.id,
             object_marking_refs=self.tlp,
+            description=self.description,
+            labels=self.labels,
+            created=self.first_seen,
+            modified=self.last_seen,
+            custom_properties={
+                "x_opencti_score": self.risk_score or None,
+            },
+        )
+
+    def add_description(self, description):
+        self.description = description
+
+    def add_labels(self, labels):
+        self.labels = labels
+
+    def map_data(self, rf_vuln, tlp, risklist_related_entities):
+        handled_related_entities_types = risklist_related_entities
+        try:
+            self.risk_score = int(rf_vuln["Risk"])
+        except ValueError:
+            self.risk_score = 0
+
+        # Get related entities
+        related_entities_links = json.loads(rf_vuln["Links"])
+
+        # If there are related entities
+        if related_entities_links and len(related_entities_links) > 0:
+            if (
+                related_entities_links
+                and len(related_entities_links[0]["sections"]) > 0
+            ):  # Sometimes, hits is not empty but sections is
+                rf_related_entities = []
+                rf_related_entities_sections = related_entities_links[0]["sections"]
+
+                for section in rf_related_entities_sections:
+                    # Handle indicators and TTP & Tools
+                    if "Indicators" or "TTP" in section["section_id"]["name"]:
+                        rf_related_entities += section["lists"]
+
+                    for element in rf_related_entities:
+                        if element["type"]["name"] in handled_related_entities_types:
+                            for rf_related_element in element["entities"]:
+                                type_ = element["type"]["name"]
+                                name_ = rf_related_element["name"]
+                                related_element = ENTITY_TYPE_MAPPER[type_](
+                                    name_, type_, self.author, tlp
+                                )
+                                stix_objs = related_element.to_stix_objects()
+                                self.related_entities.extend(stix_objs)
+
+    def build_bundle(self, stix_name):
+        """
+        Adds self and all related entities (indicators, observables, malware, threat-actors, relationships) to objects
+        """
+        # Put the vulnerability first
+        self.objects.extend(stix_name.to_stix_objects())
+        # Then related entities
+        self.objects.extend(self.related_entities)
+        relationships = []
+        # Then add 'related-to' relationship with all related entities
+        for entity in self.related_entities:
+            if entity["type"] in ["indicator"]:
+                relationships.append(self._create_rel("related-to", entity.id))
+            if entity["type"] in ["attack-pattern", "malware", "threat-actor"]:
+                relationships.append(self._create_rel("targets", entity.id))
+        self.objects.extend(relationships)
+
+    def _create_rel(self, relationship_type, source_id):
+        """Creates Relationship object linking indicator and observable"""
+        return stix2.Relationship(
+            id=pycti.StixCoreRelationship.generate_id(
+                relationship_type, source_id, self.stix_vulnerability.id
+            ),
+            relationship_type=relationship_type,
+            source_ref=source_id,
+            target_ref=self.stix_vulnerability.id,
+            created_by_ref=self.author.id,
+            object_marking_refs=self.tlp,
+        )
+
+    def to_stix_bundle(self):
+        """Returns STIX objects as a Bundle"""
+        return stix2.Bundle(
+            objects=self.objects if self.objects else self.to_stix_objects(),
+            allow_custom=True,
         )
 
 
@@ -969,6 +1118,7 @@ class StixNote:
         ta_to_intrusion_set=False,
         risk_as_score=False,
         risk_threshold=None,
+        analyst_notes_guess_relationships=False,
     ):
         self.author = self._create_author()
         self.name = None
@@ -984,9 +1134,10 @@ class StixNote:
         self.ta_to_intrusion_set = ta_to_intrusion_set
         self.risk_as_score = risk_as_score
         self.risk_threshold = risk_threshold
-        self.tlp = stix2.TLP_RED
+        self.tlp = TLP_MAP["amber+strict"]
         self.rfapi = rfapi
         self.attachments = None
+        self.analyst_notes_guess_relationships = analyst_notes_guess_relationships
 
     @staticmethod
     def _create_author():
@@ -1085,10 +1236,11 @@ class StixNote:
         for attachment in self.attachments:
             if attachment["type"] != "pdf":
                 rule = DetectionRule(
-                    attachment["name"],
-                    attachment["type"],
-                    attachment["content"],
-                    self.author,
+                    name=attachment["name"],
+                    _type=attachment["type"],
+                    content=attachment["content"],
+                    author=self.author,
+                    tlp=tlp,
                 )
                 self.objects.extend(rule.to_stix_objects())
 
@@ -1233,42 +1385,56 @@ class StixNote:
     def create_adversary_capabilities_relations(self, adversary, event_attr):
         """
         Create relation between adversary and capabilities
-        Adversary (Intrusion Set) -> Uses -> "capabilities" data in event (Attack Pattern / Malware)
+        Adversary (Intrusion Set) -> Uses -> "capabilities" data in event (Attack Pattern / Malware /Vulnerability)
         """
         event_objects = []
         for event_capability in event_attr["capabilities"]:
 
-            # Get or create capability (AttackPattern or Malware)
+            # Get capability (AttackPattern,  Malware, Vulnerability, Indicator)
             capability_name = event_capability["name"]
+            capability_type = event_capability["type"]
+
             capability_obj = [
                 obj for obj in self.objects if obj.get("name") == capability_name
             ]
             if len(capability_obj) > 0:
                 capability = capability_obj[0]
             else:
-                capability_type = event_capability["type"]
-                if capability_type == "Malware":
-                    capability_obj = Malware(
-                        name=capability_name,
-                        _type=capability_type,
-                    )
-                else:
-                    capability_obj = TTP(
-                        name=capability_name,
-                        _type=capability_type,
-                    )
-                capability_obj.create_stix_objects()
-                capability = capability_obj.stix_obj
-                event_objects.append(capability)
+                msg = f"[ANALYST NOTES] Process capability name: '{capability_name}' (type: {capability_type}) conversion skipped. Not found from previous converted entities"
+                self.helper.connector_logger.warning(msg)
+                continue
 
             # Create relation adversary-capability
-            event_objects.append(
-                self._create_rel(
-                    from_id=adversary.id,
-                    to_id=capability.id,
-                    relation="uses",
+            if capability_type == "CyberVulnerability":
+                event_objects.append(
+                    self._create_rel(
+                        from_id=adversary.id,
+                        to_id=capability.id,
+                        relation="targets",
+                    )
                 )
-            )
+            elif capability_type == "Hash":
+                event_objects.append(
+                    self._create_rel(
+                        from_id=capability.id,
+                        to_id=adversary.id,
+                        relation="indicates",
+                    )
+                )
+            elif capability_type in ["Malware", "MitreAttackIdentifier"]:
+                event_objects.append(
+                    self._create_rel(
+                        from_id=adversary.id,
+                        to_id=capability.id,
+                        relation="uses",
+                    )
+                )
+            elif capability_type in ["AttackVector"]:
+                continue
+            else:
+                msg = f"[ANALYST NOTES] Cannot convert capability when processing analyst note diamond model, unsupported capability type: {capability_type}, skipping"
+                self.helper.connector_logger.warning(msg)
+                continue
 
         return event_objects
 
@@ -1282,7 +1448,9 @@ class StixNote:
             if event.get("type") == "CyberAttack" and event.get("attributes"):
                 event_attr = event["attributes"]
 
-                if event_attr.get("adversary"):
+                if event_attr.get("adversary") and event_attr["adversary"][0][
+                    "type"
+                ] in ["Organization", "Person"]:
 
                     # Retrieve adversary in self.objects depending on adversary name in event
                     # self.objects contains all IntrusionSet, Malware, Identity, AttackPattern et ThreatActor linked to note
@@ -1309,7 +1477,7 @@ class StixNote:
 
         if event_objects:
             self.objects.extend(event_objects)
-        else:
+        elif self.analyst_notes_guess_relationships:
             self.create_relations()
 
     def _create_report_types(self, topics):

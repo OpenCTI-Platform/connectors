@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-thehive:
-    image: opencti/connector-thehive:rolling
+    image: opencti/connector-thehive:latest
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -11,6 +11,7 @@ services:
       - CONNECTOR_LOG_LEVEL=error
       - THEHIVE_URL=https://thehive.changeme.com
       - THEHIVE_API_KEY=ChangeMe
+      - THEHIVE_IMPORT_ATTACHMENTS=false
       - THEHIVE_CHECK_SSL=true
       - THEHIVE_ORGANIZATION_NAME=MyCompany
       - THEHIVE_IMPORT_FROM_DATE=2021-01-01T00:00:00 # Optional
@@ -22,4 +23,5 @@ services:
       - THEHIVE_ALERT_STATUS_MAPPING= # TheHive_ExtStatus_Text1:OpenCTI_Status_ID1,TheHive_ExtStatus_Text2:OpenCTI_Status_ID2
       - THEHIVE_USER_MAPPING= # Format: TheHive_Assignee_Email1:OpenCTI_User_ID1,TheHive_Assignee_Email2:OpenCTI_User_ID2
       - THEHIVE_INTERVAL=5 # In minutes
+      - THEHIVE_CASE_TAG_WHITELIST= # TAG_OK,TAG_GOOD
     restart: always

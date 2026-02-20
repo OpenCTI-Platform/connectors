@@ -1,13 +1,13 @@
+version: "3"
+services:
   connector-redflag-domains:
-    image: opencti/connector-red-flag-domains:rolling
+    image: opencti/connector-red-flag-domains:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=OPEN_CTI_TOKEN
-      - CONNECTOR_ID=CONNECTOR_ID
-      - "CONNECTOR_NAME=Red Flag Domains"
-      - CONNECTOR_SCOPE=red-flag-domains
-      - UPDATE_EXISTING_DATA=False
-      - CONNECTOR_LOG_LEVEL=info
-      - REDFLAGDOMAINS_URL=https://dl.red.flag.domains/daily/
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # - CONNECTOR_ID=971377CA-CA0E-41C2-BC96-8B8CCD8216BE
+      # - CONNECTOR_NAME=Red Flag Domains
+      # - CONNECTOR_SCOPE=red-flag-domains
+      # - CONNECTOR_LOG_LEVEL=error
+      # - REDFLAGDOMAINS_URL=https://dl.red.flag.domains/daily/
     restart: always
-

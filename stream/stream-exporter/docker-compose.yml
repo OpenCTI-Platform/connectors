@@ -1,8 +1,9 @@
+version: '3'
 services:
   connector-stream-exporter:
-    image: opencti/connector-stream-exporter:rolling
+    image: opencti/connector-stream-exporter:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI

@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike connector core module."""
 
 import os
 import sys
 import time
-from typing import Any, Dict, List, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any, cast
 
 import stix2
 import yaml
@@ -13,19 +13,20 @@ from crowdstrike_feeds_services.utils import (
     convert_comma_separated_str_to_list,
     create_organization,
     get_tlp_string_marking_definition,
-    is_timestamp_in_future,
     timestamp_to_datetime,
 )
 from crowdstrike_feeds_services.utils.config_variables import ConfigCrowdstrike
 from crowdstrike_feeds_services.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
-from pycti import OpenCTIConnectorHelper  # type: ignore
+from pycti import OpenCTIConnectorHelper
 
 from .actor.importer import ActorImporter
 from .importer import BaseImporter
 from .indicator.importer import IndicatorImporter, IndicatorImporterConfig
+from .malware.importer import MalwareImporter
 from .report.importer import ReportImporter
 from .rule.snort_suricata_master_importer import SnortMasterImporter
 from .rule.yara_master_importer import YaraMasterImporter
+from .vulnerability.importer import VulnerabilityImporter
 
 
 class CrowdStrike:
@@ -34,6 +35,8 @@ class CrowdStrike:
     _CONFIG_SCOPE_ACTOR = "actor"
     _CONFIG_SCOPE_REPORT = "report"
     _CONFIG_SCOPE_INDICATOR = "indicator"
+    _CONFIG_SCOPE_VULNERABILITY = "vulnerability"
+    _CONFIG_SCOPE_MALWARE = "malware"
     _CONFIG_SCOPE_YARA_MASTER = "yara_master"
     _CONFIG_SCOPE_SNORT_SURICATA_MASTER = "snort_suricata_master"
 
@@ -63,34 +66,28 @@ class CrowdStrike:
         self.config = ConfigCrowdstrike()
 
         scopes_str = self.config.scopes
-        scopes = set()
+        scopes_list: list[str] = []
         if scopes_str is not None:
-            scopes = set(convert_comma_separated_str_to_list(scopes_str))
+            scopes_list = convert_comma_separated_str_to_list(scopes_str)
+
+        scopes: set[str] = set(scopes_list)
 
         tlp = self.config.tlp
         tlp_marking = self._convert_tlp_to_marking_definition(tlp)
 
         create_observables = self.config.create_observables
-        if create_observables is None:
-            create_observables = self._DEFAULT_CREATE_OBSERVABLES
-        else:
-            create_observables = bool(create_observables)
 
         create_indicators = self.config.create_indicators
-        if create_indicators is None:
-            create_indicators = self._DEFAULT_CREATE_INDICATORS
-        else:
-            create_indicators = bool(create_indicators)
 
         actor_start_timestamp = self.config.actor_start_timestamp
-        if is_timestamp_in_future(actor_start_timestamp):
-            raise ValueError("Actor start timestamp is in the future")
+
+        malware_start_timestamp = self.config.malware_start_timestamp
 
         report_start_timestamp = self.config.report_start_timestamp
-        if is_timestamp_in_future(report_start_timestamp):
-            raise ValueError("Report start timestamp is in the future")
 
         report_status_str = self.config.report_status
+        if not report_status_str:
+            report_status_str = "new"
         report_status = self._convert_report_status_str_to_report_status_int(
             report_status_str
         )
@@ -113,11 +110,12 @@ class CrowdStrike:
                 report_target_industries_str
             )
 
-        report_guess_malware = bool(self.config.report_guess_malware)
+        report_guess_malware = self.config.report_guess_malware
+        report_guess_relations = self.config.report_guess_relations
 
         indicator_start_timestamp = self.config.indicator_start_timestamp
-        if is_timestamp_in_future(indicator_start_timestamp):
-            raise ValueError("Indicator start timestamp is in the future")
+
+        vulnerability_start_timestamp = self.config.vulnerability_start_timestamp
 
         indicator_exclude_types_str = self.config.indicator_exclude_types
         indicator_exclude_types = []
@@ -181,30 +179,14 @@ class CrowdStrike:
         self.connect_cs = BaseCrowdstrikeClient(self.helper)
 
         # Create importers.
-        importers: List[BaseImporter] = []
+        importers: list[BaseImporter] = []
 
         if self._CONFIG_SCOPE_ACTOR in scopes:
-            actor_indicator_config = {
-                "default_latest_timestamp": actor_start_timestamp,
-                "create_observables": create_observables,
-                "create_indicators": create_indicators,
-                "exclude_types": indicator_exclude_types,
-                "default_x_opencti_score": default_x_opencti_score,
-                "indicator_low_score": indicator_low_score,
-                "indicator_low_score_labels": set(indicator_low_score_labels),
-                "indicator_medium_score": indicator_medium_score,
-                "indicator_medium_score_labels": set(indicator_medium_score_labels),
-                "indicator_high_score": indicator_high_score,
-                "indicator_high_score_labels": set(indicator_high_score_labels),
-                "indicator_unwanted_labels": set(indicator_unwanted_labels),
-            }
-
             actor_importer = ActorImporter(
                 self.helper,
                 author,
                 actor_start_timestamp,
                 tlp_marking,
-                actor_indicator_config,
             )
 
             importers.append(actor_importer)
@@ -234,8 +216,10 @@ class CrowdStrike:
                 report_status,
                 report_type,
                 report_guess_malware,
+                report_guess_relations,
                 indicator_config,
                 no_file_trigger_import,
+                scopes=scopes,
             )
 
             importers.append(report_importer)
@@ -260,6 +244,7 @@ class CrowdStrike:
                 indicator_high_score_labels=set(indicator_high_score_labels),
                 indicator_unwanted_labels=set(indicator_unwanted_labels),
                 no_file_trigger_import=no_file_trigger_import,
+                scopes=scopes,
             )
 
             indicator_importer = IndicatorImporter(indicator_importer_config)
@@ -273,6 +258,7 @@ class CrowdStrike:
                 report_status,
                 report_type,
                 no_file_trigger_import,
+                scopes=scopes_list,
             )
 
             importers.append(yara_master_importer)
@@ -289,10 +275,30 @@ class CrowdStrike:
 
             importers.append(snort_master_importer)
 
+        if self._CONFIG_SCOPE_VULNERABILITY in scopes:
+            vulnerability_importer = VulnerabilityImporter(
+                self.helper,
+                author,
+                vulnerability_start_timestamp,
+                tlp_marking,
+            )
+
+            importers.append(vulnerability_importer)
+
+        if self._CONFIG_SCOPE_MALWARE in scopes:
+            malware_importer = MalwareImporter(
+                self.helper,
+                author,
+                malware_start_timestamp,
+                tlp_marking,
+            )
+
+            importers.append(malware_importer)
+
         self.importers = importers
 
     @staticmethod
-    def _read_configuration() -> Dict[str, str]:
+    def _read_configuration() -> dict[str, str]:
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/../config.yml"
         if not os.path.isfile(config_file_path):
             return {}
@@ -303,16 +309,16 @@ class CrowdStrike:
         return create_organization("CrowdStrike")
 
     @staticmethod
-    def _get_yaml_path(config_name: str) -> List[str]:
+    def _get_yaml_path(config_name: str) -> list[str]:
         return config_name.split(".")
 
     @staticmethod
-    def _get_environment_variable_name(yaml_path: List[str]) -> str:
+    def _get_environment_variable_name(yaml_path: list[str]) -> str:
         return "_".join(yaml_path).upper()
 
     @classmethod
     def _convert_tlp_to_marking_definition(
-        cls, tlp_value: Optional[str]
+        cls, tlp_value: str | None
     ) -> stix2.MarkingDefinition:
         if tlp_value is None:
             return DEFAULT_TLP_MARKING_DEFINITION
@@ -322,7 +328,7 @@ class CrowdStrike:
     def _convert_report_status_str_to_report_status_int(cls, report_status: str) -> int:
         return cls._CONFIG_REPORT_STATUS_MAPPING[report_status.lower()]
 
-    def _load_state(self) -> Dict[str, Any]:
+    def _load_state(self) -> dict[str, Any]:
         current_state = self.helper.get_state()
         if not current_state:
             return {}
@@ -330,7 +336,7 @@ class CrowdStrike:
 
     @staticmethod
     def _get_state_value(
-        state: Optional[Mapping[str, Any]], key: str, default: Optional[Any] = None
+        state: Mapping[str, Any] | None, key: str, default: Any | None = None
     ) -> Any:
         if state is not None:
             return state.get(key, default)
@@ -359,15 +365,17 @@ class CrowdStrike:
             new_state = current_state.copy()
 
             for importer in self.importers:
-                work_id = self._initiate_work(timestamp, importer.name)
+                importer_name = importer.name or importer.__class__.__name__
+                work_id = self._initiate_work(timestamp, importer_name)
                 importer_state = importer.start(work_id, new_state)
                 new_state.update(importer_state)
 
                 self._info("Storing updated new state: {0}", new_state)
                 self.helper.set_state(new_state)
 
+                connect_name = self.helper.connect_name or "CrowdStrike"
                 message = (
-                    f"{self.helper.connect_name} {importer.name} successfully run, storing last_run as "
+                    f"{connect_name} {importer_name} successfully run, storing last_run as "
                     + str(timestamp)
                 )
                 self.helper.api.work.to_processed(work_id, message)
@@ -402,11 +410,16 @@ class CrowdStrike:
         friendly_name = (
             f"{self.helper.connect_name}/{importer_name} run @ {datetime_str}"
         )
-        work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id, friendly_name
-        )
+        connect_id = self.helper.connect_id
+        if not connect_id:
+            raise ValueError("OpenCTI helper connect_id is not set")
 
-        self._info(f"New '{importer_name} work '{work_id}' initiated", work_id)
+        work_id = self.helper.api.work.initiate_work(
+            cast(str, connect_id), friendly_name
+        )
+        work_id = cast(str, work_id)
+
+        self._info(f"New '{importer_name}' work '{work_id}' initiated")
         return work_id
 
     def _info(self, msg: str, *args: Any) -> None:
