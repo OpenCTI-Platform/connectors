@@ -6,15 +6,10 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.schedulers.base import BaseScheduler
 from intel471.common import HelperRequest
 from intel471.settings import ConnectorSettings
-from intel471.streams.breach_alerts import Intel471BreachAlertsStream
-from intel471.streams.common import Intel471Stream
-from intel471.streams.cves import Intel471CVEsStream
-from intel471.streams.indicators import Intel471IndicatorsStream
-from intel471.streams.malware_reports import Intel471MalwareReportsStream
-from intel471.streams.reports import Intel471ReportsStream
-from intel471.streams.spot_reports import Intel471SpotReportsStream
-from intel471.streams.yara import Intel471YARAStream
+from intel471.streams.core.base import Intel471Stream
 from pycti import OpenCTIConnectorHelper
+
+from .backend import ClientWrapper, get_client
 
 
 class Intel471Connector:
@@ -24,7 +19,6 @@ class Intel471Connector:
     ) -> None:
         self.config = config
         self.helper = helper
-
         self.scheduler: BaseScheduler = self._init_scheduler()
         self.in_queue = Queue()
         self.out_queues: dict[str, Queue] = {}
@@ -33,15 +27,11 @@ class Intel471Connector:
         api_key = self.config.intel471.api_key.get_secret_value()
         proxy_url = self.config.intel471.proxy
         ioc_score = self.config.intel471.ioc_score
-        for stream_class in (
-            Intel471IndicatorsStream,
-            Intel471CVEsStream,
-            Intel471YARAStream,
-            Intel471ReportsStream,
-            Intel471BreachAlertsStream,
-            Intel471SpotReportsStream,
-            Intel471MalwareReportsStream,
-        ):
+        backend_name = self.config.intel471.backend
+        client_wrapper: ClientWrapper = get_client(
+            backend_name, api_username, api_key, proxy_url
+        )
+        for stream_class in client_wrapper.streams:
             if interval := getattr(
                 self.config.intel471, f"interval_{stream_class.group_label}"
             ):
@@ -51,14 +41,12 @@ class Intel471Connector:
                 )
                 self.add_job(
                     stream_class(
+                        client_wrapper,
                         self.helper,
-                        api_username,
-                        api_key,
                         self.out_queues[stream_class.label],
                         self.in_queue,
                         initial_history,
                         update_existing_data,
-                        proxy_url,
                         ioc_score,
                     ),
                     interval,

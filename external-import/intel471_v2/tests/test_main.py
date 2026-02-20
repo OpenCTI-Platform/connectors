@@ -53,6 +53,7 @@ class StubConnectorSettings(ConnectorSettings):
                     "initial_history_reports": 0,
                     "proxy": None,
                     "ioc_score": 70,
+                    "backend": "titan",
                 },
             }
         )
