@@ -310,7 +310,6 @@ class MyConnectorConfig(BaseConfigModel):
 
 The connectors-sdk project is a toolkit designed to simplify the development of connectors for various integrations on the OpenCTI platform. It provides models, exceptions, and utilities to streamline the process of building robust connectors.
 
-> [!NOTE]  
 > Note that not all OpenCTI models are available in the connectors-sdk and some may be missing. We recommend using the connectors-sdk models whenever possible for models that are available. 
 >We do our best to complete the connectors-sdk with missing models.
 
