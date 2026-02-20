@@ -19,6 +19,11 @@ from pycti import (
     StixCoreRelationship as PyctiStixCoreRelationship,
     MarkingDefinition as PyctiMarkingDefinition
 )
+
+from pycti.utils.constants import (
+    CustomObservablePhoneNumber as PhoneNumber
+)
+
 from stix2 import (
     TLP_AMBER,
     TLP_GREEN,
@@ -163,6 +168,7 @@ class ConverterToStix:
         root_domain = entity_content.get("root_domain", {})
         domain_name = root_domain.get("domain")
         ip_address = root_domain.get("ip_address", "")
+        phone_value = alert.get("entity") if alert.get("product") == "telco" else None
 
         # Parse timestamps once for indicator/note reuse
         created_at = (
@@ -233,6 +239,9 @@ class ConverterToStix:
         elif ip_address:
             pattern = f"[ipv4-addr:value = '{ip_address}']"
             name = ip_address
+        elif phone_value:
+            pattern = f"[tracking-number:value = '{phone_value}']"
+            name = phone_value
         else:
             return
 
@@ -387,6 +396,22 @@ class ConverterToStix:
             "[DoppelConverter] Revoked indicators",
             {"alert_id": alert_id, "count": len(active_indicators)},
         )
+
+    def _create_phone_number_observable(self, phone_number, alert) -> PhoneNumber:
+        """
+        Create PhoneNumber observable
+        """
+        # labels_flat = build_labels(alert)
+        # external_references = build_external_references(alert)
+        custom_properties = build_custom_properties(alert, self.author.id)
+
+        phone_number_observable = PhoneNumber(
+            value=phone_number,
+            spec_version=STIX_VERSION,
+            object_marking_refs=[self.tlp_marking.id],
+            custom_properties=custom_properties or None,
+        )
+        return phone_number_observable
 
     def _create_domain_observable(self, domain_name, alert) -> DomainName:
         """
@@ -591,12 +616,23 @@ class ConverterToStix:
 
                 # Extract required fields
                 entity_content = alert.get("entity_content", {})
+                product = alert.get("product")
                 root_domain = entity_content.get("root_domain", {})
-                domain_name = root_domain.get("domain") or alert.get("entity") # Fallback to entity field for non-domain alerts
+                domain_name = root_domain.get("domain") 
                 ip_address = root_domain.get("ip_address")
 
                 domain_observable_id = None
                 ip_observable_id = None
+
+                # Create Phone Number Observable for product = telco.
+                if product == "telco":
+                    phone_number_observable = self._create_phone_number_observable(
+                        alert.get("entity"), alert
+                    )
+                    stix_objects.append(phone_number_observable)
+                    domain_observable_id = (
+                        phone_number_observable.id
+                    )  # mocked domain observable id
 
                 # Create or reference Domain Observable
                 if domain_name:
