@@ -1,0 +1,4 @@
+pycti==6.9.17
+pydantic>=2.8.2,<3
+requests>=2.31.0,<3
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.9.17#subdirectory=connectors-sdk
