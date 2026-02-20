@@ -14,7 +14,15 @@ from pathlib import Path
 from typing import Any, Literal, Self
 
 from connectors_sdk.settings.annotated_types import ListFromString
+from connectors_sdk.settings.deprecations import (
+    migrate_deprecated_namespace,
+    migrate_deprecated_variable,
+)
 from connectors_sdk.settings.exceptions import ConfigValidationError
+from connectors_sdk.settings.json_schema_generator import (
+    ConnectorConfigJsonSchemaGenerator,
+    SanitizedJsonSchemaGenerator,
+)
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -260,6 +268,116 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
             super().__init__()
         except ValidationError as e:
             raise ConfigValidationError("Error validating configuration.") from e
+
+    @classmethod
+    def model_json_schema(cls, **kwargs: Any) -> dict[str, Any]:  # type: ignore[override]
+        """Use a custom JSON schema generator to sanitize the schema and remove function references."""
+        kwargs.setdefault("schema_generator", SanitizedJsonSchemaGenerator)
+        return super().model_json_schema(**kwargs)
+
+    @classmethod
+    def config_json_schema(
+        cls,
+        *,
+        connector_name: str,
+        by_alias: bool = False,
+        mode: str = "validation",
+    ) -> dict[str, Any]:
+        """Generate the connector-specific environment variable JSON schema used for metadata contracts."""
+
+        def make_schema_generator(
+            name: str,
+        ) -> type[ConnectorConfigJsonSchemaGenerator]:
+            return type(
+                "GeneratedSchemaGen",
+                (ConnectorConfigJsonSchemaGenerator,),
+                {"connector_name": name},
+            )
+
+        return cls.model_json_schema(
+            by_alias=by_alias,
+            schema_generator=make_schema_generator(connector_name),
+            mode=mode,
+        )
+
+    @model_validator(mode="wrap")
+    @classmethod
+    def migrate_deprecation(
+        cls,
+        data: dict[str, Any],
+        handler: ModelWrapValidatorHandler[Self],
+    ) -> Self:
+        """Migrate deprecated variables and namespaces in the configuration data.
+
+        Args:
+            data: Raw configuration data.
+            handler: Pydantic validation handler.
+
+        Returns:
+            Validated and migrated configuration data.
+        """
+        for field_name, field in cls.model_fields.items():
+            json_schema_extra = field.json_schema_extra
+            if not isinstance(json_schema_extra, dict):
+                json_schema_extra = {}
+            deprecated = field.deprecated
+            new_namespace = json_schema_extra.get("new_namespace")
+            new_namespaced_var = json_schema_extra.get("new_namespaced_var")
+            removal_date = (
+                str(json_schema_extra.get("removal_date"))
+                if json_schema_extra.get("removal_date")
+                else None
+            )
+            annotation = field.annotation
+            is_namespace = isinstance(annotation, type) and issubclass(
+                annotation, BaseConfigModel
+            )
+
+            if is_namespace and new_namespaced_var:
+                raise ValueError(
+                    f"Cannot rename variable for namespace {field_name}. "
+                    "Use only `new_namespace`."
+                )
+
+            if deprecated and new_namespace and is_namespace:
+                if not isinstance(new_namespace, str):
+                    raise ValueError(
+                        f"`new_namespace` for namespace {field_name} must be a string."
+                    )
+                migrate_deprecated_namespace(
+                    data,
+                    old_namespace=field_name,
+                    new_namespace=new_namespace,
+                    removal_date=removal_date,
+                )
+
+            if is_namespace:
+                for sub_field_name, sub_field in annotation.model_fields.items():  # type: ignore[union-attr]
+                    sub_json_schema_extra = sub_field.json_schema_extra
+                    if not isinstance(sub_json_schema_extra, dict):
+                        sub_json_schema_extra = {}
+                    sub_deprecated = sub_field.deprecated
+                    sub_new_namespace = sub_json_schema_extra.get("new_namespace")
+                    sub_new_namespaced_var = sub_json_schema_extra.get(
+                        "new_namespaced_var"
+                    )
+                    sub_new_value_factory = sub_json_schema_extra.get(
+                        "new_value_factory"
+                    )
+                    sub_removal_date = sub_json_schema_extra.get("removal_date")
+
+                    if sub_deprecated and sub_new_namespaced_var:
+                        migrate_deprecated_variable(
+                            data,
+                            old_name=sub_field_name,
+                            new_name=sub_new_namespaced_var,
+                            current_namespace=field_name,
+                            new_namespace=sub_new_namespace,
+                            new_value_factory=sub_new_value_factory,
+                            removal_date=sub_removal_date,
+                        )
+
+        return handler(data)
 
     @model_validator(mode="wrap")
     @classmethod
