@@ -84,7 +84,7 @@ def build_description(alert) -> str:
     nameservers = root_domain.get("nameservers", [])
 
     description_parts = []
-    if alert.get("product") == 'telco':
+    if alert.get("product") == "telco":
         description_parts.append(f"**Alert ID**: {alert.get('id')}\n")
         description_parts.append(f"**Doppel Alert URI**: {alert.get('doppel_link')}\n")
     if alert.get("brand"):
@@ -121,11 +121,11 @@ def build_description(alert) -> str:
             [ns if isinstance(ns, str) else ns.get("host") for ns in nameservers]
         )
         description_parts.append(f"**Nameservers**: {ns_text}\n")
-    if alert.get("product") == 'telco':
+    if alert.get("product") == "telco":
 
         table = "| Label | Value |\n"
         table += "| :--- | :--- |\n"
-    
+
         for label in build_labels(alert):
             if ":" in label:
                 # Split only on the first colon in case values contain colons
@@ -136,7 +136,7 @@ def build_description(alert) -> str:
             else:
                 key = "Tag"
                 value = label
-                
+
             table += f"| {key} | {value} |\n"
 
         description_parts.append(f"**Labels**:\n {table}")
