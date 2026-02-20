@@ -12,6 +12,7 @@ and more.
 
 ## Table of Contents
 
+<!--toc:start-->
 - [OpenCTI VulnCheck Connector](#opencti-vulncheck-connector)
   - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
@@ -25,8 +26,11 @@ and more.
     - [Manual Deployment](#manual-deployment)
   - [Usage](#usage)
   - [Behavior](#behavior)
+    - [Data Sources](#data-sources)
+    - [Data Volume](#data-volume)
   - [Debugging](#debugging)
-  - [Additional information](#additional-information)
+  - [Additional Information](#additional-information)
+<!--toc:end-->
 
 ## Introduction
 
@@ -85,10 +89,10 @@ Below are the parameters you'll need to set for running the connector:
 | Connector ID              | `id`              | `CONNECTOR_ID`                       | /                                                                                                                           | Yes         | A unique `UUIDv4` identifier for this connector.                              |
 | Connector Type            | `type`            | `CONNECTOR_TYPE`                     | EXTERNAL_IMPORT                                                                                                             | No          | Specifies the type of connector. Should always be set to `EXTERNAL_IMPORT`.   |
 | Connector Name            | `name`            | `CONNECTOR_NAME`                     | VulnCheck Connector                                                                                                         | No          | The name of the connector as it will appear in OpenCTI.                       |
-| Connector Scope           | `scope`           | `CONNECTOR_SCOPE`                    | vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference,software                    | No          | The scope of data to import, a list of Stix Objects.                          |
+| Connector Scope           | `scope`           | `CONNECTOR_SCOPE`                    | vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference,software,attack-pattern,course-of-action,x-mitre-data-source     | No          | The scope of data to import, a list of Stix Objects.                          |
 | Connector Duration period | `duration_period` | `CONNECTOR_DURATION_PERIOD`          | PT1H                                                                                                                        | No          | The time period for which to fetch data. Default is 24 hours.                 |
 | Log Level                 | `log_level`       | `CONNECTOR_LOG_LEVEL`                | info                                                                                                                        | No          | Sets the verbosity of logs. Options: `debug`, `info`, `warn`, `error`.        |
-| API Base URL              | `api_base_url`    | `CONNECTOR_VULNCHECK_API_BASE_URL`   | https://api.vulncheck.com/v3                                                                                                | No          | The base URL for the VulnCheck API (e.g., `https://api.vulncheck.com/v3`).    |
+| API Base URL              | `api_base_url`    | `CONNECTOR_VULNCHECK_API_BASE_URL`   | <https://api.vulncheck.com/v3>                                                                                                | No          | The base URL for the VulnCheck API (e.g., `https://api.vulncheck.com/v3`).    |
 | Data Sources              | `data_sources`    | `CONNECTOR_VULNCHECK_DATA_SOURCES`   | botnets,epss,exploits,initial-access,ipintel,nist-nvd2,ransomware,snort,suricata,threat-actors,vulncheck-kev,vulncheck-nvd2 | No          | List of data sources to collect intelligence from.                            |
 
 ## Deployment
@@ -97,7 +101,7 @@ Below are the parameters you'll need to set for running the connector:
 
 Before building the Docker container, you need to set the version of pycti in
 `requirements.txt` equal to whatever version of OpenCTI you're running.
-Example, `pycti==6.9.17`. If you don't, it will take the latest version, but
+Example, `pycti==6.9.21`. If you don't, it will take the latest version, but
 sometimes the OpenCTI SDK fails to initialize.
 
 Build a Docker Image using the provided `Dockerfile`.
@@ -128,7 +132,7 @@ with the appropriate configurations for you environment.
 Install the required python dependencies (preferably in a virtual environment):
 
 ```shell
-pip3 install -r requirements.txt
+pip3 install .
 ```
 
 Then, start the connector from vulncheck/src:
@@ -170,8 +174,10 @@ as STIX objects. The following types of data are processed:
 - **VulnCheck KEV**: Populates OpenCTI with vulnerabilities actively exploited
 in the wild, focusing on high-priority risks.
 - **NVD-2**: Imports vulnerability information enriched with CVSS scores,
-descriptions, and associated CPEs. (VulnCheck NVD-2 is available for
-subscribers, NIST NVD-2 is available for other users)
+descriptions, and associated CPEs. Additionally includes MITRE ATT&CK
+enrichments such as attack patterns (CAPEC and MITRE techniques), course of
+actions (mitigations), and data sources for detection. (VulnCheck NVD-2 is
+available for subscribers, NIST NVD-2 is available for community users)
 - **Exploits**: Maps exploits to vulnerabilities and generates corresponding
 Malware objects in OpenCTI.
 - **EPSS Enrichment**: Adds vulnerabilities along with their EPSS scores and
@@ -230,16 +236,10 @@ logging messages can be added using
 
 ---
 
-## Useful Resources
+## Additional Information
 
 OpenCTI documentation for connectors:
 
 - [OpenCTI Ecosystem](https://filigran.notion.site/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76)
 - [Connectors Deployment](https://docs.opencti.io/latest/deployment/connectors/)
 - [Connectors Development](https://docs.opencti.io/latest/development/connectors/)
-
-## Maintainers
-
-This integration is maintained by:
-
-- [@maddawik](https://github.com/maddawik) - Primary maintainer

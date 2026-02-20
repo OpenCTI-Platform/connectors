@@ -32,6 +32,9 @@ from crowdstrike_feeds_services.utils import (
     create_vulnerability,
     timestamp_to_datetime,
 )
+from crowdstrike_feeds_services.utils.constants import (
+    CS_KILL_CHAIN_TO_LOCKHEED_MARTIN_CYBER_KILL_CHAIN,
+)
 from pycti import OpenCTIConnectorHelper
 from stix2 import Bundle
 from stix2.v21 import (
@@ -120,16 +123,6 @@ class IndicatorBundleBuilder:
 
     _INDICATOR_PATTERN_TYPE_STIX = "stix"
 
-    _CS_KILL_CHAIN_TO_LOCKHEED_MARTIN_CYBER_KILL_CHAIN = {
-        "Reconnaissance": "reconnaissance",
-        "Weaponization": "weaponization",
-        "Delivery": "delivery",
-        "Exploitation": "exploitation",
-        "Installation": "installation",
-        "C2": "command-and-control",
-        "ActionOnObjectives": "action-on-objectives",
-    }
-
     def __init__(
         self, helper: OpenCTIConnectorHelper, config: IndicatorBundleBuilderConfig
     ) -> None:
@@ -165,7 +158,7 @@ class IndicatorBundleBuilder:
         kill_chain_phases = []
 
         for kill_chain in self.indicator["kill_chains"]:
-            lh_kill_chain = self._CS_KILL_CHAIN_TO_LOCKHEED_MARTIN_CYBER_KILL_CHAIN.get(
+            lh_kill_chain = CS_KILL_CHAIN_TO_LOCKHEED_MARTIN_CYBER_KILL_CHAIN.get(
                 kill_chain
             )
             if lh_kill_chain is None:

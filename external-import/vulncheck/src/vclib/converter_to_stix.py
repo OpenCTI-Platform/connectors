@@ -1,9 +1,12 @@
 import ipaddress
+import uuid
 from datetime import datetime
 
 import stix2
 import validators
 from pycti import (
+    AttackPattern,
+    CourseOfAction,
     Identity,
     Indicator,
     Infrastructure,
@@ -13,6 +16,37 @@ from pycti import (
     ThreatActorGroup,
     Vulnerability,
 )
+from stix2.properties import StringProperty
+from stix2.v21 import CustomObject
+
+
+# Define custom MITRE Data Source object type
+@CustomObject(
+    "x-mitre-data-source",
+    [
+        ("name", StringProperty(required=True)),
+        ("x_mitre_version", StringProperty()),
+        ("x_mitre_data_source_id", StringProperty()),
+    ],
+)
+class MitreDataSource:
+    @staticmethod
+    def generate_id(data_source_name: str, data_source_id: str) -> str:
+        """Generate a deterministic STIX ID for a MITRE Data Source.
+
+        Args:
+            data_source_name (str): Name of the data source
+            data_source_id (str): MITRE data source ID (e.g., "DS0015")
+
+        Returns:
+            str: STIX ID in format x-mitre-data-source--<UUID>
+        """
+        # Generate deterministic UUID based on data source name and ID
+        namespace = uuid.UUID("00000000-0000-0000-0000-000000000000")
+        deterministic_uuid = uuid.uuid5(
+            namespace, f"{data_source_name}-{data_source_id}"
+        )
+        return f"x-mitre-data-source--{deterministic_uuid}"
 
 
 class ConverterToStix:
@@ -64,7 +98,11 @@ class ConverterToStix:
         return author
 
     def create_relationship(
-        self, source_id: str, relationship_type: str, target_id: str
+        self,
+        source_id: str,
+        relationship_type: str,
+        target_id: str,
+        labels: list[str] = [],
     ) -> stix2.Relationship:
         """Creates Relationship object
 
@@ -88,6 +126,8 @@ class ConverterToStix:
             target_ref=target_id,
             created_by_ref=self.author,
             object_marking_refs=[stix2.TLP_AMBER],
+            labels=labels,
+            allow_custom=True,
         )
         return relationship
 
@@ -193,6 +233,7 @@ class ConverterToStix:
         name: str,
         infrastructure_type: str,
         last_seen=None,
+        labels: list[str] = [],
     ) -> stix2.Infrastructure:
         """Create Infrastructure Object
 
@@ -213,6 +254,7 @@ class ConverterToStix:
             created_by_ref=self.author,
             last_seen=last_seen,
             object_marking_refs=[stix2.TLP_AMBER],
+            labels=labels,
         )
         return stix_infrastructure
 
@@ -287,6 +329,7 @@ class ConverterToStix:
         is_family: bool,
         first_seen: str | None,
         description: str = "",
+        labels: list[str] = [],
     ) -> stix2.Malware:
         """Create Malware Object
 
@@ -311,6 +354,7 @@ class ConverterToStix:
                 first_seen=datetime.fromisoformat(first_seen),
                 created_by_ref=self.author,
                 object_marking_refs=[stix2.TLP_AMBER],
+                labels=labels,
             )
             if first_seen is not None
             else stix2.Malware(
@@ -320,6 +364,7 @@ class ConverterToStix:
                 is_family=is_family,
                 created_by_ref=self.author,
                 object_marking_refs=[stix2.TLP_AMBER],
+                labels=labels,
             )
         )
 
@@ -373,7 +418,11 @@ class ConverterToStix:
         return external_reference
 
     def create_threat_actor_group(
-        self, name: str, first_seen: datetime, external_refs: list
+        self,
+        name: str,
+        first_seen: datetime,
+        external_refs: list,
+        labels: list[str] = [],
     ) -> stix2.ThreatActor:
         """Create a Threat Actor Group Object
 
@@ -395,6 +444,7 @@ class ConverterToStix:
             external_references=external_refs,
             created_by_ref=self.author,
             object_marking_refs=[stix2.TLP_AMBER],
+            labels=labels,
         )
         return threat_actor
 
@@ -425,3 +475,156 @@ class ConverterToStix:
             object_marking_refs=[stix2.TLP_AMBER],
         )
         return indicator
+
+    def create_capec_attack_pattern(
+        self, capec_id: str, capec_name: str, capec_url: str
+    ) -> stix2.AttackPattern:
+        """Create CAPEC Attack Pattern Object
+
+        Args:
+            capec_id (str): CAPEC ID (e.g., "CAPEC-153")
+            capec_name (str): CAPEC name (e.g., "Input Data Manipulation")
+            capec_url (str): CAPEC URL
+
+        Returns:
+            stix2.AttackPattern: CAPEC Attack Pattern Object
+
+        Examples:
+            >>> create_capec_attack_pattern("CAPEC-153", "Input Data Manipulation", "https://capec.mitre.org/data/definitions/153.html")
+        """
+        external_ref = stix2.ExternalReference(
+            source_name="capec",
+            external_id=capec_id,
+            url=capec_url,
+        )
+
+        attack_pattern = stix2.AttackPattern(
+            id=AttackPattern.generate_id(capec_name, capec_id),
+            name=capec_name,
+            description=f"CAPEC attack pattern: {capec_name}",
+            created_by_ref=self.author,
+            external_references=[external_ref],
+            object_marking_refs=[stix2.TLP_AMBER],
+            custom_properties={
+                "x_mitre_id": capec_id,
+            },
+        )
+        return attack_pattern
+
+    def create_mitre_attack_pattern(
+        self, technique_id: str, technique_name: str, technique_url: str
+    ) -> stix2.AttackPattern:
+        """Create MITRE ATT&CK Attack Pattern Object
+
+        Args:
+            technique_id (str): MITRE technique ID (e.g., "T1190")
+            technique_name (str): MITRE technique name (e.g., "Exploit Public-Facing Application")
+            technique_url (str): MITRE technique URL
+
+        Returns:
+            stix2.AttackPattern: MITRE ATT&CK Attack Pattern Object
+
+        Examples:
+            >>> create_mitre_attack_pattern("T1190", "Exploit Public-Facing Application", "https://attack.mitre.org/techniques/T1190")
+        """
+        external_ref = stix2.ExternalReference(
+            source_name=technique_id,
+            external_id=technique_id,
+            url=technique_url,
+        )
+
+        attack_pattern = stix2.AttackPattern(
+            id=AttackPattern.generate_id(technique_name, technique_id),
+            name=technique_name,
+            description=f"MITRE ATT&CK technique: {technique_name}",
+            created_by_ref=self.author,
+            external_references=[external_ref],
+            object_marking_refs=[stix2.TLP_AMBER],
+            custom_properties={
+                "x_mitre_id": technique_id,
+            },
+        )
+        return attack_pattern
+
+    def create_course_of_action(
+        self, mitigation_id: str, description: str, mitigation_url=None
+    ) -> stix2.CourseOfAction:
+        """Create Course of Action Object
+
+        Args:
+            name (str): Course of Action name
+            description (str): Course of Action description
+            mitigation_url (str, optional): MITRE mitigation URL to add as external reference
+
+        Returns:
+            stix2.CourseOfAction: Course of Action Object
+
+        Examples:
+            >>> create_course_of_action("Input Validation", "Implement proper input validation to prevent injection attacks")
+            >>> create_course_of_action("M1013", "Application Developer Guidance", mitigation_url="https://attack.mitre.org/mitigations/M1013")
+        """
+        # Build external references list
+        external_references = []
+
+        # Add MITRE mitigation URL as external reference if provided
+        if mitigation_url is not None:
+            mitigation_external_ref = stix2.ExternalReference(
+                source_name=mitigation_id,
+                external_id=mitigation_id,
+                url=mitigation_url,
+            )
+            external_references.append(mitigation_external_ref)
+
+        course_of_action = stix2.CourseOfAction(
+            id=CourseOfAction.generate_id(mitigation_id),
+            name=mitigation_id,
+            description=description,
+            created_by_ref=self.author,
+            external_references=external_references,
+            object_marking_refs=[stix2.TLP_AMBER],
+        )
+        return course_of_action
+
+    def create_mitre_data_source(
+        self,
+        data_source_id: str,
+        data_source_name: str,
+        data_component_url: str | None = None,
+    ) -> MitreDataSource:
+        """Create MITRE Data Source Object with data component URL as external reference
+
+        Args:
+            data_source_id (str): MITRE data source ID (e.g., "DS0015")
+            data_source_name (str): Data source name (e.g., "Application Log")
+            data_component_url (str, optional): URL to the data component
+
+        Returns:
+            MitreDataSource: Data Source Object
+
+        Examples:
+            >>> create_mitre_data_source("DS0015", "Application Log", "https://attack.mitre.org/datasources/DS0015/#Application%20Log%20Content")
+        """
+        # Create external references list
+        external_refs = []
+
+        # Add data component URL as additional external reference if it exists
+        if data_component_url:
+            external_refs.append(
+                stix2.ExternalReference(
+                    source_name=data_source_id,
+                    url=data_component_url,
+                )
+            )
+
+        # Create data source object
+        data_source = MitreDataSource(
+            id=MitreDataSource.generate_id(data_source_name, data_source_id),
+            name=data_source_name,
+            created_by_ref=self.author.id,
+            object_marking_refs=[stix2.TLP_AMBER],
+            external_references=external_refs,
+            x_mitre_version="1.0",
+            x_mitre_data_source_id=data_source_id,
+        )
+
+        return data_source

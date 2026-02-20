@@ -6,7 +6,7 @@ for ingestion into OpenCTI, including indicators, malware, locations, and relati
 """
 
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from pycti import Indicator as PyctiIndicator
 from pycti import Location as PyctiLocation
@@ -285,49 +285,55 @@ class VMRaySTIXBuilder:
                 observables.append(rel)
         return observables
 
+    def _stix_safe(self, value: Any) -> str:
+        """
+        Safely escape values for STIX 2.1 patterns.
+        """
+        return (
+            str(value)
+            .replace("\\", "\\\\")
+            .replace("'", "\\'")
+            .replace("\n", " ")
+            .replace("\r", " ")
+        )
+
     def _generate_pattern(self, observable: STIXObservable) -> str:
         """Generate STIX pattern for observable."""
 
-        # Helper functions return safe values only
-        def safe_registry_key(obs):
-            return (
-                "".join(c for c in getattr(obs, "key", "") if c.isprintable())
-                .replace("\\", "\\\\")
-                .replace("'", "\\'")
-            )
-
-        def safe_process_cmd(obs):
-            return (
-                getattr(obs, "command_line", "")
-                .replace("\\", "\\\\")
-                .replace("'", "\\'")
-            )
-
+        safe = self._stix_safe
         type_map = {
-            "ipv4-addr": lambda obs: f"[ipv4-addr:value = '{obs.value}']",
-            "ipv6-addr": lambda obs: f"[ipv6-addr:value = '{obs.value}']",
-            "domain-name": lambda obs: f"[domain-name:value = '{obs.value}']",
-            "url": lambda obs: f"[url:value = '{obs.value}']",
+            "ipv4-addr": lambda obs: f"[ipv4-addr:value = '{safe(obs.value)}']",
+            "ipv6-addr": lambda obs: f"[ipv6-addr:value = '{safe(obs.value)}']",
+            "domain-name": lambda obs: f"[domain-name:value = '{safe(obs.value)}']",
+            "url": lambda obs: f"[url:value = '{safe(obs.value)}']",
+            "email-addr": lambda obs: f"[email-addr:value = '{safe(obs.value)}']",
+            "process": lambda obs: (
+                f"[process:command_line = '{safe(getattr(obs, 'command_line', ''))}']"
+            ),
+            "mutex": lambda obs: (f"[mutex:name = '{safe(getattr(obs, 'name', ''))}']"),
+            "windows-registry-key": lambda obs: (
+                f"[windows-registry-key:key = '{safe(getattr(obs, 'key', ''))}']"
+            ),
             "file": lambda obs: " OR ".join(
-                f"[file:hashes.'{k}' = '{v}']"
+                f"[file:hashes.'{safe(k)}' = '{safe(v)}']"
                 for k, v in getattr(obs, "hashes", {}).items()
             ),
-            "process": lambda obs: f"[process:command_line = '{safe_process_cmd(obs)}']",
-            "mutex": lambda obs: f"[mutex:name = '{getattr(obs, 'name', '')}']",
-            "windows-registry-key": lambda obs: f"[windows-registry-key:key = '{safe_registry_key(obs)}']",
-            "email-addr": lambda obs: f"[email-addr:value = '{getattr(obs, 'value', '')}']",
         }
 
         obs_type = getattr(observable, "type", None)
         if obs_type not in type_map:
             raise ValueError(f"Unsupported observable type: {obs_type}")
 
-        return type_map[obs_type](observable)
+        pattern = type_map[obs_type](observable)
+        if not pattern:
+            raise ValueError("Generated empty STIX pattern")
+
+        return pattern
 
     def _get_observable_name(self, obs: STIXObservable) -> str:
         """Return human-readable name of observable."""
         if obs.type == "file":
-            for algo in ["SHA-256", "SHA1", "MD5"]:
+            for algo in ["SHA256", "SHA1", "MD5"]:
                 if hasattr(obs, "hashes") and algo in obs.hashes:
                     return obs.hashes[algo]
             if hasattr(obs, "name") and obs.name:

@@ -1,50 +1,39 @@
-import os
 from typing import Dict
 
-import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from connectors_sdk.models import ExternalReference, OrganizationAuthor
+from pure_signal_scout.client_api import PureSignalScoutClient
+from pure_signal_scout.settings import ConnectorSettings
+from pure_signal_scout.utils import is_valid_strict_domain
+from pycti import OpenCTIConnectorHelper
 
-from .client_api import PureSignalScoutClient
-from .utils import is_valid_strict_domain
 
-
-class PureSignalScoutConfig:
-    """Configuration holder for Pure Signal Scout connector."""
-
-    # pylint: disable=too-few-public-methods
+class PureSignalScoutConnectorConfig:
     def __init__(self, config):
-        self.api_base_url = get_config_variable(
-            "PURE_SIGNAL_SCOUT_API_URL", ["pure_signal_scout", "api_url"], config
-        )
-        self.api_key = get_config_variable(
-            "PURE_SIGNAL_SCOUT_API_TOKEN", ["pure_signal_scout", "api_token"], config
-        )
-        self.max_tlp = get_config_variable(
-            "PURE_SIGNAL_SCOUT_MAX_TLP",
-            ["pure_signal_scout", "max_tlp"],
-            config,
-            default="TLP:AMBER",
-        )
+        self.api_base_url = config.pure_signal_scout.api_url
+        self.api_key = config.pure_signal_scout.api_token.get_secret_value()
+        self.max_tlp = config.pure_signal_scout.max_tlp
 
 
 class PureSignalScoutConnector:
-    def __init__(self):
-        # Initialize configuration
-        config_file_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "config.yml"
-        )
-        if os.path.isfile(config_file_path):
-            with open(config_file_path, encoding="utf-8") as f:
-                config = yaml.load(f, Loader=yaml.FullLoader)
-        else:
-            config = {}
-
-        self.helper = OpenCTIConnectorHelper(config)
-        self.config = PureSignalScoutConfig(config)
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+        self.helper = helper
+        self.config = config
         self.tlp = None
 
         # Initialize API client
-        self.client = PureSignalScoutClient(self.helper, self.config)
+        self.client = PureSignalScoutClient(
+            self.helper, PureSignalScoutConnectorConfig(self.config)
+        )
+
+        external_reference = ExternalReference(
+            source_name="Team Cymru Scout",
+            url="https://www.team-cymru.com/pure-signal",
+            description="Team Cymru Scout Search API",
+        )
+        self.team_cymru_identity = OrganizationAuthor(
+            name="Team Cymru",
+            external_references=[external_reference],
+        ).to_stix2_object()
 
         self.helper.connector_logger.info(
             "[PureSignalScout] Connector initialized",
@@ -52,6 +41,7 @@ class PureSignalScoutConnector:
                 "connector_id": self.helper.connect_id,
                 "connector_name": self.helper.connect_name,
                 "connector_scope": self.helper.connect_scope,
+                "author_id": self.team_cymru_identity["id"],
             },
         )
 
@@ -68,7 +58,9 @@ class PureSignalScoutConnector:
                 if marking_definition.get("definition_type") == "TLP":
                     self.tlp = marking_definition.get("definition")
 
-        valid_max_tlp = self.helper.check_max_tlp(self.tlp, self.config.max_tlp)
+        valid_max_tlp = self.helper.check_max_tlp(
+            self.tlp, self.config.pure_signal_scout.max_tlp
+        )
 
         if not valid_max_tlp:
             raise ValueError(
@@ -171,7 +163,11 @@ class PureSignalScoutConnector:
                     if not process_relationship(obj):
                         continue
 
+                obj["created_by_ref"] = self.team_cymru_identity["id"]
                 filtered_objects.append(obj)
+
+            if filtered_objects:
+                filtered_objects.append(self.team_cymru_identity)
 
             self.helper.connector_logger.info(
                 f"[PureSignalScout] Filtered STIX objects: {len(objects)} → {len(filtered_objects)}"
@@ -245,7 +241,9 @@ class PureSignalScoutConnector:
                 return "No Enrichment Data Found from API"
 
             serialized_bundle = self.helper.stix2_create_bundle(processed_data)
-            self.helper.send_stix2_bundle(bundle=serialized_bundle, update=True)
+            self.helper.send_stix2_bundle(
+                bundle=serialized_bundle, update=True, cleanup_inconsistent_bundle=True
+            )
             self.helper.connector_logger.info(
                 "[PureSignalScout] Data ingestion started",
                 {"observable_value": observable_value},
@@ -271,6 +269,8 @@ class PureSignalScoutConnector:
         """Start the connector"""
         self.helper.connector_logger.info(
             "[PureSignalScout] Starting connector",
-            {"api_url": self.config.api_base_url},
+            {
+                "api_url": self.config.pure_signal_scout.api_url,
+            },
         )
         self.helper.listen(self.process_message)

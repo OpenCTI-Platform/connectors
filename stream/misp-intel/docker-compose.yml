@@ -25,6 +25,7 @@ services:
       - MISP_THREAT_LEVEL=2
       - MISP_PUBLISH_ON_CREATE=false
       - MISP_PUBLISH_ON_UPDATE=false
+      - MISP_PUBLISH_ALERT=false
       - MISP_TAG_OPENCTI=true
       - MISP_TAG_PREFIX=opencti:
     restart: always

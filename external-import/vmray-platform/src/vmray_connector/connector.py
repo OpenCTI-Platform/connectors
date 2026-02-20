@@ -2,11 +2,12 @@
 Connect to VMRay and ingest feeds into OpenCTI.
 """
 
+import sys
+import time
 from datetime import datetime, timezone
 from logging import WARNING, getLogger
 from re import match as re_match
 from re import search
-from sys import exit
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 from uuid import uuid4
 
@@ -14,15 +15,8 @@ from pycti import AttackPattern as PyctiAttackPattern
 from pycti import OpenCTIConnectorHelper
 from pycti import Report as PyctiReport
 from pycti import StixCoreRelationship
-from requests.exceptions import (
-    ConnectionError,
-    ProxyError,
-    RequestException,
-    SSLError,
-    Timeout,
-    TooManyRedirects,
-)
 from stix2 import AttackPattern, Relationship, Report
+from stix2.exceptions import InvalidValueError
 from vmray.rest_api import VMRayRESTAPI, VMRayRESTAPIError
 
 from .config_loader import ConfigConnector
@@ -125,7 +119,8 @@ def extract_vti_mitre_labels_by_analysis(
     Args:
         analysis_ids (List[int]): List of VMRay analysis IDs.
         vti_lookup (Dict[int, dict]): Lookup dict containing VTI info for each analysis ID.
-        mitre_lookup (Dict[int, dict]): Lookup dict containing MITRE technique info for each analysis ID.
+        mitre_lookup (Dict[int, dict]):
+        Lookup dict containing MITRE technique info for each analysis ID.
 
     Returns:
         tuple[list[str], list[str]]: A tuple containing List of VTI labels and MITRE labels.
@@ -235,6 +230,9 @@ def build_killchain_and_confidence(
     mitre_lookup: Dict[int, Dict],
     vti_lookup: Dict[int, Dict],
 ) -> Tuple[List[Dict[str, str]], int]:
+    """
+    Build kill chain phases based on MITRE tactics and calculate confidence score from VTI.
+    """
     kill_chain_phases: List[Dict[str, str]] = []
     max_confidence_score: int = 0
 
@@ -259,27 +257,6 @@ def build_killchain_and_confidence(
     return kill_chain_phases, max_confidence_score * 20
 
 
-def build_parent_child_map(samples: List[Dict[str, Any]]) -> Dict[int, List[int]]:
-    """
-    Build a mapping of parent sample IDs to their child sample IDs.
-
-    Args:
-        samples (List[Dict[str, Any]]): List of sample dictionaries.
-
-    Returns:
-        Dict[int, List[int]]: Mapping from parent sample ID to list of child sample IDs.
-    """
-    mapping = {}
-    for sample in samples:
-        parent_id = sample.get("sample_id")
-        if parent_id is None:
-            continue
-        child_ids = sample.get("sample_child_sample_ids") or []
-        if child_ids:
-            mapping[parent_id] = [c for c in child_ids if c is not None]
-    return mapping
-
-
 class VMRayConnector:
     """
     Class to manage VMRay interactions.
@@ -290,7 +267,6 @@ class VMRayConnector:
 
         self.config = ConfigConnector()
         self.helper = OpenCTIConnectorHelper(self.config.load)
-        self.logger = self.helper.connector_logger
         getLogger("api").setLevel(WARNING)
 
         # vmray configurations
@@ -333,11 +309,6 @@ class VMRayConnector:
             api_key=self.vmray_api_key,
             connector_name=self.helper.connect_name,
         )
-        self.vmray_headers = {
-            "Authorization": f"api_key {self.vmray_api_key}",
-            "User-Agent": "OpenCTI",
-            "Accept": "application/json",
-        }
 
         self.stix_builder = VMRaySTIXBuilder(
             identity=self.identity,
@@ -349,6 +320,88 @@ class VMRayConnector:
             mitre_color=self.mitre_color,
         )
 
+    def healthcheck_vmray(self) -> None:
+        """
+        Validate VMRay API connectivity and credentials.
+        Fails fast with clear errors.
+        """
+        try:
+            self.vmray_analyzer_client.call("GET", "/rest/system_info")
+
+        except VMRayRESTAPIError as e:
+            status = getattr(e, "status_code", None)
+
+            if status in (401, 403):
+                self.helper.connector_logger.error(
+                    "[HEALTHCHECK] Invalid VMRay API credentials or insufficient permissions"
+                )
+                raise
+
+            if status == 400:
+                self.helper.connector_logger.error(
+                    "[HEALTHCHECK][FAILED] Bad request. "
+                    "The server could not understand the request due to invalid syntax."
+                )
+                raise
+
+            self.helper.connector_logger.error(
+                f"[HEALTHCHECK][FAILED] VMRay API error (HTTP {status})"
+            )
+            raise
+
+        except Exception as e:
+            self.helper.connector_logger.error(
+                f"[HEALTHCHECK][FAILED] VMRay API unreachable: {str(e)}"
+            )
+            raise
+
+        self.helper.connector_logger.info(
+            "[HEALTHCHECK][OK] VMRay API reachable and credentials valid"
+        )
+
+    def retry_api(self, api_callable, *, api_name: str):
+        """
+        Retry wrapper for VMRay API calls.
+        Returns None when sample is skipped.
+        """
+        last_exception = None
+        retryable_statuses = {408, 429, 500, 502, 503}
+        non_retryable_statuses = {400, 401, 404}
+
+        for _ in range(2):
+            try:
+                return api_callable()
+
+            except VMRayRESTAPIError as e:
+                status = getattr(e, "status_code", None)
+
+                if status == 403:
+                    self.helper.connector_logger.warning(
+                        "[VMRay][SKIP] "
+                        f"Skipping sample due to Forbidden (403) "
+                        f"during {api_name}"
+                    )
+                    return None
+
+                if status in non_retryable_statuses:
+                    self.helper.connector_logger.error(
+                        f"[VMRay][ERROR] {api_name} failed with HTTP {status}"
+                    )
+                    raise
+
+                if status in retryable_statuses:
+                    last_exception = e
+
+            except Exception as e:
+                last_exception = e
+
+            time.sleep(1)
+
+        self.helper.connector_logger.error(
+            f"[VMRay][ERROR] {api_name} failed after retries: {str(last_exception)}"
+        )
+        raise last_exception
+
     def get_submissions_by_timestamp(self) -> List[Dict]:
         """
         Fetch all submissions from VMRay within the configured time window.
@@ -356,93 +409,54 @@ class VMRayConnector:
         Returns:
             List[Dict]: List of submissions.
         """
-        all_submissions: List[Dict] = []
         params = {"submission_finish_time": f"{self.from_date}~{self.to_date}"}
 
-        try:
-            submission_data = self.vmray_analyzer_client.call(
+        all_submissions = self.retry_api(
+            lambda: self.vmray_analyzer_client.call(
                 "GET", "/rest/submission", params=params
-            )
-            if submission_data:
-                all_submissions.extend(submission_data)
-        except VMRayRESTAPIError as e:
-            self.logger.error(
-                f"[VMRay] Submission API error: '{e}' (HTTP {e.status_code})"
-            )
-        except (Timeout, ConnectionError, SSLError, ProxyError, TooManyRedirects) as e:
-            self.logger.error(
-                f"[VMRay] Network error while fetching submissions: {type(e).__name__}: {e}"
-            )
-        except RequestException as e:
-            self.logger.error(f"[VMRay] Request error while fetching submissions: {e}")
-        except Exception as e:
-            self.logger.error(f"[VMRay] Unexpected error fetching submissions: {e}")
+            ),
+            api_name="GET /rest/submission",
+        )
 
-        return all_submissions
+        if not all_submissions:
+            return []
 
-    def get_sample(self, sample_id: int) -> Optional[Dict]:
+        filtered_submissions = [
+            submission
+            for submission in all_submissions
+            if submission.get("submission_verdict") not in ("clean", None)
+        ]
+
+        submissions = sorted(
+            filtered_submissions,
+            key=lambda s: (
+                s.get("submission_finish_time"),
+                s.get("submission_sample_id"),
+            ),
+        )
+        return submissions
+
+    def get_sample(self, sample_id: int) -> Dict:
         """
-        Fetch details of a sample by its ID.
+        Fetch a sample by its ID.
 
         Args:
             sample_id (int): The unique identifier of the sample.
 
         Returns:
-            Optional[Dict]: Sample details if found, otherwise None.
+            Optional[Dict]: Sample if found, otherwise None.
         """
-        try:
-            sample_data = self.vmray_analyzer_client.call(
-                "GET", f"/rest/sample/{sample_id}"
+        return (
+            self.retry_api(
+                lambda: self.vmray_analyzer_client.call(
+                    "GET", f"/rest/sample/{sample_id}"
+                ),
+                api_name=f"GET /rest/sample/{sample_id}",
             )
-            return sample_data
-        except VMRayRESTAPIError as e:
-            self.logger.error(
-                f"[VMRay] Error fetching sample {sample_id}: '{e}' (HTTP {e.status_code})"
-            )
-        except (Timeout, ConnectionError, SSLError, ProxyError, TooManyRedirects) as e:
-            self.logger.error(
-                f"[VMRay] Network error fetching sample {sample_id}: {type(e).__name__}: {e}"
-            )
-        except RequestException as e:
-            self.logger.error(f"[VMRay] Request error fetching sample {sample_id}: {e}")
-        except Exception as e:
-            self.logger.error(
-                f"[VMRay] Unexpected error fetching sample {sample_id}: {e}"
-            )
-        return None
-
-    def get_samples_by_verdict(self, sample_ids: Set[int]) -> List[Dict]:
-        """
-        Fetch samples and filter them based on the configured sample verdicts.
-
-        Args:
-            sample_ids (Set[int]): Set of sample IDs to fetch.
-
-        Returns:
-            List[Dict]: List of samples that match the configured verdicts.
-        """
-        self.logger.info(
-            f"[VMRay] Fetching samples for verdict filtering: {sample_ids}"
+            or {}
         )
 
-        samples_by_verdict = []
-        for sample_id in sample_ids:
-            sample = self.get_sample(sample_id)
-            if sample is None:
-                continue
-
-            verdict = sample.get("sample_verdict") or sample.get("verdict")
-
-            if verdict in self.sample_verdict:
-                samples_by_verdict.append(sample)
-
-        self.logger.info(
-            f"[VMRay] Total samples passing verdict: {len(samples_by_verdict)}"
-        )
-
-        return samples_by_verdict
-
-    def get_sample_iocs(self, sample_id: int) -> Optional[Dict]:
+    def get_sample_iocs(self, sample_id: int) -> Dict:
         """
         Fetch all IOCs for a given sample ID.
 
@@ -452,30 +466,17 @@ class VMRayConnector:
         Returns:
             Optional[Dict]: Dictionary of IOCs grouped by type or None.
         """
-        try:
-            sample_iocs_data = self.vmray_analyzer_client.call(
-                "GET", f"/rest/sample/{sample_id}/iocs"
+        return (
+            self.retry_api(
+                lambda: self.vmray_analyzer_client.call(
+                    "GET", f"/rest/sample/{sample_id}/iocs"
+                ),
+                api_name=f"GET /rest/sample/{sample_id}/iocs",
             )
-            return sample_iocs_data
-        except VMRayRESTAPIError as e:
-            self.logger.error(
-                f"[VMRay] Error fetching IOCs for sample {sample_id}: '{e}' (HTTP {e.status_code})"
-            )
-        except (Timeout, ConnectionError, SSLError, ProxyError, TooManyRedirects) as e:
-            self.logger.error(
-                f"[VMRay] Network error fetching IOCs for sample {sample_id}: {type(e).__name__}: {e}"
-            )
-        except RequestException as e:
-            self.logger.error(
-                f"[VMRay] Request error fetching IOCs for sample {sample_id}: {e}"
-            )
-        except Exception as e:
-            self.logger.error(
-                f"[VMRay] Unexpected error fetching IOCs for sample {sample_id}: {e}"
-            )
-        return None
+            or {}
+        )
 
-    def get_sample_iocs_by_verdict(self, sample_id: int) -> Dict[str, List[Dict]]:
+    def get_sample_iocs_by_verdict(self, sample_id: int) -> List[Dict]:
         """
         Fetch IOCs for a sample and filter them by configured IOC verdicts.
 
@@ -485,11 +486,11 @@ class VMRayConnector:
         Returns:
             Dict[str, List[Dict]]: Filtered IOCs grouped by IOC type.
         """
-        self.logger.info(f"[VMRay] Fetching IOCs for sample {sample_id}")
-
         ioc_response = self.get_sample_iocs(sample_id)
         if not ioc_response:
-            self.logger.warning(f"[VMRay] IOC API returned EMPTY for {sample_id}")
+            self.helper.connector_logger.debug(
+                f"[VMRay] IOC API returned EMPTY for {sample_id}"
+            )
             return {}
 
         raw_iocs = ioc_response.get("iocs", {})
@@ -510,7 +511,7 @@ class VMRayConnector:
 
         return filtered_iocs
 
-    def fetch_sample_vtis(self, sample_id: int) -> List[Dict[str, Any]]:
+    def fetch_sample_vtis(self, sample_id: int) -> List[Dict]:
         """
         Fetch VMRay Threat Indicators (VTIs) for a sample.
 
@@ -518,37 +519,17 @@ class VMRayConnector:
             sample_id (int): The sample ID.
 
         Returns:
-            List[Dict[str, Any]]: List of threat indicators.
+            List[Dict]: List of threat indicators.
         """
-        try:
-            vtis_data = self.vmray_analyzer_client.call(
+        data = self.retry_api(
+            lambda: self.vmray_analyzer_client.call(
                 "GET", f"/rest/sample/{sample_id}/vtis"
-            )
-            threat_indicators = vtis_data.get("threat_indicators", [])
-            self.logger.info(
-                f"[VMRay] Retrieved {len(threat_indicators)} VTIs for sample {sample_id}"
-            )
-            return threat_indicators or []
+            ),
+            api_name=f"GET /rest/sample/{sample_id}/vtis",
+        )
+        return (data or {}).get("threat_indicators", [])
 
-        except VMRayRESTAPIError as e:
-            self.logger.error(
-                f"[VMRay] No VTIs for sample {sample_id}: '{e}' (HTTP {e.status_code})"
-            )
-        except (Timeout, ConnectionError, SSLError, ProxyError, TooManyRedirects) as e:
-            self.logger.error(
-                f"[VMRay] Network error fetching VTIs for sample {sample_id}: {type(e).__name__}: {e}"
-            )
-        except RequestException as e:
-            self.logger.error(
-                f"[VMRay] Request error fetching VTIs for sample {sample_id}: {e}"
-            )
-        except Exception as e:
-            self.logger.error(
-                f"[VMRay] Unexpected error fetching VTIs for sample {sample_id}: {e}"
-            )
-        return []
-
-    def fetch_sample_mitre_attacks(self, sample_id: int) -> List[Dict[str, Any]]:
+    def fetch_sample_mitre_attacks(self, sample_id: int) -> List[Dict]:
         """
         Fetch MITRE ATT&CK techniques for a sample.
 
@@ -556,35 +537,15 @@ class VMRayConnector:
             sample_id (int): The sample ID.
 
         Returns:
-            List[Dict[str, Any]]: List of MITRE techniques.
+            List[Dict]: List of MITRE techniques.
         """
-        try:
-            vtis_data = self.vmray_analyzer_client.call(
+        data = self.retry_api(
+            lambda: self.vmray_analyzer_client.call(
                 "GET", f"/rest/sample/{sample_id}/mitre_attack"
-            )
-            mitre_attack_techniques = vtis_data.get("mitre_attack_techniques", [])
-            self.logger.info(
-                f"[VMRay] Retrieved {len(mitre_attack_techniques)} MITRE ATT&CK techniques for sample {sample_id}"
-            )
-            return mitre_attack_techniques or []
-
-        except VMRayRESTAPIError as e:
-            self.logger.error(
-                f"[VMRay] No MITRE ATT&CK techniques for sample {sample_id}: '{e}' (HTTP {e.status_code})"
-            )
-        except (Timeout, ConnectionError, SSLError, ProxyError, TooManyRedirects) as e:
-            self.logger.error(
-                f"[VMRay] Network error fetching MITRE ATT&CK for sample {sample_id}: {type(e).__name__}: {e}"
-            )
-        except RequestException as e:
-            self.logger.error(
-                f"[VMRay] Request error fetching MITRE ATT&CK for sample {sample_id}: {e}"
-            )
-        except Exception as e:
-            self.logger.error(
-                f"[VMRay] Unexpected error fetching MITRE ATT&CK for sample {sample_id}: {e}"
-            )
-        return []
+            ),
+            api_name=f"GET /rest/sample/{sample_id}/mitre_attack",
+        )
+        return (data or {}).get("mitre_attack_techniques", [])
 
     def build_colored_labels(
         self,
@@ -666,86 +627,97 @@ class VMRayConnector:
         """
         observables: List[Any] = []
         for file_ioc in file_iocs:
-            analysis_ids = file_ioc.get("analysis_ids", [])
-            all_threat_names = file_ioc.get("threat_names", [])
-            threat_names = [
-                t
-                for t in all_threat_names
-                if isinstance(t, str) and re_match(THREAT_NAMES_REGEX, t)
-            ]
-            classifications = file_ioc.get("classifications", [])
-            vti_labels, mitre_labels = extract_vti_mitre_labels_by_analysis(
-                analysis_ids, vti_lookup, mitre_lookup
-            )
-            colored = self.build_colored_labels(
-                threat_names=threat_names,
-                classifications=classifications,
-                mitre_labels=mitre_labels,
-                vti_labels=vti_labels,
-            )
-            all_labels = combine_labels(
-                vti=colored["vti"],
-                mitre=colored["mitre"],
-                threat_names=colored.get("threat_names"),
-                classifications=colored.get("classifications"),
-            )
-            kill_chain_phases, confidence = build_killchain_and_confidence(
-                analysis_ids, mitre_lookup, vti_lookup
-            )
+            try:
+                analysis_ids = file_ioc.get("analysis_ids", [])
+                all_threat_names = file_ioc.get("threat_names", [])
+                threat_names = [
+                    t
+                    for t in all_threat_names
+                    if isinstance(t, str) and re_match(THREAT_NAMES_REGEX, t)
+                ]
+                classifications = file_ioc.get("classifications", [])
+                vti_labels, mitre_labels = extract_vti_mitre_labels_by_analysis(
+                    analysis_ids, vti_lookup, mitre_lookup
+                )
+                colored = self.build_colored_labels(
+                    threat_names=threat_names,
+                    classifications=classifications,
+                    mitre_labels=mitre_labels,
+                    vti_labels=vti_labels,
+                )
+                all_labels = combine_labels(
+                    vti=colored["vti"],
+                    mitre=colored["mitre"],
+                    threat_names=colored.get("threat_names"),
+                    classifications=colored.get("classifications"),
+                )
+                kill_chain_phases, confidence = build_killchain_and_confidence(
+                    analysis_ids, mitre_lookup, vti_lookup
+                )
 
-            vmray_hashes = {}
-            if file_ioc.get("hashes"):
-                hash_obj = file_ioc["hashes"][0]
-                for vmray_field, stix_key in [
-                    ("md5_hash", "MD5"),
-                    ("sha1_hash", "SHA1"),
-                    ("sha256_hash", "SHA256"),
-                ]:
-                    if hash_obj.get(vmray_field):
-                        vmray_hashes[stix_key] = hash_obj[vmray_field]
-            file_obs = VMRayObservableTransform(
-                observable_type="file",
-                observable_value=file_ioc.get("filename", "unknown"),
-                labels=colored["threat_names"] + colored["classifications"],
-                created_by_ref=self.identity,
-                score=confidence,
-                description="Primary File IOC from VMRay",
-                observable={
-                    "hashes": vmray_hashes,
-                    "filename": file_ioc.get("filename", "unknown"),
-                    "size": file_ioc.get("file_size"),
-                    "mime_type": file_ioc.get("mime_type"),
-                },
-                markings=self.default_markings,
-            )
-            observable_obj = file_obs.stix_observable
-            if not observable_obj:
+                vmray_hashes = {}
+                if file_ioc.get("hashes"):
+                    hash_obj = file_ioc["hashes"][0]
+                    for vmray_field, stix_key in [
+                        ("md5_hash", "MD5"),
+                        ("sha1_hash", "SHA1"),
+                        ("sha256_hash", "SHA256"),
+                    ]:
+                        if hash_obj.get(vmray_field):
+                            vmray_hashes[stix_key] = hash_obj[vmray_field]
+                file_obs = VMRayObservableTransform(
+                    observable_type="file",
+                    observable_value=file_ioc.get("filename", "unknown"),
+                    labels=colored["threat_names"] + colored["classifications"],
+                    created_by_ref=self.identity,
+                    score=confidence,
+                    description="Primary File IOC from VMRay",
+                    observable={
+                        "hashes": vmray_hashes,
+                        "filename": file_ioc.get("filename", "unknown"),
+                        "size": file_ioc.get("file_size"),
+                        "mime_type": file_ioc.get("mime_type"),
+                    },
+                    markings=self.default_markings,
+                )
+                observable_obj = file_obs.stix_observable
+                if not observable_obj:
+                    continue
+                observables.append(observable_obj)
+                description = build_indicator_description(
+                    analysis_ids, vti_lookup, classifications
+                )
+                kill_chain_phases, confidence = build_killchain_and_confidence(
+                    analysis_ids, mitre_lookup, vti_lookup
+                )
+                indicator, rel = self.stix_builder.create_indicator_from_observable(
+                    observable=observable_obj,
+                    labels=all_labels,
+                    created_by_ref=self.identity,
+                    kill_chain_phases=kill_chain_phases,
+                    confidence=confidence,
+                    description=description,
+                    score=confidence,
+                )
+                observables.append(indicator)
+                observables.append(rel)
+                observables += (
+                    self.stix_builder.create_malware_objects_for_threat_names(
+                        threat_names,
+                        classifications,
+                        indicator,
+                        file_obs,
+                        labels=colored["classifications"],
+                    )
+                )
+            except InvalidValueError as e:
+                self.helper.connector_logger.error(f"[IOC]Invalid STIX value: {str(e)}")
                 continue
-            observables.append(observable_obj)
-            description = build_indicator_description(
-                analysis_ids, vti_lookup, classifications
-            )
-            kill_chain_phases, confidence = build_killchain_and_confidence(
-                analysis_ids, mitre_lookup, vti_lookup
-            )
-            indicator, rel = self.stix_builder.create_indicator_from_observable(
-                observable=observable_obj,
-                labels=all_labels,
-                created_by_ref=self.identity,
-                kill_chain_phases=kill_chain_phases,
-                confidence=confidence,
-                description=description,
-                score=confidence,
-            )
-            observables.append(indicator)
-            observables.append(rel)
-            observables += self.stix_builder.create_malware_objects_for_threat_names(
-                threat_names,
-                classifications,
-                indicator,
-                file_obs,
-                labels=colored["classifications"],
-            )
+            except Exception as e:
+                self.helper.connector_logger.error(
+                    f"[IOC]Error while creating IOC: {str(e)}"
+                )
+                continue
         return observables
 
     def handle_processes_iocs(
@@ -760,75 +732,86 @@ class VMRayConnector:
         observables: List[Any] = []
 
         for process_ioc in process_iocs:
-            cmd_line = process_ioc.get("cmd_line")
-            all_threat_names = process_ioc.get("threat_names", [])
-            analysis_ids = process_ioc.get("analysis_ids", [])
-            threat_names = [
-                t
-                for t in all_threat_names
-                if isinstance(t, str) and re_match(THREAT_NAMES_REGEX, t)
-            ]
-            classifications = process_ioc.get("classifications", [])
-            vti_labels, mitre_labels = extract_vti_mitre_labels_by_analysis(
-                analysis_ids, vti_lookup, mitre_lookup
-            )
-            colored = self.build_colored_labels(
-                threat_names=threat_names,
-                classifications=classifications,
-                mitre_labels=mitre_labels,
-                vti_labels=vti_labels,
-            )
-            all_labels = combine_labels(
-                vti=colored["vti"],
-                mitre=colored["mitre"],
-                threat_names=colored.get("threat_names"),
-                classifications=colored.get("classifications"),
-            )
-            kill_chain_phases, confidence = build_killchain_and_confidence(
-                analysis_ids, mitre_lookup, vti_lookup
-            )
+            try:
+                cmd_line = process_ioc.get("cmd_line")
+                all_threat_names = process_ioc.get("threat_names", [])
+                analysis_ids = process_ioc.get("analysis_ids", [])
+                threat_names = [
+                    t
+                    for t in all_threat_names
+                    if isinstance(t, str) and re_match(THREAT_NAMES_REGEX, t)
+                ]
+                classifications = process_ioc.get("classifications", [])
+                vti_labels, mitre_labels = extract_vti_mitre_labels_by_analysis(
+                    analysis_ids, vti_lookup, mitre_lookup
+                )
+                colored = self.build_colored_labels(
+                    threat_names=threat_names,
+                    classifications=classifications,
+                    mitre_labels=mitre_labels,
+                    vti_labels=vti_labels,
+                )
+                all_labels = combine_labels(
+                    vti=colored["vti"],
+                    mitre=colored["mitre"],
+                    threat_names=colored.get("threat_names"),
+                    classifications=colored.get("classifications"),
+                )
+                kill_chain_phases, confidence = build_killchain_and_confidence(
+                    analysis_ids, mitre_lookup, vti_lookup
+                )
 
-            # Create process observable
-            process_obs = VMRayObservableTransform(
-                observable_type="process",
-                observable_value=cmd_line,
-                labels=colored["threat_names"] + colored["classifications"],
-                description="Primary Process IOC from VMRay",
-                created_by_ref=self.identity,
-                score=confidence,
-                markings=self.default_markings,
-                observable=process_ioc,
-            )
+                # Create process observable
+                process_obs = VMRayObservableTransform(
+                    observable_type="process",
+                    observable_value=cmd_line,
+                    labels=colored["threat_names"] + colored["classifications"],
+                    description="Primary Process IOC from VMRay",
+                    created_by_ref=self.identity,
+                    score=confidence,
+                    markings=self.default_markings,
+                    observable=process_ioc,
+                )
 
-            observable_obj = process_obs.stix_observable
-            if not observable_obj:
+                observable_obj = process_obs.stix_observable
+                if not observable_obj:
+                    continue
+                observables.append(observable_obj)
+
+                description = build_indicator_description(
+                    analysis_ids, vti_lookup, classifications
+                )
+
+                indicator, rel = self.stix_builder.create_indicator_from_observable(
+                    observable=observable_obj,
+                    labels=all_labels,
+                    created_by_ref=self.identity,
+                    kill_chain_phases=kill_chain_phases,
+                    confidence=confidence,
+                    description=description,
+                    score=confidence,
+                )
+                observables.append(indicator)
+                observables.append(rel)
+
+                observables += (
+                    self.stix_builder.create_malware_objects_for_threat_names(
+                        threat_names,
+                        classifications,
+                        indicator,
+                        process_obs,
+                        labels=colored["classifications"],
+                    )
+                )
+
+            except InvalidValueError as e:
+                self.helper.connector_logger.error(f"[IOC]Invalid STIX value: {str(e)}")
                 continue
-            observables.append(observable_obj)
-
-            description = build_indicator_description(
-                analysis_ids, vti_lookup, classifications
-            )
-
-            indicator, rel = self.stix_builder.create_indicator_from_observable(
-                observable=observable_obj,
-                labels=all_labels,
-                created_by_ref=self.identity,
-                kill_chain_phases=kill_chain_phases,
-                confidence=confidence,
-                description=description,
-                score=confidence,
-            )
-            observables.append(indicator)
-            observables.append(rel)
-
-            observables += self.stix_builder.create_malware_objects_for_threat_names(
-                threat_names,
-                classifications,
-                indicator,
-                process_obs,
-                labels=colored["classifications"],
-            )
-
+            except Exception as e:
+                self.helper.connector_logger.error(
+                    f"[IOC]Error while creating IOC: {str(e)}"
+                )
+                continue
         return observables
 
     def handle_domain_iocs(
@@ -843,97 +826,106 @@ class VMRayConnector:
         observables: List[Any] = []
 
         for domain_ioc in domain_iocs:
-            domain = domain_ioc.get("domain")
-            analysis_ids = domain_ioc.get("analysis_ids", [])
+            try:
+                domain = domain_ioc.get("domain")
+                analysis_ids = domain_ioc.get("analysis_ids", [])
 
-            labels = []
-            vti_labels, mitre_labels = extract_vti_mitre_labels_by_analysis(
-                analysis_ids, vti_lookup, mitre_lookup
-            )
-            colored = self.build_colored_labels(
-                mitre_labels=mitre_labels,
-                vti_labels=vti_labels,
-            )
-            all_labels = combine_labels(vti=colored["vti"], mitre=colored["mitre"])
-            kill_chain_phases, confidence = build_killchain_and_confidence(
-                analysis_ids, mitre_lookup, vti_lookup
-            )
-            for protocol in domain_ioc.get("protocols", []):
-                labels.append(f"protocol: {protocol}")
-
-            domain_obs = VMRayObservableTransform(
-                observable_type="domain",
-                observable_value=domain_ioc["domain"],
-                description="Primary Domain IOC from VMRay",
-                labels=labels,
-                created_by_ref=self.identity,
-                score=confidence,
-                markings=self.default_markings,
-            )
-            if domain:
-                labels.append(domain)
-            observable_obj = domain_obs.stix_observable
-            if not observable_obj:
-                continue
-            observables.append(observable_obj)
-
-            description = build_indicator_description(
-                analysis_ids=analysis_ids, vti_lookup=vti_lookup
-            )
-
-            indicator, rel = self.stix_builder.create_indicator_from_observable(
-                observable=observable_obj,
-                labels=all_labels,
-                created_by_ref=self.identity,
-                kill_chain_phases=kill_chain_phases,
-                confidence=confidence,
-                description=description,
-                score=confidence,
-            )
-            observables.append(indicator)
-            observables.append(rel)
-
-            observables += (
-                self.stix_builder.create_related_obs_for_domain_url_originals(
-                    indicator,
-                    domain_obs,
-                    domain_ioc.get("original_domains", []),
-                    "domain",
-                    labels,
-                    score=confidence,
+                labels = []
+                vti_labels, mitre_labels = extract_vti_mitre_labels_by_analysis(
+                    analysis_ids, vti_lookup, mitre_lookup
                 )
-            )
+                colored = self.build_colored_labels(
+                    mitre_labels=mitre_labels,
+                    vti_labels=vti_labels,
+                )
+                all_labels = combine_labels(vti=colored["vti"], mitre=colored["mitre"])
+                kill_chain_phases, confidence = build_killchain_and_confidence(
+                    analysis_ids, mitre_lookup, vti_lookup
+                )
+                for protocol in domain_ioc.get("protocols", []):
+                    labels.append(f"protocol: {protocol}")
 
-            # IP addresses
-            for ip in domain_ioc.get("ip_addresses", []):
-                ip_obs = VMRayObservableTransform(
-                    observable_type="ip",
-                    observable_value=ip,
-                    description="IP IOC from VMRay",
+                domain_obs = VMRayObservableTransform(
+                    observable_type="domain",
+                    observable_value=domain_ioc["domain"],
+                    description="Primary Domain IOC from VMRay",
                     labels=labels,
                     created_by_ref=self.identity,
                     score=confidence,
                     markings=self.default_markings,
                 )
-                ip_obj = ip_obs.stix_observable
-                if ip_obj:
-                    observables.append(ip_obj)
-                    rel_ip = ip_obs.create_relationship(
-                        src_id=indicator.id,
-                        tgt_id=ip_obj.id,
-                        markings=self.default_markings,
-                        rel_type="based-on",
+                if domain:
+                    labels.append(domain)
+                observable_obj = domain_obs.stix_observable
+                if not observable_obj:
+                    continue
+                observables.append(observable_obj)
+
+                description = build_indicator_description(
+                    analysis_ids=analysis_ids, vti_lookup=vti_lookup
+                )
+
+                indicator, rel = self.stix_builder.create_indicator_from_observable(
+                    observable=observable_obj,
+                    labels=all_labels,
+                    created_by_ref=self.identity,
+                    kill_chain_phases=kill_chain_phases,
+                    confidence=confidence,
+                    description=description,
+                    score=confidence,
+                )
+                observables.append(indicator)
+                observables.append(rel)
+
+                observables += (
+                    self.stix_builder.create_related_obs_for_domain_url_originals(
+                        indicator,
+                        domain_obs,
+                        domain_ioc.get("original_domains", []),
+                        "domain",
+                        labels,
+                        score=confidence,
                     )
-                    observables.append(rel_ip)
+                )
 
-            observables += self.stix_builder.create_location_objects(
-                indicator,
-                domain_obs,
-                domain_ioc.get("countries", []),
-                domain_ioc.get("country_codes", []),
-                labels,
-            )
+                # IP addresses
+                for ip in domain_ioc.get("ip_addresses", []):
+                    ip_obs = VMRayObservableTransform(
+                        observable_type="ip",
+                        observable_value=ip,
+                        description="IP IOC from VMRay",
+                        labels=labels,
+                        created_by_ref=self.identity,
+                        score=confidence,
+                        markings=self.default_markings,
+                    )
+                    ip_obj = ip_obs.stix_observable
+                    if ip_obj:
+                        observables.append(ip_obj)
+                        rel_ip = ip_obs.create_relationship(
+                            src_id=indicator.id,
+                            tgt_id=ip_obj.id,
+                            markings=self.default_markings,
+                            rel_type="based-on",
+                        )
+                        observables.append(rel_ip)
 
+                observables += self.stix_builder.create_location_objects(
+                    indicator,
+                    domain_obs,
+                    domain_ioc.get("countries", []),
+                    domain_ioc.get("country_codes", []),
+                    labels,
+                )
+
+            except InvalidValueError as e:
+                self.helper.connector_logger.error(f"[IOC]Invalid STIX value: {str(e)}")
+                continue
+            except Exception as e:
+                self.helper.connector_logger.error(
+                    f"[IOC]Error while creating IOC: {str(e)}"
+                )
+                continue
         return observables
 
     def handle_url_iocs(
@@ -948,95 +940,104 @@ class VMRayConnector:
         observables: List[Any] = []
 
         for url_ioc in url_iocs:
-            url = url_ioc.get("url")
+            try:
+                url = url_ioc.get("url")
 
-            analysis_ids = url_ioc.get("analysis_ids", [])
-            labels = []
-            vti_labels, mitre_labels = extract_vti_mitre_labels_by_analysis(
-                analysis_ids, vti_lookup, mitre_lookup
-            )
-            colored = self.build_colored_labels(
-                mitre_labels=mitre_labels,
-                vti_labels=vti_labels,
-            )
-            all_labels = combine_labels(vti=colored["vti"], mitre=colored["mitre"])
-            kill_chain_phases, confidence = build_killchain_and_confidence(
-                analysis_ids, mitre_lookup, vti_lookup
-            )
-
-            url_obs = VMRayObservableTransform(
-                observable_type="url",
-                observable_value=url_ioc["url"],
-                description="Primary URL IOC from VMRay",
-                labels=None,
-                created_by_ref=self.identity,
-                score=confidence,
-                markings=self.default_markings,
-            )
-            observable_obj = url_obs.stix_observable
-            if not observable_obj:
-                continue
-
-            observables.append(observable_obj)
-            description = build_indicator_description(
-                analysis_ids=analysis_ids, vti_lookup=vti_lookup
-            )
-
-            indicator, rel = self.stix_builder.create_indicator_from_observable(
-                observable=observable_obj,
-                labels=all_labels,
-                created_by_ref=self.identity,
-                kill_chain_phases=kill_chain_phases,
-                confidence=confidence,
-                description=description,
-                score=confidence,
-            )
-            observables.append(indicator)
-            observables.append(rel)
-            if url:
-                labels.append(url)
-            observables += (
-                self.stix_builder.create_related_obs_for_domain_url_originals(
-                    indicator,
-                    url_obs,
-                    url_ioc.get("original_urls", []),
-                    "url",
-                    labels,
-                    score=confidence,
+                analysis_ids = url_ioc.get("analysis_ids", [])
+                labels = []
+                vti_labels, mitre_labels = extract_vti_mitre_labels_by_analysis(
+                    analysis_ids, vti_lookup, mitre_lookup
                 )
-            )
+                colored = self.build_colored_labels(
+                    mitre_labels=mitre_labels,
+                    vti_labels=vti_labels,
+                )
+                all_labels = combine_labels(vti=colored["vti"], mitre=colored["mitre"])
+                kill_chain_phases, confidence = build_killchain_and_confidence(
+                    analysis_ids, mitre_lookup, vti_lookup
+                )
 
-            # IP addresses
-            for ip in url_ioc.get("ip_addresses", []):
-                ip_obs = VMRayObservableTransform(
-                    observable_type="ip",
-                    observable_value=ip,
-                    description="IP IOC from VMRay",
-                    labels=labels,
+                url_obs = VMRayObservableTransform(
+                    observable_type="url",
+                    observable_value=url_ioc["url"],
+                    description="Primary URL IOC from VMRay",
+                    labels=None,
                     created_by_ref=self.identity,
                     score=confidence,
                     markings=self.default_markings,
                 )
-                ip_obj = ip_obs.stix_observable
-                if ip_obj:
-                    observables.append(ip_obj)
-                    rel_ip = ip_obs.create_relationship(
-                        src_id=indicator.id,
-                        tgt_id=ip_obj.id,
-                        markings=self.default_markings,
-                        rel_type="based-on",
+                observable_obj = url_obs.stix_observable
+                if not observable_obj:
+                    continue
+
+                observables.append(observable_obj)
+                description = build_indicator_description(
+                    analysis_ids=analysis_ids, vti_lookup=vti_lookup
+                )
+
+                indicator, rel = self.stix_builder.create_indicator_from_observable(
+                    observable=observable_obj,
+                    labels=all_labels,
+                    created_by_ref=self.identity,
+                    kill_chain_phases=kill_chain_phases,
+                    confidence=confidence,
+                    description=description,
+                    score=confidence,
+                )
+                observables.append(indicator)
+                observables.append(rel)
+                if url:
+                    labels.append(url)
+                observables += (
+                    self.stix_builder.create_related_obs_for_domain_url_originals(
+                        indicator,
+                        url_obs,
+                        url_ioc.get("original_urls", []),
+                        "url",
+                        labels,
+                        score=confidence,
                     )
-                    observables.append(rel_ip)
+                )
 
-            # Countries
-            observables += self.stix_builder.create_location_objects(
-                indicator,
-                url_obs,
-                url_ioc.get("countries", []),
-                url_ioc.get("country_codes", []),
-                labels,
-            )
+                # IP addresses
+                for ip in url_ioc.get("ip_addresses", []):
+                    ip_obs = VMRayObservableTransform(
+                        observable_type="ip",
+                        observable_value=ip,
+                        description="IP IOC from VMRay",
+                        labels=labels,
+                        created_by_ref=self.identity,
+                        score=confidence,
+                        markings=self.default_markings,
+                    )
+                    ip_obj = ip_obs.stix_observable
+                    if ip_obj:
+                        observables.append(ip_obj)
+                        rel_ip = ip_obs.create_relationship(
+                            src_id=indicator.id,
+                            tgt_id=ip_obj.id,
+                            markings=self.default_markings,
+                            rel_type="based-on",
+                        )
+                        observables.append(rel_ip)
 
+                # Countries
+                observables += self.stix_builder.create_location_objects(
+                    indicator,
+                    url_obs,
+                    url_ioc.get("countries", []),
+                    url_ioc.get("country_codes", []),
+                    labels,
+                )
+
+            except InvalidValueError as e:
+                self.helper.connector_logger.error(f"[IOC]Invalid STIX value: {str(e)}")
+                continue
+            except Exception as e:
+                self.helper.connector_logger.error(
+                    f"[IOC]Error while creating IOC: {str(e)}"
+                )
+                continue
         return observables
 
     def handle_mutexes_iocs(
@@ -1051,74 +1052,85 @@ class VMRayConnector:
         observables: List[Any] = []
 
         for mutex_ioc in mutex_iocs:
-            analysis_ids = mutex_ioc.get("analysis_ids", [])
-            all_threat_names = mutex_ioc.get("threat_names", [])
-            threat_names = [
-                t
-                for t in all_threat_names
-                if isinstance(t, str) and re_match(THREAT_NAMES_REGEX, t)
-            ]
-            classifications = mutex_ioc.get("classifications", [])
+            try:
+                analysis_ids = mutex_ioc.get("analysis_ids", [])
+                all_threat_names = mutex_ioc.get("threat_names", [])
+                threat_names = [
+                    t
+                    for t in all_threat_names
+                    if isinstance(t, str) and re_match(THREAT_NAMES_REGEX, t)
+                ]
+                classifications = mutex_ioc.get("classifications", [])
 
-            vti_labels, mitre_labels = extract_vti_mitre_labels_by_analysis(
-                analysis_ids, vti_lookup, mitre_lookup
-            )
-            colored = self.build_colored_labels(
-                threat_names=threat_names,
-                classifications=classifications,
-                mitre_labels=mitre_labels,
-                vti_labels=vti_labels,
-            )
-            all_labels = combine_labels(
-                vti=colored["vti"],
-                mitre=colored["mitre"],
-                threat_names=colored.get("threat_names"),
-                classifications=colored.get("classifications"),
-            )
-            kill_chain_phases, confidence = build_killchain_and_confidence(
-                analysis_ids, mitre_lookup, vti_lookup
-            )
+                vti_labels, mitre_labels = extract_vti_mitre_labels_by_analysis(
+                    analysis_ids, vti_lookup, mitre_lookup
+                )
+                colored = self.build_colored_labels(
+                    threat_names=threat_names,
+                    classifications=classifications,
+                    mitre_labels=mitre_labels,
+                    vti_labels=vti_labels,
+                )
+                all_labels = combine_labels(
+                    vti=colored["vti"],
+                    mitre=colored["mitre"],
+                    threat_names=colored.get("threat_names"),
+                    classifications=colored.get("classifications"),
+                )
+                kill_chain_phases, confidence = build_killchain_and_confidence(
+                    analysis_ids, mitre_lookup, vti_lookup
+                )
 
-            mutex_obs = VMRayObservableTransform(
-                observable_type="mutex",
-                observable_value=mutex_ioc["mutex_name"],
-                labels=colored["threat_names"] + colored["classifications"],
-                description="Primary Mutex IOC from VMRay",
-                created_by_ref=self.identity,
-                score=confidence,
-                observable=mutex_ioc,
-                markings=self.default_markings,
-            )
-            observable_obj = mutex_obs.stix_observable
-            if not observable_obj:
+                mutex_obs = VMRayObservableTransform(
+                    observable_type="mutex",
+                    observable_value=mutex_ioc["mutex_name"],
+                    labels=colored["threat_names"] + colored["classifications"],
+                    description="Primary Mutex IOC from VMRay",
+                    created_by_ref=self.identity,
+                    score=confidence,
+                    observable=mutex_ioc,
+                    markings=self.default_markings,
+                )
+                observable_obj = mutex_obs.stix_observable
+                if not observable_obj:
+                    continue
+                observables.append(observable_obj)
+
+                description = build_indicator_description(
+                    analysis_ids, vti_lookup, classifications
+                )
+
+                indicator, rel = self.stix_builder.create_indicator_from_observable(
+                    observable=observable_obj,
+                    labels=all_labels,
+                    created_by_ref=self.identity,
+                    kill_chain_phases=kill_chain_phases,
+                    confidence=confidence,
+                    description=description,
+                    score=confidence,
+                )
+                observables.append(indicator)
+                observables.append(rel)
+
+                # Threat Names
+                observables += (
+                    self.stix_builder.create_malware_objects_for_threat_names(
+                        threat_names,
+                        classifications,
+                        indicator,
+                        mutex_obs,
+                        labels=colored["classifications"],
+                    )
+                )
+
+            except InvalidValueError as e:
+                self.helper.connector_logger.error(f"[IOC]Invalid STIX value: {str(e)}")
                 continue
-            observables.append(observable_obj)
-
-            description = build_indicator_description(
-                analysis_ids, vti_lookup, classifications
-            )
-
-            indicator, rel = self.stix_builder.create_indicator_from_observable(
-                observable=observable_obj,
-                labels=all_labels,
-                created_by_ref=self.identity,
-                kill_chain_phases=kill_chain_phases,
-                confidence=confidence,
-                description=description,
-                score=confidence,
-            )
-            observables.append(indicator)
-            observables.append(rel)
-
-            # Threat Names
-            observables += self.stix_builder.create_malware_objects_for_threat_names(
-                threat_names,
-                classifications,
-                indicator,
-                mutex_obs,
-                labels=colored["classifications"],
-            )
-
+            except Exception as e:
+                self.helper.connector_logger.error(
+                    f"[IOC]Error while creating IOC: {str(e)}"
+                )
+                continue
         return observables
 
     def handle_registry_iocs(
@@ -1133,75 +1145,84 @@ class VMRayConnector:
         observables: List[Any] = []
 
         for reg_ioc in reg_iocs:
+            try:
+                analysis_ids = reg_ioc.get("analysis_ids", [])
+                all_threat_names = reg_ioc.get("threat_names", [])
+                threat_names = [
+                    t
+                    for t in all_threat_names
+                    if isinstance(t, str) and re_match(THREAT_NAMES_REGEX, t)
+                ]
+                classifications = reg_ioc.get("classifications", [])
 
-            analysis_ids = reg_ioc.get("analysis_ids", [])
-            all_threat_names = reg_ioc.get("threat_names", [])
-            threat_names = [
-                t
-                for t in all_threat_names
-                if isinstance(t, str) and re_match(THREAT_NAMES_REGEX, t)
-            ]
-            classifications = reg_ioc.get("classifications", [])
+                vti_labels, mitre_labels = extract_vti_mitre_labels_by_analysis(
+                    analysis_ids, vti_lookup, mitre_lookup
+                )
+                colored = self.build_colored_labels(
+                    threat_names=threat_names,
+                    classifications=classifications,
+                    mitre_labels=mitre_labels,
+                    vti_labels=vti_labels,
+                )
+                all_labels = combine_labels(
+                    vti=colored["vti"],
+                    mitre=colored["mitre"],
+                    threat_names=colored.get("threat_names"),
+                    classifications=colored.get("classifications"),
+                )
+                kill_chain_phases, confidence = build_killchain_and_confidence(
+                    analysis_ids, mitre_lookup, vti_lookup
+                )
 
-            vti_labels, mitre_labels = extract_vti_mitre_labels_by_analysis(
-                analysis_ids, vti_lookup, mitre_lookup
-            )
-            colored = self.build_colored_labels(
-                threat_names=threat_names,
-                classifications=classifications,
-                mitre_labels=mitre_labels,
-                vti_labels=vti_labels,
-            )
-            all_labels = combine_labels(
-                vti=colored["vti"],
-                mitre=colored["mitre"],
-                threat_names=colored.get("threat_names"),
-                classifications=colored.get("classifications"),
-            )
-            kill_chain_phases, confidence = build_killchain_and_confidence(
-                analysis_ids, mitre_lookup, vti_lookup
-            )
+                reg_obs = VMRayObservableTransform(
+                    observable_type="registry",
+                    observable_value=reg_ioc["reg_key_name"],
+                    description="Primary Registry Key IOC from VMRay",
+                    labels=colored["threat_names"] + colored["classifications"],
+                    created_by_ref=self.identity,
+                    score=confidence,
+                    markings=self.default_markings,
+                    observable=reg_ioc,
+                )
+                observable_obj = reg_obs.stix_observable
+                if not observable_obj:
+                    continue
+                observables.append(observable_obj)
 
-            reg_obs = VMRayObservableTransform(
-                observable_type="registry",
-                observable_value=reg_ioc["reg_key_name"],
-                description="Primary Registry Key IOC from VMRay",
-                labels=colored["threat_names"] + colored["classifications"],
-                created_by_ref=self.identity,
-                score=confidence,
-                markings=self.default_markings,
-                observable=reg_ioc,
-            )
-            observable_obj = reg_obs.stix_observable
-            if not observable_obj:
+                description = build_indicator_description(
+                    analysis_ids, vti_lookup, classifications
+                )
+
+                indicator, rel = self.stix_builder.create_indicator_from_observable(
+                    observable=observable_obj,
+                    labels=all_labels,
+                    created_by_ref=self.identity,
+                    kill_chain_phases=kill_chain_phases,
+                    confidence=confidence,
+                    description=description,
+                    score=confidence,
+                )
+                observables.append(indicator)
+                observables.append(rel)
+
+                # Threat Names
+                observables += (
+                    self.stix_builder.create_malware_objects_for_threat_names(
+                        threat_names,
+                        classifications,
+                        indicator,
+                        reg_obs,
+                        labels=colored["classifications"],
+                    )
+                )
+            except InvalidValueError as e:
+                self.helper.connector_logger.error(f"[IOC]Invalid STIX value: {str(e)}")
                 continue
-            observables.append(observable_obj)
-
-            description = build_indicator_description(
-                analysis_ids, vti_lookup, classifications
-            )
-
-            indicator, rel = self.stix_builder.create_indicator_from_observable(
-                observable=observable_obj,
-                labels=all_labels,
-                created_by_ref=self.identity,
-                kill_chain_phases=kill_chain_phases,
-                confidence=confidence,
-                description=description,
-                score=confidence,
-            )
-            observables.append(indicator)
-            observables.append(rel)
-
-            # Threat Names
-            observables += self.stix_builder.create_malware_objects_for_threat_names(
-                threat_names,
-                classifications,
-                indicator,
-                reg_obs,
-                labels=colored["classifications"],
-            )
-
+            except Exception as e:
+                self.helper.connector_logger.error(
+                    f"[IOC]Error while creating IOC: {str(e)}"
+                )
+                continue
         return observables
 
     def handle_email_iocs(
@@ -1216,84 +1237,97 @@ class VMRayConnector:
         observables: List[Any] = []
 
         for email_ioc in email_iocs:
-            analysis_ids = email_ioc.get("analysis_ids", [])
-            all_threat_names = email_ioc.get("threat_names", [])
-            threat_names = [
-                t
-                for t in all_threat_names
-                if isinstance(t, str) and re_match(THREAT_NAMES_REGEX, t)
-            ]
-            classifications = email_ioc.get("classifications", [])
+            try:
+                analysis_ids = email_ioc.get("analysis_ids", [])
+                all_threat_names = email_ioc.get("threat_names", [])
+                threat_names = [
+                    t
+                    for t in all_threat_names
+                    if isinstance(t, str) and re_match(THREAT_NAMES_REGEX, t)
+                ]
+                classifications = email_ioc.get("classifications", [])
 
-            vti_labels, mitre_labels = extract_vti_mitre_labels_by_analysis(
-                analysis_ids, vti_lookup, mitre_lookup
-            )
-            colored = self.build_colored_labels(
-                threat_names=threat_names,
-                classifications=classifications,
-                mitre_labels=mitre_labels,
-                vti_labels=vti_labels,
-            )
-            all_labels = combine_labels(
-                vti=colored["vti"],
-                mitre=colored["mitre"],
-                threat_names=colored.get("threat_names"),
-                classifications=colored.get("classifications"),
-            )
-            subject_label = (
-                f"subject:{email_ioc['subject']}" if email_ioc.get("subject") else None
-            )
-            email_labels = colored["threat_names"] + colored["classifications"]
-            if subject_label:
-                email_labels.append(subject_label)
-            email_address = search(r"<(.+?)>", email_ioc["sender"])
-            observable_value = (
-                email_address.group(1) if email_address else email_ioc["sender"]
-            )
-            kill_chain_phases, confidence = build_killchain_and_confidence(
-                analysis_ids, mitre_lookup, vti_lookup
-            )
+                vti_labels, mitre_labels = extract_vti_mitre_labels_by_analysis(
+                    analysis_ids, vti_lookup, mitre_lookup
+                )
+                colored = self.build_colored_labels(
+                    threat_names=threat_names,
+                    classifications=classifications,
+                    mitre_labels=mitre_labels,
+                    vti_labels=vti_labels,
+                )
+                all_labels = combine_labels(
+                    vti=colored["vti"],
+                    mitre=colored["mitre"],
+                    threat_names=colored.get("threat_names"),
+                    classifications=colored.get("classifications"),
+                )
+                subject_label = (
+                    f"subject:{email_ioc['subject']}"
+                    if email_ioc.get("subject")
+                    else None
+                )
+                email_labels = colored["threat_names"] + colored["classifications"]
+                if subject_label:
+                    email_labels.append(subject_label)
+                email_address = search(r"<(.+?)>", email_ioc["sender"])
+                observable_value = (
+                    email_address.group(1) if email_address else email_ioc["sender"]
+                )
+                kill_chain_phases, confidence = build_killchain_and_confidence(
+                    analysis_ids, mitre_lookup, vti_lookup
+                )
 
-            email_obs = VMRayObservableTransform(
-                observable_type="email_address",
-                observable_value=observable_value,
-                description="Primary Email IOC from VMRay",
-                labels=email_labels,
-                created_by_ref=self.identity,
-                score=confidence,
-                markings=self.default_markings,
-                observable=email_ioc,
-            )
-            observable_obj = email_obs.stix_observable
-            if not observable_obj:
+                email_obs = VMRayObservableTransform(
+                    observable_type="email_address",
+                    observable_value=observable_value,
+                    description="Primary Email IOC from VMRay",
+                    labels=email_labels,
+                    created_by_ref=self.identity,
+                    score=confidence,
+                    markings=self.default_markings,
+                    observable=email_ioc,
+                )
+                observable_obj = email_obs.stix_observable
+                if not observable_obj:
+                    continue
+                observables.append(observable_obj)
+
+                description = build_indicator_description(
+                    analysis_ids, vti_lookup, classifications
+                )
+
+                indicator, rel = self.stix_builder.create_indicator_from_observable(
+                    observable=observable_obj,
+                    labels=all_labels,
+                    created_by_ref=self.identity,
+                    kill_chain_phases=kill_chain_phases,
+                    confidence=confidence,
+                    description=description,
+                    score=confidence,
+                )
+                observables.append(indicator)
+                observables.append(rel)
+
+                # Threat Names
+                observables += (
+                    self.stix_builder.create_malware_objects_for_threat_names(
+                        threat_names,
+                        classifications,
+                        indicator,
+                        email_obs,
+                        labels=colored["classifications"],
+                    )
+                )
+
+            except InvalidValueError as e:
+                self.helper.connector_logger.error(f"[IOC]Invalid STIX value: {str(e)}")
                 continue
-            observables.append(observable_obj)
-
-            description = build_indicator_description(
-                analysis_ids, vti_lookup, classifications
-            )
-
-            indicator, rel = self.stix_builder.create_indicator_from_observable(
-                observable=observable_obj,
-                labels=all_labels,
-                created_by_ref=self.identity,
-                kill_chain_phases=kill_chain_phases,
-                confidence=confidence,
-                description=description,
-                score=confidence,
-            )
-            observables.append(indicator)
-            observables.append(rel)
-
-            # Threat Names
-            observables += self.stix_builder.create_malware_objects_for_threat_names(
-                threat_names,
-                classifications,
-                indicator,
-                email_obs,
-                labels=colored["classifications"],
-            )
-
+            except Exception as e:
+                self.helper.connector_logger.error(
+                    f"[IOC]Error while creating IOC: {str(e)}"
+                )
+                continue
         return observables
 
     def handle_ip_iocs(
@@ -1308,86 +1342,94 @@ class VMRayConnector:
         observables: List[Any] = []
 
         for ip_ioc in ip_iocs:
-            ip = ip_ioc.get("ip_address")
-            analysis_ids = ip_ioc.get("analysis_ids", [])
-            labels = []
-            vti_labels, mitre_labels = extract_vti_mitre_labels_by_analysis(
-                analysis_ids, vti_lookup, mitre_lookup
-            )
-            colored = self.build_colored_labels(
-                mitre_labels=mitre_labels,
-                vti_labels=vti_labels,
-            )
-            all_labels = combine_labels(vti=colored["vti"], mitre=colored["mitre"])
-            kill_chain_phases, confidence = build_killchain_and_confidence(
-                analysis_ids, mitre_lookup, vti_lookup
-            )
+            try:
+                ip = ip_ioc.get("ip_address")
+                analysis_ids = ip_ioc.get("analysis_ids", [])
+                labels = []
+                vti_labels, mitre_labels = extract_vti_mitre_labels_by_analysis(
+                    analysis_ids, vti_lookup, mitre_lookup
+                )
+                colored = self.build_colored_labels(
+                    mitre_labels=mitre_labels,
+                    vti_labels=vti_labels,
+                )
+                all_labels = combine_labels(vti=colored["vti"], mitre=colored["mitre"])
+                kill_chain_phases, confidence = build_killchain_and_confidence(
+                    analysis_ids, mitre_lookup, vti_lookup
+                )
 
-            for protocol in ip_ioc.get("protocols", []):
-                labels.append(f"protocol: {protocol}")
+                for protocol in ip_ioc.get("protocols", []):
+                    labels.append(f"protocol: {protocol}")
 
-            ip_obs = VMRayObservableTransform(
-                observable_type="ip",
-                observable_value=ip_ioc["ip_address"],
-                description="Primary IP IOC from VMRay",
-                labels=labels,
-                created_by_ref=self.identity,
-                score=confidence,
-                markings=self.default_markings,
-            )
-            observable_obj = ip_obs.stix_observable
-            if not observable_obj:
-                continue
-            if ip:
-                labels.append(ip)
-            observables.append(observable_obj)
-
-            description = build_indicator_description(
-                analysis_ids=analysis_ids, vti_lookup=vti_lookup
-            )
-            indicator, rel = self.stix_builder.create_indicator_from_observable(
-                observable=observable_obj,
-                labels=all_labels,
-                created_by_ref=self.identity,
-                kill_chain_phases=kill_chain_phases,
-                confidence=confidence,
-                description=description,
-                score=confidence,
-            )
-            observables.append(indicator)
-            observables.append(rel)
-
-            # Domain
-            for domain in ip_ioc.get("domains", []):
-                domain_obs = VMRayObservableTransform(
-                    observable_type="domain",
-                    observable_value=domain,
-                    description="Domain IOC from VMRay",
+                ip_obs = VMRayObservableTransform(
+                    observable_type="ip",
+                    observable_value=ip_ioc["ip_address"],
+                    description="Primary IP IOC from VMRay",
                     labels=labels,
                     created_by_ref=self.identity,
                     score=confidence,
                     markings=self.default_markings,
                 )
-                domain_obj = domain_obs.stix_observable
-                if domain_obj:
-                    observables.append(domain_obj)
-                    rel_domain = ip_obs.create_relationship(
-                        src_id=indicator.id,
-                        tgt_id=domain_obj.id,
+                observable_obj = ip_obs.stix_observable
+                if not observable_obj:
+                    continue
+                if ip:
+                    labels.append(ip)
+                observables.append(observable_obj)
+
+                description = build_indicator_description(
+                    analysis_ids=analysis_ids, vti_lookup=vti_lookup
+                )
+                indicator, rel = self.stix_builder.create_indicator_from_observable(
+                    observable=observable_obj,
+                    labels=all_labels,
+                    created_by_ref=self.identity,
+                    kill_chain_phases=kill_chain_phases,
+                    confidence=confidence,
+                    description=description,
+                    score=confidence,
+                )
+                observables.append(indicator)
+                observables.append(rel)
+
+                # Domain
+                for domain in ip_ioc.get("domains", []):
+                    domain_obs = VMRayObservableTransform(
+                        observable_type="domain",
+                        observable_value=domain,
+                        description="Domain IOC from VMRay",
+                        labels=labels,
+                        created_by_ref=self.identity,
+                        score=confidence,
                         markings=self.default_markings,
-                        rel_type="based-on",
                     )
-                    observables.append(rel_domain)
+                    domain_obj = domain_obs.stix_observable
+                    if domain_obj:
+                        observables.append(domain_obj)
+                        rel_domain = ip_obs.create_relationship(
+                            src_id=indicator.id,
+                            tgt_id=domain_obj.id,
+                            markings=self.default_markings,
+                            rel_type="based-on",
+                        )
+                        observables.append(rel_domain)
 
-            # Countries
-            observables += self.stix_builder.create_location_objects(
-                indicator,
-                ip_obs,
-                ip_ioc.get("countries", []),
-                ip_ioc.get("country_codes", []),
-                labels,
-            )
-
+                # Countries
+                observables += self.stix_builder.create_location_objects(
+                    indicator,
+                    ip_obs,
+                    ip_ioc.get("countries", []),
+                    ip_ioc.get("country_codes", []),
+                    labels,
+                )
+            except InvalidValueError as e:
+                self.helper.connector_logger.error(f"[IOC]Invalid STIX value: {str(e)}")
+                continue
+            except Exception as e:
+                self.helper.connector_logger.error(
+                    f"[IOC]Error while creating IOC: {str(e)}"
+                )
+                continue
         return observables
 
     def create_ioc(self, ioc_name: str) -> Callable[[Any, Any, Any], List[Any]]:
@@ -1554,7 +1596,7 @@ class VMRayConnector:
                     "description": "VMRay Sample Web Interface URL",
                 }
             )
-        self.helper.connector_logger.info(
+        self.helper.connector_logger.debug(
             f"Creating Stix objects and report for sample {sample_id}"
         )
         description = (
@@ -1580,75 +1622,154 @@ class VMRayConnector:
 
         return report, stix_objects
 
-    def create_parent_child_relationships(
-        self, sample_reports: Dict[int, Report], parent_child_map: Dict[int, List[int]]
+    def update_parent_child_map_for_sample(
+        self,
+        parent_child_map: Dict[int, Set[int]],
+        child_parent_map: Dict[int, Set[int]],
+        sample: Dict[str, Any],
+    ) -> None:
+        """
+        Incrementally update parent-child and child-parent mappings using a single sample.
+        """
+        parent_id = sample.get("sample_id")
+        if parent_id is None:
+            return
+
+        child_ids = sample.get("sample_child_sample_ids") or []
+        if not child_ids:
+            return
+
+        for child_id in child_ids:
+            parent_child_map.setdefault(parent_id, set()).add(child_id)
+            child_parent_map.setdefault(child_id, set()).add(parent_id)
+
+    def create_parent_child_relationships_for_sample(
+        self,
+        sample_id: int,
+        sample_reports: Dict[int, Report],
+        parent_child_map: Dict[int, Set[int]],
+        child_parent_map: Dict[int, Set[int]],
+        verdict_passed_sample_ids: Set[int],
     ) -> List[Relationship]:
         """
-        Create relationships between parent and child sample reports.
-
-        Args:
-                sample_reports (Dict[int, Report]): Mapping of sample IDs to Report objects.
-                parent_child_map (Dict[int, List[int]]): Mapping of parent IDs to list of child IDs.
-
-        Returns:
-            List[Relationship]: List of Relationship objects representing parent-child links.
+        Create parent-child relationships only if BOTH parent and child
+        samples passed the verdict filter.
         """
-        relationships = []
-        for parent_id, child_ids in parent_child_map.items():
+        relationships: List[Relationship] = []
+
+        if sample_id not in verdict_passed_sample_ids:
+            return relationships
+
+        current_report = sample_reports.get(sample_id)
+        if not current_report:
+            return relationships
+
+        # Parents → current
+        for parent_id in child_parent_map.get(sample_id, set()):
+            if parent_id not in verdict_passed_sample_ids:
+                continue
+
             parent_report = sample_reports.get(parent_id)
             if not parent_report:
                 continue
-            for child_id in child_ids:
-                child_report = sample_reports.get(child_id)
-                if not child_report:
-                    continue
-                if child_report:
-                    relationships.append(
-                        Relationship(
-                            id=StixCoreRelationship.generate_id(
-                                "related-to", parent_report.id, child_report.id
-                            ),
-                            source_ref=parent_report.id,
-                            target_ref=child_report.id,
-                            relationship_type="related-to",
-                            created_by_ref=self.identity,
-                            object_marking_refs=self.default_markings,
-                            allow_custom=True,
-                        )
-                    )
+
+            relationships.append(
+                Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to", parent_report.id, current_report.id
+                    ),
+                    source_ref=parent_report.id,
+                    target_ref=current_report.id,
+                    relationship_type="related-to",
+                    created_by_ref=self.identity,
+                    object_marking_refs=self.default_markings,
+                    allow_custom=True,
+                )
+            )
+
+        # Current → children
+        for child_id in parent_child_map.get(sample_id, set()):
+            if child_id not in verdict_passed_sample_ids:
+                continue
+
+            child_report = sample_reports.get(child_id)
+            if not child_report:
+                continue
+
+            relationships.append(
+                Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to", current_report.id, child_report.id
+                    ),
+                    source_ref=current_report.id,
+                    target_ref=child_report.id,
+                    relationship_type="related-to",
+                    created_by_ref=self.identity,
+                    object_marking_refs=self.default_markings,
+                    allow_custom=True,
+                )
+            )
+
         return relationships
 
-    def process_samples(self, samples: List[Dict[str, Any]]) -> List[Any]:
+    def process_single_sample(
+        self,
+        sample: Dict[str, Any],
+        *,
+        work_id: str,
+        sample_reports: Dict[int, Report],
+        parent_child_map: Dict[int, Set[int]],
+        child_parent_map: Dict[int, Set[int]],
+        verdict_passed_sample_ids: Set[int],
+    ) -> None:
         """
-        Process multiple VMRay samples into full STIX objects with reports and relationships.
-
-        Args:
-            samples (List[Dict[str, Any]]): List of VMRay samples.
-
-        Returns:
-             List[Any]: All generated STIX objects including reports and parent–child relationships.
+        Process exactly one VMRay sample, immediately send its report,
+        and create relationships if possible.
         """
-        all_objects = []
-        sample_reports = {}
+        sample_id = sample.get("sample_id")
+        self.helper.connector_logger.info(f"[SAMPLE] Processing sample_id={sample_id}")
 
-        for sample in samples:
+        try:
             report, stix_objects = self.build_sample_stix_objects(sample)
+
             if not report:
-                continue
-            sample_id = sample.get("sample_id")
-            if sample_id is None:
-                continue
+                self.helper.connector_logger.debug(
+                    f"[REPORT][SKIP] sample_id={sample_id} reason=no_report_created"
+                )
+                return
+
+            # Send report immediately
+            bundle = self.helper.stix2_create_bundle(stix_objects + [report])
+            self.helper.send_stix2_bundle(bundle=bundle, update=True, work_id=work_id)
+
+            # Register report
             sample_reports[sample_id] = report
-            all_objects.extend(stix_objects)
-            all_objects.append(report)
 
-        parent_child_map = build_parent_child_map(samples)
-        relationships = self.create_parent_child_relationships(
-            sample_reports, parent_child_map
-        )
-        all_objects.extend(relationships)
+            # Update relationship maps
+            self.update_parent_child_map_for_sample(
+                parent_child_map=parent_child_map,
+                child_parent_map=child_parent_map,
+                sample=sample,
+            )
 
-        return all_objects
+            # Create relationships if resolvable
+            relationships = self.create_parent_child_relationships_for_sample(
+                sample_id=sample_id,
+                sample_reports=sample_reports,
+                parent_child_map=parent_child_map,
+                child_parent_map=child_parent_map,
+                verdict_passed_sample_ids=verdict_passed_sample_ids,
+            )
+
+            if relationships:
+                rel_bundle = self.helper.stix2_create_bundle(relationships)
+                self.helper.send_stix2_bundle(rel_bundle, update=True, work_id=work_id)
+
+        except Exception as e:
+            self.helper.connector_logger.error(
+                f"[VMRay] Failed processing sample {sample_id}: {str(e)}"
+            )
+            raise
 
     def process_message(self) -> None:
         """
@@ -1658,78 +1779,111 @@ class VMRayConnector:
             "[CONNECTOR] Starting connector...",
             {"connector_name": self.helper.connect_name},
         )
+
         try:
-            # Load last run timestamp
-            current_state = self.helper.get_state()
-            last_run = current_state.get("last_run") if current_state else None
-            next_checkpoint = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
-            if last_run:
-                self.from_date = parse_to_vmray_datetime(last_run)
-                self.helper.connector_logger.info(
-                    f"[VMRay] Using last_run as from_date: {self.from_date}"
-                )
-            else:
-                self.from_date = parse_to_vmray_datetime(self.vmray_initial_fetch_date)
-                self.helper.connector_logger.info(
-                    f"[VMRay] Using initial_fetch_date as from_date: {self.from_date}"
-                )
+            self.healthcheck_vmray()
+            state = self.helper.get_state() or {}
+            last_run = state.get("last_run")
+            failed_sample_id = state.get("failed_sample_id")
 
-            # Always set the new end time
-            self.to_date = parse_to_vmray_datetime(datetime.now(timezone.utc))
-
-            self.helper.connector_logger.info("Connecting to VMRay...")
-
-            # Fetch submissions
-            vmray_submissions = self.get_submissions_by_timestamp()
             self.helper.connector_logger.info(
-                f"[VMRay] Fetched {len(vmray_submissions)} submissions "
-                f"from {self.from_date} to {self.to_date}"
+                f"[STATE] last_run={last_run}, failed_sample_id={failed_sample_id}"
             )
 
-            # Friendly name for OpenCTI
-            friendly_name = self.helper.connect_name
+            get_timestamp = parse_to_vmray_datetime(datetime.now(timezone.utc))
 
-            # Initiate work in OpenCTI
+            self.from_date = (
+                parse_to_vmray_datetime(last_run)
+                if last_run
+                else parse_to_vmray_datetime(self.vmray_initial_fetch_date)
+            )
+            self.to_date = get_timestamp
+            self.helper.connector_logger.info(
+                f"Fetching submissions from {self.from_date} to {self.to_date}"
+            )
+
+            submissions = self.get_submissions_by_timestamp()
+            self.helper.connector_logger.info(f"Fetched {len(submissions)} submissions")
             work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
+                self.helper.connect_id, self.helper.connect_name
             )
 
-            # Process submissions
-            unique_sample_ids = set(
-                [x["submission_sample_id"] for x in vmray_submissions]
-            )
-            vmray_samples_by_verdict = self.get_samples_by_verdict(unique_sample_ids)
-            processed_objects = self.process_samples(vmray_samples_by_verdict)
+            processed_sample_ids: Set[int] = set()
+            verdict_passed_sample_ids: Set[int] = set()
+            sample_reports: Dict[int, Report] = {}
+            parent_child_map: Dict[int, Set[int]] = {}
+            child_parent_map: Dict[int, Set[int]] = {}
+            finish_time = None
+            run_successful = False
+            if submissions:
+                try:
+                    # Main processing loop
+                    for submission in submissions:
+                        sample_id = submission.get("submission_sample_id")
+                        finish_time = submission.get("submission_finish_time")
 
-            self.logger.info(
-                f"[VMRay] Total processed objects: {len(processed_objects)}"
-            )
+                        if not isinstance(sample_id, int):
+                            continue
+                        if failed_sample_id is not None:
+                            if sample_id != failed_sample_id:
+                                continue
+                            failed_sample_id = None
 
-            if processed_objects:
-                self.logger.info("[VMRay] Sending STIX bundle to OpenCTI...")
-                all_bundle = self.helper.stix2_create_bundle(processed_objects)
-                self.helper.send_stix2_bundle(
-                    bundle=all_bundle, update=True, work_id=work_id
-                )
+                        if sample_id in processed_sample_ids:
+                            continue
+                        processed_sample_ids.add(sample_id)
+                        sample = self.get_sample(sample_id)
+
+                        if not sample:
+                            continue
+
+                        if sample.get("sample_verdict") not in self.sample_verdict:
+                            continue
+
+                        verdict_passed_sample_ids.add(sample_id)
+
+                        self.process_single_sample(
+                            sample,
+                            work_id=work_id,
+                            sample_reports=sample_reports,
+                            parent_child_map=parent_child_map,
+                            child_parent_map=child_parent_map,
+                            verdict_passed_sample_ids=verdict_passed_sample_ids,
+                        )
+                    run_successful = True
+                except Exception as e:
+                    self.helper.connector_logger.error(
+                        f"Failed to fetch sample_id={sample_id} {str(e)}"
+                    )
+                    self.helper.set_state(
+                        {"last_run": finish_time, "failed_sample_id": sample_id}
+                    )
+                    raise
             else:
-                self.logger.info("[VMRay] FINAL RESULT: No new data to process.")
-
-            self.helper.set_state({"last_run": next_checkpoint})
-            message = (
-                f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                f"{next_checkpoint}"
-            )
-            self.helper.api.work.to_processed(work_id, message)
-            self.helper.connector_logger.info(message)
-
+                self.helper.connector_logger.info("No submissions to process")
+                self.helper.set_state(
+                    {"last_run": get_timestamp, "failed_sample_id": None}
+                )
+            if run_successful:
+                self.helper.set_state(
+                    {"last_run": get_timestamp, "failed_sample_id": None}
+                )
+                message = (
+                    f"{self.helper.connect_name} connector successfully run, storing last_run as "
+                    + str(get_timestamp)
+                )
+                self.helper.api.work.to_processed(work_id, message)
+                self.helper.connector_logger.info(message)
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
                 "[CONNECTOR] Connector stopped...",
                 {"connector_name": self.helper.connect_name},
             )
-            exit(0)
-        except Exception as err:
-            self.helper.connector_logger.error(str(err))
+            sys.exit(0)
+        except Exception as e:
+            self.helper.connector_logger.error(
+                f"[FATAL] Connector run aborted: {str(e)}"
+            )
 
     def run(self) -> None:
         """

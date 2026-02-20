@@ -63,6 +63,11 @@ class _ConfigLoaderMisp(ConfigBaseSettings):
         alias="MISP_PUBLISH_ON_UPDATE",
         description="Automatically publish events when updated.",
     )
+    publish_alert: bool = Field(
+        default=False,
+        alias="MISP_PUBLISH_ALERT",
+        description="Send email alert notifications when publishing events.",
+    )
 
     # Tagging configuration
     tag_opencti: bool = Field(
