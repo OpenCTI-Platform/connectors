@@ -613,10 +613,6 @@ class ConverterToStix:
                 alert_id = alert.get("id", "unknown")
                 current_queue_state = alert.get("queue_state")
                 previous_queue_state = state.get(alert_id, {}).get("queue_state")
-                self.helper.connector_logger.info(
-                    "[DoppelConverter] Previous Queue State for Phone Number alert",
-                    {"previous_queue_state": previous_queue_state}
-                )
 
                 # Extract required fields
                 entity_content = alert.get("entity_content", {})
@@ -634,7 +630,9 @@ class ConverterToStix:
                         alert.get("entity"), alert
                     )
                     stix_objects.append(phone_number_observable)
-                    domain_observable_id = phone_number_observable.id # mocked domain observable id
+                    domain_observable_id = (
+                        phone_number_observable.id
+                    )  # mocked domain observable id
 
                 # Create or reference Domain Observable
                 if domain_name:
