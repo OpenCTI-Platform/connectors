@@ -1,0 +1,21 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'CyberThreatExchange'
+  scope: 'cyberthreatexchange'
+  confidence_level: 70
+  update_existing_data: false
+  log_level: 'info'
+  queue_protocol: 'api'
+  auto_create_service_account: true
+  auto_create_service_account_confidence_level: 75
+
+cyberthreatexchange:
+  base_url: 'https://api.cyberthreatexchange.com/'
+  api_key: ChangeMe
+  feed_ids: '' # comma separated feed ids
+  interval_hours: 1 # interval in hours
