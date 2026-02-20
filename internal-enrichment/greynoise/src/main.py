@@ -1,4 +1,3 @@
-import json
 import os
 from datetime import datetime, timedelta
 from typing import Dict
@@ -7,7 +6,8 @@ import pycountry
 import stix2
 import yaml
 from dateutil.parser import parse
-from greynoise import GreyNoise
+from greynoise.api import APIConfig, GreyNoise
+from greynoise.exceptions import RequestFailure
 from pycti import (
     Identity,
     Indicator,
@@ -21,6 +21,8 @@ from pycti import (
     Vulnerability,
     get_config_variable,
 )
+
+INTEGRATION_NAME = "opencti-enricher-v4.0"
 
 
 class GreyNoiseConnector:
@@ -42,11 +44,17 @@ class GreyNoiseConnector:
         self.sighting_not_seen = get_config_variable(
             "GREYNOISE_SIGHTING_NOT_SEEN", ["greynoise", "sighting_not_seen"], config
         )
+        self.no_sightings = get_config_variable(
+            "GREYNOISE_NO_SIGHTINGS",
+            ["greynoise", "no_sightings"],
+            config,
+            default=False,
+        )
         self.greynoise_ent_name = get_config_variable(
             "GREYNOISE_NAME",
             ["greynoise", "name"],
             config,
-            default="GreyNoise Internet Scanner",
+            default="GreyNoise Intelligence",
         )
         self.greynoise_ent_desc = get_config_variable(
             "GREYNOISE_DESCRIPTION",
@@ -81,85 +89,10 @@ class GreyNoiseConnector:
         self.tlp = None
         self.stix_objects = []
 
-        self.check_api_key(force_recheck=True)
-
-    def check_api_key(self, force_recheck=False):
-        # Validate GreyNoise API Key
-        self.helper.log_debug("Validating GreyNoise API Key...")
-        try:
-            today = datetime.today().strftime("%Y-%m-%d")
-
-            if os.path.exists("KEY_INFO"):
-                with open("KEY_INFO") as text_file:
-                    key_info = text_file.read()
-                key_state = json.loads(key_info)
-            else:
-                empty_key_state = {"offering": "", "expiration": "", "last_checked": ""}
-                with open("KEY_INFO", "w") as text_file:
-                    empty_key_state = json.dumps(empty_key_state)
-                    print(f"{empty_key_state}", file=text_file)
-                key_state = json.loads(empty_key_state)
-
-            if key_state.get("last_checked") != today or force_recheck:
-                session = GreyNoise(
-                    api_key=self.greynoise_key, integration_name="opencti-enricher-v3.1"
-                )
-                key_check = session.test_connection()
-
-                key_state = {
-                    "offering": key_check.get("offering"),
-                    "expiration": key_check.get("expiration"),
-                    "last_checked": today,
-                }
-
-                if "offering" in key_check:
-                    self.helper.log_info(
-                        "GreyNoise API Key Status: "
-                        + str(key_check.get("offering", ""))
-                        + "/"
-                        + str(key_check.get("expiration", ""))
-                    )
-                    if key_check.get("offering") == "community_trial":
-                        key_state["valid"] = True
-                        self.helper.log_info("GreyNoise API key is valid!")
-                    elif key_check.get("offering") == "community":
-                        key_state["valid"] = False
-                        self.helper.log_info(
-                            "GreyNoise API key NOT valid! Update to use connector!"
-                        )
-                    elif (
-                        key_check.get("offering") != "community"
-                        and key_check.get("expiration") > today
-                    ):
-                        key_state["valid"] = True
-                        self.helper.log_info("GreyNoise API key is valid!")
-                    elif (
-                        key_check.get("offering") != "community"
-                        and key_check.get("expiration") < today
-                    ):
-                        key_state["valid"] = False
-
-                with open("KEY_INFO", "w") as text_file:
-                    key_state = json.dumps(key_state)
-                    print(f"{key_state}", file=text_file)
-                key_state = json.loads(key_state)
-
-            return key_state.get("valid", False)
-
-        except Exception as e:
-            self.helper.log_error(
-                "[API] GreyNoise API key is not valid or not supported for this integration. API "
-                "Response: " + str(e)
-            )
-            raise Exception(
-                "[API] GreyNoise API key is not valid or not supported for this integration. API Response: "
-                + str(e)
-            )
-
     def _get_indicator_score(self, classification):
         if classification == "malicious":
             self.indicator_score = self.indicator_score_malicious
-        elif classification == "suspicious":
+        elif classification == "suspicious" or classification == "2":
             self.indicator_score = self.indicator_score_suspicious
         else:
             self.indicator_score = self.indicator_score_benign
@@ -225,7 +158,7 @@ class GreyNoiseConnector:
         """
 
         new_custom_label = self.helper.api.label.read_or_create_unchecked(
-            value=name_label, color=color_label
+            value=name_label, color=color_label, createdBy=self.greynoise_identity["id"]
         )
         if new_custom_label is None:
             self.helper.connector_logger.error(
@@ -236,11 +169,7 @@ class GreyNoiseConnector:
         else:
             self.all_labels.append(new_custom_label["value"])
 
-    @staticmethod
-    def _get_match(data, key, value):
-        return next((x for x in data if x[key] == value), None)
-
-    def _process_labels(self, data: dict, data_tags: dict) -> tuple:
+    def _process_labels(self, data: dict) -> tuple:
         """
         This method allows you to start the process of creating labels and recovering associated malware.
 
@@ -251,93 +180,97 @@ class GreyNoiseConnector:
 
         self.all_labels = []
         all_malwares = []
-        entity_tags = data["tags"]
+        entity_tags = data["internet_scanner_intelligence"].get("tags", [])
 
-        if data["classification"] == "benign":
+        if data["internet_scanner_intelligence"]["classification"] == "benign":
             # Create label GreyNoise "benign"
             self._create_custom_label("gn-classification: benign", "#06c93a")
             # Include additional label "benign-actor"
-            self._create_custom_label(f"gn-benign-actor: {data['actor']} ", "#06c93a")
-
-        elif data["classification"] == "unknown":
+            self._create_custom_label(
+                f"gn-benign-actor: {data['internet_scanner_intelligence']['actor']} ",
+                "#06c93a",
+            )
+        elif data["internet_scanner_intelligence"]["classification"] == "unknown":
             # Create label GreyNoise "unknown"
             self._create_custom_label("gn-classification: unknown", "#a6a09f")
-
-        elif data["classification"] == "malicious":
+        elif data["internet_scanner_intelligence"]["classification"] == "malicious":
             # Create label GreyNoise "malicious"
             self._create_custom_label("gn-classification: malicious", "#ff8178")
-
-        elif data["classification"] == "suspicious":
+        elif data["internet_scanner_intelligence"]["classification"] == "suspicious":
             # Create label GreyNoise "suspicious"
             self._create_custom_label("gn-classification: suspicious", "#e3d922")
 
-        if data["bot"] is True:
+        if data["business_service_intelligence"]["trust_level"] == "1":
+            # Create label GreyNoise "trust level 1"
+            self._create_custom_label("gn-trust-level: reasonably ignore", "#90D5FF")
+            # Include additional label "provider"
+            self._create_custom_label(
+                f"gn-provider: {data['business_service_intelligence']['name']} ",
+                "#90D5FF",
+            )
+        elif data["business_service_intelligence"]["trust_level"] == "2":
+            # Create label GreyNoise "trust level 1"
+            self._create_custom_label("gn-trust-level: commonly seen", "#57B9FF")
+            # Include additional label "provider"
+            self._create_custom_label(
+                f"gn-provider: {data['business_service_intelligence']['name']} ",
+                "#57B9FF",
+            )
+
+        if data["internet_scanner_intelligence"]["bot"] is True:
             # Create label for "Known Bot Activity"
             self._create_custom_label("Known BOT Activity", "#7e4ec2")
 
-        if data["metadata"]["tor"] is True:
+        if data["internet_scanner_intelligence"]["tor"] is True:
             # Create label for "Known Tor Exit Node"
             self._create_custom_label("Known TOR Exit Node", "#7e4ec2")
 
-        if data["vpn"] is True:
+        if data["internet_scanner_intelligence"]["vpn"] is True:
             # Create label for "Known VPN"
             self._create_custom_label("Known VPN", "#7e4ec2")
 
         # Create all Labels in entity_tags
         for tag in entity_tags:
-            tag_details_matching = self._get_match(data_tags["metadata"], "name", tag)
-            if tag_details_matching is not None:
-                tag_details = tag_details_matching
-            else:
-                self.all_labels.append(tag)
-                continue
-
             # Create red label when malicious intent and type not category worm and activity
-            if tag_details["intention"] == "malicious" and tag_details[
-                "category"
-            ] not in ["worm"]:
-                self._create_custom_label(f"{tag}", "#ff8178")
+            if tag["intention"] == "malicious" and tag["category"] not in ["worm"]:
+                self._create_custom_label(f"{tag['name']}", "#ff8178")
 
             # If category is worm, prepare malware object
-            elif tag_details["category"] == "worm":
+            elif tag["category"] == "worm":
                 malware_worm = {
                     "name": f"{tag}",
-                    "description": f"{tag_details['description']}",
+                    "description": f"{tag['description']}",
                     "type": "worm",
                 }
                 all_malwares.append(malware_worm)
-                self.all_labels.append(tag)
+                self.all_labels.append(tag["name"])
 
-            elif tag_details["intention"] == "benign":
+            elif tag["intention"] == "benign":
                 # Create green label for benign tags
-                self._create_custom_label(f"{tag_details['name']}", "#06c93a")
-            elif tag_details["intention"] == "suspicious":
+                self._create_custom_label(f"{tag['name']}", "#06c93a")
+            elif tag["intention"] == "suspicious":
                 # Create yellow label for suspicious tags
-                self._create_custom_label(f"{tag_details['name']}", "#e3d922")
+                self._create_custom_label(f"{tag['name']}", "#e3d922")
             else:
                 # Create white label otherwise
-                self._create_custom_label(f"{tag}", "#ffffff")
+                self._create_custom_label(f"{tag['name']}", "#ffffff")
 
         return self.all_labels, all_malwares
 
-    def _generate_stix_external_reference(
-        self, data: dict, sighting_not_seen: bool = False
-    ) -> list:
+    def _generate_stix_external_reference(self, data: dict) -> list:
         """
         This method allows you to create an external reference in Stix2 format.
 
         :param data: A parameter that contains all the data about the IPv4 that was searched for in GreyNoise.
-        :param sighting_not_seen: This parameter is a boolean that corresponds to the configuration of
-                                  sighting_not_seen, which aims to know if the user wants to create a sighting at 0.
         :return: list -> ExternalReference (Stix2 format)
         """
-
-        description = (
-            "This IP has not yet been identified by GreyNoise, meaning it has not been seen mass scanning "
-            "the internet nor does it belong to a business service that we monitor."
-            if sighting_not_seen is True
-            else f'[{data["metadata"]["country_code"]}] - {data["metadata"]["city"]}'
-        )
+        description = ""
+        if data["internet_scanner_intelligence"]["found"] is True:
+            description = "This reference will direct to the GreyNoise Visualizer IP details page for an IP that has been seen mass scanning the internet."
+        elif data["business_service_intelligence"]["found"] is True:
+            description = "This reference will direct to the GreyNoise Visualizer IP details page for an IP that is part of a common business service."
+        else:
+            description = "This reference will direct to the GreyNoise Visualizer IP details page for an IP that has not yet been identified by GreyNoise, meaning it has not been seen mass scanning the internet nor does it belong to a business service that we monitor."
 
         # Generate ExternalReference
         external_reference = stix2.ExternalReference(
@@ -372,22 +305,25 @@ class GreyNoiseConnector:
         :param data: A parameter that contains all the data about the IPv4 that was searched for in GreyNoise.
         """
 
-        organization = data["metadata"]["organization"]
-
-        # Generate other Identity
-        stix_organization = stix2.Identity(
-            id=Identity.generate_id(organization, "organization"),
-            name=organization,
-            identity_class="organization",
-            created_by_ref=self.greynoise_identity["id"],
+        organization = data["internet_scanner_intelligence"]["metadata"].get(
+            "organization", ""
         )
-        self.stix_objects.append(stix_organization)
 
-        # Generate Relationship : Observable -> "related-to" -> Organization
-        observable_to_organization = self._generate_stix_relationship(
-            self.stix_entity["id"], "related-to", stix_organization.id
-        )
-        self.stix_objects.append(observable_to_organization)
+        if organization != "":
+            # Generate other Identity
+            stix_organization = stix2.Identity(
+                id=Identity.generate_id(organization, "organization"),
+                name=organization,
+                identity_class="organization",
+                created_by_ref=self.greynoise_identity["id"],
+            )
+            self.stix_objects.append(stix_organization)
+
+            # Generate Relationship : Observable -> "related-to" -> Organization
+            observable_to_organization = self._generate_stix_relationship(
+                self.stix_entity["id"], "related-to", stix_organization.id
+            )
+            self.stix_objects.append(observable_to_organization)
 
     def _generate_stix_asn_with_relationship(self, data: dict):
         """
@@ -399,24 +335,59 @@ class GreyNoiseConnector:
         """
 
         # Generate Asn
-        entity_asn = data["metadata"]["asn"]
-        asn_number = int(data["metadata"]["asn"].replace("AS", ""))
-        stix_asn = stix2.AutonomousSystem(
-            type="autonomous-system",
-            number=asn_number,
-            name=entity_asn,
-            custom_properties={
-                "created_by_ref": self.greynoise_identity["id"],
-                "x_opencti_score": self.indicator_score,
-            },
-        )
-        self.stix_objects.append(stix_asn)
+        entity_asn = data["internet_scanner_intelligence"]["metadata"].get("asn", "")
+        if entity_asn != "":
+            asn_number = int(
+                data["internet_scanner_intelligence"]["metadata"]["asn"].replace(
+                    "AS", ""
+                )
+            )
+            stix_asn = stix2.AutonomousSystem(
+                type="autonomous-system",
+                number=asn_number,
+                name=entity_asn,
+                custom_properties={
+                    "created_by_ref": self.greynoise_identity["id"],
+                    "x_opencti_score": self.indicator_score,
+                },
+            )
+            self.stix_objects.append(stix_asn)
 
-        # Generate Relationship : observable -> "belongs-to" -> Asn
-        observable_to_asn = self._generate_stix_relationship(
-            self.stix_entity["id"], "belongs-to", stix_asn.id
+            # Generate Relationship : observable -> "belongs-to" -> Asn
+            observable_to_asn = self._generate_stix_relationship(
+                self.stix_entity["id"], "belongs-to", stix_asn.id
+            )
+            self.stix_objects.append(observable_to_asn)
+
+    def _generate_stix_domain_with_relationship(self, data: dict):
+        """
+        This method creates and adds a bundle to "self.stix_objects" the IPv4 associated "Domain"
+        provided by GreyNoise in Stix2 format,
+
+        - Relationship : observable -> "related-to" -> Domain.
+        :param data: A parameter that contains all the data about the IPv4 that was searched for in GreyNoise.
+        """
+
+        # Generate Asn
+        entity_domain = data["internet_scanner_intelligence"]["metadata"].get(
+            "rdns", ""
         )
-        self.stix_objects.append(observable_to_asn)
+        if entity_domain != "":
+            stix_domain = stix2.DomainName(
+                type="domain-name",
+                value=entity_domain,
+                custom_properties={
+                    "created_by_ref": self.greynoise_identity["id"],
+                    "x_opencti_score": self.indicator_score,
+                },
+            )
+            self.stix_objects.append(stix_domain)
+
+            # Generate Relationship : observable -> "resolves-to" -> Domain
+            domain_to_observable = self._generate_stix_relationship(
+                stix_domain.id, "resolves-to", self.stix_entity["id"]
+            )
+            self.stix_objects.append(domain_to_observable)
 
     def _generate_stix_location_with_relationship(self, data: dict):
         """
@@ -427,43 +398,57 @@ class GreyNoiseConnector:
         :param data: A parameter that contains all the data about the IPv4 that was searched for in GreyNoise.
         """
 
-        country = pycountry.countries.get(alpha_2=data["metadata"]["country_code"])
-        country_name = (
-            country.official_name if hasattr(country, "official_name") else country.name
-        )
+        if data["internet_scanner_intelligence"]["found"] is True:
+            country = pycountry.countries.get(
+                alpha_2=data["internet_scanner_intelligence"]["metadata"][
+                    "source_country_code"
+                ]
+            )
+            country_name = (
+                country.official_name
+                if hasattr(country, "official_name")
+                else country.name
+            )
 
-        # Generate City Location
-        stix_city_location = stix2.Location(
-            id=Location.generate_id(data["metadata"]["city"], "City"),
-            name=data["metadata"]["city"],
-            country=country_name,
-            custom_properties={"x_opencti_location_type": "City"},
-        )
-        self.stix_objects.append(stix_city_location)
+            # Generate City Location
+            stix_city_location = stix2.Location(
+                id=Location.generate_id(
+                    data["internet_scanner_intelligence"]["metadata"]["source_city"],
+                    "City",
+                ),
+                name=data["internet_scanner_intelligence"]["metadata"]["source_city"],
+                country=country_name,
+                custom_properties={"x_opencti_location_type": "City"},
+            )
+            self.stix_objects.append(stix_city_location)
 
-        # Generate Relationship : observable -> "located-at" -> city
-        observable_to_city = self._generate_stix_relationship(
-            self.stix_entity["id"], "located-at", stix_city_location.id
-        )
-        self.stix_objects.append(observable_to_city)
+            # Generate Relationship : observable -> "located-at" -> city
+            observable_to_city = self._generate_stix_relationship(
+                self.stix_entity["id"], "located-at", stix_city_location.id
+            )
+            self.stix_objects.append(observable_to_city)
 
-        # Generate Country Location
-        stix_country_location = stix2.Location(
-            id=Location.generate_id(country.name, "Country"),
-            name=country_name,
-            country=country_name,
-            custom_properties={
-                "x_opencti_location_type": "Country",
-                "x_opencti_aliases": [data["metadata"]["country_code"]],
-            },
-        )
-        self.stix_objects.append(stix_country_location)
+            # Generate Country Location
+            stix_country_location = stix2.Location(
+                id=Location.generate_id(country.name, "Country"),
+                name=country_name,
+                country=country_name,
+                custom_properties={
+                    "x_opencti_location_type": "Country",
+                    "x_opencti_aliases": [
+                        data["internet_scanner_intelligence"]["metadata"][
+                            "source_country_code"
+                        ]
+                    ],
+                },
+            )
+            self.stix_objects.append(stix_country_location)
 
-        # Generate Relationship : city -> "located-at" -> country
-        city_to_country = self._generate_stix_relationship(
-            stix_city_location.id, "located-at", stix_country_location.id
-        )
-        self.stix_objects.append(city_to_country)
+            # Generate Relationship : city -> "located-at" -> country
+            city_to_country = self._generate_stix_relationship(
+                stix_city_location.id, "located-at", stix_country_location.id
+            )
+            self.stix_objects.append(city_to_country)
 
     def _generate_stix_vulnerability_with_relationship(self, data: dict):
         """
@@ -474,8 +459,11 @@ class GreyNoiseConnector:
         :param data: A parameter that contains all the data about the IPv4 that was searched for in GreyNoise.
         """
 
-        if "cve" in data:
-            entity_vulns = data["cve"]
+        if (
+            "cves" in data["internet_scanner_intelligence"]
+            and data["internet_scanner_intelligence"].get("cves", []) is not []
+        ):
+            entity_vulns = data["internet_scanner_intelligence"]["cves"]
             for vuln in entity_vulns:
                 # Generate Vulnerability
                 stix_vulnerability = stix2.Vulnerability(
@@ -505,14 +493,20 @@ class GreyNoiseConnector:
         :param data: A parameter that contains all the data about the IPv4 that was searched for in GreyNoise.
         """
 
-        if data["vpn"] is True:
+        if data["internet_scanner_intelligence"]["vpn"] is True:
             # Generate Tool
             stix_tool = stix2.Tool(
-                id=Tool.generate_id(f"VPN: {data['vpn_service']}"),
-                name=f"VPN: {data['vpn_service']}",
+                id=Tool.generate_id(
+                    f"VPN: {data['internet_scanner_intelligence']['vpn_service']}"
+                ),
+                name=f"VPN: {data['internet_scanner_intelligence']['vpn_service']}",
                 labels=["tool"],
                 created_by_ref=self.greynoise_identity["id"],
-                custom_properties={"x_opencti_aliases": data["vpn_service"]},
+                custom_properties={
+                    "x_opencti_aliases": data["internet_scanner_intelligence"][
+                        "vpn_service"
+                    ]
+                },
                 allow_custom=True,
             )
             self.stix_objects.append(stix_tool)
@@ -646,14 +640,17 @@ class GreyNoiseConnector:
 
         # Create threat actor for non-benign when known
         if (
-            data["actor"]
-            and data["actor"] != "unknown"
-            and data["classification"] != "benign"
+            data["internet_scanner_intelligence"]["actor"]
+            and data["internet_scanner_intelligence"]["actor"] != "unknown"
+            and data["internet_scanner_intelligence"]["actor"] != ""
+            and data["internet_scanner_intelligence"]["classification"] != "benign"
         ):
             # Generate Threat Actor
             stix_threat_actor = stix2.ThreatActor(
-                id=ThreatActorGroup.generate_id(data["actor"]),
-                name=data["actor"],
+                id=ThreatActorGroup.generate_id(
+                    data["internet_scanner_intelligence"]["actor"]
+                ),
+                name=data["internet_scanner_intelligence"]["actor"],
                 created_by_ref=self.greynoise_identity["id"],
             )
             self.stix_objects.append(stix_threat_actor)
@@ -683,6 +680,15 @@ class GreyNoiseConnector:
         :return: dict
         """
 
+        if self.sighting_not_seen is True:
+            self.indicator_score = 0
+
+        description = (
+            "Internet Scanning IP detected by GreyNoise with classification `"
+            + data["internet_scanner_intelligence"]["classification"]
+            + "`."
+        )
+
         # Generate Indicator
         stix_indicator = stix2.Indicator(
             id=Indicator.generate_id(data["ip"]),
@@ -691,6 +697,7 @@ class GreyNoiseConnector:
             pattern=f"[ipv4-addr:value = '{data['ip']}']",
             created_by_ref=self.greynoise_identity["id"],
             external_references=external_reference,
+            description=description,
             custom_properties={
                 "pattern_type": "stix",
                 "x_opencti_score": self.indicator_score,
@@ -709,7 +716,7 @@ class GreyNoiseConnector:
         return stix_indicator
 
     def _generate_stix_observable(
-        self, detection: bool, external_reference: list, labels: list = None
+        self, data: dict, detection: bool, external_reference: list, labels: list = None
     ):
         """
         This method creates and adds a bundle to "self.stix_objects" the IPv4 associated "Observable"
@@ -719,6 +726,12 @@ class GreyNoiseConnector:
         :param external_reference: This parameter contains the list external reference associated with the IPv4.
         :param labels: This parameter contains a list of all labels associated with the IPv4.
         """
+
+        description = (
+            "Internet Scanning IP detected by GreyNoise with classification `"
+            + data["internet_scanner_intelligence"]["classification"]
+            + "`."
+        )
 
         # Generate Observable
         stix_observable = stix2.IPv4Address(
@@ -730,13 +743,12 @@ class GreyNoiseConnector:
                 "x_opencti_score": self.indicator_score,
                 "x_opencti_labels": labels if detection is True else [],
                 "x_opencti_created_by_ref": self.greynoise_identity["id"],
+                "x_opencti_description": description,
             },
         )
         self.stix_objects.append(stix_observable)
 
-    def _generate_stix_bundle(
-        self, data: dict, data_tags: dict, stix_entity: dict
-    ) -> str:
+    def _generate_stix_bundle(self, data: dict, stix_entity: dict) -> str:
         """
         This method create a bundle in Stix2 format.
 
@@ -749,7 +761,11 @@ class GreyNoiseConnector:
         self.stix_entity = stix_entity
         self._generate_greynoise_stix_identity()
 
-        if data["seen"] is False and self.sighting_not_seen is True:
+        if (
+            data["internet_scanner_intelligence"]["found"] is False
+            and data["business_service_intelligence"]["found"] is False
+            and self.sighting_not_seen is True
+        ):
             """
             If the IP has not been identified by GreyNoise, but the user still wants to create a sighting at count=0,
             they can do so by setting the sighting_not_seen variable to "true", in this case we create an external
@@ -764,13 +780,16 @@ class GreyNoiseConnector:
                 },
             )
 
-            external_reference = self._generate_stix_external_reference(data, True)
+            external_reference = self._generate_stix_external_reference(data)
             stix_indicator = self._generate_stix_indicator_with_relationship(
                 data, False, external_reference
             )
+            self.all_labels = []
+            self._create_custom_label("greynoise: not observed", "#ffffff")
 
-            self._generate_stix_observable(False, external_reference)
-            self._generate_stix_sighting(external_reference, stix_indicator, True)
+            self._generate_stix_observable(True, external_reference, self.all_labels)
+            if not self.no_sightings:
+                self._generate_stix_sighting(external_reference, stix_indicator, True)
 
         else:
             self.helper.connector_logger.info(
@@ -778,24 +797,39 @@ class GreyNoiseConnector:
                 {"IPv4": stix_entity["value"]},
             )
 
-            if "first_seen" in data and data["first_seen"]:
-                self.first_seen = parse(data["first_seen"]).strftime(
-                    "%Y-%m-%dT%H:%M:%SZ"
+            if data["internet_scanner_intelligence"]["found"] is True:
+                self.last_seen = parse(
+                    data["internet_scanner_intelligence"]["last_seen_timestamp"]
+                ).strftime("%Y-%m-%dT%H:%M:%SZ")
+                self._get_indicator_score(
+                    data["internet_scanner_intelligence"].get(
+                        "classification", "unknown"
+                    )
                 )
-                self.last_seen = parse(data["last_seen"]).strftime("%Y-%m-%dT%H:%M:%SZ")
             else:
-                self.first_seen = parse(data["last_seen"]).strftime(
-                    "%Y-%m-%dT%H:%M:%SZ"
+                self.last_seen = parse(
+                    data["business_service_intelligence"]["last_updated"]
+                ).strftime("%Y-%m-%dT%H:%M:%SZ")
+                self._get_indicator_score(
+                    data["business_service_intelligence"].get("trust_level", "2")
                 )
-                self.last_seen = datetime.strptime(
-                    data["last_seen"], "%Y-%m-%d"
+
+            if (
+                "first_seen" in data["internet_scanner_intelligence"]
+                and data["internet_scanner_intelligence"]["first_seen"] != ""
+            ):
+                self.first_seen = parse(
+                    data["internet_scanner_intelligence"]["first_seen"]
+                ).strftime("%Y-%m-%dT%H:%M:%SZ")
+            else:
+                self.first_seen = self.last_seen
+                self.last_seen = datetime.fromisoformat(
+                    self.last_seen.replace("Z", "+00:00")
                 ) + timedelta(hours=23)
                 self.last_seen = self.last_seen.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-            self._get_indicator_score(data.get("classification", "unknown"))
-
             # Generate Stix Object for bundle
-            labels, malwares = self._process_labels(data, data_tags)
+            labels, malwares = self._process_labels(data)
             external_reference = self._generate_stix_external_reference(data)
             stix_indicator = self._generate_stix_indicator_with_relationship(
                 data, True, external_reference, labels
@@ -803,13 +837,15 @@ class GreyNoiseConnector:
 
             self._generate_other_stix_identity_with_relationship(data)
             self._generate_stix_asn_with_relationship(data)
+            self._generate_stix_domain_with_relationship(data)
             self._generate_stix_location_with_relationship(data)  # City + Country
             self._generate_stix_vulnerability_with_relationship(data)
             self._generate_stix_tool_with_relationship(data)
             self._generate_stix_malware_with_relationship(malwares)
             self._generate_stix_threat_actor_with_relationship(data)
-            self._generate_stix_observable(True, external_reference, labels)
-            self._generate_stix_sighting(external_reference, stix_indicator, False)
+            self._generate_stix_observable(data, True, external_reference, labels)
+            if not self.no_sightings:
+                self._generate_stix_sighting(external_reference, stix_indicator, False)
 
         uniq_bundles_objects = list(
             {obj["id"]: obj for obj in self.stix_objects}.values()
@@ -832,14 +868,6 @@ class GreyNoiseConnector:
         entity_splited = data["entity_id"].split("--")
         entity_type = entity_splited[0].lower()
 
-        if not self.check_api_key():
-            self.helper.log_error(
-                "GreyNoise API Key is NOT valid. Update to Enterprise API key to use this connector."
-            )
-            raise ValueError(
-                "GreyNoise API Key is NOT valid. Update to Enterprise API key to use this connector."
-            )
-
         if entity_type in scopes:
             # OpenCTI entity information retrieval
             stix_entity = data["stix_entity"]
@@ -857,32 +885,27 @@ class GreyNoiseConnector:
             opencti_entity_value = stix_entity["value"]
 
             try:
-                # Get "IP Context" GreyNoise API Response
-                # https://docs.greynoise.io/reference/noisecontextip-1
-                session = GreyNoise(
-                    api_key=self.greynoise_key, integration_name="opencti-enricher-v3.1"
+                # Get "IP Lookup" GreyNoise API Response
+                # https://docs.greynoise.io/reference/v3ip#/
+                api_config = APIConfig(
+                    api_key=self.greynoise_key, integration_name=INTEGRATION_NAME
                 )
+                session = GreyNoise(api_config)
 
                 json_data = session.ip(opencti_entity_value)
 
                 if (
-                    "seen" in json_data
-                    and json_data["seen"] is False
+                    "found" in json_data["internet_scanner_intelligence"]
+                    and json_data["internet_scanner_intelligence"]["found"] is False
+                    and json_data["business_service_intelligence"]["found"] is False
                     and self.sighting_not_seen is False
                 ):
                     raise ValueError(
                         "[API] This IP has not yet been identified by GreyNoise"
                     )
 
-                # Get "Tag Metadata" Greynoise API Response
-                # https://docs.greynoise.io/reference/metadata-3
-
-                json_data_tags = session.metadata()
-
                 # Generate a stix bundle
-                stix_bundle = self._generate_stix_bundle(
-                    json_data, json_data_tags, stix_entity
-                )
+                stix_bundle = self._generate_stix_bundle(json_data, stix_entity)
 
                 # Send stix2 bundle
                 bundles_sent = self.helper.send_stix2_bundle(stix_bundle)
@@ -892,10 +915,29 @@ class GreyNoiseConnector:
                     + " stix bundle(s) for worker import"
                 )
 
+            except RequestFailure as e:
+                error_msg = str(e)
+                # Check if this is a rate limit (429) error
+                if "429" in error_msg or "too many" in error_msg.lower():
+                    self.helper.connector_logger.warning(
+                        "[RATE LIMIT] GreyNoise API rate limit exceeded, will retry later",
+                        {"ip": opencti_entity_value, "error": error_msg},
+                    )
+                    # Return a message instead of raising - allows retry
+                    return (
+                        "[RATE LIMIT] API rate limit exceeded, message will be retried"
+                    )
+                else:
+                    # For other API request failures, raise as before
+                    raise ValueError(
+                        "[ERROR] GreyNoise API Request Failed:",
+                        {"Exception": error_msg},
+                    )
+
             except Exception as e:
                 # Handling other unexpected exceptions
                 raise ValueError(
-                    "[ERROR] Unexpected Error occurred :", {"Exception": str(e)}
+                    "[ERROR] Unexpected Error occurred:", {"Exception": str(e)}
                 )
         else:
             return self.helper.connector_logger.info(
