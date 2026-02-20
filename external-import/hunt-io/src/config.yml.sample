@@ -3,10 +3,9 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'
   name: 'Hunt IO'
-  scope: 'ChangeMe'
+  scope: 'ipv4-addr,ipv6-addr,vulnerability,domain,url,StixFile'
   log_level: 'info'
   duration_period: 'PT5M' # Interval given for scheduler process in ISO-8601 format
   #============================================#
@@ -19,6 +18,6 @@ connector:
   #send_to_directory_path: 'ChangeMe'
   #send_to_directory_retention: 7
 
-connector_hunt_io:
+hunt_io:
   api_base_url: 'https://api.hunt.io/v1/feeds/c2'
   api_key: 'ChangeMe'
