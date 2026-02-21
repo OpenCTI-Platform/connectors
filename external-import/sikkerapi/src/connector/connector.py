@@ -108,9 +108,7 @@ class SikkerAPIConnector:
                     update=True,
                     work_id=work_id,
                 )
-                total += sum(
-                    1 for obj in filtered if obj.get("type") == "indicator"
-                )
+                total += sum(1 for obj in filtered if obj.get("type") == "indicator")
 
             has_more = envelope.get("more", False)
             cursor = envelope.get("next")
