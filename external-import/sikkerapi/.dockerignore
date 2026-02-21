@@ -1,0 +1,7 @@
+__metadata__
+**/__pycache__
+**/.venv
+**/venv
+**/logs
+**/config.yml
+**/*.egg-info

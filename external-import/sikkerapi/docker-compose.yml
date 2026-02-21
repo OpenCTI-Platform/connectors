@@ -1,0 +1,19 @@
+version: '3'
+services:
+  connector-sikkerapi:
+    image: opencti/connector-sikkerapi:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=SikkerAPI
+      - CONNECTOR_SCOPE=sikkerapi
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT6H
+      - SIKKERAPI_API_KEY=ChangeMe
+      # - SIKKERAPI_BASE_URL=https://api.sikkerapi.com
+      # - SIKKERAPI_COLLECTION_ID=sikker-threat-intel
+      # - SIKKERAPI_PAGE_SIZE=500
+      # - SIKKERAPI_CONFIDENCE_MIN=0
+      # - SIKKERAPI_IMPORT_START_DATE=2026-01-01T00:00:00Z
+    restart: always

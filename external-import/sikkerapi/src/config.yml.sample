@@ -1,0 +1,19 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'SikkerAPI'
+  scope: 'sikkerapi'
+  log_level: 'info'
+  duration_period: 'PT6H'
+
+sikkerapi:
+  api_key: 'ChangeMe'
+  # base_url: 'https://api.sikkerapi.com'
+  # collection_id: 'sikker-threat-intel'
+  # import_start_date: '2026-01-01T00:00:00Z'
+  # page_size: 500
+  # confidence_min: 0
