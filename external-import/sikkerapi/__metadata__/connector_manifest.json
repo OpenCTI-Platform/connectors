@@ -1,0 +1,19 @@
+{
+  "title": "SikkerAPI",
+  "slug": "sikkerapi",
+  "description": "Import IP reputation indicators from SikkerAPI's TAXII 2.1 feed into OpenCTI. Data is sourced from a globally distributed honeypot network capturing real attacker behavior. Includes confidence scoring, MITRE ATT&CK mappings, behavioral labels, and kill chain phases.",
+  "short_description": "IP reputation indicators from SikkerAPI honeypot network via TAXII 2.1.",
+  "logo": "external-import/sikkerapi/__metadata__/logo.png",
+  "use_cases": ["Open Source Threat Intel"],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 100,
+  "support_version": ">=6.8.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/sikkerapi",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-sikkerapi",
+  "container_type": "EXTERNAL_IMPORT"
+}
