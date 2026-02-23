@@ -2,6 +2,8 @@
 
 __version__ = "0.1.0"
 
+from connectors_sdk.connectors.base_data_processor import BaseDataProcessor
+from connectors_sdk.connectors.external_import_connector import ExternalImportConnector
 from connectors_sdk.settings.annotated_types import (
     DatetimeFromIsoString,
     ListFromString,
@@ -23,6 +25,7 @@ from connectors_sdk.settings.exceptions import (
     ConfigError,
     ConfigValidationError,
 )
+from connectors_sdk.state_manager.base_state_manager import BaseConnectorStateManager
 
 __all__ = [
     # Base Settings
@@ -43,4 +46,8 @@ __all__ = [
     # Deprecations
     "Deprecate",
     "DeprecatedField",
+    # Connector Base Classes
+    "BaseDataProcessor",
+    "BaseConnectorStateManager",
+    "ExternalImportConnector",
 ]
