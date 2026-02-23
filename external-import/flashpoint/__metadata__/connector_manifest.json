@@ -15,7 +15,7 @@
   "subscription_link": "https://flashpoint.io/ignite/",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/flashpoint",
   "manager_supported": true,
-  "container_version": "rolling",
+  "container_version": "6.9.22",
   "container_image": "opencti/connector-flashpoint",
   "container_type": "EXTERNAL_IMPORT"
 }

@@ -15,7 +15,7 @@
   "subscription_link": "https://www.zscaler.com",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/zscaler",
   "manager_supported": false,
-  "container_version": "rolling",
+  "container_version": "6.9.22",
   "container_image": "opencti/connector-zscaler",
   "container_type": "STREAM"
 }

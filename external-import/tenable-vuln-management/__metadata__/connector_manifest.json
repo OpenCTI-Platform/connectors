@@ -15,7 +15,7 @@
   "subscription_link": "",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/tenable-vuln-management",
   "manager_supported": false,
-  "container_version": "rolling",
+  "container_version": "6.9.22",
   "container_image": "opencti/connector-tenable-vuln-management",
   "container_type": "EXTERNAL_IMPORT"
 }
