@@ -320,7 +320,7 @@ class GreyNoiseFeedConnector:
                 self.helper.log_info(
                     "Querying GreyNoise API - First Results Page (" + query + ")"
                 )
-                response = session.query(query=query, exclude_raw=True)
+                response = session.query(query=query, exclude_raw=True, size=5000)
                 complete = response.get("request_metadata", {}).get("complete", True)
                 scroll = response.get("request_metadata", {}).get("scroll", "")
 
@@ -359,7 +359,7 @@ class GreyNoiseFeedConnector:
                         "Query GreyNoise API - Next Results Page (" + query + ")"
                     )
                     response = session.query(
-                        query=query, scroll=scroll, exclude_raw=True
+                        query=query, scroll=scroll, exclude_raw=True, size=5000
                     )
                     complete = response.get("request_metadata", {}).get(
                         "complete", True
