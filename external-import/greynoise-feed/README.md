@@ -71,6 +71,17 @@ There are a number of configuration options, which are set either in `docker-com
 | Suspicious Score | greynoise.indicator_score_suspicious | `GREYNOISE_INDICATOR_SCORE_SUSPICIOUS` | 50      | No        | The indicator score for GreyNoise Suspicious Indicators. |
 | Benign Score     | greynoise.indicator_score_benign     | `GREYNOISE_INDICATOR_SCORE_BENIGN`     | 20      | No        | The indicator score for GreyNoise Benign Indicators.     |
 
+### Feed Type Options
+
+The connector ingest indicators based off of a defined "feed type" in the configuration.  The following are the support feed types and what inidicators they will ingest:
+- `benign`: imports all indicators observed by GreyNoise in the previous day, which exhibited benign scanning behavior
+- `malicious`: imports all indicators observed by GreyNoise in the previous day, which exhibited malicious scanning behavior
+- `suspicious`: imports all indicators observed by GreyNoise in the previous day, which exhibited suspicious scanning behavior
+- `benign+malicious`: imports all indicators observed by GreyNoise in the previous day, which exhibited benign OR malicious scanning behavior
+- `malicious+suspicious`: imports all indicators observed by GreyNoise in the previous day, which exhibited suspicious OR malicious scanning behavior
+- `benign+suspicious+malicious`: imports all indicators observed by GreyNoise in the previous day, which exhibited benign OR malicious OR suspicious scanning behavior
+- `all`: imports all indicators observed by GreyNoise in the previous day
+
 ## Deployment
 
 ### Docker Deployment
