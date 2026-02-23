@@ -1,4 +1,4 @@
-pycti==6.9.21
+pycti==6.9.22
 python-dateutil==2.8.2
 requests==2.32.5
 stix2==3.0.1

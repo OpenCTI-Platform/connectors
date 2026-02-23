@@ -11,7 +11,7 @@ authors = [{ name = "VulnCheck" }]
 requires-python = ">= 3.12, <3.13"
 dependencies = [
   "vulncheck-sdk==0.0.40",
-  "pycti==6.9.21",
+  "pycti==6.9.22",
   "pydantic==2.11.9",
   "validators==0.35.0",
   "psutil==7.1.2",

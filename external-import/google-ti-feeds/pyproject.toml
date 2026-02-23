@@ -18,7 +18,7 @@ classifiers = [
 requires-python = ">=3.11, <3.13"
 
 dependencies = [
-    "pycti==6.9.21",
+    "pycti==6.9.22",
     "aiohttp~=3.13.2",
     "Markdown~=3.10.0",
     "markdownify~=1.2.0",
@@ -27,7 +27,7 @@ dependencies = [
     "python-dotenv~=1.1.1",
     "stix2~=3.0.1",
     "dotenv~= 0.9.9",
-    "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.9.21#subdirectory=connectors-sdk",
+    "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.9.22#subdirectory=connectors-sdk",
 ]
 
 [project.optional-dependencies]

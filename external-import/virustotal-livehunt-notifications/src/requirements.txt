@@ -1,4 +1,4 @@
 plyara~=2.2.1
-pycti==6.9.21
+pycti==6.9.22
 vt-py==0.21.0
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.9.21#subdirectory=connectors-sdk
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.9.22#subdirectory=connectors-sdk

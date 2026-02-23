@@ -1,4 +1,4 @@
-pycti==6.9.21
+pycti==6.9.22
 requests~=2.32.3          # HTTP requests
 stix2~=3.0.1              # STIX 2.1 object creation
 tenacity==9.1.2           # Retry logic (used in older implementation, optional now)

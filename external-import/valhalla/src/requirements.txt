@@ -1,5 +1,5 @@
-pycti==6.9.21
+pycti==6.9.22
 pydantic>=2.8.2,<3.0.0
 valhallaAPI==0.6.0
 python-dateutil==2.9.0.post0
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.9.21#subdirectory=connectors-sdk
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.9.22#subdirectory=connectors-sdk
