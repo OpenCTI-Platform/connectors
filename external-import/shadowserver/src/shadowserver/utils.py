@@ -3,7 +3,6 @@ import hashlib
 import io
 import ipaddress
 from datetime import datetime
-from typing import Dict, List, Optional, Union
 
 from shadowserver.constants import REQUEST_DATE_FORMAT, SEVERITY_MAP, TLP_MAP
 from stix2.base import _Observable as Observable
@@ -11,7 +10,7 @@ from tabulate import tabulate
 
 
 # Function to calculate different hashes
-def calculate_hashes(data: bytes) -> Dict[str, str]:
+def calculate_hashes(data: bytes) -> dict[str, str]:
     """
     Calculate MD5, SHA-1, SHA-256, and SHA-512 hashes for the given data.
 
@@ -61,7 +60,7 @@ def validate_marking_refs(marking_refs: str) -> bool:
     raise ValueError(f"Invalid marking references: {marking_refs}")
 
 
-def datetime_to_string(dt: datetime) -> Optional[str]:
+def datetime_to_string(dt: datetime) -> str | None:
     """
     Converts a datetime object to a string representation in the format "YYYY-MM-DDTHH:MM:SS.sssZ".
 
@@ -77,7 +76,7 @@ def datetime_to_string(dt: datetime) -> Optional[str]:
         return None
 
 
-def string_to_datetime(date_string: str) -> Optional[datetime]:
+def string_to_datetime(date_string: str) -> datetime | None:
     """
     Converts a string representation of a date to a datetime object.
 
@@ -108,7 +107,7 @@ def note_timestamp_to_datetime(date_string: str) -> datetime:
     return datetime.strptime(date_string, "%Y-%m-%d %H:%M:%SZ")
 
 
-def dicts_to_markdown(dicts_list: Union[List[Dict], Dict]) -> str:
+def dicts_to_markdown(dicts_list: list[dict] | dict) -> str:
     """
     Converts a list of dictionaries or a single dictionary to a Markdown formatted string.
 
@@ -168,7 +167,7 @@ def check_ip_address(ip_str: str) -> str:
     return "Invalid IP/CIDR"
 
 
-def clean_dict(original_dict: Dict) -> Dict:
+def clean_dict(original_dict: dict) -> dict:
     """
     Remove None and empty string values from a dictionary.
 
@@ -181,7 +180,7 @@ def clean_dict(original_dict: Dict) -> Dict:
     return {k: v for k, v in original_dict.items() if v is not None and v != ""}
 
 
-def clean_list_of_dicts(data_list: List[Dict]) -> List[Dict]:
+def clean_list_of_dicts(data_list: list[dict]) -> list[dict]:
     """
     Remove None and empty string values from a list of dictionaries.
 
@@ -194,7 +193,7 @@ def clean_list_of_dicts(data_list: List[Dict]) -> List[Dict]:
     return [clean_dict(d) for d in data_list]
 
 
-def from_list_to_csv(data_list: List[Dict]) -> str:
+def from_list_to_csv(data_list: list[dict]) -> str:
     """
     Convert a list of dictionaries to a CSV formatted string.
 
@@ -216,7 +215,7 @@ def from_list_to_csv(data_list: List[Dict]) -> str:
     return output.getvalue()
 
 
-def _csv_value_to_native(value: str) -> Optional[Union[str, int]]:
+def _csv_value_to_native(value: str) -> str | int | None:
     """
     Convert a CSV cell string to None, int, or str.
 
@@ -229,7 +228,7 @@ def _csv_value_to_native(value: str) -> Optional[Union[str, int]]:
     return value
 
 
-def from_csv_to_list(csv_content: bytes) -> List[Dict]:
+def from_csv_to_list(csv_content: bytes) -> list[dict]:
     """
     Convert CSV content (bytes) to a list of dictionaries.
 
@@ -247,7 +246,7 @@ def from_csv_to_list(csv_content: bytes) -> List[Dict]:
     ]
 
 
-def get_stix_id_precedence(stix_id_list: List[str]) -> Optional[str]:
+def get_stix_id_precedence(stix_id_list: list[str]) -> str | None:
     """
     Determine the precedence of STIX IDs.
 
@@ -273,8 +272,8 @@ def get_stix_id_precedence(stix_id_list: List[str]) -> Optional[str]:
 
 
 def find_stix_object_by_id(
-    stix_objects: List[Observable], target_id: str
-) -> Optional[Union[str, None]]:
+    stix_objects: list[Observable], target_id: str
+) -> str | None:
     """
     Search through a list of STIX2 objects and return the object with the specified ID.
 
@@ -291,7 +290,7 @@ def find_stix_object_by_id(
     return None
 
 
-def compare_severity(severity1, severity2):
+def compare_severity(severity1: str, severity2: str) -> str:
     """
     Compare two severity values and return the higher severity..
 
@@ -308,7 +307,7 @@ def compare_severity(severity1, severity2):
         return severity2
 
 
-def remove_duplicates(data_list: List):
+def remove_duplicates(data_list: list) -> list:
     """
     Remove duplicate dictionaries from a list of dictionaries.
 
