@@ -1,7 +1,7 @@
-pycti==6.9.21
+pycti==6.9.22
 feedly-client==0.27
 schedule==1.2.2
 Markdown==3.10
 pydantic>=2.10, <3
 pydantic-settings==2.9.1
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.9.21#subdirectory=connectors-sdk
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.9.22#subdirectory=connectors-sdk
