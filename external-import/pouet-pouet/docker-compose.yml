@@ -1,0 +1,19 @@
+version: '3'
+services:
+  connector-pouet-pouet:
+    image: opencti/connector-pouet-pouet:latest # 'pouet-pouet' being the name of connector's directory
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      # Common parameters for connectors of type EXTERNAL_IMPORT
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=CHANGEME # optional (default: 'PouetPouet Connector')
+      - CONNECTOR_SCOPE=CHANGEME
+      - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      - CONNECTOR_DURATION_PERIOD=CHANGEME # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+      # Custom parameters for connector-pouet-pouet
+      - POUET_POUET_API_BASE_URL=CHANGEME
+      - POUET_POUET_API_KEY=CHANGEME
+      - POUET_POUET_TLP_LEVEL=clear # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
+    restart: always
