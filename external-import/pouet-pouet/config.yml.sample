@@ -1,0 +1,16 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'PouetPouet Connector' # optional (default: 'PouetPouet Connector')
+  scope: 'ChangeMe'
+  log_level: 'error' # optional (default: 'error')
+  duration_period: 'PT1H' #  # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+
+pouet_pouet:
+  api_base_url: 'ChangeMe'
+  api_key: 'ChangeMe'
+  tlp_level: 'clear' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')

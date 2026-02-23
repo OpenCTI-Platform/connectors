@@ -1,0 +1,19 @@
+{
+  "title": "PouetPouet Connector",
+  "slug": "pouet-pouet",
+  "description": "PouetPouet description of the connector",
+  "short_description": "PouetPouet short description (summary) of the connector",
+  "logo": null,
+  "use_cases" : [],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.12",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/pouet-pouet",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-pouet-pouet",
+  "container_type": "EXTERNAL_IMPORT"
+}
