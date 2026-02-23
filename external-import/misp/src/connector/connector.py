@@ -304,7 +304,7 @@ class Misp:
                 bundle_objects_chunk, author, markings
             )
 
-            new_state = {"last_event_date": self._get_event_datetime(event).isoformat()}
+            new_state: dict = {}
             if self.config.misp.datetime_attribute == "date":
                 new_state["current_event_id"] = event.Event.id
 
@@ -365,7 +365,7 @@ class Misp:
                 {"prefix": LOG_PREFIX, **filter_params},
             )
 
-            event_processed = False
+            curr_event_date = None
             try:
                 for event in self.client_api.search_events(**filter_params):
                     event_log_data = {
@@ -373,15 +373,21 @@ class Misp:
                         "event_id": event.Event.id,
                         "event_uuid": event.Event.uuid,
                     }
+
+                    if not self._validate_event(event):
+                        continue
+
+                    curr_event_date = self._get_event_datetime(event).isoformat()
+                    new_state = {"last_event_date": curr_event_date}
+
+                    self.work_manager.update_state(state_update=new_state)
+
                     if self.work_manager.check_connector_buffering():
                         self.logger.info(
                             "Connector is buffering, this event will be processed in the next scheduler process",
                             event_log_data,
                         )
                         break
-
-                    if not self._validate_event(event):
-                        continue
 
                     self.logger.info("MISP event found - Processing...", event_log_data)
                     try:
@@ -415,19 +421,22 @@ class Misp:
                         author=author,
                         markings=markings,
                     )
-                    event_processed = True
 
                 else:
-                    if (
-                        event_processed
-                        and self.config.misp.datetime_attribute != "date"
-                    ):
+                    if self.config.misp.datetime_attribute != "date":
                         # If the datetime attribute is not date, we need to update
                         # the last event date to avoid processing the same event again
-                        current_state = self.work_manager.get_state()
-                        last_event_date = current_state.get("last_event_date")
-                        if last_event_date is None:
+
+                        if curr_event_date is None:
+                            self.logger.debug(
+                                "No event date found, skipping update of last event date",
+                                {
+                                    "prefix": LOG_PREFIX,
+                                },
+                            )
                             return None
+
+                        last_event_date = curr_event_date
 
                         last_event_datetime = datetime.fromisoformat(last_event_date)
                         # Check if the last event date is not the same as the current time
@@ -445,6 +454,15 @@ class Misp:
                                 "last_event_date": last_event_datetime.isoformat()
                             }
                             self.work_manager.update_state(state_update=new_state)
+
+                        else:
+                            self.logger.debug(
+                                "Last event date is the same as the current time, skipping update of last event date",
+                                {
+                                    "prefix": LOG_PREFIX,
+                                    "last_event_date": last_event_datetime.isoformat(),
+                                },
+                            )
 
             finally:
                 self._flush_batch_processor()
