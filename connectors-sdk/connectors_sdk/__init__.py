@@ -2,24 +2,8 @@
 
 __version__ = "0.1.0"
 
-from connectors_sdk.connectors.base_external_import import (
-    BaseExternalImportConnector,
-    BatchingExternalImportConnector,
-    MultiHandlerExternalImportConnector,
-    SimpleExternalImportConnector,
-    StreamingExternalImportConnector,
-)
-from connectors_sdk.connectors.managers import (
-    BatchingProcessingEngine,
-    ConverterFactory,
-    ErrorHandler,
-    MultiHandlerProcessingEngine,
-    ProcessingEngine,
-    SimpleProcessingEngine,
-    StateManager,
-    StreamingProcessingEngine,
-    WorkManager,
-)
+from connectors_sdk.connectors.base_data_processor import BaseDataProcessor
+from connectors_sdk.connectors.external_import_connector import ExternalImportConnector
 from connectors_sdk.settings.annotated_types import (
     DatetimeFromIsoString,
     ListFromString,
@@ -37,6 +21,7 @@ from connectors_sdk.settings.exceptions import (
     ConfigError,
     ConfigValidationError,
 )
+from connectors_sdk.state_manager.base_state_manager import BaseConnectorStateManager
 
 __all__ = [
     # Base Settings
@@ -55,21 +40,7 @@ __all__ = [
     "DatetimeFromIsoString",
     "ListFromString",
     # Connector Base Classes
-    "BaseExternalImportConnector",
-    "SimpleExternalImportConnector",
-    "StreamingExternalImportConnector",
-    "MultiHandlerExternalImportConnector",
-    "BatchingExternalImportConnector",
-    # Managers
-    "StateManager",
-    "WorkManager",
-    "ErrorHandler",
-    # Processing Engines
-    "ProcessingEngine",
-    "SimpleProcessingEngine",
-    "StreamingProcessingEngine",
-    "BatchingProcessingEngine",
-    "MultiHandlerProcessingEngine",
-    # Factory
-    "ConverterFactory",
+    "BaseDataProcessor",
+    "BaseConnectorStateManager",
+    "ExternalImportConnector",
 ]

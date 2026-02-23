@@ -9,8 +9,10 @@ def test_root_public_api_is_valid():
     # Given the feature name
     # Then it should all be present
     imports = {
-        "BaseConnectorSettings",
         "BaseConfigModel",
+        "BaseConnectorSettings",
+        "BaseConnectorStateManager",
+        "BaseDataProcessor",
         "BaseExternalImportConnectorConfig",
         "BaseInternalEnrichmentConnectorConfig",
         "BaseInternalExportFileConnectorConfig",
@@ -19,6 +21,7 @@ def test_root_public_api_is_valid():
         "ConfigError",
         "ConfigValidationError",
         "DatetimeFromIsoString",
+        "ExternalImportConnector",
         "ListFromString",
     }
     missing = imports - set(root_api.__all__)
