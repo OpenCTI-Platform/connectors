@@ -1,0 +1,5 @@
+pycti==6.9.18
+pydantic~= 2.11.3
+requests~=2.32.3
+validators==0.35.0
+# connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.9.18#subdirectory=connectors-sdk
