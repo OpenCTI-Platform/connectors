@@ -4,4 +4,4 @@ requests>=2.28.0
 pyyaml>=6.0
 python-dateutil>=2.8.0
 pydantic >=2.8.2, <3
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.9.22#subdirectory=connectors-sdk
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk

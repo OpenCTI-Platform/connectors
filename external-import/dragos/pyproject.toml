@@ -26,7 +26,7 @@ dependencies = [
     "tenacity>=9,<10",
     "markdownify>=1.1.0,<2",
     "pydantic>=2.8.2,<3",
-     "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.9.22#subdirectory=connectors-sdk",
+     "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk",
 ]
 
 
