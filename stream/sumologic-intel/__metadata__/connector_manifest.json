@@ -15,7 +15,7 @@
   "subscription_link": "https://www.sumologic.com/solutions/cloud-siem/",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/sumologic-intel",
   "manager_supported": false,
-  "container_version": "rolling",
+  "container_version": "7.260224.0",
   "container_image": "opencti/connector-sumologic-intel",
   "container_type": "STREAM"
 }

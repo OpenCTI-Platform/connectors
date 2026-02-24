@@ -15,7 +15,7 @@
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/wiz",
   "manager_supported": true,
-  "container_version": "rolling",
+  "container_version": "7.260224.0",
   "container_image": "opencti/connector-wiz",
   "container_type": "EXTERNAL_IMPORT"
 }
