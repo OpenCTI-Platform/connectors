@@ -23,7 +23,7 @@ IOC_ENDPOINT_URL = "/web/api/v2.1/threat-intelligence/iocs/stix"
 # More details can be found in the connector's documentation.
 
 SUPPORTED_STIX_PATTERNS = [
-    re.compile(r"^\s*\[file:hashes\.(MD5|SHA1|SHA256)\s*=\s*\'[^\']+\'\s*\]\s*$"),
+    re.compile(r"^\s*\[file:hashes\.(MD5|SHA-1|SHA-256)\s*=\s*\'[^\']+\'\s*\]\s*$"),
     re.compile(r"^\s*\[domain-name:value\s*=\s*\'[^\']+\'\s*\]\s*$"),
     re.compile(r"^\s*\[url:value\s*=\s*\'[^\']+\'\s*\]\s*$"),
     re.compile(r"^\s*\[ipv4-addr:value\s*=\s*\'[^\']+\'\s*\]\s*$"),
