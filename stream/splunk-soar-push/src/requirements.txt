@@ -7,4 +7,4 @@ tenacity==9.1.2
 certifi==2025.11.12
 requests==2.32.5
 PyYAML==6.0.3
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.9.22#subdirectory=connectors-sdk
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
