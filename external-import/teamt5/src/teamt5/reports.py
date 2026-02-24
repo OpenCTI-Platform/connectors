@@ -16,7 +16,6 @@ NUM_REPORTS_PER_PAGE = 10
 
 
 class ReportHandler:
-
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
@@ -63,6 +62,11 @@ class ReportHandler:
             # Retrieve Reports at the current offset. Note that the API responds with most to least recent.
             params = {"offset": num_reports, "date[from]": last_run_timestamp}
             response = self._request_data(reports_url, params)
+            if response is None:
+                self.helper.connector_logger.error(
+                    "Failed to retrieve Reports: No response from API"
+                )
+                break
 
             data = response.json()
             if not data.get("success") or not data.get("reports"):
@@ -191,7 +195,9 @@ class ReportHandler:
                 )
 
                 self.helper.connector_logger.info(
-                    f"Report: {report.get("title","")} with {len(stix_content)} items Created and Pushed to OpenCTI Successfully"
+                    f"Report: {report.get('title', '')} with "
+                    f"{len(stix_content)} items Created and "
+                    "Pushed to OpenCTI Successfully"
                 )
 
                 num_pushed += 1

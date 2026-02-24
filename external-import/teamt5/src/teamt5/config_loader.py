@@ -62,7 +62,33 @@ class ConfigConnector:
             "TEAMT5_API_KEY",
             ["teamt5", "api_key"],
             self.load,
+            required=False,
+            default=None,
         )
+
+        self.client_id = get_config_variable(
+            "TEAMT5_CLIENT_ID",
+            ["teamt5", "client_id"],
+            self.load,
+            required=False,
+            default=None,
+        )
+
+        self.client_secret = get_config_variable(
+            "TEAMT5_CLIENT_SECRET",
+            ["teamt5", "client_secret"],
+            self.load,
+            required=False,
+            default=None,
+        )
+
+        has_api_key = bool(self.api_key)
+        has_oauth = bool(self.client_id and self.client_secret)
+        if not has_api_key and not has_oauth:
+            raise ValueError(
+                "TeamT5 connector requires either 'api_key' OR both "
+                "'client_id' and 'client_secret' to be configured."
+            )
 
         self.tlp_level = get_config_variable(
             "TEAMT5_TLP_LEVEL",
