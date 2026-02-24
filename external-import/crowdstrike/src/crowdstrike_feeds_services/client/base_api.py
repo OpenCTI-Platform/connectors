@@ -30,7 +30,16 @@ class BaseCrowdstrikeClient:
 
         if response["status_code"] >= 400:
             error_message = response["body"]["errors"][0]["message"]
-            self.helper.connector_logger.error(
-                "[API] Error while processing fetching data",
-                {"error_message": error_message},
-            )
+            status_code = response["status_code"]
+
+            # Log 403 (permission denied) as warning since it's often expected/handled gracefully
+            if status_code == 403:
+                self.helper.connector_logger.warning(
+                    "[API] Permission denied accessing resource",
+                    {"error_message": error_message},
+                )
+            else:
+                self.helper.connector_logger.error(
+                    "[API] Error while processing fetching data",
+                    {"error_message": error_message},
+                )
