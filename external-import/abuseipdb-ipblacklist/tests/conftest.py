@@ -50,5 +50,6 @@ def mock_register(monkeypatch):
                     "pass": "changeme",
                 }
             },
+            "jwks": {},
         },
     )
