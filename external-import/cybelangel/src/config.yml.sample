@@ -1,0 +1,20 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'CybelAngel'
+  scope: 'all'
+  run_and_terminate: false
+  log_level: 'error'
+
+cybelangel:
+  client_id: "ChangeMe" # Required
+  client_secret: "ChangeMe" # Required
+  api_url: 'https://platform.cybelangel.com'
+  auth_url: 'https://auth.cybelangel.com/oauth/token'
+  interval: 1 # In hours
+  marking: 'TLP:AMBER+STRICT'
+  fetch_period: 7 # In days

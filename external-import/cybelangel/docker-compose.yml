@@ -1,0 +1,21 @@
+version: '3'
+services:
+  connector-cybelangel:
+    image: opencti/connector-cybelangel:6.7.9
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_SCOPE=all
+      - CONNECTOR_NAME=CybelAngel
+      - CONNECTOR_RUN_AND_TERMINATE=false
+      - CONNECTOR_LOG_LEVEL=error
+      - CYBELANGEL_CLIENT_ID=ChangeMe # Required
+      - CYBELANGEL_CLIENT_SECRET=ChangeMe # Required
+      - CYBELANGEL_INTERVAL=1 # In hours
+      - CYBELANGEL_API_URL=https://platform.cybelangel.com
+      - CYBELANGEL_AUTH_URL=https://auth.cybelangel.com/oauth/token
+      - CYBELANGEL_MARKING=TLP:AMBER+STRICT
+      - CYBELANGEL_FETCH_PERIOD=7 # Maximum number of days to fetch data from Cybelangel. Use "all" to fetch all available data
+    restart: always
