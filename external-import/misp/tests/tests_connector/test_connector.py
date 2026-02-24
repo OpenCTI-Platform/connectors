@@ -1,10 +1,12 @@
+import time
 from copy import deepcopy
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from api_client.models import EventRestSearchListItem
 from connector import ConnectorSettings, Misp
+from freezegun import freeze_time
 from pycti import OpenCTIConnectorHelper
 
 minimal_config_dict = {
@@ -568,3 +570,147 @@ def test_connector_does_not_validate_event_already_processed_by_update_datetime(
         )
         # Timestamp is before the last event date, so the event should not be validated
         assert connector._validate_event(event) is False
+
+
+def _make_publish_timestamp_event(event_id: str, ts: int) -> EventRestSearchListItem:
+    return EventRestSearchListItem.model_validate(
+        {"Event": {"id": event_id, "publish_timestamp": str(ts)}}
+    )
+
+
+def _run_process_events(connector, events, buffering_sequence, initial_state=None):
+    """
+    Run `process_events` with all external dependencies mocked.
+
+    Returns:
+        (state dict, mock for _process_bundle_in_batch, process_events return value)
+    """
+    state = dict(initial_state or {})
+
+    def track_update_state(state_update=None, **kwargs):
+        if state_update:
+            state.update(state_update)
+
+    with (
+        patch.object(connector, "helper") as mock_helper,
+        patch.object(connector, "work_manager") as mock_wm,
+        patch.object(connector, "client_api") as mock_api,
+        patch.object(connector, "converter") as mock_converter,
+        patch.object(connector, "batch_processor"),
+        patch.object(connector, "_process_bundle_in_batch") as mock_process,
+    ):
+        mock_helper.get_state.return_value = initial_state or {}
+        mock_helper.metric = MagicMock()
+
+        mock_wm.get_state.side_effect = lambda: dict(state)
+        mock_wm.update_state.side_effect = track_update_state
+        if isinstance(buffering_sequence, list):
+            mock_wm.check_connector_buffering.side_effect = buffering_sequence
+        else:
+            mock_wm.check_connector_buffering.return_value = buffering_sequence
+
+        mock_api.search_events.return_value = iter(events)
+        mock_converter.process.return_value = (MagicMock(), [], [MagicMock()])
+
+        result = connector.process_events()
+
+    return state, mock_process, result
+
+
+@freeze_time("2026-01-01 00:00:00")
+def test_process_events_state_set_to_buffered_event_date_on_buffering(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    """
+    Test that when buffering is detected, `last_event_date` is saved to the
+    buffered event's timestamp so the next run restarts from that event.
+
+    Scenario:
+    - Event A (earlier timestamp): processed normally.
+    - Event B (later timestamp): buffering detected → loop breaks.
+
+    Expected: after the run, `last_event_date` equals event B's timestamp (not
+    A's), so the next run re-processes event B.
+    """
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
+    connector = fake_misp_connector(config_dict)
+
+    ts_a = int(time.time())
+    ts_b = int(time.time() + 1)
+
+    event_a = _make_publish_timestamp_event("1", ts_a)
+    event_b = _make_publish_timestamp_event("2", ts_b)
+
+    # No buffering for A, buffering triggers on B
+    state, _, result = _run_process_events(
+        connector, [event_a, event_b], buffering_sequence=[False, True]
+    )
+
+    expected = datetime.fromtimestamp(ts_b, tz=timezone.utc).isoformat()
+    assert state.get("last_event_date") == expected
+
+
+@freeze_time("2026-01-01 00:00:00")
+def test_process_events_buffered_event_not_processed(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    """
+    Test that when buffering is detected for event B, `_process_bundle_in_batch`
+    is NOT called for it — even though the state has already been advanced to
+    its timestamp.
+    """
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
+    connector = fake_misp_connector(config_dict)
+
+    ts_a = int(time.time())
+    ts_b = int(time.time() + 1)
+
+    event_a = _make_publish_timestamp_event("1", ts_a)
+    event_b = _make_publish_timestamp_event("2", ts_b)
+
+    state, mock_process, _ = _run_process_events(
+        connector, [event_a, event_b], buffering_sequence=[False, True]
+    )
+
+    # Only event A should have been processed
+    assert mock_process.call_count == 1
+    assert mock_process.call_args[1]["event"] == event_a
+
+
+def test_process_events_adds_one_second_after_loop_completion(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    """
+    Test that after the event loop completes without interruption, `last_event_date`
+    is advanced by 1 second. This prevents events at the exact boundary timestamp
+    from being re-queried (and reprocessed) on the next run.
+    """
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
+    connector = fake_misp_connector(config_dict)
+
+    with freeze_time("2026-01-01 00:00:00") as frozen_time:
+        ts = int(time.time())
+        event = _make_publish_timestamp_event("1", ts)
+
+        # No buffering — loop completes normally
+        state, _, result = _run_process_events(
+            connector, [event], buffering_sequence=False
+        )
+
+        # ts == Now: process_events does not update last_event_date (handled
+        # by _process_bundle_in_batch, which is mocked here).
+        assert state.get("last_event_date") is None
+        assert result is None
+
+        frozen_time.move_to("2026-01-01 00:00:01")
+        state, _, result = _run_process_events(
+            connector, [event], buffering_sequence=False
+        )
+        expected = (
+            datetime.fromtimestamp(ts, tz=timezone.utc) + timedelta(seconds=1)
+        ).isoformat()
+        assert state.get("last_event_date") == expected
+        assert result is None
