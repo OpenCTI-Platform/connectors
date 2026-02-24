@@ -618,19 +618,19 @@ def _run_process_events(connector, events, buffering_sequence, initial_state=Non
 
 
 @freeze_time("2026-01-01 00:00:00")
-def test_process_events_state_updated_before_buffering_check(
+def test_process_events_state_set_to_buffered_event_date_on_buffering(
     mock_opencti_connector_helper, mock_py_misp
 ):
     """
-    Test that `last_event_date` is set to the current event's timestamp BEFORE
-    the buffering check is performed.
+    Test that when buffering is detected, `last_event_date` is saved to the
+    buffered event's timestamp so the next run restarts from that event.
 
     Scenario:
     - Event A (earlier timestamp): processed normally.
     - Event B (later timestamp): buffering detected → loop breaks.
 
     Expected: after the run, `last_event_date` equals event B's timestamp (not
-    A's), so that MISP's date filter excludes event A on the next run.
+    A's), so the next run re-processes event B.
     """
     config_dict = deepcopy(minimal_config_dict)
     config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
@@ -700,9 +700,9 @@ def test_process_events_adds_one_second_after_loop_completion(
             connector, [event], buffering_sequence=False
         )
 
-        # ts == Now, so no 1 second added
-        expected = (datetime.fromtimestamp(ts, tz=timezone.utc)).isoformat()
-        assert state.get("last_event_date") == expected
+        # ts == Now: process_events does not update last_event_date (handled
+        # by _process_bundle_in_batch, which is mocked here).
+        assert state.get("last_event_date") is None
         assert result is None
 
         frozen_time.move_to("2026-01-01 00:00:01")

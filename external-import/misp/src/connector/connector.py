@@ -304,7 +304,7 @@ class Misp:
                 bundle_objects_chunk, author, markings
             )
 
-            new_state: dict = {}
+            new_state = {"last_event_date": self._get_event_datetime(event).isoformat()}
             if self.config.misp.datetime_attribute == "date":
                 new_state["current_event_id"] = event.Event.id
 
@@ -378,15 +378,15 @@ class Misp:
                         continue
 
                     curr_event_date = self._get_event_datetime(event).isoformat()
-                    new_state = {"last_event_date": curr_event_date}
-
-                    self.work_manager.update_state(state_update=new_state)
 
                     if self.work_manager.check_connector_buffering():
                         self.logger.info(
                             "Connector is buffering, this event will be processed in the next scheduler process",
                             event_log_data,
                         )
+                        # Save the event date to restart from the current one in the next process.
+                        new_state = {"last_event_date": curr_event_date}
+                        self.work_manager.update_state(state_update=new_state)
                         break
 
                     self.logger.info("MISP event found - Processing...", event_log_data)
@@ -423,6 +423,10 @@ class Misp:
                     )
 
                 else:
+                    # FOR-ELSE: The else block executes only if the loop is not
+                    # broken, meaning all events have been processed. We then
+                    # add 1 second to the last event date to avoid processing
+                    # the same event again during the next run.
                     if self.config.misp.datetime_attribute != "date":
                         # If the datetime attribute is not date, we need to update
                         # the last event date to avoid processing the same event again
@@ -437,7 +441,6 @@ class Misp:
                             return None
 
                         last_event_date = curr_event_date
-
                         last_event_datetime = datetime.fromisoformat(last_event_date)
                         # Check if the last event date is not the same as the current time
                         if last_event_datetime != now:
