@@ -6,7 +6,7 @@ from collections import namedtuple
 import pika
 from minio import Minio
 from minio.commonconfig import CopySource
-from pika.exceptions import NackError, UnroutableError
+from pika.exceptions import ChannelClosedByBroker, NackError, UnroutableError
 
 from .lib.external_import import ExternalImportConnector
 from .metrics import Metrics
@@ -232,9 +232,11 @@ class StreamImporterConnector(ExternalImportConnector):
             )
             self.helper.connector_logger.debug("Event has been sent")
             self.helper.metric.inc("bundle_send")
-        except (UnroutableError, NackError):
+        except (ChannelClosedByBroker, NackError, UnroutableError) as err:
             self.metrics.send_error()
-            self.helper.connector_logger.error("Unable to send bundle, retry...")
+            self.helper.connector_logger.error(
+                f"Unable to send bundle ({type(err).__name__}): {err}"
+            )
             self._send_event(channel, event)
 
 
