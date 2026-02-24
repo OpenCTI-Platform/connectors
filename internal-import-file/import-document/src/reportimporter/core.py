@@ -9,6 +9,10 @@ from typing import Callable, Dict, List
 import stix2
 import yaml
 from pycti import (
+    CustomObservableICCID,
+    CustomObservableIMEI,
+    CustomObservableIMSI,
+    CustomObservablePhoneNumber,
     OpenCTIConnectorHelper,
     Report,
     StixCoreRelationship,
@@ -535,6 +539,42 @@ class ReportImporter:
                     value = match[RESULT_FORMAT_MATCH][:-1]
                 observable = stix2.URL(
                     value=value,
+                    object_marking_refs=object_markings,
+                    custom_properties={
+                        "x_opencti_create_indicator": self.create_indicator,
+                        "created_by_ref": author,
+                    },
+                )
+            elif match[RESULT_FORMAT_CATEGORY] == "Phone-Number.value":
+                observable = CustomObservablePhoneNumber(
+                    value=match[RESULT_FORMAT_MATCH],
+                    object_marking_refs=object_markings,
+                    custom_properties={
+                        "x_opencti_create_indicator": self.create_indicator,
+                        "created_by_ref": author,
+                    },
+                )
+            elif match[RESULT_FORMAT_CATEGORY] == "IMEI.value":
+                observable = CustomObservableIMEI(
+                    value=match[RESULT_FORMAT_MATCH],
+                    object_marking_refs=object_markings,
+                    custom_properties={
+                        "x_opencti_create_indicator": self.create_indicator,
+                        "created_by_ref": author,
+                    },
+                )
+            elif match[RESULT_FORMAT_CATEGORY] == "ICCID.value":
+                observable = CustomObservableICCID(
+                    value=match[RESULT_FORMAT_MATCH],
+                    object_marking_refs=object_markings,
+                    custom_properties={
+                        "x_opencti_create_indicator": self.create_indicator,
+                        "created_by_ref": author,
+                    },
+                )
+            elif match[RESULT_FORMAT_CATEGORY] == "IMSI.value":
+                observable = CustomObservableIMSI(
+                    value=match[RESULT_FORMAT_MATCH],
                     object_marking_refs=object_markings,
                     custom_properties={
                         "x_opencti_create_indicator": self.create_indicator,
